@@ -7,7 +7,7 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import CONMINdriver
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 #from openmdao.examples.bar3simulation.bar3 import Bar3Truss
 from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
@@ -66,11 +66,11 @@ class Bar3Optimization(Assembly):
        # CONMIN Constraints
 
         constraints = [
-            '(bar3_truss.bar1_stress/bar1_stress_allowable) <= 1.0',
-            '(bar3_truss.bar2_stress/bar2_stress_allowable) <= 1.0',
-            '(bar3_truss.bar3_stress/bar3_stress_allowable) <= 1.0',
-            '(bar3_truss.displacement_x_dir/displacement_x_dir_allowable) <= 1.0',
-            '(bar3_truss.displacement_y_dir/displacement_y_dir_allowable) <= 1.0',
+            'abs(bar3_truss.bar1_stress/bar1_stress_allowable) <= 1.0',
+            'abs(bar3_truss.bar2_stress/bar2_stress_allowable) <= 1.0',
+            'abs(bar3_truss.bar3_stress/bar3_stress_allowable) <= 1.0',
+            'abs(bar3_truss.displacement_x_dir/displacement_x_dir_allowable) <= 1.0',
+            'abs(bar3_truss.displacement_y_dir/displacement_y_dir_allowable) <= 1.0',
             'frequency_allowable**2 <= bar3_truss.frequency**2']
         map(self.driver.add_constraint, constraints)
         

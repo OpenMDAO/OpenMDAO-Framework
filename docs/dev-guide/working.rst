@@ -64,10 +64,10 @@ from *dev*.  In that case you would do the following:
 Creating the Virtual Environment
 --------------------------------
 
-OpenMDAO operates inside of a virtual python environment. To create that environment, 
+OpenMDAO operates inside of a virtual Python environment. To create that environment, 
 run ``python go-openmdao-dev.py`` from the top directory of your
 repository. The script will check the version of Python you are running. **You must
-be running version 2.6 or 2.7.** (To find out which Python version you are
+be running version 2.7.x.** (To find out which Python version you are
 running, you can type ``python --version``.)
 
 
@@ -237,7 +237,7 @@ Here's an example of the kind of output you might see:
 ::
 
     M README.txt
-   M  go-openmdao-dev.py
+    M go-openmdao-dev.py
    ?? anewfile.py
    ?? somejunk.txt
 
@@ -440,8 +440,8 @@ Once you've done all of these things, you're ready to push your changes up to
 your personal OpenMDAO fork and ask the OpenMDAO maintainers to merge your changes
 into the official *dev* branch.
 
-To push the changes from your ``<branchname>`` branch up to your fork, which you
-earlier named *myfork*, use the ``git push`` command:
+To push the branch with your changes up to your fork, which you earlier named *myfork*, use
+the ``git push`` command:
 
 ::
 
@@ -449,45 +449,54 @@ earlier named *myfork*, use the ``git push`` command:
 
 
 Once that's done, ``myfork/<branchname>`` will have your changes, and you can ask the
-OpenMDAO maintainers to merge, or *pull*, them to dev branch.  To issue a pull request, follow these steps:
+OpenMDAO maintainers to merge, or *pull*, them to dev branch.  To issue a pull request,
+follow these steps:
 
-1. Go to the page for your personal OpenMDAO fork on GitHub. (You must be logged in to GitHub.)
+1. If you are not already logged in, log in to GitHub. You should be on your personal page.
 
-   To get there from your user page, select the branch that you pushed up to GitHub. For example, in the
-   figure below under **Public Activity** you see a ``play_branch`` that pziegfeld created from her
-   personal ``OpenMDAO-Framework`` fork (circled in red) and pushed up to GitHub. If pziegfeld clicked
-   on ``play_branch``, it would take her to that branch on her personal fork.
+2. On the right side of the page, scroll down until you see the area titled **Your Repositories**
+   with a list your personal repositories. 
+   
+   If your page shows tabs for `Contributions, Repositories,` and `Public Activity` across the top, click
+   on the **Repositories** tab.
 
-.. figure:: user_page1.png
+3. Click on **OpenMDAO-Framework** to take you to your personal fork of the OpenMDAO-Framework.
+
+   You will probably be on the `master` branch. The branch-name button is circled in red in the
+   figure that follows. 
+
+.. figure:: OpenMDAO-Framework_repo.png
    :align: center
-   
-   User Page Showing the OpenMDAO-Framework Fork (left side of page) and the Branch to be Pulled (circled)
-   
-|    
-   
-   Alternatively, pziegfeld could select ``OpenMDAO-Framework``, the fork listed under **Repositories**
-   (circled in green above). If she did that, when she goes to her personal OpenMDAO fork page she would be
-   on the `master` branch.  In the next figure it shows that the branch she is on (highlighted in yellow) is
-   the master. 
+   :alt: screen of personal OpenMDAO fork showing the "branch" button circled in red
 
-      
-.. figure:: PersonalFork8-21.png
+   Screen of a personal OpenMDAO-Framework fork showing the branch button
+
+4. If you're on the master branch, you need to switch branches before issuing a
+   pull request. 
+   
+   -  Click on the down arrow next to the branch name. 
+   
+      A drop-down list of branches will appear (in alphabetical order). 
+
+   -  Use the Search box or the scroll bar to find the branch you want merged. 
+   
+      If you mouse over the branch name, it will be highlighted, and a check mark will appear in front of it. 
+
+   -  Click on the branch name to go to that branch. 
+
+5. Once you're on the correct branch, click on the **Compare and pull request** button. See the following
+   graphic with the button circled in red.
+
+.. figure:: compare-pull.png
    :align: center
+   :alt: screen of personal OpenMDAO-Framework fork with "compare and pull request" button circled in red
+
+   Screen showing the "Compare and pull request" button
+
+6. A new window will appear, and you will be prompted to enter a description of
+   your changes. 
    
-   Example Page for a Personal OpenMDAO Fork 
-  
-   
-2. If you are on the master branch, you need to switch branches before issuing a pull request. Click on down
-   the arrow next to the branch name. A drop-down list of branches will appear in alphabetical order.
-   Scroll down until you find the desired branch. If you mouse over the branch name, it will be highlighted
-   and a check mark will appear in front of it. Click on the branch name to go to that branch. 
+   Provide a brief description and then click on the **Send pull request** button.
 
-
-3. Once you're on the correct branch, click on the **Pull Request** button (highlighted in green). 
-
-
-4. A new window will appear, and you will be prompted to fill in a description of your changes. Once
-   you have supplied a short description, click on the button to issue the pull request.
-
-   One of the maintainers will review the changes on your branch and decide whether to approve it. If the maintainer
-   has a question or problem, you will be contacted.
+   One of the maintainers will review the changes on your branch and decide whether to approve
+   the requested merge. If the maintainer has a question or problem, you will be contacted.

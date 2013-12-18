@@ -1,7 +1,11 @@
 import cmd
-import jsonpickle
+try:
+    import simplejson as json
+except ImportError:
+    import json
 import logging
 import os.path
+from os import utime
 import sys
 import traceback
 
@@ -10,11 +14,11 @@ from zope.interface import implementedBy
 
 from openmdao.main.api import Assembly, Component, Driver, logger, \
                               set_as_top, get_available_types
-from openmdao.main.vartree import VariableTree
+from openmdao.main.variable import json_default
 
 from openmdao.main.project import Project, ProjFinder, \
                                   _clear_insts, _match_insts
-from openmdao.main.publisher import publish
+from openmdao.main.publisher import publish, Publisher
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.interfaces import IContainer, IComponent, IAssembly
 from openmdao.main.factorymanager import register_class_factory, \
@@ -25,22 +29,45 @@ from openmdao.main.releaseinfo import __version__, __date__
 
 from openmdao.util.nameutil import isidentifier
 from openmdao.util.fileutil import file_md5
+from openmdao.util.dep import plugin_groups
 
 from openmdao.gui.util import packagedict
 from openmdao.gui.filemanager import FileManager
 from openmdao.gui.projdirfactory import ProjDirFactory
 
 
-def modifies_model(target):
-    ''' Decorator for methods that may have modified the model
-        performs maintenance on root level containers/assemblies and
+def modifies_project(target):
+    ''' Decorator for methods that update the project (or might do so)
+        via adding, removing or updating files in the project. This includes
+        the issuing of commands that end up in the default macro file.
+        (TODO: should be able to due this directly through the FileManager)
+
+        Updates the timestamp of the project _settings.cfg file so that
+        it can be used to determine when the project was 'last saved'.
+    '''
+
+    def wrapper(self, *args, **kargs):
+        result = target(self, *args, **kargs)
+        settings_path = self.files._get_abs_path("_settings.cfg")
+
+        with file(settings_path, 'a'):
+            utime(settings_path, None)
+
+        return result
+
+    return wrapper
+
+
+def modifies_state(target):
+    ''' Decorator for methods that modify the session state (or might do so).
+        Performs maintenance on root level containers/assemblies and
         publishes the potentially updated components.
     '''
 
     def wrapper(self, *args, **kwargs):
         result = target(self, *args, **kwargs)
         self._update_roots()
-        self._update_workflows()
+        # self._update_workflows()
         if self.publish_updates:
             self.publish_components()
         return result
@@ -48,8 +75,8 @@ def modifies_model(target):
 
 
 class ConsoleServer(cmd.Cmd):
-    ''' Object which knows how to load a model and provides a command line
-        interface and various methods to access and modify that model.
+    ''' Object which knows how to load an OpenMDAO project and provides a
+        command line interface and methods to interact with that project.
     '''
 
     def __init__(self, name='', host='', publish_updates=True):
@@ -92,14 +119,14 @@ class ConsoleServer(cmd.Cmd):
 
     def _update_roots(self):
         ''' Ensure that all root containers in the project dictionary know
-            their own name and that all root assemblies are set as top.
+            their own name and are set as top.
         '''
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 if v.name != k:
                     v.name = k
-            if is_instance(v, Assembly) and v._call_cpath_updated:
-                set_as_top(v)
+                if v._call_cpath_updated:
+                    set_as_top(v)
 
     def _update_workflows(self):
         ''' Call :meth:`_update_workflow` on drivers to capture any workflow
@@ -108,7 +135,7 @@ class ConsoleServer(cmd.Cmd):
         for k, v in self.proj.items():
             if has_interface(v, IContainer):
                 for driver in [obj for name, obj in v.items(recurse=True)
-                                   if is_instance(obj, Driver)]:
+                               if is_instance(obj, Driver)]:
                     driver._update_workflow()
 
     def publish_components(self):
@@ -123,7 +150,7 @@ class ConsoleServer(cmd.Cmd):
         else:
             comps = self._publish_comps.keys()
             for pathname in comps:
-                comp, root = self.get_container(pathname, report=False)
+                comp, root = self.get_object(pathname, report=False)
                 if comp is None:
                     del self._publish_comps[pathname]
                     publish(pathname, {})
@@ -136,7 +163,7 @@ class ConsoleServer(cmd.Cmd):
         publish(topic, msg)
 
     def _error(self, err, exc_info):
-        ''' Publish error message and save stack trace in case it's requested.
+        ''' Publish error message and save stack trace if case it's requested.
         '''
         self._partial_cmd = None
         self.exc_info = exc_info
@@ -153,7 +180,7 @@ class ConsoleServer(cmd.Cmd):
             logger.error('publishing of message failed')
 
     def do_trace(self, arg):
-        ''' print remembered trace from last exception
+        ''' Print remembered trace from last exception.
         '''
         if self.exc_info:
             exc_type, exc_value, exc_traceback = self.exc_info
@@ -169,7 +196,8 @@ class ConsoleServer(cmd.Cmd):
         #self._hist += [line.strip()]
         return line
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def onecmd(self, line):
         self._hist.append(line)
         try:
@@ -204,7 +232,7 @@ class ConsoleServer(cmd.Cmd):
 
     def default(self, line):
         ''' Called on an input line when the command prefix is not recognized.
-            In that case we execute the line as Python code.
+            In this case we execute the line as Python code.
         '''
         line = line.rstrip()
         if self._partial_cmd is None:
@@ -226,9 +254,11 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def run(self, pathname, *args, **kwargs):
-        ''' Run `pathname` or the model (i.e., the top assembly).
+        ''' Run the component `pathname`.
+            If no pathname is specified, use `top`.
         '''
         pathname = pathname or 'top'
         if pathname in self.proj:
@@ -243,13 +273,14 @@ class ConsoleServer(cmd.Cmd):
             self._print_error("Execution failed: No %r component was found." %
                               pathname)
 
-    @modifies_model
+    @modifies_project
+    @modifies_state
     def execfile(self, filename):
-        ''' execfile in server's globals.
+        ''' Execfile in server's globals.
         '''
         try:
             self.proj.command("execfile('%s', '%s')" %
-                                 (filename, file_md5(filename)))
+                              (filename, file_md5(filename)))
         except Exception as err:
             self._error(err, sys.exc_info())
 
@@ -259,7 +290,7 @@ class ConsoleServer(cmd.Cmd):
         return os.getpid()
 
     def get_project(self):
-        ''' Return the current model as a project archive.
+        ''' Return the current project.
         '''
         return self.proj
 
@@ -273,12 +304,7 @@ class ConsoleServer(cmd.Cmd):
         '''
         return self._recorded_cmds[:]
 
-    def get_JSON(self):
-        ''' Return current state as JSON.
-        '''
-        return jsonpickle.encode(self.proj._model_globals)
-
-    def get_container(self, pathname, report=True):
+    def get_object(self, pathname, report=True):
         ''' Get the container with the specified pathname.
             Returns the container and the name of the root object.
         '''
@@ -313,12 +339,11 @@ class ConsoleServer(cmd.Cmd):
         for k, v in cont.items():
             if is_instance(v, Component):
                 comp = {}
-                if cont is self.proj._model_globals:
+                if cont is self.proj._project_globals:
                     comp['pathname'] = k
-                    children = self._get_components(v, k)
                 else:
                     comp['pathname'] = '.'.join([pathname, k]) if pathname else k
-                    children = self._get_components(v, comp['pathname'])
+                children = self._get_components(v, comp['pathname'])
                 if len(children) > 0:
                     comp['children'] = children
                 comp['type'] = str(v.__class__.__name__)
@@ -332,206 +357,22 @@ class ConsoleServer(cmd.Cmd):
     def get_components(self):
         ''' Get hierarchical dictionary of openmdao objects.
         '''
-        return jsonpickle.encode(self._get_components(self.proj._model_globals))
+        return json.dumps(self._get_components(self.proj._project_globals),
+                          default=json_default)
 
     def get_connections(self, pathname, src_name, dst_name):
-        ''' Get list of source variables, destination variables, and the
-            connections between them.
+        ''' For the assembly with the given pathname, get a list of the outputs
+            from the component *src_name* (sources), the inputs to the component
+            *dst_name* (destinations), and the connections between them.
         '''
         conns = {}
-        asm, root = self.get_container(pathname)
+        asm, root = self.get_object(pathname)
         if asm:
             try:
-                # outputs
-                sources = []
-                if src_name:
-                    src = asm.get(src_name)
-                else:
-                    src = asm
-                connected = src.list_outputs(connected=True)
-                for name in src.list_outputs():
-                    var = src.get(name)
-                    vtype = type(var).__name__
-                    units = ''
-                    meta = src.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    valid = src.get_valid([name])[0]
-                    sources.append({'name': name,
-                                    'type': vtype,
-                                    'valid': valid,
-                                    'units': units,
-                                    'connected': (name in connected)
-                                   })
-                    if isinstance(var, VariableTree):
-                        for var_name in var.list_vars():
-                            vt_var = var.get(var_name)
-                            units = ''
-                            meta = var.get_metadata(var_name)
-                            if meta and 'units' in meta:
-                                units = meta['units']
-                            sources.append({'name': name + '.' + var_name,
-                                            'type':  type(vt_var).__name__,
-                                            'valid': valid,
-                                            'units': units,
-                                            'connected': (name in connected)
-                                           })
-                    elif vtype == 'ndarray':
-                        for idx in range(0, len(var)):
-                            vname = name + '[' + str(idx) + ']'
-                            dtype = type(var[0]).__name__
-                            units = ''
-                            sources.append({'name': vname,
-                                            'type': dtype,
-                                            'valid': valid,
-                                            'units': units,
-                                            'connected': (vname in connected)
-                                           })
-
-                # connections to assembly can be passthrough (input to input)
-                if src is asm:
-                    connected = src.list_inputs(connected=True)
-                    for name in src.list_inputs():
-                        var = src.get(name)
-                        vtype = type(var).__name__
-                        units = ''
-                        sources.append({'name': name,
-                                        'type': vtype,
-                                        'valid': src.get_valid([name])[0],
-                                        'units': units,
-                                        'connected': (name in connected)
-                                       })
-                        if isinstance(var, VariableTree):
-                            for var_name in var.list_vars():
-                                vt_var = var.get(var_name)
-                                units = ''
-                                meta = var.get_metadata(var_name)
-                                if meta and 'units' in meta:
-                                    units = meta['units']
-                                sources.append({'name': name + '.' + var_name,
-                                                'type':  type(vt_var).__name__,
-                                                'valid': valid,
-                                                'units': units,
-                                                'connected': (name in connected)
-                                               })
-                        elif vtype == 'ndarray':
-                            for idx in range(0, len(var)):
-                                vname = name + '[' + str(idx) + ']'
-                                dtype = type(var[0]).__name__
-                                units = ''
-                                sources.append({'name': vname,
-                                                'type': dtype,
-                                                'valid': valid,
-                                                'units': units,
-                                                'connected': (vname in connected)
-                                               })
-
-                conns['sources'] = sorted(sources, key=lambda d: d['name'])
-
-                # inputs
-                dests = []
-                if dst_name:
-                    dst = asm.get(dst_name)
-                else:
-                    dst = asm
-                connected = dst.list_inputs(connected=True)
-                for name in dst.list_inputs():
-                    var = dst.get(name)
-                    vtype = type(var).__name__
-                    units = ''
-                    meta = dst.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    dests.append({'name': name,
-                                  'type': vtype,
-                                  'valid': dst.get_valid([name])[0],
-                                  'units': units,
-                                  'connected': (name in connected)
-                                })
-                    if isinstance(var, VariableTree):
-                        for var_name in var.list_vars():
-                            vt_var = var.get(var_name)
-                            units = ''
-                            meta = var.get_metadata(var_name)
-                            if meta and 'units' in meta:
-                                units = meta['units']
-                            dests.append({'name': name + '.' + var_name,
-                                          'type': type(vt_var).__name__,
-                                          'valid': valid,
-                                          'units': units,
-                                          'connected': (name in connected)
-                                         })
-                    elif vtype == 'ndarray':
-                        for idx in range(0, len(var)):
-                            vname = name + '[' + str(idx) + ']'
-                            dtype = type(var[0]).__name__
-                            units = ''
-                            dests.append({'name': vname,
-                                          'type': dtype,
-                                          'valid': valid,
-                                          'units': units,
-                                          'connected': (vname in connected)
-                                         })
-
-                # connections to assembly can be passthrough (output to output)
-                if dst == asm:
-                    connected = dst.list_outputs(connected=True)
-                    for name in dst.list_outputs():
-                        var = dst.get(name)
-                        vtype = type(var).__name__
-                        units = ''
-                        meta = dst.get_metadata(name)
-                        if meta and 'units' in meta:
-                            units = meta['units']
-                        dests.append({'name': name,
-                                      'type': type(var).__name__,
-                                      'valid': dst.get_valid([name])[0],
-                                      'units': units,
-                                      'connected': (name in connected)
-                                     })
-                        if isinstance(var, VariableTree):
-                            for var_name in var.list_vars():
-                                vt_var = var.get(var_name)
-                                units = ''
-                                meta = var.get_metadata(var_name)
-                                if meta and 'units' in meta:
-                                    units = meta['units']
-                                dests.append({'name': name + '.' + var_name,
-                                              'type': type(vt_var).__name__,
-                                              'valid': valid,
-                                              'units': units,
-                                              'connected': (name in connected)
-                                             })
-                        elif vtype == 'ndarray':
-                            for idx in range(0, len(var)):
-                                vname = name + '[' + str(idx) + ']'
-                                dtype = type(var[0]).__name__
-                                units = ''
-                                dests.append({'name': vname,
-                                              'type': dtype,
-                                              'valid': valid,
-                                              'units': units,
-                                              'connected': (vname in connected)
-                                             })
-
-                conns['destinations'] = sorted(dests, key=lambda d: d['name'])
-
-                # connections
-                connections = []
-                conntuples = asm.list_connections(show_passthrough=True)
-                comp_names = asm.list_components()
-                for src_var, dst_var in conntuples:
-                    src_root = src_var.split('.')[0]
-                    dst_root = dst_var.split('.')[0]
-                    if ((src_name and src_root == src_name) or \
-                       (not src_name and src_root not in comp_names)) \
-                    and ((dst_name and dst_root == dst_name) or \
-                        (not dst_name and dst_root not in comp_names)):
-                        connections.append([src_var, dst_var])
-                conns['connections'] = connections
+                conns = asm.get_connections(src_name, dst_name)
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return jsonpickle.encode(conns)
+        return json.dumps(conns, default=json_default)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -541,7 +382,7 @@ class ConsoleServer(cmd.Cmd):
         dataflow = {}
         if pathname and len(pathname) > 0:
             try:
-                asm, root = self.get_container(pathname)
+                asm, root = self.get_object(pathname)
                 if has_interface(asm, IAssembly):
                     dataflow = asm.get_dataflow()
             except Exception as err:
@@ -552,34 +393,39 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Component):
                     inames = [cls.__name__
                               for cls in list(implementedBy(v.__class__))]
-                    components.append({'name': k,
-                                       'pathname': k,
-                                       'type': type(v).__name__,
-                                       'valid': v.is_valid(),
-                                       'interfaces': inames,
-                                       'python_id': id(v)
-                                      })
-            dataflow['components'] = components
+                    components.append({
+                        'name': k,
+                        'pathname': k,
+                        'type': type(v).__name__,
+                        'valid': v.is_valid(),
+                        'interfaces': inames,
+                        'python_id': id(v)
+                    })
+            dataflow['components']  = components
             dataflow['connections'] = []
-            dataflow['parameters'] = []
+            dataflow['parameters']  = []
             dataflow['constraints'] = []
-            dataflow['objectives'] = []
-        return jsonpickle.encode(dataflow)
+            dataflow['objectives']  = []
+        return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
         ''' Serve a list of events that are available to a driver.
         '''
         events = []
         if pathname:
-            drvr, root = self.get_container(pathname)
+            drvr, root = self.get_object(pathname)
             events = drvr.list_available_events()
 
-        return jsonpickle.encode(events)
+        return json.dumps(events, default=json_default)
 
     def get_workflow(self, pathname):
+        ''' Get the workflow for the specified driver or assembly.
+            If no driver or assembly is specified, get the workflows for
+            all of the top-level assemblies.
+        '''
         flows = []
         if pathname:
-            drvr, root = self.get_container(pathname)
+            drvr, root = self.get_object(pathname)
             # allow for request on the parent assembly
             if is_instance(drvr, Assembly):
                 drvr = drvr.get('driver')
@@ -595,55 +441,54 @@ class ConsoleServer(cmd.Cmd):
                 if is_instance(v, Assembly):
                     v = v.get('driver')
                 if is_instance(v, Driver):
-                    flow = {}
-                    flow['pathname'] = v.get_pathname()
-                    flow['type'] = type(v).__module__ + '.' + type(v).__name__
-                    flow['workflow'] = []
-                    flow['valid'] = v.is_valid()
-                    for comp in v.workflow:
-                        pathname = comp.get_pathname()
-                        if is_instance(comp, Assembly) and comp.driver:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'driver':   comp.driver.get_workflow(),
-                                'valid':    comp.is_valid()
-                              })
-                        elif is_instance(comp, Driver):
-                            flow['workflow'].append(comp.get_workflow())
-                        else:
-                            flow['workflow'].append({
-                                'pathname': pathname,
-                                'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                                'valid':    comp.is_valid()
-                              })
+                    flow = v.get_workflow()
                     flows.append(flow)
-        return jsonpickle.encode(flows)
+        return json.dumps(flows, default=json_default)
 
     def get_attributes(self, pathname):
+        ''' Get the attributes of the specified object.
+        '''
         attr = {}
-        comp, root = self.get_container(pathname)
-        if comp:
-            try:
+        comp, root = self.get_object(pathname)
+        try:
+            if comp:
                 attr = comp.get_attributes(io_only=False)
-            except Exception as err:
-                self._error(err, sys.exc_info())
-        return jsonpickle.encode(attr)
+            return json.dumps(attr, default=json_default)
+        except Exception as err:
+            self._error(err, sys.exc_info())
+
+    def get_passthroughs(self, pathname):
+        ''' Get the inputs and outputs of the assembly's child components
+            and indicate for each whether or not it is a passthrough variable.
+        '''
+        asm, root = self.get_object(pathname)
+        passthroughs = asm.get_passthroughs()
+        return json.dumps(passthroughs, default=json_default)
 
     def get_value(self, pathname):
         ''' Get the value of the object with the given pathname.
         '''
         try:
-            val, root = self.get_container(pathname)
+            val, root = self.get_object(pathname)
             return val
         except Exception as err:
             self._print_error("error getting value: %s" % err)
 
     def get_types(self):
-        return packagedict(get_available_types())
+        ''' Get a dictionary of types available for creation.
+        '''
+        #Don't want to get variable types showing up, so we exclude
+        #'openmdao.variable' from this list.
+        keyset = set(plugin_groups.keys())
+        exclset = set(['openmdao.variable'])
+        groups = list(keyset - exclset)
+        return packagedict(get_available_types(groups))
 
-    @modifies_model
+    @modifies_state
     def load_project(self, projdir):
+        ''' Activate the project in the specified directory;
+            instantiate a file manager and projdirfactory.
+        '''
         _clear_insts()
         self.cleanup()
 
@@ -666,6 +511,7 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
+    @modifies_project
     def commit_project(self, comment=''):
         ''' Save the current project macro and commit to the project repo.
         '''
@@ -679,9 +525,9 @@ class ConsoleServer(cmd.Cmd):
         else:
             self._print_error('No Project to commit')
 
-    @modifies_model
+    @modifies_project
     def revert_project(self, commit_id=None):
-        ''' Revert back to the most recent commit of the project.
+        ''' Revert to the most recent commit of the project.
         '''
         if self.proj:
             try:
@@ -708,12 +554,26 @@ class ConsoleServer(cmd.Cmd):
         except Exception as err:
             self._error(err, sys.exc_info())
 
-    @modifies_model
-    def add_component(self, name, classname, parentname, args):
-        ''' Add a new component of the given type to the specified parent.
+    def put_object(self, pathname, classname, args=None):
+        ''' Create or replace object with the given pathname with a new object
+            of the specified type.
         '''
+        obj, root = self.get_object(pathname, report=False)
+        if obj:
+            self.replace_object(pathname, classname, args)
+        else:
+            self.add_object(pathname, classname, args)
+
+    @modifies_project
+    @modifies_state
+    def add_object(self, pathname, classname, args):
+        ''' Add a new object of the given type to the specified parent.
+        '''
+        parentname, dot, name = pathname.rpartition('.')
         if isidentifier(name):
             name = name.encode('utf8')
+            if args is None:
+                args = ''
             cmd = 'create("%s"%s)' % (classname, args)
             if parentname:
                 cmd = '%s.add("%s", %s)' % (parentname, name, cmd)
@@ -724,12 +584,13 @@ class ConsoleServer(cmd.Cmd):
             except Exception as err:
                 self._error(err, sys.exc_info())
         else:
-            self._print_error('Error adding component:'
+            self._print_error('Error adding object:'
                               ' "%s" is not a valid identifier' % name)
 
-    @modifies_model
-    def replace_component(self, pathname, classname, args):
-        ''' Replace existing component with component of the given type.
+    @modifies_project
+    @modifies_state
+    def replace_object(self, pathname, classname, args=None):
+        ''' Replace existing object with object of the given type.
         '''
         pathname = pathname.encode('utf8')
         parentname, dot, name = pathname.rpartition('.')
@@ -755,7 +616,7 @@ class ConsoleServer(cmd.Cmd):
             self.files.cleanup()
 
     def get_files(self):
-        ''' get a nested dictionary of files
+        ''' Get a nested dictionary of files.
         '''
         try:
             return self.files.get_files(root=self.proj.path)
@@ -764,32 +625,40 @@ class ConsoleServer(cmd.Cmd):
 
     def get_file(self, filename):
         ''' Get contents of a file.
-            Returns None if file was not found.
+            Returns a tuple of (file contents, mimetype, encoding).
+            Tuple values will be None if file was not found.
         '''
         return self.files.get_file(filename)
 
+    @modifies_project
     def ensure_dir(self, dirname):
         ''' Create directory
             (does nothing if directory already exists).
         '''
         return self.files.ensure_dir(dirname)
 
+    @modifies_project
     def write_file(self, filename, contents):
         ''' Write contents to file.
         '''
-        return self.files.write_file(filename, contents)
+        ret = self.files.write_file(filename, contents)
+        if not ret is True:
+            return ret
 
+    @modifies_project
     def add_file(self, filename, contents):
         ''' Add file.
         '''
         return self.files.add_file(filename, contents)
 
+    @modifies_project
     def delete_file(self, filename):
         ''' Delete file from project.
-            Returns False if file was not found; otherwise, returns True.
+            Returns False if file was not found; otherwise returns True.
         '''
         return self.files.delete_file(filename)
 
+    @modifies_project
     def rename_file(self, oldpath, newname):
         ''' Rename file.
         '''
@@ -811,15 +680,20 @@ class ConsoleServer(cmd.Cmd):
                 self._start_log_msgs(pathname)
             else:
                 self._stop_log_msgs()
+        elif pathname.startswith('/'):  # treat it as a filename
+            if publish:
+                Publisher.register(pathname, pathname[1:])
+            else:
+                Publisher.unregister(pathname)
         else:
-            parts = pathname.split('.')
+            parts = pathname.split('.', 1)
             if len(parts) > 1:
                 root = self.proj.get(parts[0])
                 if root:
-                    rest = '.'.join(parts[1:])
+                    rest = parts[1]
                     root.register_published_vars(rest, publish)
 
-            cont, root = self.get_container(pathname)
+            cont, root = self.get_object(pathname)
             if has_interface(cont, IComponent):
                 if publish:
                     if pathname in self._publish_comps:
@@ -894,11 +768,12 @@ class ConsoleServer(cmd.Cmd):
         if pdf:
             if self.is_macro(filename):
                 return True
-            filename = filename.lstrip('/')
-            filename = os.path.join(self.proj.path, filename)
-            info = pdf._files.get(filename)
-            if info and _match_insts(info.classes.keys()):
-                return True
+            if filename.endswith('.py'):
+                filename = filename.lstrip('/')
+                filename = os.path.join(self.proj.path, filename)
+                info = pdf._files.get(filename)
+                if info and _match_insts(info.classes.keys()):
+                    return True
         return False
 
 

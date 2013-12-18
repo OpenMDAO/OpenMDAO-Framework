@@ -8,7 +8,7 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 
 
-from openmdao.lib.datatypes.api import Float, Int, Array, Str, Slot
+from openmdao.main.datatypes.api import Float, Int, Array, Str, Slot
 
 import mool.Optimization.MidFiModel
 

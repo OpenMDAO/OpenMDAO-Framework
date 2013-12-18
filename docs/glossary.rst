@@ -466,8 +466,9 @@ Glossary
         Database Abstraction Library
 
 
-      **Slot**
-        A placeholder for a plugin within a :term:`Component`.
+      **Slot** 
+        A Slot is a variable that requires any value assigned to it to be either an instance of
+	a specific class or an implementation of a specific Interface.
 
       
       **SlotList**
@@ -491,24 +492,7 @@ Glossary
    
       **Tempita**
         Tempita is a small templating language for text substitution.
-     
-          
-      **ticket**
-        A ticket is a file contained within an issue (or bug) tracking system
-        that contains information about a request, often by an end user, to
-        fix a bug or make some other change to a computer software package. A
-        ticket has a unique reference number (ticket number) that allows the
-        submitter, software developer, or other technical staff to quickly
-        locate, add to, or communicate the status of the submitter's issue or
-        request. Once OpenMDAO's bug-tracking tool is in place, all changes to
-        the software will require a ticket, and the ticket number will identify
-        the software :term:`branch` where the change is being made.
-
-
-      **Trac**
-        An open source, web-based project management and bug-tracking tool. OpenMDAO uses Trac
-        to track bugs, enhancements, and requirements and to host openmdao.org.
-      
+    
       
       **Traits**
         A software package from Enthought, Inc. A trait is

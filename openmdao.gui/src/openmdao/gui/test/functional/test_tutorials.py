@@ -11,6 +11,8 @@ from nose.tools import with_setup
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
 
+from pageobjects.util import NotifierPage
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -29,19 +31,18 @@ def _test_MDAO_MDF(browser):
     workspace_page.add_file(file_path)
 
     # Add Disciplines to assembly.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'sellar.Discipline1', 'dis1')
-    workspace_page.add_library_item_to_dataflow(
-        'sellar.Discipline2', 'dis2')
+    workspace_page.add_library_item_to_dataflow('sellar.Discipline1', 'dis1')
+    workspace_page.add_library_item_to_dataflow('sellar.Discipline2', 'dis2')
 
     # Replace Run_Once with SLSQP
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.slsqpdriver.SLSQPdriver')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
+
     # Add Solver
     workspace_page.add_library_item_to_dataflow(
         'openmdao.lib.drivers.iterate.FixedPointIterator',
-        'solver', offset=(150, 50))
+        'solver')
 
     # One data connection
     dis1 = workspace_page.get_dataflow_figure('dis1', 'top')
@@ -66,6 +67,8 @@ def _test_MDAO_MDF(browser):
     editor = driver.editor_page(base_type='Driver')
     editor.move(-100, -100)
 
+    editor('inputs_tab').click()
+    
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
     dialog.target = 'dis1.y2'
@@ -118,21 +121,30 @@ def _test_MDAO_MDF(browser):
     dialog('ok').click()
     editor.close()
 
+    # Set Initial Conditions
+    workspace_page.do_command("top.dis1.z1 = top.dis2.z1 = 5.0")    
+    workspace_page.do_command("top.dis1.z2 = top.dis2.z2 = 2.0")    
+    workspace_page.do_command("top.dis1.x1 = 1.0")    
+    workspace_page.do_command("top.solver.tolerance = .00001")    
+
     # Get an implicitly connected output before the run.
     dis1_fig = workspace_page.get_dataflow_figure('dis1', 'top')
     editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
-    eq(outputs.value[3][:3], ['y1', 'float', '0'])
+    eq(outputs.value[0][1:3], ['y1', '0'])
     editor.close()
 
     # Run the model
-    workspace_page.run()
+    top = workspace_page.get_dataflow_figure('top')
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
 
     # Verify implicitly connected output has been updated with valid result.
     editor = dis1_fig.editor_page()
     outputs = editor.get_outputs()
-    eq(outputs.value[3][:2], ['y1', 'float'])
-    dis1_y1 = float(outputs.value[3][2])
+    eq(outputs.value[0][1], 'y1')
+    dis1_y1 = float(outputs.value[0][2])
     if abs(dis1_y1 - 3.16) > 0.01:
         raise TestCase.failureException(
             "Output dis1.y1 did not reach correct value, but instead is %s"

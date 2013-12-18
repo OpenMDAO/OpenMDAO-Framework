@@ -4,17 +4,18 @@ DB (Python's sqlite.)
 
 import sys
 import sqlite3
-import uuid
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
+
+from traits.trait_handlers import TraitListObject, TraitDictObject
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id','uuid','parent','label','msg','retries', \
-                        'model_id','timeEnter'])
-_vartable_attrs = set(['var_id','name','case_id','sense','value'])
+_casetable_attrs = set(['id', 'uuid', 'parent', 'label', 'msg', 'retries', \
+                        'model_id', 'timeEnter'])
+_vartable_attrs = set(['var_id', 'name', 'case_id', 'sense', 'value'])
 
 def _query_split(query):
     """Return a tuple of lhs, relation, rhs after splitting on 
@@ -71,12 +72,12 @@ class DBCaseIterator(object):
         sql = ["SELECT * FROM cases"]
         if self.selectors is not None:
             for sel in self.selectors:
-                rhs,rel,lhs = _query_split(sel)
+                rhs, rel, lhs = _query_split(sel)
                 if rhs in _casetable_attrs:
                     if len(sql) == 1:
-                        sql.append("WHERE %s%s%s" % (rhs,rel,lhs))
+                        sql.append("WHERE %s%s%s" % (rhs, rel, lhs))
                     else:
-                        sql.append("AND %s%s%s" % (rhs,rel,lhs))
+                        sql.append("AND %s%s%s" % (rhs, rel, lhs))
             
         casecur = self._connection.cursor()
         casecur.execute(' '.join(sql))
@@ -84,9 +85,9 @@ class DBCaseIterator(object):
         sql = ['SELECT var_id,name,case_id,sense,value from casevars WHERE case_id=%s']
         if self.selectors is not None:
             for sel in self.selectors:
-                rhs,rel,lhs = _query_split(sel)
+                rhs, rel, lhs = _query_split(sel)
                 if rhs in _vartable_attrs:
-                    sql.append("AND %s%s%s" % (rhs,rel,lhs))
+                    sql.append("AND %s%s%s" % (rhs, rel, lhs))
         combined = ' '.join(sql)
         varcur = self._connection.cursor()
         
@@ -95,15 +96,16 @@ class DBCaseIterator(object):
             inputs = []
             outputs = []
             for var_id, vname, case_id, sense, value in varcur:
-                if not isinstance(value, (float,int,str)):
+                if not isinstance(value, (float, int, str)):
                     try:
                         value = loads(str(value))
                     except UnpicklingError as err:
-                        raise UnpicklingError("can't unpickle value '%s' for case '%s' from database: %s" %
-                                              (vname, cname, str(err)))
-                if sense=='i':
+                        raise UnpicklingError("can't unpickle value '%s' for"
+                                              " case '%s' from database: %s"
+                                              % (vname, cname, str(err)))
+                if sense == 'i':
                     inputs.append((vname, value))
-                else:
+                elif sense == 'o':
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
                 yield Case(inputs=inputs, outputs=outputs,
@@ -208,21 +210,35 @@ class DBCaseRecorder(object):
                                       case.msg or '', case.retries, 
                                       self.model_id))
         case_id = cur.lastrowid
-        # insert the inputs and outputs into the vars table.  Pickle them if they're not one of the
-        # built-in types int, float, or str.
+        # insert the inputs and outputs into the vars table.  Pickle them if
+        # they're not one of the built-in types int, float, or str.
         
-        for name,value in case.items(iotype='in'):
-            if isinstance(value, (float,int,str)):
+        v = (None, 'timestamp', case_id, None, case.timestamp )
+        cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
+                    v)
+
+        for name, value in case.items(iotype='in'):
+            if isinstance(value, (float, int, str)):
                 v = (None, name, case_id, 'i', value)
             else:
-                v = (None, name, case_id, 'i', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+                if isinstance(value, TraitDictObject):
+                    value = dict(value)
+                elif isinstance(value, TraitListObject):
+                    value = list(value)
+                v = (None, name, case_id, 'i', 
+                     sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
             cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
                         v)
-        for name,value in case.items(iotype='out'):
-            if isinstance(value, (float,int,str)):
+        for name, value in case.items(iotype='out'):
+            if isinstance(value, (float, int, str)):
                 v = (None, name, case_id, 'o', value)
             else:
-                v = (None, name, case_id, 'o', sqlite3.Binary(dumps(value,HIGHEST_PROTOCOL)))
+                if isinstance(value, TraitDictObject):
+                    value = dict(value)
+                elif isinstance(value, TraitListObject):
+                    value = list(value)
+                v = (None, name, case_id, 'o', 
+                     sqlite3.Binary(dumps(value, HIGHEST_PROTOCOL)))
             cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)", 
                         v)
         self._connection.commit()
@@ -308,7 +324,7 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         
     """
     connection = sqlite3.connect(dbname)
-    vardict = dict([(name,[]) for name in varnames])
+    vardict = dict([(name, []) for name in varnames])
 
     sql = ["SELECT id FROM cases"]
     qlist = []
@@ -325,14 +341,15 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
     
     sql = ["SELECT name, value from casevars WHERE case_id=%s"]
     vars_added = False
-    for i,name in enumerate(vardict.keys()):
-        if i==0:
+    for i, name in enumerate(vardict.keys()):
+        if i == 0:
             sql.append("AND (")
         else:
             sql.append("OR")
         sql.append("name='%s'" % name)
         vars_added = True
-    if vars_added: sql.append(")")
+    if vars_added:
+        sql.append(")")
     
     if var_sql:
         sql.append(" AND %s" % var_sql)
@@ -344,16 +361,17 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=Fa
         casedict = {}
         varcur.execute(combined % case_id)
         for vname, value in varcur:
-            if not isinstance(value, (float,int,str)):
+            if not isinstance(value, (float, int, str)):
                 try:
                     value = loads(str(value))
                 except UnpicklingError as err:
-                    raise UnpicklingError("can't unpickle value '%s' from database: %s" %
-                                          (vname, str(err)))
+                    raise UnpicklingError("can't unpickle value '%s' from"
+                                          " database: %s" % (vname, str(err)))
             casedict[vname] = value
         
         if len(casedict) != len(vardict):
-            continue   # case doesn't contain a complete set of specified vars, so skip it to avoid data mismatches
+            continue   # case doesn't contain a complete set of specified vars,
+                       # so skip it to avoid data mismatches
         
         for name, value in casedict.items():
             vardict[name].append(value)
@@ -369,7 +387,7 @@ def _get_lines(dbname, xnames, ynames, case_sql=None, var_sql=None):
     lines = []
     yvals = []
     xvals = []
-    for i,name in enumerate(ynames):
+    for i, name in enumerate(ynames):
         yvals.append(vardict[name])
         if len(xnames) == 0:
             xvals.append(range(len(vardict[name])))
@@ -378,7 +396,7 @@ def _get_lines(dbname, xnames, ynames, case_sql=None, var_sql=None):
         else:
             xvals.append(vardict[xnames[i]])
     
-    for xdata,ydata in zip(xvals, yvals):
+    for xdata, ydata in zip(xvals, yvals):
         lines.append((xdata, ydata))
         
     return lines
@@ -436,7 +454,7 @@ def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
     fig = plt.figure()
     fig.add_subplot(111)
     
-    for i,line in enumerate(_get_lines(dbname, xnames, ynames, case_sql, var_sql)):
+    for i, line in enumerate(_get_lines(dbname, xnames, ynames, case_sql, var_sql)):
         args = []
         kwargs = {}
         args.append(line[0])

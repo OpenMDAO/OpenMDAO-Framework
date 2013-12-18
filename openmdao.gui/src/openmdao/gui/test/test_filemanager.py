@@ -5,6 +5,7 @@ import tempfile
 import zipfile
 
 from openmdao.gui.filemanager import FileManager
+from openmdao.util.fileutil import onerror
 
 
 class FileManagerTestCase(unittest.TestCase):
@@ -14,15 +15,13 @@ class FileManagerTestCase(unittest.TestCase):
         self.tempdir = os.path.realpath(tempdir)  # osx
 
     def tearDown(self):
-        shutil.rmtree(self.tempdir)
+        shutil.rmtree(self.tempdir, onerror=onerror)
 
     def test_filemanager(self):
         # exercise filemanager functions
-        
-        orig_dir = os.getcwd()
-        
+
         tempdir = self.tempdir
-        
+
         # constructor
         filemanager = FileManager('test', tempdir)
 
@@ -42,8 +41,10 @@ class FileManagerTestCase(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, sname)))
 
         # get_file
-        contents = filemanager.get_file(sname)
+        (contents, mimetype, encoding) = filemanager.get_file(sname)
         self.assertEqual(contents, hello)
+        self.assertEqual(mimetype, 'text/x-python')
+        self.assertEqual(encoding, None)
 
         # get_files
         # note that os.sep will be prepended to all file names
@@ -74,7 +75,7 @@ class FileManagerTestCase(unittest.TestCase):
 
     def test_add_file(self):
         # exercise filemanager add_file function
-        
+
         # create a zip file
         tempdir = tempfile.mkdtemp()
         tempdir = os.path.realpath(tempdir)  # osx
@@ -91,7 +92,7 @@ class FileManagerTestCase(unittest.TestCase):
             with open(tempzip, 'rb') as f:
                 contents = f.read()
         finally:
-            shutil.rmtree(tempdir)
+            shutil.rmtree(tempdir, onerror=onerror)
 
         # add_file
         filemanager = FileManager('test', self.tempdir)

@@ -11,8 +11,9 @@ from openmdao.examples.mdao.sellar_CO import SellarCO
 from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
 from openmdao.main.api import Assembly, Component, set_as_top
+import openmdao.main.pseudocomp as pcompmod
 from openmdao.lib.drivers.api import CONMINdriver
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
 from openmdao.util.testutil import assert_rel_error
@@ -91,11 +92,11 @@ class SellarCO_Multi(Assembly):
     January 1996.
     """
 
-    z1 = Float()
-    z2 = Float()
-    x1 = Float()
-    y1 = Float()
-    y2 = Float()
+    z1 = Float(iotype='in')
+    z2 = Float(iotype='in')
+    x1 = Float(iotype='in')
+    y1 = Float(iotype='in')
+    y2 = Float(iotype='in')
     
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -125,10 +126,7 @@ class SellarCO_Multi(Assembly):
         #Parameters - Global Optimization
         # using group parameters to 'broadcast' same data 
         self.driver.add_objective('x1**2 + z2 + y1 + math.exp(-y2)')
-        for param,low,high in zip([('z1','dis1.z1','dis2b.z1'), 
-                                   ('z2','dis1.z2','dis2c.z2'), 
-                                   ('x1','dis1.x1'), ('y1','dis2a.y1'), 
-                                   ('y2','dis1.y2')],
+        for param,low,high in zip(['z1', 'z2', 'x1', 'y1', 'y2'],
                                   [-10.0, 0.0, 0.0, 3.16, -10.0],
                                   [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)
@@ -188,7 +186,7 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test. """
-        pass
+        pcompmod._count = 0
 
     def tearDown(self):
         """ Called after each test. """
@@ -281,10 +279,28 @@ class TestCase(unittest.TestCase):
         prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
         prob.dis1.x1 = prob.x1_store = 1.0
     
+        # gotta run the components, but not the driver
+        prob.sa_dis1.workflow.run()
+        prob.sa_dis1.workflow.initialize_residual()
+        
+        edges = prob.sa_dis1.workflow._edges
+        self.assertEqual(set(edges['@in0']), set(['_pseudo_7.in3', '~~0.dis1|x1']))
+        self.assertEqual(set(edges['~~0.dis1|y1']), set(['_pseudo_5.in0', '_pseudo_7.in0']))
+        self.assertEqual(set(edges['_pseudo_5.out0']), set(['@out1']))
+        #self.assertEqual(set(edges['@source0']), set(['@out1']))
+        self.assertEqual(set(edges['_pseudo_7.out0']), set(['@out0']))
+        self.assertEqual(len(edges), 6)
+    
         prob.run()
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
+        
+        self.assertEqual(prob.check_gradient(), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0']), [])
+        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], 
+                                             outputs=['_pseudo_2.out0', '_pseudo_2.out0']), [])
         
 
 if __name__ == '__main__':

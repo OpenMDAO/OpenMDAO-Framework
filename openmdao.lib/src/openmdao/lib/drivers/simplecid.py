@@ -3,7 +3,7 @@ with a CaseRecorder. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
-from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.datatypes.api import Slot
 testdict = {}
 
@@ -53,5 +53,8 @@ class SimpleCaseIterDriver(Driver):
         try:
             case.update_outputs(self.parent, msg)
         except Exception as err:
-            case.msg = msg + " : " + str(err)
+            if msg is None:
+                case.msg = str(err)
+            else:
+                case.msg = msg + ":" + str(err)
 

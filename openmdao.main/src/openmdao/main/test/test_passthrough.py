@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 
 
 class Simple(Component):
@@ -53,27 +53,29 @@ class PassthroughTestCase(unittest.TestCase):
         top.driver.workflow.add(['c1','a1','c3'])
         a1.driver.workflow.add(['c2'])
         
-        top.connect('c1.c', 'a1.c2.b')
-        top.connect('a1.c2.d', 'c3.a')
+        a1.create_passthrough('c2.b')
+        a1.create_passthrough('c2.d')
+        top.connect('c1.c', 'a1.b')
+        top.connect('a1.d', 'c3.a')
         
     def test_simple_passthrough(self):
         varnames = ['a','b','c','d']
         self._setup_simple()
         self.assertEqual(set(self.asm.c1.list_outputs()),
                          set(['c','d', 'derivative_exec_count', 'exec_count', 'itername']))
-        self.assertTrue('c2.b' in self.asm.a1.list_inputs())
+        self.assertTrue('b' in self.asm.a1.list_inputs())
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-2,2,0,-4))
-        self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c3.get_valid(varnames),
                          [True,True,True,True])
-        self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.a1.c2.get_valid(varnames),
                          [True,True,True,True])
-        self.assertEqual([self.asm.c1._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c1.get_valid(varnames),
                          [True,True,True,True])
         self.asm.c1.a = 6
-        self.assertEqual([self.asm.c3._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.c3.get_valid(varnames),
                          [False,True,False,False])
-        self.assertEqual([self.asm.a1.c2._valid_dict[n] for n in varnames],
+        self.assertEqual(self.asm.a1.c2.get_valid(varnames),
                          [True,False,False,False])
         self.asm.run()
         self.assertEqual(self.asm.c3.getvals(), (-7,2,-5,-9))
@@ -90,13 +92,13 @@ class PassthroughTestCase(unittest.TestCase):
     def test_basics(self):
         c = Simple()
         c.connect('parent.c1.foo', 'a')
-        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
-        self.assertEqual([], c._depgraph.get_connected_outputs())
-        self.assertTrue('parent.c1.foo' in c._depgraph._graph['@xin']['@bin']['link']._srcs)
+        self.assertEqual(['a'], c._depgraph.get_boundary_inputs(connected=True))
+        self.assertEqual([], c._depgraph.get_boundary_outputs(connected=True))
+        self.assertTrue('parent.c1.foo' in c._depgraph)
         c.connect('c', 'parent.c2.a')
-        self.assertTrue('parent.c2.a' in c._depgraph._graph['@bout']['@xout']['link']._dests)
-        self.assertEqual(['a'], c._depgraph.get_connected_inputs())
-        self.assertEqual(['c'], c._depgraph.get_connected_outputs())
+        self.assertTrue('parent.c2.a' in c._depgraph)
+        self.assertEqual(['a'], c._depgraph.get_boundary_inputs(connected=True))
+        self.assertEqual(['c'], c._depgraph.get_boundary_outputs(connected=True))
         
         
         

@@ -2,8 +2,6 @@
 Exception classes for OpenMDAO.
 """
 
-import traceback
-
 class ConstraintError(ValueError):
     """Raised when a constraint is violated."""
     pass
@@ -23,9 +21,13 @@ class RunStopped(RuntimeError):
 
 class TracedError(Exception):
     """An exception that encapsulates another exception and its traceback."""
-    def __init__(self, orig_exc, tback):
-        self.traceback = tback.strip()
+    def __init__(self, orig_exc, tback=None):
+        if tback is None:
+            self.traceback = ''
+        else:
+            self.traceback = tback.strip()
         self.orig_exc = orig_exc
+        super(TracedError, self).__init__(str(orig_exc))
     
     def __str__(self):
         return str(self.orig_exc)

@@ -270,6 +270,12 @@ nav ul ul a.omg-disabled:hover {
     color:rgba(0,0,0,255);
 }
 
+.framework_var {
+    /*background:rgba(204,204,204,255);
+    color:rgba(0,0,0,255);*/
+    font-style:italic;
+}
+
 .parameter {
     color:rgba(100,180,255,255);
 }
@@ -278,6 +284,11 @@ nav ul ul a.omg-disabled:hover {
 }
 .objective {
     color:rgba(100,180,255,255);
+}
+
+/* specific styling for controls for gemoetry viewer */
+.jstree-geom a {
+    color:white;
 }
 
 /* specific icons for the items in the component tree */
@@ -324,6 +335,10 @@ nav ul ul a.omg-disabled:hover {
     background-position:-112px 0px;
 }
 
+/*Overriding jQuery UI ToolTip width*/
+div.ui-tooltip{
+    max-width: 200px;
+}
 /* end CSS3 */
 
 

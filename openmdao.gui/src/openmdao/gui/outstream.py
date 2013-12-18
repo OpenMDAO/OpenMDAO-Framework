@@ -9,7 +9,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 
 
 class OutStream(object):
-    """ A file like object that publishes the stream to a 0MQ PUB socket.
+    """ A file-like object that publishes the stream to a 0MQ PUB socket.
         (Borrowed from IPython, but stripped down a bit...)
     """
 
@@ -69,7 +69,7 @@ class OutStream(object):
 
 
 class OutStreamRedirector(Process):
-    ''' listen for output on the given port and dump it to a file
+    ''' Listen for output on the given port and dump it to a file.
     '''
 
     def __init__(self, name, addr, filename='sys.stdout'):

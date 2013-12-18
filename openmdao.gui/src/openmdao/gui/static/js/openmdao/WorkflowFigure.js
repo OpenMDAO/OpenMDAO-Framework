@@ -5,22 +5,22 @@
  *  containing figures for each of the components in the driver's workflow
  *
  *  Arguments:
- *      elm:    jQuery element which will contain the WorkflowFigure
- *      model:  object that provides access to the openmdao model
- *      driver: pathname of the driver of the parent workflow, if any
- *      json:   json representation of the workflow, per the openmdao server API
+ *      elm:      jQuery element which will contain the WorkflowFigure
+ *      project:  object that provides access to the openmdao project
+ *      driver:   pathname of the driver of the parent workflow, if any
+ *      json:     json representation of the workflow, per the openmdao server API
  **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowFigure = function(elm, model, driver, json) {
+openmdao.WorkflowFigure = function(elm, project, driver, json) {
     var self = this,
         pathname = json.pathname,
         name = openmdao.Util.getName(pathname),
         id = elm.attr('id')+'-'+pathname.replace(/\./g,'-')+'-WorkflowFigure',
         fig = jQuery('<div class="WorkflowFigure" id='+id+' style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
-        drvr_fig = new openmdao.WorkflowComponentFigure(fig,model,driver,json.pathname,json.type,json.valid),
+        drvr_fig = new openmdao.WorkflowComponentFigure(fig,project,driver,json.pathname,json.type,json.valid),
         flow_css = 'background-repeat:no-repeat', //;border-style:solid;border-color:yellow;border-width:thin;',
         flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+'/>')
             .appendTo(fig),
@@ -179,7 +179,8 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     };
 
     flow_div.droppable ({
-        accept: '.component, .IComponent',
+        accept: '.component, .IComponent, .DataflowFigure',
+        tolerance: 'pointer',
         greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(flow_div);
@@ -192,7 +193,14 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dragged_pathname,
                 dragged_parent;
 
-            if (dragged_object.hasClass('component')) {
+            if (dragged_object.hasClass('DataflowFigure')) {
+                dragged_pathname = jQuery(ui.draggable).attr('pathname');
+                dragged_parent = openmdao.Util.getPath(dragged_pathname);
+                if (dragged_parent === target_parent) {
+                    openmdao.drag_and_drop_manager.draggableOver(flow_div);
+                }
+            }
+            else if (dragged_object.hasClass('component')) {
                 dragged_pathname = jQuery(ui.draggable ).parent().attr("path");
                 dragged_parent = openmdao.Util.getPath(dragged_pathname);
                 if (dragged_parent === target_parent) {
@@ -204,20 +212,19 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             }
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            if (top_div) {
-                var drop_function = top_div.droppable('option', 'actualDropHandler');
-                drop_function(ev, ui);
+            var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+            if (dropTarget) {
+                dropTarget.droppable('option', 'dropHandler')(ev, ui);
             }
         },
-        actualDropHandler: function(ev,ui) {
+        dropHandler: function(ev,ui) {
             // could get same event multiple times if drop triggers for sibling targets
             if (this.dropEvent && this.dropEvent === ev.originalEvent) {
                 return;  // already handled this drop event
             }
             this.dropEvent = ev.originalEvent;
 
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
+            openmdao.drag_and_drop_manager.reset();
 
             var target_pathname = flow_div.data('pathname'),
                 target_parent = openmdao.Util.getPath(target_pathname),
@@ -227,14 +234,23 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 dropped_name,
                 prompt;
 
-            if (dropped_object.hasClass('component')) {
+            if (dropped_object.hasClass('DataflowFigure')) {
+                dropped_pathname = jQuery(ui.draggable).attr('pathname'),
+                dropped_parent = openmdao.Util.getPath(dropped_pathname);
+                if (dropped_parent === target_parent) {
+                    dropped_name = openmdao.Util.getName(dropped_pathname);
+                    cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
+                    project.issueCommand(cmd);
+                }
+            }
+            else if (dropped_object.hasClass('component')) {
                 // dropped from component tree, component must be in same assembly as the driver
                 dropped_pathname = jQuery(ui.draggable).parent().attr("path");
                 dropped_parent = openmdao.Util.getPath(dropped_pathname);
                 if (dropped_parent === target_parent) {
                     dropped_name = openmdao.Util.getName(dropped_pathname);
                     cmd = target_pathname + '.workflow.add("' + dropped_name + '")';
-                    model.issueCommand(cmd);
+                    project.issueCommand(cmd);
                 }
             }
             else if (dropped_object.hasClass('IComponent')) {
@@ -244,11 +260,11 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
                 prompt = 'Specify a name for the new '+dropped_name+'<br>'+
                          '(It will be added to '+target_parent +' and to <br>'+
                          'the workflow of '+ target_pathname+')';
-                openmdao.Util.addComponent(dropped_pathname, dropped_name,
-                                           target_parent, prompt, function(name) {
+                openmdao.project.addObject(dropped_pathname, dropped_name,
+                                         target_parent, prompt, function(name) {
                     // If successful, then add to workflow as well.
                     cmd = target_pathname+'.workflow.add("'+name+'")';
-                    model.issueCommand(cmd);
+                    project.issueCommand(cmd);
                 });
             }
         }
@@ -281,7 +297,7 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
     contextMenu.append(jQuery('<li>Clear Workflow</li>').click(function(e) {
         var cmd = pathname + '.workflow.clear();' +
                   pathname + '.config_changed();';
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }));
     ContextMenu.set(contextMenu.attr('id'), flow_div.attr('id'));
 
@@ -291,10 +307,13 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
         // Traverse server workflow checking for a match in figure list.
         jQuery.each(json, function(idx, comp) {
             var match = false,
-                remove = 0;
+                remove = 0,
+                comp_fig,
+                comp_pathname;
+
             if (comp_figs.length > idx) {
-                var comp_fig = comp_figs[idx],
-                    comp_pathname = comp_fig.getPathname();
+                comp_fig = comp_figs[idx];
+                comp_pathname = comp_fig.getPathname();
                 if (comp.driver && comp.driver.pathname === comp_pathname) {
                     // comp is an assembly (figure is a WorkflowFigure)
                     comp_fig.update(comp.driver);
@@ -320,17 +339,17 @@ openmdao.WorkflowFigure = function(elm, model, driver, json) {
             if (!match) {
                 if (comp.hasOwnProperty('workflow')) {
                     // new comp is a driver with it's own workflow
-                    comp_fig = new openmdao.WorkflowFigure(flow_div, model,
+                    comp_fig = new openmdao.WorkflowFigure(flow_div, project,
                                                            pathname, comp);
                 }
                 else if (comp.hasOwnProperty('driver')) {
                     // new comp is an assembly with a driver that has it's own workflow
-                    comp_fig = new openmdao.WorkflowFigure(flow_div, model,
+                    comp_fig = new openmdao.WorkflowFigure(flow_div, project,
                                                            pathname, comp.driver);
                 }
                 else {
                     comp_fig = new openmdao.WorkflowComponentFigure(flow_div,
-                                               model, pathname, comp.pathname,
+                                               project, pathname, comp.pathname,
                                                comp.type, comp.valid);
                 }
                 var removed = comp_figs.splice(idx, remove, comp_fig);

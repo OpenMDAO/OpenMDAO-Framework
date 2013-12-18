@@ -28,7 +28,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 class ExpectedImprovement(Component):
     best_case = Slot(CaseSet, iotype="in",
                        desc="CaseSet which contains a single case "
-                            "representing the criteria value.", required=True)
+                            "representing the criteria value.")
     
     criteria = Str(iotype="in",
                    desc="Name of the variable to maximize the expected "

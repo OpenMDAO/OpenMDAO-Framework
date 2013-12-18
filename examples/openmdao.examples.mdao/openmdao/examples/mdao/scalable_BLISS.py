@@ -1,10 +1,8 @@
 from openmdao.lib.optproblems.scalable import UnitScalableProblem
 
-from openmdao.lib.datatypes.api import Array, Float
+from openmdao.main.datatypes.api import Array, Float
 
 from openmdao.lib.drivers.api import BroydenSolver, SensitivityDriver, CONMINdriver, FixedPointIterator
-
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
 
 from openmdao.main.api import Component
 
@@ -80,7 +78,6 @@ class Scalable(UnitScalableProblem):
         mda.add_constraint("d2.y_out=d1.y_in1")
         
         sa0 = self.add('sa0',SensitivityDriver())
-        sa0.differentiator = FiniteDifference()
         sa0.add_parameter('d0.x0',low=-10,high=10)
         sa0.add_parameter('d0.x1',low=-10,high=10)
         sa0.add_parameter('d0.x2',low=-10,high=10)
@@ -88,7 +85,6 @@ class Scalable(UnitScalableProblem):
         sa0.add_constraint(d0_const)
         
         sa1 = self.add('sa1',SensitivityDriver())
-        sa1.differentiator = FiniteDifference()
         sa1.add_parameter('d1.x0',low=-10,high=10)
         sa1.add_parameter('d1.x1',low=-10,high=10)
         sa1.add_parameter('d1.x2',low=-10,high=10)
@@ -96,7 +92,6 @@ class Scalable(UnitScalableProblem):
         sa1.add_constraint(d1_const)
         
         sa2 = self.add('sa2',SensitivityDriver())
-        sa2.differentiator = FiniteDifference()
         sa2.add_parameter('d0.x0',low=-10,high=10)
         sa2.add_parameter('d0.x1',low=-10,high=10)
         sa2.add_parameter('d0.x2',low=-10,high=10)
@@ -104,7 +99,6 @@ class Scalable(UnitScalableProblem):
         sa2.add_constraint(d2_const)
         
         ssa = self.add('ssa',SensitivityDriver()) 
-        ssa.differentiator = FiniteDifference()
         ssa.add_parameter(("d0.z0","d1.z0","d2.z0"), low = -10, high = 10)
         ssa.add_parameter(("d0.z1","d1.z1","d2.z1"), low = -10, high = 10)
         ssa.add_parameter(("d0.z2","d1.z2","d2.z2"), low = -10, high = 10)

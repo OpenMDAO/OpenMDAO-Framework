@@ -40,7 +40,19 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     """
     debug = config.getboolean(name, 'debug')
     img_id = config.get(name, 'image_id')
-    img = conn.get_image(img_id)
+    # Sometimes requires retry due to:
+    # SSLError: [Errno 8] _ssl.c:504: EOF occurred in violation of protocol
+    for retry in range(3):
+        try:
+            img = conn.get_image(img_id)
+        except Exception as exc:
+            print 'get_image(%s) failed: %s' % (img_id, exc)
+            time.sleep(1)
+        else:
+            break
+    else:
+        raise RuntimeError("Can't get image for %s" % img_id)
+    
     instance_type = config.get(name, 'instance_type')
     platform = config.get(name, 'platform')
     identity = config.get(name, 'identity')
@@ -105,7 +117,7 @@ def start_instance_from_image(conn, config, name, sleep=10, max_tries=50,
     return inst
 
 def start_instance(conn, inst_id, debug=False, sleep=10, max_tries=50):
-    """Starts up an existing EC2 instance given its id"""
+    """Starts up an existing EC2 instance given its id."""
     if debug:
         print 'starting a instance (id=%s)' % inst_id
         

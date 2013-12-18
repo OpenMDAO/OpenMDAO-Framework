@@ -70,7 +70,7 @@ def get_dump_time(f):
 
 def get_python_info(f):
     """
-        This function will capture specific python information,
+        This function will capture specific Python information,
         such as version number, compiler, and build.
     """
     f.write('\n\n================PYTHON INFORMATION================\n')
@@ -298,7 +298,7 @@ def _add_from_path_entry(entry, pkgs):
     
 def get_pkg_info(f):
     """
-        This function will list python packages found on sys.path
+        This function will list Python packages found on sys.path
     """
 
     f.write('\n\n================PYTHON PACKAGES================\n')

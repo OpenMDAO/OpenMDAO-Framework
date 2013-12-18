@@ -13,7 +13,7 @@ from itertools import product
 from openmdao.main.numpy_fallback import linspace
 
 from openmdao.main.interfaces import implements, IDOEgenerator
-from openmdao.lib.datatypes.api import Int
+from openmdao.main.datatypes.api import Int
 from openmdao.main.api import Container
 
 class FullFactorial(Container):

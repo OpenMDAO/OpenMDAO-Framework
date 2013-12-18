@@ -2,22 +2,64 @@
 Tests of code editor functions.
 """
 
-import sys
 import time
+import pkg_resources
+
 from unittest import TestCase
 
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 from nose.tools import assert_not_equal as neq
 
 from util import main, setup_server, teardown_server, generate, \
-                 startup, closeout
+                 startup, closeout, broken_chrome
 from pageobjects.util import NotifierPage
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
     for _test, browser in generate(__name__):
         yield _test, browser
+
+
+def _test_crlf(browser):
+    # Test ability to handle a file with Windows-style CR/LF line terminations
+    project_dict, workspace_page = startup(browser)
+
+    # add a Windows notepad generated python file
+    filename = 'notepad.py'
+    filepath = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'files/notepad.py')
+    workspace_page.add_file(filepath)
+
+    # open file in code editor
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.edit_file(filename)
+    eq(str(editor_page.get_tab_label()), '/' + filename)
+
+    # add a comment and save
+    comment = '# a comment'
+    editor_page.append_text_to_file(comment)
+    editor_page.save_document()
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # re-open file and verify comment was successfully added
+    workspace_window = browser.current_window_handle
+    if broken_chrome():
+        raise SkipTest('Test broken for chrome/selenium combination')
+    editor_page = workspace_page.edit_file(filename)
+    assert editor_page.get_code().endswith(comment)
+
+    # Back to workspace.
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_editfile(browser):
@@ -33,12 +75,12 @@ def _test_editfile(browser):
     # verify file is opened in code editor by double clicking
     workspace_window = browser.current_window_handle
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), '/'+file1)
+    eq(str(editor_page.get_tab_label()), '/' + file1)
 
     # verify different file is opened in code editor by double clicking
     browser.switch_to_window(workspace_window)
     editor_page = workspace_page.edit_file(file2)
-    eq(str(editor_page.get_tab_label()), '/'+file2)
+    eq(str(editor_page.get_tab_label()), '/' + file2)
 
     # Back to workspace.
     browser.close()
@@ -46,8 +88,10 @@ def _test_editfile(browser):
 
     # verify code editor can be re-opened by double clicking on file
     workspace_window = browser.current_window_handle
+    if broken_chrome():
+        raise SkipTest('Test broken for chrome/selenium combination')
     editor_page = workspace_page.edit_file(file1)
-    eq(str(editor_page.get_tab_label()), '/'+file1)
+    eq(str(editor_page.get_tab_label()), '/' + file1)
 
     # Back to workspace.
     browser.close()
@@ -68,14 +112,14 @@ def _test_multitab(browser):
     test_code1 = """
 def f(x):
 return math.sqrt(x)"""
-    
+
     test_code2 = """
 def g(x):
 return x**2"""
-    
+
     editor_page.new_file('test1.py', test_code1)
     editor_page.new_file('test2.py', test_code2)
-    
+
     editor_page.edit_file('test1.py')
     editor_page.add_text_to_file('\n #an extra comment line')
     input_code1 = editor_page.get_code()
@@ -84,13 +128,14 @@ return x**2"""
     editor_page.edit_file('test2.py')
     editor_page.add_text_to_file('\n #an extra comment line')
     input_code2 = editor_page.get_code()
-    
+
     # Back to workspace.
     browser.close()
     browser.switch_to_window(workspace_window)
 
     # Go back to code editor, open file, verify source code
-    
+    if broken_chrome():
+        raise SkipTest('Test broken for chrome/selenium combination')
     editor_page = workspace_page.edit_file('test1.py')  # this file was saved
     time.sleep(1)
     loaded_code = editor_page.get_code()
@@ -140,7 +185,7 @@ def _test_newfile(browser):
     # Create the file (code editor automatically indents).
     editor_page.new_file('plane.py', """
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 # lines will be auto-indented by ace editor
 class Plane(Component):
@@ -157,6 +202,7 @@ f_x = Float(0.0, iotype='out')
     browser.switch_to_window(workspace_window)
 
     # Drag over Plane.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow('plane.Plane', 'plane')
 
@@ -166,4 +212,3 @@ f_x = Float(0.0, iotype='out')
 
 if __name__ == '__main__':
     main()
-

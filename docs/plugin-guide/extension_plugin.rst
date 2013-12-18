@@ -76,7 +76,7 @@ If you have downloaded the latest release version from the website, you should f
 
 ::
 
-  openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation
+  openmdao-X.X.X/lib/python2.7/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation
 
 ``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that contains the Python version and the
 Operating System description. This path will vary depending on your system and version, but there will be
@@ -100,7 +100,7 @@ for a three-bar truss with the following specific geometry:
 
 .. figure:: ThreeBar.jpg
    :align: center
-   :alt: Lines and errors showing the geometry of the 3-bar truss
+   :alt: Lines and arrows showing the geometry of the 3-bar truss
 
    The 3-Bar Truss Geometry
    
@@ -376,8 +376,8 @@ steps look like this:
 
     swig -python engineC_SWIG.i
 
-    gcc -fPIC -c engineC.c -I/usr/local/include/python2.6
-    gcc -fPIC -c engineC_SWIG_wrap.c -I/usr/local/include/python2.6
+    gcc -fPIC -c engineC.c -I/usr/local/include/python2.7
+    gcc -fPIC -c engineC_SWIG_wrap.c -I/usr/local/include/python2.7
 
     gcc -shared engineC.o engineC_SWIG_wrap.o -lGLU -lGL -lX11 -lXext -lpthread /usr/lib64/libstdc++.so.6 -lm -o _engineC_SWIG_wrap.so
 

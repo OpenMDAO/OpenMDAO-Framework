@@ -1,7 +1,8 @@
-""" Workflow class definition """
+""" Base class for all workflows. """
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 
@@ -14,16 +15,16 @@ class Workflow(object):
 
     def __init__(self, parent=None, scope=None, members=None):
         """Create a Workflow.
-        
+
         parent: Driver (optional)
             The Driver that contains this Workflow.  This option is normally
             passed instead of scope because scope usually isn't known at
             initialization time.  If scope is not provided, it will be
             set to parent.parent, which should be the Assembly that contains
             the parent Driver.
-            
+
         scope: Component (optional)
-            The scope can be explicitly specified here, but this is not 
+            The scope can be explicitly specified here, but this is not
             typically known at initialization time.
 
         members: list of str (optional)
@@ -44,19 +45,28 @@ class Workflow(object):
 
     @property
     def scope(self):
-        """The scoping Component that is used to resolve the Component names in 
+        """The scoping Component that is used to resolve the Component names in
         this Workflow.
         """
         if self._scope is None and self._parent is not None:
-            self._scope = self._parent.parent
+            self._scope = self._parent.get_expr_scope()
         if self._scope is None:
             raise RuntimeError("workflow has no scope!")
         return self._scope
-    
+
     @scope.setter
     def scope(self, scope):
         self._scope = scope
         self.config_changed()
+
+    @property
+    def itername(self):
+        return self._iterbase('')
+    
+    def check_config(self):
+        """Perform any checks that we need prior to run. Specific workflows
+        should override this.""" 
+        pass
 
     def set_initial_count(self, count):
         """
@@ -66,7 +76,7 @@ class Workflow(object):
         count: int
             Initial value for workflow execution count.
         """
-        self._initial_count = count -1  # run() and step() will increment.
+        self._initial_count = count - 1  # run() and step() will increment.
 
     def reset(self):
         """ Reset execution count. """
@@ -74,15 +84,20 @@ class Workflow(object):
 
     def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
+
         self._stop = False
         self._iterator = self.__iter__()
         self._exec_count += 1
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
+                
         for comp in self._iterator:
-            self._comp_count += 1
-            comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+            if isinstance(comp, PseudoComponent):
+                comp.run(ffd_order=ffd_order, case_id=case_id)
+            else:
+                self._comp_count += 1
+                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+                comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
@@ -117,65 +132,46 @@ class Workflow(object):
             raise err
         raise RunStopped('Step complete')
 
-    def calc_derivatives(self, first=False, second=False):
-        """ Calculate derivatives and save baseline states for all components
-        in this workflow."""
-        
-        self._stop = False
-        self._iterator = self.__iter__()
-        for node in self._iterator:
-            node.calc_derivatives(first, second)
-            if self._stop:
-                raise RunStopped('Stop requested')
-        self._iterator = None
-        
-    def check_derivatives(self, order, driver_inputs, driver_outputs):
-        """ Run check_derivatives on all components in workflow."""
-        
-        self._iterator = self.__iter__()
-        for node in self._iterator:
-            node.check_derivatives(order, driver_inputs, driver_outputs)
-        self._iterator = None
-        
     def stop(self):
         """
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        for comp in self.get_components():
+        for comp in self.get_components(full=True):
             comp.stop()
         self._stop = True
 
     def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the workflow by name."""
         raise NotImplementedError("This Workflow has no 'add' function")
-    
+
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration (dependencies, etc)
-        has changed.
+        """Notifies the Workflow that workflow configuration 
+        (dependencies, etc.) has changed.
         """
         pass
-        
+
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
         raise NotImplementedError("This Workflow has no 'remove' function")
 
-    def get_names(self):
+    def get_names(self, full=False):
         """Return a list of component names in this workflow."""
         raise NotImplementedError("This Workflow has no 'get_names' function")
 
-    def get_components(self):
+    def get_components(self, full=False):
         """Returns a list of all component objects in the workflow. No ordering
         is assumed.
         """
         scope = self.scope
-        return [getattr(scope, name) for name in self.get_names()]
+        return [getattr(scope, name) for name in self.get_names(full)]
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow in
         some order.
         """
         raise NotImplementedError("This Workflow has no '__iter__' function")
-    
+
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
+

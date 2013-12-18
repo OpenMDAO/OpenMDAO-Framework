@@ -12,6 +12,8 @@ def main():
                       help='# trials to attempt')
     parser.add_option('-n', '--nonose', action='store_true',
                       help='if present, run outside of nose')
+    parser.add_option('-c', '--continue-after-error', action='store_true',
+                      help='if present, continue after error')
     options, files = parser.parse_args()
 
     args = ['-v']
@@ -24,9 +26,8 @@ def main():
     logfile = open('stressit.log', 'w')
 
     for trial in range(options.trials):
-        for stop in ('STOP', 'STOP.txt'):
-            if os.path.exists(stop):
-                break
+        if os.path.exists('STOP') or os.path.exists('STOP.txt'):
+            break
     
         if sys.platform == 'win32':
             msg = 'Trial %s:' % (trial+1)
@@ -52,7 +53,8 @@ def main():
                 msg = '        exit status %s' % status
                 print msg
                 logfile.write(msg+'\n')
-                sys.exit(status)
+                if not options.continue_after_error:
+                    sys.exit(status)
 
     logfile.close()
 

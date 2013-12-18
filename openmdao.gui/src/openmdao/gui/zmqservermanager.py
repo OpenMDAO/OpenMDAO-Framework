@@ -19,7 +19,7 @@ def DEBUG(msg):
 
 
 class ZMQServerManager(object):
-    ''' creates and keeps track of ZMQ servers for the given class
+    ''' Creates and keeps track of ZMQ servers for the given class.
     '''
 
     def __init__(self, classpath, external=False):
@@ -32,7 +32,7 @@ class ZMQServerManager(object):
             self.address = 'localhost'
 
     def server(self, server_id):
-        ''' get server associated with an id, create one if none exists
+        ''' Get server associated with an id; create one if none exists.
         '''
         try:
             if server_id in self.server_dict:
@@ -65,14 +65,14 @@ class ZMQServerManager(object):
             return None
 
     def delete_server(self, server_id):
-        ''' delete the server(s) associated with an id
+        ''' Delete the server(s) associated with an id.
         '''
         if server_id in self.server_dict:
             server_info = self.server_dict[server_id]
             del self.server_dict[server_id]
 
-            self._terminate(server_info, 'out_server')
-            self._terminate(server_info, 'pub_server')
+            self._terminate(server_info, 'out_ws_server')
+            self._terminate(server_info, 'pub_ws_server')
 
             # Call proxy.cleanup() in a separate thread so we can
             # recover if it hangs (happens sometimes on Windows/EC2).
@@ -110,60 +110,37 @@ class ZMQServerManager(object):
         except Exception as exc:
             print 'Error cleaning up proxy', exc
 
-    def get_pub_socket_url(self, server_id):
-        ''' get the url of the publisher socket for the server associated with
-            an id
+    def get_websocket_url(self, server_id, stream_name, target_url):
+        ''' Get the url of the websocket for the specified stream of the
+            specified server; if websocket server does not exist, start it.
+
+                server_id:      The id of the server.
+
+                stream_name:    The name of the stream ('out' or 'pub').
+
+                target_url:     The relative url at which to serve the websocket.
         '''
-        if server_id in self.server_dict:
-            server_info = self.server_dict[server_id]
-            return server_info['pub_url']
-        else:
+        if stream_name not in ['out', 'pub']:
+            print >>sys.stderr, \
+                "ZMQServerManager - Invalid stream requested:", stream_name
             return None
 
-    def get_out_socket_url(self, server_id):
-        ''' get the url of the output socket for the server associated with
-            an id
-        '''
-        if server_id in self.server_dict:
-            server_info = self.server_dict[server_id]
-            return server_info['out_url']
-        else:
-            return None
-
-    def get_pub_server_url(self, server_id, ws_url):
-        ''' get the publisher socket web server for the server associated with
-            an id, create one if none exists
-        '''
         server_info = self.server_dict[server_id]
-        if 'pub_server' in server_info:
-            return server_info['pub_server_url']
+
+        ws_url_key = stream_name + '_ws_url'
+        if ws_url_key in server_info:
+            return server_info[ws_url_key]
         else:
             ws_port = get_unused_ip_port()
-            ws_addr = 'ws://%s:%d%s' % (self.address, ws_port, ws_url)
-            server_info['pub_server'] = \
-                ZMQStreamServer.spawn_process(server_info['pub_url'],
-                                              ws_port, ws_url, self.external)
-            server_info['pub_server_url'] = ws_addr
-            return ws_addr
-
-    def get_out_server_url(self, server_id, ws_url):
-        ''' get the output socket web server for the server associated with
-            an id, create one if none exists
-        '''
-        server_info = self.server_dict[server_id]
-        if 'out_server' in server_info:
-            return server_info['out_server_url']
-        else:
-            ws_port = get_unused_ip_port()
-            ws_addr = 'ws://%s:%d%s' % (self.address, ws_port, ws_url)
-            server_info['out_server'] = \
-                ZMQStreamServer.spawn_process(server_info['out_url'],
-                                              ws_port, ws_url, self.external)
-            server_info['out_server_url'] = ws_addr
-            return ws_addr
+            ws_url = 'ws://%s:%d%s' % (self.address, ws_port, target_url)
+            server_info[stream_name + '_ws_server'] = \
+                ZMQStreamServer.spawn_process(server_info[stream_name+'_url'],
+                                              ws_port, target_url, self.external)
+            server_info[ws_url_key] = ws_url
+            return ws_url
 
     def cleanup(self):
-        ''' delete all servers
+        ''' Delete all servers.
         '''
         keys = self.server_dict.keys()
         for server_id in keys:

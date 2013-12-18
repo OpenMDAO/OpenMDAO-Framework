@@ -6,7 +6,7 @@ Trait for boolean variables.
 __all__ = ["Bool"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Bool as Enthought_Bool
+from traits.api import Bool as Enthought_Bool
 
 from openmdao.main.variable import Variable, gui_excludes
 

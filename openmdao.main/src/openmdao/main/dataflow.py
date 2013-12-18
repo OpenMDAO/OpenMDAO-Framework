@@ -1,16 +1,20 @@
+""" A workflow where the execution order is automatically inferred from the
+data connections."""
 
 import networkx as nx
 from networkx.algorithms.components import strongly_connected_components
+from networkx.algorithms.dag import is_directed_acyclic_graph
 
-from openmdao.main.seqentialflow import SequentialWorkflow
+from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 
 __all__ = ['Dataflow']
 
+
 class Dataflow(SequentialWorkflow):
     """
-    A Dataflow consists of a collection of Components which are executed in 
+    A Dataflow consists of a collection of Components which are executed in
     data flow order.
     """
     def __init__(self, parent=None, scope=None, members=None):
@@ -20,25 +24,30 @@ class Dataflow(SequentialWorkflow):
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        # resolve all of the components up front so if there's a problem it'll
-        # fail early and not waste time running components
+        # resolve all of the components up front so if there's a problem
+        # it will fail early and not waste time running components
         scope = self.scope
         return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
-    def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name. """
-        super(Dataflow, self).add(compnames, index, check)
-        self.config_changed()
+    def check_config(self):
+        """Check for cyclic graph."""
 
-    def remove(self, compname):
-        """Remove a component from this Workflow by name."""
-        super(Dataflow, self).remove(compname)
-        self.config_changed()
+        super(Dataflow, self).check_config()
+
+        graph = self._get_collapsed_graph()
+        if not is_directed_acyclic_graph(graph):
+            # do a little extra work here to give more info to the user
+            # in the error message
+            strcon = strongly_connected_components(graph)
+            self.scope.raise_exception('circular dependency found between'
+                                       ' the following: %s'
+                                       % str(strcon[0]), RuntimeError)
 
     def config_changed(self):
         """Notifies the Workflow that its configuration (dependencies, etc.)
         has changed.
         """
+        super(Dataflow, self).config_changed()
         self._collapsed_graph = None
         self._topsort = None
         self._duplicates = None
@@ -67,50 +76,50 @@ class Dataflow(SequentialWorkflow):
         """
         if self._collapsed_graph:
             return self._collapsed_graph
-        
+
         to_add = []
         scope = self.scope
-        graph = scope._depgraph.copy_graph()
-        
-        contents = self.get_components()
-        
-        # add any dependencies due to ExprEvaluators
-        for comp in contents:
-            graph.add_edges_from([tup for tup in comp.get_expr_depends()])
-            
-        collapsed_graph = nx.DiGraph(graph)  # this way avoids a deep copy of edge/node data
+        graph = scope._depgraph
 
         # find all of the incoming and outgoing edges to/from all of the
         # components in each driver's iteration set so we can add edges to/from
         # the driver in our collapsed graph
-        cnames = set(self._names)
+        comps = self.get_components(full=True)
+        cnames = set([c.name for c in comps])
         removes = set()
         itersets = {}
-        for comp in contents:
+        graph_with_subs = graph.component_graph()
+        collapsed_graph = graph_with_subs.subgraph(cnames)
+
+        # TODO - Is this recursive?
+        for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):
                 iterset = [c.name for c in comp.iteration_set()]
                 itersets[cname] = iterset
                 removes.update(iterset)
-                for u,v in graph.edges_iter(nbunch=iterset): # outgoing edges
-                    if v != cname and v not in iterset:
+                for u,v in graph_with_subs.edges_iter(nbunch=iterset): # outgoing edges
+                    if v != cname and v not in iterset and not v.startswith('_pseudo_'):
                         collapsed_graph.add_edge(cname, v)
-                for u,v in graph.in_edges_iter(nbunch=iterset): # incoming edges
-                    if u != cname and u not in iterset:
+                for u,v in graph_with_subs.in_edges_iter(nbunch=iterset): # incoming edges
+                    if u != cname and u not in iterset and not u.startswith('_pseudo_'):
                         collapsed_graph.add_edge(u, cname)
 
         # connect all of the edges from each driver's iterset members to itself
+        # For this, we need the graph with the subdriver itersets all still in it.
         to_add = []
-        for drv,iterset in itersets.items():
+        for drv, iterset in itersets.items():
             for cname in iterset:
-                for u,v in collapsed_graph.edges_iter(cname):
+                for u, v in graph_with_subs.edges_iter(cname):
                     if v != drv:
                         to_add.append((drv, v))
-                for u,v in collapsed_graph.in_edges_iter(cname):
+                for u, v in graph_with_subs.in_edges_iter(cname):
                     if u != drv:
                         to_add.append((u, drv))
         collapsed_graph.add_edges_from(to_add)
-        
+
+        collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+
         # now add some fake dependencies for degree 0 nodes in an attempt to
         # mimic a SequentialWorkflow in cases where nodes aren't connected.
         # Edges are added from each degree 0 node to all nodes after it in
@@ -119,7 +128,7 @@ class Dataflow(SequentialWorkflow):
         last = len(self._names)-1
         if last > 0:
             to_add = []
-            for i,cname in enumerate(self._names):
+            for i, cname in enumerate(self._names):
                 if collapsed_graph.degree(cname) == 0:
                     if self._names.count(cname) > 1:
                         # Don't introduce circular dependencies.
@@ -131,9 +140,11 @@ class Dataflow(SequentialWorkflow):
                         else:
                             for n in self._names[0:i]:
                                 to_add.append((n, cname))
-            collapsed_graph.add_edges_from(to_add)
-        
-        self._collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+            collapsed_graph.add_edges_from([(u,v) for u,v in to_add
+                                            if u in collapsed_graph and v in collapsed_graph])
+
+        self._collapsed_graph = collapsed_graph
+
         return self._collapsed_graph
 
     def _insert_duplicates(self):
@@ -159,4 +170,3 @@ class Dataflow(SequentialWorkflow):
                         start = index + 1
                     max_index = max(index, max_index)
                 topsort.insert(max_index+1, cname)
-

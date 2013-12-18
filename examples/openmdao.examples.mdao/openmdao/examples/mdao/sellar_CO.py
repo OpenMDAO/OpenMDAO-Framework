@@ -2,7 +2,7 @@
     Solution of the sellar analytical problem using Collaborative Optimization.
 """
 
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Array
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar
@@ -12,9 +12,9 @@ class SellarCO(Assembly):
     """Solution of the sellar analytical problem using CO.
     """
     
-    global_des_var_targets = Array([5.0,2.0])
-    local_des_var_targets = Array([1.0])
-    coupling_var_targets = Array([3.16,0])
+    global_des_var_targets = Array([5.0, 2.0], iotype='in')
+    local_des_var_targets = Array([1.0], iotype='in')
+    coupling_var_targets = Array([3.16, 0.0], iotype='in')
 
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -114,6 +114,8 @@ if __name__ == "__main__":
     tt = time.time()
     prob.run()
 
+    #prob.driver.workflow.check_gradient()
+    
     print "\n"
     print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
                                              prob.dis1.z2, \
@@ -121,8 +123,8 @@ if __name__ == "__main__":
     print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0], \
                                              prob.global_des_var_targets[1], \
                                              prob.local_des_var_targets[0])
-    print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Couping var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
+    print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
     print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
 

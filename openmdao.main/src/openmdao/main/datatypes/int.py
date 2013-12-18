@@ -8,7 +8,7 @@ __all__ = ["Int"]
 from sys import maxint
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Range
+from traits.api import Range
 
 from openmdao.main.variable import Variable
 

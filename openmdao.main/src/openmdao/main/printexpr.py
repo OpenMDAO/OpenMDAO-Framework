@@ -115,6 +115,15 @@ class ExprPrinter(ast.NodeVisitor):
     def visit_Name(self, node):
         self.write(node.id)
         
+    def visit_UnaryOp(self, node):
+        if isinstance(node.operand, ast.BinOp):
+            self.visit(node.op)
+            self.write('(')
+            self.visit(node.operand)
+            self.write(')')
+        else:
+            super(ExprPrinter, self).generic_visit(node)
+
     def visit_BinOp(self, node):
         # we have to add parens around any immediate BinOp child
         # that has a lower precedence operation than we do
@@ -125,10 +134,17 @@ class ExprPrinter(ast.NodeVisitor):
         else:
             self.visit(node.left)
         self.visit(node.op)
-        if isinstance(node.right, ast.BinOp) and _pred_cmp(node.right.op, node.op) < 0:
-            self.write('(')
-            self.visit(node.right)
-            self.write(')')
+        if isinstance(node.right, ast.BinOp):
+            pred_comp = _pred_cmp(node.right.op, node.op)
+            # Subtraction isn't commutative, so when the operator precedence
+            # is equal, we still need parentheses.
+            if pred_comp < 0 or \
+              (pred_comp == 0 and (isinstance(node.op, ast.Sub) or isinstance(node.op, ast.Div))):
+                self.write('(')
+                self.visit(node.right)
+                self.write(')')
+            else:
+                self.visit(node.right)
         else:
             self.visit(node.right)
 
@@ -259,7 +275,7 @@ class ExprPrinter(ast.NodeVisitor):
     visit_Expr       = _ignore
     visit_Expression = _ignore
     visit_Compare    = _ignore
-    visit_UnaryOp    = _ignore
+    #visit_UnaryOp    = _ignore
     visit_Subscript  = _ignore
     visit_Load       = _ignore
     visit_Store      = _ignore
@@ -286,12 +302,22 @@ class ExprNameTransformer(ast.NodeTransformer):
             return self.generic_visit(node)
         return _get_attr_node(self.mapping[long_name].split('.'))
 
+    def visit_Subscript(self, node):
+        p = print_node(node)
+        xform = self.mapping.get(p)
+        if xform is not None:
+            return _get_attr_node(xform.split('.'))
+        return super(ExprNameTransformer, self).generic_visit(node)
+        
     
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on
-    the value of the mapping dict.  Note that this transforms only 'complete'
+    the value of the mapping dict.  Note that this transforms only "complete"
     names (dotted or not), not sub-names within a larger dotted name.
     """
+    if expr in mapping:
+        return mapping[expr]
+
     new_ast = ExprNameTransformer(mapping).visit(ast.parse(expr, mode='eval'))
     ast.fix_missing_locations(new_ast)
     
@@ -304,7 +330,16 @@ def eliminate_expr_ws(expr):
     """Return the expression string with whitespace removed, except for 
     whitespace within string literals passed as function args.
     """
-    return transform_expression(expr, {})
+    node = ast.parse(expr, mode='eval')
+    ep = ExprPrinter()
+    ep.visit(node)
+    return ep.get_text()
+
+def print_node(node):
+    p = ExprPrinter()
+    p.visit(node)
+    return p.get_text()
+
 
 if __name__ == '__main__':
     import sys

@@ -13,66 +13,60 @@
 
         #newProjectModal {
            width: 500px;
-           margin: -50px 0 0 -250px; 
+           margin: -50px 0 0 -250px;
         }
-        #newProjectModal .modal-body{
+        #newProjectModal .modal-body {
           max-height:550px;
         }
 
         #editProjectModal {
            width: 500px;
-           margin: -50px 0 0 -250px; 
+           margin: -50px 0 0 -250px;
         }
-        #editProjectModal .modal-body{
+        #editProjectModal .modal-body {
           max-height:550px;
         }
-        #editProjectModal .form-actions{
+        #editProjectModal .form-actions {
           padding-top:0px;
           margin-top:0px;
           margin-bottom:0px;
           border-top:0px;
         }
-        #editProjectModal form{
+        #editProjectModal form {
           margin-bottom: 0px ;
         }
 
         #importProjectModal {
            width: 500px;
-           margin: -50px 0 0 -250px; 
+           margin: -50px 0 0 -250px;
         }
-        #importProjectModal .modal-body{
+        #importProjectModal .modal-body {
           max-height:550px;
         }
-
     </style>
 
-    <script src="/static/js/jquery-1.7.1.min.js"></script>
+    <script src="/static/js/jquery-1.8.2.min.js"></script>
     <script src="/static/js/jquery.validate.js"></script>
     <script src="/static/js/jquery.dataTables.min.js"></script>
     <script src="/static/bootstrap/js/DT_bootstrap.js"></script>
     <script src="/static/bootstrap/js/bootstrap.min.js"></script>
     <script src="/static/js/bootbox.min.js"></script>
 
-
     <script>
-          function confirm_delete(currentForm, projectname) {
-                bootbox.confirm(
-                    "Are you sure you want to delete the project, " + 
-                    projectname +
-                    " ?", 
-                    function(result) {
-                    if (result) {
-                        currentForm.submit();
-                    }
-                });
-                return false;
-            }
-    </script>
+        /* define function in global scope :( */
+        function confirm_delete(currentForm, projectname) {
+            var msg = "Are you sure you want to delete the project, "
+                    + projectname + "?";
+            bootbox.confirm(msg, function(result) {
+                if (result) {
+                    currentForm.submit();
+                }
+            });
+            return false;
+        }
 
-
-    <script>
-        /* fnDrawCallback turns off the pagination if there is only one page */
         $(document).ready(function() {
+            /* initialize the datatable */
             $('#project_table').dataTable({
                 "bJQueryUI": false,
                 "bStateSave": true,
@@ -80,146 +74,118 @@
                 "bPaginate": true,
                 "sDom": "<'row'<'span6'i><'span6'f>r>t<'row'<'span6'l><'span6'p>>",
                 "fnDrawCallback": function() {
-                  if (Math.ceil((this.fnSettings().fnRecordsDisplay()) / this.fnSettings()._iDisplayLength) > 1)  {
-                    $('.dataTables_paginate').css("display", "block");
-                  } else {
-                    $('.dataTables_paginate').css("display", "none");
-                  }
-                 }
-                }) ;
+                    /* turn off the pagination if there is only one page */
+                    if (Math.ceil((this.fnSettings().fnRecordsDisplay()) / this.fnSettings()._iDisplayLength) > 1)  {
+                        $('.dataTables_paginate').css("display", "block");
+                    }
+                    else {
+                        $('.dataTables_paginate').css("display", "none");
+                    }
+                }
+            });
 
-          
             /* controls what happens when the Cancel button in the import dialog is clicked */
             $("#importProjectModal #import-cancel").click(function(event) {
-                $("#load-project").show() ;
-                $("#import-project").hide() ;
-                $("#import-metadata-fields").empty() ;
-                $("#import-file-input").show() ;
-                $("#id_projectfile").val("") ;
+                $("#load-project").show();
+                $("#import-project").hide();
+                $("#import-metadata-fields").empty();
+                $("#import-file-input").show();
+                $("#id_projectfile").val("");
                 return true;
              });
 
             $("#importProjectModalForm").submit(function(event) {
-               /* The import form is a two step process. The
-                   first step is just to let the user select the project.
+                /* The import form is a two step process.
+                  The first step is just to let the user select the project.
                   The second step is to let the user edit the metadata
-                   before actually importing the project.
-                  This initial if statement checks to see if we are at 
-                   the second stage by looking for the Import Project 
-                   button. If yes, then just submit the form normally.
-               */
-               if ( $(this).find("#import-project").is(":visible") ) {
-                  return true;
-               }
-          
-               if ( ! $("#id_projectfile").val() ) {
+                    before actually importing the project.
+                  This initial if statement checks to see if we are at
+                    the second stage by looking for the Import Project
+                    button. If yes, then just submit the form normally.
+                */
+                if ($(this).find("#import-project").is(":visible")) {
+                    return true;
+                }
+
+                if (! $("#id_projectfile").val()) {
                    bootbox.alert("Please select an OpenMDAO project file!");
                    return false;
-               }
+                }
 
-               /* 
-                  If at the first step, just get the metadata of the 
-                    project selected and fill in the metadata fields.
-                  Use Ajax for this.
-               */
-               var formData = new FormData($(this)[0]);
+                /* If at the first step, just get the metadata of the
+                   project selected and fill in the metadata fields.
+                   Use Ajax for this.
+                */
+                var formData = new FormData($(this)[0]);
 
-               /* stop form from submitting normally */
-               event.preventDefault();
+                /* stop form from submitting normally */
+                event.preventDefault();
 
-               /* Get the data using post and put the results in a div on the form */
-               $.ajax({
-                        url: "/projects/import/",
-                        type: 'POST',
-                        data: formData,
-                        async: true,
-                        success: function (data) {
-                                   $("#import-file-input").hide() ;
-                                   $("#import-metadata-fields").html(data);
-                                 },
-                        cache: false,
-                        contentType: false,
-                        processData: false
+                /* Get the data using post and put the results in a div on the form */
+                $.ajax({
+                    url: "/projects/import/",
+                    type: 'POST',
+                    data: formData,
+                    async: true,
+                    success: function (data) {
+                        $("#import-file-input").hide() ;
+                        $("#import-metadata-fields").html(data);
+                    },
+                    cache: false,
+                    contentType: false,
+                    processData: false
                 });
 
-                /* In moving to the second step, show the 
+                /* In moving to the second step, show the
                     Import button and hide the Load button */
                 $("#load-project").hide() ;
                 $("#import-project").show() ;
 
                 return false ;
- 
-             }); // End of submit call
+            }); // End of submit call
 
 
-      <!-- Validation -->
-      $("#newProjectModalForm").validate({
-          rules:{
-                 id_project_name:{required:true,maxlength:40},
-                 },
-          messages:{
-                 id_project_name:{required:"Enter a project name"},
-                 },
-          errorClass: "help-inline",
-          errorElement: "span",
-          highlight:function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').addClass('error');
-                    },
-          unhighlight: function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').removeClass('error');
-                      $(element).parents('.control-group').addClass('success');
-                    }
-         });
+            <!-- Validation -->
+            /* NOTE: #editProjectModalForm does not exist yet at this point,
+                     so this validation is not actually applied that form */
+            $("#editProjectModalForm, #newProjectModalForm").validate({
+                rules: {
+                    id_project_name: {required:true, maxlength:40},
+                },
+                messages: {
+                    id_project_name: {required:"Enter a project name"},
+                },
+                errorClass: "help-inline",
+                errorElement: "span",
+                highlight: function(element, errorClass, validClass) {
+                    $(element).parents('.control-group').addClass('error');
+                },
+                unhighlight: function(element, errorClass, validClass) {
+                    $(element).parents('.control-group').removeClass('error');
+                    $(element).parents('.control-group').addClass('success');
+                }
+            });
 
-      $("#editProjectModalForm").validate({
-          rules:{
-                 id_project_name:{required:true,maxlength:40},
-                 },
-          messages:{
-                 id_project_name:{required:"Enter a project name"},
-                 },
-          errorClass: "help-inline",
-          errorElement: "span",
-          highlight:function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').addClass('error');
-                    },
-          unhighlight: function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').removeClass('error');
-                      $(element).parents('.control-group').addClass('success');
-                    }
-         });
-
-      $("#importProjectModalForm").validate({
-          rules:{
-                 id_projectfile:{required:true},
-                 id_project_name:{required:true,maxlength:40}
-                 },
-          messages:{
-                 id_projectfile:{required:"Must load an existing OpenMDAO project file"},
-                 id_project_name:{required:"Enter a project name"},
-                 },
-          errorClass: "help-inline",
-          errorElement: "span",
-          highlight:function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').addClass('error');
-                    },
-          unhighlight: function(element, errorClass, validClass)
-                    {
-                      $(element).parents('.control-group').removeClass('error');
-                      $(element).parents('.control-group').addClass('success');
-                    }
-         });
-
-
-
-
-        }
-        ) ; // End of ready call
+            $("#importProjectModalForm").validate({
+                rules: {
+                    id_projectfile: {required:true},
+                    id_project_name: {required:true, maxlength:40}
+                },
+                messages:{
+                    id_projectfile: {required: "Must load an existing OpenMDAO project file"},
+                    id_project_name: {required: "Enter a project name"},
+                },
+                errorClass: "help-inline",
+                errorElement: "span",
+                highlight:function(element, errorClass, validClass) {
+                    $(element).parents('.control-group').addClass('error');
+                },
+                unhighlight: function(element, errorClass, validClass) {
+                    $(element).parents('.control-group').removeClass('error');
+                    $(element).parents('.control-group').addClass('success');
+                }
+            });
+        }); // End of ready call
 
     </script>
 {% end %}
@@ -231,107 +197,100 @@
     <div class='alert alert-info fade in' data-alert='alert'>
       <h3>
         <strong>
-          Welcome to OpenMDAO
+          Welcome to OpenMDAO {{ version }}
         </strong>
       </h3>
     </div>
 
-<a href="#newProjectModal" role="button" class="btn" data-toggle="modal">New Project</a>
-<a href="#importProjectModal" role="button" class="btn" data-toggle="modal">Import Project</a>
-<a class="btn pull-right" href='/exit'>Exit</a>
- 
-<div id="editProjectModal" class="modal hide fade bigModal" tabindex="-1" 
-     role="dialog" >
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">×</button>
-    <h3>Edit Project<small> ( * indicates a required field )</small></h3>
-  </div>
+    <a href="#newProjectModal"    role="button" class="btn" data-toggle="modal">New Project</a>
+    <a href="#importProjectModal" role="button" class="btn" data-toggle="modal">Import Project</a>
+    <a class="btn pull-right" href='/exit'>Exit</a>
 
-  <div class="modal-body">
-  </div>
-</div>
-
-<div id="importProjectModal" class="modal hide fade" tabindex="-1" 
-     role="dialog">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">×</button>
-    <h3>Import Project</h3>
-  </div>
-
-  <form id="importProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/import/">
-  <div class="modal-body">
-
-      <div id="import-file-input" class="control-group required">
-        <label class="control-label" for="id_projectfile">
-          <abbr title="required">*</abbr>  
-          Select an OpenMDAO project file to import:
-        </label>
-        <input type="file" name="projectfile" id="id_projectfile" 
-               class='button' />
-      </div>
-
-      <div id="import-metadata-fields">
-      </div>
-
-  </div> <!-- end of modal body -->
-
-  <div class="modal-footer">
-    <button type="button" id="import-cancel" class="btn" data-dismiss="modal">Cancel</button>
-    <button type="submit" id="load-project" class="btn btn-primary">Load Project</button>
-    <button type="submit" id="import-project" class="hide btn btn-primary">Import Project</button>
-  </div>
-
-  </form>
-</div>
-
-<div id="newProjectModal" class="modal hide fade" tabindex="-1" 
-     role="dialog">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">×</button>
-    <h3>New Project</h3>
-  </div>
-
-  <form id="newProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/new/">
-  <div class="modal-body">
-
-      <!-- Name -->
-      <div class="control-group string required">
-        <label class="string required control-label" for="id_projectname"><abbr title="required">*</abbr>  Project Name:</label>
-        <div class="controls">
-          <input class="string required span6" 
-                 id="id_project_name" name="projectname" 
-                 size="40" type="text" maxlength="40" value="" />
+    <div id="editProjectModal" class="modal hide fade bigModal" tabindex="-1" role="dialog">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">×</button>
+            <h3>Edit Project<small> ( * indicates a required field )</small></h3>
         </div>
-      </div>
 
-      <!-- Description -->
-      <div class="control-group text optional">
-        <label class="text optional control-label" for="id_description">Description:</label>
-        <div class="controls">
-          <textarea class="text optional span6" cols="40" id="id_description" 
-                    name="description" rows="10" maxlength="200">
-          </textarea>
+        <div class="modal-body"></div>
+    </div>
+
+    <div id="importProjectModal" class="modal hide fade" tabindex="-1" role="dialog">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">×</button>
+            <h3>Import Project</h3>
         </div>
-      </div>
 
-      <!-- Version -->
-      <div class="control-group string">
-        <label class="string control-label" for="id_version">Version:</label>
-        <div class="controls">
-          <input class="string span6" id="id_version" name="version" 
-                 type="text" value="" maxlength="40" />
-          <p class="help-block">Version format is user defined</p>
+        <form id="importProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/import/">
+            <div class="modal-body">
+                <div id="import-file-input" class="control-group required">
+                    <label class="control-label" for="id_projectfile">
+                        <abbr title="required">*</abbr>
+                        Select an OpenMDAO project file to import:
+                    </label>
+                    <input type="file" name="projectfile" id="id_projectfile" class='button' />
+                </div>
+
+                <div id="import-metadata-fields"></div>
+            </div> <!-- end of modal body -->
+
+            <div class="modal-footer">
+                <button type="button" id="import-cancel"  class="btn" data-dismiss="modal">Cancel</button>
+                <button type="submit" id="load-project"   class="btn btn-primary">Load Project</button>
+                <button type="submit" id="import-project" class="hide btn btn-primary">Import Project</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="newProjectModal" class="modal hide fade" tabindex="-1" role="dialog">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">×</button>
+            <h3>New Project</h3>
         </div>
-      </div>
-  </div>
 
-  <div class="modal-footer">
-    <button class="btn" type="button" data-dismiss="modal">Cancel</button>
-    <button class="btn btn-primary">New Project</button>
-  </div>
-  </form>
-</div>
-    
+        <form id="newProjectModalForm" method="POST" enctype="multipart/form-data" action="/projects/new/">
+            <div class="modal-body">
+                <!-- Name -->
+                <div class="control-group string required">
+                    <label class="string required control-label" for="id_projectname">
+                        <abbr title="required">*</abbr>  Project Name:
+                    </label>
+                    <div class="controls">
+                        <input class="string required span6" id="id_project_name"
+                               name="projectname" size="40" type="text" maxlength="40"
+                               value="" />
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="control-group text optional">
+                    <label class="text optional control-label" for="id_description">Description:</label>
+                    <div class="controls">
+                        <textarea class="text optional span6" cols="40"
+                                  id="id_description" name="description"
+                                  rows="10" maxlength="200">
+                        </textarea>
+                    </div>
+                </div>
+
+                <!-- Version -->
+                <div class="control-group string">
+                    <label class="string control-label" for="id_version">Version:</label>
+                    <div class="controls">
+                        <input class="string span6" id="id_version" name="version"
+                               type="text" value="" maxlength="40" />
+                        <p class="help-block">Version format is user defined</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn" type="button" data-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary">New Project</button>
+            </div>
+        </form>
+    </div>
+
     <hr/>
 
     {% if project_list %}
@@ -347,40 +306,37 @@
         {% for project in project_list %}
         <tr>
             <td>
-                <a style="white-space:nowrap;" href="/workspace/project?projpath={{ project['projpath'] }}">{{ project['projectname'] }}</a>
+                <a style="white-space:nowrap;" href="/workspace/project?projpath={{ url_escape(project['projpath']) }}">{{ project['projectname'] }}</a>
             </td>
             <td>{{ project['description'] }}</td>
             <td>{{ project['version'] }}</td>
-            <td style="white-space:nowrap;">{{ project['created'][:-10] }}</td>
-            <td style="white-space:nowrap;">{{ project['file_modified'][:-3] }}</td>
+            <td style="white-space:nowrap;">{{ project['created'][:-7] }}</td>
+            <td style="white-space:nowrap;">{{ project['file_modified'] }}</td>
             <td style="white-space:nowrap;" width="140" style="padding-right: 0px;">
-              <!-- Button to trigger edit modal -->
-              <a href="/projects/{{ project['id'] }}" role="button" 
-                 class="btn btn-link" data-toggle="modal" 
-                 data-target="#editProjectModal" title="Edit"><i class="icon-pencil"></i>
-              </a>
-              <!-- delete project button -->
-              <form class="deleteProject" onsubmit='return confirm_delete(this, "{{ project['projectname'] }}" )'
-                    action="/projects/delete/{{ project['id'] }}/" 
-                    method="POST" style="display:inline">
-                  <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
-                  <input type="hidden" name="projectname" value="{{ project['projectname'] }}" />
-                  <button type="submit" title="Delete" value="Delete this project" class="btn btn-link" style="display:inline">
-                    <i class="icon-trash"></i>
-                  </button>
+                <!-- Button to trigger edit modal -->
+                <a href="/projects/{{ project['id'] }}" role="button" class="btn btn-link" data-toggle="modal"
+                   data-target="#editProjectModal" title="Edit">
+                    <i class="icon-pencil"></i>
+                </a>
+
+                <!-- delete project button -->
+                <form class="deleteProject" onsubmit='return confirm_delete(this, "{{ project['projectname'] }}" )'
+                      action="/projects/delete/{{ project['id'] }}/"
+                      method="POST" style="display:inline">
+                    <input type="hidden" name="projpath" value="{{ project['projpath'] }}" />
+                    <input type="hidden" name="projectname" value="{{ project['projectname'] }}" />
+                    <button type="submit" title="Delete" value="Delete this project" class="btn btn-link" style="display:inline">
+                        <i class="icon-trash"></i>
+                    </button>
               </form>
 
               <!-- export button -->
-              <form action="/projects/download/{{ project['id'] }}/" 
-                    method="GET" style="display:inline">
-                  <button type="submit" title="Export" 
-                          value="Export this project" 
-                          class="btn btn-link" style="display:inline">
-                    <i class="icon-download-alt"></i>
-                  </button>
+              <form action="/projects/download/{{ project['id'] }}/" method="GET" style="display:inline">
+                    <button type="submit" title="Export" value="Export this project" class="btn btn-link" style="display:inline">
+                        <i class="icon-download-alt"></i>
+                    </button>
                   <!-- <input type="submit" value="Export this project" /> -->
               </form>
-
             </td>
         </tr>
         {% end %}

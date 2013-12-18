@@ -2,48 +2,52 @@
 import unittest
 import pickle
 
-from openmdao.main.api import Assembly, Component, Container, Case
+from openmdao.main.api import Assembly, Component, Container, Case, VariableTree
 from openmdao.main.datatypes.api import Slot, Int, List, Dict, Str
 from openmdao.main.interfaces import implements, ICaseIterator
 from openmdao.util.testutil import assert_raises
 
 import zope.interface
 
+
 class CIterator(object):
     implements(ICaseIterator)
+
     def __iter__(self):
         return iter([])
-    
+
+
 class SlotComp(Assembly):
     iterator = Slot(ICaseIterator, allow_none=False, desc='cases to evaluate')
     num_cases = Int(0, iotype='out')
-    
+
     def __init__(self):
         super(SlotComp, self).__init__()
-        
+
     def execute(self):
         self.num_cases = 0
         for case in self.iterator:
             self.num_cases += 1
 
+
 class SlotComp2(SlotComp):
     somesocket = Slot(Assembly)
-        
+
+
 class SlotComp3(SlotComp2):
     iterator = Slot(Assembly, desc='another dumb socket')
-    
-        
+
+
 class SlotComp4(SlotComp3):
     pass
-        
-        
-        
+
+
 class SlotTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.sc = SlotComp()
-    
+
     def tearDown(self):
         """this teardown function will be called after each test"""
         pass
@@ -68,7 +72,7 @@ class SlotTestCase(unittest.TestCase):
 
     def test_wrong_interface(self):
         try:
-            self.sc.iterator = Component('dummy')
+            self.sc.iterator = Component()
         except TypeError, exc:
             self.assertEqual(str(exc), ": iterator must provide interface 'ICaseIterator'")
         else:
@@ -86,7 +90,7 @@ class SlotTestCase(unittest.TestCase):
                              str(exc))
         else:
             self.fail('AttributeError expected')
-            
+
     def test_inherit_sockets(self):
         sc2 = SlotComp2()
         self.assertEqual(sc2.iterator, None)
@@ -99,11 +103,11 @@ class SlotTestCase(unittest.TestCase):
         asm = Assembly()
         sc3.somesocket = asm
         self.assertEqual(sc3.somesocket, asm)
-        
+
     def test_pickle(self):
         s = Slot()
         out = pickle.dumps(s)
-        
+
     def test_socket_override(self):
         sc2 = SlotComp2()
         sc2.iterator = CIterator()
@@ -113,7 +117,7 @@ class SlotTestCase(unittest.TestCase):
             pass
         else:
             self.fail('TypeError expected')
-            
+
         sc4 = SlotComp4()
         sc4.iterator = Assembly()
         try:
@@ -122,14 +126,14 @@ class SlotTestCase(unittest.TestCase):
             pass
         else:
             self.fail('TypeError expected')
-        
+
     def test_list_and_dict_slot_attributes(self):
-        
+
         top = Assembly()
         top.add('sock', Slot(MyClass, iotype='in', desc='Stuff0'))
         top.add('list_sock', List(Slot(MyClass), iotype='in', desc='Stuff'))
-        top.add('dict_sock', Dict(key_trait=Str, 
-                                  value_trait=Slot(MyClass), 
+        top.add('dict_sock', Dict(key_trait=Str,
+                                  value_trait=Slot(MyClass),
                                   iotype='in', desc='Stuff2'))
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
@@ -140,7 +144,7 @@ class SlotTestCase(unittest.TestCase):
                          'desc': 'Stuff'} in slot_attrs)
         self.assertTrue({'name': 'dict_sock',
                          'containertype': 'dict',
-                         'filled': [],
+                         'filled': {},
                          'klass': 'MyClass',
                          'desc': 'Stuff2'} in slot_attrs)
         self.assertTrue({'name': 'sock',
@@ -150,15 +154,15 @@ class SlotTestCase(unittest.TestCase):
                          'desc': 'Stuff0'} in slot_attrs)
 
         # Now fill some slots.
-        
+
         top.list_sock.append(MyClass())
         top.list_sock.append(MyClass())
         top.dict_sock['Testing'] = MyClass()
-        
+
         top.sock = MyClass()
         # Note, only tested with one item in the dict because it is not ordered,
         # and hash order will vary on different platforms.
-        
+
         attrs = top.get_attributes(io_only=False)
         slot_attrs = attrs['Slots']
         self.assertTrue({'name': 'list_sock',
@@ -166,44 +170,62 @@ class SlotTestCase(unittest.TestCase):
                          'filled': ['MyClass', 'MyClass'],
                          'klass': 'MyClass',
                          'desc': 'Stuff'} in slot_attrs)
-        self.assertTrue({'name': 'dict_sock',
-                         'containertype': 'dict',
-                         'filled': ['Testing'],
-                         'klass': 'MyClass',
-                         'desc': 'Stuff2'} in slot_attrs)
+        # Need some special checking for the dict slot
+        # since we get back a MyClass instance
+        dict_slots = filter(lambda x: x["name"] == "dict_sock", slot_attrs)
+        self.assertEqual(len(dict_slots), 1)
+        dict_slot = dict_slots[0]
+        self.assertEqual(dict_slot["containertype"], "dict")
+        self.assertEqual(dict_slot["klass"], "MyClass")
+        self.assertEqual(dict_slot["desc"], "Stuff2")
+        self.assertEqual(dict_slot["filled"], {'Testing': 'MyClass'})
         self.assertTrue({'name': 'sock',
                          'containertype': 'singleton',
                          'filled': 'MyClass',
                          'klass': 'MyClass',
                          'desc': 'Stuff0'} in slot_attrs)
 
+    def test_variabletree(self):
+        # Ensure VariableTree is rejected.
+        msg = 'Slotting of VariableTrees is not supported,' \
+              ' please use VarTree instead'
+
+        code = 'Slot(VariableTree)'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
+
+        code = 'Slot(VariableTree())'
+        assert_raises(self, code, globals(), locals(), TypeError, msg)
+
 
 class MyIface(zope.interface.Interface):
-    
+
     xx = zope.interface.Attribute("some attribute")
 
     def myfunct(a, b):
         """some function"""
-    
+
+
 class MyClass(Container):
     implements(MyIface)
-    
+
     def __init__(self):
-        
+
         super(MyClass, self).__init__()
         self.x = 1
 
     def myfunct(a, b):
         return a+b
-    
+
+
 class MyOtherClass(Container):
     def __init__(self):
-        
+
         super(MyOtherClass, self).__init__()
         self.x = 1
 
     def myfunct(a, b):
         return a+b
+
 
 class SlotTestCase2(unittest.TestCase):
 
@@ -212,29 +234,30 @@ class SlotTestCase2(unittest.TestCase):
         self.hobj = Container()
         self.hobj.add('iface_sock', Slot(MyIface))
         self.hobj.add('class_sock', Slot(MyClass))
-                       
+
     def test_set(self):
         mc = MyClass()
         self.hobj.class_sock = mc
         self.hobj.iface_sock = mc
-        
+
     def test_bad_set(self):
         moc = MyOtherClass()
         try:
             self.hobj.iface_sock = moc
         except TypeError as err:
             self.assertEqual(str(err), ": iface_sock must provide interface 'MyIface'")
-            
+
         try:
             self.hobj.class_sock = 3.14
         except TypeError as err:
-            self.assertEqual(str(err), ": class_sock must be an instance of class 'MyClass'")
-        
+            self.assertEqual(str(err), ": class_sock must be an instance of"
+                             " class 'MyClass', got <type 'float'>")
+
 
 class SlotComp5(Assembly):
     iterator = Slot(CIterator(), allow_none=False, desc='cases to evaluate')
     num_cases = Int(0, iotype='out')
-    
+
     def execute(self):
         self.num_cases = 0
         for case in self.iterator:
@@ -246,25 +269,22 @@ class SlotTestCase3(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.sc = SlotComp5()
-    
+
     def tearDown(self):
         """this teardown function will be called after each test"""
         pass
 
     def test_normal(self):
-        
+
         # Run as is
         self.sc.run()
         self.assertEqual(self.sc.num_cases, 0)
-        
+
         # Slot a new instance
         self.sc.iterator = CIterator()
         self.sc.run()
         self.assertEqual(self.sc.num_cases, 0)
 
 
-
-            
 if __name__ == "__main__":
     unittest.main()
-

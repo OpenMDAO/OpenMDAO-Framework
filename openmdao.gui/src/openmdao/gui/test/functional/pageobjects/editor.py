@@ -64,7 +64,7 @@ class EditorPage(BasePageObject):
     file_toggle = ButtonElement((By.XPATH, "//a[(@rel='toggle')]"))
 
     # Right side.
-    editor_new_button       = ButtonElement((By.ID, 'code_pane-uiBar-new'))
+    editor_new_button        = ButtonElement((By.ID, 'code_pane-uiBar-new'))
     editor_save_button       = ButtonElement((By.ID, 'code_pane-uiBar-save'))
     editor_find_button       = ButtonElement((By.ID, 'code_pane-uiBar-find'))
     editor_replace_button    = ButtonElement((By.ID, 'code_pane-uiBar-replace'))
@@ -82,19 +82,19 @@ class EditorPage(BasePageObject):
 
         self.locators = {}
         self.locators["files"] = (By.XPATH, "//div[@id='file_pane']//a[@class='file ui-draggable']")
-    
+
     def get_code(self):
         return self.browser.execute_script("return openmdao.frames.code_pane.editor.getValue()")
-    
+
     def get_tab_label(self):
         label = self.browser.execute_script("return openmdao.frames.code_pane.currentTablabel()")
-        return ''.join(label.split('*')) # ignore changed / unchanged status
-    
+        return ''.join(label.split('*'))  # ignore changed / unchanged status
+
     def get_files(self):
         """ Return names in the file tree. """
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'file_pane'))
-# FIXME: absolute delay for tree population.
+        # FIXME: absolute delay for tree population.
         time.sleep(1)
         file_items = self.browser.find_elements(*self.locators["files"])
         file_names = []
@@ -155,7 +155,7 @@ class EditorPage(BasePageObject):
         #click the 'undo' button
         self('editor_undo_button').click()
         return
-    
+
     def new_file(self, filename, code, check=True):
         """ Make a new file `filename` with contents `code`. """
         page = self.new_file_dialog()
@@ -171,7 +171,7 @@ class EditorPage(BasePageObject):
             code_input_element.send_keys(Keys.ARROW_DOWN)
         # Type in the code.
         code_input_element.send_keys(code)
-        
+
         self.save_document(check=check)
 
     def edit_file(self, filename, dclick=True):
@@ -198,14 +198,14 @@ class EditorPage(BasePageObject):
     def get_text_area(self):
         code_input_element = WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element_by_css_selector('textarea'))
-# FIXME: absolute delay for editor to get ready.
-#        Problem is Firefox sometimes sends arrow key to scrollbar.
-#        Sadly this didn't completely fix the issue.
+        # FIXME: absolute delay for editor to get ready.
+        #        Problem is Firefox sometimes sends arrow key to scrollbar.
+        #        Sadly this didn't completely fix the issue.
         time.sleep(1)
         return code_input_element
-        
+
     def save_document(self, overwrite=False, check=True, cancel=False):
-        #use 'save' button to save code
+        # use 'save' button to save code
         self('editor_save_button').click()
         if overwrite:
             self('editor_overwrite_button').click()
@@ -223,3 +223,13 @@ class EditorPage(BasePageObject):
         code_input_element.send_keys(text)
         return code_input_element
 
+    def append_text_to_file(self, text):
+        """ Add the given text to the end of the current file.  """
+        # Switch to editor textarea
+        code_input_element = self.get_text_area()
+
+        # Type in the code.
+        line_count = self.get_code().count('\n')
+        code_input_element.send_keys(Keys.ARROW_DOWN * line_count)
+        code_input_element.send_keys(text)
+        return code_input_element

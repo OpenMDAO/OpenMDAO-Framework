@@ -220,9 +220,9 @@ The following sections can be included in a docstring, but in many cases, are op
   .. note:: A note directive is different from the *Notes* section of a docstring. A note will
      appear in a gray box.
      
-- Line spacing and indentation are important. New paragraphs are marked with a blank line. Indentation in
-  paragraphs indicates that the output is indented. Sphinx will complain if a paragraph appears to be
-  indented for no reason.
+- Line spacing and indentation are important. New paragraphs are marked with a blank
+  line. Indentation in paragraphs indicates that the output is indented. Sphinx will
+  complain if a paragraph appears to be indented for no reason.
 
 
 General Documentation Issues
@@ -233,14 +233,13 @@ General Documentation Issues
 *Underlines (and Overlines)*
 ++++++++++++++++++++++++++++
 
-This section pertains only to the user documents, not source code. You should never use underlines
-in source code as Sphinx will complain. 
+This section pertains only to the user documents, not source code. Never use
+underlines in source code as Sphinx will complain. 
 
 **- Document title:**
 
-
-In general, use underline and overline for the title of document (in the
-index file for the document). In OpenMDAO, we typically use a double line for
+In general, underline and overline are used only for the title of document and appear
+in the index for the document. In OpenMDAO, we typically use a double line for
 titles as shown in the following example:
 
 ::
@@ -249,34 +248,40 @@ titles as shown in the following example:
   Developer Guide
   ================
 
-The overline and underline must be the same length, or you will get an error and the
-build will fail. If you use just underline and it is shorter than the text, you will get
-a warning, but the documents will build. If you use just underline, and it is longer than
-the text, Sphinx doesn't seem to mind.
+* The overline and underline must be the same length or you will get an error and the
+  build will fail. 
+  
+* If you use just underline and it is shorter than the text, you will get a warning,
+  but the documents will build. 
+
+* If you use underline only and it is equal in length or longer than the text, Sphinx
+  is fine with it. 
 
 
 **- File title:**
 
-Use just underline for the title of a file. (This would be the Heading 1
-equivalent). For example:
+Use just underline for the title of a file. (This would be the Heading 1 equivalent).
+For example:
 
 :: 
 
   Overview
   ========
 
-The double underline is preferred, but you may see documentation written early in
-the project that varies from this guideline.
+The double underline is preferred, but you may see a file or document that varies from
+this guideline. The main thing is to be consistent throughout a file. 
 
 
 **- Heading Levels**
 
-OpenMDAO documents do not have outline numbers so that they look different from
-print documents. While there are no outline numbers, there are heading levels.
+OpenMDAO documents do not have outline numbers so they look different from print
+documents and because they are generally not read sequentially. While they have no
+outline numbers, they do have heading levels.
 
-In general it is preferred that the heading levels go no more than four levels deep. If
-there are more than four levels, readers may forget where they are in the hierarchy. Of
-course, there are always exceptions, and the subject matter should be your guide.
+In general it is preferred that the heading levels go no more than four levels deep.
+If there are more than four levels, readers may forget where they are in the
+hierarchy. Of course, there are always exceptions, and the subject matter should be
+your guide.
 
 When creating your document, be sure each heading level has a different underline
 style, and be consistent. The following example shows how heading levels may

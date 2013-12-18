@@ -1,4 +1,5 @@
 import copy
+import logging
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -7,14 +8,15 @@ from pkg_resources import working_set, Environment
 from openmdao.main.factory import Factory
 from openmdao.util.dep import plugin_groups, find_module, \
                               PythonSourceTreeAnalyser
-                
+
+
 class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
     it searches through egg info of distributions in order to find any entry
     point groups corresponding to openmdao plugin types, e.g.,
     openmdao.component, openmdao.variable, etc.
     """
-    
+
     def __init__(self, groups=plugin_groups.keys(), search_path=None):
         super(PkgResourcesFactory, self).__init__()
         self._have_new_types = True
@@ -22,8 +24,8 @@ class PkgResourcesFactory(Factory):
         self._search_path = search_path
         self.env = Environment(search_path)
         self.tree_analyser = PythonSourceTreeAnalyser()
-            
-    def create(self, typ, version=None, server=None, 
+
+    def create(self, typ, version=None, server=None,
                res_desc=None, **ctor_args):
         """Create and return an object of the given type, with
         optional name, version, server id, and resource description.
@@ -66,7 +68,7 @@ class PkgResourcesFactory(Factory):
                             # newest version didn't have entry point, so skip to next project
                             break
         return None
-            
+
     def _entry_map_info(self, distiter):
         dct = {}
         for group in plugin_groups.keys():
@@ -76,12 +78,12 @@ class PkgResourcesFactory(Factory):
                     lst[1].append(group)
                     lst[2].add(value.module_name)
         return dct
-        
+
     def _get_type_dict(self):
         if self._have_new_types:
             self._entry_pt_classes = self._entry_map_info(working_set)
         return self._entry_pt_classes
-            
+
     def _get_meta_info(self, typ_list, groups, typ_dict):
         distset = set()
         for name, lst in typ_dict.items():
@@ -91,52 +93,58 @@ class PkgResourcesFactory(Factory):
             ifaces = set()
             for g in lst[1]:
                 ifaces.update(plugin_groups[g])
-                
+
             meta = {
                 'version': dist.version,
                 'ifaces': set(ifaces),
             }
-            
+
             for modname in modules:
                 fpath = find_module(modname)
                 if fpath is not None:
                     fanalyzer = self.tree_analyser.analyze_file(fpath, use_cache=True)
-                    meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
-                    
+                    # 'name' may be missing if that module only imports,
+                    # does not define, the class.
+                    if name in fanalyzer.classes:
+                        meta['bases'] = fanalyzer.classes[name].bases
+                        meta['ifaces'].update(fanalyzer.classes[name].meta['ifaces'])
+                    else:
+                        logging.warning('pkg_res_factory: %r not found', name)
+
             meta['ifaces'] = list(meta['ifaces'])
             if groups.intersection(lst[1]):
                 typ_list.append((name, meta))
         self.tree_analyser.flush_cache()
         return distset
-        
+
     def get_available_types(self, groups=None):
         """Return a set of tuples of the form (typename, dist_version), one
         for each available plugin type in the given entry point groups.
         If groups is None, return the set for all openmdao entry point groups.
         """
         ret = []
-        
+
         if groups is None:
             groups = plugin_groups.keys()
         groups = set(groups)
-        
+
         typ_dict = self._get_type_dict()
         distset = self._get_meta_info(ret, groups, typ_dict)
-           
-        if self._search_path is None: # self.env has same contents as working_set,
-                                      # so don't bother looking through it
+
+        if self._search_path is None:  # self.env has same contents as working_set,
+                                       # so don't bother looking through it
             return ret
 
         # now look in the whole Environment
-        dists = [] # we want an iterator of newest dist for each project in Environment
+        dists = []  # we want an iterator of newest dist for each project in Environment
         for proj in self.env:
             dist = self.env[proj][0]
             if dist.project_name not in distset:
                 dists.append(dist)
-        
+
         typ_dict = self._entry_map_info(dists)
         #dset = self._get_meta_info(ret, groups, typ_dict)
-        
+
         return ret
 
     def get_signature(self, typname, version=None):
@@ -148,4 +156,3 @@ class PkgResourcesFactory(Factory):
             return None
         else:
             return self.form_signature(cls)
-

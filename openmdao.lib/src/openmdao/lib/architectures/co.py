@@ -2,8 +2,7 @@
 
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver
-from openmdao.lib.datatypes.api import Float, Array
-from openmdao.lib.differentiators.finite_difference import FiniteDifference
+from openmdao.main.datatypes.api import Float, Array
 
 class CO(Architecture): 
     
@@ -16,8 +15,8 @@ class CO(Architecture):
         self.num_allowed_objectives = 1
         self.has_coupling_vars = True
         self.has_global_des_vars = True
+        
     def configure(self): 
-         
          
         global_dvs = self.parent.get_global_des_vars()        
         local_dvs = self.parent.get_local_des_vars()
@@ -36,7 +35,6 @@ class CO(Architecture):
         
         #Global Driver    
         global_opt = self.parent.add('driver', SLSQPdriver())
-        global_opt.differentiator = FiniteDifference()
         global_opt.recorders = self.data_recorders
         global_opt.print_vars = ['dis1.y1', 'dis2.y2']
         global_opt.iprint = 0
@@ -89,7 +87,6 @@ class CO(Architecture):
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
             local_opt = self.parent.add('local_opt_%s'%comp,SLSQPdriver())
-            local_opt.differentiator = FiniteDifference()
             local_opt.iprint = 0
             global_opt.workflow.add(local_opt.name)
             residuals = []

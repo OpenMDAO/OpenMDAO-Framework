@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowFrame = function(id,model,pathname) {
+openmdao.WorkflowFrame = function(id, project, pathname) {
     openmdao.WorkflowFrame.prototype.init.call(this,id,'Workflow: '+pathname,[]);
 
     /***********************************************************************
@@ -10,7 +10,7 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
 
     // initialize private variables
     var self = this,
-        pane = new openmdao.WorkflowPane(jQuery('#'+id),model,pathname,'Workflow');
+        pane = new openmdao.WorkflowPane(jQuery('#'+id),project,pathname,'Workflow');
 
     self.pathname = false;
 
@@ -34,7 +34,7 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
      *  privileged
      ***********************************************************************/
 
-    /** update the schematic with data from the model */
+    /** update the schematic with data from the project */
     this.update = function() {
         pane.showWorkflow(self.pathname);
     };
@@ -44,12 +44,12 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
         // if not already showing workflow for this pathname
         if (path !== self.pathname) {
             if (self.pathname !== false) {
-                model.removeListener(self.pathname, handleMessage);
+                project.removeListener(self.pathname, handleMessage);
             }
             self.pathname = path;
             self.setTitle('Workflow: '+path);
             pane.showWorkflow(path);
-            model.addListener(path,handleMessage);
+            project.addListener(path,handleMessage);
         }
     };
 
@@ -58,7 +58,7 @@ openmdao.WorkflowFrame = function(id,model,pathname) {
         return self.pathname;
     };
 
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.showWorkflow(pathname);
     });
 };

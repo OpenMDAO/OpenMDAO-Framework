@@ -12,7 +12,7 @@ from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, Ite
 
 from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DBCaseIterator
-from openmdao.lib.datatypes.api import Str, Array, Float, Int, Enum
+from openmdao.main.datatypes.api import Str, Array, Float, Int, Enum
 
 #TODO: Only supports HasObjective,HasParameters - real/contiunous variables        
 class EGO(Architecture): 

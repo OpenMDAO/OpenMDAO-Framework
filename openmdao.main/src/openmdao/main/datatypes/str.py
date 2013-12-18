@@ -6,7 +6,7 @@ Trait for string variables.
 __all__ = ["Str"]
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Str as Enthought_Str
+from traits.api import Str as Enthought_Str
 
 from openmdao.main.variable import Variable
 

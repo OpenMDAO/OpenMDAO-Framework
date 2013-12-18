@@ -9,6 +9,7 @@ issues found with some keys read from ssh ``id_rsa`` files.
 import base64
 import cPickle
 import getpass
+import logging
 import os.path
 import socket
 import sys
@@ -268,6 +269,9 @@ def is_private(path):
         sd = win32security.GetFileSecurity(path,
                                         win32security.DACL_SECURITY_INFORMATION)
         dacl = sd.GetSecurityDescriptorDacl()
+        if dacl is None:
+            logging.warning('is_private: No DACL for %r', path)
+            return False  # Happened on a user's XP system.
 
         # Verify the DACL contains just the two entries we expect.
         count = dacl.GetAceCount()
@@ -433,10 +437,8 @@ def read_authorized_keys(filename=None, logger=None):
             try:
                 ip_addr = socket.gethostbyname(host)
             except socket.gaierror:
-                logger.error('unknown host %r', host)
-                logger.error(line)
-                errors += 1
-                continue
+                logger.warning('unknown host %r', host)
+                logger.warning(line)
 
             data = base64.b64decode(key_data)
             start = 0

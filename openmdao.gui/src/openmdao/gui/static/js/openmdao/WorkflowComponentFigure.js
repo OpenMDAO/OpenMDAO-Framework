@@ -7,7 +7,7 @@
  *
  *  Arguments:
  *      elm:      jQuery element which will contain the WorkflowComponentFigure
- *      model:    object that provides access to the openmdao model
+ *      project:  object that provides access to the openmdao project
  *      driver:   pathname of the driver of the parent workflow, if any
  *      pathname: the pathname of the component
  *      type:     the type of the component
@@ -16,7 +16,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, valid) {
+openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, valid) {
     /***********************************************************************
      *  private
      ***********************************************************************/
@@ -60,15 +60,15 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
     // create context menu
     contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
     contextMenu.append(jQuery('<li>Edit</li>').click(function(e) {
-        var frame = new openmdao.ObjectFrame(model,pathname);
+        var frame = new openmdao.ObjectFrame(project,pathname);
     }));
     contextMenu.append(jQuery('<li>Properties</li>').click(function(e) {
         var id = (pathname+'-properties').replace(/\./g,'-'),
-            frame = new openmdao.PropertiesFrame(id,model).editObject(pathname);
+            frame = new openmdao.PropertiesFrame(id,project).editObject(pathname);
     }));
     contextMenu.append(jQuery('<li>Run</li>').click(function(e) {
         var cmd = pathname + '.run();';
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }));
     if (driver.length > 0) {
         contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
@@ -79,14 +79,14 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
             else {
                 cmd = cmd + name + "')";
             }
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }));
     }
     ContextMenu.set(contextMenu.attr('id'), svg.attr('id'));
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
-        frame = new openmdao.ObjectFrame(model, pathname);
+        frame = new openmdao.ObjectFrame(project, pathname);
     });
 
     // set rectangle color based on state
@@ -120,7 +120,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
         }
     }
 
-    model.addListener(pathname+'.exec_state', handleMessage);
+    project.addListener(pathname+'.exec_state', handleMessage);
 
     /***********************************************************************
      *  privileged
@@ -164,7 +164,7 @@ openmdao.WorkflowComponentFigure=function(elm, model, driver, pathname, type, va
 
     /** clean up listener */
     this.destroy = function() {
-        model.removeListener(pathname+'.exec_state', handleMessage);
+        project.removeListener(pathname+'.exec_state', handleMessage);
         fig.remove();
     };
 };

@@ -41,7 +41,6 @@ import sys
 import threading
 
 from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
 
 from openmdao.util.publickey import get_key_pair, HAVE_PYWIN32, \
                                     pk_sign, pk_verify
@@ -88,7 +87,12 @@ class Credentials(object):
         object.
     """
 
-    user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
+    try:  # Ensure we can at least connect to ourselves.
+        socket.gethostbyaddr(socket.getfqdn())
+    except (socket.gaierror, socket.herror) as err:
+        user_host = '%s@%s' % (getpass.getuser(), socket.gethostname())
+    else:
+        user_host = '%s@%s' % (getpass.getuser(), socket.getfqdn())
 
     def __init__(self, encoded=None):
         # We don't use cPickle to create or parse .data because we'd rather not

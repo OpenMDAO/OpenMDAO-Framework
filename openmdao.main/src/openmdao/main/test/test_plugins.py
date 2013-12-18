@@ -14,6 +14,7 @@ from openmdao.main.plugin import _get_plugin_parser, plugin_quickstart, \
                                  find_all_plugins, find_docs_url
 from openmdao.util.fileutil import find_files
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import find_in_path, onerror
 
 
 class PluginsTestCase(unittest.TestCase):
@@ -22,7 +23,7 @@ class PluginsTestCase(unittest.TestCase):
         self.tdir = tempfile.mkdtemp()
 
     def tearDown(self):
-        shutil.rmtree(self.tdir)
+        shutil.rmtree(self.tdir, onerror=onerror)
 
     def test_basic(self):
         logging.debug('')
@@ -44,13 +45,13 @@ class PluginsTestCase(unittest.TestCase):
             retval = plugin_quickstart(parser, options, args)
             self.assertEqual(retval, 0)
             fandd = find_files(self.tdir, showdirs=True)
-            self.assertEqual(set([os.path.basename(f) for f in fandd]), 
+            self.assertEqual(set([os.path.basename(f) for f in fandd]),
                              set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                                   'MANIFEST.in', '__init__.py', 'conf.py',
                                   'usage.rst', 'index.rst',
-                                  'srcdocs.rst', 'pkgdocs.rst', 'foobar.py', 
-                                  'README.txt',
-                                  'test','test_foobar.py']))
+                                  'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
+                                  'README.txt', '_static',
+                                  'test', 'test_foobar.py']))
         finally:
             os.chdir(orig_dir)
 
@@ -168,6 +169,8 @@ class PluginsTestCase(unittest.TestCase):
             parser = _get_plugin_parser()
             options, args = parser.parse_known_args(argv)
             url = find_docs_url(options.plugin_dist_name)
+            # Strip off the file protocol header
+            url = url.replace('file://', '')
             expected = os.path.join(self.tdir, 'foobar', 'src', 'foobar',
                                     'sphinx_build', 'html', 'index.html')
             self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
@@ -175,10 +178,12 @@ class PluginsTestCase(unittest.TestCase):
             # Uninstall
             logging.debug('')
             logging.debug('uninstall')
-            with open('pip.in', 'w') as out:
+            pip_in = os.path.join(self.tdir, 'pip.in')
+            pip_out = os.path.join(self.tdir, 'pip.out')
+            with open(pip_in, 'w') as out:
                 out.write('y\n')
-            stdin = open('pip.in', 'r')
-            stdout = open('pip.out', 'w')
+            stdin = open(pip_in, 'r')
+            stdout = open(pip_out, 'w')
             # On EC2 Windows, 'pip' generates an absurdly long temp directory
             # name, apparently to allow backing-out of the uninstall.
             # The name is so long Windows can't handle it. So we try to
@@ -186,15 +191,19 @@ class PluginsTestCase(unittest.TestCase):
             env = os.environ.copy()
             env['TMP'] = os.path.expanduser('~')
             try:
-                check_call(('pip', 'uninstall', 'foobar'), env=env,
+                # the following few lines are to prevent the system level pip
+                # from being used instead of the local virtualenv version.
+                pipexe = 'pip-%d.%d' % (sys.version_info[0], sys.version_info[1])
+                pipexe = find_in_path(pipexe)
+                if pipexe is None:
+                    pipexe = 'pip'
+                check_call((pipexe, 'uninstall', 'foobar'), env=env,
                            stdin=stdin, stdout=stdout, stderr=STDOUT)
             finally:
                 stdin.close()
                 stdout.close()
-                with open('pip.out', 'r') as inp:
+                with open(pip_out, 'r') as inp:
                     captured_stdout = inp.read()
-                os.remove('pip.in')
-                os.remove('pip.out')
                 logging.debug('captured stdout:')
                 logging.debug(captured_stdout)
 
@@ -225,13 +234,13 @@ class PluginsTestCase(unittest.TestCase):
         retval = plugin_quickstart(parser, options, args)
         self.assertEqual(retval, 0)
         fandd = find_files(self.tdir, showdirs=True)
-        self.assertEqual(set([os.path.basename(f) for f in fandd]), 
+        self.assertEqual(set([os.path.basename(f) for f in fandd]),
                          set(['foobar', 'src', 'docs', 'setup.cfg', 'setup.py',
                               'MANIFEST.in', '__init__.py', 'conf.py',
                               'usage.rst', 'index.rst',
-                              'srcdocs.rst', 'pkgdocs.rst', 'foobar.py', 
-                              'README.txt',
-                              'test','test_foobar.py']))
+                              'srcdocs.rst', 'pkgdocs.rst', 'foobar.py',
+                              'README.txt', '_static',
+                              'test', 'test_foobar.py']))
 
         # Errors.
         code = 'plugin_quickstart(parser, options, args)'
@@ -288,14 +297,14 @@ class PluginsTestCase(unittest.TestCase):
         expected = ['openmdao.lib.architectures.bliss.BLISS',
                     'openmdao.lib.casehandlers.caseset.CaseArray',
                     'openmdao.lib.components.broadcaster.Broadcaster',
-                    'openmdao.lib.datatypes.array.Array',
-                    'openmdao.lib.differentiators.finite_difference.FiniteDifference',
+                    'openmdao.main.datatypes.array.Array',
                     'openmdao.lib.doegenerators.central_composite.CentralComposite',
                     'openmdao.lib.drivers.broydensolver.BroydenSolver',
                     'openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate',
                     'openmdao.main.assembly.Assembly']
         for plugin in expected:
-            self.assertTrue(plugin in captured_stdout)
+            if plugin not in captured_stdout:
+                self.fail('%s not in captured_stdout' % plugin)
 
         sys.stdout = cStringIO.StringIO()
         sys.stderr = cStringIO.StringIO()
@@ -394,9 +403,12 @@ class PluginsTestCase(unittest.TestCase):
         parser = _get_plugin_parser()
         options, args = parser.parse_known_args(argv)
         url = find_docs_url(options.plugin_dist_name)
+        # Strip off the file protocol header
+        url = url.replace('file://', '')
         expected = os.path.join(os.path.dirname(sys.modules['subprocess'].__file__),
                                 'sphinx_build', 'html', 'index.html')
-        self.assertEqual(url, expected)
+        self.assertEqual(os.path.realpath(url), os.path.realpath(expected))
+        
 
     def test_install(self):
         # Errors.
@@ -414,7 +426,7 @@ from openmdao.main.api import Component, Container
 
 class MyComp(Component):
     pass
-    
+
 class MyCont(Container):
     pass
             """)
@@ -436,4 +448,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

@@ -14,18 +14,22 @@ from openmdao.main.container import Container, get_default_name, \
                                     create_io_traits
 from openmdao.main.vartree import VariableTree
 from openmdao.main.component import Component, SimulationRoot
+from openmdao.main.implicitcomp import ImplicitComponent
 from openmdao.main.component_with_derivatives import ComponentWithDerivatives
 from openmdao.main.driver_uses_derivatives import DriverUsesDerivatives
 from openmdao.main.assembly import Assembly, set_as_top, dump_iteration_tree
-from openmdao.main.driver import Driver
+from openmdao.main.driver import Driver, Run_Once
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.seqentialflow import SequentialWorkflow
+from openmdao.main.sequentialflow import SequentialWorkflow
+from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.variable import Variable
 
 from openmdao.main.exceptions import ConstraintError
 
-from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.interfaces import implements, Attribute, Interface
+
+from openmdao.main.file_supp import FileMetadata
 
 from openmdao.main.case import Case
 
@@ -36,7 +40,7 @@ from openmdao.util.eggsaver import SAVE_PICKLE, SAVE_CPICKLE #, SAVE_YAML, SAVE_
 
 from openmdao.units import convert_units
 
-from zope.interface import implements, Attribute, Interface
+from openmdao.main.project import load_project
 
 # TODO: This probably shouldn't be here. Removing it will require edits to some
 # of our plugins

@@ -6,17 +6,16 @@ import os
 from glob import glob
 
 from math import pi
-from numpy import array, zeros, sqrt, cos, sin, radians, log10
+from numpy import zeros, sqrt, cos, sin, radians, log10
 from numpy import float as numpy_float
 
-from openmdao.lib.datatypes.api import Int, Float, Array, Enum
+from openmdao.main.datatypes.api import Int, Float, Array, Enum, VarTree
 from openmdao.lib.components.api import ExternalCode
 
 from openmdao.units import add_unit
 #from openmdao.util.namelist_util import Namelist
 
 # The following will be used for file wrapping, see the next sections
-from openmdao.main.api import FileMetadata, VariableTree, Slot
 from openmdao.util.filewrap import InputFileGenerator, FileParser
 from geometry import Geometry
 from MEflows import MEflows
@@ -28,8 +27,8 @@ class HSRNOISE(ExternalCode):
 
     # Variables from MEflows and Geometry variable trees
     # -------------------------
-    flow_in = Slot(MEflows, iotype='in')
-    geo_in = Slot(Geometry, iotype='in')
+    flow_in = VarTree(MEflows(), iotype='in')
+    geo_in = VarTree(Geometry(), iotype='in')
     
     LinFrac = Float(0.9, iotype='in', desc='Fraction of ejector length covered by acoustic liner')
     phi = Float(0.0, iotype='in', units='deg', desc='Roll angle at which noise is estimated')

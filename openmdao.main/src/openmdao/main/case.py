@@ -1,19 +1,18 @@
 
+import time
 from uuid import uuid1
-import re
 from array import array
 import traceback
 from StringIO import StringIO
 from inspect import getmro
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError
+from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
-class _Missing(object):
-    pass
+_Missing = object()
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -82,12 +81,15 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid. 
-        self.label = label   # optional label
+        self.exc = None                 # Exception during execution.
+        self.label = label              # Optional label.
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
             self.uuid = str(uuid1())  # unique identifier
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
+
+        self.timestamp = time.time()
 
         if inputs: 
             self.add_inputs(inputs)
@@ -105,8 +107,10 @@ class Case(object):
         stream = StringIO()
         stream.write("Case: %s\n" % self.label)
         stream.write("   uuid: %s\n" % self.uuid)
+        stream.write("   timestamp: %15f\n" % self.timestamp)
         if self.parent_uuid:
             stream.write("   parent_uuid: %s\n" % self.parent_uuid)
+
         if ins:
             stream.write("   inputs:\n")
             for name,val in ins:
@@ -121,9 +125,11 @@ class Case(object):
             stream.write("   retries: %s\n" % self.retries)
         if self.msg:
             stream.write("   msg: %s\n" % self.msg)
+        if self.exc is not None:
+            stream.write("   exc: %s\n" % traceback_str(self.exc))
         return stream.getvalue()
     
-    def __eq__(self,other): 
+    def __eq__(self, other): 
         if self is other:
             return True
         try:
@@ -131,13 +137,14 @@ class Case(object):
                 return False
             if len(self) != len(other):
                 return False
-            for selftup, othertup in zip(self.items(), other.items()):
+            for selftup, othertup in zip(self.items(flatten=True), 
+                                         other.items(flatten=True)):
                 if selftup[0] != othertup[0] or selftup[1] != othertup[1]:
                     return False
         except:
             return False
         return True
-    
+
     def __getitem__(self, name):
         val = self._inputs.get(name, _Missing)
         if val is not _Missing:
@@ -296,7 +303,10 @@ class Case(object):
                             self.msg = str(err)
                         else:
                             self.msg = self.msg + " %s" % err
-        if last_excpt:
+
+        self.timestamp = time.time()
+
+        if last_excpt is not None:
             raise last_excpt
             
     def add_input(self, name, value):
@@ -359,8 +369,10 @@ class Case(object):
                 outs.append((name,self._outputs[name]))
             else:
                 raise KeyError("'%s' is not part of this Case" % name)
-        return Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
+        sc =  Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
                     max_retries=self.max_retries)
+        sc.timestamp = self.timestamp
+        return sc
 
         
     def _register_expr(self, s):

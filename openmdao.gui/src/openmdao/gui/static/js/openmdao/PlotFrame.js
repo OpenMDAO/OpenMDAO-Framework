@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 // requires flot.js
 
-openmdao.PlotFrame = function(id,model,pathname) {
+openmdao.PlotFrame = function(id, project, pathname) {
     openmdao.PlotFrame.prototype.init.call(this,id,'Plot: '+pathname);
 
     /***********************************************************************
@@ -75,10 +75,10 @@ openmdao.PlotFrame = function(id,model,pathname) {
         updatePlot();
     }
 
-    // subscribe to model for data
+    // subscribe to project for data
     function plotVariable(pathname) {
         variables.push(pathname);
-        model.addListener(pathname, handleMessage);
+        project.addListener(pathname, handleMessage);
     }
 
     // prompt for a new variable to add to the plot
@@ -108,7 +108,7 @@ openmdao.PlotFrame = function(id,model,pathname) {
     this.destructor = function() {
         var i =0;
         for (i = 0 ; i < variables.length ; ++i) {
-            model.removeListener(variables[i], handleMessage);
+            project.removeListener(variables[i], handleMessage);
         }
     };
 
@@ -123,7 +123,7 @@ openmdao.PlotFrame.prototype = new openmdao.BaseFrame();
 openmdao.PlotFrame.prototype.chooseVariable = function() {
     openmdao.Util.promptForValue('Enter pathname of variable to plot:',
         function(pathname) {
-            p=new openmdao.PlotFrame('plot-'+pathname,openmdao.model,pathname);
+            p=new openmdao.PlotFrame('plot-'+pathname,openmdao.project,pathname);
         }
     );
 };

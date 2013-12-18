@@ -3,11 +3,10 @@ Test distributed simulation.
 """
 
 import cPickle
-import glob
 import hashlib
 import logging
 from math import pi
-from multiprocessing import AuthenticationError, current_process
+from multiprocessing import AuthenticationError
 from multiprocessing.managers import RemoteError
 import os
 import shutil
@@ -15,9 +14,10 @@ import socket
 import sys
 import traceback
 import unittest
-import nose
 
 from Crypto.Random import get_random_bytes
+
+from traits.api import CTrait
 
 from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
                               set_as_top
@@ -31,7 +31,7 @@ from openmdao.main.objserverfactory import connect, start_server, RemoteFile
 from openmdao.main.rbac import Credentials, get_credentials, set_credentials, \
                                AccessController, RoleError, rbac
 
-from openmdao.lib.datatypes.api import Float, Int
+from openmdao.main.datatypes.api import Float, Int, FileRef
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 from openmdao.test.execcomp import ExecComp
@@ -39,6 +39,7 @@ from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.publickey import get_key_pair
 from openmdao.util.testutil import assert_raises, assert_rel_error
+from openmdao.util.fileutil import onerror
 
 
 # Used for naming classes we want to create instances of.
@@ -46,7 +47,6 @@ _MODULE = 'openmdao.main.test.test_distsim'
 
 # Used for naming server directories.
 _SERVER_ID = 0
-
 
 
 class Box(ExecComp):
@@ -94,7 +94,6 @@ class Box(ExecComp):
         return self.parent.xyzzy()
 
 
-
 class HollowSphere(Component):
     """ Simple component for testing. """
 
@@ -108,7 +107,7 @@ class HollowSphere(Component):
     pid = Int(iotype='out')
 
     def __init__(self):
-        super(HollowSphere, self).__init__() 
+        super(HollowSphere, self).__init__()
         self.pid = os.getpid()
 
     def execute(self):
@@ -160,6 +159,7 @@ class BoxSource(ExecComp):
         # For get_closest_proxy().
         sub = self.add('subcontainer', Container())
         sub.add('subvar', Int())
+
 
 class BoxSink(ExecComp):
     """ Just a pass-through for :class:`BoxDriver` result values. """
@@ -243,31 +243,29 @@ class ProtectedBox(Box):
     def get_access_controller(self):
         return self.protector
 
-    @rbac(('owner', 'user'))
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get(self, path, index=None):
         if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).get(path, index)
-        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
+        raise RoleError('No get access to %r' % path)
+
+    @rbac(('owner', 'user'), proxy_types=[CTrait])
+    def get_dyn_trait(self, name, iotype=None, trait=None):
+        if self.protector.user_attribute(self, name):
+            return super(ProtectedBox, self).get_dyn_trait(name, iotype, trait)
+        raise RoleError('No get_dyn_trait access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def get_dyn_trait(self, name, iotype=None):
+    def get_attr(self, name, index=None):
         if self.protector.user_attribute(self, name):
-            return super(ProtectedBox, self).get_dyn_trait(name, iotype)
-        raise RoleError("No get access to '%s' by role '%s'" % (attr, role))
-
-    @rbac(('owner', 'user'))
-    def get_wrapped_attr(self, name, index=None):
-        if self.protector.user_attribute(self, name):
-            return super(ProtectedBox, self).get_wrapped_attr(name)
-        raise RoleError("No get_wrapped_attr access to '%s' by role '%s'"
-                        % (attr, role))
+            return super(ProtectedBox, self).get_attr(name)
+        raise RoleError('No get_attr access to %r' % name)
 
     @rbac(('owner', 'user'))
     def set(self, path, value, index=None, src=None, force=False):
         if self.protector.user_attribute(self, path):
             return super(ProtectedBox, self).set(path, value, index, src, force)
-        raise RoleError("No set access to '%s' by role '%s'"
-                        % (attr, role))
+        raise RoleError('No set access to %r' % path)
 
 
 class TestCase(unittest.TestCase):
@@ -301,7 +299,7 @@ class TestCase(unittest.TestCase):
 
         server_dir = 'Factory_%d' % _SERVER_ID
         if os.path.exists(server_dir):
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         os.mkdir(server_dir)
         os.chdir(server_dir)
         self.server_dirs.append(server_dir)
@@ -358,7 +356,7 @@ class TestCase(unittest.TestCase):
                len(self.test_result.failures) == self.n_failures and \
                not int(self.keepdirs):
                 for server_dir in self.server_dirs:
-                    shutil.rmtree(server_dir)
+                    shutil.rmtree(server_dir, onerror=onerror)
         finally:
             os.environ['OPENMDAO_KEEPDIRS'] = self.keepdirs
 
@@ -395,9 +393,14 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, obj.get('solid_volume'), 2.5766295747, 0.000001)
         assert_rel_error(self, obj.get('surface_area'), 50.265482457, 0.000001)
 
-        msg = ": Variable 'radius' must be a float in the range (0.0, "
-        assert_raises(self, "obj.set('radius', -1)", globals(), locals(),
-                      ValueError, msg)
+        try:
+            obj.set('radius', -1)
+        except RemoteError as exc:
+            fragment = ": Variable 'radius' must be a float in the range (0.0, "
+            if fragment not in str(exc):
+                self.fail('%s not found in %s' % (fragment, exc))
+        else:
+            self.fail('Expected RemoteError')
 
         # Now a Box, accessed via attribute methods.
         obj = factory.create(_MODULE+'.Box')
@@ -476,7 +479,7 @@ class TestCase(unittest.TestCase):
         try:
             box.cause_parent_error1()
         except RemoteError as exc:
-            msg = "AttributeError: attribute 'no_such_variable' of"
+            msg = "AttributeError: 'Model' object has no attribute 'no_such_variable'"
             logging.debug('msg: %s', msg)
             logging.debug('exc: %s', exc)
             self.assertTrue(msg in str(exc))
@@ -582,7 +585,7 @@ class TestCase(unittest.TestCase):
         authkey = 'password'
         server_dir = 'Factory_authkey'
         if os.path.exists(server_dir):
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         os.mkdir(server_dir)
         os.chdir(server_dir)
         self.server_dirs.append(server_dir)
@@ -708,8 +711,8 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.DEBUG)
-    unittest.main()
+    #unittest.main()
     #sys.argv.append('--cover-package=openmdao.main')
     #sys.argv.append('--cover-erase')
-    #nose.runmodule()
-
+    import nose
+    nose.runmodule()

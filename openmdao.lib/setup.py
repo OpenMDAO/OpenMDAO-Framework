@@ -1,6 +1,7 @@
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -15,7 +16,7 @@ setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
       long_description="""\
-Component, Driver, and Variable plugins for OpenMDAO
+Component, Driver, Variable and other plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -64,10 +65,12 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
+      openmdao.lib.drivers.mda_solver.MDASolver = openmdao.lib.drivers.mda_solver:MDASolver
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
+      openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent
 
       [openmdao.component]
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
@@ -80,22 +83,15 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
       openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
+      openmdao.lib.components.lazy_comp.LazyComponent = openmdao.lib.components.lazy_comp:LazyComponent
+      openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
 
-      [openmdao.differentiator]
-      openmdao.lib.differentiators.finite_difference.FiniteDifference = openmdao.lib.differentiators.finite_difference:FiniteDifference
-      openmdao.lib.differentiators.chain_rule.ChainRule = openmdao.lib.differentiators.chain_rule:ChainRule
-      openmdao.lib.differentiators.analytic.Analytic = openmdao.lib.differentiators.analytic:Analytic
-      
-      [openmdao.variable]
-      openmdao.lib.datatypes.array.Array = openmdao.lib.datatypes.array:Array
-      
       [openmdao.surrogatemodel]
       openmdao.lib.surrogatemodels.kriging_surrogate.KrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:KrigingSurrogate
       openmdao.lib.surrogatemodels.kriging_surrogate.FloatKrigingSurrogate = openmdao.lib.surrogatemodels.kriging_surrogate:FloatKrigingSurrogate
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 
-      
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
@@ -133,5 +129,14 @@ Component, Driver, and Variable plugins for OpenMDAO
       openmdao.lib.architectures.co.CO = openmdao.lib.architectures.co:CO
       openmdao.lib.architectures.ego.EGO = openmdao.lib.architectures.ego:EGO
       openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
+
+      [openmdao.parametric_geometry]
+      openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.geometry.box:BoxParametricGeometry
+
+      [openmdao.binpub]
+      openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
+      openmdao.lib.geometry.box.BoxSender = openmdao.lib.geometry.box:BoxSender
+      openmdao.lib.geometry.stl_group.STLGroupSender = openmdao.lib.geometry.stl_group:STLGroupSender
+
       """,
       )

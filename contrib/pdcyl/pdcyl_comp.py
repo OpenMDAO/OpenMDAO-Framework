@@ -5,7 +5,7 @@ PDCYL is a structural esimation code that was pulled from ACSYNT.
 """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, Enum, Float, Int, Str
+from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Str
 from openmdao.lib.components.api import ExternalCode
 from openmdao.main.api import FileMetadata
 from openmdao.util.filewrap import FileParser

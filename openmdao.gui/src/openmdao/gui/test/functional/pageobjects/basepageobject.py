@@ -71,6 +71,7 @@ class BasePageObject(object):
         """ Current browser title. """
         return WebDriverWait(self.browser, TMO).until(
                    lambda browser: browser.title)
+
     @property
     def page_url(self):
         """ Current browser URL. """
@@ -96,4 +97,3 @@ class BasePageObject(object):
             except TimeoutException:
                 raise TimeoutException('Waiting for title %r' % prefix)
         return cls(browser, port)
-

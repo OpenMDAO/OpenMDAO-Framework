@@ -101,8 +101,7 @@ def pack_zipfile(patterns, filename, logger=None):
 
     nfiles = 0
     nbytes = 0
-    zipped = zipfile.ZipFile(filename, 'w', compression, zip64)
-    try:
+    with zipfile.ZipFile(filename, 'w', compression, zip64) as zipped:
         for pattern in patterns:
             for path in glob.glob(pattern):
                 size = os.path.getsize(path)
@@ -110,8 +109,7 @@ def pack_zipfile(patterns, filename, logger=None):
                 zipped.write(path)
                 nfiles += 1
                 nbytes += size
-    finally:
-        zipped.close()
+
     return (nfiles, nbytes)
 
 
@@ -129,7 +127,7 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
     textfiles: list
         List of :mod:`fnmatch` style patterns specifying which unpacked files
         are text files possibly needing newline translation. If not supplied,
-        the first 4KB of each is scanned for a zero byte. If not found, then the
+        the first 4KB of each is scanned for a zero byte. If none is found, then the
         file is assumed to be a text file.
     """
     logger = logger or NullLogger()
@@ -139,13 +137,18 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
 
     nfiles = 0
     nbytes = 0
-    zipped = zipfile.ZipFile(filename, 'r')
-    try:
+    with zipfile.ZipFile(filename, 'r') as zipped:
         for info in zipped.infolist():
-            filename = info.filename
-            size = info.file_size
+            filename, size = info.filename, info.file_size
             logger.debug('unpacking %r (%d)...', filename, size)
             zipped.extract(info)
+
+            if sys.platform != 'win32':
+                # Set permissions, extract() doesn't.
+                rwx = (info.external_attr >> 16) & 0777
+                if rwx:
+                    os.chmod(filename, rwx)  # Only if something valid.
+
             # Requires mismatched systems.
             if info.create_system != local_system:  # pragma no cover
                 if textfiles is None:
@@ -161,8 +164,7 @@ def unpack_zipfile(filename, logger=None, textfiles=None):
                             translate_newlines(filename)
             nfiles += 1
             nbytes += size
-    finally:
-        zipped.close()
+
     return (nfiles, nbytes)
 
 

@@ -1,29 +1,31 @@
+import sys
+import traceback
+
 import cStringIO as StringIO
 import os.path
 import shutil
 import tarfile
-from ConfigParser import SafeConfigParser
 from tempfile import mkdtemp
 from time import strftime
+from urllib import quote_plus
 from urllib2 import HTTPError
 
 from tornado import web
 
 from openmdao.main import __version__
 from openmdao.main.project import parse_archive_name, Project
-from openmdao.main.repo import find_vcs
+from openmdao.main.repo import find_vcs, DumbRepo
 from openmdao.gui.handlers import ReqHandler
 from openmdao.gui.projectdb import Projects
 from openmdao.util.fileutil import clean_filename, onerror
-from openmdao.util.log import logger
 
 
 def _get_unique_name(dirname, basename):
-    """Returns a unique pathname for a file with the given basename
+    """Returns a unique 'clean' pathname with the given basename
     in the specified directory.
     """
     i = 1
-    name = basename
+    name = clean_filename(basename)
     while os.path.exists(os.path.join(dirname, name)):
         name = '%s_%d' % (basename, i)
         i += 1
@@ -55,26 +57,12 @@ class DeleteHandler(ReqHandler):
         if project['projpath']:
             dirname = str(project['projpath'])
             if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=onerror)
-
-        pdb.remove(project_id)
-        self.redirect('/')
-
-    @web.authenticated
-    def get(self, project_id):
-        pdb = Projects()
-        project = pdb.get(project_id)
-
-        if project['projpath']:
-            dirname = str(project['projpath'])
-            if os.path.isdir(dirname):
-                shutil.rmtree(dirname, onerror=onerror)
-
-        pdb.remove(project_id)
-        self.redirect('/')
-
-    @web.authenticated
-    def get(self, project_id):
+                try:
+                    shutil.rmtree(dirname, onerror=onerror)
+                except Exception as err:
+                    raise HTTPError(dirname, 403, err, None, None)
+                else:
+                    pdb.remove(project_id)
         self.redirect('/')
 
 
@@ -117,27 +105,12 @@ class DetailHandler(ReqHandler):
             project['version'] = forms['version'].strip()
         else:
             project['version'] = ''
-            
-        directory = forms.get('directory', self.get_project_dir())
 
         # if there's no proj dir yet, create an empty one
         if not project['projpath']:
-
-            version = project['version']
+            directory = self.get_project_dir()
             pname = project['projectname']
-
-            if len(version):
-                filename = clean_filename('%s-%s' % (pname, version))
-            else:
-                filename = clean_filename(pname)
-
-            unique = filename
-            i = 1
-            while os.path.exists(os.path.join(directory, unique)):
-                unique = '%s_%s' % (filename, str(i))
-                i = i+1
-
-            project['projpath'] = os.path.join(directory, unique)
+            project['projpath'] = _get_unique_name(directory, pname)
 
         if project_is_new:
             pdb.new(project)
@@ -162,7 +135,6 @@ class DetailHandler(ReqHandler):
 
     @web.authenticated
     def get(self, project_id):
-
         pdb = Projects()
         project = pdb.get(project_id)
         self.render('projdb/project_detail.html', project=project,
@@ -196,28 +168,27 @@ class DownloadHandler(ReqHandler):
                     self.set_header('Content-Disposition',
                                     'attachment; filename=%s-%s-%s.proj' %
                                     (form_proj, form_ver, form_date))
-    
+
                     try:
                         self.write(proj_file.read())
                     finally:
                         proj_file.close()
                 finally:
                     try:
-                        shutil.rmtree(tdir)
+                        shutil.rmtree(tdir, onerror=onerror)
                     except:
                         pass
             else:
                 raise HTTPError(dirname, 403, "%s is not a directory" % dirname,
                                 None, None)
         else:
-            raise HTTPError(filename, 403, "no file found for %s" % \
+            raise HTTPError(filename, 403, "no file found for %s" %
                                             project['projectname'], None, None)
-
 
 
 class NewHandler(ReqHandler):
     ''' Add a project to the project database. This extracts the project file
-    into a directory under the projects directory of user.
+    into a directory under the project's directory of users.
     '''
 
     @web.authenticated
@@ -251,13 +222,13 @@ class NewHandler(ReqHandler):
         i = 1
         while os.path.exists(os.path.join(directory, unique)):
             unique = '%s_%s' % (filename, str(i))
-            i = i+1
+            i = i + 1
 
         project['projpath'] = os.path.join(directory, unique)
 
         pdb.new(project)
         os.mkdir(project['projpath'])
-                
+
         # Update project settings.
         proj = Project(project['projpath'])
         dummy = proj.get_info()  # Just to get required keys.
@@ -266,7 +237,8 @@ class NewHandler(ReqHandler):
             info[key] = project[key]
         proj.set_info(info)
 
-        self.redirect("/workspace/project?projpath=" + project['projpath'])
+        self.redirect("/workspace/project?projpath=" + quote_plus(project['projpath']))
+
 
 class ImportHandler(ReqHandler):
     ''' Get/set project details.
@@ -275,65 +247,58 @@ class ImportHandler(ReqHandler):
     @web.authenticated
     def get(self):
         self.render('projdb/import-metadata-fields.html',
-                    projectname='someproject'
-                    )
+                    projectname='someproject')
 
     @web.authenticated
     def post(self):
-
-        if not self.request.arguments.has_key( "projectname" ):
-            # First step in the import process.
-            #   Just get the name, description and version of the
-            #   project the user wants to import.
-            #   Then pass this to the form so the user can change it.
-
-            # Go through the process of creating a new project directory
-            #   so we can read the name, description and version from the
-            #   settings file.
+        # The project file is uploaded once to extract the metadata.
+        # It is then deleted and the metadata is used to populate another
+        # import dialog, giving the user an opportunity to edit the
+        # info before importing or cancel the import.
+        if not 'projectname' in self.request.arguments:
+            # First upload
             sourcefile = self.request.files['projectfile'][0]
-            if sourcefile:
+            try:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
                     unique = _get_unique_name(self.get_project_dir(),
                                               parse_archive_name(filename))
-                    os.mkdir(unique)
+                    tdir = mkdtemp(prefix=unique)
                     buff = StringIO.StringIO(sourcefile['body'])
                     archive = tarfile.open(fileobj=buff, mode='r:gz')
-                    archive.extractall(path=unique)
-                    vcslist = find_vcs()
-                    if vcslist:
-                        vcs = vcslist[0](unique)
-                    else:
-                        vcs = DumbVCS(unique)
-                    vcs.init_repo()
-    
-                    # Update project dict with info section of config file.
-                    proj = Project(unique)
-                    
-                    shutil.rmtree(unique)
-    
+                    archive.extractall(path=tdir)
+                    proj = Project(tdir)
                     project_info = proj.get_info()
+
+                    try:
+                        shutil.rmtree(tdir, onerror=onerror)
+                    except:
+                        pass
+
                     self.render('projdb/import-metadata-fields.html',
                                 projectname=parse_archive_name(unique),
                                 description=project_info['description'],
-                                version=project_info['version']
-                                )
-            self.redirect("/")
+                                version=project_info['version'])
+            except Exception as err:
+                print 'ERROR: could not get metadata from', sourcefile
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                self.redirect('/')
         else:
+            # second upload
             forms = {}
             for field in ['projectname', 'description', 'version']:
                 if field in self.request.arguments.keys():
                     forms[field] = self.request.arguments[field][0]
 
-
             sourcefile = self.request.files['projectfile'][0]
-            if sourcefile:
+            try:
                 filename = sourcefile['filename']
                 if len(filename) > 0:
 
                     unique = _get_unique_name(self.get_project_dir(),
                                               parse_archive_name(filename))
-                
+
                     pdb = Projects()
 
                     project = {}
@@ -345,9 +310,9 @@ class ImportHandler(ReqHandler):
                     project['projpath'] = unique
 
                     os.mkdir(unique)
-                
+
                     buff = StringIO.StringIO(sourcefile['body'])
-                  
+
                     archive = tarfile.open(fileobj=buff, mode='r:gz')
                     archive.extractall(path=unique)
 
@@ -355,7 +320,7 @@ class ImportHandler(ReqHandler):
                     if vcslist:
                         vcs = vcslist[0](unique)
                     else:
-                        vcs = DumbVCS(unique)
+                        vcs = DumbRepo(unique)
                     vcs.init_repo()
 
                     # Update project settings.
@@ -368,11 +333,12 @@ class ImportHandler(ReqHandler):
 
                     pdb.new(project)
 
-                    self.redirect("/workspace/project?projpath=" + project['projpath'])
-
-            self.redirect("/")
-    
-
+                    self.redirect("/workspace/project?projpath=" + quote_plus(project['projpath']))
+            except Exception as err:
+                print 'ERROR: could not get import project from', sourcefile
+                exc_type, exc_value, exc_traceback = sys.exc_info()
+                traceback.print_exception(exc_type, exc_value, exc_traceback)
+                self.redirect('/')
 
 
 handlers = [

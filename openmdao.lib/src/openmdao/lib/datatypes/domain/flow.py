@@ -27,7 +27,7 @@ class FlowSolution(object):
         self._grid_location = loc
 
     grid_location = property(_get_grid_location, _set_grid_location,
-                             doc='Position at which data is located,'
+                             doc='Position at which data is located;'
                                  ' must be one of %s' % (_GRID_LOCATIONS,))
     def _get_ghosts(self):
         return self._ghosts

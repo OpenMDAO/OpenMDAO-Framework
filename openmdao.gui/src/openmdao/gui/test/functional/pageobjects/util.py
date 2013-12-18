@@ -1,10 +1,13 @@
 import Queue
 import threading
 import time
+import logging
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import WebDriverException, TimeoutException, \
+                                       NoSuchWindowException
 
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement, InputElement, TextElement
@@ -62,6 +65,18 @@ class ArgsPrompt(BasePageObject):
         arg_inputs = table.find_elements(By.XPATH, 'tbody/tr/td/input')
         arg_inputs[index].send_keys(text)
 
+    def argument_count(self):
+        self.browser.implicitly_wait(1)
+        try:
+            table = self.browser.find_elements_by_css_selector('#get-args-tbl')
+        finally:
+            self.browser.implicitly_wait(TMO)
+        if table:
+            arg_inputs = table[0].find_elements(By.XPATH, 'tbody/tr/td/input')
+            return len(arg_inputs)
+        else:
+            return 0
+
     def click_ok(self):
         self('ok_button').click()
 
@@ -93,19 +108,36 @@ class NotifierPage(object):
     """
 
     @staticmethod
-    def wait(parent, timeout=TMO, base_id=None):
-        """ Wait for notification. Returns notification message. """
-        time.sleep(0.5)  # Pacing.
-        base_id = base_id or 'notify'
-        msg_id = base_id+'-msg'
-        ok_id  = base_id+'-ok'
-        msg = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, msg_id))
-        ok = WebDriverWait(parent.browser, timeout).until(
-                  lambda browser: browser.find_element(By.ID, ok_id))
-        message = msg.text
-        ok.click()
-        return message
+    def wait(parent, timeout=TMO, base_id=None, retries=5):
+        """
+        Wait for notification. Returns notification message.
+        If `retries` <= 0 then we're checking for something we anticipate
+        won't be there, so don't worry if it isn't.
+        """
+        for retry in range(max(retries, 1)):
+            time.sleep(0.5)  # Pacing.
+            base_id = base_id or 'notify'
+            msg_id = base_id + '-msg'
+            ok_id  = base_id + '-ok'
+            try:
+                msg = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, msg_id))
+                ok = WebDriverWait(parent.browser, timeout).until(
+                          lambda browser: browser.find_element(By.ID, ok_id))
+            except WebDriverException as err:
+                if retries > 0 or not isinstance(err, TimeoutException):
+                    logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+            else:
+                # Sometimes the 'Ok' button is temporarily obscured.
+                try:
+                    message = msg.text
+                    ok.click()
+                    return message
+                except WebDriverException as err:
+                    logging.warning('NotifierPage.wait(%s): %r', base_id, err)
+
+        if retries > 0 or not isinstance(err, TimeoutException):
+            raise err
 
 
 class SafeBase(object):
@@ -134,6 +166,14 @@ class SafeElementBase(SafeBase):
     def find_elements(self, *args, **kwargs):
         return self._wrap(
             self._invoke('find_elements', args, kwargs))
+
+    def find_element_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_element_by_tag_name', args, kwargs))
+
+    def find_elements_by_tag_name(self, *args, **kwargs):
+        return self._wrap(
+            self._invoke('find_elements_by_tag_name', args, kwargs))
 
     def find_element_by_class_name(self, *args, **kwargs):
         return self._wrap(
@@ -252,9 +292,15 @@ class SafeDriver(SafeElementBase):
         # All elements share same invoker.
         super(SafeDriver, self).__init__(driver, SafeInvoker())
 
+    def __repr__(self):
+        return 'SafeDriver(%s)' % (self._delegate.__class__.__name__)
+
     @property
     def current_window_handle(self):
-        return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
+        try:
+            return self._invoke('getattr', (self._delegate, 'current_window_handle'), {})
+        except NoSuchWindowException:
+            return None
 
     @property
     def window_handles(self):
@@ -278,6 +324,12 @@ class SafeDriver(SafeElementBase):
 
     def get_window_size(self, *args, **kwargs):
         return self._invoke('get_window_size', args, kwargs)
+
+    def set_window_size(self, *args, **kwargs):
+        return self._invoke('set_window_size', args, kwargs)
+
+    def set_window_position(self, *args, **kwargs):
+        return self._invoke('set_window_position', args, kwargs)
 
     def implicitly_wait(self, *args, **kwargs):
         return self._invoke('implicitly_wait', args, kwargs)
@@ -341,4 +393,3 @@ class SafeInvoker(object):
 
             self._request_q.task_done()
             self._reply_q.put((retval, exc))
-

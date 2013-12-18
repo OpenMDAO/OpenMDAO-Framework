@@ -16,76 +16,127 @@ System Requirements
 ===================
 
 Working with OpenMDAO as a developer means there are some additional system requirements besides
-those mentioned in the :ref:`User Guide <System-Requirements>`. These requirements are
-described below.
-
+those mentioned in the :ref:`User Guide <System-Requirements>`. Make sure that you have installed 
+all of those requirements first, and then add the other requirements described below.
 
 **Git**
-  We use Git for version control.  You'll need it to access the OpenMDAO
-  source repository.  GitHub, where our source repository is stored, has
-  excellent documentation describing how to install Git and how to become
-  familiar with Git and GitHub.  You can find it `here`__.
-    
+
+We use Git for version control.  You'll need it to access the OpenMDAO
+source repository.  GitHub, where our source repository is stored, has
+excellent documentation describing how to install Git and how to become
+familiar with Git and GitHub.  You can find it `here`__.
+
 .. __: https://help.github.com
 
 **C/C++ and Fortran Compilers**
-  Certain packages used in OpenMDAO contain Python extensions, meaning that they
-  contain non-Python source code that must be compiled. Packages currently in use require
-  either C/C++ or Fortran compilers.
 
-  - *Linux*:
+Certain packages used in OpenMDAO contain Python extensions, meaning that they contain non-Python
+source code that must be compiled. Packages currently in use require either C/C++ or Fortran
+compilers.
 
-    - *gcc*
-    
-    - *gfortran*
-      
-      If they are not already on your system, they should be easily installable using
-      your package manager. OpenMDAO currently builds and passes all tests with
-      gcc/gfortran 4.1.2. We expect that later versions of gcc/gfortran 4.X should also
-      work.
+- *Linux*:
 
-      
-  - *Mac OS X*:
-   
-    - *gcc*
-      
-      Is available as part of *Xcode*, which can be found on the OS X distribution disks but typically is not 
-      installed by default.  You can also download gcc and install it from source, although
-      this is more prone to installation problems.
-        
-    - *gfortran*
-      
-      Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
+  - *gcc*
+
+  - *gfortran*
+
+   If these compilers are not already on your system, they should be easily installable using
+   your package manager. OpenMDAO currently builds and passes all tests with gcc/gfortran 4.1.2.
+   We expect that later versions of gcc/gfortran 4.X should also work.
+
+
+- *Mac OS X*:
+
+  - Xcode 
+
+    You can get the latest version from Apple, but to do so you'll have to register (free) as a developer
+    or log in if you are already registered. If you're using Lion or Mountain Lion, you can also get
+    Xcode from the App store. If you don't want to get the whole X-Code environment, for Lion and
+    Mountain Lion  Apple offers a smaller compiler-only library called *Command Line Tools for Xcode*.
+    You can get the latest Xcode or the  smaller compiler package `here
+    <https://developer.apple.com/xcode>`_.
+
+
+  - gfortran 
+
+    It's sometimes hard to figure out which version of gfortran to install on your Mac. See
+    this `page <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_ for a pretty good overview 
+    of what's available. Alternatively, you can follow the instructions for installing a package manager 
+    called `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_,
+    which will figure out the right kind of gfortran for you. 
+
+
+  - Lion (OS X 10.7) and Mountain Lion (OS X 10.8)
+
+    - If you want to get the full Xcode, make sure version 4.3.2 or higher is installed. You can try the 
+      Mac App Store. When you install Xcode (via the app store or not), it does not install the compilers you
+      need by default.  So go to Xcode's  **Preferences** menu, choose **Downloads**, and then choose **Command Line Tools.**
+
+      .. figure:: OSX_Lion_Screenshot.png
+         :align: center
+         :alt: Screenshot of Xcode's Downloads screen showing options
+
+         XCode's *Downloads* Screen     
+
+    - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_, or use Homebrew 
+
+
+  - On **Leopard:**
+
+    - `gfortran`__  - Click on ``fortran-macosx-leopard-x86.dmg`` under **Miscellaneous Downloads.**
+
+      If you have g77 installed on Leopard, you may get build errors like:  ``ld: library not found for
+      -lcc_dynamic``. This indicates that g77, which won't work, is being used instead of `gfortran`. At the
+      moment, the recommended fix is to change the name of g77 to something else, for example, ``_g77`` so
+      that it won't be found by ``numpy.distutils``.
+
+    .. __: http://openmdao.org/downloads/recent/      
 
 .. _`Windows`:
 
-  - *Windows*:
+- *Windows*:
 
-    - *mingw32*   (for Fortran and C++)
-      
-     
-      You can find mingw32 `here`__. You must do the following things when installing it:
-            
-      - Check the C++ compiler installation option to get g++ (required to run OpenMDAO)
-      
-      - Create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
-      
+  - *mingw32*   (for Fortran and C++)
+
+
+    You can find mingw32 `here`__. You must do the following things when installing it:
+
+    - Check the C++ and Fortran compiler installation options to get g++ (required to run OpenMDAO)
+
+    - Create a file in your home directory called ``pydistutils.cfg`` that contains the following lines:
+
+      ::
+
+        [build_ext]
+        compiler=mingw32
+        
+      On Windows, your home directory can be determined by typing the following command in your command-prompt:
+
         ::
-      
-          [build_ext]
-          compiler=mingw32
-       
-      - Make sure to put the ``bin`` directory of the mingw32 install in your path.
-           
 
-         
-    - *Visual C++ 2008 (Optional)*
-      
-      You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it; mingw32 will work fine,
-      but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
-      but others (Professional, Standard) should work too. To get this software,
-      go to the `downloads page <http://www.microsoft.com/visualstudio/eng/products/visual-studio-overview#2008-Visual-CPP>`_.
-         
+          echo %USERPROFILE%
+
+    - Make sure to put the ``bin`` directory of the mingw32 install in your path.
+
+      To check if this directory is already in your path, type the following in your command-prompt:
+
+        ::
+
+          echo %PATH%
+
+      If you do not see the directory, you can add it to your path once again from command-prompt:
+
+        ::
+
+          set PATH=%PATH%;/path/to/bin_dir
+
+  - *Visual C++ 2008 (Optional)*
+
+    You can optionally use Visual C++ 2008 as your C++ compiler. You don't need it; mingw32 will work fine,
+    but if you prefer Visual C++ 2008, you're welcome to use it instead. The Express version will work, 
+    but others (Professional, Standard) should work too. To get this software,
+    go to the `downloads page <http://www.microsoft.com/visualstudio/eng/products/visual-studio-overview#2008-Visual-CPP>`_.
+
 .. __: http://sourceforge.net/projects/mingw/files
 
 
@@ -134,6 +185,8 @@ using Git and GitHub.
 
 .. figure:: version_control.png
    :align: center
+   :alt: GitHub version control process with arrows showing relationship among OpenMDAO repository, personal fork of that repo, and personal copy of OpenMDAO repo with its branches
+
 
    Version Control Process
 
@@ -155,7 +208,7 @@ Git repositories, you should follow the instructions `here`__ to set your userna
 and API token. This way, your contact information will be included whenever you
 :term:`commit` to a :term:`repository` on that machine.
 
-.. __: https://help.github.com/articles/setting-your-email-in-git
+.. __: https://help.github.com/articles/set-up-git
 
 
 .. index:: repository

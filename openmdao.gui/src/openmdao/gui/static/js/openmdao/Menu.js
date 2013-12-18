@@ -107,7 +107,7 @@ openmdao.Menu = function(id, json) {
     }
 
     /** Control commit/revert menu buttons */
-    function modelModified(message) {
+    function projectModified(message) {
         var modified = message[1];
         if (modified) {
             enableById('project-commit');
@@ -143,7 +143,7 @@ openmdao.Menu = function(id, json) {
     buildMenus(json);
 
     // Initially nothing modified.
-    modelModified(['@model-modified', false]);
-    openmdao.model.addListener('@model-modified', modelModified);
+    projectModified(['@project-modified', false]);
+    openmdao.project.addListener('@project-modified', projectModified);
 };
 

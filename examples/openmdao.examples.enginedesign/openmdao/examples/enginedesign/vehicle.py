@@ -9,24 +9,23 @@
 
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
-from openmdao.main.api import Assembly, Interface
-
+from openmdao.main.api import Assembly
 from openmdao.examples.enginedesign.transmission import Transmission
 from openmdao.examples.enginedesign.chassis import Chassis
 from openmdao.examples.enginedesign.engine_wrap_c import Engine
 
-    
+
 class Vehicle(Assembly):
     """ Vehicle assembly. """
-    
-    tire_circumference = Float(75.0, iotype='in', units='inch', 
+
+    tire_circumference = Float(75.0, iotype='in', units='inch',
                                     desc='Circumference of tire (inches)')
-    
-    velocity = Float(75.0, iotype='in', units='mi/h', 
+
+    velocity = Float(75.0, iotype='in', units='mi/h',
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
-    
+
     def configure(self):
         """ Configures a new Vehicle Assembly object
 
@@ -41,7 +40,7 @@ class Vehicle(Assembly):
         IVC = 53.0                 # Intake Valve Close after BDC (deg ABDC)
         L_v = 8.0                  # Maximum Valve Lift (mm)
         D_v = 41.2                 # Inlet Valve Dia (mm)
-            
+
         # Design parameters from Transmission
         ratio1                     # Gear ratio in First Gear
         ratio2                     # Gear ratio in Second Gear
@@ -50,39 +49,39 @@ class Vehicle(Assembly):
         ratio5                     # Gear ratio in Fifth Gear
         final_drive_ratio          # Final Drive Ratio
         tire_circumference         # Circumference of tire (inches)
-            
+
         # Design parameters from Vehicle Dynamics
         mass_vehicle               # Vehicle Mass (kg)
         Cf                         # Friction coef (multiplies W)
         Cd                         # Drag coef (multiplies V**2)
         area                       # Frontal area (for drag calc) (sq m)
-            
+
         # Simulation Inputs
         current_gear               # Gear Position
         throttle                   # Throttle Position
         velocity                   # Vehicle velocity needed to determine
                                      engine RPM (mi/h)
-            
+
         # Outputs
         power                      # Power at engine output (KW)
         torque                     # Torque at engine output (N*m)
         fuel_burn                  # Fuel burn rate (liters/sec)
         acceleration               # Calculated vehicle acceleration (m/s^2)
         """
-        
+
         # Create component instances
-        
+
         self.add('transmission', Transmission())
         self.add('engine', Engine())
         self.add('chassis', Chassis())
-        
+
         # Set up the workflow
         self.driver.workflow.add(['transmission', 'engine', 'chassis'])
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
         # "Instance of <class> has no <attr> member"
-        
+
         # Promoted From Engine
         self.create_passthrough('engine.stroke')
         self.create_passthrough('engine.bore')
@@ -116,7 +115,7 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.Cd')
         self.create_passthrough('chassis.area')
         self.create_passthrough('chassis.acceleration')
-        
+
         # These vars have unit conversions
         self.connect('velocity',
                      ['chassis.velocity', 'transmission.velocity'])
@@ -124,33 +123,32 @@ class Vehicle(Assembly):
                      ['chassis.tire_circ', 'transmission.tire_circ'])
 
         # Hook it all up
-        self.connect('transmission.RPM','engine.RPM')
-        self.connect('transmission.torque_ratio','chassis.torque_ratio')
-        self.connect('engine.torque','chassis.engine_torque')
-        self.connect('engine.engine_weight','chassis.mass_engine')
+        self.connect('transmission.RPM', 'engine.RPM')
+        self.connect('transmission.torque_ratio', 'chassis.torque_ratio')
+        self.connect('engine.torque', 'chassis.engine_torque')
+        self.connect('engine.engine_weight', 'chassis.mass_engine')
 
 
+if __name__ == "__main__":  # pragma: no cover
 
-if __name__ == "__main__": # pragma: no cover
-    
     from openmdao.main.api import set_as_top
-    
+
     top = set_as_top(Assembly())
     top.add('car', Vehicle())
     top.driver.workflow.add('Testing')
-    
+
     top.car.current_gear = 1
-    top.car.velocity = 20.0*(26.8224/60.0)
+    top.car.velocity = 20.0 * (26.8224 / 60.0)
     top.car.throttle = 1.0
     top.car.run()
-    
+
     def prz(vehicle):
         """ Printing the results"""
         print "Accel = ", vehicle.acceleration
         print "Fuelburn = ", vehicle.fuel_burn
         print "(power, torque) ", vehicle.power, vehicle.torque
         print "RPM = ", vehicle.engine.RPM
-        
+
     prz(top.car)
 
-# End vehicle.py 
+# End vehicle.py

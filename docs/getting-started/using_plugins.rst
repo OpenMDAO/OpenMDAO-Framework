@@ -10,7 +10,7 @@ What Official OpenMDAO Plugins Are Available?
 
 The OpenMDAO project also hosts a set of official plugins in a GitHub
 top-level organization called **OpenMDAO-Plugins**. You can visit this site at
-https://github.com/OpenMDAO-Plugins/ .
+https://github.com/OpenMDAO-Plugins/.
 
 These plugins are all open source, although some of them are component wraps
 of proprietary or otherwise-restricted codes (e.g., Nastran) that you will
@@ -72,7 +72,6 @@ You should get a response that looks something like this:
     openmdao.lib.components.mux.DeMux 0.2.1
     openmdao.lib.components.mux.Mux 0.2.1
     openmdao.lib.components.pareto_filter.ParetoFilter 0.2.1
-    openmdao.lib.differentiators.finite_difference.FiniteDifference 0.2.1
     openmdao.lib.drivers.broydensolver.BroydenSolver 0.2.1
     openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver 0.2.1
     openmdao.lib.drivers.conmindriver.CONMINdriver 0.2.1
@@ -120,7 +119,7 @@ that are drivers, do the following:
     plugin list -g driver
 
 The possible group names are: ``caserecorder, caseiterator, optproblem, driver, surrogatemodel,
-doegenerator, component, architecture, container, differentiator, variable``.
+doegenerator, component, architecture, container, variable``.
 
 
 Installing Plugins
@@ -177,24 +176,12 @@ if you installed the ``pyopt_driver`` using
 
     plugin install --github pyopt_driver
 
-you can then view the documentation for it using
+you can then view the documentation for it using the command
 
 ::
 
-    plugin docs pyopt_driver
+    openmdao docs pyopt_driver
 
-
-The last part of that, after the final dot, is the class name and
-should be used in the ``plugin docs`` command. 
-
-For an internal plugin like ``py_opt``, it is listed as 
-
-::
-
-    pyopt_driver.pyopt_driver.pyOptDriver
-
-The package name is the next to last part of that: ``pyopt_driver``.
-That should be used in the ``plugin docs`` command.
 
 Importing Plugin Modules
 ------------------------
@@ -229,8 +216,6 @@ List plugins available on GitHub      ``plugin list --github``
 Install plugin foo from GitHub        ``plugin install --github foo``
 -----------------------------------   ------------------------------------
 Install version 0.3 of plugin foo     ``plugin install --github foo==0.3``
------------------------------------   ------------------------------------
-Display docs for a plugin             ``plugin docs foo``
 ===================================   ====================================
 
 

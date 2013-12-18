@@ -11,6 +11,7 @@ import sys
 
 from openmdao.main.resource import ResourceAllocationManager, \
                                    LocalAllocator, ClusterAllocator
+from openmdao.util.fileutil import onerror
 
 
 # Users who have ssh configured correctly for testing.
@@ -35,7 +36,7 @@ def init_cluster(encrypted=True, clean_dir=True, allow_shell=False):
             if clean_dir:
                 # Remove any local allocator-created directories.
                 for path in glob.glob('Sim-*'):
-                    shutil.rmtree(path)
+                    shutil.rmtree(path, onerror=onerror)
 
     node = platform.node()
     name = '%s_%s' % (node.replace('.', '_'), authkey)
@@ -51,9 +52,9 @@ def init_cluster(encrypted=True, clean_dir=True, allow_shell=False):
         # Using less than full machine (55 nodes) to allow multiple
         # cluster testing without hitting limit on open files (sockets).
         for i in range(20):
-            machines.append({'hostname':'gx%02d' % i, 'python':python})
+            machines.append({'hostname': 'gx%02d' % i, 'python': python})
     elif local_ssh_available():
-        machines.append({'hostname':node, 'python':python})
+        machines.append({'hostname': node, 'python': python})
 
     if machines:
         cluster = ClusterAllocator(name, machines, authkey, allow_shell)
@@ -92,4 +93,3 @@ def local_ssh_available():
             return False
     except IOError:
         return False
-

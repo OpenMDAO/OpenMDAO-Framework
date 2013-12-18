@@ -3,7 +3,7 @@ import inspect
 #public symbols
 __all__ = ["Factory"]
 
-    
+
 class Factory(object):
     """Base class for objects that know how to create other objects
     based on a type argument and several optional arguments (version,
@@ -11,8 +11,8 @@ class Factory(object):
     """
     def __init__(self):
         pass
-        
-    def create(self, typname, version=None, server=None, 
+
+    def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
         """Return an object of type *typname* (or a proxy to it if it resides
         in another process) using the specified package version, server
@@ -20,7 +20,7 @@ class Factory(object):
         unable to create the specified type.
         """
         raise NotImplementedError('create')
-    
+
     def get_available_types(self, groups=None):
         """Return a set of tuples of the form (typename, metadata_dict), one
         for each available plugin type in the given entry point groups.
@@ -60,4 +60,3 @@ class Factory(object):
         return dict(args=args,
                     varargs=argspec.varargs or '',
                     kwargs=argspec.keywords or '')
-

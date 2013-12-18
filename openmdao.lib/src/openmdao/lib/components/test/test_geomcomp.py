@@ -8,34 +8,71 @@ import tempfile
 import unittest
 from nose import SkipTest
 
+from openmdao.main.vartree import VariableTree
+from openmdao.main.datatypes.api import Enum, Python
 from openmdao.lib.components.geomcomp import GeomComponent
-from openmdao.main.api import Component
+from openmdao.lib.geometry.box import BoxParametricGeometry
+from openmdao.util.fileutil import onerror
+
+import numpy
 
 class GeomCompTestCase(unittest.TestCase):
 
     def setUp(self):
         self.geomcomp = GeomComponent()
         self.tdir = tempfile.mkdtemp()
-        comp = Component()
-        self.base_inputs = set(comp.list_inputs())
-        self.base_outputs = set(comp.list_outputs())
+        self.base_inputs = set(self.geomcomp.list_inputs())
+        #need to manually add geom_out here, since it's a special case
+        self.base_outputs = set(self.geomcomp.list_outputs()+['geom_out']) 
 
     def tearDown(self):
-        shutil.rmtree(self.tdir)
+        shutil.rmtree(self.tdir, onerror=onerror)
+
+    def test_auto_run_with_box(self): 
+    
+        self.geomcomp.add('parametric_geometry',BoxParametricGeometry())  
+
+        self.geomcomp.height = 2
+        self.geomcomp.auto_run = False
+        self.geomcomp.run()
+
+        self.assertEquals(self.geomcomp.volume,8)
+
+        self.geomcomp.height = 10  
+
+        #check that is has not run yet, and that volume has not changed
+        self.assertFalse(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
+
+        self.geomcomp.run()
+        self.assertTrue(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,40)
+
+
+        self.geomcomp.auto_run = True
+        self.geomcomp.height = 2
+        self.assertTrue(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
+
+        #make sure setting back to false works
+        self.geomcomp.auto_run = False
+        self.geomcomp.height = 10 
+        self.assertFalse(self.geomcomp.is_valid())
+        self.assertEquals(self.geomcomp.volume,8)
 
     def test_with_pygem_diamond(self):
         try:
-            from pygem_diamond.pygem import GEMParametricGeometry
+            from openmdao.lib.geometry.diamond import GEMParametricGeometry
         except ImportError:
             raise SkipTest("pygem_diamond is not installed")
         self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
         base_ins = set(self.geomcomp.list_inputs())
-        base_outs = set(self.geomcomp.list_outputs())
+        base_outs = set(self.geomcomp.list_outputs()+['geom_out'])
 
         gem_outs = ['zcg', 'zmax', 'xcg', 'zmin', 'Ixz',
-            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody',
+            'Izx', 'Ixx', 'Ixy', 'xmin', 'Izy', 'Izz', 'ymin', 'ibody1', 'ibody2',
             'ymax', 'nnode', 'ycg', 'nface', 'volume', 'Iyy', 'Iyx', 'Iyz',
-            'area', 'nedge', 'xmax']
+            'area', 'nedge', 'xmax', 'iedge', 'length', 'iface', 'inode', 'nbody']
 
         csm_input = """
 # bottle2 (from OpenCASCADE tutorial)
@@ -129,18 +166,121 @@ end
         self.assertEqual(comp.sph_dist, self.geomcomp.side/2.0)
         self.assertAlmostEqual(comp.volume, comp.side**3.0 - 4./3.*math.pi*comp.radius**3.0)
 
-    def test_with_pygem_quartz(self):
-        try:
-            from pygem_quartz.pygem import GEMParametricGeometry
-        except ImportError:
-            raise SkipTest("pygem_quartz is not installed")
-        self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
-        self.geomcomp.parametric_geometry.model_file = self.model_file
-        self.def_outs = []
-        # add test here...
+    # def test_with_pygem_quartz(self):
+    #     try:
+    #         from pygem_quartz.pygem import GEMParametricGeometry
+    #     except ImportError:
+    #         raise SkipTest("pygem_quartz is not installed")
+    #     self.geomcomp.add('parametric_geometry', GEMParametricGeometry())
+    #     self.geomcomp.parametric_geometry.model_file = self.model_file
+    #     self.def_outs = []
+    #     # add test here...
 
-       
+    def test_with_box(self):
+        self.geomcomp.add('parametric_geometry', 
+                          BoxParametricGeometry())
+        ins = set(self.geomcomp.list_inputs()) - self.base_inputs
+        outs = set(self.geomcomp.list_outputs()) - self.base_outputs
+        print self.base_outputs, self.geomcomp.list_outputs(), outs
+        self.assertEqual(ins, set(['height']))
+        self.assertEqual(outs, set(['volume']))
+        height = self.geomcomp.height
+        volume = self.geomcomp.volume
+        self.assertEqual(volume, 2*2*height)
+        self.geomcomp.height = 5
+        self.geomcomp.run()
+        self.assertEqual(self.geomcomp.volume, 2*2*5.)
+
+    def test_with_vartrees(self):
+        class VTBoxParametricGeometry(BoxParametricGeometry):
+            def _update_meta(self):
+                newmeta = {
+                    'myvt.f': {
+                        'iotype': 'in',
+                        'value': 3.14,
+                    },
+                    'myvt.subvt.f': {
+                        'iotype': 'in',
+                        'value': 11.1,
+                    },
+                    'myvt.subvt.i': {
+                        'iotype': 'in',
+                        'value': 4,
+                    },
+                    'myvt.subvt.s': {
+                        'iotype': 'in',
+                        'value': "foo",
+                    },
+                    'myvt.subvt.arr': {
+                        'iotype': 'in',
+                        'value': numpy.array([1., 2., 3., 4.]),
+                    },
+                    'myvt.subvt.en': {
+                        'iotype': 'in',
+                        'type': 'enum',
+                        'values': ["yes", "no"],
+                        'value': 'yes',
+                    },
+                    'fproduct': {
+                        'iotype': 'out',
+                        'value': 3.14 * 11.1,
+                    },
+                    'concat': {
+                        'iotype': 'out',
+                        'value': 'fooyes'
+                    },
+                    'bogus': {
+                        'iotype': 'out',
+                        'type': 'flarn',  # this should cause a warning and revert trait to a Python trait
+                        'value': object(),
+                    }
+                }
+                self.meta.update(newmeta)                
+
+            def regen_model(self):
+                super(VTBoxParametricGeometry, self).regen_model()
+                if 'myvt.f' not in self.meta:
+                    self._update_meta()
+
+                self.meta['fproduct']['value'] = self.meta['myvt.f']['value']*self.meta['myvt.subvt.f']['value']
+                self.meta['concat']['value'] = self.meta['myvt.subvt.s']['value']+self.meta['myvt.subvt.en']['value']
+
+        self.geomcomp.add('parametric_geometry', VTBoxParametricGeometry())
+        ins = set(self.geomcomp.list_inputs()) - self.base_inputs
+        outs = set(self.geomcomp.list_outputs()) - self.base_outputs
+
+        # are expected inputs and outputs here?
+        self.assertEqual(ins, set(["height", "myvt"]))
+        self.assertEqual(outs, set(["volume", "fproduct", "concat", "bogus"]))
+
+        # make sure our VT works
+        topvars = set(self.geomcomp.myvt.list_vars())
+        self.assertEqual(topvars, set(["f", "subvt"]))
+        topvars = set(self.geomcomp.myvt.subvt.list_vars())
+        self.assertEqual(topvars, set(["arr", "en", 'i', 'f', 's']))
+        
+        # check types of stuff
+        self.assertTrue(isinstance(self.geomcomp.myvt, VariableTree))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt, VariableTree))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.arr, numpy.ndarray))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.en, basestring))
+        self.assertTrue(isinstance(self.geomcomp.myvt.subvt.trait('en').trait_type, Enum))
+        self.assertTrue(isinstance(self.geomcomp.trait('bogus').trait_type, Python))
+
+        # set some vartree values and see if they update in the geometry
+        self.geomcomp.myvt.f = 6.
+        self.geomcomp.myvt.subvt.f = 7.
+
+        self.geomcomp.run()
+
+        self.assertEqual(self.geomcomp.fproduct, 42.)
+
+        # see if enum is limited to allowed values
+        try:
+            self.geomcomp.myvt.subvt.en = "foo"
+        except Exception as err:
+            self.assertEqual("myvt.subvt: Variable 'en' must be in ['yes', 'no'], but a value of foo <type 'str'> was specified.", 
+                             str(err))
+
 if __name__ == "__main__":
     unittest.main()
-
-

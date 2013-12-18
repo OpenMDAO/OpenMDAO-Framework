@@ -6,15 +6,15 @@
 *CONMINDriver*
 ~~~~~~~~~~~~~~
 
-:term:`CONMIN` is a Fortran program written as a subroutine to solve linear or
-nonlinear constrained optimization problems. The basic optimization algorithm
-is the Method of Feasible Directions. If analytic gradients of the objective
-or constraint functions are not available (i.e., if a Differentiator is not
-plugged into the differentiator socket), then the gradients are calculated
-by CONMIN's internal finite difference code. While the program is intended
-primarily for efficient solution of constrained problems, unconstrained
-function minimization problems may also be solved. The conjugate direction
-method of Fletcher and Reeves is used for this purpose.
+:term:`CONMIN` is a Fortran program written as a subroutine to solve linear
+or nonlinear constrained optimization problems. The basic optimization
+algorithm is the Method of Feasible Directions. If analytic gradients of the
+objective or constraint functions are not available, or you do not wish to
+use OpenMDAO's gradient calculation, then you can use CONMIN's internal
+finite difference code to calculate the gradient. While the program is
+intended primarily for efficient solution of constrained problems,
+unconstrained function minimization problems may also be solved. The
+conjugate direction method of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
 <http://www.eng.buffalo.edu/Research/MODEL/mdo.test.orig/CONMIN/manual.html>`_. 
@@ -130,11 +130,16 @@ default value is 3.
 
         self.driver.itrm = 3
 
-CONMIN can calculate the gradient of both the objective functions and of the
-constraints using a finite difference approximation. This is the default
-behavior if no Differentiator is plugged into the differentiator socket. Two
-parameters control the step size used for numerically estimating the local
-gradient: `fdch` and `fdchm`. The `fdchm` parameter is the minimum
+By default, OpenMDAO calculates the gradient and provides it to CONMIN. However,
+you may want to use CONMIN's internal finite-difference to calculate the gradient.
+This can be done by setting the `conmin_diff` flag to True.
+
+.. testcode:: CONMIN_show
+
+        self.conmin_diff = True
+        
+Two parameters control the step size used for numerically estimating the
+local gradient: `fdch` and `fdchm`. The `fdchm` parameter is the minimum
 absolute step size that the finite difference will use, and `fdch` is the
 step size relative to the design variable.
 
@@ -148,10 +153,6 @@ step size relative to the design variable.
    large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
-
-You can also replace CONMIN's finite difference with OpenMDAO's built-in
-capability by inserting a differentiator into the Differentiator slot in the
-driver.
 
 For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:

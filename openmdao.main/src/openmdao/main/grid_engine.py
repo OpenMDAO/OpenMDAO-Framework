@@ -12,7 +12,6 @@ application.
 import fnmatch
 import os.path
 import string
-import sys
 
 from openmdao.main.mp_support import OpenMDAO_Manager, register
 from openmdao.main.objserverfactory import ObjServer
@@ -32,10 +31,10 @@ class GridEngineAllocator(FactoryAllocator):
     Uses :class:`GridEngineServer` instead of :class:`ObjServer` when deploying.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     pattern: string
-        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output,
+        :mod:`fnmatch`-style pattern used to select hosts from `qhost` output.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -169,9 +168,9 @@ class GridEngineAllocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(GridEngineAllocator, self).check_compatibility(resource_desc)
@@ -279,47 +278,47 @@ class GridEngineServer(ObjServer):
         ========================= =========================
         Resource Key              Translation
         ========================= =========================
-        submit_as_hold            -h
+        ``submit_as_hold``        -h
         ------------------------- -------------------------
         rerunnable                -r yes|no
         ------------------------- -------------------------
-        working_directory         -wd `value`
+        ``working_directory``     -wd `value`
         ------------------------- -------------------------
-        job_category              Sets parallel environment
+        ``job_category``          Sets parallel environment
         ------------------------- -------------------------
-        min_cpus                  Sets parallel environment
+        ``min_cpus``              Sets parallel environment
         ------------------------- -------------------------
-        max_cpus                  Sets parallel environment
+        ``max_cpus``              Sets parallel environment
         ------------------------- -------------------------
-        min_phys_memory           Ignored
+        ``min_phys_memory``       Ignored
         ------------------------- -------------------------
         email                     -M `value`
         ------------------------- -------------------------
-        email_on_started          -m b
+        ``email_on_started``      -m b
         ------------------------- -------------------------
-        email_on_terminated       -m e
+        ``email_on_terminated``   -m e
         ------------------------- -------------------------
-        job_name                  -N `value`
+        ``job_name``              -N `value`
         ------------------------- -------------------------
-        input_path                -i `value`
+        ``input_path``            -i `value`
         ------------------------- -------------------------
-        output_path               -o `value`
+        ``output_path``           -o `value`
         ------------------------- -------------------------
-        error_path                -e `value`
+        ``error_path``            -e `value`
         ------------------------- -------------------------
-        join_files                -j yes|no
+        ``join_files``            -j yes|no
         ------------------------- -------------------------
-        reservation_id            -ar `value`
+        ``reservation_id``        -ar `value`
         ------------------------- -------------------------
-        queue_name                -q `value`
+        ``queue_name``            -q `value`
         ------------------------- -------------------------
         priority                  -p `value`
         ------------------------- -------------------------
-        start_time                -a `value`
+        ``start_time``            -a `value`
         ------------------------- -------------------------
-        deadline_time             Ignored
+        ``deadline_time``         Ignored
         ------------------------- -------------------------
-        accounting_id             -A `value`
+        ``accounting_id``         -A `value`
         ========================= =========================
 
         Where `value` is the corresponding resource value.
@@ -342,21 +341,21 @@ class GridEngineServer(ObjServer):
         ==================== =========================
         Resource Key         Translation
         ==================== =========================
-        core_file_size       Ignored
+        ``core_file_size``   Ignored
         -------------------- -------------------------
-        data_seg_size        Ignored
+        ``data_seg_size``    Ignored
         -------------------- -------------------------
-        file_size            Ignored
+        ``file_size``        Ignored
         -------------------- -------------------------
-        open_files           Ignored
+        ``open_files``       Ignored
         -------------------- -------------------------
-        stack_size           Ignored
+        ``stack_size``       Ignored
         -------------------- -------------------------
-        virtual_memory       Ignored
+        ``virtual_memory``   Ignored
         -------------------- -------------------------
-        cpu_time             -l h_cpu= `value`
+        ``cpu_time``         -l h_cpu= `value`
         -------------------- -------------------------
-        wallclock_time       -l h_rt= `value`
+        ``wallclock_time``   -l h_rt= `value`
         ==================== =========================
 
         Output from `qsub` itself is routed to ``qsub.out``.
@@ -417,7 +416,8 @@ class GridEngineServer(ObjServer):
             elif key == 'email_on_terminated':
                 email_events += 'e'
             elif key == 'job_name':
-                cmd.extend(('-N', self._jobname(value)))
+                if value:
+                    cmd.extend(('-N', self._jobname(value)))
             elif key == 'input_path':
                 cmd.extend(('-i', self._fix_path(value)))
                 inp = value

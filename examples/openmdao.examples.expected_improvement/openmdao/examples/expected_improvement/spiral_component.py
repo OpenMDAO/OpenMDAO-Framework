@@ -2,7 +2,7 @@ from math import pi
 from numpy import sin,cos
 
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 
 class SpiralComponent(Component): 

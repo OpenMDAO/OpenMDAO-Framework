@@ -6,12 +6,12 @@
 ~~~~~~~~~~~
 
 MetaModel is a class which supports generalized meta modeling 
-(a.k.a. surrogate modeling) capabilities. It has a slot called 
+(a.k.a. surrogate modeling) capabilities. It has a :term:`slot` called 
 `model` for the component that is being approximated. As soon as a component is put in the
 slot, MetaModel will automatically mirror the inputs and outputs of that 
 component. In other words, MetaModel will have the same inputs and 
 outputs as whatever component is put into the model slot. If you fill 
-only the `model` slot, the a MetaModel instance will act exactly mimic
+only the `model` slot, the MetaModel instance will mimic
 the underlying component.
 
 .. testcode:: MetaModel_model
@@ -33,15 +33,16 @@ the underlying component.
             self.meta_model.x = 9
             self.meta_model.y = 9
 
-A second slot, called ``default_surrogate`` can be filled with a surrogate model
-generator instance. Copies of this default surrogate model generator will be used for
-any outputs that don't have a specific surrogate model generator associated
-with them. To associate a surrogate model generator with a specific output,
-you must first fill the `model` slot so that MetaModel can determine what your
-outputs are. When `model` is filled, MetaModel will create a slot named
-``sur_<output_name>`` for each output of the model. To override the default
-surrogate model generator for a specific output, just drop the new surrogate
-model generator into the ``sur_<output_name>`` slot. All surrogate model
+A second slot, called ``default_surrogate`` can be filled with a surrogate
+model generator instance. Copies of this default surrogate model generator
+will be used for any outputs that don't have a specific surrogate model
+generator associated with them. To associate a surrogate model generator with
+a specific output, you must first fill the `model` slot so that MetaModel can
+determine what your outputs are. When `model` is filled, MetaModel will
+create a dictionary named `surrogates` where the keys are the variable names in
+the model, and the values are slots. To override the default surrogate model
+generator for a specific output, just drop the new surrogate model generator
+into the slot whose key is the output of interest. All surrogate model
 generators must implement the ISurrogate interface. OpenMDAO provides some
 surrogate model generators in the ``openmdao.lib.surrogatemodels`` directory.
 
@@ -60,12 +61,15 @@ surrogate model generators in the ``openmdao.lib.surrogatemodels`` directory.
             #component has two inputs: x,y
             self.meta_model.model = BraninComponent()
 
-            #once the 'model' slot has been filled, a slot named 'sur_<name>' will
-            #be created for each output variable. In this case we'll just put
+            #once the 'model' slot has been filled, a dictionary named 'surrogates' will
+            #be created. The dictionary's keys are the variable names, and the values are
+            #slots where a surrogate model instance can be filled. In this case we'll just put
             #another KrigingSurrogate in there, just to show how it's done. Since
             #the default_surrogate is also a KrigingSurrogate, this will give us
             #the same results we would have had if we'd only used the default_surrogate.
-            self.sur_f_xy = KrigingSurrogate() # use Kriging for the f_xy output
+            
+            # use Kriging for the f_xy output
+            self.meta_model.surrogates['f_xy'] = KrigingSurrogate() 
             
             #meta_model now has two inputs: x,y
             self.meta_model.x = 9

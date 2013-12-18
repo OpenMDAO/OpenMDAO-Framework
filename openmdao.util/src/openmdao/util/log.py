@@ -1,7 +1,7 @@
 """
 This is just a wrapper for the logging module.
 Messages can be routed to the console via enable_console().
-If the file `logger.cfg` exists, it can be used to configure logging.
+If the file logger.cfg exists, it can be used to configure logging.
 See the Python documentation for `logging.config` for details.
 The example below is equivalent to calling enable_console():
 
@@ -91,7 +91,7 @@ def _configure_root():
 
     handler = logging.handlers.RotatingFileHandler(filename)
     handler.setFormatter(formatter)
-    handler.setLevel(logging.WARNING)
+    handler.setLevel(0)  # Handle anything sent to us.
 
     logging.getLogger().addHandler(handler)
 
@@ -416,10 +416,10 @@ class _LogListener(object):
         """ Listen for log messages. """
         self._server = _LogServer((hostname, 0), _LogHandler)
         self._port = self._server.server_address[1]
-        self._started.set()
         logging.info('Listening for log messages at %s:%s',
                      hostname, self._port)
         atexit.register(self._stop, os.getpid())
+        self._started.set()
         self._server.service_loop()
 
     def _stop(self, pid):
@@ -554,4 +554,3 @@ class _LogHandler(SocketServer.StreamRequestHandler):
         conn.close()
         if peer is not None:
             logging.info('Logging connection from %s closed', peer)
-

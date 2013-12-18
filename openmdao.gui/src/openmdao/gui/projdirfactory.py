@@ -8,7 +8,7 @@ import threading
 import traceback
 import fnmatch
 import ast
-from inspect import isclass, getmembers
+from inspect import isclass, getmembers, getmro
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -20,9 +20,11 @@ from openmdao.main.factorymanager import get_available_types
 from openmdao.util.dep import find_files, plugin_groups
 from openmdao.util.fileutil import get_module_path
 from openmdao.util.log import logger
+from openmdao.util.astutil import parse_ast
 from openmdao.main.publisher import publish
 from openmdao.gui.util import packagedict
 from openmdao.main.project import PROJ_DIR_EXT
+
 
 class PyWatcher(FileSystemEventHandler):
     """
@@ -41,7 +43,7 @@ class PyWatcher(FileSystemEventHandler):
             changed_set = set()
             deleted_set = set()
             if not event.is_directory and fnmatch.fnmatch(event.src_path, '*.py'):
-                compiled = event.src_path+'c'
+                compiled = event.src_path + 'c'
                 if os.path.exists(compiled):
                     os.remove(compiled)
                 self.factory.on_modified(event.src_path, added_set, changed_set, deleted_set)
@@ -50,27 +52,27 @@ class PyWatcher(FileSystemEventHandler):
             traceback.print_exc()
 
     on_created = on_modified
-    
+
     def on_moved(self, event):
         try:
             added_set = set()
             changed_set = set()
             deleted_set = set()
-        
+
             pub = False
             if event._src_path and \
                (event.is_directory or fnmatch.fnmatch(event._src_path, '*.py')):
                 if not event.is_directory:
-                    compiled = event._src_path+'c'
+                    compiled = event._src_path + 'c'
                     if os.path.exists(compiled):
                         os.remove(compiled)
                 self.factory.on_deleted(event._src_path, deleted_set)
                 pub = True
-        
+
             if fnmatch.fnmatch(event._dest_path, '*.py'):
                 self.factory.on_modified(event._dest_path, added_set, changed_set, deleted_set)
                 pub = True
-            
+
             if pub:
                 self.factory.publish_updates(added_set, changed_set, deleted_set)
         except Exception:
@@ -82,7 +84,7 @@ class PyWatcher(FileSystemEventHandler):
             changed_set = set()
             deleted_set = set()
             if event.is_directory or fnmatch.fnmatch(event.src_path, '*.py'):
-                compiled = event.src_path+'c'
+                compiled = event.src_path + 'c'
                 if os.path.exists(compiled):
                     os.remove(compiled)
                 self.factory.on_deleted(event.src_path, deleted_set)
@@ -90,7 +92,7 @@ class PyWatcher(FileSystemEventHandler):
         except Exception:
             traceback.print_exc()
 
-            
+
 def _find_module_attr(modpath):
     """Return an attribute from a module based on the given modpath.
     Import the module if necessary.
@@ -98,7 +100,7 @@ def _find_module_attr(modpath):
     parts = modpath.split('.')
     if len(parts) <= 1:
         return None
-    
+
     mname = '.'.join(parts[:-1])
     mod = sys.modules.get(mname)
     if mod is None:
@@ -109,26 +111,26 @@ def _find_module_attr(modpath):
             pass
     if mod:
         return getattr(mod, parts[-1])
-    
+
     # try one more level down in case attr is nested
     obj = _find_module_attr(mname)
     if obj:
         obj = getattr(obj, parts[-1], None)
     return obj
-    
+
+
 class _ClassVisitor(ast.NodeVisitor):
     def __init__(self, fname):
         ast.NodeVisitor.__init__(self)
         self.classes = []
-        
+
         with open(fname, 'Ur') as f:
             contents = f.read()
-            if len(contents)>0 and contents[-1] != '\n':
-                contents += '\n'
-        self.visit(ast.parse(contents, fname))
-        
+        self.visit(parse_ast(contents, fname))
+
     def visit_ClassDef(self, node):
         self.classes.append(node.name)
+
 
 class _FileInfo(object):
     def __init__(self, fpath):
@@ -139,25 +141,26 @@ class _FileInfo(object):
         module = sys.modules[self.modpath]
         self.version = getattr(module, '__version__', None)
         self._update_class_info()
-    
+
     def _update_class_info(self):
         self.classes = {}
         cset = set(_ClassVisitor(self.fpath).classes)
         module = sys.modules[self.modpath]
-        for key,val in getmembers(module, isclass):
+        for key, val in getmembers(module, isclass):
             if key in cset:
                 fullname = '.'.join([self.modpath, key])
                 self.classes[fullname] = {
                     'ctor': key,
+                    'bases':  [klass.__name__ for klass in getmro(val)],
                     'ifaces': [klass.__name__ for klass in implementedBy(val)],
                     'version': self.version,
                     'modpath': self.modpath,
                 }
-        
+
     def _reload(self):
         mtime = os.path.getmtime(self.fpath)
         if self.modtime < mtime:
-            cmpfname = os.path.splitext(self.fpath)[0]+'.pyc'
+            cmpfname = os.path.splitext(self.fpath)[0] + '.pyc'
             # unless we remove the .pyc file, reload will just use it and won't
             # see any source updates.  :(
             if os.path.isfile(cmpfname):
@@ -166,16 +169,16 @@ class _FileInfo(object):
             reload(sys.modules[self.modpath])
             self.modtime = mtime
         self._update_class_info()
-        
+
     def update(self, added, changed, removed):
-        """File may have changed on disk, update information and return 
+        """File may have changed on disk, update information and return
         sets of added, removed and (possibly) changed classes.
         """
         self.modpath = get_module_path(self.fpath)
         startset = set(self.classes.keys())
-        
+
         self._reload()
-        
+
         keys = set(self.classes.keys())
         added.update(keys - startset)
         changed.update(startset & keys)
@@ -191,21 +194,21 @@ class ProjDirFactory(Factory):
         self._lock = threading.RLock()
         self.observer = None
         self.watchdir = watchdir
-        self._files = {} # mapping of file pathnames to _FileInfo objects
-        self._classes = {} # mapping of class names to _FileInfo objects
+        self._files = {}    # mapping of file pathnames to _FileInfo objects
+        self._classes = {}  # mapping of class names to _FileInfo objects
         try:
             added_set = set()
             changed_set = set()
             deleted_set = set()
-            
-            modeldir = watchdir+PROJ_DIR_EXT
+
+            modeldir = watchdir + PROJ_DIR_EXT
             if modeldir not in sys.path:
-                sys.path = [modeldir]+sys.path
+                sys.path = [modeldir] + sys.path
                 logger.info("added %s to sys.path" % modeldir)
-                
+
             for pyfile in find_files(self.watchdir, "*.py"):
                 self.on_modified(pyfile, added_set, changed_set, deleted_set)
-            
+
             if use_observer:
                 self._start_observer(observer)
                 self.publish_updates(added_set, changed_set, deleted_set)
@@ -227,8 +230,8 @@ class ProjDirFactory(Factory):
         if self._ownsobserver:
             self.observer.daemon = True
             self.observer.start()
-        
-    def create(self, typ, version=None, server=None, 
+
+    def create(self, typ, version=None, server=None,
                res_desc=None, **ctor_args):
         """Create and return an instance of the specified type, or None if
         this Factory can't satisfy the request.
@@ -238,7 +241,7 @@ class ProjDirFactory(Factory):
             if klass is not None:
                 return klass(**ctor_args)
         return None
-    
+
     def _lookup(self, typ, version):
         """ Return class for `typ`. """
         try:
@@ -253,17 +256,19 @@ class ProjDirFactory(Factory):
         with self._lock:
             typset = set(self._classes.keys())
             types = []
-        
+
             if groups is None:
                 ifaces = set([v[0] for v in plugin_groups.values()])
             else:
-                ifaces = set([v[0] for k,v in plugin_groups.items() if k in groups])
-        
+                ifaces = set([v[0] for k, v in plugin_groups.items() if k in groups])
+
             for typ in typset:
                 finfo = self._classes[typ]
                 meta = finfo.classes[typ]
+
                 if ifaces.intersection(meta['ifaces']):
-                    meta = { 
+                    meta = {
+                        'bases': meta['bases'],
                         'ifaces': meta['ifaces'],
                         'version': meta['version'],
                         '_context': 'In Project',
@@ -279,7 +284,7 @@ class ProjDirFactory(Factory):
             return None
         else:
             return self.form_signature(cls)
-      
+
     def on_modified(self, fpath, added_set, changed_set, deleted_set):
         if os.path.isdir(fpath):
             return None
@@ -290,7 +295,10 @@ class ProjDirFactory(Factory):
                     fileinfo = _FileInfo(fpath)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
-                        msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
+                        if err.offset:
+                            msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        else:
+                            msg = str(err)
                         self._error(msg)
                     else:
                         self._error(str(err))
@@ -299,12 +307,15 @@ class ProjDirFactory(Factory):
                 added_set.update(fileinfo.classes.keys())
                 for cname in fileinfo.classes.keys():
                     self._classes[cname] = fileinfo
-            else: # updating a file that's already been imported
+            else:  # updating a file that's already been imported
                 try:
                     finfo.update(added_set, changed_set, deleted_set)
                 except Exception as err:
                     if isinstance(err, SyntaxError):
-                        msg = '%s%s^\n%s' % (err.text, ' '*err.offset, str(err))
+                        if err.offset:
+                            msg = '%s%s^\n%s' % (err.text, ' ' * err.offset, str(err))
+                        else:
+                            msg = str(err)
                         self._error(msg)
                     else:
                         self._error(str(err))
@@ -314,7 +325,7 @@ class ProjDirFactory(Factory):
                     self._classes[cname] = finfo
                 for cname in deleted_set:
                     del self._classes[cname]
-                
+
     def on_deleted(self, fpath, deleted_set):
         with self._lock:
             if os.path.isdir(fpath):
@@ -325,11 +336,11 @@ class ProjDirFactory(Factory):
                 if finfo:
                     deleted_set.update(finfo.classes.keys())
                     self._remove_fileinfo(fpath)
-            
+
     def publish_updates(self, added_set, changed_set, deleted_set):
         types = get_available_types()
         try:
-            publish('types', 
+            publish('types',
                     [
                         packagedict(types),
                         list(added_set),
@@ -341,8 +352,8 @@ class ProjDirFactory(Factory):
 
     def _error(self, msg):
         logger.error(msg)
-        print msg
         publish('console_errors', msg)
+        publish('file_errors', msg)
 
     def _remove_fileinfo(self, fpath):
         """Clean up all data related to the given file. This typically occurs
@@ -350,12 +361,12 @@ class ProjDirFactory(Factory):
         """
         finfo = self._files.get(fpath)
         if finfo:
-            classes = [c for c,f in self._classes.items() if f is finfo]
+            classes = [c for c, f in self._classes.items() if f is finfo]
             for klass in classes:
                 del self._classes[klass]
             del self._files[fpath]
             return classes
-                
+
     def cleanup(self):
         """If this factory is removed from the FactoryManager during execution,
         this function will stop the watchdog observer thread.

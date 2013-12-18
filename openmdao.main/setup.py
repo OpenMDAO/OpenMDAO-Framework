@@ -1,6 +1,8 @@
+
 # pylint: disable-msg=F0401
 
-import os,sys
+import os
+import sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
@@ -35,7 +37,10 @@ setup(name='openmdao.main',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'openmdao.main.test': ['src/doubler.py'],
+          'openmdao.main.test': ['src/doubler.py', 
+                                 'load_test/_macros/default', 
+                                 'load_test/_settings.cfg', 
+                                 'load_test/simple.py'],
           'openmdao.main': ['src/openmdao/main/docs/*'] 
       },
       test_suite='nose.collector',
@@ -43,27 +48,25 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
-          'jsonpickle',
-          'networkx==1.3',
+          'networkx',
           'openmdao.units',
           'openmdao.util',
           'pycrypto',
-          'pyparsing==1.5.2',
+          'pyparsing',
           'setuptools',
           'Sphinx',
           'sympy',
-          'Traits==3.3.0',
+          'Traits==4.3.0',
           'zope.interface',
       ],
-      extras_require = {
+      extras_require={
           'numpy_comps': ['numpy'],
       },
-      entry_points = """
+      entry_points="""
       [console_scripts]
       idle=idlelib.PyShell:main
       openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
-      get_full_libpath=openmdao.main.plugin:get_full_libpath
       openmdao=openmdao.main.cli:openmdao
       
       [openmdao.component]
@@ -71,24 +74,28 @@ setup(name='openmdao.main',
       openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
       openmdao.main.driver_uses_derivatives.DriverUsesDerivatives = openmdao.main.driver_uses_derivatives:DriverUsesDerivatives
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
-      
+      openmdao.main.implicitcomp.ImplicitComponent = openmdao.main.implicitcomp:ImplicitComponent
+
       [openmdao.driver]
       openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
       
       [openmdao.variable]
-      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
-      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
-      openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
-      openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
-      openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
-      openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
-      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
-      openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
-      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
+      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
       openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
       openmdao.main.datatypes.complex.Complex = openmdao.main.datatypes.complex:Complex
-      openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
+      openmdao.main.datatypes.dict.Dict = openmdao.main.datatypes.dict:Dict
+      openmdao.main.datatypes.enum.Enum = openmdao.main.datatypes.enum:Enum
+      openmdao.main.datatypes.event.Event = openmdao.main.datatypes.event:Event
+      openmdao.main.datatypes.file.File = openmdao.main.datatypes.file:File
+      openmdao.main.datatypes.float.Float = openmdao.main.datatypes.float:Float
+      openmdao.main.datatypes.geom.Geom = openmdao.main.datatypes.geom:Geom
+      openmdao.main.datatypes.int.Int = openmdao.main.datatypes.int:Int
+      openmdao.main.datatypes.list.List = openmdao.main.datatypes.list:List
+      openmdao.main.datatypes.slot.Slot = openmdao.main.datatypes.slot:Slot
+      openmdao.main.datatypes.str.Str = openmdao.main.datatypes.str:Str
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
+      openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
+      openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
       
       """,
-    )
+      )

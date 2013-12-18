@@ -22,8 +22,9 @@ from openmdao.main.objserverfactory import connect, start_server
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import ResourceAllocator, LocalAllocator, \
                                    ClusterAllocator, RESOURCE_LIMITS
-from openmdao.lib.datatypes.api import Dict
+from openmdao.main.datatypes.api import Dict
 from openmdao.util.testutil import assert_raises, find_python
+from openmdao.util.fileutil import onerror
 
 # Users who have ssh configured correctly for testing.
 SSH_USERS = []
@@ -56,8 +57,8 @@ class TestCase(unittest.TestCase):
             self.skip_ssh = False
 
         self.machines = []
-        self.machines.append({'hostname':self.node,
-                              'python':self.python})
+        self.machines.append({'hostname': self.node,
+                              'python': self.python})
 
         # Ensure we aren't held up by local host load problems.
         for allocator in RAM.list_allocators():
@@ -85,7 +86,7 @@ class TestCase(unittest.TestCase):
         for path in glob.glob(os.path.join(tempdir, 'omdao-*')):
             info = os.stat(path)
             if info.st_uid == uid:
-                shutil.rmtree(path)
+                shutil.rmtree(path, onerror=onerror)
 
     def test_cluster(self):
         logging.debug('')
@@ -99,7 +100,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(self.cluster), len(self.machines))
 
         n_servers, criteria = \
-            self.cluster.max_servers({'python_version':sys.version[:3]})
+            self.cluster.max_servers({'python_version': sys.version[:3]})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):  # pragma no cover
@@ -107,7 +108,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
         n_servers, criteria = \
-            self.cluster.max_servers({'python_version':'bad-version'})
+            self.cluster.max_servers({'python_version': '2.999'})
         self.assertEqual(n_servers, 0)
 
     def test_max_servers(self):
@@ -115,8 +116,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_max_servers')
 
         n_servers, criteria = \
-            self.local.max_servers({'python_version':sys.version[:3],
-                                    'min_cpus':1})
+            self.local.max_servers({'python_version': sys.version[:3],
+                                    'min_cpus': 1})
         try:
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):
@@ -124,41 +125,41 @@ class TestCase(unittest.TestCase):
         self.assertEqual(n_servers, self.local.max_load * n_cpus)
 
         n_servers, criteria = \
-            self.local.max_servers({'min_cpus':1000})
+            self.local.max_servers({'min_cpus': 1000})
         self.assertEqual(n_servers, 0)
 
         n_servers, criteria = \
-            self.local.max_servers({'python_version':'bad-version'})
+            self.local.max_servers({'python_version': '2.999'})
         self.assertEqual(n_servers, 0)
 
     def test_hostnames(self):
         logging.debug('')
         logging.debug('test_hostnames')
 
-        hostnames = RAM.get_hostnames({'min_cpus':1})
+        hostnames = RAM.get_hostnames({'min_cpus': 1})
         self.assertEqual(hostnames[0], platform.node())
-        
-        hostnames = RAM.get_hostnames({'allocator':'LocalHost',
-                                       'localhost':False})
+
+        hostnames = RAM.get_hostnames({'allocator': 'LocalHost',
+                                       'localhost': False})
         self.assertEqual(hostnames, None)
-        
+
     def test_resources(self):
         logging.debug('')
         logging.debug('test_resources')
 
-        result = RAM.allocate({'localhost':False})
+        result = RAM.allocate({'localhost': False})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'exclude':[platform.node()]})
+        result = RAM.allocate({'exclude': [platform.node()]})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'min_cpus':1000000})
+        result = RAM.allocate({'min_cpus': 1000000})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'orphan_modules':['xyzzy']})
+        result = RAM.allocate({'orphan_modules': ['xyzzy']})
         self.assertEqual(result, (None, None))
 
-        result = RAM.allocate({'python_version':'xyzzy'})
+        result = RAM.allocate({'python_version': '2.999'})
         self.assertEqual(result, (None, None))
 
         start_time = datetime.datetime(2012, 2, 8, 16, 42)
@@ -289,7 +290,7 @@ class TestCase(unittest.TestCase):
             logging.debug('    requires ssh, skipping')
             return
 
-        self.machines.append({'hostname':'xyzzy', 'python':self.python})
+        self.machines.append({'hostname': 'xyzzy', 'python': self.python})
         self.cluster = ClusterAllocator(self.name, self.machines)
         self.assertEqual(len(self.cluster), len(self.machines)-1)
 
@@ -301,7 +302,7 @@ class TestCase(unittest.TestCase):
             logging.debug('    requires ssh, skipping')
             return
 
-        self.machines = [{'hostname':self.node, 'python':'no-such-python'}]
+        self.machines = [{'hostname': self.node, 'python': 'no-such-python'}]
         self.cluster = ClusterAllocator(self.name, self.machines)
         self.assertEqual(len(self.cluster), 0)
 
@@ -312,7 +313,7 @@ class TestCase(unittest.TestCase):
         # Start remote server.
         server_dir = 'Factory'
         if os.path.exists(server_dir):
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
         os.mkdir(server_dir)
         os.chdir(server_dir)
         try:
@@ -350,17 +351,17 @@ class TestCase(unittest.TestCase):
                     remote_alloc.max_servers(dict(localhost=True))
                 self.assertEqual(max_servers, 0)
                 self.assertEqual(info, dict(localhost='requested local host'))
-                
+
                 max_servers, info = \
                     remote_alloc.max_servers(dict(allocator='LocalHost'))
                 self.assertEqual(max_servers, 0)
                 self.assertEqual(info, dict(allocator='wrong allocator'))
-                
+
                 estimate, info = \
                     remote_alloc.time_estimate(dict(allocator='LocalHost'))
                 self.assertEqual(estimate, -2)
                 self.assertEqual(info, dict(allocator='wrong allocator'))
-                
+
                 # Allocate, release.
                 remote_server, info = RAM.allocate(dict(allocator=remote))
                 RAM.release(remote_server)
@@ -382,11 +383,11 @@ class TestCase(unittest.TestCase):
                 server.terminate(timeout=10)
         finally:
             os.chdir('..')
-            shutil.rmtree(server_dir)
+            shutil.rmtree(server_dir, onerror=onerror)
 
         # Access local RAM in manner it would be accessed in the server.
         self.assertEqual(RAM._get_instance().get_total_allocators(), 1)
-        self.assertTrue(RAM._get_instance().get_allocator_proxy(0) \
+        self.assertTrue(RAM._get_instance().get_allocator_proxy(0)
                         is RAM.list_allocators()[0])
 
     def test_configure(self):
@@ -622,4 +623,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

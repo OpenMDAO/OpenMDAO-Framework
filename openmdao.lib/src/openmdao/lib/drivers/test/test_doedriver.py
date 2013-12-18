@@ -10,15 +10,17 @@ import re
 import sys
 import unittest
 
-from openmdao.lib.datatypes.api import Event
+from openmdao.main.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Bool
+from openmdao.main.datatypes.api import Float, Bool, Array
 from openmdao.lib.casehandlers.api import SequenceCaseFilter
 from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial, \
                                            CSVFile
+from openmdao.util.testutil import case_assert_rel_error, assert_rel_error, \
+                                   assert_raises
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -262,8 +264,9 @@ class TestCaseDOE(unittest.TestCase):
                 self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
+                assert_rel_error(self, case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                                 0.0001)
 
     def test_rerun(self):
         logging.debug('')
@@ -283,7 +286,7 @@ class TestCaseDOE(unittest.TestCase):
         self.assertEqual(len(orig_cases), 10)
         self.assertEqual(len(rerun.cases), len(rerun_seq))
         for i, case in enumerate(rerun.cases):
-            self.assertEqual(case, orig_cases[rerun_seq[i]])
+            case_assert_rel_error(case, orig_cases[rerun_seq[i]], self, .0001)
 
 
 class MyModel2(Assembly):
@@ -321,6 +324,12 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         os.chdir(ORIG_DIR)
         if os.path.realpath(end_dir).lower() != os.path.realpath(self.directory).lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
+
+    def test_doegen_remove(self):
+        top = set_as_top(Assembly())
+        top.add("driver", DOEdriver())
+        top.driver.remove("DOEgenerator")
+        top.driver.add("DOEgenerator", FullFactorial())
 
     def test_sequential(self):
         logging.debug('')
@@ -479,8 +488,58 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
                 self.assertTrue(re.match(expected, msg))
             else:
                 self.assertEqual(case.msg, None)
-                self.assertEqual(case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]))
+                assert_rel_error(self, case['driven.rosen_suzuki'],
+                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                                 0.0001)
+
+
+class ArrayComponent(Component):
+    """ Just something to be driven and compute results. """
+
+    x = Array([1., 1., 1., 1.], iotype='in')
+    rosen_suzuki = Float(0., iotype='out')
+
+    def execute(self):
+        """ Compute results from input vector. """
+        self.rosen_suzuki = rosen_suzuki(self.x[0], self.x[1], self.x[2], self.x[3])
+
+
+class ArrayModel(Assembly):
+    """ Use DOEdriver with DrivenComponent. """
+
+    def configure(self):
+        self.add('driver', DOEdriver())
+        self.add('driven', ArrayComponent())
+        self.driver.workflow.add('driven')
+        self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
+        self.driver.case_outputs = ['driven.rosen_suzuki']
+        self.driver.add_parameter('driven.x', low=-10., high=10.,
+                                  scaler=20., adder=10.)
+
+
+class ArrayTest(unittest.TestCase):
+    """ Test DOEdriver with ArrayParameter. """
+
+    def setUp(self):
+        self.model = set_as_top(ArrayModel())
+
+    def tearDown(self):
+        if os.path.exists('driver.csv'):
+            os.remove('driver.csv')
+
+    def test_sequential(self):
+        logging.debug('')
+        logging.debug('test_sequential')
+
+        results = ListCaseRecorder()
+        self.model.driver.recorders = [results]
+        self.model.run()
+
+        for case in results.cases:
+            self.assertEqual(case.msg, None)
+            assert_rel_error(self, case['driven.rosen_suzuki'],
+                             rosen_suzuki(*[case['driven.x'][i] for i in range(4)]),
+                             0.0001)
 
 
 if __name__ == "__main__":

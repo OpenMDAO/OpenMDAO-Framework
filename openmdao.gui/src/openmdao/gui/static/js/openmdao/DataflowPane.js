@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
+openmdao.DataflowPane = function(elm, project, pathname, name, prop_fn) {
 
     /***********************************************************************
      *  private
@@ -10,8 +10,8 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
     // initialize private variables
     var self = this,
         dataflowID  = pathname.replace(/\./g,'-')+"-dataflow",
-        dataflowCSS = 'height:'+(screen.height-100)+'px;'+
-                      'width:'+(screen.width-100)+'px;'+
+        dataflowCSS = 'height:'+(screen.height*4)+'px;'+
+                      'width:'+(screen.width*4)+'px;'+
                       'position:relative;',
         dataflowDiv = jQuery('<div id='+dataflowID+' style="'+dataflowCSS+'">')
             .appendTo(elm),
@@ -39,8 +39,9 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
        to include all dataflow panes in the list of droppables so that handling
        of the layers works
     */
-    elm.droppable ({
+    elm.droppable({
         accept: '.IComponent',
+        tolerance: 'pointer',
         greedy: true,
         out: function(ev,ui) {
             openmdao.drag_and_drop_manager.draggableOut(elm);
@@ -49,13 +50,12 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
             openmdao.drag_and_drop_manager.draggableOver(elm);
         },
         drop: function(ev,ui) {
-            var top_div = openmdao.drag_and_drop_manager.getTopDroppableForDropEvent(ev,ui);
-            if (top_div) {
-                var drop_function = top_div.droppable('option','actualDropHandler');
-                drop_function(ev,ui);
+            var dropTarget = openmdao.drag_and_drop_manager.getDropTarget(ev, ui);
+            if (dropTarget) {
+                dropTarget.droppable('option', 'dropHandler')(ev, ui);
             }
         },
-        actualDropHandler: function(ev,ui) {
+        dropHandler: function(ev,ui) {
             // could get same event multiple times if drop triggers for sibling targets
             if (this.dropEvent && this.dropEvent === ev.originalEvent) {
                 return;  // already handled this drop event
@@ -66,8 +66,8 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
                 droppedName = droppedObject.text(),
                 droppedPath = droppedObject.attr("modpath");
 
-            openmdao.drag_and_drop_manager.clearHighlightingDroppables();
-            openmdao.Util.addComponent(droppedPath, droppedName, self.pathname);
+            openmdao.drag_and_drop_manager.reset();
+            openmdao.project.addObject(droppedPath, droppedName, self.pathname);
         }
     });
 
@@ -90,16 +90,16 @@ openmdao.DataflowPane = function(elm, model, pathname, name, prop_fn) {
     this.update = function() {
         if (dataflowFig !== null) {
             // need to minimize & destroy figures to get rid of listeners
-            dataflowFig.minimize();
-            dataflow.clear();
+            dataflowFig.minimize(true);
+            dataflow.removeFigure(dataflowFig);
             dataflowFig.destroy();
         }
-        dataflowFig = new openmdao.DataflowFigure(model, self.pathname, prop_fn);
+        dataflowFig = new openmdao.DataflowFigure(project, self.pathname, prop_fn);
         dataflow.addFigure(dataflowFig,20,20);
         dataflowFig.maximize();
     };
 
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.showDataflow(pathname);
     });
 };

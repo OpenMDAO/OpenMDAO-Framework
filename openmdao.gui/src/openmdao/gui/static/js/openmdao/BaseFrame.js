@@ -2,7 +2,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.update = function() {
     // tell all openmdao frames to update themselves
-    jQuery.each(this.frames,function(id,frame) {
+    jQuery.each(openmdao.frames, function(id, frame) {
         frame.update();
     });
 };
@@ -15,7 +15,7 @@ openmdao.BaseFrame = function() {
     this.menu  = null;  // an optional menu
 };
 
-openmdao.BaseFrame.prototype.init = function (id,title,menu) {
+openmdao.BaseFrame.prototype.init = function(id, title, menu) {
 /*  initialize a BaseFrame on the element with the given ID
     if the element doesn't exist it will be created as a popup
     any existing HTML under the element will be deleted
@@ -70,7 +70,7 @@ openmdao.BaseFrame.prototype.init = function (id,title,menu) {
     }
 };
 
-openmdao.BaseFrame.prototype.popup = function (title) {
+openmdao.BaseFrame.prototype.popup = function(title) {
     /* put this frame in a popup */
     var dlg = this.elm;
     dlg.dialog({
@@ -96,12 +96,16 @@ openmdao.BaseFrame.prototype.popup = function (title) {
             panel.height(pane_height);
             panel.width(pane_width);
 
-            // Accomodate any extra stuff after the slickgrid table. This content should
-            // be placed in a div called "post_slick"
+            // Accomodate any extra stuff before or after the slickgrid table.
+            // This content should be placed in a div called "post_slick"
             var extra_height = 0;
             extra = panel.find('.post_slick');
             if (extra.length>0) {
-                extra_height = extra.outerHeight();
+                extra_height += extra.outerHeight();
+            }
+            extra = panel.find('#inlineFilter');
+            if (extra.length>0) {
+                extra_height += extra.outerHeight();
             }
 
             // resize all slickgrid viewports and use viewport for scrolling
@@ -134,11 +138,6 @@ openmdao.BaseFrame.prototype.popup = function (title) {
         this.elm.width(window.innerWidth*0.8);
     }
 
-    //if (typeof openmdao_test_mode !== 'undefined') {
-    //    // reliably set position to be fully in window for testing
-    //    dlg.dialog({ position: [100, 10] });
-    //}
-
     // give it a few ms to render then check for being out of bounds
     setTimeout(function() {
         var off  = dlg.offset(),
@@ -164,7 +163,7 @@ openmdao.BaseFrame.prototype.popup = function (title) {
 
 };
 
-openmdao.BaseFrame.prototype.setTitle = function (title) {
+openmdao.BaseFrame.prototype.setTitle = function(title) {
     if (title) {
         this.title = title;
         if (this.elm.is(':data(dialog)')) {
@@ -173,11 +172,13 @@ openmdao.BaseFrame.prototype.setTitle = function (title) {
     }
 };
 
-openmdao.BaseFrame.prototype.close = function () {
-    if ((this.hasOwnProperty('destructor')) &&
-        (typeof this.destructor === 'function')) {
-        this.destructor();
+openmdao.BaseFrame.prototype.moveToTop = function() {
+    if (this.elm.is(':data(dialog)')) {
+        this.elm.dialog('moveToTop');
     }
+};
+
+openmdao.BaseFrame.prototype.close = function() {
     // assuming I'm a dialog: if I have a parent then re-dock with it, else self-destruct
     if (this.par) {
         this.elm.dialog('destroy');
@@ -185,8 +186,13 @@ openmdao.BaseFrame.prototype.close = function () {
         this.elm.show();
     }
     else {
+        if ((this.hasOwnProperty('destructor')) &&
+            (typeof this.destructor === 'function')) {
+            this.destructor();
+        }
         this.elm.dialog('destroy');
         this.elm.remove();
+        delete openmdao.frames[this.id];
     }
 };
 

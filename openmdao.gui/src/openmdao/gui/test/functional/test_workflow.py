@@ -3,14 +3,16 @@ Tests of workflow functions.
 """
 
 import pkg_resources
-import sys
 import time
+from unittest import TestCase
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
-
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
+
+from pageobjects.util import NotifierPage
+
 
 @with_setup(setup_server, teardown_server)
 def test_generator():
@@ -30,8 +32,8 @@ def _test_basic(browser):
                                                 'nested', offset=(300, 300))
     # Verify full workflow shown.
     workspace_page('workflow_tab').click()
-    eq(len(workspace_page.get_workflow_figures()), 3)
-    eq(len(workspace_page.get_workflow_component_figures()), 6)
+    eq(len(workspace_page.get_workflow_figures()), 2)
+    eq(len(workspace_page.get_workflow_component_figures()), 5)
 
     # Verify flow layout is horizontal and can be switched to vertical
     sim = workspace_page.get_workflow_figure('sim.driver')
@@ -55,7 +57,7 @@ def _test_basic(browser):
     # Verify workflow can be cleared
     nested = workspace_page.get_workflow_figure('nested.driver')
     nested.clear()
-    eq(len(workspace_page.get_workflow_component_figures()), 2)
+    eq(len(workspace_page.get_workflow_component_figures()), 1)
 
     # Clean up.
     closeout(project_dict, workspace_page)
@@ -66,9 +68,9 @@ def _test_update(browser):
     project_dict, workspace_page = startup(browser)
 
     # Create model with CONMIN and ExecComp.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
-    workspace_page.replace('driver',
-                           'openmdao.lib.drivers.conmindriver.CONMINdriver')
+    workspace_page.replace_driver('top', 'CONMINdriver')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.test.execcomp.ExecComp', 'exe', args=["('z = x * y',)"])
 
@@ -97,6 +99,7 @@ def _test_duplicates(browser):
     project_dict, workspace_page = startup(browser)
 
     # Create model with multiple ExecComps.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
     workspace_page.add_library_item_to_dataflow(
         'openmdao.test.execcomp.ExecComp', 'exe', args=["('z = x * y',)"])
@@ -110,6 +113,7 @@ def _test_duplicates(browser):
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 def _test_parameter_auto(browser):
     # Test auto-filling the min and max for a parameter.
     project_dict, workspace_page = startup(browser)
@@ -117,9 +121,7 @@ def _test_parameter_auto(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/connect.py')
     workspace_page.add_file(file_path)
-    
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
+
     workspace_page.add_library_item_to_dataflow('connect.Conn_Assy',
                                                 'top')
     # Add parameter to driver.
@@ -129,17 +131,82 @@ def _test_parameter_auto(browser):
     dialog = editor.new_parameter()
     dialog.target = 'comp.x'
     dialog('ok').click()
-    
+
     parameters = editor.get_parameters()
-    expected = [['', 'comp.x', '0', '299', '', '', '', 'comp.x']]
+    expected = [['', 'comp.x', '0', '299', '1', '0', '', 'comp.x']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
-    
+
     editor.close()
 
     closeout(project_dict, workspace_page)
 
+
+def _test_array_parameter(browser):
+    # Test adding an array parameter.
+    project_dict, workspace_page = startup(browser)
+
+    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                                'files/array_parameters.py')
+    workspace_page.add_file(file_path)
+    workspace_page.add_library_item_to_dataflow('array_parameters.ArrayParameters',
+                                                'top')
+    # Add parameter to driver.
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = driver.editor_page(base_type='Driver')
+    editor('parameters_tab').click()
+    dialog = editor.new_parameter()
+    dialog.target = 'paraboloid.x'
+    dialog.low = '-50'
+    dialog.high = '[40, 50]'
+    dialog.scaler = '[[1., 1]]'
+    dialog('ok').click()
+
+    parameters = editor.get_parameters()
+    expected = [['', 'paraboloid.x', '-50', '40,50', '1,1', '0', '', 'paraboloid.x']]
+    eq(len(parameters.value), len(expected))
+    for i, row in enumerate(parameters.value):
+        eq(row, expected[i])
+
+    editor.close()
+    time.sleep(1)
+
+    # Run optimization.
+    top = workspace_page.get_dataflow_figure('top')
+    assert top.state == 'INVALID'
+    driver = workspace_page.get_dataflow_figure('driver', 'top')
+    assert driver.state == 'INVALID'
+    paraboloid = workspace_page.get_dataflow_figure('paraboloid', 'top')
+    assert paraboloid.state == 'INVALID'
+
+    top.run()
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
+
+    assert top.state == 'VALID'
+    assert driver.state == 'VALID'
+#FIXME: this should be 'VALID'
+    assert paraboloid.state == 'INVALID'
+
+    # Check results.
+    workspace_page.do_command("top.paraboloid.x[0][0]")
+    x00 = workspace_page.history.split("\n")[-1]
+    workspace_page.do_command("top.paraboloid.x[0][1]")
+    x01 = workspace_page.history.split("\n")[-1]
+
+    if abs(float(x00) - 6.6667) > 0.01:
+        raise TestCase.failureException(
+            "Parameter x[0][0] did not reach correct value, but instead is %s"
+            % x00)
+
+    if abs(float(x01) - -7.3333) > 0.01:
+        raise TestCase.failureException(
+            "Parameter x[0][1] did not reach correct value, but instead is %s"
+            % x01)
+
+    closeout(project_dict, workspace_page)
+
+
 if __name__ == '__main__':
     main()
-

@@ -2,8 +2,8 @@
 ::
 
     This plugin provides test timings to identify which tests might be
-    taking the most. From this information, it might be useful to couple
-    individual tests nose's `--with-profile` option to profile problematic
+    taking the most time. From this information, it might be useful to couple
+    individual tests' nose's `--with-profile` option to profile problematic
     tests.
     
     This plugin is heavily influenced by nose's `xunit` plugin.

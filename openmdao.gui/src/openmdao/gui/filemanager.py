@@ -2,39 +2,16 @@ import os.path
 import shutil
 import traceback
 import zipfile
+import re
+import mimetypes
 
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, PatternMatchingEventHandler
+from watchdog.events import FileSystemEventHandler
 
 from openmdao.gui.util import filedict
 from openmdao.main.publisher import Publisher
 from openmdao.util.log import logger
-
-
-# FIXME: The pattern matching bit seems to be causing random errors
-#        See Pivotal story # 39063129
-#        It has been disabled until the error can be investigated and fixed
-
-#class FilesPublisher(PatternMatchingEventHandler):
-#    ''' publishes file collection when ANY file system event occurs
-#    '''
-
-#    def __init__(self, files):
-#        super(FilesPublisher, self).__init__(
-#                ignore_patterns=[
-#                    "*/_macros/*",
-#                    "*.pyc", "*.pyd"])
-
-#        self.files = files
-#
-#    def on_any_event(self, event):
-#        ''' publishes file collection when ANY file system event occurs
-#        '''
-
-#        try:
-#            self.files.publish_files()
-#        except Exception:
-#            traceback.print_exc()
+from openmdao.util.fileutil import onerror
 
 
 class FilesPublisher(FileSystemEventHandler):
@@ -43,10 +20,31 @@ class FilesPublisher(FileSystemEventHandler):
 
     def __init__(self, files):
         self.files = files
+        # watchdog has a PatternMatchingEventHandler but it was causing
+        # random errors, so we will just filter which events we publish
+        if os.sep == "\\":
+            self.ignore_patterns = [
+                r".*\\_macros$",
+                r".*\\_macros\\.*",
+                r".*\\.git.*",
+                r".*\.pyc$",
+                r".*\.pyd$"
+            ]
+        else:
+            self.ignore_patterns = [
+                r".*/_macros$",
+                r".*/_macros/.*",
+                r".*/\.git.*",
+                r".*\.pyc$",
+                r".*\.pyd$"
+            ]
 
     def dispatch(self, event):
         ''' Just publish the updated file collection.
         '''
+        for pattern in self.ignore_patterns:
+            if re.match(pattern, event.src_path):
+                return
         try:
             self.files.publish_files()
         except Exception:
@@ -119,10 +117,15 @@ class FileManager(object):
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
+            (mimetype, encoding) = mimetypes.guess_type(filepath)
+            if mimetype and mimetype.lower() == 'image/x-png':
+                # image/x-png is a legacy MIME type from the days before
+                # it got its official name, image/png, in 1996.
+                mimetype = 'image/png'
             contents = open(filepath, 'rb').read()
-            return contents
+            return (contents, mimetype, encoding)
         else:
-            return None
+            return (None, None, None)
 
     def ensure_dir(self, dirname):
         ''' Create directory in working directory.
@@ -143,11 +146,11 @@ class FileManager(object):
             filename = str(filename)
             fpath = self._get_abs_path(filename)
             if filename.endswith('.py'):
-                initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
                 files = os.listdir(os.path.dirname(fpath))
                 # FIXME: This is a bit of a kludge, but for now we only create
                 # an __init__.py file if it's the very first file in the
                 # directory where a new file is being added.
+                initpath = os.path.join(os.path.dirname(fpath), '__init__.py')
                 if not files and not os.path.isfile(initpath):
                     with open(initpath, 'w') as f:
                         f.write(' ')
@@ -191,7 +194,7 @@ class FileManager(object):
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
             if os.path.isdir(filepath):
-                shutil.rmtree(filepath)
+                shutil.rmtree(filepath, onerror=onerror)
             else:
                 os.remove(filepath)
             return True
@@ -208,4 +211,3 @@ class FileManager(object):
             return True
         else:
             return False
-

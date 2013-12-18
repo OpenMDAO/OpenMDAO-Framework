@@ -40,6 +40,7 @@ class HasStopConditions(object):
         except KeyError:
             self._parent.raise_exception("Stop condition '%s' was not found. Remove failed." % 
                                          expr_string, AttributeError)
+            
     def clear_stop_conditions(self):
         """Removes all stop conditions."""
         self._stop_conditions = ordereddict.OrderedDict()
@@ -55,7 +56,7 @@ class HasStopConditions(object):
     def should_stop(self):
         """Return True if any of the stopping conditions evaluate to True."""
         for cond in self._stop_conditions.values():
-            if cond.evaluate() and cond.refs_valid():
+            if cond.evaluate(): # and cond.refs_valid():
                 return True
         return False
 

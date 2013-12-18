@@ -27,6 +27,7 @@ class DictTestCase(unittest.TestCase):
                            'value_type' : 'Float',
                            'valid' : True,
                            'connected' : '',
+			   'connection_types' : 0,
                            'type' : 'dict',
                            'implicit' : ''} in attr)
                        

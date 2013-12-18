@@ -6,7 +6,7 @@ import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.exceptions import RunStopped
-from openmdao.lib.datatypes.api import Int, Bool
+from openmdao.main.datatypes.api import Int, Bool
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -68,9 +68,9 @@ class TestCase(unittest.TestCase):
         self.model.driver.workflow.add('foobar')
         try:
             self.model.run()
-        except AttributeError as err:
+        except Exception as err:
             self.assertEqual(str(err), 
-                "driver: 'Model' object has no attribute 'foobar'")
+                "'Model' object has no attribute 'foobar'")
 
     def test_simple(self):
         self.assertEqual(self.model.comp_a.total_executions, 0)

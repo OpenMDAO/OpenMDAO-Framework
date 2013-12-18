@@ -4,21 +4,29 @@ import cStringIO
 import os
 import shutil
 import unittest
-import sys
+import logging
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
                               set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Float, Int, Str, Slot, List, Array
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasobjective import HasObjective
 from openmdao.util.log import enable_trace, disable_trace
+from openmdao.util.fileutil import onerror
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasConstraints
+from openmdao.main.hasobjective import HasObjective
+import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
+
+@add_delegate(HasParameters, HasConstraints, HasObjective)
+class DumbDriver(Driver):
+    pass
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
     rval_out = Float(iotype='out')
     mult = Float(iotype='in')
-    
+
     def __init__(self):
         super(Multiplier, self).__init__()
         self.rval_in = 4.
@@ -27,15 +35,15 @@ class Multiplier(Component):
 
     def execute(self):
         self.rval_out = self.rval_in * self.mult
-        
+
 
 class Simple(Component):
-    
+
     a = Float(iotype='in')
     b = Float(iotype='in')
     c = Float(iotype='out')
     d = Float(iotype='out')
-    
+
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 4.
@@ -47,41 +55,62 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
+class SimpleUnits(Component):
+
+    a = Float(iotype='in', units='inch')
+    b = Float(iotype='in')
+    kin = Float(iotype='in', units='K')
+    c = Float(iotype='out', units='ft')
+    d = Float(iotype='out')
+    kout = Float(iotype='out', units='degK')
+
+    def __init__(self):
+        super(SimpleUnits, self).__init__()
+        self.a = 4.
+        self.b = 5.
+        self.c = 7.
+        self.d = 1.5
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+
 
 class SimpleListComp(Component):
-    
+
     a = List(Int, iotype='in')
     b = List(Int, iotype='in')
     c = List(Int, iotype='out')
     d = List(Int, iotype='out')
-    
+
     def __init__(self):
         super(SimpleListComp, self).__init__()
-        self.a = [1,2,3]
-        self.b = [4,5,6]
-        self.c = [5,7,9]
-        self.d = [-3,-3,-3]
+        self.a = [1, 2, 3]
+        self.b = [4, 5, 6]
+        self.c = [5, 7, 9]
+        self.d = [-3, -3, -3]
 
     def execute(self):
-        self.c = [a+b for a,b in zip(self.a, self.b)]
-        self.d = [a-b for a,b in zip(self.a, self.b)]
+        self.c = [a+b for a, b in zip(self.a, self.b)]
+        self.d = [a-b for a, b in zip(self.a, self.b)]
 
 
 class DummyComp(Component):
-    
+
     r = Float(iotype='in')
     r2 = Float(iotype='in')
-    r3 = Float(iotype='in',desc="some random variable",low=-1.0,high=1.0,other_meta_data="test")
+    r3 = Float(iotype='in', desc="some random variable", low=-1.0, high=1.0, other_meta_data="test")
     s = Str(iotype='in')
     rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
     slistout = List(Str, iotype='out')
-    
+
     dummy_in = Slot(Component, iotype='in')
     dummy_out = Slot(Component, iotype='out')
     dummy_out_no_copy = Slot(Component, iotype='out', copy=None)
-    
+
     def __init__(self):
         super(DummyComp, self).__init__()
         self.r = 1.0
@@ -90,12 +119,12 @@ class DummyComp(Component):
         self.r2out = 0.0
         self.s = 'a string'
         self.sout = ''
-        
+
         # make a nested container with input and output ContainerVars
         self.add('dummy', Multiplier())
         self.dummy_in = self.dummy
         self.dummy_out = self.dummy
-                
+
     def execute(self):
         self.rout = self.r * 1.5
         self.r2out = self.r2 + 10.0
@@ -111,12 +140,12 @@ class Wrapper(Assembly):
     """
 
     def configure(self):
-        self.add('comp', Comp())
+        self.add('comp', ComponentProxy())
         self.driver.workflow.add('comp')
 
         # define passthrough conections
         for path in ('x', 'y', 'z'):
-            val = self.get('comp.'+path)
+            val = self.get('comp.' + path)
             self.create_passthrough('comp.'+path)
 
     def run(self):
@@ -128,30 +157,54 @@ class Wrapper(Assembly):
 
 
 class FloatProxy(Float):
+    """ Example of a 'proxy' trait. """
+
+    def __init__(self, remote, **metadata):
+        super(FloatProxy, self).__init__(**metadata)
+        self._metadata['type'] = 'property'  # Just to show correct type.
+        self._remote = remote
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_remote'] = None
+        return state
+
+    def restore(self, remote):
+        self._remote = remote
+
+    def get(self, obj, name):
+        return self._remote.get(name, 0.)
+
+    def set(self, obj, name, value):
+        self._remote[name] = value
+
+
+class ComponentProxy(Component):
     """
-    Example of a 'proxy' trait. Normally variables in the `_vals` dictionary
+    Example of a 'proxy' component. Normally variables in the `_vals` dictionary
     here would actually be somewhere else in a wrapped code.
     """
 
-    def __init__(self, **metadata):
+    def __init__(self):
+        super(ComponentProxy, self).__init__()
         self._vals = {}
-        Float.__init__(self, **metadata)
-        self._metadata['type'] = 'property'  # Just to show correct type.
+        self._remote = self._vals
+        self.add('x', FloatProxy(self._remote, iotype='in'))
+        self.add('y', FloatProxy(self._remote, iotype='in'))
+        self.add('z', FloatProxy(self._remote, iotype='out'))
 
-    def get(self, obj, name):
-        return self._vals.get(id(obj), {}).get(name, 0.)
+    def __getstate__(self):
+        state = super(ComponentProxy, self).__getstate__()
+        state['_remote'] = None
+        return state
 
-    def set(self, obj, name, value):
-        if id(obj) not in self._vals:
-            self._vals[id(obj)] = {}
-        self._vals[id(obj)][name] = value
-
-
-class Comp(Component):
-
-    x = FloatProxy(iotype='in')
-    y = FloatProxy(iotype='in')
-    z = FloatProxy(iotype='out')
+    def post_load(self):
+        self._remote = self._vals
+        for name, trait in self._alltraits().items():
+            typ = trait.trait_type
+            if isinstance(typ, FloatProxy):
+                typ.restore(self._remote)
+        super(ComponentProxy, self).post_load()
 
     def execute(self):
         self._logger.debug('execute')
@@ -226,17 +279,17 @@ class AssemblyTestCase(unittest.TestCase):
         nested.add('comp1', DummyComp())
         for name in ['comp2', 'comp3']:
             top.add(name, DummyComp())
-            
-        top.driver.workflow.add(['comp1','nested','comp2','comp3'])
+
+        top.driver.workflow.add(['comp1', 'nested', 'comp2', 'comp3'])
         nested.driver.workflow.add('comp1')
-                
+
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
         comp1 = top.add('comp1', Multiplier())
         comp2 = top.add('comp2', Multiplier())
-        
+
         top.driver.workflow.add(['comp1', 'comp2'])
-        
+
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
         top.connect('comp1.rval_out', 'comp2.rval_in')
@@ -247,8 +300,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp2.rval_out'), 40.)
         self.assertEqual(top.comp1.exec_count, 1)
         self.assertEqual(top.comp2.exec_count, 1)
-        
-        # now change an input (mult) on comp2. This should only 
+
+        # now change an input (mult) on comp2. This should only
         # cause comp2 to execute when we run next time.
         top.set('comp2.mult', 3.0)
         top.run()
@@ -257,35 +310,34 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.get('comp2.rval_out'), 30.)
         self.assertEqual(top.comp1.exec_count, 1)
         self.assertEqual(top.comp2.exec_count, 2)
-        
-     
+
     def test_data_passing(self):
         comp1 = self.asm.comp1
         comp2 = self.asm.comp2
-        self.asm.connect('comp1.rout','comp2.r')
-        self.asm.connect('comp1.sout','comp2.s')
+        self.asm.connect('comp1.rout', 'comp2.r')
+        self.asm.connect('comp1.sout', 'comp2.s')
         self.asm.comp1.r = 3.0
         self.asm.comp1.s = 'once upon a time'
         self.assertEqual(comp1.get('r'), 3.0)
         self.assertEqual(comp1.get('s'), 'once upon a time')
         self.assertEqual(comp1.r, 3.0)
         self.assertEqual(comp1.s, 'once upon a time')
-        
+
         # also, test that we can't do a direct set of a connected input
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
         except Exception, err:
-            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'" +
                                        " and cannot be directly set")
         else:
             self.fail("Expected an Exception when setting a connected input")
-        
+
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
-        
+
         self.asm.run()
-        
+
         self.assertEqual(comp1.get('rout'), 4.5)
         self.assertEqual(comp1.get('sout'), 'emit a nopu ecno')
         self.assertEqual(comp1.rout, 4.5)
@@ -296,46 +348,46 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp2.rout, 6.75)
         self.assertEqual(comp2.s, 'emit a nopu ecno')
         self.assertEqual(comp2.sout, 'once upon a time')
-        
+
         # now test removal of the error callback when a connected input is disconnected
-        self.asm.disconnect('comp1.rout','comp2.r')
+        self.asm.disconnect('comp1.rout', 'comp2.r')
         self.asm.comp2.r = 33
         self.assertEqual(33, self.asm.comp2.r)
-        
+
     def test_direct_set_of_connected_input(self):
         comp1 = self.asm.comp1
         comp2 = self.asm.comp2
-        self.asm.connect('comp1.rout','comp2.r')
-        self.asm.connect('comp1.sout','comp2.s')
-        
+        self.asm.connect('comp1.rout', 'comp2.r')
+        self.asm.connect('comp1.sout', 'comp2.s')
+
         # test that we can't do a direct set of a connected input
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
         except Exception, err:
-            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'"+
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'parent.comp1.rout'" +
                                        " and cannot be directly set")
         else:
             self.fail("Expected an Exception when setting a connected input")
-        
+
         # verify that old value of connected input hasn't changed
         self.assertEqual(oldval, self.asm.comp2.r)
-        
+
         # now test removal of the error callback when a connected input is disconnected
-        self.asm.disconnect('comp1.rout','comp2.r')
+        self.asm.disconnect('comp1.rout', 'comp2.r')
         self.asm.comp2.r = 33
         self.assertEqual(33, self.asm.comp2.r)
 
     def test_connect_containers(self):
         self.asm.set('comp1.dummy_in.rval_in', 75.4)
-        self.asm.connect('comp1.dummy_out','comp2.dummy_in')
+        self.asm.connect('comp1.dummy_out', 'comp2.dummy_in')
         self.asm.connect('comp1.dummy_out_no_copy', 'comp3.dummy_in')
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         self.assertFalse(self.asm.comp1.dummy_out is self.asm.comp2.dummy_in)
         self.assertTrue(self.asm.comp1.dummy_out_no_copy is self.asm.comp3.dummy_in)
-        
+
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
         self.asm.create_passthrough('comp3.rout')
@@ -344,15 +396,15 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.comp3.rout, 75.4*1.5)
         self.assertEqual(self.asm.rout, 75.4*1.5)
-        
+
         self.asm.create_passthrough('comp3.r3')
         metadata = self.asm.get_metadata('r3')
-        self.assertEqual(metadata['iotype'],'in')
-        self.assertEqual(metadata['desc'],'some random variable')
-        self.assertEqual(metadata['low'],-1.0)
-        self.assertEqual(metadata['high'],1.0)
-        self.assertEqual(metadata['other_meta_data'],'test')
-        
+        self.assertEqual(metadata['iotype'], 'in')
+        self.assertEqual(metadata['desc'], 'some random variable')
+        self.assertEqual(metadata['low'], -1.0)
+        self.assertEqual(metadata['high'], 1.0)
+        self.assertEqual(metadata['other_meta_data'], 'test')
+
     def test_create_passthrough_already_exists(self):
         self.asm.create_passthrough('comp3.rout')
         try:
@@ -363,25 +415,25 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual(str(err), str(KeyError(": 'rout' already exists")))
         else:
             self.fail('expected Exception')
-        
-    def test_autopassthrough_nested(self):
-        self.asm.set('comp1.r', 8.)
-        self.asm.connect('comp1.rout', 'nested.comp1.r')
-        self.asm.connect('nested.comp1.rout','comp2.r')
-        self.asm.run()
-        self.assertEqual(self.asm.get('comp1.rout'), 12.)
-        self.assertEqual(self.asm.get('comp2.rout'), 27.)
-                
+
+    #def test_autopassthrough_nested(self):
+        #self.asm.set('comp1.r', 8.)
+        #self.asm.connect('comp1.rout', 'nested.comp1.r')
+        #self.asm.connect('nested.comp1.rout', 'comp2.r')
+        #self.asm.run()
+        #self.assertEqual(self.asm.get('comp1.rout'), 12.)
+        #self.assertEqual(self.asm.get('comp2.rout'), 27.)
+
     def test_create_passthrough_alias(self):
         self.asm.nested.set('comp1.r', 75.4)
-        self.asm.nested.create_passthrough('comp1.r','foobar')
+        self.asm.nested.create_passthrough('comp1.r', 'foobar')
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         self.asm.run()
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
-        
+
     def test_passthrough_already_connected(self):
-        self.asm.connect('comp1.rout','comp2.r')
-        self.asm.connect('comp1.sout','comp2.s')
+        self.asm.connect('comp1.rout', 'comp2.r')
+        self.asm.connect('comp1.sout', 'comp2.s')
         # this should fail since we're creating a second connection
         # to an input
         try:
@@ -395,78 +447,79 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthrough('comp1.sout')
         self.asm.run()
         self.assertEqual(self.asm.get('sout'), 'some new string'[::-1])
-        
+
     def test_container_passthrough(self):
         self.asm.set('comp1.dummy_out.rval_in', 75.4)
-        self.asm.create_passthrough('comp1.dummy_out','dummy_out_passthrough')
+        self.asm.create_passthrough('comp1.dummy_out', 'dummy_out_passthrough')
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthrough.rval_out'), 75.4*1.5)
 
 #    def test_discon_reconnect_passthrough(self):
 #        self.fail('unfinished test')
-        
+
     def test_invalid_connect(self):
         try:
-            self.asm.connect('comp1.rout','comp2.rout')
+            self.asm.connect('comp1.rout', 'comp2.rout')
         except RuntimeError, err:
-            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout': comp2: rout must be an input variable",
+            self.assertEqual(": Can't connect 'comp1.rout' to 'comp2.rout': 'comp2.rout' must be an input variable",
                              str(err))
         else:
             self.fail('exception expected')
-        try:
-            self.asm.connect('comp1.r','comp2.rout')
-        except RuntimeError, err:
-            self.assertEqual(": Can't connect 'comp1.r' to 'comp2.rout': comp1: r must be an output variable",
-                             str(err))
-        else:
-            self.fail('RuntimeError expected')
-            
+
+
     def test_self_connect(self):
         try:
-            self.asm.connect('comp1.rout','comp1.r')
+            self.asm.connect('comp1.rout', 'comp1.r')
         except Exception, err:
             self.assertEqual(": Can't connect 'comp1.rout' to 'comp1.r': 'comp1.rout' and 'comp1.r' refer to the same component.",
                              str(err))
         else:
             self.fail('exception expected')
-     
+
     def test_metadata_link(self):
         try:
-            self.asm.connect('comp1.rout.units','comp2.s')
+            self.asm.connect('comp1.rout.units', 'comp2.s')
         except Exception, err:
-            self.assertEqual(str(err), 
-                    ": Can't connect 'comp1.rout.units' to 'comp2.s': : Can't find 'comp1.rout.units'")
+            self.assertEqual(str(err),
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': comp1: Couldn't find metadata for trait rout.units")
         else:
             self.fail('Exception expected')
-            
+
     def test_get_metadata(self):
         units = self.asm.comp1.get_metadata('rout', 'units')
         self.assertEqual(units, 'ft')
-        
+
         meta = self.asm.comp1.get_metadata('rout')
-        self.assertEqual(set(meta.keys()), 
-                         set(['vartypename','units','high','iotype','type','low']))
+        self.assertEqual(set(meta.keys()),
+                         set(['vartypename', 'units', 'high', 'iotype', 'type', 'low']))
         self.assertEqual(meta['vartypename'], 'Float')
-        self.assertEqual(self.asm.comp1.get_metadata('slistout','vartypename'), 'List')
-        
+        self.assertEqual(self.asm.comp1.get_metadata('slistout', 'vartypename'), 'List')
+
     def test_missing_metadata(self):
         foo = self.asm.comp1.get_metadata('rout', 'foo')
         self.assertEqual(foo, None)
-        
+
         try:
             bar = self.asm.comp1.get_metadata('bogus', 'bar')
         except Exception as err:
             self.assertEqual(str(err), "comp1: Couldn't find metadata for trait bogus")
         else:
             self.fail("Exception expected")
-            
+
     def test_circular_dependency(self):
-        self.asm.connect('comp1.rout','comp2.r')
+
+        self.asm.connect('comp1.rout', 'comp2.r')
+
+        # Cyclic graphs are permitted in declaration.
+        self.asm.connect('comp2.rout', 'comp1.r')
+
+        # However, cyclic graphs should not run with the Dataflow workflow.
         try:
-            self.asm.connect('comp2.rout','comp1.r')
-        except Exception, err:
-            self.assertEqual(": Can't connect 'comp2.rout' to 'comp1.r': circular dependency (['comp2', 'comp1']) would be created by"+
-                             " connecting comp2.rout to comp1.r", str(err))
+            self.asm.check_configuration()
+        except RuntimeError, err:
+            msg = ": circular dependency found between the following: " + \
+                  "['comp2', 'comp1']"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('Exception expected')
 
@@ -511,33 +564,33 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.comp1.r = 3.0
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
-        
+
         # now disconnect
         self.asm.comp1.r = 6.0
         self.asm.disconnect('comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
-        
+
         # now reconnect
-        self.asm.connect('comp1.rout','comp2.r')
+        self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
-        
+
         self.asm.disconnect('comp2.r')
         self.asm.connect('3.0*comp1.rout', 'comp2.r')
         self.asm.disconnect('3.0*comp1.rout', 'comp2.r')
-        
+
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())
         comp1 = asm.nested.add('comp1', Simple())
         comp2 = asm.nested.add('comp2', Simple())
-        
+
         asm.driver.workflow.add('nested')
-        asm.nested.driver.workflow.add(['comp1','comp2'])
-        
-        asm.nested.create_passthrough('comp1.a') 
-        asm.nested.connect('a', 'comp2.b') 
+        asm.nested.driver.workflow.add(['comp1', 'comp2'])
+
+        asm.nested.create_passthrough('comp1.a')
+        asm.nested.connect('a', 'comp2.b')
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         asm.nested.a = 0.5
@@ -559,7 +612,7 @@ class AssemblyTestCase(unittest.TestCase):
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 999.)
         self.assertEqual(asm.nested.comp2.b, 999.)
-        
+
     def test_connect_2_outs_to_passthrough(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())
@@ -568,15 +621,14 @@ class AssemblyTestCase(unittest.TestCase):
         asm.nested.create_passthrough('comp1.c')
         try:
             asm.nested.connect('comp2.d', 'c')
-        except RuntimeError, err:
+        except RuntimeError as err:
             self.assertEqual(str(err), "nested: Can't connect 'comp2.d' to 'c': nested: 'c' is already connected to source 'comp1.c'")
         else:
             self.fail('RuntimeError expected')
-        
- 
+
     def test_discon_not_connected(self):
-        self.asm.connect('comp1.rout','comp2.r')
-        
+        self.asm.connect('comp1.rout', 'comp2.r')
+
         # disconnecting something that isn't connected is ok and shouldn't
         # raise an exception
         self.asm.disconnect('comp2.s')
@@ -592,24 +644,22 @@ class AssemblyTestCase(unittest.TestCase):
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
-        
-            
+
     def test_assembly_connect_init(self):
         class MyComp(Component):
             ModulesInstallPath  = Str('', desc='', iotype='in')
-            
+
             def execute(self):
                 pass
-            
-            
-        class MyAsm(Assembly):    
+
+        class MyAsm(Assembly):
             ModulesInstallPath  = Str('C:/work/IMOO2/imoo/modules', desc='', iotype='in')
-        
+
             def configure(self):
                 self.add('propulsion', MyComp())
                 self.driver.workflow.add('propulsion')
-                self.connect('ModulesInstallPath','propulsion.ModulesInstallPath')
-        
+                self.connect('ModulesInstallPath', 'propulsion.ModulesInstallPath')
+
         asm = set_as_top(MyAsm())
         asm.run()
         self.assertEqual(asm.ModulesInstallPath, 'C:/work/IMOO2/imoo/modules')
@@ -623,8 +673,8 @@ class AssemblyTestCase(unittest.TestCase):
             '%s.FloatProxy' % __name__,
             'openmdao.main.datatypes.float.Float',
             'openmdao.main.variable.Variable',
-            'enthought.traits.trait_handlers.TraitType',
-            'enthought.traits.trait_handlers.BaseTraitHandler',
+            'traits.trait_handlers.TraitType',
+            'traits.trait_handlers.BaseTraitHandler',
             '__builtin__.object'
         ]
         self.assertEqual(top.get_trait_typenames('x'), expected)
@@ -663,7 +713,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual(egg.get('comp.z'), 33.)
         finally:
             os.remove(egg_info[0])
-            shutil.rmtree('Top')
+            shutil.rmtree('Top', onerror=onerror)
 
     def test_multiconnect(self):
         top = Assembly()
@@ -677,6 +727,25 @@ class AssemblyTestCase(unittest.TestCase):
         top.run()
         self.assertEqual(top.m2.rval_out, 4.5)
         self.assertEqual(top.m3.rval_out, 6.)
+
+    def test_remove(self):
+        top = Assembly()
+
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertEqual(comps, ['driver'])
+
+        top.add('comp', Component())
+
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertEqual(set(comps), set(['driver','comp']))
+
+        top.remove('comp')
+
+        g = top._depgraph.component_graph()
+        comps = [name for name in g]
+        self.assertEqual(comps, ['driver'])
 
     def test_itername(self):
         # top
@@ -795,29 +864,27 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         errors = 0
         for i, line in enumerate(trace_buf):
             if line != expected[i]:
-                logging.error('%d: expected %r, got %r', i, expoected[i], line)
+                logging.error('%d: expected %r, got %r', i, expected[i], line)
                 errors += 1
         self.assertEqual(errors, 0)
         self.assertEqual(len(trace_buf), len(expected))
 
     def test_expr(self):
-        class Dummy(Component): 
-        
-            z = Array([[0],[0],[0]],iotype="in",shape=(3,1))
-            
-            def execute(self): 
+        class Dummy(Component):
+
+            z = Array([[0], [0], [0]], iotype="in", shape=(3, 1))
+
+            def execute(self):
                 pass
-            
-              
-        class TestA(Assembly): 
-           
-            x = Float(0.0,iotype="in")
-           
-            def configure(self): 
-                self.add('d',Dummy())
-                self.connect('x','d.z[0][0]')
-               
-               
+
+        class TestA(Assembly):
+
+            x = Float(0.0, iotype="in")
+
+            def configure(self):
+                self.add('d', Dummy())
+                self.connect('x', 'd.z[0][0]')
+
         t = set_as_top(TestA())
 
     def test_tracing(self):
@@ -856,7 +923,7 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         disable_trace()
         top.run()
         self.assertEqual(trace_out.getvalue(), expected)
-        
+
     def _setup_move_rename(self):
         asm = set_as_top(Assembly())
         asm.add('sub', Assembly())
@@ -873,30 +940,32 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         asm.sub.connect('a2', 'comp2.a')
         asm.sub.connect('comp2.c', 'comp3.a')
         asm.sub.connect('comp3.c', 'c3')
-        asm.connect('comp1.d', 'sub.comp2.b') # autopassthrough
-        asm.connect('sub.comp3.d', 'comp4.b') # autopassthrough
+        #asm.connect('comp1.d', 'sub.comp2.b')  # autopassthrough
+        #asm.connect('sub.comp3.d', 'comp4.b')  # autopassthrough
         connections = asm.list_connections(show_passthrough=True)
-        self.assertEqual(set(connections), 
-                         set([('comp1.c', 'sub.a2'), ('comp1.d', 'sub.comp2.b'), 
-                              ('sub.comp3.d', 'comp4.b'), ('sub.c3', 'comp4.a')]))
+        self.assertEqual(set(connections),
+                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.comp2.b'),
+                              #('sub.comp3.d', 'comp4.b'),
+                              ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
-        self.assertEqual(set(sub_connections), 
+        self.assertEqual(set(sub_connections),
                          set([('comp3.c', 'c3'), ('a2', 'comp2.a'), ('comp2.c', 'comp3.a')]))
         self.assertEqual([c.name for c in asm.driver.workflow],
                          ['comp1', 'sub', 'comp4'])
         self.assertEqual([c.name for c in asm.sub.driver.workflow],
                          ['comp2', 'comp3'])
         return asm
-    
+
     def test_rename_asm(self):
         asm = self._setup_move_rename()
         asm.rename('sub', 'nested')
         connections = asm.list_connections(show_passthrough=True)
-        self.assertEqual(set(connections), 
-                         set([('comp1.c', 'nested.a2'), ('comp1.d', 'nested.comp2.b'), 
-                              ('nested.comp3.d', 'comp4.b'), ('nested.c3', 'comp4.a')]))
+        self.assertEqual(set(connections),
+                         set([('comp1.c', 'nested.a2'), #('comp1.d', 'nested.comp2.b'),
+                              #('nested.comp3.d', 'comp4.b'),
+                              ('nested.c3', 'comp4.a')]))
         sub_connections = asm.nested.list_connections(show_passthrough=True)
-        self.assertEqual(set(sub_connections), 
+        self.assertEqual(set(sub_connections),
                          set([('comp3.c', 'c3'), ('a2', 'comp2.a'), ('comp2.c', 'comp3.a')]))
         self.assertEqual([c.name for c in asm.driver.workflow],
                          ['comp1', 'nested', 'comp4'])
@@ -904,31 +973,106 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
                          ['comp2', 'comp3'])
         self.assertEqual(asm.nested.name, 'nested')
         self.assertFalse(hasattr(asm, 'sub'))
-        
+
     def test_rename_child(self):
         asm = self._setup_move_rename()
         asm.sub.rename('comp2', 'newcomp2')
         asm.sub.rename('comp3', 'newcomp3')
-        
+
         self.assertEqual(asm.sub.newcomp2.name, 'newcomp2')
         self.assertEqual(asm.sub.newcomp3.name, 'newcomp3')
         self.assertFalse(hasattr(asm.sub, 'comp2'))
         self.assertFalse(hasattr(asm.sub, 'comp3'))
-        
+
         connections = asm.list_connections(show_passthrough=True)
-        self.assertEqual(set(connections), 
-                         set([('comp1.c', 'sub.a2'), ('comp1.d', 'sub.newcomp2.b'), 
-                              ('sub.newcomp3.d', 'comp4.b'), ('sub.c3', 'comp4.a')]))
+        self.assertEqual(set(connections),
+                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.newcomp2.b'),
+                              #('sub.newcomp3.d', 'comp4.b'),
+                              ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
-        self.assertEqual(set(sub_connections), 
+        self.assertEqual(set(sub_connections),
                          set([('newcomp3.c', 'c3'), ('a2', 'newcomp2.a'), ('newcomp2.c', 'newcomp3.a')]))
         self.assertEqual([c.name for c in asm.driver.workflow],
                          ['comp1', 'sub', 'comp4'])
         self.assertEqual([c.name for c in asm.sub.driver.workflow],
                          ['newcomp2', 'newcomp3'])
-        
+
+
+def pseudo_edges(index, num_inputs):
+    pname = '_pseudo_%d' % index
+    edges = [(pname, pname+'.out0')]
+    for i in range(num_inputs):
+        edges.append(('%s.in%d' % (pname, i), pname))
+    return edges
+
+
+class AssemblyTestCase2(unittest.TestCase):
+
+    def setUp(self):
+        pcompmod._count = 0
+        self.top = top = set_as_top(Assembly())
+        self.top.add('driver', DumbDriver())
+        top.add('C1', SimpleUnits())
+        top.add('C2', SimpleUnits())
+        top.add('C3', SimpleUnits())
+
+    def test_cleanup(self):
+        top = self.top
+        clean_edges = set(top._depgraph.edges())
+
+        # first, a no units connection
+        top.connect('C1.d', 'C2.b')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.d', 'C2.b')]))
+
+        top.disconnect('C1')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # now a connection between two edges that have different aliases for the same unit
+        # (should result in no pseudocomps being created)
+        top.connect('C1.kout', 'C2.kin')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.kout', 'C2.kin')]))
+
+        top.disconnect('C1')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # no units but a multi-comp source expression
+        top.connect('C1.d+C2.d', 'C3.b')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges,
+                         set([('_pseudo_0.out0','C3.b'),
+                              ('C1.d','_pseudo_0.in0'),
+                              ('C2.d','_pseudo_0.in1')]+pseudo_edges(0,2)))
+
+        # disconnecting one source comp from a mult-comp source expression
+        top.disconnect('C1')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # replace the multi-comp connection (makes a new pseudocomp)
+        top.connect('C1.d+C2.d', 'C3.b')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges,
+                         set([('_pseudo_1.out0','C3.b'),
+                              ('C1.d','_pseudo_1.in0'),
+                              ('C2.d','_pseudo_1.in1')]+pseudo_edges(1,2)))
+
+        # disconnecting dest comp from a mult-comp source expression
+        top.disconnect('C3')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # units conversion connection
+        top.connect('C1.c', 'C3.a')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.c', '_pseudo_2.in0'),
+                                                                        ('_pseudo_2.out0', 'C3.a')]+pseudo_edges(2,1)))
+
+        # disconnect a units conversion connection by disconnecting a comp
+        top.disconnect('C1')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
+
+        # units conversion connection
+        top.connect('C1.c', 'C3.a')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set([('C1.c', '_pseudo_3.in0'),
+                                                                        ('_pseudo_3.out0', 'C3.a')]+pseudo_edges(3,1)))
+
+        top.disconnect('C1.c', 'C3.a')
+        self.assertEqual(set(top._depgraph.edges()) - clean_edges, set())
 
 if __name__ == "__main__":
     unittest.main()
-
-

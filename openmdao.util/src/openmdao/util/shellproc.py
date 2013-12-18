@@ -31,19 +31,20 @@ class ShellProc(subprocess.Popen):
     args: string or list
         If a string, then this is the command line to execute and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict
         Environment variables for the command.
     """
 
-    def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None):
+    def __init__(self, args, stdin=None, stdout=None, stderr=None, env=None,
+                 universal_newlines=False):
         environ = os.environ.copy()
         if env:
             environ.update(env)
@@ -72,7 +73,8 @@ class ShellProc(subprocess.Popen):
         try:
             subprocess.Popen.__init__(self, args, stdin=self._inp,
                                       stdout=self._out, stderr=self._err,
-                                      shell=shell, env=environ)
+                                      shell=shell, env=environ,
+                                      universal_newlines=universal_newlines)
         except Exception:
             self.close_files()
             raise
@@ -174,12 +176,12 @@ def call(args, stdin=None, stdout=None, stderr=None, env=None,
     args: string or list
         If a string, then this is the command line to execute and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict
@@ -206,12 +208,12 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
     args: string or list
         If a string, then this is the command line to execute, and the
         :class:`subprocess.Popen` ``shell`` argument is set True.
-        Otherwise this is a list of arguments; the first is the command
+        Otherwise, this is a list of arguments; the first is the command
         to execute.
 
     stdin, stdout, stderr: string, file, or int
         Specify handling of corresponding stream. If a string, a file
-        of that name is opened. Otherwise see the :mod:`subprocess`
+        of that name is opened. Otherwise, see the :mod:`subprocess`
         documentation.
 
     env: dict

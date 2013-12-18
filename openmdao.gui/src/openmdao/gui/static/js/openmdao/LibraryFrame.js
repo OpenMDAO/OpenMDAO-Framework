@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.LibraryFrame = function(id,model) {
+openmdao.LibraryFrame = function(id, project) {
     openmdao.LibraryFrame.prototype.init.call(this,id,'Library',[]);
 
     /***********************************************************************
@@ -17,6 +17,7 @@ openmdao.LibraryFrame = function(id,model) {
        var yPos = 0,
            scrolls = 0,
            firstElemWithOSP = 0;
+
        while(elem && !isNaN(elem.offsetTop)) {
           scrolls += elem.scrollTop;
           if (firstElemWithOSP === 0 && elem.offsetParent) {
@@ -38,9 +39,9 @@ openmdao.LibraryFrame = function(id,model) {
     function updateLibrary(packages) {
         // build the new html
         var html = '<div class="ui-widget" style="clear:both">'
-                 +   '<label for="objtt-select" id="objtt-search">Search: </label>'
+                 +   '<label for="objtt-filter" id="objtt-search">Search: </label>'
                  +   '<table id="objtt-group"><tr>'
-                 +     '<td><input id="objtt-select"></td>'
+                 +     '<td><input id="objtt-filter"></td>'
                  +     '<td><button id="objtt-clear">X</button></td>'
                  +   '</tr></table>'
                  + '</div>';
@@ -76,16 +77,13 @@ openmdao.LibraryFrame = function(id,model) {
                     "CaseRecorder",
                     "CaseIterator",
                     "Component",
-                    "Differentiator",
                     "DOEgenerator",
                     "Driver",
                     "Optimizer",
                     "Solver",
-                    "Surrogate",
-                    //"UncertainVariable",
-                    "Variable"
+                    "Surrogate"
                 ];
-        var input_obj = self.elm.find('#objtt-select');
+        var input_obj = self.elm.find('#objtt-filter');
 
         input_obj.autocomplete({
            source: function(term, response_cb) {
@@ -114,7 +112,7 @@ openmdao.LibraryFrame = function(id,model) {
                 dtable.fnFilter(e.target.value);
                 dtable.width('100%');
                 var found = jQuery('#objtypetable > tbody > tr > td');
-                if (found.length > 1 || 
+                if (found.length > 1 ||
                     found.attr('class') !== 'dataTables_empty') {
                     if (selections.indexOf(e.target.value) === -1) {
                         selections.push(e.target.value);
@@ -125,7 +123,7 @@ openmdao.LibraryFrame = function(id,model) {
 
         var clrButton = self.elm.find('#objtt-clear');
         clrButton.click(function() {
-            inputObj = self.elm.find('#objtt-select');
+            inputObj = self.elm.find('#objtt-filter');
             inputObj.val('');
             if (!self.searchListOpen) {
                 dtable.fnFilter('');
@@ -183,22 +181,42 @@ openmdao.LibraryFrame = function(id,model) {
         ContextMenu.set(contextMenu.attr('id'), dtable.attr('id'));
 
         // make everything draggable
-        objtypes.draggable({ helper: 'clone', appendTo: 'body' } ) ;
+        objtypes.draggable({
+            appendTo: 'body',
+            opacity: 0.5,
+            helper: function() {
+                // a helper that looks like a semi-transparent object
+                var html = '<div class="ObjTypeHelper">'
+                         + '  <svg height="60" width="100">'
+                         + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15" style="fill:gray;stroke-width:2;stroke:black;" />'
+                         + '    <text id="klass" x="50" y="33" font-style="italic" text-anchor="middle">'+this.innerText+'</text>'
+                         + '  </svg>'
+                         + '</div>';
+                return jQuery(html);
+            },
+            cursorAt: {left: 0, top: 0}
+        });
         // TODO: Could not get this to work if the cursor was for .objtype in mdao-style.css
         //        For some reason this does not override that during the drag
         //        But for now it all looks pretty good with just an open hand for the hover
         //        and then drag
         //cursor: 'url( http://www.google.com/intl/en_ALL/mapfiles/closedhand.cur ) 8 8, auto ' });
-                             
+
         //objtypes.addClass('jstree-draggable'); // allow drop on jstree
     }
 
     /** build HTML string for a package */
     function packageHTML(name,item) {
-        var html = "<tr><td class='objtype " + item.ifaces.toString().replace(/,/g," " ) + "' modpath="+item.modpath+">"+name+"</td><td>"+
-                   item.modpath+"</td><td>"+item.version+"</td><td>"+
-                   item._context+"</td><td>"+item.ifaces+"</td></tr>";
-        return html;
+        var classes = item.ifaces.toString().replace(/,/g," ")+" ";
+
+        if (item.hasOwnProperty('bases')) {
+            classes += item.bases.toString().replace(/,/g," ");
+        }
+
+        return "<tr><td class='objtype " + classes + "' modpath="+item.modpath+">"+name+"</td>"+
+                   "<td>"+item.modpath+"</td><td>"+item.version+"</td>"+
+                   "<td>"+item._context+"</td><td>"+item.ifaces+"</td>"+
+               "</tr>";
     }
 
     function handleMessage(message) {
@@ -217,18 +235,18 @@ openmdao.LibraryFrame = function(id,model) {
      *  privileged
      ***********************************************************************/
 
-    /** update the display, with data from the model */
+    /** update the display, with data from the project */
     this.update = function() {
         self.elm.html("<div>Updating...</div>")
             .effect('highlight',{color:'#ffd'},1000);
-        model.getTypes(updateLibrary);
+        project.getTypes().done(updateLibrary);
     };
 
-    // ask model for an update whenever something changes
-    model.addListener('types', handleMessage);
+    // ask project for an update whenever something changes
+    project.addListener('types', handleMessage);
 
     // initial update
-    model.model_ready.always(function() {
+    project.project_ready.always(function() {
         self.update();
     });
 };

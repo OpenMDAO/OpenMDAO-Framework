@@ -1,13 +1,13 @@
 import numpy as np
 
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Float, Array
 
 
 class LinearDistribution(Component): 
-    """takes two Float inputs, and provides n Float outputs with a linear 
+    """Takes two Float inputs and provides n Float outputs with a linear 
     variation between them. Units can be optionally provided. If use_array is 
-    True (default) then the output is an array. Otherwise, the output will 
+    True (default), then the output is an array. Otherwise, the output will 
     be a set of separate variables""" 
 
     def __init__(self, n=3, units=None, use_array=True): 

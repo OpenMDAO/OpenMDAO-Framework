@@ -44,7 +44,7 @@ except ImportError as err:
             else:
                 return array(value)
 else:
-    from enthought.traits.api import Array as TraitArray
+    from traits.api import Array as TraitArray
 
 
 class Array(TraitArray):
@@ -107,7 +107,7 @@ class Array(TraitArray):
             
         super(Array, self).__init__(dtype=dtype, value=default_value,
                                     **metadata)
-
+        
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -217,14 +217,15 @@ class Array(TraitArray):
         
         attr['name'] = name
         attr['type'] = "ndarray"
-        attr['value'] = str(value)
+        attr['value'] = str(value.tolist())
+        attr['dim'] = str(value.shape).strip('()').rstrip(',')
         
         for field in meta:
             if field not in gui_excludes:
                 attr[field] = meta[field]
         
         return attr, None
-
+    
             
 # register a flattener for Cases
 from openmdao.main.case import flatteners

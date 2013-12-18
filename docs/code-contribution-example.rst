@@ -1,3 +1,5 @@
+.. _`dev-checklist`:
+
 Code Contribution Tutorial & Checklist
 ======================================
 
@@ -9,8 +11,8 @@ framework effort.
   https://github.com/OpenMDAO/OpenMDAO-Framework and click on the **Fork** button in the upper
   right. You should only have to do this once!   
 
-* Also, if you have not done so yet, *clone* the official OpenMDAO-Framework repository. You
-  should really only need to do this once. You can do it multiple times--but you'll use a lot
+* Additionally, if you have not done so yet, *clone* the official OpenMDAO-Framework repository. You
+  should only need to do this once also. You can do it multiple times -- but you'll use a lot
   more space and waste time waiting for it to download. 
 
   ::
@@ -18,7 +20,7 @@ framework effort.
     git clone git@github.com:OpenMDAO/OpenMDAO-Framework.git  
     
          
-  or, if you have trouble connecting, try:
+  If you have trouble connecting, try:
 	 
   ::  
     
@@ -54,8 +56,15 @@ repository (assuming the maintainers approve the change).
 
     ::  
     
-      git branch <your_branch>
-      git checkout <your_branch>
+      git branch <your_new_branch>
+      git checkout <your_new_branch>
+      
+    Optionally, you can create and checkout your new branch with one command:
+    
+    ::
+    
+      git checkout -b <your_new_branch>
+    
 
 #.  If you're using the same repo you've used before, to be safe you should delete the ``devenv`` directory
     that got built the last time. 
@@ -185,21 +194,25 @@ repository (assuming the maintainers approve the change).
 
 #. Issue a pull request, i.e., ask the OpenMDAO maintainers to merge your changes:
  
- *  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
+   *  Go to your personal OpenMDAO-Framework fork on GitHub, for example:
 
-    https://github.com/hschilling/OpenMDAO-Framework 
+      https://github.com/hschilling/OpenMDAO-Framework 
 
- *  On the left side of the page, you'll see an icon and the text `branch:` followed by a branch name. If you are
-    not on the desired branch, click on the down arrow next to display a list of your branches; then select the one
-    you want merged. 
+   *  On the left side of the page, you'll see a branch icon and the text `branch:` followed by a branch
+      name. If you are not on the desired branch, click on the down arrow after the branch name to display
+      a list of your branches; then select the one you want merged. 
 
- *  Click on the **Pull Request** button towards the top middle of the page.   
+   *  Click on the **Pull Request** button towards the top middle of the page.   
 
- *  Fill out the form that appears and then click the **Send pull request** button. 
+   *  Fill out the form that appears and then click the **Send pull request** button. 
+
+      The openMDAO maintainers will be notified, and one of them will review your pull request. In the
+      upper middle of the screen is a field that automatically shows your pull requests.  You should
+      now show at least 1. 
+
+#.  When you're finished, it's a good idea to deactivate your environment in case the virtualenv gets
+    changed.   
+
+    ::
     
-    The openMDAO maintainers will be notified, and one of them will review your pull request. In the
-    upper middle of the screen is a field that automatically shows your pull requests.  You should
-    now show at least 1. 
-
-    
-
+      deactivate

@@ -6,7 +6,7 @@
 
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.datatypes.api import Float, Int, Str, Bool, Enum
+from openmdao.main.datatypes.api import Array, Float, Int, Str, Bool, Enum
 
 class Oneout(Component):
     """ A simple output component    """
@@ -24,6 +24,8 @@ class Oneout(Component):
     ratio6 = Enum(27, (0,3,9,27), iotype='out', desc='some enum')
     unit = Float(12.0, units='inch', iotype='out')
     no_unit = Float(12.0, iotype='out')
+
+    arrout = Array(dtype=float, default_value=[1, 2, 3], iotype='out')
 
     def execute(self):
         """                                                                    
@@ -49,6 +51,8 @@ class Oneinp(Component):
     ratio6 = Enum(0, (0,3,11,27), iotype='in', desc='some enum')
     unit = Float(0.0, units='ft', iotype='in')
     no_unit = Float(0.0, iotype='in')
+
+    arrinp = Array(dtype=float, default_value=[42, 13, 0], iotype='in')
 
     def execute(self):
         """                                                                    
@@ -84,7 +88,6 @@ class VariableTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.033792,self.top.oneinp.ratio4,5)
         self.assertEqual('05678',self.top.oneinp.ratio5)
         self.assertEqual(27,self.top.oneinp.ratio6)
-
 
     def test_var2(self):
         self.top.oneout.ratio2 = 11
@@ -180,7 +183,6 @@ class VariableTestCase(unittest.TestCase):
         else:
             self.fail('Exception Expected')
 
-
     def test_var10(self):
         self.top.oneout.ratio5 = '55555'
         try:
@@ -221,6 +223,23 @@ class VariableTestCase(unittest.TestCase):
         self.top.run()
         self.assertEqual(12.0,self.top.oneinp.no_unit)
         self.assertEqual(12.0,self.top.oneinp.unit)
+
+    def _parse_list(self, liststr):
+        liststr = liststr[1:len(liststr)-2]
+        return set([s.strip("'") for s in liststr.split(', ') if s.strip()])
+        
+    def test_attributes(self):
+        # Check for correct 'connected' information.
+        self.top.connect('oneout.arrout[0]', 'oneinp.arrinp[0]')
+        self.top.connect('oneout.arrout[1]', 'oneinp.arrinp[1]')
+        inputs = self.top.oneinp.get_attributes()['Inputs'] 
+        for item in inputs:
+            if item['name'] == 'arrinp':
+                self.assertEqual(self._parse_list(item['connected']),
+                    self._parse_list("['parent.oneout.arrout[1]', 'parent.oneout.arrout[0]']"))
+                break
+        else:
+            self.fail('No arrinp item!')
 
 
 if __name__ == '__main__':

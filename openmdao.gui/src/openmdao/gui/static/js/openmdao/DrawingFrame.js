@@ -3,7 +3,7 @@ var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 // requires flot.js
 
-openmdao.DrawingFrame = function(id,model,pathname) {
+openmdao.DrawingFrame = function(id, project, pathname) {
     openmdao.DrawingFrame.prototype.init.call(this,id,'Drawing: '+pathname);
 
     /***********************************************************************
@@ -37,25 +37,27 @@ openmdao.DrawingFrame = function(id,model,pathname) {
         }
     }
 
-    // subscribe to model for data and set initial value
+    // subscribe to project for data and set initial value
     function draw(pathname) {
         if (self.pathname && self.pathname.length>0) {
             if (self.pathname !== pathname) {
-                model.removeListener(self.pathname, handleMessage);
+                project.removeListener(self.pathname, handleMessage);
                 self.pathname = pathname;
             }
         }
         else {
             self.pathname = pathname;
         }
+
         if (self.pathname.length > 0) {
-            model.addListener(self.pathname, handleMessage);
-            model.getValue(self.pathname,
-                              updateDrawing,
-                              function(jqXHR, textStatus, errorThrown) {
-                                  self.pathname = '';
-                                  debug.error("Error getting drawing:", jqXHR);
-                              });
+            project.addListener(self.pathname, handleMessage);
+            project.getValue(self.pathname)
+                .done(updateDrawing)
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    debug.error("Error getting drawing for:", self.pathname,
+                        jqXHR, textStatus, errorThrown);
+                    self.pathname = '';
+                });
         }
     }
 
@@ -77,7 +79,7 @@ openmdao.DrawingFrame = function(id,model,pathname) {
     /** clean up listeners before going away */
     this.destructor = function() {
         if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
+            project.removeListener(self.pathname, handleMessage);
         }
     };
 
@@ -100,7 +102,7 @@ openmdao.DrawingFrame.prototype.chooseVariable = function() {
                  '(a Str variable with an SVG value)';
     openmdao.Util.promptForValue(prompt,
         function(pathname) {
-            p=new openmdao.DrawingFrame('Drawing-'+pathname,openmdao.model,pathname);
+            p=new openmdao.DrawingFrame('Drawing-'+pathname,openmdao.project,pathname);
         }
     );
 };

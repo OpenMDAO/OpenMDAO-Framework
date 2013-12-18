@@ -12,13 +12,13 @@
     <!-- =================================== -->
 
     <link rel="stylesheet" href="/static/css/mdao-layout.css">
-    <link rel="stylesheet" href="/static/css/mdao-styles.css">
 
     <!-- modernizr -->
     <script type="text/javascript" src="/static/js/modernizr.js"></script>
 
     <!-- jQuery -->
     <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
+    <link rel="stylesheet" href="/static/css/mdao-styles.css">
     <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"            ></script>
     <script type="text/javascript" src="/static/js/jquery-ui-1.9.1.min.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery.cookie.js"               ></script>
@@ -26,14 +26,14 @@
     <script type="text/javascript" src="/static/js/jquery.layout-latest.js"        ></script>
     <script type="text/javascript" src="/static/js/jquery.event.drag-2.0.min.js"   ></script>
     <script type="text/javascript" src="/static/js/jquery.hoverIntent.js"          ></script>
+    <script type="text/javascript" src="/static/js/jquery.fileDownload.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery.dataTables.min.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/jquery.extensions.js"  ></script>
 
-    <!--  ben alman's debug script (for development only, remove for flight)  -->
+    <!--  ben alman's debug script -->
     <script type="text/javascript" src="/static/js/ba-debug.min.js"                ></script>
 
-
-    <!--  draw2d stuff for workflow/structure  -->
+    <!--  draw2d stuff for workflow/dataflow  -->
     <script type="text/javascript" src="/static/js/wz_jsgraphics.js"               ></script>
     <script type="text/javascript" src="/static/js/mootools.js"                    ></script>
     <script type="text/javascript" src="/static/js/moocanvas.js"                   ></script>
@@ -41,10 +41,12 @@
 
     <!-- SlickGrid -->
     <link rel="stylesheet" href="/static/js/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8">
+    <link rel="stylesheet" href="/static/js/slickgrid/slick.columnpicker.css" type="text/css" media="screen" charset="utf-8">
     <script type="text/javascript" src="/static/js/slickgrid/slick.core.js"        ></script>
     <script type="text/javascript" src="/static/js/slickgrid/slick.grid.js"        ></script>
     <script type="text/javascript" src="/static/js/slickgrid/slick.dataview.js"    ></script>
     <script type="text/javascript" src="/static/js/slickgrid/slick.editors.js"     ></script>
+    <script type="text/javascript" src="/static/js/slickgrid/slick.columnpicker.js"></script>
 
     <!-- jstree pre 1.0 fixed -->
     <script type="text/javascript" src="/static/js/jquery.jstree.js"               ></script>
@@ -56,22 +58,23 @@
     <!-- context menus -->
     <script type="text/javascript" src="/static/js/ContextMenu.js"                 ></script>
 
-    <!--  use ace for the text editor  -->
+    <!--  ace text editor  -->
     <script type="text/javascript" src="/static/ace-min/ace.js" charset="utf-8"    ></script>
 
-    <!--  use raphael for the drawing of svg figures -->
+    <!--  raphael for drawing svg figures -->
     <script type="text/javascript" src="/static/js/raphael.js"                     ></script>
     <script type="text/javascript" src="/static/js/openmdao/raphael.extensions.js" ></script>
 
     <!-- openmdao specific imports (to be rolled into single file at some point) -->
     <script type="text/javascript" src="/static/js/openmdao/Util.js"               ></script>
-    <script type="text/javascript" src="/static/js/openmdao/Model.js"              ></script>
+    <script type="text/javascript" src="/static/js/openmdao/Project.js"            ></script>
+    <script type="text/javascript" src="/static/js/openmdao/Preferences.js"        ></script>
     <script type="text/javascript" src="/static/js/openmdao/Menu.js"               ></script>
     <script type="text/javascript" src="/static/js/openmdao/TabbedPane.js"         ></script>
 
     <script type="text/javascript" src="/static/js/openmdao/BaseFrame.js"          ></script>
     <script type="text/javascript" src="/static/js/openmdao/CodeFrame.js"          ></script>
-    <script type="text/javascript" src="/static/js/openmdao/WorkflowTreeFrame.js"  ></script>
+    <script type="text/javascript" src="/static/js/openmdao/ObjectTreeFrame.js"    ></script>
     <script type="text/javascript" src="/static/js/openmdao/FileTreeFrame.js"      ></script>
     <script type="text/javascript" src="/static/js/openmdao/LibraryFrame.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/PropertiesFrame.js"    ></script>
@@ -84,6 +87,8 @@
     <script type="text/javascript" src="/static/js/openmdao/PlotFrame.js"          ></script>
     <script type="text/javascript" src="/static/js/openmdao/DrawingFrame.js"       ></script>
 
+    <script type="text/javascript" src="/static/js/openmdao/ComponentTreePane.js"  ></script>
+    <script type="text/javascript" src="/static/js/openmdao/WorkflowTreePane.js"   ></script>
     <script type="text/javascript" src="/static/js/openmdao/DataflowPane.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/WorkflowPane.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/PropertiesPane.js"     ></script>

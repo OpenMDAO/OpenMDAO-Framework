@@ -1,6 +1,5 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
-openmdao.sockets = [];
 
 /**
  * utility functions used in the openmdao gui
@@ -53,7 +52,7 @@ openmdao.Util = {
      * title:   the title of the window
      * options: window options
      */
-    popupWindow: function(url,title,options) {
+    popupWindow: function(url, title, options) {
         var specs = {
             height:     3/4*screen.height,
             width:      1/2*screen.width,
@@ -96,8 +95,8 @@ openmdao.Util = {
      * title:   the title of the window
      * options: window options
      */
-    htmlWindow: function(html,title,options) {
-        var win =  openmdao.Util.popupWindow('',title,options);
+    htmlWindow: function(html, title, options) {
+        var win = openmdao.Util.popupWindow('', title, options);
         win.document.open();
         win.document.write(html);
         win.document.close();
@@ -110,11 +109,10 @@ openmdao.Util = {
      * script:  script to initialize the window
      * options: window options
      */
-    popupScript: function (title,script,options) {
+    scriptWindow: function (title, script, options) {
         var url = "/workspace/base?head_script='"+script+"'",
-            win = openmdao.Util.popupWindow(url,title,options);
+            win = openmdao.Util.popupWindow(url, title, options);
     },
-
 
     /**
      *  escape anything in the text that might look like HTML, etc.
@@ -122,16 +120,16 @@ openmdao.Util = {
     escapeHTML: function(text) {
         var i = 0,
             result = "";
-        for(i = 0; i < text.length; i++){
-            if(text.charAt(i) === "&"
+        for (i = 0; i < text.length; i++) {
+            if (text.charAt(i) === "&"
                   && text.length-i-1 >= 4
-                  && text.substr(i, 4) !== "&amp;"){
+                  && text.substr(i, 4) !== "&amp;") {
                 result = result + "&amp;";
-            } else if(text.charAt(i) === "<"){
+            } else if(text.charAt(i) === "<") {
                 result = result + "&lt;";
-            } else if(text.charAt(i) === ">"){
+            } else if(text.charAt(i) === ">") {
                 result = result + "&gt;";
-            } else if(text.charAt(i) === " "){
+            } else if(text.charAt(i) === " ") {
                 result = result + "&nbsp;";
             } else {
                 result = result + text.charAt(i);
@@ -234,20 +232,16 @@ openmdao.Util = {
      * title:       optional title, default ``Please confirm``
      * baseId:      optional id, default ``confirm``, used for element ids
      */
-    confirm: function(prompt, callback, title, baseId) {
+    confirm: function(prompt, title, baseId) {
         title = title || 'Please confirm:';
         baseId = baseId || 'confirm';
-
-        // if the user didn't specify a callback, just return
-        if (typeof callback !== 'function') {
-            return;
-        }
 
         var promptId = baseId+'-prompt',
             okId = baseId+'-ok',
             cancelId = baseId + '-cancel',
             win = null,
-            userInput = null;
+            userInput = null,
+            confirmation = jQuery.Deferred();
 
         // FIXME: this looks like a bug, should be removed in handleResponse()
         if (jQuery('#'+baseId).length > 0) {
@@ -257,9 +251,12 @@ openmdao.Util = {
         function handleResponse(ok) {
             // close dialog
             win.dialog('close');
-            // if response was 'Ok' then invoke the callback
-            if (ok && callback) {
-                callback();
+            // resolve the confirmation
+            if (ok) {
+                confirmation.resolve();
+            }
+            else {
+                confirmation.reject();
             }
             // remove from DOM
             win.remove();
@@ -288,6 +285,8 @@ openmdao.Util = {
         jQuery('#'+promptId).html(prompt+'?');
 
         win.dialog('open');
+
+        return confirmation.promise();
     },
 
     /**
@@ -305,9 +304,10 @@ openmdao.Util = {
         var msgId = baseId+'-msg',
             win = null;
 
-        // FIXME: this looks like a bug, should be removed in handleResponse()
-        if (jQuery('#'+baseId).length > 0) {
-            jQuery('#'+baseId).remove();
+        // Don't put up a notification with a duplicate ID
+        if (jQuery('#'+msgId).length > 0) {
+            debug.warn('Util.notify() removing duplicate notification:', msgId);
+            jQuery('#'+msgId).remove();
         }
 
         win = jQuery('<div id="'+msgId+'"></div>');
@@ -433,52 +433,6 @@ openmdao.Util = {
     },
 
     /**
-     * Get name and arguments for new component, add it to model,
-     * and optionally invoke callback.
-     *
-     * typePath: python path for type of component.
-     * typeName: last component of typePath.
-     * parentPath: pathname for component's parent.
-     * prompt: optional prompt use when requesting name.
-     * callback: optional callback invoked after adding component to model.
-     */
-    addComponent: function(typePath, typeName, parentPath, prompt, callback) {
-        prompt = prompt || 'Enter name for new '+ typeName;
-        openmdao.model.getSignature(typePath, function(signature) {
-            openmdao.Util.promptForArgs(prompt, signature, function(name, args) {
-                openmdao.model.addComponent(typePath, name, args, parentPath, function() {
-                    if (callback) {
-                        callback(name);
-                    }
-                });
-            });
-        });
-    },
-
-    /**
-     * Confirm and then replace component.
-     *
-     * typePath: python path for type of component.
-     * typeName: last component of typePath.
-     * compPath: pathname for replaced component.
-     */
-    replaceComponent: function(typePath, typeName, compPath) {
-        prompt = 'Replace '+compPath+' with '+typeName;
-        openmdao.Util.confirm(prompt, function() {
-            openmdao.model.getSignature(typePath, function(signature) {
-                if (signature.args.length) {
-                    prompt = 'Replacement '+typeName;
-                    openmdao.Util.promptForArgs(prompt, signature, function(nm, args) {
-                        openmdao.model.replaceComponent(compPath, typePath, args);
-                    }, true);
-                } else {
-                    openmdao.model.replaceComponent(compPath, typePath, '');
-                }
-            });
-        });
-    },
-
-    /**
      * show the properties of an object on the log (debug only)
      *
      * obj: the object for which properties are to be displayed
@@ -533,7 +487,7 @@ openmdao.Util = {
 
     /** get the path from the pathname */
     getPath: function(pathname) {
-        path = '';
+        var path = '';
         if (pathname) {
             var lastdot = pathname.lastIndexOf('.');
             if (lastdot > 0) {
@@ -559,7 +513,7 @@ openmdao.Util = {
             highest_elm = null,
             highest_idx = 0,
             i = 0;
-        for (i = 0; i < elems.length; i++)  {
+        for (i = 0; i < elems.length; i++) {
             var elem = elems[i][0];
             var zindex = document.defaultView.getComputedStyle(elem,null).getPropertyValue("z-index");
             if ((zindex > highest_idx) && (zindex !== 'auto')) {
@@ -579,121 +533,12 @@ openmdao.Util = {
                       + ' -ms-transform: rotate('+x+'deg); -ms-transform-origin: 50% 50%;'
                       + ' transform: rotate('+x+'deg); transform-origin: 50% 50%;';
         document.body.setAttribute('style',rotateCSS);
-    },$doabarrelroll:function(){for(i=0;i<=360;i++){setTimeout("openmdao.Util.rotatePage("+i+")",i*40);} return;},
-
-    /** connect to websocket at specified address */
-    openWebSocket: function(addr,handler,errHandler,retry,delay) {
-        // if retry is true and connection fails, try again to connect after delay
-        retry = typeof retry !== 'undefined' ? retry : true;
-        delay = typeof delay !== 'undefined' ? delay : 2000;
-
-        var socket = null,
-            defrd = jQuery.Deferred();
-
-        function connect_after_delay() {
-            tid = setTimeout(connect, delay);
-        }
-
-        function displaySockets() {
-            debug.info('WebSockets:');
-            var i = 0;
-            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-                debug.info('    '+i+': state '+openmdao.sockets[i].readyState);
-            }
-        }
-
-        function connect() {
-            if (socket === null || socket.readyState > 0) {
-                socket = new WebSocket(addr);
-                openmdao.sockets.push(socket);
-                socket.onopen = function (e) {
-                    defrd.resolve(socket);
-                    //debug.info('websocket opened '+socket.readyState,socket,e);
-                    //displaySockets();
-                };
-                socket.onclose = function (e) {
-                    //debug.info('websocket closed',socket,e);
-                    //displaySockets();
-                    index = openmdao.sockets.indexOf(this);
-                    if (index >= 0) {
-                        openmdao.sockets.splice(index, 1);
-                        if (typeof openmdao_test_mode !== 'undefined') {
-                            if (openmdao.sockets.length === 0) {
-                                openmdao.Util.notify('WebSockets closed',
-                                                     'closed', 'ws_closed');
-                            }
-                        }
-                    }
-                    else {
-                        debug.info('websocket not found!');
-                    }
-                    if ((e.code === 1006) && (retry === true)) {
-                        // See RFC 6455 for error code definitions.
-                        connect_after_delay();
-                    }
-                };
-                socket.onmessage = function(e) {
-                    //debug.info('websocket message',socket,e);
-                    handler(e.data);
-                };
-
-                socket.onerror = function (e) {
-                    if (typeof errHandler === 'function') {
-                        errHandler(e);
-                    }
-                    else {
-                        debug.error('websocket error',socket,e);
-                    }
-                };
-            }
-        }
-
-        connect();
-        /*debug.info('websocket connected');
-        debug.info('addr='+addr);
-        debug.info('retry='+retry);
-        debug.info('delay='+delay);
-        debug.info('handler:');
-        debug.info(handler);
-        debug.info('errhandler:');
-        debug.info(errHandler);
-        */
-        return defrd.promise();
     },
 
-    /** Close all WebSockets. */
-    closeWebSockets: function(reason) {
-        var i;
-        if (openmdao.sockets) {
-            for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-             openmdao.sockets[i].close(1000, reason);
-            }
+    $doabarrelroll: function() {
+        for (i=0; i<=360; i++) {
+            setTimeout("openmdao.Util.rotatePage("+i+")", i*40);
         }
-    },
-
-    /** Notify when `nSockets` are open (used for testing). */
-    webSocketsReady: function(nSockets) {
-        function doPoll() {
-            setTimeout(poll, 500);
-        }
-
-        function poll() {
-            var i;
-            if (openmdao.sockets.length >= nSockets) {
-                for (i = 0 ; i < openmdao.sockets.length ; ++i) {
-                    if (openmdao.sockets[i].readyState !== 1) {
-                        doPoll();
-                        return;
-                    }
-                }
-                openmdao.Util.notify('WebSockets open', 'open',
-                                      'ws_open');
-            }
-            else {
-                doPoll();
-            }
-        }
-        poll();
     },
 
     /*
@@ -702,12 +547,113 @@ openmdao.Util = {
      * the child's constructor and before extending it's
      * prototype.
      */
-    inherit : function(childObject, parentObject){
+    inherit: function(childObject, parentObject) {
         childObject.prototype = new parentObject();
         childObject.prototype.constructor = childObject;
         childObject.prototype.superClass = parentObject.prototype;
+    },
+
+    /*
+     * Compare alphanumeric strings 's1' and 's2', case insensitive,
+     * uppercase after lowercase for same letter.
+     * Numeric portion of compare is limited to integers.
+     * If either 's1' or 's2' are undefined, returns zero.
+     * (this is needed for correct vartree sorting)
+     */
+    alphanumeric_compare: function(s1, s2) {
+        if ((s1 === undefined) || (s2 === undefined)) {
+            return 0;
+        }
+
+        var l1 = s1.length,
+            l2 = s2.length,
+            i = 0;
+
+        while (i < l2) {
+            if (i >= l1) {
+                return -1;
+            }
+
+            var c1 = s1.charAt(i),
+                c2 = s2.charAt(i);
+
+            // Compare integer fields.
+            if (('0' <= c1 && c1 <= '9') &&
+                ('0' <= c2 && c2 <= '9')) {
+
+                // Accumulate value.
+                var j = i + 1;
+                while (j < l1) {
+                    c1 = s1.charAt(j);
+                    if ('0' <= c1 && c1 <= '9') {
+                        ++j;
+                    } else {
+                        break;
+                    }
+                }
+                var v1 = parseInt(s1.substring(i, j), 10);
+
+                // Accumulate value.
+                j = i + 1;
+                while (j < l2) {
+                    c2 = s2.charAt(j);
+                    if ('0' <= c2 && c2 <= '9') {
+                        ++j;
+                    } else {
+                        break;
+                    }
+                }
+                var v2 = parseInt(s2.substring(i, j), 10);
+
+                // Compare values.
+                if (v1 != v2) {
+                    return v1 - v2;
+                }
+                i = j;
+            }
+
+            else if (c1 === c2) {
+                ++i;
+            }
+
+            else {
+                var lc1 = c1.toLowerCase(),
+                    lc2 = c2.toLowerCase();
+                if (lc1 === lc2) {
+                    // Uppercase is numerically smaller.
+                    return c1 < c2 ? 1 : -1;
+                }
+                else {
+                    return lc1 < lc2 ? -1 : 1;
+                }
+            }
+        }
+
+        return l1 - l2;
+    },
+
+    hasImageExtension: function (filename) {
+        filename = filename.toLowerCase();
+        if (/\.png$/.test(filename) || /\.jpg$/.test(filename) ||
+            /\.gif$/.test(filename) || /\.bmp$/.test(filename)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    },
+
+    hasGeometryExtension: function (filename) {
+        // FIXME: ultimately the test of whether a file is a geometry file
+        //     should use information from geometry viewer plugins that have
+        //     been loaded in the server...
+        filename = filename.toLowerCase();
+        if (/\.stl$/.test(filename) || /\.csm$/.test(filename)) {
+            return true;
+        }
+        else {
+            return false;
+        }
     }
+
 };
-
-
-

@@ -17,10 +17,14 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.add('arr1',Array(array([98.9]), iotype='in', units='ft'))
         self.hobj.add('arr2', Array(array([13.2]), iotype='out', units='inch'))
         self.hobj.add('arr3', Array(iotype='in', units='kg', desc='stuff'))
+        self.hobj.add('arr98', Array(iotype='in'))
+        self.hobj.add('arr99', Array(iotype='in'))
         
         self.hobj.arr1 = [1.0, 2.0, 3.0]
         self.hobj.arr2 = [[1.,2.],[3.,4.]]
         self.hobj.arr3 = [1.1]
+        self.hobj.arr98 = [[0., 1., 0.1944, 0.1944], [0., 33., 1., 0.]];
+        self.hobj.arr99 = [[0, 1, 0.1944, 0.1944], [0, 0, 1, 0]]
                        
         
     def tearDown(self):
@@ -50,21 +54,6 @@ class ArrayTestCase(unittest.TestCase):
         self.assertAlmostEqual(12., self.hobj.arr2[0], 5)
         self.assertAlmostEqual(24., self.hobj.arr2[1], 5)
         self.assertAlmostEqual(36., self.hobj.arr2[2], 5)
-
-    def test_unit_conversion(self):
-        self.hobj.arr1 = [1.,2.,3.]
-        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr1')
-        self.assertAlmostEqual(12., self.hobj.arr2[0])
-        self.assertAlmostEqual(24., self.hobj.arr2[1])
-        self.assertAlmostEqual(36., self.hobj.arr2[2])
-        
-        # unit to unitless
-        self.hobj.add('arr5', Array(iotype='in'))
-        self.hobj.arr5 = [1., 2., 4.]
-        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr5')
-        self.assertAlmostEqual(1., self.hobj.arr2[0])
-        self.assertAlmostEqual(2., self.hobj.arr2[1])
-        self.assertAlmostEqual(4., self.hobj.arr2[2])
         
     def test_bogus_units(self):
         try:
@@ -87,17 +76,6 @@ class ArrayTestCase(unittest.TestCase):
         f1 = Array([3.])
         d1 = f1.default_value/2
         self.assertAlmostEqual(d1[0], 1.5, places=4)
-        
-    def test_bad_connection(self):
-        srcwrapper = self.hobj.get_wrapped_attr('arr2')
-        self.hobj.arr1 = srcwrapper
-        try:
-            self.hobj.arr3 = srcwrapper
-        except Exception, err:
-            self.assertEqual(str(err), 
-                "arr3: units 'inch' are incompatible with assigning units of 'kg'")
-        else:
-            self.fail('Exception expected')
 
     def test_constructor_defaults(self):
         
@@ -150,6 +128,90 @@ class ArrayTestCase(unittest.TestCase):
                           ('foo[1][1]',4),
                           ('foo[2][0]',5),
                           ('foo[2][1]',6),])
+        
+    def test_attributes(self):
+        
+        self.hobj.arr1 = [1.0, 2.0, 3.0]
+        self.hobj.arr2 = [[1.,2.],[3.,4.]]
+        self.hobj.arr3 = [1.1]
+        self.hobj.arr99 = [[0, 1, 0.194435353535353, 0.1944], [0, 0, 1, 0]]
+                
+        # Python is sometimes off by 1 bit. Let's make sure we match.
+        arr3 = str(self.hobj.arr3.tolist())
+        arr98 = str(self.hobj.arr98.tolist())
+        arr99 = str(self.hobj.arr99.tolist())
+        
+        attrs = self.hobj.get_attributes(io_only=False)
+        input_attrs = attrs['Inputs']
+
+        self.assertEqual(len(input_attrs), 7)
+        self.assertTrue({'name': 'arr1',
+                         'id': 'arr1',
+                         'dim': '3',
+                         'comparison_mode': 1,
+                         'value': '[1.0, 2.0, 3.0]',
+                         'implicit': '',
+                         'connected': '',
+                         'connection_types' : 0,
+                         'valid': True,
+                         'units': 'ft',
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)
+        self.assertTrue({'name': 'arr3',
+                         'id': 'arr3',
+                         'dim': '1',
+                         'comparison_mode': 1,
+                         'value': arr3,
+                         'implicit': '',
+                         'connected': '',
+                         'connection_types' : 0,
+                         'valid': True,
+                         'units': 'kg',
+                         'array': True,
+                         'type': 'ndarray',
+                         'desc': 'stuff',
+                         'indent': 0} in input_attrs)
+        self.assertTrue({'name': 'arr99',
+                         'id': 'arr99',
+                         'dim': '2, 4',
+                         'comparison_mode': 1,
+                         'connection_types' : 0,
+                         'value': arr99,
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)        
+        self.assertTrue({'name': 'arr98',
+                         'id': 'arr98',
+                         'dim': '2, 4',
+                         'comparison_mode': 1,
+                         'connection_types' : 0,
+                         'value': arr98,
+                         'implicit': '',
+                         'connected': '',
+                         'valid': True,
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in input_attrs)        
+        
+        output_attrs = attrs['Outputs']
+        
+        self.assertTrue({'name': 'arr2',
+                         'id': 'arr2',
+                         'dim': '2, 2',
+                         'comparison_mode': 1,
+                         'connection_types' : 0,
+                         'value': '[[1.0, 2.0], [3.0, 4.0]]',
+                         'implicit': '',
+                         'connected': '',
+                         'valid': False,
+                         'units': 'inch',
+                         'array': True,
+                         'type': 'ndarray',
+                         'indent': 0} in output_attrs)
         
 if __name__ == "__main__":
     unittest.main()

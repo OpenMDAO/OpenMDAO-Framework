@@ -11,9 +11,9 @@ try:
     from numpy import ndarray, array, append, vstack, zeros, \
          int32, int64, float32, float64
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
 
-from enthought.traits.trait_handlers import TraitListObject 
+from traits.trait_handlers import TraitListObject 
 
 from pyparsing import CaselessLiteral, Combine, ZeroOrMore, Literal, \
                       Optional, QuotedString, Suppress, Word, alphanums, \
@@ -301,15 +301,15 @@ class Namelist(object):
                             line += "\n"
                         
                     else:
-                        raise RuntimeError("Don't know how to handle array" + \
-                                           " of %s dimensions" \
+                        raise RuntimeError("Don't know how to handle array"
+                                           " of %s dimensions"
                                            % len(card.value.shape))
                     
                 else:
-                    raise RuntimeError("Error generating input file. Don't" + \
-                                       " know how to handle data in variable" + \
-                                       " %s in group %s." % (card.name, \
-                                                            group_name))
+                    raise RuntimeError("Error generating input file. Don't"
+                                       " know how to handle data in variable"
+                                       " %s in group %s." % (card.name,
+                                                             group_name))
 
                 data.append(line)
 
@@ -363,11 +363,11 @@ class Namelist(object):
         data_token = numstr_token | boolval
         index_token = Suppress('(') + num_int + Suppress(')')
         
-        card_token = Group(fieldval("name") + \
-                           Optional(index_token("index")) + \
-                           Suppress('=') + \
-                           Optional(num_int("dimension") + Suppress('*')) + \
-                           data_token("value") + \
+        card_token = Group(fieldval("name") +
+                           Optional(index_token("index")) +
+                           Suppress('=') +
+                           Optional(num_int("dimension") + Suppress('*')) +
+                           data_token("value") +
                            Optional(Suppress('*') + num_int("dimension")))
         multi_card_token = (card_token + ZeroOrMore(Suppress(',') + card_token))
         array_continuation_token = numstr_token.setResultsName("value")
@@ -377,8 +377,10 @@ class Namelist(object):
                         Suppress('=') + numval + \
                         ZeroOrMore(Suppress(',') + numval)
         
-        # Tokens for parsing the group head and tail
-        group_end_token = Literal("/") | Literal("$END") | Literal("$end")
+        # Tokens for parsing the group head and tai
+        group_end_token = Literal("/") | \
+                          Literal("$END") | Literal("$end") | \
+                          Literal("&END") | Literal("&end")
         group_name_token = (Literal("$") | Literal("&")) + \
                            Word(alphanums).setResultsName("name") + \
                            Optional(multi_card_token) + \
@@ -642,7 +644,7 @@ class Namelist(object):
         group_id = self.groups.index(group)
         
         for card in self.cards[group_id]:
-            if card.name==name:
+            if card.name == name:
                 return card.value
             
         msg = "Variable %s" % name + \

@@ -9,9 +9,11 @@ import time
 
 from openmdao.main.mp_util import read_server_config
 from openmdao.main.objserverfactory import connect, start_server
+from openmdao.util.fileutil import onerror
 
 
 MESSAGE_DATA = []
+
 
 def init_messages():
     """ Initialize message data for various sizes. """
@@ -60,7 +62,7 @@ def main():
                 count += 1
                 name = 'Echo_%d' % count
                 if os.path.exists(name):
-                    shutil.rmtree(name)
+                    shutil.rmtree(name, onerror=onerror)
                 os.mkdir(name)
                 os.chdir(name)
                 try:
@@ -123,9 +125,8 @@ def main():
             out.write('\n')
 
     for path in glob.glob('Echo_*'):
-        shutil.rmtree(path)
+        shutil.rmtree(path, onerror=onerror)
 
 
 if __name__ == '__main__':
     main()
-

@@ -17,14 +17,14 @@ class DataflowFigure(BasePageObject):
 
     name = TextElement((By.CLASS_NAME, 'DataflowFigureHeader'))
 
-    top_left = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
-    header = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
-    top_right = ButtonElement((By.CLASS_NAME, 'DataflowFigureTopRight'))
+    top_left     = GenericElement((By.CLASS_NAME, 'DataflowFigureTopLeft'))
+    header       = GenericElement((By.CLASS_NAME, 'DataflowFigureHeader'))
+    top_right    = ButtonElement((By.CLASS_NAME,  'DataflowFigureTopRight'))
     content_area = GenericElement((By.CLASS_NAME, 'DataflowFigureContentArea'))
 
-    bottom_left = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
+    bottom_left  = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomLeft'))
     bottom_right = GenericElement((By.CLASS_NAME, 'DataflowFigureBottomRight'))
-    footer = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
+    footer       = GenericElement((By.CLASS_NAME, 'DataflowFigureFooter'))
 
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
@@ -78,6 +78,19 @@ class DataflowFigure(BasePageObject):
         return self.root.value_of_css_property('border')
 
     @property
+    def state(self):
+        """ Exec state of this component. """
+        border = self.border
+        if ('rgb(255, 0, 0)' in border):
+            return 'INVALID'
+        elif ('rgb(0, 255, 0)' in border):
+            return 'VALID'
+        elif ('rgb(0, 0, 255)' in border):
+            return 'RUNNING'
+        else:
+            return 'UNKNOWN'
+
+    @property
     def background_color(self):
         """ Figure background-color property. """
         return self.root.value_of_css_property('background-color')
@@ -91,20 +104,23 @@ class DataflowFigure(BasePageObject):
         top = int(top[0:-2])  # Drop 'px'.
         return (left, top)
 
-    def editor_page(self, double_click=True, base_type='Component'):
+    def editor_page(self, double_click=True, base_type='Component',
+                    version=ComponentPage.Version.OLD):
         """ Return :class:`ComponentPage` for this component. """
         chain = ActionChains(self.browser)
         if double_click:
             chain.double_click(self.root).perform()
         else:
             self._context_click('edit_button')
-        editor_id = 'CE-%s' % self.pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % self.pathname.replace('.', '-')
+        chain.release(None).perform()
         if base_type == 'Assembly':
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
         elif base_type == 'Driver':
             return DriverPage(self.browser, self.port, (By.ID, editor_id))
         else:
-            return ComponentPage(self.browser, self.port, (By.ID, editor_id))
+            return ComponentPage(self.browser, self.port, (By.ID, editor_id),
+                                 version=version)
 
     def properties_page(self):
         """ Return :class:`PropertiesPage` for this component. """
@@ -124,17 +140,17 @@ class DataflowFigure(BasePageObject):
         chain.context_click(self.input_port).perform()
         time.sleep(0.5)
         self('edit_driver').click()
-        editor_id = 'CE-%s' % driver_pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
 
     def output_edit_driver(self, driver_pathname):
         """ Return :class:`DriverPage` associated with the output port. """
-# FIXME: can't get response from context click.
+        # FIXME: can't get response from context click.
         chain = ActionChains(self.browser)
         chain.context_click(self.output_port).perform()
         time.sleep(0.5)
         self('edit_driver').click()
-        editor_id = 'CE-%s' % driver_pathname.replace('.', '-')
+        editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
 
     def run(self):
@@ -174,12 +190,37 @@ class DataflowFigure(BasePageObject):
         time.sleep(0.5)
         self(name).click()
 
+    def get_pathname(self):
+        '''Get the OpenMDAO pathname for a DataflowFigure'''
+        figid = self.root.get_attribute('id')  # get the ID of the element here
+        script = "return jQuery('#" + figid + "').data('pathname')"
+        return self.browser.execute_script(script)
+
+    def get_parent(self):
+        '''get the parent element of this DataflowFigure'''
+        return self.root.find_element_by_xpath("..")
+
+    def get_drop_targets(self):
+        '''Dataflow figures are made of many subelements. This function
+        returns a list of them so that we can try dropping on any one
+        of the elements
+        '''
+        # return [self(area).element for area in \
+        #        ['top_left','header','top_right', 'content_area',
+        #         'bottom_left', 'footer', 'bottom_right']]
+
+        # add back 'top_left' 'bottom_left' at some point. right now that test fails
+        arr = ['content_area', 'header', 'footer', 'bottom_right', 'top_right']
+        return [self(area).element for area in arr]
+
 
 def find_dataflow_figures(page):
     """ Return dataflow figure elements in `page`. """
     root = page.root or page.browser
     time.sleep(0.5)  # Pause for stable display.
-    return root.find_elements_by_class_name('DataflowFigure')
+    elements = root.find_elements_by_class_name('DataflowFigure')
+    figs = [DataflowFigure(page.browser, page.port, element) for element in elements]
+    return figs
 
 
 def find_dataflow_figure(page, name, prefix=None, retries=5):
@@ -237,27 +278,6 @@ def find_dataflow_component_names(page):
                 if n_headers == n_found:
                     return [h.text for h in dataflow_component_headers]
             n_found = n_headers
-    else:
-        logging.error('get_dataflow_component_names: n_found %s', n_found)
-        return names
 
-    #for i in range(len(dataflow_component_headers)):
-        #for retry in range(10):  # This has had issues...
-            #try:
-                #names.append(root.find_elements_by_class_name('DataflowFigureHeader')[i].text)
-            #except StaleElementReferenceException:
-                #logging.warning('get_dataflow_component_names:'
-                                #' StaleElementReferenceException')
-            #except IndexError:
-                #logging.warning('get_dataflow_component_names:'
-                                #' IndexError for i=%s, headers=%s',
-                                #i, len(dataflow_component_headers))
-            #else:
-                #break
-
-    #if len(names) != len(dataflow_component_headers):
-        #logging.error('get_dataflow_component_names:'
-                      #' expecting %d names, got %s',
-                      #len(dataflow_component_headers), names)
-    #return names
-
+    logging.error('get_dataflow_component_names: n_found %s', n_found)
+    return names

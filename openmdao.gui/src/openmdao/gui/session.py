@@ -1,28 +1,40 @@
 
 """ Ref: http://caines.ca/blog/programming/sessions-in-tornado (27 OCT/09)
 
+    From Gregg Caines blog:
+    
     In case anyone's interested, here's my sessions.py that I use for doing a
     pickle-based session (stored as a file in a directory of your choosing) in
     Tornado.  Feel free to use it however you please.  If I write something
     more scalable one day, I'll post it too.
 
     Usage:
-    In your application script,
-    settings["session_secret"] = 'some secret password!!'
-    settings["session_dir"] = 'sessions'  # the directory to store sessions in
-    application.session_manager = session.TornadoSessionManager(settings["session_secret"], settings["session_dir"])
+    
+    In your application script:
+    
+    ::
+    
+      settings["session_secret"] = 'some secret password!!'
+      settings["session_dir"] = 'sessions'  # the directory to store sessions in
+      application.session_manager = session.TornadoSessionManager(settings["session_secret"], settings["session_dir"])
 
-    In your RequestHandler (probably in __init__),
-    self.session = session.TornadoSession(self.application.session_manager, self)
+    In your RequestHandler (probably in ``__init__``):
+    
+    ::
+    
+      self.session = session.TornadoSession(self.application.session_manager, self)
 
     After that, you can use it like this (in get(), post(), etc):
-    self.session['blah'] = 1234
-    self.save()
-    blah = self.session['blah']
-
-    etc.
+    
+    ::
+    
+      self.session['blah'] = 1234
+      self.save()
+      blah = self.session['blah']
+      etc.
 
     The basic session mechanism is this:
+    
     * Take some data, pickle it, store it somewhere.
     * Assign an id to it. Run that id through a HMAC (NOT just a hash function) to prevent tampering.
     * Put the id and HMAC output in a cookie.
@@ -47,7 +59,7 @@ class Session(dict):
 
 
 class SessionManager(object):
-    """ SessionManager handles the cookie and file read/writes for a Session,
+    """ SessionManager handles the cookie and file read/writes for a Session.
     """
 
     def __init__(self, secret, session_dir = ''):

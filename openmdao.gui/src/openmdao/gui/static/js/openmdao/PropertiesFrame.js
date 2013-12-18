@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.PropertiesFrame = function(id,model) {
+openmdao.PropertiesFrame = function(id, project) {
     openmdao.PropertiesFrame.prototype.init.call(this,id,'Properties');
 
     /***********************************************************************
@@ -28,13 +28,13 @@ openmdao.PropertiesFrame = function(id,model) {
     this.elm.append(outputsDiv);
     this.elm.width(200);
 
-    inputs = new openmdao.PropertiesPane(inputsDiv,model,self.pathname,'Inputs',true);
+    inputs = new openmdao.PropertiesPane(inputsDiv,project,self.pathname,'Inputs',true);
     inputsHeader.click(function () {
         inputsDiv.toggle("normal");
         return false;
     });
 
-    outputs = new openmdao.PropertiesPane(outputsDiv,model,self.pathname,'Outputs',false);
+    outputs = new openmdao.PropertiesPane(outputsDiv,project,self.pathname,'Outputs',false);
     outputsHeader.click(function () {
         outputsDiv.toggle("normal");
         return false;
@@ -75,33 +75,34 @@ openmdao.PropertiesFrame = function(id,model) {
      *  privileged
      ***********************************************************************/
 
-    /** get the specified object from model, load properties into table */
+    /** get the specified object from project, load properties into table */
     this.editObject = function(path) {
         if (self.pathname !== path) {
            if (self.pathname) {
-                model.removeListener(self.pathname, handleMessage);
+                project.removeListener(self.pathname, handleMessage);
             }
             self.pathname = path;
             inputs.pathname = path;
             outputs.pathname = path;
             // listen for messages and update component properties accordingly
-            model.addListener(self.pathname, handleMessage);
+            project.addListener(self.pathname, handleMessage);
+
+            project.getObject(path)
+                .done(loadTables)
+                .fail(function(jqXHR, textStatus, errorThrown) {
+                    self.pathname = '';
+                    if (self.elm.parent().hasClass('ui-dialog')) {
+                        self.close();
+                    }
+                    else {
+                        loadTables({});
+                    }
+                });
         }
-        model.getComponent(path, loadTables,
-            function(jqXHR, textStatus, errorThrown) {
-                self.pathname = '';
-                if (self.elm.parent().hasClass('ui-dialog')) {
-                    self.close();
-                }
-                else {
-                    loadTables({});
-                }
-            }
-        );
         return this;
     };
 
-    /** if there is an object loaded, update it from the model */
+    /** if there is an object loaded, update it from the project */
     this.update = function() {
         if (self.pathname && self.pathname.length>0) {
             self.editObject(self.pathname);
@@ -110,7 +111,7 @@ openmdao.PropertiesFrame = function(id,model) {
 
     this.destructor = function() {
         if (self.pathname && self.pathname.length>0) {
-            model.removeListener(self.pathname, handleMessage);
+            project.removeListener(self.pathname, handleMessage);
         }
     };
 

@@ -78,7 +78,7 @@ Common Install Problems
   support alternative Python builds, such as Enthought, ActiveState Python or Python(x,y), although some may
   work with OpenMDAO.  
 
-* OpenMDAO does not support Python 3.x, nor does it support Python versions below 2.6.5.  Having the incorrect
+* OpenMDAO does not support Python 3.x or any Python versions below 2.7.  Having the incorrect
   Python installation in the PATH and/or not having the OpenMDAO-approved Python version in the PATH will only lead
   to problems.
 

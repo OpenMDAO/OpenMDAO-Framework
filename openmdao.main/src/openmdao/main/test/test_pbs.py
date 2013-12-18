@@ -14,6 +14,7 @@ from openmdao.main.pbs import PBS_Allocator, PBS_Server
 from openmdao.main.resource import HOME_DIRECTORY, WORKING_DIRECTORY
 from openmdao.util.shellproc import DEV_NULL
 from openmdao.util.testutil import assert_raises
+from openmdao.util.fileutil import onerror
 
 
 class TestCase(unittest.TestCase):
@@ -37,7 +38,7 @@ class TestCase(unittest.TestCase):
             if os.path.exists(name):
                 os.remove(name)
         for name in glob.glob('PBS_TestServer*'):
-            shutil.rmtree(name)
+            shutil.rmtree(name, onerror=onerror)
 
     def test_allocator(self):
         logging.debug('')
@@ -179,9 +180,10 @@ class TestCase(unittest.TestCase):
 
 # Skip varification of location-dependent working directory.
 
+        generated_echo = '"%s"' % echo if ' ' in echo else echo
         self.assertTrue(script.endswith("""\
 python %s hello world <echo.in >echo.out 2>&1
-""" % echo))
+""" % generated_echo))
 
         # error_path.
         server.execute_command(dict(remote_command='python',
@@ -195,7 +197,7 @@ python %s hello world <echo.in >echo.out 2>&1
         logging.debug(script)
         self.assertTrue(script.endswith("""\
 python %s hello world <%s >echo.out 2>echo.err
-""" % (echo, DEV_NULL)))
+""" % (generated_echo, DEV_NULL)))
 
         # HOME_DIRECTORY, WORKING_DIRECTORY.
         home_dir = os.path.expanduser('~')
@@ -220,4 +222,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=pbs.')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

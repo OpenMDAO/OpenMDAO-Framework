@@ -47,7 +47,10 @@ setup(name='openmdao.gui',
                                      'static/js/3Dresources/o3djs/*',
                                      'static/js/3Dresources/o3d-webgl/*',
                                      'static/js/openmdao/*',
-                                     'static/js/slickgrid/*',
+                                     'static/js/slickgrid/*.css',
+                                     'static/js/slickgrid/*.js',
+                                     'static/js/slickgrid/images/*.png',
+                                     'static/js/slickgrid/images/*.gif',
                                      'static/js/themes/classic/*',
                                      'static/js/webgl/*',
                                      'templates/*.html',
@@ -61,9 +64,10 @@ setup(name='openmdao.gui',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
-          'pyzmq-static>=2.1.11.1',
+          'pyzmq>=13.0.1',
           'tornado>=2.2',
-          'watchdog'
+          'watchdog',
+          'pyV3D',
       ],
       extras_require = {
           'jsTest': [
@@ -74,7 +78,7 @@ setup(name='openmdao.gui',
               'zope.exceptions==3.6.1'
           ],
           'functionalTest': [
-              'selenium==2.20.0',
+              'selenium==2.35.0',
               'PyVirtualDisplay==0.1',
           ]
       },   

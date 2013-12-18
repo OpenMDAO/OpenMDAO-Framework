@@ -3,20 +3,18 @@
 """
 
 import os
-import copy
 
 from numpy import array
 from numpy import float as numpy_float
 
-from openmdao.lib.datatypes.api import Int, Float, Array, Enum
+from openmdao.main.datatypes.api import Int, Float, Array, Enum, VarTree
 from openmdao.lib.components.api import ExternalCode
 
-from openmdao.units import add_unit
 from openmdao.util.namelist_util import Namelist
 
 # The following will be used for file wrapping, see the next sections
-from openmdao.main.api import FileMetadata, VariableTree, Slot
-from openmdao.util.filewrap import InputFileGenerator, FileParser
+from openmdao.main.api import FileMetadata
+from openmdao.util.filewrap import FileParser
 from geometry import Geometry
 from MEflows import MEflows
 
@@ -25,10 +23,10 @@ class DREA(ExternalCode):
 
     # Variables from MEflows and Geometry variable trees
     # -------------------------
-    flow_in = Slot(MEflows, iotype='in')
-    flow_out = Slot(MEflows, iotype='out')    
-    geo_in = Slot(Geometry, iotype='in')
-    geo_out = Slot(Geometry, iotype='out')
+    flow_in = VarTree(MEflows(), iotype='in')
+    flow_out = VarTree(MEflows(), iotype='out')    
+    geo_in = VarTree(Geometry(), iotype='in')
+    geo_out = VarTree(Geometry(), iotype='out')
     
     #mode parameter used to replace ist and ifab in control.in
     # -------------------------

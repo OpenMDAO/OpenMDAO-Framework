@@ -1,0 +1,8 @@
+1. Add a GeomComponent to the dataflow
+2. Double-click the object to bring up its Properties Pane
+3. Click on its "Slots" tab.
+4. Drag a "BoxGeometry" to fill the ParametricGeometry slot.
+5. Click on the "Outputs" tab.
+6. In the "value" column of "geom_out", click "View Geom."
+7. Verify that a separate window, containing a multi-colored cube, has spawned.
+8. Choose Project->Exit, and verify that leaving the GUI kills the Geometry window.

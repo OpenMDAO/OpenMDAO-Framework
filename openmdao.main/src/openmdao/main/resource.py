@@ -102,7 +102,9 @@ class ResourceAllocationManager(object):
 
     By default ``~/.openmdao/resources.cfg`` will be used for additional
     configuration information. To avoid this, call :meth:`configure` before
-    any other allocation routines.
+    any other allocation routines, or set the ``OPENMDAO_RAMFILE`` environment
+    variable to the path to be used (a null path is legal and avoids any
+    additional configuration).
     """
 
     _lock = threading.Lock()
@@ -117,6 +119,14 @@ class ResourceAllocationManager(object):
         self._allocators.append(LocalAllocator('LocalHost',
                                                authkey='PublicKey',
                                                allow_shell=True))
+
+        # If OPENMDA_RAMFILE is specified, use that.
+        # Set to null during testing for better coverage analysis.
+        config_filename = os.environ.get('OPENMDAO_RAMFILE')
+        if config_filename is not None:
+            if config_filename and not os.path.exists(config_filename):
+                self.log_error('OPENMDAO_RAMFILE %r not found', config_filename)
+
         if config_filename is None:
             config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
             config_filename = os.path.expanduser(config_filename)
@@ -200,6 +210,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.append(allocator)
 
     @staticmethod
@@ -215,6 +229,10 @@ class ResourceAllocationManager(object):
         """
         ram = ResourceAllocationManager._get_instance()
         with ResourceAllocationManager._lock:
+            name = allocator.name
+            for alloc in ram._allocators:
+                if alloc.name == name:
+                    raise RuntimeError('allocator named %r already exists' % name)
             ram._allocators.insert(index, allocator)
 
     @staticmethod
@@ -281,10 +299,12 @@ class ResourceAllocationManager(object):
         for allocator in self._allocators:
             count, criteria = allocator.max_servers(resource_desc)
             if count <= 0:
-                key = criteria.keys()[0]
-                info = criteria[key]
-                self._logger.debug('%r incompatible: key %r: %s',
-                                   allocator.name, key, info)
+                keys = criteria.keys()
+                if keys:
+                    info = ': key %r: %s' % (keys[0], criteria[keys[0]])
+                else:
+                    info = ''  # Don't die on an empty dictionary.
+                self._logger.debug('%r incompatible%s', allocator.name, info)
             else:
                 self._logger.debug('%r returned %d', allocator._name, count)
                 total += count
@@ -446,7 +466,7 @@ class ResourceAllocationManager(object):
 
         server: proxy for a remote server
             The server whose allocators are to be added.
-            It must support :meth:`get_ram` which should return the server's
+            It must support :meth:`get_ram`, which should return the server's
             `ResourceAllocationManager` and a `host` attribute.
 
         prefix: string
@@ -734,7 +754,7 @@ class ResourceAllocator(object):
     resource and can deploy on that resource.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
         Must be alphanumeric (underscore also allowed).
     """
 
@@ -815,9 +835,9 @@ class ResourceAllocator(object):
 
         Returns ``(retcode, info)``.  If `retcode` is zero, then `info`
         is a list of keys in `recource_desc` that have not been processed.
-        Otherwise `retcode` will be -2 and `info` will be a single-entry
+        Otherwise, `retcode` will be -2 and `info` will be a single-entry
         dictionary whose key is the incompatible key in `resource_desc`
-        and value provides data regarding the incompatibility.
+        and whose value provides data regarding the incompatibility.
         """
         keys = []
         for key, value in resource_desc.items():
@@ -832,8 +852,12 @@ class ResourceAllocator(object):
                 if missing:
                     return (-2, {key: 'missing %s' % missing})
             elif key == 'python_version':
-                if sys.version[:3] != value:
-                    return (-2, {key : 'want %s, have %s' % (value, sys.version[:3])})
+                # Require major match, minor request <= system.
+                req_ver = float(value)
+                sys_ver = float(sys.version[:3])
+                if int(sys_ver) != int(req_ver) or \
+                   sys_ver < req_ver:
+                    return (-2, {key : 'want %s, have %s' % (req_ver, sys_ver)})
             elif key == 'exclude':
                 if socket.gethostname() in value:
                     return (-2, {key : 'excluded host %s' % socket.gethostname()})
@@ -869,10 +893,11 @@ class ResourceAllocator(object):
 #FIXME: shouldn't pollute the environment like this does.
         not_found = []
         for module in sorted(resource_value):
-            try:
-                __import__(module)
-            except ImportError:
-                not_found.append(module)
+            if module:
+                try:
+                    __import__(module)
+                except ImportError:
+                    not_found.append(module)
         return not_found
 
     # To be implemented by real allocator.
@@ -913,7 +938,7 @@ class FactoryAllocator(ResourceAllocator):
     Base class for allocators using :class:`ObjServerFactory`.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     authkey: string
         Authorization key for this allocator and any deployed servers.
@@ -924,6 +949,7 @@ class FactoryAllocator(ResourceAllocator):
     """
     def __init__(self, name, authkey=None, allow_shell=False):
         super(FactoryAllocator, self).__init__(name)
+        self._deployed_servers = []
 
         if authkey is None:
             authkey = multiprocessing.current_process().authkey
@@ -971,12 +997,15 @@ class FactoryAllocator(ResourceAllocator):
         credentials = get_credentials()
         allowed_users = {credentials.user: credentials.public_key}
         try:
-            return self.factory.create(typname='', allowed_users=allowed_users,
-                                       name=name)
+            server = self.factory.create(typname='', name=name,
+                                         allowed_users=allowed_users)
         # Shouldn't happen...
-        except Exception as exc:  #pragma no cover
-            self._logger.error('create failed: %r', exc)
+        except Exception:  #pragma no cover
+            self._logger.exception('create failed:')
             return None
+
+        self._deployed_servers.append(server)
+        return server
 
     @rbac(('owner', 'user'))
     def release(self, server):
@@ -987,6 +1016,7 @@ class FactoryAllocator(ResourceAllocator):
             Previously deployed server to be shut down.
         """
         self.factory.release(server)
+        self._deployed_servers.remove(server)
 
 
 class LocalAllocator(FactoryAllocator):
@@ -994,11 +1024,11 @@ class LocalAllocator(FactoryAllocator):
     Purely local resource allocator.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     total_cpus: int
         If >0, then that is taken as the number of cpus/cores available.
-        Otherwise the number is taken from :meth:`multiprocessing.cpu_count`.
+        Otherwise, the number is taken from :meth:`multiprocessing.cpu_count`.
 
     max_load: float
         Specifies the maximum cpu-adjusted load (obtained from
@@ -1085,8 +1115,8 @@ class LocalAllocator(FactoryAllocator):
     @rbac('*')
     def max_servers(self, resource_desc):
         """
-        Returns `total_cpus` * `max_load` if `resource_desc` is supported,
-        otherwise zero.
+        Returns `total_cpus` * `max_load` if `resource_desc` is supported;
+        otherwise, zero.
 
         resource_desc: dict
             Description of required resources.
@@ -1149,6 +1179,9 @@ class LocalAllocator(FactoryAllocator):
         }
         if (loadavgs[0] / self.total_cpus) < self.max_load:
             return (0, criteria)
+        elif len(self._deployed_servers) == 0:
+            # Ensure progress by always allowing 1 server.
+            return (0, criteria)
         # Tests force max_load high to avoid other issues.
         else:  #pragma no cover
             return (-1, criteria)  # Try again later.
@@ -1161,9 +1194,9 @@ class LocalAllocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(LocalAllocator, self).check_compatibility(resource_desc)
@@ -1253,13 +1286,10 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
     of :class:`LocalAllocator`, one for each machine in the cluster.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
-    machines: list(dict)
-        Dictionaries providing configuration data for each machine in the
-        cluster.  At a minimum, each dictionary must specify a host
-        address in 'hostname' and the path to the OpenMDAO Python command in
-        'python'.
+    machines: list(:class:`ClusterHost`)
+        Hosts to allocate from.
 
     authkey: string
         Authorization key to be passed-on to remote servers.
@@ -1296,14 +1326,15 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         """ Setup allocators on the given machines. """
         hostnames = set()
         hosts = []
-        for machine in machines:
-            hostname = machine['hostname']
-            if hostname in hostnames:
-                self._logger.warning('Ignoring duplicate hostname %r', hostname)
+        for i, host in enumerate(machines):
+            if not isinstance(host, ClusterHost):
+                raise TypeError('Expecting ClusterHost for machine %s, got %r'
+                                % (i, host))
+            if host.hostname in hostnames:
+                self._logger.warning('Ignoring duplicate hostname %r',
+                                     host.hostname)
                 continue
-            hostnames.add(hostname)
-            host = mp_distributing.Host(machine['hostname'],
-                                        python=machine['python'])
+            hostnames.add(host.hostname)
             host.register(LocalAllocator)
             hosts.append(host)
 
@@ -1314,27 +1345,20 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
 
         for host in self.cluster:
             manager = host.manager
-            try:
-                la_name = manager._name
-            except AttributeError:
-                la_name = 'localhost'
-                host_ip = '127.0.0.1'
-            else:
-                # 'host' is 'Host-<ipaddr>:<port>
-                dash = la_name.index('-')
-                colon = la_name.index(':')
-                host_ip = la_name[dash+1:colon]
-                la_name = la_name.replace('-', '_')
-                la_name = la_name.replace('.', '')
-                la_name = la_name.replace(':', '_')
+            la_name = host.hostname
+            if '@' in la_name:
+                la_name = la_name.split('@')[1]
+            for char in ('-', '.'):
+                la_name = la_name.replace(char, '_')
 
-            if host_ip not in self._allocators:
+            if la_name in self._allocators:
+                self._logger.warning('skipping duplicate %s', la_name)
+            else:
                 allocator = \
                     manager.openmdao_main_resource_LocalAllocator(name=la_name,
                                                   allow_shell=self._allow_shell)
-                self._allocators[host_ip] = allocator
-                self._logger.debug('%s allocator %r pid %s', host.hostname,
-                                   la_name, allocator.pid)
+                self._allocators[la_name] = allocator
+                self._logger.debug('allocator %r pid %s', la_name, allocator.pid)
 
     def __getitem__(self, i):
         return self._allocators[i]
@@ -1395,7 +1419,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         machines = []
         for i in range(origin, nhosts+origin):
             hostname = pattern % i
-            machines.append(dict(hostname=hostname, python=python))
+            machines.append(ClusterHost(hostname=hostname, python=python))
         self._initialize(machines)
 
     def max_servers(self, resource_desc):
@@ -1427,7 +1451,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 if i < max_workers:
                     worker_q = WorkerPool.get()
                     worker_q.put((self._get_count,
-                                  (allocator, resource_desc, credentials),
+                                  (allocator, rdesc, credentials),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
@@ -1446,7 +1470,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     WorkerPool.release(worker_q)
                 else:
                     worker_q.put((self._get_count,
-                                  (next_allocator, resource_desc, credentials),
+                                  (next_allocator, rdesc, credentials),
                                   {}, self._reply_q))
                 count = retval
                 if count:
@@ -1472,6 +1496,10 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             msg = traceback.format_exc()
             self._logger.error('%r max_servers() caught exception %s',
                                allocator.name, msg)
+        else:
+            if count < 1:
+                self._logger.debug('%s incompatible: %s',
+                                   allocator.name, criteria)
         return max(count, 0)
 
     def time_estimate(self, resource_desc):
@@ -1557,7 +1585,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                 if retval is None:
                     continue
                 allocator, estimate, criteria = retval
-                if estimate is None:
+                if estimate is None or estimate < -1:
                     continue
 
                 # Accumulate available cpus in cluster.
@@ -1592,11 +1620,17 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     best_criteria = criteria
                     best_allocator = allocator
                 elif (best_estimate == 0 and estimate == 0):
-                    best_load = best_criteria['loadavgs'][0]
-                    if load < best_load:
-                        best_estimate = estimate
-                        best_criteria = criteria
-                        best_allocator = allocator
+                    if 'loadavgs' in best_criteria:
+                        best_load = best_criteria['loadavgs'][0]
+                        if load < best_load:
+                            best_estimate = estimate
+                            best_criteria = criteria
+                            best_allocator = allocator
+                    else:
+                        if 'loadavgs' in criteria:  # Prefer non-Windows.
+                            best_estimate = estimate
+                            best_criteria = criteria
+                            best_allocator = allocator
 
             # If no alternative, repeat use of previous allocator.
             if best_estimate < 0 and prev_estimate >= 0:
@@ -1665,8 +1699,12 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             criteria = None
         else:
             if estimate == 0:
-                self._logger.debug('%r returned %g (%g)', allocator.name,
-                                   estimate, criteria['loadavgs'][0])
+                if 'loadavgs' in criteria:
+                    load = '%g' % criteria['loadavgs'][0]
+                else:
+                    load = 'None'
+                self._logger.debug('%r returned %g (%s)', allocator.name,
+                                   estimate, load)
             else:
                 self._logger.debug('%r returned %g', allocator.name, estimate)
 
@@ -1691,6 +1729,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             allocator = criteria['allocator']
             self._last_deployed = allocator
             del criteria['allocator']  # Don't pass a proxy without a server!
+        self._logger.debug('deploying on %r as %r', allocator.name, name)
         try:
             server = allocator.deploy(name, resource_desc, criteria)
         except Exception as exc:
@@ -1729,4 +1768,30 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
     def shutdown(self):
         """ Shutdown, releasing resources. """
         self.cluster.shutdown()
+
+
+# Cluster allocation requires ssh configuration and multiple hosts.
+class ClusterHost(mp_distributing.Host):  #pragma no cover
+    """
+    Represents a host to use as a node in a cluster.
+
+    hostname: string
+        Name of the host. `ssh` is used to log into the host. To log in as a
+        different user, use a host name of the form: "username@somewhere.org".
+
+    python: string
+        Path to the Python command to be used on `hostname`.
+
+    tunnel_incoming: bool
+        True if we need to set up a tunnel for `hostname` to connect to us.
+        This is the case when a local firewall blocks connections.
+
+    tunnel_outgoing: bool
+        True if we need to set up a tunnel to connect to `hostname`.
+        This is the case when a remote firewall blocks connections.
+
+    identity_filename: string
+        Path to optional identity file to pass to ssh.
+    """
+    pass  # Currently identical.
 

@@ -7,10 +7,9 @@ Sphinx documentation.
 
 from sys import maxint, float_info
 
-from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, \
-                                 Instance
-from enthought.traits.trait_types import _InstanceArgs
-from inspect import getmro, ismodule, getmembers, ismethod, isfunction, isclass
+from traits.api import HasTraits, MetaHasTraits, Any, Python, Instance
+from traits.trait_types import _InstanceArgs
+from inspect import getmro, ismodule, getmembers, isfunction, isclass
 
 from openmdao.main.datatypes.api import Slot, Event
 
@@ -27,14 +26,14 @@ def _print_funct(funct, args, kw):
     argstr = ', '.join(arglst)
     kwlst = []
     if kw:
-        for k,v in kw.items():
-            if isinstance(v,basestring):
-                kwlst.append("%s='%s'" % (k,v))
+        for k, v in kw.items():
+            if isinstance(v, basestring):
+                kwlst.append("%s='%s'" % (k, v))
             else:
-                kwlst.append("%s=%s" % (k,v))
+                kwlst.append("%s=%s" % (k, v))
     kwstr = ', '.join(kwlst)
     if kwstr and len(argstr)>0:
-        kwstr = ', '+kwstr
+        kwstr = ', ' + kwstr
     return "%s(%s%s)" % (funct.__name__, argstr, kwstr)
 
 def _get_instance_default(trait):
@@ -56,21 +55,21 @@ def get_traits_info(app, what, name, obj, options, lines):
 
         #get functions
         fns = getmembers(obj, isfunction)
-        for n,v in fns:
+        for n, v in fns:
             filename = v.__module__ + ".py"
-            lines.append(":ref:`%s<%s>`" %(n,filename))
+            lines.append(":ref:`%s<%s>`" % (n, filename))
             lines.append('\n')
       
         #get classes
         cls = getmembers(obj, isclass)
         for n1, v1 in cls:
             module = v1.__module__
-            if module=="enthought.traits.trait_types":
-                filename2 = ("http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_types.%s.html" %n1)
-                lines.append("`%s <%s>`_" %(n1, filename2))
+            if module == "traits.trait_types":
+                filename2 = "http://docs.enthought.com/traits/traits_api_reference/trait_types.html"
+                lines.append("`%s <%s>`_" % (n1, filename2))
             else:
                 filename2 = module + ".py"
-                lines.append(":ref:`%s<%s>`" %(n1,filename2))
+                lines.append(":ref:`%s<%s>`" % (n1, filename2))
             lines.append('\n')
     
     if not isinstance(obj, (MetaHasTraits, HasTraits)):
@@ -105,63 +104,68 @@ def get_traits_info(app, what, name, obj, options, lines):
             if not trt_val == base_class_traits[trt]:
                 keepers[trt] = trt_val
                 
-    keepers_in={}
-    keepers_out={}
-    keepers_instance={}
-    keepers_undefined={}
+    keepers_in = {}
+    keepers_out = {}
+    keepers_instance = {}
+    keepers_undefined = {}
     
     #Now we need to SORT the traits by input/output type.
-    for t,val in keepers.items():
+    for t, val in keepers.items():
         #As long as it's not an excluded type, add it.
         if not isinstance(val.trait_type, excludes):
             if val.trait_type._metadata.has_key("iotype"):
-                if val.trait_type._metadata["iotype"] =="in":
-                    keepers_in[t]=val
+                if val.trait_type._metadata["iotype"] == "in":
+                    keepers_in[t] = val
                 elif val.trait_type._metadata["iotype"] == "out":
-                    keepers_out[t]=val
+                    keepers_out[t] = val
             elif type(val.trait_type).__name__ in ["Instance","Slot"]:
-                keepers_instance[t]=val        
+                keepers_instance[t] = val        
             else:
-                keepers_undefined[t]=val
+                keepers_undefined[t] = val
                 
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
-    dontdo_meta=set(['iotype', 'units', 'low', 'high', 'type', 
-                     'desc', 'instance_handler', 'parent', 'array'])
+    dontdo_meta = set(['iotype', 'units', 'low', 'high', 'type', 
+                       'desc', 'instance_handler', 'parent', 'array'])
     for dic in dicts:
         sortedDict = _sortedDictVals(dic)
         for t, val in sortedDict:
             lines.append('')
-            #Now just need to spit out the traits in the proper format into the documentation 
+            #Now just need to spit out the traits in the proper format into the
+            # documentation 
             if val.is_trait_type(Instance) or val.is_trait_type(Slot):
-                lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
+                lines.extend(["*%s* (%s) **%s**"
+                              % (type(val.trait_type).__name__,
+                                 val.trait_type.klass.__name__, t)])
             else:
-                lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])
+                lines.extend(["*%s* **%s**" % (type(val.trait_type).__name__, t)])
             if val.desc is not None:
-                lines.extend(["  %s" %val.desc])
+                lines.extend(["  %s" % val.desc])
                 lines.append('')
             if val.is_trait_type(Instance) or val.is_trait_type(Slot):
-                lines.extend(["  * default:  %s" % _get_instance_default(val.trait_type)]) 
+                lines.extend(["  * default:  %s"
+                              % _get_instance_default(val.trait_type)]) 
             else:
-                lines.extend(["  * default:  '%s'" %(val.trait_type).default_value]) 
+                lines.extend(["  * default:  '%s'"
+                              % (val.trait_type).default_value]) 
             if val.iotype is not None:
-                lines.extend(["  * iotype:  '%s'" %val.iotype])
+                lines.extend(["  * iotype:  '%s'" % val.iotype])
             if val.units is not None:
-                lines.extend(["  * units: '%s'" %val.units])    
+                lines.extend(["  * units: '%s'" % val.units])    
             if val.low is not None:
                 if val.low == (-1 * maxint):
                     continue
                 elif val.low == (-float_info.max):
                     continue
                 else:
-                    lines.extend(['  * low:  %s' %val.low])
+                    lines.extend(['  * low:  %s' % val.low])
             if val.high is not None:
                 if val.high is maxint:
                     continue
                 elif val.high is float_info.max:
                     continue
                 else:
-                    lines.extend(['  * high:  %s' %val.high])
+                    lines.extend(['  * high:  %s' % val.high])
     
             #now to put in the metadata added by users, or not specially handled.
             metadata = val.trait_type._metadata.items()
@@ -169,7 +173,7 @@ def get_traits_info(app, what, name, obj, options, lines):
                 if m not in dontdo_meta:
                     if isinstance(v, basestring):
                         v = "'%s'" % v
-                    lines.extend(['  *  %s:  %s' %(m, v)])
+                    lines.extend(['  *  %s:  %s' % (m, v)])
                     
             lines.append('')
             

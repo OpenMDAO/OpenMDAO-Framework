@@ -1,7 +1,7 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
+openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
     var objectives,
         objectivesDiv = jQuery("<div id='"+name+"_objectives' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Objective</button>").button(),
@@ -18,7 +18,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             autoEdit: false
         };
 
-    function buttonFormatter(row,cell,value,columnDef,dataContext) {  
+    function buttonFormatter(row,cell,value,columnDef,dataContext) {
         button = '<div class="ui-icon-trash"></div>';
         return button;
     }
@@ -40,9 +40,9 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     objectives = new Slick.Grid(objectivesDiv, [], columns, options);
     if (editable) {
         objectives.onCellChange.subscribe(function(e,args) {
-            // TODO: better way to do this (e.g. model.setProperty(path,name,value)
+            // TODO: better way to do this (e.g. project.setProperty(path,name,value)
             cmd = pathname+'.'+args.item.name+'='+args.item.value;
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         });
    }
     objectives.onClick.subscribe(function (e) {
@@ -50,7 +50,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
         if (cell.cell==0) {
             var delname = objectives.getData()[cell.row].name
             cmd = pathname+'.remove_objective("'+delname+'");';
-            model.issueCommand(cmd);
+            project.issueCommand(cmd);
         }
     });
 
@@ -61,7 +61,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
             cmd = cmd + ",name='"+name+"'";
         }
         cmd = cmd + ");";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     objectivesDiv.bind('resizeCanvas', function() {
@@ -114,7 +114,7 @@ openmdao.ObjectivesPane = function(elm,model,pathname,name,editable) {
     /** clear all objectives */
     function clearObjectives() {
         cmd = pathname+".clear_objectives();";
-        model.issueCommand(cmd);
+        project.issueCommand(cmd);
     }
 
     addButton.click(function() { promptForObjective(addObjective); });

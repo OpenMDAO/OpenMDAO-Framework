@@ -12,7 +12,7 @@ except ImportError:
 else:
     real_types.extend([numpy.float32, numpy.float64])
     int_types.extend([numpy.int32, numpy.int64])
-    iterable_types.append(numpy.array)
+    iterable_types.append(numpy.ndarray)
     
 # use these with isinstance to test for various types that include builtins
 # and numpy types (if numpy is available)

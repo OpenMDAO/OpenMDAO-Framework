@@ -11,9 +11,9 @@ import sys
 import time
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.lib.datatypes.api import Bool, Dict, Str, Float, Int, List
+from openmdao.main.datatypes.api import Bool, Dict, Str, FileRef, Float, Int, List
 
-from openmdao.main.api import ComponentWithDerivatives, FileRef
+from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.rbac import AccessController, RoleError, rbac, remote_access
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -22,7 +22,7 @@ from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util import shellproc
 
 
-class ExternalCode(ComponentWithDerivatives):
+class ExternalCode(Component):
     """
     Run an external code as a component. The component can be configured to
     run the code on a remote server. See :meth:`execute`.
@@ -82,10 +82,9 @@ class ExternalCode(ComponentWithDerivatives):
         """
         Runs the specified command.
 
-            1. Existing output (but not in/out) files are removed.
-            2. Checks that all external input files exist.
-            3. Runs the command.
-            4. Checks that all external output files exist.
+            1. Checks that all external input files exist.
+            2. Runs the command.
+            3. Checks that all external output files exist.
 
         If a subclass generates outputs (such as postprocessing results),
         then it should set attribute ``check_external_outputs`` False and call
@@ -139,18 +138,6 @@ class ExternalCode(ComponentWithDerivatives):
         self.return_code = -12345678
         self.timed_out = False
 
-        # Remove existing output (but not in/out) files.
-        for metadata in self.external_files:
-            if metadata.get('output', False) and \
-               not metadata.get('input', False):
-                for path in glob.glob(metadata.path):
-                    if os.path.exists(path):
-                        os.remove(path)
-        for pathname, obj in self.items(iotype='out', recurse=True):
-            if isinstance(obj, FileRef):
-                if os.path.exists(obj.path):
-                    os.remove(obj.path)
-
         if not self.command:
             self.raise_exception('Empty command list', ValueError)
 
@@ -173,10 +160,13 @@ class ExternalCode(ComponentWithDerivatives):
 
             elif return_code:
                 if isinstance(self.stderr, str):
-                    stderrfile = open(self.stderr, 'r')
-                    error_desc = stderrfile.read()
-                    stderrfile.close()
-                    err_fragment = "\nError Output:\n%s" % error_desc
+                    if os.path.exists(self.stderr):
+                        stderrfile = open(self.stderr, 'r')
+                        error_desc = stderrfile.read()
+                        stderrfile.close()
+                        err_fragment = "\nError Output:\n%s" % error_desc
+                    else:
+                        err_fragment = "\n[stderr %r missing]" % self.stderr
                 else:
                     err_fragment = error_msg
                     
@@ -292,7 +282,7 @@ class ExternalCode(ComponentWithDerivatives):
         error_msg = ''
         try:
             # Create resource description for command.
-            rdesc['job_name'] = self.get_pathname()
+            rdesc['job_name'] = self.get_pathname() or self.__class__.__name__
             rdesc['remote_command'] = self.command[0]
             if len(self.command) > 1:
                 rdesc['args'] = self.command[1:]

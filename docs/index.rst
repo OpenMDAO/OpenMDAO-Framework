@@ -9,10 +9,7 @@ Current version: |version|
    
    getting-started/index
    basics/index
-   optimization/index
-   surrogate/index
-   mdao/index
-   complex/index
+   tutorials/index
    concurrent
    srcdocs/index
    licenses/index
@@ -24,10 +21,10 @@ OpenMDAO Developer Guide
 .. toctree::
    :maxdepth: 1
    
-   documenting/index
-   plugin-guide/index
    dev-guide/index
+   plugin-guide/index
    code-contribution-example
+   documenting/index
    
 ==============================
 Appendix and Glossary

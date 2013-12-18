@@ -1,34 +1,29 @@
 /**
- * stuff to do after the code editor page is loaded
+ * stuff to do after the editor editor page is loaded
  */
 
 jQuery(function() {
-    // define openmdao namespace & create interface to openmdao in global scope
-    openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
-    if (opener && opener.openmdao && opener.openmdao.model ) {
-        openmdao.model = opener.openmdao.model;
-        openmdao.model.addWindow(window);
+    if (opener && opener.openmdao) {
+        openmdao.project = opener.openmdao.project;
     }
     else {
-        openmdao.model = new openmdao.Model();
+        // define openmdao namespace & create interface to openmdao in global scope
+        openmdao = (typeof openmdao === 'undefined' || !openmdao ) ? {} : openmdao ;
+        openmdao.project = new openmdao.Project();
     }
 
-    var code = new openmdao.CodeFrame('code_pane', openmdao.model);
-
-    function code_fn(path) { code.editFile(path); }
-    function geom_fn(path) { openmdao.Util.popupWindow('geometry?path='+path,'Geometry'); }
-
-    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.model, code_fn, geom_fn);
+    var editor = new openmdao.CodeFrame('code_pane', openmdao.project);
+    var ftree = new openmdao.FileTreeFrame('file_pane', openmdao.project);
 
     // allow frames to close in an orderly fashion before closing window
     jQuery(window).bind('beforeunload', function(e) {
-        openmdao.model.editor = undefined;
-        code.close();
+        openmdao.project.codeEditor = undefined;
+        editor.close();
         ftree.close();
     });
 
-    // set the layout (note: global scope)
-    layout = jQuery('body').layout({
+    // set the layout
+    jQuery('body').layout({
         onresize: function(e) {
             // resize content pane of all tabbed panes to fill the layout pane
             var layout_pane = jQuery('.ui-layout-'+e),
@@ -39,7 +34,7 @@ jQuery(function() {
                 panel.height(pane_height);
                 panel.width(pane_width);
             }));
-            code.resize();
+            editor.resize();
         }
     });
 
@@ -55,11 +50,11 @@ jQuery(function() {
 
     // if a filename was specified, load it & clean up the temporary variable
     if (openmdao.edit_filename) {
-        code.editFile(openmdao.edit_filename);
+        editor.editFile(openmdao.edit_filename);
         delete openmdao.edit_filename;
     }
 
     // save ref to editor for others to use
-    openmdao.model.editor = code;
+    openmdao.project.codeEditor = editor;
 });
 

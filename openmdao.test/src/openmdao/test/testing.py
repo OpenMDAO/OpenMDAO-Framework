@@ -7,10 +7,7 @@ import nose
 from nose.plugins.base import Plugin
 from pkg_resources import working_set, to_filename
 
-from openmdao.main.resource import ResourceAllocationManager
-
 import atexit
-
 
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
@@ -119,8 +116,8 @@ def _get_openmdao_packages():
 def read_config(options):
     """Reads the config file specified in options.cfg.
     
-    Returns a tuple of the form (hosts, config), where hosts is the list of
-    host names and config is the ConfigParser object for the config file.
+    Returns a tuple of the form (hosts, config), where `hosts` is the list of
+    host names and `config` is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
     
@@ -229,7 +226,7 @@ def run_openmdao_suite(argv=None):
             os.remove(path)
 
     # Avoid having any user-defined resources causing problems during testing.
-    ResourceAllocationManager.configure('')
+    os.environ['OPENMDAO_RAMFILE'] = ''
 
     if '--with-coverage' in args:
         args.append('--cover-erase')
@@ -264,10 +261,9 @@ def run_openmdao_suite(argv=None):
         plugin_install(parser, options, argz)
 
     # The default action should be to run the GUI functional tests.
-    # The 'win32' test here is to allow easily changing the default for Windows
-    # where testing still has occasional problems not terminating on EC2.
+    # The 'win32' test here is to allow easily changing the default for Windows.
     if sys.platform == 'win32':
-        do_gui_tests = False
+        do_gui_tests = True
     else:
         do_gui_tests = True
 

@@ -5,8 +5,10 @@ import webbrowser
 from argparse import ArgumentParser
 
 from openmdao.main.plugin import plugin_docs, print_sub_help
+from openmdao.main.releaseinfo import __version__
 from openmdao.test.testing import read_config, filter_config, run_openmdao_suite
 from openmdao.util.fileutil import get_cfg_file
+
 
 
 def list_testhosts(parser, options, args=None):
@@ -41,6 +43,9 @@ def _get_openmdao_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
 
     top_parser = ArgumentParser()
+    top_parser.add_argument('-v', '--version', action='version',
+                            version='OpenMDAO %s' % __version__)
+
     subparsers = top_parser.add_subparsers(title='commands')
 
     parser = subparsers.add_parser('list_testhosts',
@@ -190,8 +195,8 @@ def _get_openmdao_parser():
                                  ' (WARNING: Not Safe or Secure!!)')
         parser.set_defaults(func=gui.run)
 
-    except ImportError:
-        pass
+    except ImportError as err:
+        print str(err)
 
     return top_parser
 

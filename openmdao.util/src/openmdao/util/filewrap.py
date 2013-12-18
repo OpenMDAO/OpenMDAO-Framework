@@ -424,7 +424,7 @@ class InputFileGenerator(object):
         """Replace the contents of a row with the newline character.
         
         row: integer
-            row number to clear, relative to current anchor."""
+            Row number to clear, relative to current anchor."""
 
         self.data[self.current_row + row] = "\n"
         
@@ -476,7 +476,7 @@ class FileParser(object):
         
         delimiter: str
             A string containing characters to be used as delimiters. The
-            default value is ' \t'. which means that spaces and tabs are not
+            default value is ' \t', which means that spaces and tabs are not
             taken as data but instead mark the boundaries. Note that the
             parser is smart enough to recognize characters within quotes as
             non-delimiters."""
@@ -587,7 +587,7 @@ class FileParser(object):
         
         fieldend: integer (optional)
             Position of last character to return. If omitted, the end of
-            the line is used"""
+            the line is used."""
         
         j = self.current_row + row
         line = self.data[j]

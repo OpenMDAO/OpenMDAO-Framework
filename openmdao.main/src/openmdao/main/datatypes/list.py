@@ -7,7 +7,7 @@ __all__ = ["List"]
 
 # pylint: disable-msg=E0611,F0401
 
-from enthought.traits.api import List as Enthought_List
+from traits.api import List as Enthought_List
 
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.interfaces import implements, IVariable
@@ -42,7 +42,7 @@ class List(Enthought_List):
 
         attr['name'] = name
         attr['type'] = 'list'
-        attr['value'] = list(value)
+        attr['value'] = str(list(value))
 
         for field in meta:
             if field not in gui_excludes:

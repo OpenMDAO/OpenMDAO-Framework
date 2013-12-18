@@ -17,11 +17,13 @@ except ImportError as err:
     connections = {}
     logging.warn("In %s: %r", __file__, err)
 
-from openmdao.util.fileutil import find_up
+from openmdao.util.fileutil import find_up, onerror
 from openmdao.util.decorators import stub_if_missing_deps
+
 
 class VersionError(RuntimeError):
     pass
+
 
 @stub_if_missing_deps('fabric')
 def fabric_cleanup(debug=False):
@@ -58,11 +60,11 @@ def get_openmdao_version(release_dir, version=None):
         try:
             version = check_openmdao_version(release_dir, version)
         except VersionError, err:
-            print str(err),'\n'
+            print str(err), '\n'
             version = None
-       
+
     if version is None:
-        version = prompt('Enter version id:', 
+        version = prompt('Enter version id:',
                          validate=lambda ver: check_openmdao_version(release_dir, ver))
     return version
 
@@ -74,12 +76,12 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
     """
     for fpath in fpaths:
         put(fpath, os.path.join(remotedir, os.path.basename(fpath)))
-        
+
     if runner is None:
         runner = 'python' if fpaths[0].endswith('.py') else ''
 
     print 'cd-ing to %s' % remotedir
-    cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]), 
+    cmd = '%s %s %s' % (runner, os.path.basename(fpaths[0]),
                         ' '.join(args))
     with cd(remotedir):
         print 'running:', cmd
@@ -87,14 +89,14 @@ def push_and_run(fpaths, remotedir, runner=None, args=()):
 
 
 def tar_dir(dirpath, archive_name, destdir):
-    """Tar up the given directory and put in in the specified destination
+    """Tar up the given directory and put it in the specified destination
     directory.
     """
     dirpath = os.path.abspath(dirpath)
     destdir = os.path.abspath(destdir)
     startdir = os.getcwd()
     os.chdir(os.path.dirname(dirpath))
-    tarpath = os.path.abspath(os.path.join(destdir,'%s.tar.gz' % archive_name))
+    tarpath = os.path.abspath(os.path.join(destdir, '%s.tar.gz' % archive_name))
     try:
         archive = tarfile.open(tarpath, 'w:gz')
         archive.add(os.path.basename(dirpath))
@@ -102,6 +104,7 @@ def tar_dir(dirpath, archive_name, destdir):
     finally:
         os.chdir(startdir)
     return tarpath
+
 
 @stub_if_missing_deps('paramiko')
 def ssh_test(host, port=22, timeout=3):
@@ -142,7 +145,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
 
     # Loop until successful connect
     while tries < max_tries:
-        
+
         # Attempt connection
         try:
             client.connect(
@@ -163,7 +166,7 @@ def fab_connect(user, host, port=22, max_tries=10, sleep=10, debug=False):
                   % (tries, host, str(e))
 
         time.sleep(sleep)
-        
+
     raise RuntimeError("failed to connect to host %s after %d tries" %
                        (host, tries))
 
@@ -179,15 +182,27 @@ def remote_py_cmd(cmds, py='python', remote_dir=None):
         f.write("import os\n")
         for cmd in cmds:
             f.write("%s\n" % cmd)
-        f.write("os.remove(__file__)\n") # make file delete itself when it runs
+        f.write("os.remove(__file__)\n")  # make file delete itself when it runs
     if remote_dir is not None:
-        remotecmd = os.path.join(remote_dir, cmdfname).replace('\\','/')
+        remotecmd = os.path.join(remote_dir, cmdfname).replace('\\', '/')
     else:
         remotecmd = cmdfname
     # apparently put/get ignore the cd() context manager, but run doesn't  :(
     put(cmdfname, remotecmd)
-    os.remove(cmdfname) # remove local version
-    return run('%s %s' % (py, cmdfname))
+    try:
+        retval = run('%s %s' % (py, cmdfname))
+    except SystemExit as err:  # error on remote side calls abort :|
+        retval = None
+    else:
+        err = None
+    if (err or retval.failed):
+        #print the stuff
+        print "Enjoy the contents of _cmd_.py below!"
+        with open(cmdfname, 'r') as f:
+            for i,line in enumerate(f):
+                print "%d: %s" % (i+1, line),
+    os.remove(cmdfname)  # remove local version
+    return retval
 
 @stub_if_missing_deps('fabric')
 def remote_get_platform():
@@ -195,13 +210,15 @@ def remote_get_platform():
     with settings(hide('running', 'stderr'), warn_only=True):
         return remote_py_cmd(["import sys", "print sys.platform"])
 
+
 @stub_if_missing_deps('fabric')
 def remote_check_setuptools(py):
     """Return True if setuptools is installed on the remote host."""
     with settings(hide('everything'), warn_only=True):
         return remote_py_cmd(["import setuptools"],
                              py).succeeded
-    
+
+
 @stub_if_missing_deps('fabric')
 def remote_check_pywin32(py):
     """Return True if pywin32 is installed on the remote host."""
@@ -211,21 +228,24 @@ def remote_check_pywin32(py):
                               "import ntsecuritycon"],
                              py=py).succeeded
 
+
 @stub_if_missing_deps('fabric')
 def remote_untar(tarfile, remote_dir=None, delete=True):
     """Use internal Python tar package to untar a file in the current remote
     directory instead of assuming that tar exists on the remote machine.
     """
-    tarfile = tarfile.replace('\\','/')
-    cmds = [ "import tarfile",
-             "tar = tarfile.open('%s')" % tarfile,
-             "tar.extractall()",
-             "tar.close()",
-             ]
+    tarfile = tarfile.replace('\\', '/')
+    cmds = [
+        "import tarfile",
+        "tar = tarfile.open('%s')" % tarfile,
+        "tar.extractall()",
+        "tar.close()",
+    ]
     if delete:
         cmds.extend(['import os', 'os.remove("%s")' % tarfile])
     return remote_py_cmd(cmds, remote_dir=remote_dir)
-    
+
+
 @stub_if_missing_deps('fabric')
 def remote_tmpdir():
     """Create and return the name of a temporary directory at the remote
@@ -235,40 +255,43 @@ def remote_tmpdir():
         return remote_py_cmd(['import tempfile',
                               'print tempfile.mkdtemp()'])
 
+
 def remote_mkdir(path):
     """Create a remote directory with the given name. If it already exists,
     just return with no error.
     """
     return remote_py_cmd(["import os",
-                          "if not os.path.exists('%s'):" % path.replace('\\','/'),
-                          "    os.makedirs('%s')" % path.replace('\\','/')])
-    
+                          "if not os.path.exists('%s'):" % path.replace('\\', '/'),
+                          "    os.makedirs('%s')" % path.replace('\\', '/')])
+
+
 @stub_if_missing_deps('fabric')
 def remote_listdir(path):
     """Return a list of files found in the given remote directory."""
     with settings(show('stdout')):
         s = remote_py_cmd(["import os",
-                           "print os.listdir('%s')" % path.replace('\\','/')])
+                           "print os.listdir('%s')" % path.replace('\\', '/')])
     s = s.strip()[1:-1]
     return [part.strip("'") for part in s.split(', ')]
+
 
 def rm_remote_tree(pathname):
     """Delete the directory at the remote location."""
     return remote_py_cmd(["import shutil",
-                          "shutil.rmtree('%s')" % pathname.replace('\\','/')])
-    
+                          "shutil.rmtree('%s')" % pathname.replace('\\', '/')])
+
 
 def put_untar(local_path, remote_dir):
     """Put the given tarfile on the current active host and untar it in the
     specified place.
     """
     tarname = os.path.basename(local_path)
-    
+
     remote_mkdir(remote_dir)
 
     abstarname = os.path.join(remote_dir, tarname)
     put(local_path, abstarname)
-    
+
     with cd(remote_dir):
         remote_untar(tarname, remote_dir, delete=True)
 
@@ -276,10 +299,10 @@ def put_untar(local_path, remote_dir):
 def put_dir(src, dest):
     """Tar the src directory, upload it to the current active
     host, untar it, and perform renaming if necessary.
-    
+
     src: str
         directory to be copied to remote host
-        
+
     dest: str
         pathname of directory on remote host
     """
@@ -287,14 +310,14 @@ def put_dir(src, dest):
     tarpath = tar_dir(src, os.path.basename(src), tmpdir)
     remote_dir = os.path.dirname(dest)
     put_untar(tarpath, remote_dir)
-    shutil.rmtree(tmpdir)
-    
-    
-def rsync_dirs(dest, host, dirs=('downloads','dists'),
+    shutil.rmtree(tmpdir, onerror=onerror)
+
+
+def rsync_dirs(dest, host, dirs=('downloads', 'dists'),
                doit=os.system):
     """Use rsync to sync the specified directories on the specified host
     with the corresponding directories in the specified destination directory.
-    
+
     This requires ssh access without a password to the host.
     """
     for dname in dirs:
@@ -304,48 +327,50 @@ def rsync_dirs(dest, host, dirs=('downloads','dists'),
 @stub_if_missing_deps('fabric')
 def retrieve_docs(remote_dir):
     """Retrieve a tar file of the docs built on a remote machine."""
-    cmds = [ "import tarfile",
-             "import os",
-             "remote_dir = os.path.expanduser('%s')" % remote_dir,
-             "for fname in os.listdir(remote_dir):",
-             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
-             "        break",
-             "else:",
-             "    raise RuntimeError('install dir not found in %s' % remote_dir)",
-             "tardir = os.path.join(remote_dir, fname, 'docs', '_build', 'html')",
-             "tar = tarfile.open(os.path.join(remote_dir, 'html.tar.gz'), mode='w:gz')",
-             "tar.add(tardir, arcname='html')",
-             "tar.close()",
-             ]
-    
+    cmds = [
+        "import tarfile",
+        "import os",
+        "remote_dir = os.path.expanduser('%s')" % remote_dir,
+        "for fname in os.listdir(remote_dir):",
+        "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+        "        break",
+        "else:",
+        "    raise RuntimeError('install dir not found in %s' % remote_dir)",
+        "tardir = os.path.join(remote_dir, fname, 'docs', '_build', 'html')",
+        "tar = tarfile.open(os.path.join(remote_dir, 'html.tar.gz'), mode='w:gz')",
+        "tar.add(tardir, arcname='html')",
+        "tar.close()",
+    ]
+
     remote_py_cmd(cmds)
     get(os.path.join(remote_dir, 'html.tar.gz'), 'html.tar.gz')
-    
+
 
 @stub_if_missing_deps('fabric')
 def retrieve_pngs(remote_dir):
     """Retrieve a tar file of PNG & server files generated on a remote machine."""
-    cmds = [ "import tarfile",
-             "import os",
-             "import glob",
-             "import sys",
-             "remote_dir = os.path.expanduser('%s')" % remote_dir,
-             "for fname in os.listdir(remote_dir):",
-             "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
-             "        break",
-             "else:",
-             "    raise RuntimeError('install dir not found in %s' % remote_dir)",
-             "if sys.platform == 'win32':",
-             "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'Scripts')",
-             "else:",
-             "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'bin')",
-             "tar = tarfile.open(os.path.join(remote_dir, 'png.tar'), mode='w')",
-             "for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):",
-             "    for path in glob.glob(os.path.join(pngdir, pattern)):",
-             "        tar.add(path)",
-             "tar.close()",
-             ]
-    
+    cmds = [
+        "import tarfile",
+        "import os",
+        "import glob",
+        "import sys",
+        "remote_dir = os.path.expanduser('%s')" % remote_dir,
+        "for fname in os.listdir(remote_dir):",
+        "    if '-OpenMDAO-Framework-' in fname and not fname.endswith('.gz'):",
+        "        break",
+        "else:",
+        "    raise RuntimeError('install dir not found in %s' % remote_dir)",
+        "if sys.platform == 'win32':",
+        "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'Scripts')",
+        "else:",
+        "    pngdir = os.path.join(remote_dir, fname, 'devenv', 'bin')",
+        "tar = tarfile.open(os.path.join(remote_dir, 'png.tar'), mode='w')",
+        "for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):",
+        "    for path in glob.glob(os.path.join(pngdir, pattern)):",
+        "        tar.add(path)",
+        "tar.close()",
+    ]
+
     for pattern in ('*.png', '*-log.txt', '*-stdout.txt'):
         for name in glob.glob(pattern):
             os.remove(name)
@@ -358,7 +383,7 @@ def retrieve_pngs(remote_dir):
             png.write(fileobj.read())
         fileobj.close()
     tar.close()
-    
+
 
 #
 # Git related utilities
@@ -367,18 +392,18 @@ def retrieve_pngs(remote_dir):
 def repo_top():
     """Return the top level directory in the current Git repository."""
     # apparently --show-toplevel doesn't work until git 1.7 :(
-    #p = Popen('git rev-parse --show-toplevel', 
+    #p = Popen('git rev-parse --show-toplevel',
               #stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
     #return p.communicate()[0].strip()
     d = find_up('.git')
     if d is None:
         return d
     return os.path.dirname(d)
-    
+
 
 def get_git_log_info(fmt):
     try:
-        p = Popen('git log -1 --format=format:"%s"' % fmt, 
+        p = Popen('git log -1 --format=format:"%s"' % fmt,
                   stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
         out = p.communicate()[0]
         ret = p.returncode
@@ -387,8 +412,9 @@ def get_git_log_info(fmt):
     else:
         return out.strip()
 
+
 def get_git_branch():
-    p = Popen('git branch', 
+    p = Popen('git branch',
               stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
     brlist = [b.strip() for b in p.communicate()[0].split('\n')]
     for b in brlist:
@@ -396,8 +422,9 @@ def get_git_branch():
             return b[2:]
     return ''
 
+
 def get_git_branches():
-    p = Popen('git branch', 
+    p = Popen('git branch',
               stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
     return [b.strip(' *') for b in p.communicate()[0].split('\n')]
 
@@ -411,4 +438,3 @@ def make_git_archive(tarfilename, prefix=''):
                     tarfilename, '--prefix=%s' % prefix, 'HEAD'])
     finally:
         os.chdir(startdir)
-

@@ -3,6 +3,7 @@ INDEX = 0
 ATTR = 1
 CALL = 2
 SLICE = 3
+EXTSLICE = 4
 
 def process_index_entry(obj, idx):
     """
@@ -18,6 +19,7 @@ def process_index_entry(obj, idx):
           ATTR = 1
           CALL = 2
           SLICE = 3
+          EXTSLICE = 4
           
     On the off chance that you want to use a tuple as a key into a dict, you'll have to
     nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
@@ -33,9 +35,12 @@ def process_index_entry(obj, idx):
                    (2,[('foo',1)]) is not.
           SLICE:   (3, lower, upper, step) All members must be present and should have a
                    value of None if not set.
-
+          EXTSLICE:  (4, plus a combination of (lower,upper,step) tuples and indexes)
+                     For example, (4, (None,None,None), 2)
     """
     if not isinstance(idx, tuple):
+        print obj, type(obj)
+        print obj[idx]
         return obj[idx]
     if idx[0] == INDEX:
         return obj[idx[1]]
@@ -53,9 +58,16 @@ def process_index_entry(obj, idx):
             return obj.__call__(*args, **kwargs)
     elif idx[0] == SLICE:
         return obj.__getitem__(slice(*idx[1]))
+    elif idx[0] == EXTSLICE:
+        args = []
+        for a in idx[1:]:
+            if isinstance(a, tuple):
+                args.append(slice(a[0],a[1],a[2]))
+            else:
+                args.append(a)
+        return obj.__getitem__(args)
     
     raise ValueError("invalid index: %s" % idx)
-
 
 def index_retains_metadata(index):
     fails = (CALL, ATTR)
@@ -64,8 +76,7 @@ def index_retains_metadata(index):
             return False
     return True
         
-
-def get_indexed_value(obj, name, index):
+def get_indexed_value(obj, name, index=None):
     if name:
         obj = getattr(obj, name)
     if index:

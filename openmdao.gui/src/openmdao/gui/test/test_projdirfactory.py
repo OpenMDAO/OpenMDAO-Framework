@@ -6,7 +6,7 @@ import time
 import os
 import sys
 
-from openmdao.util.fileutil import build_directory, get_module_path, find_files
+from openmdao.util.fileutil import build_directory, get_module_path, find_files, onerror
 from openmdao.gui.projdirfactory import ProjDirFactory
 from openmdao.main.driver import Driver
 from openmdao.main.component import Component
@@ -34,7 +34,7 @@ class MyDrv2(Driver):
          'version': '1.0',
     }
 """
-    }
+}
 
 
 class ProjDirFactoryTestCase(unittest.TestCase):
@@ -49,7 +49,7 @@ class ProjDirFactoryTestCase(unittest.TestCase):
             modpath = get_module_path(pyfile)
             if modpath in sys.modules:
                 del sys.modules[modpath]
-        shutil.rmtree(self.tdir)
+        shutil.rmtree(self.tdir, onerror=onerror)
 
     def test_with_observer(self):
         sys.path = [self.tdir] + sys.path
@@ -59,8 +59,8 @@ class ProjDirFactoryTestCase(unittest.TestCase):
             types = dict(pdf.get_available_types())
             typenames = types.keys()
             self.assertEqual(set(typenames), set(expected))
-            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']), 
-                             set(['IContainer', 'IComponent', 'IDriver','IHasEvents']))
+            self.assertEqual(set(types['mydrv.MyDrv']['ifaces']),
+                             set(['IContainer', 'IComponent', 'IDriver', 'IHasEvents']))
             self.assertEqual(set(types['mycomp.MyComp']['ifaces']),
                              set(['IContainer', 'IComponent']))
             self.assertTrue('mydrv.MyDrv' in pdf._classes)
@@ -128,17 +128,17 @@ class Foo(Component):
     def test_manual(self):
         try:
             sys.path = [self.tdir]+sys.path
-            
+
             pdf = ProjDirFactory(self.tdir, use_observer=False)
             expected = ['mydrv.MyDrv', 'mydrv.MyDrv2', 'mycomp.MyComp']
             types = pdf.get_available_types()
             typenames = [n for n, mdata in types]
             self.assertEqual(set(typenames), set(expected))
-    
+
             # now try creating a MyDrv
             mydrv = pdf.create('mydrv.MyDrv')
             self.assertTrue(isinstance(mydrv, Driver))
-    
+
             # now create a new file
             fpath = os.path.join(self.tdir, 'mycomp2.py')
             with open(fpath, 'w') as f:
@@ -157,7 +157,7 @@ class MyComp2(Component):
             self.assertEqual(set(['mycomp2.MyComp2']), added_set)
             self.assertEqual(set(), changed_set)
             self.assertEqual(set(), deleted_set)
-    
+
             # now test removal
             os.remove(fpath)
             deleted_set = set()
@@ -166,7 +166,7 @@ class MyComp2(Component):
             typenames = [n for n, mdata in types]
             self.assertEqual(set(typenames), set(expected))
             self.assertEqual(set(['mycomp2.MyComp2']), deleted_set)
-    
+
             # now try modifying an existing file
             time.sleep(2)  # Windows timestamp granularity is one second.
             fpath = os.path.join(self.tdir, 'mydrv.py')
@@ -175,7 +175,7 @@ class MyComp2(Component):
 from openmdao.main.api import Component
 class MyDrv(Component):  #old MyDrv was a Driver, new one is just a Component
     pass
-    
+
 class Foo(Component):
     pass
                 """)
@@ -196,4 +196,3 @@ class Foo(Component):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -1,4 +1,4 @@
-''' The Projects object provides a basic interface for interacting with the
+''' The Project's object provides a basic interface for interacting with the
 project database used by the GUI. '''
 
 import sys
@@ -7,7 +7,7 @@ import os.path
 from datetime import datetime
 
 from openmdao.gui.util import ensure_dir, print_dict
-from openmdao.util.log import logger
+
 
 def get_user_dir():
     user_dir = os.path.expanduser("~/.openmdao/gui/")
@@ -96,7 +96,7 @@ class Projects(object):
         ''' Get a dictionary containing the fields for a project id.
 
             project_id: int
-                unique id for requested project.
+                Unique id for requested project.
         '''
 
         con = self._get_connection()
@@ -135,7 +135,7 @@ class Projects(object):
             a project with a specific path.
 
             path: str (valid path)
-                path for requested project
+                Path for requested project.
         '''
         con = self._get_connection()
         con.row_factory = sqlite3.Row
@@ -158,8 +158,7 @@ class Projects(object):
         cur.close()
 
         if len(matched_projects) < 1:
-            print "Error project ID not found:", id
-
+            print "Error project not found:", path
         # This should never happen!
         elif len(matched_projects) > 1:
             print "Error: Non-unique project ID:"
@@ -170,7 +169,7 @@ class Projects(object):
     def predict_next_rowid(self):
         ''' Predict what the next auto-inserted rowid will be.
         This is here because the GUI handlers need to know the
-        project_id even before the row is inserted.'''
+        project_id `before` the row is inserted.'''
 
         con = self._get_connection()
         con.row_factory = sqlite3.Row
@@ -196,7 +195,7 @@ class Projects(object):
         #cur.execute('SELECT id,projpath from projects')
 
         #to_remove = []
-        
+
         #for row in cur:
             #if not os.path.exists(row['projpath']):
                 #to_remove.append(row['id'])
@@ -206,13 +205,13 @@ class Projects(object):
             #cur = con.cursor()
             #remove_str = "%s" % to_remove
             #sql = 'DELETE from projects WHERE id IN (%s)' % remove_str[1:len(remove_str)-1]
-    
+
             #logger.error("sql = %s" % sql)
-            
+
             #cur.execute(sql)
             #con.commit()
             #cur.close()
-        
+
     def list_projects(self):
         ''' Return a list of dictionaries for all projects owned by the
         user. Each dictionary contains all fields for that project id.'''
@@ -225,7 +224,7 @@ class Projects(object):
         cur.execute(sql)
 
         matched_projects = []
-        
+
         for row in cur:
             project = {
                 'id': row['id'],
@@ -239,13 +238,24 @@ class Projects(object):
             }
             # Return last file modification dates too.
             try:
-                stamp = os.path.getmtime(project['projpath'])
-                project['file_modified'] = datetime.fromtimestamp(stamp).strftime(self.time_format)
+                #all_files = []
+                #for root, sub_folders, files in os.walk(project['projpath']):
+                #    all_files.append(root)
+                #    if files:
+                #        for f in files:
+                #            all_files.append( os.path.join( root, f ) )
+                #
+                #timestamps = [os.path.getmtime( file ) for file in all_files ]
+                #last_modified = max(timestamps)
+                #stamp = os.path.getmtime(project['projpath'])
+                project_root_dir = project['projpath']
+                last_modified = os.path.getmtime(os.path.join(project_root_dir, "_settings.cfg"))
+                project['file_modified'] = datetime.fromtimestamp(last_modified).strftime(self.time_format)
             except Exception, err:
                 project['file_modified'] = err
-                
+
             matched_projects.append(project)
-            
+
         cur.close()
 
         return matched_projects
@@ -276,14 +286,14 @@ class Projects(object):
         'modified' to the current time/date.
 
         project_id: int
-            unique id for requested project.
+            Unique id for requested project.
         '''
 
         modified = str(datetime.now())
         self.set(project_id, 'modified', modified)
 
     def remove(self, project_id):
-        ''' Remove a project from the database
+        ''' Remove a project from the database.
 
         project_id: int
             Unique id for requested project.
@@ -296,4 +306,3 @@ class Projects(object):
         cur.execute(sql, (project_id,))
         con.commit()
         cur.close()
-

@@ -31,7 +31,7 @@ class PBS_Allocator(FactoryAllocator):
     Uses :class:`PBS_Server` instead of :class:`ObjServer` when deploying.
 
     name: string
-        Name of allocator, used in log messages, etc.
+        Name of allocator; used in log messages, etc.
 
     accounting_id: string
         Default value for the ``accounting_id`` resource key.
@@ -138,9 +138,9 @@ class PBS_Allocator(FactoryAllocator):
             Description of required resources.
 
         Returns ``(retcode, info)``. If Compatible, then `retcode` is zero
-        and `info` is empty. Otherwise `retcode` will be -2 and `info` will
+        and `info` is empty. Otherwise, `retcode` will be -2 and `info` will
         be a single-entry dictionary whose key is the incompatible key in
-        `resource_desc` and value provides data regarding the incompatibility.
+        `resource_desc` and whose value provides data regarding the incompatibility.
         """
         retcode, info = \
             super(PBS_Allocator, self).check_compatibility(resource_desc)
@@ -218,52 +218,52 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         Resource Key              Translation
         ========================= ===========================
-        submit_as_hold            -h
+        ``submit_as_hold``        -h
         ------------------------- ---------------------------
         rerunnable                -r y|n
         ------------------------- ---------------------------
-        working_directory         Handled in generated script
+        ``working_directory``     Handled in generated script
         ------------------------- ---------------------------
-        job_category              Ignored
+        ``job_category``          Ignored
         ------------------------- ---------------------------
-        min_cpus                  -l select= `value` :ncpus=1
+        ``min_cpus``              -l select= `value` :ncpus=1
         ------------------------- ---------------------------
-        max_cpus                  Ignored
+        ``max_cpus``              Ignored
         ------------------------- ---------------------------
-        min_phys_memory           Ignored
+        ``min_phys_memory``       Ignored
         ------------------------- ---------------------------
         email                     -M `value`
         ------------------------- ---------------------------
-        email_on_started          -m b
+        ``email_on_started``      -m b
         ------------------------- ---------------------------
-        email_on_terminated       -m e
+        ``email_on_terminated``   -m e
         ------------------------- ---------------------------
-        job_name                  -N `value`
+        ``job_name``              -N `value`
         ------------------------- ---------------------------
-        input_path                Handled in generated script
+        ``input_path``            Handled in generated script
         ------------------------- ---------------------------
-        output_path               Handled in generated script
+        ``output_path``           Handled in generated script
         ------------------------- ---------------------------
-        error_path                Handled in generated script
+        ``error_path``            Handled in generated script
         ------------------------- ---------------------------
-        join_files                Handled in generated script
+        ``join_files``            Handled in generated script
         ------------------------- ---------------------------
-        reservation_id            Ignored
+        ``reservation_id``        Ignored
         ------------------------- ---------------------------
-        queue_name                -q `value`
+        ``queue_name``            -q `value`
         ------------------------- ---------------------------
         priority                  -p `value`
         ------------------------- ---------------------------
-        start_time                -a `value`
+        ``start_time``            -a `value`
         ------------------------- ---------------------------
-        deadline_time             Ignored
+        ``deadline_time``         Ignored
         ------------------------- ---------------------------
-        accounting_id             -W group_list= `value`
+        ``accounting_id``         -W group_list= `value`
         ========================= ===========================
 
         Where `value` is the corresponding resource value.
 
-        In order to support a working directory other than HOME or a
+        To support a working directory other than HOME or a
         PBS-generated scratch directory, a short script is written with
         PBS directives in the header. The script will change to the working
         directory and then run the command.
@@ -283,24 +283,26 @@ class PBS_Server(ObjServer):
         ==================== =========================
         Resource Key         Translation
         ==================== =========================
-        core_file_size       Ignored
+        ``core_file_size``   Ignored
         -------------------- -------------------------
-        data_seg_size        Ignored
+        ``data_seg_size``    Ignored
         -------------------- -------------------------
-        file_size            Ignored
+        ``file_size``        Ignored
         -------------------- -------------------------
-        open_files           Ignored
+        ``open_files``       Ignored
         -------------------- -------------------------
-        stack_size           Ignored
+        ``stack_size``       Ignored
         -------------------- -------------------------
-        virtual_memory       Ignored
+        ``virtual_memory``   Ignored
         -------------------- -------------------------
-        cpu_time             Ignored
+        ``cpu_time``         Ignored
         -------------------- -------------------------
-        wallclock_time       -l walltime= `value`
+        ``wallclock_time``   -l walltime= `value`
         ==================== =========================
 
         Output from `qsub` itself is routed to ``qsub.out``.
+        If the job reports an error, ``qsub.out`` will be appended to either
+        `error_path`, or if that was not specified, stdout.
         """
         self.home_dir = os.path.expanduser('~')
         self.work_dir = ''
@@ -330,9 +332,10 @@ class PBS_Server(ObjServer):
         # Write script to be submitted rather than putting everything on
         # 'qsub' command line. We have to do this since otherwise there's
         # no way to set an execution directory or input path.
+        base = None
         if 'job_name' in resource_desc:
             base = self._jobname(resource_desc['job_name'])
-        else:
+        if not base:
             base = os.path.basename(resource_desc['remote_command'])
         script_name = '%s%s' % (base, suffix)
 
@@ -397,6 +400,7 @@ class PBS_Server(ObjServer):
                 elif key == 'email_on_terminated':
                     email_events += 'e'
                 elif key == 'job_name':
+                    value = value or base
                     script.write('%s -N %s\n' % (prefix, self._jobname(value)))
                 elif key == 'input_path':
                     inp = value
@@ -439,13 +443,18 @@ class PBS_Server(ObjServer):
                 # This can potentially cause problems...
                 self._logger.warning('work %r not a descendant of home %r',
                                      work, home)
+            if ' ' in work:
+                work = '"%s"' % work
             script.write('cd %s\n' % work)
 
             script.write(self._fix_path(resource_desc['remote_command']))
 
             if 'args' in resource_desc:
                 for arg in resource_desc['args']:
-                    script.write(' %s' % self._fix_path(arg))
+                    arg = self._fix_path(arg)
+                    if ' ' in arg and arg[0] not in ('"', "'"):
+                        arg = '"%s"' % arg
+                    script.write(' %s' % arg)
 
             script.write(' <%s' % (inp or DEV_NULL))
             script.write(' >%s' % (out or '%s.stdout' % base))
@@ -461,25 +470,53 @@ class PBS_Server(ObjServer):
         # Add 'escape' clause.
         cmd.extend(native_specification)
 
+        with open(script_name, 'rU') as inp:
+            self._logger.debug('%s:', script_name)
+            for line in inp:
+                self._logger.debug('    %s', line.rstrip())
+
+        # Submit job.
         cmd.append(os.path.join('.', script_name))
         self._logger.info('%r', ' '.join(cmd))
         try:
             process = ShellProc(cmd, DEV_NULL, 'qsub.out', STDOUT, env)
         except Exception as exc:
             self._logger.error('exception creating process: %s', exc)
+            if os.path.exists('qsub.out'):
+                with open('qsub.out', 'rU') as inp:
+                    self._logger.error('qsub.out:')
+                    for line in inp:
+                        self._logger.error('    %s', line.rstrip())
             raise
 
+        # Submitted, wait for completion.
         self._logger.debug('    PID = %d', process.pid)
         return_code, error_msg = process.wait(1)
         self._logger.debug('    returning %s', (return_code, error_msg))
+        if return_code and os.path.exists('qsub.out'):
+            if join_files or err is None:
+                qsub_echo = out or '%s.stdout' % base
+            else:
+                qsub_echo = err
+            with open('qsub.out', 'rU') as inp:
+                with open(qsub_echo, 'a+') as out:
+                    self._logger.error('qsub.out:')
+                    out.write('===== qsub.out =====\n')
+                    for line in inp:
+                        self._logger.error('    %s', line.rstrip())
+                        out.write(line)
         return (return_code, error_msg)
 
     def _fix_path(self, path):
         """ Translates special prefixes. """
         if path.startswith(HOME_DIRECTORY):
             path = os.path.join(self.home_dir, path[len(HOME_DIRECTORY):])
+            if ' ' in path:
+                path = '"%s"' % path
         elif path.startswith(WORKING_DIRECTORY):
             path = os.path.join(self.work_dir, path[len(WORKING_DIRECTORY):])
+            if ' ' in path:
+                path = '"%s"' % path
         return path
 
     @staticmethod
@@ -487,7 +524,7 @@ class PBS_Server(ObjServer):
         """ Create legal job name from `name`. """
         name = name.strip()[:15]  # 15 characters max.
         name = name.translate(_XLATE)
-        if not name[0].isalpha():
+        if name and not name[0].isalpha():
             name = 'Z%s' % name[1:]
         return name
 

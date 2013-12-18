@@ -4,15 +4,19 @@
 Working with Variables
 ======================
 
-In OpenMDAO, a *variable* is an attribute that can be seen or manipulated by
+In OpenMDAO, a *variable* is a piece of data that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
 model must use variables to declare the inputs and outputs for each
 component.
 
-You can create a variable for a component in two ways. The first is to
-declare it in the component's class definition. A simple component that takes
-a floating point number as an input and provides a floating point number as an
-output would look like this:
+You can create a variable for a component in two ways. The first way is to
+declare it in the component's class definition as illustrated in the examples
+that follow. The second way is to add it using a component's ``add`` function.
+Use the second way only if a variable needs to be added after the component
+is instantiated.
+
+A simple component that takes a floating point number as an input and
+provides a floating point number as an output would look like this:
 
 .. testcode:: creating_public_variables_1
 
@@ -56,9 +60,7 @@ Built-in Variable Types
 |          | desc = None, iotype = None, aliases = ()] )``                |
 +----------+--------------------------------------------------------------+
 | File     | ``File( [default_value = None, iotype = None,                |
-|          | desc = None, low = None, high = None, path = None,           |
-|          | content_type = None, binary = False,                         |
-|          | local_path = None] )``                                       |
+|          | desc = None, legal_types = None, local_path = None] )``      |
 +----------+--------------------------------------------------------------+
 | Float    | ``Float( [default_value = None, iotype = None,               |
 |          | desc = None, low = None, high = None,                        |
@@ -314,29 +316,211 @@ the integers 1 to 6. Note that the Enum doesn't need an iotype, but the List doe
 *File Variables*
 ++++++++++++++++
 
-The *File* variable contains a reference to an input or output file on disk. It
-is more than just a text string that contains a path and filename; it is
-a *FileReference* that can be passed into other functions expecting
-such an object. FileReferences have methods for copying the reference and
-opening the referenced file for reading. The available `flags` are defined
-by `FileMetadata`, which supports arbitrary user metadata.
+The value of a :class:`File <openmdao.main.datatypes.file.File>` variable is a
+:class:`FileRef <openmdao.main.datatypes.file.FileRef>`, a reference to a file
+on disk (possibly at a remote system) along with various metadata regarding the
+file's format.
+Legal metadata associated with the File variable depends on its iotype.
+File variables with iotype ``in`` may specify *legal_types* and *local_path*
+if desired.
 
+*legal_types* is a list of strings specifying what *content_type* an
+incoming file may be (the strings are arbitrary, but must match exactly).
+If a content_type does not match, a ValueError is raised.
+If not specified, any content_type is valid.
+To connect to an input variable with legal_types specified, the output
+variable must have a default FileRef specified with a matching content_type.
+
+If an input variable specifies *local_path*, the incoming file will be
+copied to that path when the input variable is set.
+This is just a convenience for a common operation with external codes.
+
+Usage of an output variable consists of creating the file on disk in whatever
+manner is convenient, creating a FileRef referring to that file with associated
+metadata describing the file, and assigning the FileRef to the File variable.
+
+.. testcode:: filevar_output
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File, FileRef
+
+    class Source(Component):
+        """ Send a greeting. """
+        outfile = File(iotype='out')
+
+        def execute(self):
+            # Create the file.
+            path = 'source.txt'
+            with open(path, 'w') as out:
+                out.write('Hello world!\n')
+            self.outfile = FileRef(path)  # Assign reference to variable.
+
+If the FileRef needs metadata and the metadata doesn't change (which is fairly
+common), an alternative form for the above component may be used:
+
+.. testcode:: filevar_output2
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File, FileRef
+
+    class Source(Component):
+        """ Send a greeting. """
+        outfile = File(FileRef('source.txt', content_type='example'), iotype='out')
+
+        def execute(self):
+            # Create the file.
+            with open(self.outfile.path, 'w') as out:
+                out.write('Hello world!\n')
+            self.outfile = self.outfile.copy(self)  # Force new value.
+
+The last line is necessary so that Traits will perform the downstream
+assignment. Without this, the value of the variable hasn't changed, so Traits
+sees no new data to process. Note that only the FileRef is being copied,
+not the file data.
+
+Usage of an input variable takes one of two forms, depending on whether you
+want to read the file directly in your component, or some other code needs to
+access it by filename.
+
+To access the file directly, simply :meth:`open` the File variable's value.
+The (possibly remote) file will be opened in either text or binary mode as
+appropriate and a :class:`RemoteFile <openmdao.main.file_supp.RemoteFile>`
+object will be returned which acts like other Python file objects.
+
+.. testcode:: filevar_input
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File
+
+    class Sink1(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in')
+
+        def execute(self):
+            # Note that this is doing open() on a FileRef.
+            with self.infile.open() as inp:
+                for line in inp:
+                    print line,
+
+If instead the incoming file is to be used by some other code, set the
+local_path attribute on the File variable to where the code expects the
+file to be. When the File variable's value is set, the file data will
+automatically be copied to this location.
+
+.. testcode:: filevar_local
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import File
+
+    class Sink2(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in', local_path='input.txt')
+
+        def execute(self):
+            # Note that this is doing a direct open().
+            with open('input.txt', 'rU') as inp:
+                for line in inp:
+                    print line,
+
+FileRefs are an extension of
+:class:`FileMetadata <openmdao.main.file_supp.FileMetadata>`,
+which holds predefined as well as arbitrary user metadata.
+The predefined metadata is used to describe file layout, primarily basic binary
+formats.
+
+The *path* must be a descendant of the parent component's path.
+This is both a security precaution and it allows for collecting a model into
+a Python egg for transport.
+
+The *binary* flag is used to mark a file as binary. This is important
+when transferring files between Windows and OS X or Linux.  The default value
+is False, signifying a text file which needs newline translation between
+different systems.  If newline translation is applied to a binary file it will
+corrupt the data.
+
+The :class:`Stream <openmdao.util.stream.Stream>` class can be helpful when
+reading or writing binary formats.  Stream uses :mod:`numpy` internally which
+requires a standard Python file object rather than RemoteFile, so you'll have
+to use the local_path option for input files.
+
+Here's a complete example of a source component sending to two destination
+components.  The source component generates both text and binary files.
 
 .. testcode:: filevar_example
 
-    from openmdao.lib.datatypes.api import File
-    
-    text_file = File(path='source.txt', iotype='out', content_type='txt')
-    binary_file = File(path='source.bin', iotype='out', binary=True,
-                            extra_stuff='Hello world!')
+    import random
 
-The *path* must be a descendant of the parent component's path. The *binary* flag can be used to
-mark a file as binary. 
+    from openmdao.main.api import Assembly, Component
+    from openmdao.lib.datatypes.api import File, FileRef
+    from openmdao.util.stream import Stream
 
-.. todo::
+    class Source(Component):
+        """ Send a greeting and a Fortran unformatted file of numbers. """
+        txtfile = File(FileRef('source.txt', content_type='example'), iotype='out')
+        binfile = File(FileRef('unformatted.dat', binary=True, unformatted=True,
+                               content_type='data'), iotype='out')
+        def execute(self):
+            # Create the files.
+            with open(self.outfile.path, 'w') as out:
+                out.write('Hello world!\n')
+            self.txtfile = self.txtfile.copy(self)  # Force new value.
 
-    Provide some examples to demonstrate the options.
-                
+            with open(self.binfile.path, 'wb') as out:
+                stream = Stream(out, binary=True, unformatted=True)
+                for i in range(4):
+                    data = [random.random() for j in range(3)]
+                    print data
+                    stream.write_floats(data, full_record=True)
+            self.binfile = self.binfile.copy(self)  # Force new value.
+            print
+
+    class Sink1(Component):
+        """ Receive a file and display. """
+        infile = File(iotype='in', legal_types=['text', 'example'])
+
+        def execute(self):
+            # Note that this is doing open() on a FileRef.
+            with self.infile.open() as inp:
+                print self.get_pathname()
+                for line in inp:
+                    print line,
+                print
+
+    class Sink2(Component):
+        """ Receive files and display. """
+        txtfile = File(iotype='in', legal_types=['text', 'example'],
+                       local_path='input.txt')
+        binfile = File(iotype='in', legal_types=['data'], local_path='input.dat')
+
+        def execute(self):
+            # Note that this is doing a direct open().
+            with open('input.txt', 'rU') as inp:
+                print self.get_pathname()
+                for line in inp:
+                    print line,
+
+            with open('input.dat', 'rb') as inp:
+                # Setup stream based on format declared on incoming file.
+                stream = Stream(inp, binary=self.binfile.binary,
+                                unformatted=self.binfile.unformatted)
+                for i in range(4):
+                    data = stream.read_floats(3, full_record=True)
+                    print list(data)  # Use list() just for consistent format.
+                print
+
+    if __name__ == '__main__':
+        top = Assembly()
+        top.add('src', Source())
+        top.add('dst1', Sink1())
+        top.add('dst2', Sink2())
+        top.driver.workflow.add(('src', 'dst1', 'dst2'))
+        top.connect('src.txtfile', ('dst1.infile', 'dst2.txtfile'))
+        top.connect('src.binfile', 'dst2.binfile')
+        top.run()
+        top.src.force_execute = True  # Force another run.
+        top.run()
+
+
 .. index:: Slot Variables
 
 *Slot Variables*
@@ -378,8 +562,8 @@ The attribute *required* is used to indicate whether the object that plugs into
 a Slot is required. If ``required`` is True, then an exception will be raised
 if the component is executed when that object is not present.
 
-You can also use a class name to define what is permitted in the slot. In this
-code sample, we've specified that the ``recorder`` slot can only contain an
+You can also use a class name to define what is permitted in the Slot. In this
+code sample, we've specified that the ``recorder`` Slot can contain only an
 object of class ``CSVCaseRecorder```.
 
 .. testcode:: instance_example
@@ -395,7 +579,7 @@ object of class ``CSVCaseRecorder```.
         recorder = Slot(CSVCaseRecorder, desc='Something to append() to.',
                           required=True)
                           
-We can also declare a pre-filled slot by passing an instance instead of the class
+We can also declare a pre-filled Slot by passing an instance instead of the class
 name. This is a shortcut for adding it later.
 
 .. testcode:: instance_example
@@ -483,9 +667,9 @@ coercion from Str or to Str is allowed. If you need to apply different
 coercion behavior, just create a new class inherited from Variable and 
 perform the coercion in the validate function.
 
-More details can be found in the `Traits 3 User Manual`__.
+More details can be found in the `Traits 4 User Manual`__.
 
-.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
+.. __: http://docs.enthought.com/traits/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
 Variable Trees
 --------------
@@ -510,8 +694,8 @@ three variables that define two flight conditions:
 
 .. testcode:: variable_containers
 
-    from openmdao.main.api import Component, VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import Component, VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
     class FlightCondition(VariableTree):
         """Container of variables"""
@@ -524,22 +708,13 @@ three variables that define two flight conditions:
     class AircraftSim(Component):
         """This component contains variables in a VariableTree"""
     
-        # create Slots to handle updates to our FlightCondition attributes
-        fcc1 = Slot(FlightCondition, iotype='in')
-        fcc2 = Slot(FlightCondition, iotype='out')
+        # create VarTrees to handle updates to our FlightCondition attributes
+        fcc1 = VarTree(FlightCondition(), iotype='in')
+        fcc2 = VarTree(FlightCondition(), iotype='out')
         
         weight = Float(5400.0, iotype='in', units='kg')
         # etc.
 
-        def __init__(self):
-            """Instantiate variable containers here"""
-
-            super(AircraftSim, self).__init__()
-        
-            # Instantiate and add our variable containers.
-            self.add('fcc1', FlightCondition())
-            self.add('fcc2', FlightCondition())
-    
         def execute(self):
             """Do something."""
         
@@ -549,13 +724,13 @@ three variables that define two flight conditions:
 
 .. note::
 
-    It's important to create a Slot variable for each VariableTree object contained
-    in your component if you intend to connect it to variables in other components.
-    Also make sure to set the *iotype* attribute in the Slot.  If you don't, changes 
+    It's important to create a VarTree variable (which is much like a :term:`Slot`)
+    for each VariableTree object contained in your component if you intend to
+    connect it to variables in other components.
+    Also make sure to set the *iotype* attribute in the VarTree.  If you don't, changes 
     to variables within the VariableTree object won't properly notify the component.
-    If you have a nested VariableTree, it's only necessary to create a Slot in the
-    component that contains it.  Adding Slots for VariableTrees inside of another
-    VariableTree is not necessary.
+    If you have a nested VariableTree, it's necessary to create a VarTree in the
+    VariableTree that contains it.
     
     
 Here, we defined the class ``FlightCondition``, containing three variables.
@@ -569,12 +744,13 @@ another VariableTree, so any level of nesting is possible.  For example:
 
 .. testsetup:: nested_vartree
 
-    from openmdao.main.api import VariableTree, Slot
-    from openmdao.lib.datatypes.api import Float
+    from openmdao.main.api import VariableTree
+    from openmdao.lib.datatypes.api import Float, VarTree
 
+    class FlightCondition(VariableTree):
+        pass
     
 .. testcode:: nested_vartree
-
 
     class MyNestedVars(VariableTree):
         """A nested container of variables"""
@@ -582,10 +758,7 @@ another VariableTree, so any level of nesting is possible.  For example:
         f1 = Float(120.0)
         f2 = Float(0.0)
         
-        def __init__(self):
-            super(MyNestedVars, self).__init__()
-            self.add('sub_vartree', FlightCondition())
-            
+        sub_vartree = VarTree(FlightCondition())
         
     
 An interesting thing about this example is that we've

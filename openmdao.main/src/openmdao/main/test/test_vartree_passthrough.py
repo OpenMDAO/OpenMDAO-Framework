@@ -1,28 +1,23 @@
 import unittest
 
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Int, Slot
+from openmdao.main.datatypes.api import Float, VarTree
 
 class TstContainer(VariableTree):
     dummy1 = Float(1.0) 
 
 class TstComponent(Component):
-    dummy_data = Slot(TstContainer, iotype='in')
-    dummy_data_out = Slot(TstContainer, iotype='out')
+    dummy_data = VarTree(TstContainer(), iotype='in')
+    dummy_data_out = VarTree(TstContainer(), iotype='out')
     dummyin = Float(iotype='in')
 
-    def __init__(self): 
-        super(TstComponent,self).__init__()
-        self.add('dummy_data',TstContainer())
-        self.add('dummy_data_out',TstContainer())
-        
     def execute(self):
         self.dummy_data_out = self.dummy_data.copy()
 
 class TstAssembly(Assembly):
 
     def configure(self):
-        self.add('comp',TstComponent())
+        self.add('comp', TstComponent())
         self.create_passthrough('comp.dummy_data.dummy1')
         self.create_passthrough('comp.dummy_data_out.dummy1', 'dummy1_out')
         self.driver.workflow.add('comp')
@@ -30,7 +25,7 @@ class TstAssembly(Assembly):
 class TstAssembly2(Assembly):
 
     def configure(self):
-        self.add('comp',TstComponent())
+        self.add('comp', TstComponent())
         self.create_passthrough('comp.dummy_data')
         self.create_passthrough('comp.dummy_data_out', 'dummy1_out')
         self.driver.workflow.add('comp')
@@ -70,10 +65,12 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'vt': 'vt', 
                          'implicit': '', 
                          'valid': True, 
-                         'connected': '', 
-                         'ttype': 'slot', 
+                         'connected': '',
+                         'connection_types' : 0,
+                         'ttype': 'vartree',
                          'type': 'TstContainer', 
-                         'id': 'dummy_data'} in attrs['Inputs'])
+                         'id': 'dummy_data',
+                         'target': 'comp.dummy_data'} in attrs['Inputs'])
         self.assertTrue({'indent': 1, 
                          'name': 'dummy1', 
                          'parent': 'dummy_data', 
@@ -83,16 +80,18 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy_data_dummy1'} in attrs['Inputs'])
+                         'id': 'dummy_data.dummy1'} in attrs['Inputs'])
         self.assertTrue({'indent': 0, 
                          'name': 'dummy1_out', 
                          'vt': 'vt', 
                          'implicit': '', 
                          'valid': False, 
                          'connected': '', 
-                         'ttype': 'slot', 
+                         'connection_types' : 0,
+                         'ttype': 'vartree',
                          'type': 'TstContainer', 
-                         'id': 'dummy1_out'} in attrs['Outputs'])
+                         'id': 'dummy1_out',
+                         'target': 'comp.dummy_data_out'} in attrs['Outputs'])
         self.assertTrue({'indent': 1, 
                          'name': 'dummy1', 
                          'parent': 'dummy1_out', 
@@ -102,7 +101,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy1_out_dummy1'} in attrs['Outputs'])
+                         'id': 'dummy1_out.dummy1'} in attrs['Outputs'])
 
         blah = set_as_top(TstAssembly())
         attrs = blah.get_attributes(True)
@@ -113,6 +112,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'valid': True, 
                          'implicit': '', 
                          'connected': '', 
+                         'connection_types' : 0,
                          'target': 'comp.dummy_data.dummy1', 
                          'low': None, 
                          'type': 'float', 
@@ -124,6 +124,7 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'valid': False, 
                          'implicit': '', 
                          'connected': '', 
+                         'connection_types' : 0,
                          'target': 'comp.dummy_data_out.dummy1', 
                          'low': None, 
                          'type': 'float', 
@@ -131,6 +132,4 @@ class VarTreePassthroughTestCase(unittest.TestCase):
         
 if __name__ == "__main__":
     unittest.main()
-
-
 

@@ -1,20 +1,20 @@
 
-var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ; 
+var openmdao = (typeof openmdao == "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.TestFrame = function(id,model) {
+openmdao.TestFrame = function(id,project) {
     this.prototype = new openmdao.BaseFrame()
-    
+
     /***********************************************************************
      *  private
      ***********************************************************************/
-        
+
     var self = this,
         title    = "Test Pane",
         helpHTML = "<div>"+
                    "This is just a test of a basic frame which can be built upon... <br/>"+
                    "</div>",
         menu     = [
-                     { "text": "Menu", 
+                     { "text": "Menu",
                        "items": [
                          { "text": "Test",  "onclick": "alert('Test complete!');" },
                        ]
@@ -23,10 +23,10 @@ openmdao.TestFrame = function(id,model) {
                    ];
 
     openmdao.TestFrame.prototype.init.call(this,id,title,menu);
-    
-    // build your ui, access openmdao via model, etc.
+
+    // build your ui, access openmdao via project, etc.
     // ...
-    
+
 }
 
 /** set prototype */

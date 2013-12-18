@@ -33,15 +33,16 @@ Some Basics
 * Use two asterisks for strong emphasis (**boldface**) ``**boldface**`` 
 
 * When numbering items (such as steps in a task or process), DO NOT indent the numbers -- put them
-  flush left. When numbers are indented, they do not display correctly in Internet Explorer (although
-  they look fine in Firefox and Safari). If the numbered item is long and you wrap it, it could also
-  cause display issues in IE.
+  flush left. When this section was written, indented numbers did not display correctly in Internet
+  Explorer (IE). Additionally, IE had issues displaying numbered items that were long and wrapped to
+  the next line.
 
-* All text in headings (level one, level two, level three, etc.)
-  must be underlined. (In OpenMDAO documents, generally the title is overlined
-  and underlined, while the other headings are underlined only. All levels must
-  be different. Please see the :ref:`Style-Guide` for more information.)
-  
+* All text in headings (level one, level two, level three, etc.) must be underlined. In OpenMDAO
+  documents, many of the document titles are overlined and underlined, while the other headings are
+  underlined only. It is not necessary to use overline, and it's easier not to. Just be
+  consistent within your document; all levels must be different. Please see the :ref:`Style-Guide`
+  for more information.
+
 * If you get a Sphinx build error that says "Unexpected indentation," it is probably because
   Sphinx is expecting a blank line, such as after a literal text block. Your line may have
   wrapped and confused Sphinx. In this case, try pulling the text up to the previous line even
@@ -131,7 +132,7 @@ Hyperlinks
    Problem Overview
    ----------------
 
-   The overall objective of the tutorial problem is to design . . . . 
+      This tutorial covers some of the more advanced capabilities of OpenMDAO. You should . . . 
  
 
  Note the hyphenation between words in the label and the cross reference to the label.
@@ -186,20 +187,20 @@ Hyperlinks
   Use ```Link text <http://target>`_`` for inline web links. 
 
   For example, typing:
-	 ```Python  2.2.1 <http://www.python.org/download/releases/2.1.1/license/>`_``
+	 ```Python  2.7 <http://www.python.org/download/releases/2.7/>`_``
 
   will result in the following hyperlink: 
-	`Python  2.2.1 <http://www.python.org/download/releases/2.1.1/license/>`_ 
+	`Python  2.7 <http://www.python.org/download/releases/2.7/>`_ 
 
   If the link text should be the Web address, you don't need special markup; just
   type the address in the reST file, and the parser will find the
   link/mailing address in the text.
 
   For example, typing:
-	``http://www.python.org/download/releases/2.1.1/license/`` 
+	``http://www.python.org/download/releases/2.7/`` 
 	
   will result in this hyperlink:
-	http://www.python.org/download/releases/2.1.1/license/
+	http://www.python.org/download/releases/2.7/
 
 
 **- External link -- to more than one web address (anonymous hyperlink)**
@@ -207,7 +208,7 @@ Hyperlinks
   On occasion you may want to use identical text as the hyperlink to different web
   addresses. In such a case, you must create anonymous hyperlinks. No text label precedes
   the web address; however, a double underscore is required after the text link
-  (i.e., ```reStructuredTest`__`` in the example that follows) and before the
+  (i.e., ```reStructuredText`__`` in the example that follows) and before the
   web address (e.g., ``.. __: http://docutils.sourceforge.net/rst.html``). 
 
   This is an example where *reStructuredText* acts as the hyperlink to two different web
@@ -249,66 +250,45 @@ Hyperlinks
 Figures
 -------
 
-**- Generated figures**
+An `image` is a simple picture, and reST has an image directive. However, since a `figure`
+is an image (picture, diagram, graphic) that optionally has a caption and/or legend, it's
+just easier to use the figure directive and either include or omit a caption as desired.
+All figures go in the directory with the ``.rst`` file that references it; therefore, when
+you reference a figure, there is no path, just the figure's name. A figure may be a
+``.gif, .png, .jpg``, or other file type; it's up to the author.
 
-  In the OpenMDAO documentation, we have been using the open source Dia application to create
-  diagrams (figures) and saving them as .png files. A script automatically resizes the Dia
-  files for our documentation. Generated images go in the directory with
-  the .rst files they are associated with.
+Most figures in the OpenMDAO docs are center aligned, but it is up to the author to
+determine alignment. Some browsers automatically center a figure's caption or place it
+flush left.
 
-  Here is an example of how to link to a figure:
+If you have a figure caption, you must leave a blank line before the caption. Also leave a
+blank line after the caption since it ends a paragraph. 
 
-  ::
+To link to, or cross reference, a figure that appears later in the text, use the
+figure's caption as the label. Some text would precede the figure and refer to it, such
+as the following (in reST format): ``The figure `Class Diagram of Core Classes`_
+describes the . . . .``  
 
-    .. _`Class Diagram of Core Classes`:
+::
 
-    .. figure:: ModelClasses.png     
-       :align: center
+  .. _`Class Diagram of Core Classes`:
 
-       Class Diagram of Core Classes
+  .. figure:: ModelClasses.png     
+     :align: center
 
+     Class Diagram of Core Classes
 
-  In the above example, ``.. _`Class Diagram of Core Classes`:`` is an optional label that is used for
-  cross referencing to this figure. In this case there was some preceding text: ``The figure `Class Diagram of
-  Core Classes`_ shows...``. A cross reference is not necessary, but if you are discussing a figure
-  that appears later in the text, it is helpful to the reader. 
-
-  Since we have moved all the images into the directory with the reST files, there is no path, just
-  the file name. Generally we align our figures *center*, as shown in the example, but that is up to
-  the author.
-
-  Last is the figure caption: ``Class Diagram of Core Classes``. You must leave a blank
-  line before the caption. You would also leave a blank line after it, since it is the end of a
-  paragraph. (In Firefox, figure captions are automatically centered, but in Internet Explorer
-  they appear flush left.) 
-
-
-**- Static figures** 
-
-  Static figures were formerly stored in separate ``images/`` directory, but like generated images,
-  they now reside in the folder with the .rst file that points to them. Here is an example from the
-  complex tutorial where the author pulled in a static figure titled *EPA City Driving Profile.* 
-  Static figures may be a .gif, .png, .jpg, or another file type; it's up to the author.
-
-  :: 
-
-    .. figure:: EPA-city.gif
-       :align: center
-
-       EPA City Driving Profile
-
+A cross reference is not necessary, but it may be helpful to the reader. 
 
 Add Lines/Maintain Line Break
 ------------------------------
 
-If you want to add an extra line after a graphic or table, use the vertical bar ("|")
-found above the backslash on the keyboard. Put it on a line by itself.
+To add an extra line after a figure or table, use the vertical bar ("|") found above
+the backslash on the keyboard. Put it on a line by itself.
 
- 
-Also use the vertical bar when you want to maintain line breaks. You might want
-to do this inside a specific block of text. If your text needs to be
-indented, then first indent, type the vertical bar, leave a space, and then type
-the desired text.
+Also use the vertical bar when you want to maintain line breaks, such as inside a
+specific block of text. If your text needs to be indented, then first indent, type the
+vertical bar, leave a space, and then type the desired text.
 
 
 Lists/Bullets
@@ -395,7 +375,7 @@ how they appear.
  a blank line appears between them because of our nested list. Whenever there is nested bullet list or
  a bullet is longer than one paragraph, a blank line appears between bullet items. Otherwise, there is no blank
  line between bullet items. Consequently, different sets of bullets within the same document will
- look different (inconsistent). This is the way reST or Sphinx currently works, and the author cannot
+ look different (inconsistent). This is the way reST or Sphinx currently works, and you cannot
  change it.  
 
 
@@ -442,7 +422,7 @@ Tables
  engine_weight	     Engine weight estimate			  kg
  ==================  ===========================================  =======
 
- The table that is generated does not have a box outline around it. And to get the
+ The table that is generated does not have a box outline around it. To get the
  header rows to be boldface, you must use the two asterisks (**) markup before and
  after the text you want in bold. 
 
@@ -542,10 +522,11 @@ Tables
 Index Items
 ------------
 
-If you wish to add index items to a file as you are writing, please do. Additionally the tech
-writer will review new documentation and add index (and glossary) entries as needed. Index
-entries should precede the section or paragraph containing the text to be indexed.
-*Note that all index entries are placed flush left.* Some examples follow.
+Sphinx automatically creates index entries from all object descriptions (e.g., functions, classes,
+or attributes). However, you may wish to add index items in a file as you are writing. 
+
+Index entries should precede the section or paragraph containing the text to be indexed. *Note that
+all index entries are placed flush left.* Some examples follow.
 
 **- Single term** 
  

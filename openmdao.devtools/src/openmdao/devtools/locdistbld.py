@@ -66,10 +66,10 @@ def build_dist(srcdir, destdir='.', build_type='bdist_egg'):
     it in the specified destination directory.
     
     srcdir: str
-        source directory for the distribution to be built
+        Source directory for the distribution to be built.
         
     destdir: str
-        directory where the built distribution file will be placed
+        Directory where the built distribution file will be placed.
 
     build_type: str
         The type of distribution to be built.  Default is 'bdist_egg'.

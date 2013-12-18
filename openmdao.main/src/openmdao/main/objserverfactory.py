@@ -4,6 +4,7 @@ which support various operations such as creating objects, loading models via
 egg files, remote execution, and remote file access.
 """
 
+import atexit
 import logging
 import optparse
 import os.path
@@ -22,7 +23,7 @@ from openmdao.main.container import Container
 from openmdao.main.factory import Factory
 from openmdao.main.factorymanager import create, get_available_types, \
                                          get_signature
-from openmdao.main.filevar import RemoteFile
+from openmdao.main.file_supp import RemoteFile
 from openmdao.main.mp_support import OpenMDAO_Manager, OpenMDAO_Proxy, register
 from openmdao.main.mp_util import keytype, read_allowed_hosts, setup_tunnel, \
                                   read_server_config, write_server_config
@@ -36,6 +37,7 @@ from openmdao.util.log import install_remote_handler, remove_remote_handlers, \
 from openmdao.util.publickey import make_private, read_authorized_keys, \
                                     write_authorized_keys, HAVE_PYWIN32
 from openmdao.util.shellproc import ShellProc, STDOUT, DEV_NULL
+from openmdao.util.fileutil import onerror
 
 _PROXIES = {}
 
@@ -46,7 +48,7 @@ class ObjServerFactory(Factory):
     within those servers.
 
     name: string
-        Name of factory, used in log messages, etc.
+        Name of factory; used in log messages, etc.
 
     authkey: string
         Passed to created :class:`ObjServer` servers.
@@ -63,7 +65,7 @@ class ObjServerFactory(Factory):
         same form of address.
 
     The environment variable ``OPENMDAO_KEEPDIRS`` can be used to avoid
-    having server directory trees removed when servers are shut-down.
+    having server directory trees removed when servers are shut down.
     """
 
     # These are used to propagate selections from main().
@@ -157,7 +159,7 @@ class ObjServerFactory(Factory):
         del self._managers[server]
         keep_dirs = int(os.environ.get('OPENMDAO_KEEPDIRS', '0'))
         if not keep_dirs and os.path.exists(root_dir):
-            shutil.rmtree(root_dir)
+            shutil.rmtree(root_dir, onerror=onerror)
 
     @rbac('owner')
     def cleanup(self):
@@ -273,11 +275,16 @@ class ObjServerFactory(Factory):
             orig_main = None
             if sys.platform == 'win32':  #pragma no cover
                 scripts = ('openmdao-script.py', 'openmdao_test-script.py')
-                if sys.modules['__main__'].__file__.endswith(scripts):
-                    orig_main = sys.modules['__main__'].__file__
-                    sys.modules['__main__'].__file__ = \
-                        pkg_resources.resource_filename('openmdao.main',
-                                                        'objserverfactory.py')
+                try:
+                    main_file = sys.modules['__main__'].__file__
+                except AttributeError:
+                    pass
+                else:
+                    if main_file.endswith(scripts):
+                        orig_main = main_file
+                        sys.modules['__main__'].__file__ = \
+                            pkg_resources.resource_filename('openmdao.main',
+                                                            'objserverfactory.py')
             owner = get_credentials()
             self._logger.log(LOG_DEBUG2, '%s starting server %r in dir %s',
                              owner, name, root_dir)
@@ -314,7 +321,7 @@ class _FactoryManager(OpenMDAO_Manager):
 
 register(ObjServerFactory, _FactoryManager, 'openmdao.main.objserverfactory')
 
-    
+
 class ObjServer(object):
     """
     An object which knows how to create other objects, load a model, etc.
@@ -322,7 +329,7 @@ class ObjServer(object):
     directory at startup.
 
     name: string
-        Name of server, used in log messages, etc.
+        Name of server; used in log messages, etc.
 
     allow_shell: bool
         If True, :meth:`execute_command` and :meth:`load_model` are allowed.
@@ -367,7 +374,7 @@ class ObjServer(object):
         except ImportError:
             pass
         else:
-            from enthought.traits.trait_numeric import AbstractArray
+            from traits.trait_numeric import AbstractArray
             dummy = AbstractArray()
 
     @rbac(('owner', 'user'))
@@ -530,10 +537,10 @@ class ObjServer(object):
             Name of ZipFile to unpack.
 
         textfiles: list
-            List of :mod:`fnmatch` style patterns specifying which upnapcked
+            List of :mod:`fnmatch` style patterns specifying which unpacked
             files are text files possibly needing newline translation. If not
-            supplied, the first 4KB of each is scanned for a zero byte. If not
-            found then the file is assumed to be a text file.
+            supplied, the first 4KB of each is scanned for a zero byte. If none
+            is found, then the file is assumed to be a text file.
         """
         self._logger.debug('unpack_zipfile %r', filename)
         self._check_path(filename, 'unpack_zipfile')
@@ -602,7 +609,7 @@ class ObjServer(object):
             Name of file to open.
 
         mode: string
-            Accees mode.
+            Access mode.
 
         bufsize: int
             Size of buffer to use.
@@ -666,7 +673,7 @@ class _ServerManager(OpenMDAO_Manager):
 
 register(ObjServer, _ServerManager, 'openmdao.main.objserverfactory')
 
-    
+
 def connect_to_server(config_filename):
     """
     Connects to the the server specified by `config_filename` and returns a
@@ -683,11 +690,11 @@ def connect_to_server(config_filename):
 def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
             logfile=None):
     """
-    Connects to the the server at `address` and `port` using `key` and returns
+    Connects to the server at `address` and `port` using `key` and returns
     a (shared) proxy for the associated :class:`ObjServerFactory`.
 
     address: string
-        IP address for server, or pipe filename.
+        IP address for server or pipe filename.
 
     port: int
         Server port.  If < 0, `address` is a pipe filename.
@@ -699,7 +706,7 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
         Server authorization key.
 
     pubkey:
-        Server public key, required if `authkey` is 'PublicKey'.
+        Server public key; required if `authkey` is 'PublicKey'.
 
     logfile:
         Location of server's log file, if known.
@@ -713,7 +720,8 @@ def connect(address, port, tunnel=False, authkey='PublicKey', pubkey=None,
     except KeyError:
         # Requires ssh setup.
         if tunnel:  # pragma no cover
-            location = setup_tunnel(address, port)
+            location, cleanup = setup_tunnel(address, port)
+            atexit.register(*cleanup)
         else:
             location = key
         via = ' (via tunnel)' if tunnel else ''
@@ -748,7 +756,7 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
     in the current directory.
 
     authkey: string
-        Authorization key, must be matched by clients.
+        Authorization key; must be matched by clients.
 
     address: string
         IPv4 address, hostname, or pipe name.
@@ -894,10 +902,10 @@ def start_server(authkey='PublicKey', address=None, port=0, prefix='server',
 def stop_server(server, config_filename):
     """
     Shutdown :class:`ObjServerFactory` specified by `config_filename` and
-    terminate it's process `server`.
+    terminate its process `server`.
 
     server: :class:`ShellProc`
-        Server process retured by :meth:`start_server`.
+        Server process returned by :meth:`start_server`.
 
     config_filename: string:
         Name of server configuration file.
@@ -981,7 +989,7 @@ def main():  #pragma no cover
         Prefix to apply to remote log messages. Default is ``pid@host``.
 
     If ``prefix.key`` exists, it is read for an authorization key string.
-    Otherwise public key authorization and encryption is used.
+    Otherwise, public key authorization and encryption is used.
 
     Allowed hosts *must* be specified if `port` is >= 0. Only allowed hosts
     may connect to the server.

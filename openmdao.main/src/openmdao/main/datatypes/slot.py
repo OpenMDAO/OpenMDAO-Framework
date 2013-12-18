@@ -16,7 +16,7 @@ __all__ = ["Slot"]
 from inspect import isclass
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import Instance, Interface
+from traits.api import Instance, Interface
 import zope.interface
 
 from openmdao.main.variable import Variable, gui_excludes
@@ -32,7 +32,7 @@ class Slot(Variable):
 
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
-        
+
         default_value = None
         try:
             iszopeiface = issubclass(klass, zope.interface.Interface)
@@ -47,8 +47,8 @@ class Slot(Variable):
         self._allow_none = allow_none
         self.klass = klass
 
-        if has_interface(klass, IContainer) or (isclass(klass) and \
-                                            IContainer.implementedBy(klass)):
+        if has_interface(klass, IContainer) or \
+           (isclass(klass) and IContainer.implementedBy(klass)):
             self._is_container = True
         else:
             self._is_container = False
@@ -66,9 +66,13 @@ class Slot(Variable):
                 self._instance.default_value = default_value
             else:
                 default_value = self._instance.default_value
-                
+
+            if klass.__name__ == 'VariableTree':
+                raise TypeError('Slotting of VariableTrees is not supported,'
+                                ' please use VarTree instead')
+
         super(Slot, self).__init__(default_value, **metadata)
-        
+
     def validate(self, obj, name, value):
         ''' wrapper around Enthought validate method'''
 
@@ -87,8 +91,8 @@ class Slot(Variable):
                 if issubclass(self._instance.klass, Interface):
                     self._iface_error(obj, name, self._instance.klass.__name__)
                 else:
-                    obj.raise_exception("%s must be an instance of class '%s'" %
-                                        (name, self._instance.klass.__name__),
+                    obj.raise_exception("%s must be an instance of class '%s', got %s" %
+                                        (name, self._instance.klass.__name__, type(value)),
                                         TypeError)
 
         return value
@@ -100,9 +104,6 @@ class Slot(Variable):
         if self._is_container and value is not None:
             if value.parent is not obj:
                 value.parent = obj
-            # VariableTrees also need to know their iotype
-            if hasattr(value, '_iotype'):
-                value._iotype = self.iotype
 
     def _iface_error(self, obj, name, iface_name):
         obj.raise_exception("%s must provide interface '%s'" %
@@ -147,5 +148,6 @@ class Slot(Variable):
         for field in meta:
             if field not in gui_excludes:
                 slot_attr[field] = meta[field]
+                io_attr[field] = meta[field]
 
         return io_attr, slot_attr

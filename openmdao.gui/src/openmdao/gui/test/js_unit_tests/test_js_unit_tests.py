@@ -1,15 +1,19 @@
 import sys
 
 # to run interactively, use the following command in directory with jsTestDriver.conf:
-# java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser /usr/bin/chromium-browser --tests all
-# if /usr/bin/chromium-browser doesn't work, try google-chrome
+#   java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests all
+#
+# or to run a specific test:
+#   java -jar JsTestDriver-1.3.3c.jar --port 9876 --browser google-chrome --tests "test addListener"
 
 # Because Xvfb does not exist on Windows, it is difficult
 #   to do headless testing on Windows. So for now
 #   we just test on Linux
 if sys.platform.startswith("linux"):
 
+    import glob
     import os
+    import glob
     import tempfile
     from distutils.spawn import find_executable
 
@@ -38,13 +42,11 @@ if sys.platform.startswith("linux"):
     server: http://localhost:%(port_num)s
 
     load:
-      - %(gd)s/static/js/require-jquery*
-      - %(gd)s/static/js/jquery.event.drag-2.0.min.js
-      - %(gd)s/static/js/jquery-ui-1.8.7.custom.min.js
+      - %(gd)s/static/js/jquery*.js
       - %(gd)s/static/js/slickgrid/*.js
       - %(gd)s/static/js/ba-debug.min.js
       - %(gd)s/static/js/openmdao/Util.js
-      - %(gd)s/static/js/openmdao/Model.js
+      - %(gd)s/static/js/openmdao/Project.js
       - %(gd)s/static/js/openmdao/CellEditor.js
       - %(gd)s/static/js/openmdao/ValueEditor.js
 
@@ -82,6 +84,11 @@ if sys.platform.startswith("linux"):
                 raise SkipTest("java is needed to do the "
                                "GUI JavaScript unit testing")
 
+            # Can't seem to pass a path with spaces in it correctly,
+            # quoting isn't honored at receiver.
+            if ' ' in jstestdriver_path:
+                raise SkipTest('Install directory has spaces in path')
+
             # run headless if xvfb is available
             if find_executable("xvfb-run"):
                 java_cmd = "xvfb-run java"
@@ -95,15 +102,15 @@ if sys.platform.startswith("linux"):
                                "GUI JavaScript unit testing" % browser_name)
 
             # Set some env vars used by jsTestDriver
-            os.environ['JSTESTDRIVER'] = """%(java_cmd)s -jar %(jstd_path)s
-                                                         --port %(port_num)d
-                                                         --captureConsole
-                                                         --browser %(browser)s""" % \
-                {'java_cmd':  java_cmd,
-                 'jstd_path': jstestdriver_path,
-                 'port_num':  port_number,
-                 'browser':   browser_exe_filepath,
-                }
+            jstd_opts = {
+                'java_cmd':  java_cmd,
+                'jstd_path': jstestdriver_path,
+                'port_num':  port_number,
+                'browser':   browser_exe_filepath,
+            }
+            os.environ['JSTESTDRIVER'] = "%(java_cmd)s -jar %(jstd_path)s " \
+                "--port %(port_num)d --captureConsole --browser %(browser)s" \
+                % jstd_opts
             os.environ['JSTESTDRIVER_PORT'] = str(port_number)
             os.environ['JSTESTDRIVER_SERVER'] = \
                        'http://localhost:%d' % (port_number)
@@ -111,6 +118,14 @@ if sys.platform.startswith("linux"):
         def tearDown(self):
             #os.unlink(self.config_filename)
             super(BrowserJsUnitTestCase, self).tearDown()
+
+            keymap = glob.glob('/tmp/server-*.xkm')  # From virtual framebuffer.
+            if keymap:
+                try:
+                    os.remove(keymap[0])
+                except Exception as exc:
+                    print >> sys.stderr, 'JsTearDown: %s cleanup failed: %s' \
+                                         % (keymap[0], exc)
 
     class ChromeJsUnitTestCase(BrowserJsUnitTestCase):
         """test GUI JavaScript using Chrome"""

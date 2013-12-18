@@ -1,12 +1,11 @@
 [
     { "text": "Project", "id": "project-menu",
       "items": [
-        { "text": "Commit",        "id": "project-commit",  "onclick": "openmdao.model.commit();" },
-        { "text": "Revert",        "id": "project-revert",  "onclick": "openmdao.model.revert();" },
-        { "text": "Run",           "id": "project-run",     "onclick": "openmdao.model.runModel();" },
-        { "text": "Reload",        "id": "project-reload",  "onclick": "openmdao.model.reload();" },
-        { "text": "Close",         "id": "project-close",   "onclick": "openmdao.model.close();" },
-        { "text": "Exit",          "id": "project-exit",    "onclick": "openmdao.model.exit();" }
+        { "text": "Commit",        "id": "project-commit",  "onclick": "openmdao.project.commit();" },
+        { "text": "Revert",        "id": "project-revert",  "onclick": "openmdao.project.revert();" },
+        { "text": "Reload",        "id": "project-reload",  "onclick": "openmdao.project.reload();" },
+        { "text": "Close",         "id": "project-close",   "onclick": "openmdao.project.close('/');" },
+        { "text": "Exit",          "id": "project-exit",    "onclick": "openmdao.project.close('/exit');" }
       ]
     },
     { "text": "View", "id": "view-menu",
@@ -24,7 +23,9 @@
     },
     { "text": "Tools", "id": "tools-menu",
       "items": [
-        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.Util.popupWindow('editor', 'Code Editor')"},
+        { "text": "Code Editor",   "id": "tools-editor",    "onclick": "openmdao.project.editFile();"},
+        { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.project.viewGeometry();"},
+        { "text": "View Images",   "id": "tools-images",    "onclick": "openmdao.project.viewImages();"},
         { "text": "Plot Variable", "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
         { "text": "Show Drawing",  "id": "tools-drawing",   "onclick": "openmdao.DrawingFrame.prototype.chooseVariable();"},
         { "text": "Show Log",      "id": "tools-log",       "onclick": "openmdao.DisplayLogFrame();"}

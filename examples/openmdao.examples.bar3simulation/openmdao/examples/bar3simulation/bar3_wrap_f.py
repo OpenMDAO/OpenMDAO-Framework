@@ -8,7 +8,7 @@ from numpy import zeros
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
@@ -101,6 +101,12 @@ class Bar3Truss(Component):
         self.bar1_force = float(forces.force1)
         self.bar2_force = float(forces.force2)
         self.bar3_force = float(forces.force3)
+        
+        # The FORTRAN code returns stresses with the wrong sign, so we
+        # flip the sign here (tension = positive).
+        self.bar1_stress = -self.bar1_stress
+        self.bar2_stress = -self.bar2_stress
+        self.bar3_stress = -self.bar3_stress
 
 #end Bar3Truss
     

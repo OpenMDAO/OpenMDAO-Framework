@@ -1,21 +1,17 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
-import logging
-import StringIO
-from math import sqrt
+from math import sqrt  # so expr can find it
 
 from openmdao.main.api import Assembly, Component, Driver, \
-                              Dataflow, SequentialWorkflow, set_as_top, \
+                              SequentialWorkflow, set_as_top, \
                               dump_iteration_tree
-from openmdao.lib.datatypes.api import Float, Int, Str
+from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-
-from openmdao.main.component import _show_validity
 
 exec_order = []
 
@@ -115,6 +111,9 @@ class MultiDriverTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
+        
+    def tearDown(self):
+        self.top = None
 
     def rosen_setUp(self):
         # Chop up the equations for the Rosen-Suzuki optimization problem
@@ -147,6 +146,7 @@ class MultiDriverTestCase(unittest.TestCase):
                           'adder1', 'adder2', 'adder3'])
         
         drv.itmax = 30
+        #drv.conmin_diff = True
         drv.add_objective('adder3.sum+50.')
         drv.add_parameter('comp1.x', -10., 99.)
         drv.add_parameter('comp2.x', -10., 99.)
@@ -167,17 +167,19 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         self.top.run()
         self.top.comp1.x = 12.3
-        self.assertEqual([False, True, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, True, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         self.top.comp2.x = 32.1
-        self.assertEqual([False, False, False], [self.top.adder1._valid_dict[n] for n in ['x1','x2','sum']])
+        self.assertEqual([False, False, False], 
+                         self.top.adder1.get_valid(['x1','x2','sum']))
         
     def test_one_driver(self):
         global exec_order
         print "*** test_one_driver ***"
         self.rosen_setUp()
         self.top.run()
-        self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.eval_objective(), places=2)
+        assert_rel_error(self, self.opt_objective, 
+                         self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
@@ -203,19 +205,21 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.workflow.add(['comp1a', 'comp2a'])
         
         drv.itmax = 40
+        # Note, this is a bad test for our gradient stuff. It has 2 local
+        # minima, and pretty much requires forward or backward difference
+        # to reach one of them if you start at 0.0. Still, it works. -- KTM
         drv.add_objective('comp2a.f_x')
         drv.add_parameter('comp1a.x', low=0, high=99)
         
         self.top.run()
         
-        self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.eval_objective(), places=2)
+        assert_rel_error(self, self.opt_objective, 
+                         self.top.driver1.eval_objective(), 0.01)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         assert_rel_error(self, self.opt_design_vars[1], self.top.comp2.x, 0.01)
         assert_rel_error(self, self.opt_design_vars[2], self.top.comp3.x, 0.01)
-        self.assertAlmostEqual(self.opt_design_vars[3], 
-                               self.top.comp4.x, places=1)
+        assert_rel_error(self, self.opt_design_vars[3], self.top.comp4.x, 0.01)
         self.assertAlmostEqual(-6.2498054387439232, 
                                self.top.driver1a.eval_objective(), 
                                places=2)
@@ -238,6 +242,7 @@ class MultiDriverTestCase(unittest.TestCase):
         nested = self.top.add('nested', Assembly())
         # create the inner driver
         inner_driver = nested.add('driver', CONMINdriver())
+        #inner_driver = nested.driver
         
         nested.add('comp1', ExprComp(expr='x-3'))
         nested.add('comp2', ExprComp(expr='-3'))
@@ -256,33 +261,24 @@ class MultiDriverTestCase(unittest.TestCase):
         
         outer_driver.workflow.add('nested')
         inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
-
-        ## create one driver for testing
-        #inner_driver = self.top.add('driver1', CONMINdriver())
-        #inner_driver.itmax = 30
-        #inner_driver.iprint = 1001
-        #inner_driver.fdch = .000001
-        #inner_driver.fdchm = .000001
-        #inner_driver.add_objective('comp4.f_xy')
-        #inner_driver.add_parameter('comp1.x',-50,50)
-        #inner_driver.add_parameter('comp3.y',-50,50)
-        ##inner_driver.constraints = ['comp1.x**2 + comp3.y**2']
             
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
+        #inner_driver.conmin_diff = True
         inner_driver.add_objective('comp3.f_xy')
         inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
+        outer_driver.conmin_diff = True
         outer_driver.add_objective('nested.f_xy')   # comp4.f_xy passthrough
         outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
         
         self.top.run()
 
-        # Notes: CONMIN does not quite reach the anlytical minimum
+        # Notes: CONMIN does not quite reach the analytical minimum
         # In fact, it only gets to about 2 places of accuracy.
         # This is also the case for a single 2-var problem.
         self.assertAlmostEqual(nested.x, 6.66667, places=4)
@@ -290,9 +286,13 @@ class MultiDriverTestCase(unittest.TestCase):
 
         # test dumping of iteration tree
         s = dump_iteration_tree(self.top)
+        
+        # Comp2 and Comp3 are ambiguous in the sort
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
             '\n   driver\n      nested\n         nested.driver\n            '
-            'nested.comp1\n            nested.comp3\n            nested.comp2\n'
+            'nested.comp1\n            nested.comp2or3\n            nested.comp2or3\n'
             '            nested.comp4\n')
 
     def test_2_nested_drivers_same_assembly(self):
@@ -303,8 +303,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # the outer loop takes care of x
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
-        self.top = set_as_top(Assembly())
-        top = self.top
+        top = set_as_top(Assembly())
         # create the outer driver
         outer_driver = top.add('driver', CONMINdriver())
         
@@ -339,6 +338,66 @@ class MultiDriverTestCase(unittest.TestCase):
         outer_driver.add_objective('comp4.f_xy')
         outer_driver.add_parameter('comp1.x', low=-50, high=50)
         
+        top.run()
+        # Notes: CONMIN does not quite reach the anlytical minimum
+        # In fact, it only gets to about 2 places of accuracy.
+        # This is also the case for a single 2-var problem.
+        self.assertAlmostEqual(top.comp1.x, 6.66667, places=4)
+        self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
+        
+        # test dumping of iteration tree
+        s = dump_iteration_tree(top)
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
+        self.assertEqual(s, 
+            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
+            '         comp2or3\n         comp4\n')
+        
+    def test_2_nested_drivers_same_assembly_extra_comp(self):
+        print "*** test_2_nested_drivers_same_assembly ***"
+        #
+        # Same as above, but one extra trailing component in outer
+        # workflow.
+        # 
+        # Optimal solution: x = 6.6667; y = -7.3333
+        self.top = set_as_top(Assembly())
+        top = self.top
+        # create the outer driver
+        outer_driver = top.add('driver', CONMINdriver())
+        
+        # create the inner driver
+        inner_driver = top.add('driver1', CONMINdriver())
+        
+        top.add('comp1', ExprComp(expr='x-3'))
+        top.add('comp2', ExprComp(expr='-3'))
+        top.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
+        top.add('comp4', ExprComp2(expr='x+y'))
+        top.add('comp5', ExprComp(expr='x'))
+        top.comp1.x = 50
+        top.comp3.y = -50
+        
+        # Hook stuff up
+        top.connect('comp1.f_x', 'comp3.x')
+        top.connect('comp3.f_xy', 'comp4.y')
+        top.connect('comp2.f_x', 'comp4.x')
+        top.connect('comp4.f_xy', 'comp5.x')
+        
+        # Driver process definition
+        outer_driver.workflow.add(['driver1', 'comp5'])
+        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        
+        inner_driver.itmax = 30
+        inner_driver.fdch = .000001
+        inner_driver.fdchm = .000001
+        inner_driver.add_objective('comp3.f_xy')
+        inner_driver.add_parameter('comp3.y', low=-50, high=50)
+        
+        outer_driver.itmax = 30
+        outer_driver.fdch = .000001
+        outer_driver.fdchm = .000001
+        outer_driver.add_objective('comp5.f_x')
+        outer_driver.add_parameter('comp1.x', low=-50, high=50)
+        
         self.top.run()
 
         # Notes: CONMIN does not quite reach the anlytical minimum
@@ -349,9 +408,11 @@ class MultiDriverTestCase(unittest.TestCase):
         
         # test dumping of iteration tree
         s = dump_iteration_tree(self.top)
+        s = s.replace('comp2', 'comp2or3')
+        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
-            '\n   driver\n      driver1\n         comp1\n         comp3\n'
-            '         comp2\n         comp4\n')
+            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
+            '         comp2or3\n         comp4\n      comp5\n')
         
     def test_2drivers_same_iterset(self):
         #

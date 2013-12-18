@@ -1,5 +1,5 @@
 from openmdao.main.api import VariableTree
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, VarTree
 from stream import Stream
 
 class MEflows(VariableTree):
@@ -10,8 +10,6 @@ class MEflows(VariableTree):
     #alt = Float(0.0, units='ft', desc='Altitude')
     #Mach = Float(0.0, desc='Freestream Mach number')
 
-    def __init__(self):
-        super(MEflows, self).__init__()
-        self.add('pri', Stream())
-        self.add('sec', Stream())
-    
+    pri = VarTree(Stream())
+    sec = VarTree(Stream())
+

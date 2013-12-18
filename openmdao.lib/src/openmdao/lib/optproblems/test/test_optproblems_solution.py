@@ -61,8 +61,8 @@ class TestOptProblems(unittest.TestCase):
         
     
     def test_optproblems_solution(self): 
-        """test to make sure that at the specified solution point, the objective 
-        values match what is given in the solution""" 
+        # test to make sure that at the specified solution point, the objective 
+        # values match what is given in the solution
         
         #find all the optproblems in lib
         startdirs = [os.path.dirname(openmdao.lib.optproblems.__file__),]

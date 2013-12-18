@@ -7,9 +7,11 @@ From Sellar's analytic problem.
     Aerospace Sciences Meeting and Exhibit, Reno, NV, January 1996.
 """
 
-from openmdao.main.api import Component, ComponentWithDerivatives
+import numpy
+
+from openmdao.main.api import Component
 from openmdao.main.problem_formulation import OptProblem
-from openmdao.lib.datatypes.api import Float
+from openmdao.main.datatypes.api import Float
 
 class Discipline1(Component):
     """Component containing Discipline 1."""
@@ -33,10 +35,10 @@ class Discipline1(Component):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)
+        #print "Dis 1 (%f, %f, %f, %f, out = %f)" % (z1, z2, x1, y2, self.y1)
         
         
-class Discipline1_WithDerivatives(ComponentWithDerivatives):
+class Discipline1_WithDerivatives(Component):
     """Component containing Discipline 1."""
     
     # pylint: disable-msg=E1101
@@ -47,23 +49,6 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
 
     y1 = Float(iotype='out', desc='Output of this Discipline.')        
    
-    def __init__(self): 
-        super(Discipline1_WithDerivatives,self).__init__()
-        
-        self.derivatives.declare_first_derivative('y1', 'z1')
-        self.derivatives.declare_first_derivative('y1', 'z2')
-        self.derivatives.declare_first_derivative('y1', 'x1')
-        self.derivatives.declare_first_derivative('y1', 'y2')
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-    
-        self.derivatives.set_first_derivative('y1', 'z1', 2.0*self.z1)
-        self.derivatives.set_first_derivative('y1', 'z2', 1.0)
-        self.derivatives.set_first_derivative('y1', 'x1', 1.0)
-        self.derivatives.set_first_derivative('y1', 'y2', -0.2)
-    
-        
     def execute(self):
         """Evaluates the equation  
         y1 = z1**2 + z2 + x1 - 0.2*y2."""
@@ -74,8 +59,26 @@ class Discipline1_WithDerivatives(ComponentWithDerivatives):
         y2 = self.y2
         
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
-        #print "(%f, %f, %f)" % (z1, z2, x1)        
+        #print "Dis 1 (%f, %f, %f, %f, out = %f)" % (z1, z2, x1, y2, self.y1)
 
+    def linearize(self):
+        """ Calculate the Jacobian """
+        
+        self.J = numpy.zeros([1, 4])
+        
+        self.J[0, 0] = 1.0
+        self.J[0, 1] = -0.2
+        self.J[0, 2] = 2.0*self.z1
+        self.J[0, 3] = 1.0
+        
+    def provideJ(self):
+        """Alternative specification."""
+        
+        input_keys = ('x1', 'y2', 'z1', 'z2')
+        output_keys = ('y1',)
+        
+        return input_keys, output_keys, self.J
+                
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -101,9 +104,10 @@ class Discipline2(Component):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2
+        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
         
-        
-class Discipline2_WithDerivatives(ComponentWithDerivatives):
+    
+class Discipline2_WithDerivatives(Component):
     """Component containing Discipline 2."""
     
     # pylint: disable-msg=E1101
@@ -112,23 +116,6 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
     y1 = Float(1.0, iotype='in', desc='Disciplinary Coupling.')
 
     y2 = Float(iotype='out', desc='Output of this Discipline.') 
-    
-    def __init__(self): 
-        super(Discipline2_WithDerivatives,self).__init__()
-        
-        self.derivatives.declare_first_derivative('y2', 'z1')
-        self.derivatives.declare_first_derivative('y2', 'z2')
-        self.derivatives.declare_first_derivative('y2', 'y1')
-        
-    def calculate_first_derivatives(self):
-        """Analytical first derivatives"""
-    
-        self.derivatives.set_first_derivative('y2', 'z1', 1.0)
-        self.derivatives.set_first_derivative('y2', 'z2', 1.0)
-        # Derivative blows up around y1=0, and is imaginary for y1<0
-        # y1 should be kept above 0.
-        self.derivatives.set_first_derivative('y2', 'y1', .5*(abs(self.y1))**-0.5) 
-       
     
     def execute(self):
         """Evaluates the equation  
@@ -143,7 +130,25 @@ class Discipline2_WithDerivatives(ComponentWithDerivatives):
         y1 = abs(self.y1)
         
         self.y2 = y1**(.5) + z1 + z2         
+        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
         
+    def linearize(self):
+        """ Calculate the Jacobian """
+        
+        self.J = numpy.zeros([1, 3])
+        
+        self.J[0, 0] = .5*(abs(self.y1))**-0.5
+        self.J[0, 1] = 1.0
+        self.J[0, 2] = 1.0
+
+    def provideJ(self):
+        """Alternative specification."""
+        
+        input_keys = ('y1', 'z1', 'z2')
+        output_keys = ('y2',)
+        
+        return input_keys, output_keys, self.J
+
            
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
