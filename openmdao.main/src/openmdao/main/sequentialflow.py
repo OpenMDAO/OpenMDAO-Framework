@@ -1240,8 +1240,9 @@ class SequentialWorkflow(Workflow):
                               % (out_width, out_name, inp_width, inp_name,
                                  calc, finite, error)
         print >> stream
-        print >> stream, 'Average RelError:', error_sum / error_n
-        print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if error_n:
+            print >> stream, 'Average RelError:', error_sum / error_n
+            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
         if suspects:
             print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
             for out_name, inp_name in suspects:
