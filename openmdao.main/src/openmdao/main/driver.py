@@ -102,7 +102,7 @@ class Driver(Component):
     def iteration_set(self, solver_only=False):
         """Return a set of all Components in our workflow and
         recursively in any workflow in any Driver in our workflow.
-        
+
         solver_only: Bool
             Only recurse into solver drivers. These are the only kinds
             of drivers whose derivatives get absorbed into the parent
@@ -170,8 +170,8 @@ class Driver(Component):
         return pcomps
 
     def get_references(self, name):
-        """Return a dict of parameter, constraint, and objective 
-        references to component `name` in preparation for 
+        """Return a dict of parameter, constraint, and objective
+        references to component `name` in preparation for
         subsequent :meth:`restore_references` call.
 
         name: string
@@ -232,6 +232,10 @@ class Driver(Component):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates.
         """
+
+        # (Re)configure parameters.
+        if hasattr(self, 'config_parameters'):
+            self.config_parameters()
 
         for recorder in self.recorders:
             recorder.startup()
@@ -382,7 +386,7 @@ class Driver(Component):
         elif hasattr(self, 'eval_objectives'):
             for j, obj in enumerate(self.eval_objectives()):
                 case_output.append(["Objective_%d" % j, obj])
-                
+
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
@@ -446,7 +450,7 @@ class Driver(Component):
             # The variables in pseudo-comps are not of interest.
             if not hasattr(comp, 'list_vars'):
                 continue
-            
+
             # All variables from components in workflow
             for var in comp.list_vars():
                 all_vars.append('%s%s.%s' % (header, comp.name, var))
@@ -479,11 +483,11 @@ class Driver(Component):
         ret['valid'] = self.is_valid()
         comps = [comp for comp in self.workflow]
         for comp in comps:
-            
+
             # Skip pseudo-comps
             if hasattr(comp, '_pseudo_type'):
                 continue
-                
+
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
                 ret['workflow'].append({
