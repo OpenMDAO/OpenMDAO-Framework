@@ -64,10 +64,10 @@ var force = d3.layout.force()
             var tparts = lnk.target.id.split(".");
             // make var comp and var to subvar connections shorter
             if (sparts[0] === tparts[0]) {
-                return 30;
+                return 10;
             }
             else {
-                return 80;
+                return 40;
             }
     })
     .linkStrength(function(lnk, idx) {
@@ -75,7 +75,7 @@ var force = d3.layout.force()
                 var tparts = lnk.target.id.split(".");
                 // make var comp and var to subvar connections stronger
                 if (sparts[0] === tparts[0]) {
-                    return 1.0;
+                    return 2.8;
                 }
                 else {
                     return 0.7;
@@ -89,7 +89,6 @@ var drag = force.drag()
 var svg = d3.select("body").append("svg")
     .attr("width", width)
     .attr("height", height)
-
 
 svg.append("marker")
    .attr("id", "mArrow")
@@ -160,7 +159,26 @@ function tick() {
   //     });
 
   node.attr("transform", function(d) { 
-        return "translate(" + d.x + "," + d.y + ")"; });
+    //var w = Number(svg.style("width").split("p")[0]);
+    //var h = Number(svg.style("height").split("p")[0]);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    
+    if (d.x > w) {
+      d.x = w;
+    }
+    else if (d.x < 0) {
+      d.x = 0;
+    }
+    if (d.y > h) {
+      d.y = h;
+    }
+    else if (d.y < 0) {
+      d.y = 0;
+    }
+
+
+    return "translate(" + d.x + "," + d.y + ")"; });
 }
 
 function dragstart(d) {
