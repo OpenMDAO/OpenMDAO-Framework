@@ -30,7 +30,7 @@ def _clean_graph(graph):
     """
     from openmdao.main.component import Component
     c = Component()
-    excluded_vars = c.items(framework_var=True)
+    excluded_vars = [n for n,v in c.items(framework_var=True)]
 
     # copy the graph since we're changing node/edge metadata
     graph = graph.subgraph(graph.nodes_iter())
