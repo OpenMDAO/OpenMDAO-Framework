@@ -28,6 +28,10 @@ def _clean_graph(graph):
     should not be used for really large graphs because it 
     copies the entire graph.
     """
+    from openmdao.main.component import Component
+    c = Component()
+    excluded_vars = [n for n,v in c.items(framework_var=True)]
+
     # copy the graph since we're changing node/edge metadata
     graph = graph.subgraph(graph.nodes_iter())
 
@@ -47,7 +51,7 @@ def _clean_graph(graph):
                 nodes_to_remove.append(node)
                 continue
 
-        if 'framework_var' in data:
+        if node in excluded_vars:
             nodes_to_remove.append(node)
         else: # update node metadata
             newdata = data
