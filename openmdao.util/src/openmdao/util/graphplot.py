@@ -6,6 +6,7 @@ import json
 import tempfile
 import webbrowser
 
+
 from networkx.readwrite.json_graph import node_link_data
 
 _excluded_nodes = set([
@@ -136,16 +137,66 @@ def plot_graph(graph, d3page='fixedforce.html'):
 
 
 def main():
-    __import__(sys.argv[1])
-    mod = sys.modules[sys.argv[1]]
-    obj = getattr(mod, sys.argv[2])()
+    from argparse import ArgumentParser
+    import inspect
 
-    if len(sys.argv) > 3:
-        graph = eval('obj.'+sys.argv[3])
-    else:
-        graph = obj._depgraph
+    from openmdao.main.assembly import Assembly, set_as_top
+    from openmdao.main.driver import Driver
+
+    parser = ArgumentParser()
+    parser.add_argument('-m', '--module', action='store', dest='module',
+                        metavar='MODULE',
+                        help='name of module that contains the class to be instantiated and graphed')
+    parser.add_argument('-c', '--class', action='store', dest='klass',
+                        help='boolean expression to filter hosts')
+    parser.add_argument('-r', '--recurse', action='store_true', dest='recurse',
+                        help='if set, recurse down and plot all dependency and derivative graphs')
+
+    options = parser.parse_args()
     
-    plot_graph(graph)
+    if options.module is None:
+        parser.print_help()
+        sys.exit(-1)
+
+    def get_graphs(obj):
+        graphs = []
+        if isinstance(obj, Assembly):
+            graphs.append((obj.name, obj._depgraph))
+            graphs.extend(get_graphs(obj.driver))
+        elif isinstance(obj, Driver):
+            graphs.append((obj.get_pathname(), obj.workflow.derivative_graph()))
+            for comp in obj.iteration_set():
+                if isinstance(comp, Assembly) or isinstance(comp, Driver):
+                    graphs.extend(get_graphs(comp))
+        return graphs
+                
+    __import__(options.module)
+
+    mod = sys.modules[options.module]
+
+    if options.klass:
+        obj = getattr(mod, options.klass)()
+    else:
+        def isasm(obj):
+            return issubclass(obj, Assembly)
+
+        klasses = inspect.getmembers(mod, isasm)
+        if len(klasses) > 1:
+            print "found %d Assembly classes.  pick one" % len(klasses)
+            for i, klass in enumerate(klasses):
+                print "%d) %s" % (i, klass.__name__)
+            var = raw_input("\nEnter a number: ")
+            obj = klasses[int(var)]
+
+    set_as_top(obj)
+
+    if options.recurse:
+        graphs = get_graphs(obj)
+    else:
+        graphs = [('top', obj._depgraph)]
+
+    for name, graph in graphs:
+        plot_graph(graph)
 
 
 if __name__ == '__main__':
