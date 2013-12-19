@@ -122,58 +122,6 @@ class ToInf(TokenConverter):
         return float('inf')
     
     
-def _parse_line(delimiters=' \t'):
-    """Parse a single data line that may contain string or numerical data.
-    Float and Int 'words' are converted to their appropriate type. 
-    Exponentiation is supported, as are NaN and Inf."""
-    
-    # Somewhat of a hack, but we can only use printables if the delimiter is
-    # just whitespace. Otherwise, some seprators (like ',' or '=') potentially
-    # get parsed into the general string text. So, if we have non whitespace
-    # delimiters, we need to fall back to just alphanums, and then add in any
-    # missing but important symbols to parse.
-    if delimiters.isspace():
-        textchars = printables
-    else:
-        textchars = alphanums
-        
-        symbols = ['.', '/', '+', '*', '^', '(', ')', '[', ']', '=',
-                   ':', ';', '?', '%', '&', '!', '#', '|', '<', '>',
-                   '{', '}', '-', '_', '@', '$', '~']
-        
-        for symbol in symbols:
-            if symbol not in delimiters:
-                textchars = textchars + symbol
-                
-    string_text = Word(textchars)
-        
-    digits = Word(nums)
-    dot = "."
-    sign = oneOf("+ -")
-    ee = CaselessLiteral('E') | CaselessLiteral('D')
-
-    num_int = ToInteger(Combine( Optional(sign) + digits ))
-    
-    num_float = ToFloat(Combine( Optional(sign) + 
-                        ((digits + dot + Optional(digits)) |
-                         (dot + digits)) +
-                         Optional(ee + Optional(sign) + digits)
-                        ))
-    
-    # special case for a float written like "3e5"
-    mixed_exp = ToFloat(Combine( digits + ee + Optional(sign) + digits ))
-    
-    nan = ToInf(oneOf("Inf -Inf")) | \
-          ToNan(oneOf("NaN nan NaN%  NaNQ NaNS qNaN sNaN " + \
-                        "1.#SNAN 1.#QNAN -1.#IND"))
-    
-    # sep = Literal(" ") | Literal("\n")
-    
-    data = ( OneOrMore( (nan | num_float | mixed_exp | num_int |
-                         string_text) ) )
-    
-    return data
-
 
 class InputFileGenerator(object):
     """Utility to generate an input file from a template.
@@ -451,6 +399,7 @@ class FileParser(object):
         
         self.current_row = 0
         self.anchored = False
+        self._reset_tokens()
         
     def set_file(self, filename):
         """Set the name of the file that will be generated.
@@ -466,7 +415,8 @@ class FileParser(object):
         else:
             self.data = []
             for line in inputfile :
-                if line[0] == self.full_line_comment_char : continue
+                if line[0] == self.full_line_comment_char: 
+                    continue
                 self.data.append( line.split( self.end_of_line_comment_char )[0] )
         inputfile.close()
 
@@ -484,6 +434,7 @@ class FileParser(object):
         self.delimiter = delimiter
         if delimiter != "columns":
             ParserElement.setDefaultWhitespaceChars(str(delimiter))
+        self._reset_tokens()
             
     def mark_anchor(self, anchor, occurrence=1):
         """Marks the location of a landmark, which lets you describe data by
@@ -505,15 +456,17 @@ class FileParser(object):
         instance = 0
         if occurrence > 0:
             count = 0
-            for line in self.data[self.current_row:]:
-                
+            max_lines = len(self.data)
+            for index in xrange(self.current_row, max_lines):
+                line = self.data[index]
+            
                 # If we are marking a new anchor from an existing anchor, and
                 # the anchor is mid-line, then we still search the line, but
                 # only after the anchor.
                 if count == 0 and self.anchored:
                     line = line.split(anchor)[-1]
-
-                if line.find(anchor) > -1:
+                
+                if anchor in line:
                     
                     instance += 1
                     if instance == occurrence:
@@ -525,15 +478,17 @@ class FileParser(object):
                 
         elif occurrence < 0:
             count = len(self.data)-1
-            for line in reversed(self.data):
+            max_lines = len(self.data)
+            for index in xrange(self.current_row, -1, -1):
+                line = self.data[index]
                 
                 # If we are marking a new anchor from an existing anchor, and
                 # the anchor is mid-line, then we still search the line, but
                 # only before the anchor.
-                if count == len(self.data)-1 and self.anchored:
+                if count == max_lines-1 and self.anchored:
                     line = line.split(anchor)[0]
 
-                if line.find(anchor) > -1:
+                if anchor in line:
                     instance += -1
                     if instance == occurrence:
                         self.current_row = count
@@ -601,7 +556,7 @@ class FileParser(object):
             
             # Let pyparsing figure out if this is a number, and return it
             # as a float or int as appropriate
-            data = _parse_line().parseString(line)
+            data = self._parse_line().parseString(line)
             
             # data might have been split if it contains whitespace. If so,
             # just return the whole string
@@ -610,7 +565,7 @@ class FileParser(object):
             else:
                 return data[0]
         else:
-            data = _parse_line(self.delimiter).parseString(line)
+            data = self._parse_line().parseString(line)
             return data[field-1]
 
     def transfer_keyvar(self, key, field, occurrence=1, rowoffset=0):
@@ -660,7 +615,7 @@ class FileParser(object):
         j = self.current_row + row + rowoffset
         line = self.data[j]
         
-        fields = _parse_line(self.delimiter).parseString(line.replace(key,"KeyField"))
+        fields = self._parse_line().parseString(line.replace(key,"KeyField"))
         
         return fields[field]
 
@@ -708,7 +663,7 @@ class FileParser(object):
                 
                 # Let pyparsing figure out if this is a number, and return it
                 # as a float or int as appropriate
-                parsed = _parse_line().parseString(line)
+                parsed = self._parse_line().parseString(line)
                 
                 newdata = array(parsed[:])
                 # data might have been split if it contains whitespace. If the
@@ -719,7 +674,7 @@ class FileParser(object):
                 data = append(data, newdata)
                 
             else:
-                parsed = _parse_line(self.delimiter).parseString(line)
+                parsed = self._parse_line().parseString(line)
                 if i == j2-j1-1:
                     data = append(data, array(parsed[(fieldstart-1):fieldend]))
                 else:
@@ -769,7 +724,7 @@ class FileParser(object):
             else:
                 line = lines[0][(fieldstart-1):]
                 
-            parsed = _parse_line().parseString(line)
+            parsed = self._parse_line().parseString(line)
             row = array(parsed[:])
             data = zeros(shape=(abs(j2-j1), len(row)))
             data[0, :] = row
@@ -780,11 +735,11 @@ class FileParser(object):
                 else:
                     line = line[(fieldstart-1):]
                 
-                parsed = _parse_line().parseString(line)
+                parsed = self._parse_line().parseString(line)
                 data[i+1, :] = array(parsed[:])
                 
         else:
-            parsed = _parse_line(self.delimiter).parseString(lines[0])
+            parsed = self._parse_line().parseString(lines[0])
             if fieldend:
                 row = array(parsed[(fieldstart-1):fieldend])
             else:
@@ -794,7 +749,7 @@ class FileParser(object):
             data[0, :] = row
     
             for i, line in enumerate(list(lines[1:])):
-                parsed = _parse_line(self.delimiter).parseString(line)
+                parsed = self._parse_line().parseString(line)
                 
                 if fieldend:
                     try:
@@ -805,3 +760,58 @@ class FileParser(object):
                     data[i+1, :] = array(parsed[(fieldstart-1):])
         
         return data
+    
+    def _parse_line(self):
+        """Parse a single data line that may contain string or numerical data.
+        Float and Int 'words' are converted to their appropriate type. 
+        Exponentiation is supported, as are NaN and Inf."""
+
+        return self.line_parse_token
+    
+    def _reset_tokens(self):
+        ''' Sets up the tokens for pyparsing '''
+        
+        # Somewhat of a hack, but we can only use printables if the delimiter is
+        # just whitespace. Otherwise, some seprators (like ',' or '=') potentially
+        # get parsed into the general string text. So, if we have non whitespace
+        # delimiters, we need to fall back to just alphanums, and then add in any
+        # missing but important symbols to parse.
+        if self.delimiter.isspace():
+            textchars = printables
+        else:
+            textchars = alphanums
+            
+            symbols = ['.', '/', '+', '*', '^', '(', ')', '[', ']', '=',
+                       ':', ';', '?', '%', '&', '!', '#', '|', '<', '>',
+                       '{', '}', '-', '_', '@', '$', '~']
+            
+            for symbol in symbols:
+                if symbol not in self.delimiter:
+                    textchars = textchars + symbol
+                
+        digits = Word(nums)
+        dot = "."
+        sign = oneOf("+ -")
+        ee = CaselessLiteral('E') | CaselessLiteral('D')
+        
+        num_int = ToInteger(Combine( Optional(sign) + digits ))
+        
+        num_float = ToFloat(Combine( Optional(sign) + 
+                            ((digits + dot + Optional(digits)) |
+                             (dot + digits)) +
+                             Optional(ee + Optional(sign) + digits)
+                            ))
+        
+        # special case for a float written like "3e5"
+        mixed_exp = ToFloat(Combine( digits + ee + Optional(sign) + digits ))
+        
+        nan = ToInf(oneOf("Inf -Inf")) | \
+              ToNan(oneOf("NaN nan NaN%  NaNQ NaNS qNaN sNaN " + \
+                            "1.#SNAN 1.#QNAN -1.#IND"))
+    
+        string_text = Word(textchars)
+            
+        self.line_parse_token = ( OneOrMore( (nan | num_float | mixed_exp | num_int |
+                                              string_text) ) )
+         
+
