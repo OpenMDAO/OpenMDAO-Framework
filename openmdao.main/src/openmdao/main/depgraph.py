@@ -1143,27 +1143,26 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
+def get_subdriver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
     """Return edges coming from solvers that are in the
     specified workflow or part of the graph between specified
     derivative inputs and outputs.
     """
-    #from openmdao.main.pseudoassembly import from_PA_var # prevent recursive import
-    
-    # add edges from any nested solvers
+    # add edges from any nested drivers
     edges = set()
     comps = set(wflow)
     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
 
     flat_inputs = flatten_list_of_iters(inputs)
-    for comp in comps:  #._parent.iteration_set():
-        if has_interface(comp, ISolver):
+    for comp in comps:
+        is_solver = has_interface(comp, ISolver)
+        if has_interface(comp, IDriver):
             g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
                                                group_nondif=False)
             for u, v, data in g.edges_iter(data=True):
                 if u.startswith('@'):
                     # Mark all states (params) from sub-solver
-                    if v not in flat_inputs:
+                    if is_solver and v not in flat_inputs:
                         graph.node[v]['solver_state'] = True
                     continue
                 if v.startswith('@'):
@@ -1190,7 +1189,7 @@ def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
 
     for comp in nondiff_comps:
         if comp in graph:
-            graph.node[comp] = graph.node[comp].copy() # don't pollute top level graph with nondiff markers
+            graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
             graph.node[comp]['non-differentiable'] = True
 
 def mod_for_derivs(graph, inputs, outputs, wflow):
@@ -1235,7 +1234,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
     
-    slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
+    slv_edges = get_subdriver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
     edges.update(slv_edges)
 
     mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)

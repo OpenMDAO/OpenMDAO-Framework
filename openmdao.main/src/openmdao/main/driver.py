@@ -38,7 +38,7 @@ class Driver(Component):
                      desc='Case recorders for iteration data.')
 
     # Extra variables for adding to CaseRecorders
-    printvars = List(Str, iotype='in',
+    printvars = List(Str, iotype='in', framework_var=True,
                      desc='List of extra variables to output in the recorders.')
 
     # set factory here so we see a default value in the docs, even

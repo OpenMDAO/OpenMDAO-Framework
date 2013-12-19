@@ -699,8 +699,8 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['~~0._pseudo1.in0'])
-        self.assertEqual(edges['~~0._pseudo1.out0'], ['@out0'])
+        self.assertEqual(edges['@in0'], ['_pseudo_1.in0', '~~0._pseudo_0|in1'])
+        self.assertEqual(edges['_pseudo_1.out0'], ['@out0'])
         
     def test_list_states(self):
         comp = MyComp_Deriv()
