@@ -9,18 +9,6 @@ import webbrowser
 
 from networkx.readwrite.json_graph import node_link_data
 
-_excluded_nodes = set([
-    'force_execute',
-    'directory',
-    'external_files',
-    'log_level',
-    'exec_count',
-    'derivative_exec_count',
-    'itername',
-    'create_instance_dir',
-    'printvars',
-])
-
 _excluded_node_data = set([
     'pa_object',
 ])
@@ -59,7 +47,7 @@ def _clean_graph(graph):
                 nodes_to_remove.append(node)
                 continue
 
-        if name in _excluded_nodes:
+        if 'framework_var' in data:
             nodes_to_remove.append(node)
         else: # update node metadata
             newdata = data
