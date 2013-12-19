@@ -56,7 +56,7 @@ class GeomTestCase(unittest.TestCase):
         try:
             self.top.g2.g_extra = "hey"
         except TypeError as err:
-            msg = "g2 (1-2): g_extra must provide interface 'IStaticGeometry'"
+            msg = "g2 (1-2): object g_extra of type <type 'str'> must provide interface 'IStaticGeometry'"
             self.assertEqual(str(err), msg)        
         else:
             self.fail("exception expected")

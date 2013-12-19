@@ -2,7 +2,6 @@
 Test the broyden solver component.
 """
 
-import os
 import unittest
 import numpy
 
@@ -109,19 +108,21 @@ class MIMOEquation(Component):
     f4 = Float(iotype='out', desc='Output of this Discipline')
     f5 = Float(iotype='out', desc='Output of this Discipline')
 
+    ff = Array([0., 0., 0., 0., 0.], iotype='out')
+
     def execute(self):
         """Should converge to x=[0,0,0,0,0]"""
 
         d = numpy.array([3, 2, 1.5, 1, 0.5])
         c = 0.01
 
-        ff = -d*self.x - c*self.x**3
+        self.ff = -d*self.x - c*self.x**3
 
-        self.f1 = ff[0]
-        self.f2 = ff[1]
-        self.f3 = ff[2]
-        self.f4 = ff[3]
-        self.f5 = ff[4]
+        self.f1 = self.ff[0]
+        self.f2 = self.ff[1]
+        self.f3 = self.ff[2]
+        self.f4 = self.ff[3]
+        self.f5 = self.ff[4]
 
 
 class DumbComp(Component):
@@ -169,11 +170,6 @@ class MIMOBroyden(Assembly):
         self.driver.workflow.add(['dis1'])
 
         # solver connections
-        self.driver.add_constraint('dis1.f1 = 0.0')
-        self.driver.add_constraint('dis1.f2 = 0.0')
-        self.driver.add_constraint('dis1.f3 = 0.0')
-        self.driver.add_constraint('dis1.f4 = 0.0')
-        self.driver.add_constraint('dis1.f5 = 0.0')
         self.driver.itmax = 40
         self.driver.alpha = .8
         self.driver.tol = .000001
@@ -260,6 +256,12 @@ class TestCase(unittest.TestCase):
         driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
 
+        driver.add_constraint('dis1.f1 = 0.0')
+        driver.add_constraint('dis1.f2 = 0.0')
+        driver.add_constraint('dis1.f3 = 0.0')
+        driver.add_constraint('dis1.f4 = 0.0')
+        driver.add_constraint('dis1.f5 = 0.0')
+
         prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "broyden2"
 
@@ -279,6 +281,7 @@ class TestCase(unittest.TestCase):
 
         driver = prob.driver
         driver.add_parameter('dis1.x', low=-9.e99, high=9.e99)
+        driver.add_constraint('dis1.ff = 0.0')
 
         prob.dis1.x = [1., 1., 1., 1., 1.]
         prob.dis1.trace = True
@@ -305,6 +308,12 @@ class TestCase(unittest.TestCase):
         driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
 
+        driver.add_constraint('dis1.f1 = 0.0')
+        driver.add_constraint('dis1.f2 = 0.0')
+        driver.add_constraint('dis1.f3 = 0.0')
+        driver.add_constraint('dis1.f4 = 0.0')
+        driver.add_constraint('dis1.f5 = 0.0')
+
         prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "broyden3"
 
@@ -328,6 +337,12 @@ class TestCase(unittest.TestCase):
         driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
+
+        driver.add_constraint('dis1.f1 = 0.0')
+        driver.add_constraint('dis1.f2 = 0.0')
+        driver.add_constraint('dis1.f3 = 0.0')
+        driver.add_constraint('dis1.f4 = 0.0')
+        driver.add_constraint('dis1.f5 = 0.0')
 
         prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "excitingmixing"

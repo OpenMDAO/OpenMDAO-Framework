@@ -640,7 +640,7 @@ class Assembly(Component):
         return conns
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname):#, inputs):
+    def update_inputs(self, compname):
         """Transfer input data to input expressions on the specified component.
         The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
@@ -882,9 +882,9 @@ class Assembly(Component):
 
         for src in required_inputs:
             varname, _, tail = src.partition('[')
-            target = self._depgraph.successors(varname)
+            target = [n for n in self._depgraph.successors(varname) if not n.startswith('parent.')]
             if len(target) == 0:
-                target = self._depgraph.successors(src)
+                target = [n for n in self._depgraph.successors(src) if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 

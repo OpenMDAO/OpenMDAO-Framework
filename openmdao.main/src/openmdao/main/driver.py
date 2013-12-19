@@ -8,7 +8,7 @@ import fnmatch
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, \
-                                     implements
+                                     implements, ISolver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.component import Component
@@ -99,14 +99,21 @@ class Driver(Component):
         super(Driver, self).check_config()
         self.workflow.check_config()
 
-    def iteration_set(self):
+    def iteration_set(self, solver_only=False):
         """Return a set of all Components in our workflow and
         recursively in any workflow in any Driver in our workflow.
+        
+        solver_only: Bool
+            Only recurse into solver drivers. These are the only kinds
+            of drivers whose derivatives get absorbed into the parent
+            driver's graph.
         """
         allcomps = set()
         for child in self.workflow.get_components(full=True):
             allcomps.add(child)
             if has_interface(child, IDriver):
+                if solver_only and not has_interface(child, ISolver):
+                    continue
                 allcomps.update(child.iteration_set())
         return allcomps
 
@@ -372,7 +379,10 @@ class Driver(Component):
         # Objectives
         if hasattr(self, 'eval_objective'):
             case_output.append(["Objective", self.eval_objective()])
-
+        elif hasattr(self, 'eval_objectives'):
+            for j, obj in enumerate(self.eval_objectives()):
+                case_output.append(["Objective_%d" % j, obj])
+                
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
@@ -433,6 +443,10 @@ class Driver(Component):
 
         for comp in self.workflow.__iter__():
 
+            # The variables in pseudo-comps are not of interest.
+            if not hasattr(comp, 'list_vars'):
+                continue
+            
             # All variables from components in workflow
             for var in comp.list_vars():
                 all_vars.append('%s%s.%s' % (header, comp.name, var))

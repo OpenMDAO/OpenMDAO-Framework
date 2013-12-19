@@ -54,5 +54,5 @@ When it is executed, it should produce this output:
 Notice that the minimum of the constrained problem is different from the minimum of
 the unconstrained problem.
 
-Now you are ready to add derivatives to your comnponent, which you will do in the next section.
+Now you are ready to add derivatives to your component, which you will do in the next section.
 

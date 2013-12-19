@@ -43,7 +43,12 @@ class A(Component):
     @property
     def some_prop(self):
         return 7
-    
+
+class B(Component): 
+
+    in1 = Float(iotype="in")
+    in11 = Float(iotype="in")
+
 class Comp(Component):
     x = Float(iotype='in')
     y = Float(iotype='in')
@@ -535,10 +540,15 @@ class ExprEvalTestCase(unittest.TestCase):
         assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
         assert_rel_error(self, grad['comp1.c'], g3, 0.00001)
         
-        #exp = ExprEvaluator('gamma(comp2.a)', top.driver) #sympy fails; requires finite difference
-        #grad = exp.evaluate_gradient(scope=top)
-        #g1=gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
-        #assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        exp = ExprEvaluator('gamma(comp2.a)', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        from scipy.special import polygamma
+        g1 = gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative 
+        assert_rel_error(self, grad['comp2.a'], g1, 0.001)
+        
+        exp = ExprEvaluator('abs(comp2.a)', top.driver) 
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp2.a'], 1.0, 0.0001)
         
     def test_eval_gradient_array(self):
         top = set_as_top(Assembly())
@@ -550,6 +560,17 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
         assert_rel_error(self, grad['comp1.b2d[1][1]'], 4.0, 0.00001)
+
+    def test_eval_gradient_lots_of_vars(self): 
+        top = set_as_top(Assembly())
+        top.add('comp1', B())
+        #build expr
+        expr = "2*comp1.in1 + 3*comp1.in11"
+
+        exp = ExprEvaluator(expr, top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp1.in1'], 2.0, 0.00001)
+        assert_rel_error(self, grad['comp1.in11'], 3.0, 0.00001)
 
     def test_scope_transform(self):
         exp = ExprEvaluator('myvar+abs(comp.x)*a.a1d[2]', self.top)

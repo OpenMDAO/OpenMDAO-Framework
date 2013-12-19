@@ -366,37 +366,6 @@ b = Float(0.0, iotype='out')
     closeout(project_dict, workspace_page)
 
 
-def _test_addfiles(browser):
-    # Adds multiple files to the project.
-    project_dict, workspace_page = startup(browser)
-
-    # Get path to  paraboloid file.
-    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                     'paraboloid.py')
-
-    # Get path to optimization_unconstrained file.
-    optPath = pkg_resources.resource_filename('openmdao.examples.simple',
-                                              'optimization_unconstrained.py')
-
-    # Add the files
-    # would like to test adding multiple files but Selenium doesn't support it
-    #workspace_page.add_files(paraboloidPath, optPath)
-    workspace_page.add_file(paraboloidPath)
-    workspace_page.add_file(optPath)
-
-    # Check to make sure the files were added.
-    time.sleep(0.5)
-    file_names = workspace_page.get_files()
-    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
-    if sorted(file_names) != sorted(expected_file_names):
-        raise TestCase.failureException(
-            "Expected file names, '%s', should match existing file names, '%s'"
-            % (expected_file_names, file_names))
-
-    # Clean up.
-    closeout(project_dict, workspace_page)
-
-
 def _test_properties(browser):
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
@@ -415,6 +384,7 @@ def _test_properties(browser):
     eq(inputs.value, [['printvars',     '[]'],
                       ['directory',     ''],
                       ['force_execute', 'True'],
+                      ['force_fd', 'False'],
                       ])  # FIXME: printvars is really an empty list...
     # Clean up.
     closeout(project_dict, workspace_page)
@@ -956,6 +926,8 @@ def _test_arguments(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -974,104 +946,6 @@ def _test_casefilters(browser):
                       'SequenceCaseFilter', 'SliceCaseFilter'):
         workspace_page.find_library_button(classname)
 
-    closeout(project_dict, workspace_page)
-
-
-def _test_rename_file(browser):
-    # Rename a file in the project.
-    project_dict, workspace_page = startup(browser)
-
-    # Add paraboloid.py
-    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                     'paraboloid.py')
-    workspace_page.add_file(paraboloidPath)
-    time.sleep(0.5)
-    file_names = workspace_page.get_files()
-    eq(file_names, ['paraboloid.py'])
-
-    workspace_page.rename_file('paraboloid.py', 'xyzzy.py')
-    time.sleep(0.5)
-    file_names = workspace_page.get_files()
-    eq(file_names, ['xyzzy.py'])
-
-    # Clean up.
-    #closeout(projects_page, project_info_page, project_dict, workspace_page)
-    closeout(project_dict, workspace_page)
-
-
-def _test_remove_files(browser):
-    # Adds multiple files to the project.
-    project_dict, workspace_page = startup(browser)
-
-    # Add some files
-    paraboloidPath = pkg_resources.resource_filename('openmdao.examples.simple',
-                                                     'paraboloid.py')
-    optPath = pkg_resources.resource_filename('openmdao.examples.simple',
-                                              'optimization_unconstrained.py')
-    workspace_page.add_file(paraboloidPath)
-    workspace_page.add_file(optPath)
-
-    # Check to make sure the files were added.
-    time.sleep(0.5)
-    file_names = workspace_page.get_files()
-    expected_file_names = ['optimization_unconstrained.py', 'paraboloid.py']
-    if sorted(file_names) != sorted(expected_file_names):
-        raise TestCase.failureException(
-            "Expected file names, '%s', should match existing file names, '%s'"
-            % (expected_file_names, file_names))
-
-    # delete using context menu the file paraboloid.py
-    workspace_page.delete_file('paraboloid.py')
-
-    # Check to make sure the file was deleted
-    time.sleep(0.5)
-    file_names = workspace_page.get_files()
-    expected_file_names = ['optimization_unconstrained.py', ]
-    if sorted(file_names) != sorted(expected_file_names):
-        raise TestCase.failureException(
-            "Expected file names, '%s', should match existing file names, '%s'"
-            % (expected_file_names, file_names))
-
-    # add more files
-    file_path_one = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                    'files/basic_model.py')
-    file_path_two = pkg_resources.resource_filename('openmdao.examples.enginedesign',
-                                                    'vehicle_singlesim.py')
-    workspace_page.add_file(file_path_one)
-    workspace_page.add_file(file_path_two)
-
-    # Test deleting the paraboloid and opt files at one time using the delete files pick
-    #   on the Files menu
-    workspace_page.delete_files(['vehicle_singlesim.py', 'optimization_unconstrained.py'])
-
-    # Check to make sure the files were deleted
-    time.sleep(1.5)
-    file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py']
-    if sorted(file_names) != sorted(expected_file_names):
-        raise TestCase.failureException(
-            "Expected file names, '%s', should match existing file names, '%s'"
-            % (expected_file_names, file_names))
-
-    # Test deleting a file in a folder
-    workspace_page.new_folder("test_folder")
-    time.sleep(1.0)
-    workspace_page.add_file_to_folder("test_folder", paraboloidPath)
-    time.sleep(1.0)
-    workspace_page.expand_folder('test_folder')
-    time.sleep(1.0)
-    workspace_page.delete_files(['test_folder/paraboloid.py', ])
-
-    # Check to make sure the file was deleted
-    time.sleep(1.5)
-    file_names = workspace_page.get_files()
-    expected_file_names = ['basic_model.py']
-    if sorted(file_names) != sorted(expected_file_names):
-        raise TestCase.failureException(
-            "Expected file names, '%s', should match existing file names, '%s'"
-            % (expected_file_names, file_names))
-
-    # Clean up.
     closeout(project_dict, workspace_page)
 
 
@@ -1101,6 +975,8 @@ def _test_sorting(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -1123,59 +999,6 @@ def _test_sorting(browser):
         eq(row, expected[i])
 
     editor.close()
-    closeout(project_dict, workspace_page)
-
-
-def _test_view_file(browser):
-    project_dict, workspace_page = startup(browser)
-    workspace_window = browser.current_window_handle
-
-    # add an image file
-    file_name = 'Engine_Example_Process_Diagram.png'
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/' + file_name)
-    workspace_page.add_file(file_path)
-
-    time.sleep(2)
-
-    # view the image file in browser
-    new_page = workspace_page.view_file(file_name)
-
-    time.sleep(2)
-
-    # the new page should have an img tag with the selected file name
-    images = new_page.browser.find_elements_by_css_selector('img')
-    eq(len(images), 1)
-    eq(images[0].get_attribute('src').strip().endswith(file_name), True)
-
-    # Back to workspace.
-    browser.close()
-    browser.switch_to_window(workspace_window)
-
-    # add a pdf file
-    file_name = 'sample.pdf'
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/' + file_name)
-    workspace_page.add_file(file_path)
-
-    time.sleep(2)
-
-    # view the pdf file in browser
-    new_page = workspace_page.view_file(file_name)
-
-    time.sleep(2)
-
-    # the new page should have an embed tag with the selected file name
-    embeds = new_page.browser.find_elements_by_css_selector('embed')
-    eq(len(embeds), 1)
-    eq(embeds[0].get_attribute('src').strip().endswith(file_name), True)
-    eq(embeds[0].get_attribute('type'), 'application/pdf')
-
-    # Back to workspace.
-    browser.close()
-    browser.switch_to_window(workspace_window)
-
-    # Clean up.
     closeout(project_dict, workspace_page)
 
 

@@ -61,6 +61,13 @@ class ImplicitComponent(Component):
         self._state_names = None
         self._resid_names = None
 
+    def check_config(self):
+        """
+        Override this function to perform configuration checks specific to your class.
+        Bad configurations should raise an exception.
+        """
+        pass  # TODO: add check that total width of states == total width of residuals
+
     def execute(self):
         """ Performs either an internal solver or a single evaluation.
         Do not override this function.
@@ -200,7 +207,7 @@ class ImplicitComponent(Component):
             
             idx += size
             
-        applyJ(self, inputs, outputs)
+        applyJ(self, inputs, outputs, [])
         #print inputs, outputs
         
         idx = 0

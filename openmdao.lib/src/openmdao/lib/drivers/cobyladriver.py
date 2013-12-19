@@ -49,7 +49,8 @@ class COBYLAdriver(Driver):
                    desc='Reasonable initial changes to the variables.')
 
     rhoend = Float(1e-4, iotype='in',
-                   desc='Final accuracy in the optimization (not precisely guaranteed).')
+                   desc='Final accuracy in the optimization'
+                        ' (not precisely guaranteed).')
 
     iprint = Enum(1, [0, 1, 2, 3], iotype='in',
                   desc='Controls the frequency of output: 0 (no output),1,2,3.')
@@ -87,17 +88,24 @@ class COBYLAdriver(Driver):
         self.nparam = 0
         self.ncon = 0
 
+        self.upper = None
+        self.lower = None
+        self._continue = None
+
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
 
         self.nparam = self.total_parameters()
-        self.ncon = len(self.get_ineq_constraints())
+        self.ncon = self.total_ineq_constraints()
         self.ncon += 2*self.nparam
         self.g = zeros(self.ncon, 'd')
         self.work_vector = zeros(self.ncon, 'd')
 
         # get the initial values of the parameters
         self.x = self.eval_parameters(self.parent)
+
+        self.upper = self.get_upper_bounds()
+        self.lower = self.get_lower_bounds()
 
         n = self.nparam
         m = self.ncon
@@ -146,13 +154,11 @@ class COBYLAdriver(Driver):
             self.raise_exception(msg, RuntimeError)
 
         # Constraints (COBYLA defines positive as satisfied)
-        con_list = [-v for v in self.eval_ineq_constraints()]
+        cons = -1. * array(self.eval_ineq_constraints())
 
         # Side Constraints
         vals = self.eval_parameters(self.parent)
-        upper = self.get_upper_bounds()
-        lower = self.get_lower_bounds()
-        g = hstack([array(con_list, 'd'), (vals - lower), (upper - vals)])
+        g = hstack([cons, (vals - self.lower), (self.upper - vals)])
 
         # Write out some relevant information to the recorder
         self.record_case()

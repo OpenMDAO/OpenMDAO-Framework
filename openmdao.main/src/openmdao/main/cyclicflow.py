@@ -87,24 +87,6 @@ class CyclicWorkflow(SequentialWorkflow):
             cyclic = True
             self._severed_edges = set()
             
-            # This section turns param/eq_constraint pairs into severed edges.
-            # TODO: get rid of this. Solvers need to be more general.
-            if hasattr(self._parent, 'list_param_group_targets'):
-                params = [p[0] for p in self._parent.list_param_group_targets()]
-                constraints = [item.get_referenced_varpaths() for item in \
-                               self._parent.get_constraints().values()]
-                
-                for const_pair in constraints:
-                    src, targ = const_pair
-                    if src in params:
-                        self._severed_edges.add((targ, src))
-                    elif targ in params:
-                        self._severed_edges.add((src, targ))
-                    else:
-                        msg = "Something is wrong with solver" + \
-                        "Param/Constraints"
-                        self.scope.raise_exception(msg, RuntimeError)
-
             while cyclic:
                 
                 try:
@@ -141,17 +123,13 @@ class CyclicWorkflow(SequentialWorkflow):
         # Cached
         if self._workflow_graph is None:
        
-            contents = self.get_components()
+            contents = self.get_components(full=True)
            
             # get the parent assembly's component graph
             scope = self.scope
             compgraph = scope._depgraph.component_graph()
             graph = compgraph.subgraph([c.name for c in contents])
            
-            # add any dependencies due to ExprEvaluators
-            for comp in contents:
-                graph.add_edges_from([tup for tup in comp.get_expr_depends()])
-                
             self._workflow_graph = graph
        
         return self._workflow_graph
@@ -198,24 +176,41 @@ class CyclicWorkflow(SequentialWorkflow):
         return super(CyclicWorkflow, self).initialize_residual()
        
         
-    def derivative_graph(self, inputs=None, outputs=None, fd=False):
+    def derivative_graph(self, inputs=None, outputs=None, fd=False, 
+                         group_nondif=True):
         """Returns the local graph that we use for derivatives. For cyclic flows,
         we need to sever edges and use them as inputs/outputs.
         """
     
-        if self._derivative_graph is None:
+        if self._derivative_graph is None or group_nondif is False:
             
+            if inputs == None:
+                inputs = []
+                
+            if outputs == None:
+                outputs = []
+            
+            # Solver can specify parameters
+            if hasattr(self._parent, 'list_param_group_targets'):
+                inputs = self._parent.list_param_group_targets()
+        
+            # Solver can specify equality constraints
+            if hasattr(self._parent, 'get_eq_constraints'):
+                outputs = ["%s.out0" % item.pcomp_name for item in \
+                               self._parent.get_constraints().values()]
+                    
             # Cyclic flows need to be severed before derivatives are calculated.
             self._get_topsort()
             
-            inputs = []
-            outputs = []
             for src, target in self._severed_edges:
                 inputs.append(target)
                 outputs.append(src)
                 
-            super(CyclicWorkflow, self).derivative_graph(inputs, outputs, fd, 
-                                                         self._severed_edges)
+            dgraph = super(CyclicWorkflow, self).derivative_graph(inputs, 
+                            outputs, fd, self._severed_edges, group_nondif)
+            
+            if group_nondif is False:
+                return dgraph
             
         return self._derivative_graph
             
@@ -257,13 +252,18 @@ class CyclicWorkflow(SequentialWorkflow):
         dv: ndarray (nEdge, 1)
             Array of values to add to the model inputs.
         """
-        for src, targets in self._mapped_severed_edges:
-            
-            i1, i2 = self.get_bounds(src)
+        indep = list(self._mapped_severed_edges)
+        parm_const = [edge for edge in self._edges.iteritems() \
+                             if '@in' in edge[0]]
+        indep.extend(parm_const)
+                           
+        for src, targets in indep:
             
             if isinstance(targets, str):
                 targets = [targets]
                 
+            i1, i2 = self.get_bounds(src)
+            
             for target in targets:
                 
                 target = from_PA_var(target)
@@ -288,6 +288,7 @@ class CyclicWorkflow(SequentialWorkflow):
     
                 # Poke new value into the input end of the edge.
                 self.scope.set(target, new_val, force=True)
+                print 'set', target, old_val, new_val
     
                 # Prevent OpenMDAO from stomping on our poked input.
                 self.scope.set_valid([target.split('[',1)[0]], True)
@@ -304,6 +305,10 @@ class CyclicWorkflow(SequentialWorkflow):
         for src, targets in self._edges.iteritems():
             
             i1, i2 = self.get_bounds(src)
+            
+            if '@in' in src:
+                continue
+                
             src_val = self.scope.get(from_PA_var(src))
             src_val = flattened_value(src, src_val).reshape(-1, 1)
                 
@@ -312,6 +317,10 @@ class CyclicWorkflow(SequentialWorkflow):
                 
             for target in targets:
                 
+                if '@out' in target:
+                    self.res[i1:i2] = src_val
+                    continue
+                    
                 target_val = self.scope.get(from_PA_var(target))
                 target_val = flattened_value(target, target_val).reshape(-1, 1)
             

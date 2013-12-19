@@ -3,6 +3,7 @@ Test the MDA driver
 """
 
 import unittest
+from nose import SkipTest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
@@ -175,6 +176,8 @@ class MDA_SolverTestCase(unittest.TestCase):
         
     def test_gauss_seidel_param_con(self):
         
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
         self.top.disconnect('d2.y2')
         self.top.driver.add_parameter('d1.y2', low=-100, high=100)
         self.top.driver.add_constraint('d1.y2 = d2.y2')
@@ -231,6 +234,8 @@ class MDA_SolverTestCase(unittest.TestCase):
         
     def test_newton_param_con(self):
         
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
         self.top.disconnect('d2.y2')
         self.top.driver.add_parameter('d1.y2', low=-100, high=100)
         self.top.driver.add_constraint('d1.y2 = d2.y2')

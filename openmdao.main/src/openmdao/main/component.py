@@ -131,6 +131,8 @@ class Component(Container):
                                ' by this component.')
     force_execute = Bool(False, iotype='in', framework_var=True,
                          desc="If True, always execute even if all IO traits are valid.")
+    force_fd = Bool(False, iotype='in', framework_var=True,
+                    desc="If True, always finite difference this component.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
@@ -300,9 +302,14 @@ class Component(Container):
             visited = set([id(self), id(self.parent)])
             for name, value in self.traits(type=not_event).items():
                 obj = getattr(self, name)
-                if value.is_trait_type(Slot) and value.required is True and obj is None:
-                    self.raise_exception("required plugin '%s' is not present" %
-                                         name, RuntimeError)
+                if value.required is True:
+                    if value.is_trait_type(Slot):
+                        if obj is None:
+                            self.raise_exception("required plugin '%s' is not present" %
+                                                 name, RuntimeError)
+                    elif value.iotype in ['in', 'state'] and obj == value.default:
+                        self.raise_exception("required variable '%s' was not set" %
+                                             name, RuntimeError)
                 if has_interface(obj, IComponent) and id(obj) not in visited:
                     visited.add(id(obj))
                     obj.check_configuration()
@@ -459,7 +466,13 @@ class Component(Container):
         required_outputs
             Not needed by Component
         """
-
+        
+        # Allow user to force finite difference on a comp. This also turns off
+        # fake finite difference (i.e., there must be a reason they don't
+        # trust their own derivatives.)
+        if self.force_fd == True:
+            return
+        
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'linearize'):
 
@@ -549,7 +562,8 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ')):
+                   and (hasattr(self, 'provideJ')) \
+                   and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
                     #print 'execute_ffd: %s' % self.get_pathname()
@@ -669,12 +683,12 @@ class Component(Container):
 
         self.add(target_name, newobj)  # this will remove the old object
 
-    def add_trait(self, name, trait):
+    def add_trait(self, name, trait, refresh=True):
         """Overrides base definition of *add_trait* in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
-        super(Component, self).add_trait(name, trait)
+        super(Component, self).add_trait(name, trait, refresh)
 
         # if it's an input trait, register a callback to be called whenever it's changed
         if trait.iotype == 'in':

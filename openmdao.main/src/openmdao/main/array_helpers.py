@@ -3,7 +3,7 @@
 import itertools
 
 from openmdao.main.vartree import VariableTree
-from openmdao.util.typegroups import real_types
+from openmdao.util.typegroups import real_types, int_types
 
 try:
     from numpy import ndarray, ravel_multi_index, prod, arange, array
@@ -21,9 +21,9 @@ def is_differentiable_var(name, scope):
     return 'data_shape' in meta
 
 def is_differentiable_val(val):
-    if isinstance(val, (bool, int)):
+    if isinstance(val, int_types):
         return False
-    if isinstance(val, real_types): # somehow bool is in real_types???
+    elif isinstance(val, real_types):
         return True
     elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
         return True
@@ -51,16 +51,14 @@ def flattened_size(name, val, scope=None):
         return size
     
     else:
-        meta = scope.get_metadata(name)
+        meta = scope.get_metadata(name.split('[')[0])
         
         # Custom data objects with data_shape in the metadata
         if 'data_shape' in meta:
             return prod(meta['data_shape'])
             
-        #Nothing else is differentiable
-        else:
-            raise TypeError('Variable %s is of type %s which is not convertable'
-                            ' to a 1D float array.' % (name, type(val)))
+    raise TypeError('Variable %s is of type %s which is not convertable'
+                    ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
