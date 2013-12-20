@@ -270,17 +270,17 @@ class Driver(Component):
 
         # force param pseudocomps to get updated values to start
         # KTM1 - probably don't need this anymore
-        #self.update_parameters()
+        self.update_parameters()
 
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
         self._invalidated = False
 
-    #def update_parameters(self):
-        #if hasattr(self, 'get_parameters'):
-            #for param in self.get_parameters().values():
-                #param.initialize(self.get_expr_scope())
+    def update_parameters(self):
+        if hasattr(self, 'get_parameters'):
+            for param in self.get_parameters().values():
+                param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
