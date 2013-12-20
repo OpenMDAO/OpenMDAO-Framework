@@ -7,24 +7,45 @@ import fnmatch
 
 # pylint: disable-msg=E0611,F0401
 
-from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, \
-                                     implements, ISolver
+from openmdao.main.case import Case
+from openmdao.main.component import Component
+from openmdao.main.dataflow import Dataflow
+from openmdao.main.datatypes.api import Bool, Enum, Float, Int, List, Slot, \
+                                        Str, VarTree
+from openmdao.main.depgraph import find_all_connecting
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.component import Component
-from openmdao.main.workflow import Workflow
-from openmdao.main.case import Case
-from openmdao.main.dataflow import Dataflow
-from openmdao.main.hasevents import HasEvents
-from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
+from openmdao.main.hasevents import HasEvents
 from openmdao.main.hasobjective import HasObjective, HasObjectives
-from openmdao.util.decorators import add_delegate
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.interfaces import IDriver, ICaseRecorder, IHasEvents, \
+                                     implements, ISolver
 from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
-from openmdao.main.datatypes.api import List, Slot, Str
-from openmdao.main.depgraph import find_all_connecting
+from openmdao.main.vartree import VariableTree
+from openmdao.main.workflow import Workflow
+from openmdao.util.decorators import add_delegate
+
+
+class GradientOptions(VariableTree):
+    ''' Options for calculation of the gradient by the driver's workflow. '''
+
+    # Finite Difference
+    fd_form = Enum('forward', ['forward', 'backward', 'central'],
+                   desc='Finite difference mode (forward, backward, central')
+    fd_stepsize = Float(1.0e-6, desc='Deafault finite difference stepsize')
+    force_fd = Bool(False, desc="Set to True to force finite difference " + \
+                                "of this driver's entire workflow in a" + \
+                                "single block.")
+    # KTM - story up for this one.
+    #fd_blocks = List([], desc='User can specify nondifferentiable blocks ' + \
+    #                          'by adding sets of component names.')
+
+    # Analytic solution with GMRES
+    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES')
+    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES')
 
 
 @add_delegate(HasEvents)
@@ -46,6 +67,8 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
+    gradient_options = VarTree(GradientOptions(), iotype='in')
+
     def __init__(self):
         self._iter = None
         super(Driver, self).__init__()
@@ -59,6 +82,7 @@ class Driver(Component):
         self._invalidated = False
 
     def _workflow_changed(self, oldwf, newwf):
+        """callback when new workflow is slotted"""
         if newwf is not None:
             newwf._parent = self
 
@@ -215,22 +239,23 @@ class Driver(Component):
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
-        """Run this object. This should include fetching input variables if necessary,
-        executing, and updating output variables. Do not override this function.
+        """Run this object. This should include fetching input variables if
+        necessary, executing, and updating output variables. Do not override
+        this function.
 
         force: bool
             If True, force component to execute even if inputs have not
             changed. (Default is False)
 
         ffd_order: int
-            Order of the derivatives to be used when finite differencing (1 for first
-            derivatives, 2 for second derivativse). During regular execution,
-            ffd_order should be 0. (Default is 0)
+            Order of the derivatives to be used when finite differencing (1
+            for first derivatives, 2 for second derivatives). During regular
+            execution, ffd_order should be 0. (Default is 0)
 
         case_id: str
-            Identifier for the Case that is associated with this run. (Default is '')
+            Identifier for the Case that is associated with this run.
             If applied to the top-level assembly, this will be prepended to
-            all iteration coordinates.
+            all iteration coordinates. (Default is '')
         """
 
         # (Re)configure parameters.
@@ -242,17 +267,17 @@ class Driver(Component):
 
         # force param pseudocomps to get updated values to start
         # KTM1 - probably don't need this anymore
-        self.update_parameters()
+        #self.update_parameters()
 
         # Override just to reset the workflow :-(
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_id)
         self._invalidated = False
 
-    def update_parameters(self):
-        if hasattr(self, 'get_parameters'):
-            for param in self.get_parameters().values():
-                param.initialize(self.get_expr_scope())
+    #def update_parameters(self):
+        #if hasattr(self, 'get_parameters'):
+            #for param in self.get_parameters().values():
+                #param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -283,6 +308,7 @@ class Driver(Component):
         raise RunStopped('Step complete')
 
     def _step(self):
+        '''Step through a single workflow comp and then return control'''
         while self.continue_iteration():
             self.pre_iteration()
             for junk in self._step_workflow():
@@ -300,6 +326,7 @@ class Driver(Component):
             yield
 
     def stop(self):
+        """Stop the workflow."""
         self._stop = True
         self.workflow.stop()
 

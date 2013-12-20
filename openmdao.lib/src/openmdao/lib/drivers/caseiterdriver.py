@@ -700,7 +700,7 @@ class CaseIterDriverBase(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.workflow._parent.update_parameters()
+                #self.workflow._parent.update_parameters()
                 self.workflow.run(case_id=self._server_cases[server][0].uuid)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())
