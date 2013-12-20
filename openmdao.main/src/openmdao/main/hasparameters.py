@@ -649,10 +649,24 @@ class ArrayParameter(ParameterBase):
                                    % (self, attr))
         self.shape = val.shape
         self._size = val.size
-        self._low = array([self._low[0]] * val.size, self.dtype)
-        self._high = array([self._high[0]] * val.size, self.dtype)
-        self._fd_step = [self._fd_step[0]] * val.size
         # .start, ._scaler, and ._adder are scalars.
+
+        if self._low.size:
+            self._low = array([self._low[0]] * val.size, self.dtype)
+            self._high = array([self._high[0]] * val.size, self.dtype)
+            self._fd_step = [self._fd_step[0]] * val.size
+        else:  # Started with empty array.
+            if self.low is None:
+                metadata = self.get_metadata()[1]
+                self._low = array([metadata.get('low')] * val.size, self.dtype)
+            else:
+                self._low = array([self.low] * val.size, self.dtype)
+            if self.high is None:
+                metadata = self.get_metadata()[1]
+                self._high = array([metadata.get('high')] * val.size, self.dtype)
+            else:
+                self._high = array([self.high] * val.size, self.dtype)
+            self._fd_step = [self.fd_step] * val.size
 
     def get_high(self):
         """Returns upper limits as a sequence."""
