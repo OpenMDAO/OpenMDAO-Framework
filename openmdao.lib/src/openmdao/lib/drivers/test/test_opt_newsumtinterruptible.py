@@ -527,7 +527,7 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
         self.top.driver.epsrsf = 0.0005
         self.top.driver.epsodm = 0.001
         self.top.driver.epsgsn = 0.001
-        self.top.driver.default_fd_stepsize = 0.001
+        self.top.driver.default_fd_step_size = 0.001
         self.top.driver.stepmx = 1e10
         self.top.driver.maxrsf = 30
 
@@ -630,12 +630,12 @@ class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
             'comp.x[0] - 2.0 * comp.x[1] + 1.0 > 0.0',
             '- comp.x[0]**2 + 2.0 * ( comp.x[0] + comp.x[1]) - 1.0 > 0.0'
             ])
-        self.top.driver.default_fd_stepsize = 0.01
+        self.top.driver.default_fd_step_size = 0.01
 
         self.top.run()
         baseerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())
 
-        self.top.driver.default_fd_stepsize = 10.0
+        self.top.driver.default_fd_step_size = 10.0
         self.top.comp.x = numpy.array([2.0, 1.0], dtype=float)
         self.top.run()
         newerror = abs(self.top.comp.opt_objective

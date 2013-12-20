@@ -548,8 +548,10 @@ class FiniteDifference(object):
 
         options = pa.wflow._parent.gradient_options
         
-        self.fd_step = options.fd_stepsize*ones((len(self.inputs)))
+        self.fd_step = options.fd_step_size*ones((len(self.inputs)))
         self.form = options.fd_form
+        self.step_type = options.fd_step_type
+        self.relative_threshold = 1.0e-4
 
         in_size = 0
         for j, srcs in enumerate(self.inputs):
@@ -596,6 +598,12 @@ class FiniteDifference(object):
                 i1, i2 = self.in_bounds[src[0]]
             
             for i in range(i1, i2):
+                
+                # Relative stepsizing
+                if self.step_type == 'relative':
+                    current_val = self.get_value(src, i1, i2, i)
+                    if current_val > self.relative_threshold:
+                        fd_step = fd_step*current_val
 
                 #--------------------
                 # Forward difference
@@ -733,7 +741,7 @@ class FiniteDifference(object):
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
             old_val = self.scope.get(src)
-    
+            
             if i2-i1 == 1:
                 
                 # Indexed array
@@ -791,36 +799,30 @@ class FiniteDifference(object):
             else:
                 self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
+    def get_value(self, srcs, i1, i2, index):
+        """Get a value from the model. We only need this function for 
+        determining the relative stepsize to take."""
+        
+        # Support for Parameter Groups:
+        if isinstance(srcs, basestring):
+            srcs = [srcs]
+            
+        for src in srcs:
+            old_val = self.scope.get(src)
+            
+            # Full vector
+            if i2-i1 > 1:
+                index = index - i1
+                
+                # Indexed array slice
+                if '[' in src:
+                    sliced_shape = old_val.shape
+                    flattened_src = old_val.flatten()
+                    old_val = flattened_src[index]
+                    
+                else:
+                    unravelled = unravel_index(index, old_val.shape)
+                    old_val = old_val[unravelled]
+                    
+        return old_val
 
-# def apply_linear_model(self, comp, ffd_order):
-#     """Returns the Fake Finite Difference output for the given output
-#     name using the stored baseline and derivatives along with the
-#     new inputs in the component.
-#     """
-
-#     input_keys, output_keys, J = comp.provideJ()
-
-#     # First order derivatives
-#     if ffd_order == 1:
-
-#         for j, out_name in enumerate(output_keys):
-#             y = comp.get(out_name)
-#             for i, in_name in enumerate(input_keys):
-#                 y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
-#                 setattr(comp, name, y)
-
-#     # Second order derivatives
-#     #elif order == 2:
-#     #
-#     #    for in_name1, item in self.second_derivatives[out_name].iteritems():
-#     #        for in_name2, dx in item.iteritems():
-#     #            y += 0.5*dx* \
-#     #              (self.parent.get(in_name1) - self.inputs[in_name1])* \
-#     #              (self.parent.get(in_name2) - self.inputs[in_name2])
-#     #
-#     else:
-#         msg = 'Fake Finite Difference does not currently support an ' + \
-#               'order of %s.' % order
-#         raise NotImplementedError(msg)
-
-#     return y

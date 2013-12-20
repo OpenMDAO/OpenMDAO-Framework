@@ -35,7 +35,10 @@ class GradientOptions(VariableTree):
     # Finite Difference
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
                    desc='Finite difference mode (forward, backward, central')
-    fd_stepsize = Float(1.0e-6, desc='Deafault finite difference stepsize')
+    fd_step_size = Float(1.0e-6, desc='Deafault finite difference stepsize')
+    fd_step_type = Enum('absolute', ['absolute', 'relative'],
+                        desc='Set to absolute or relative stepsizes')
+    
     force_fd = Bool(False, desc="Set to True to force finite difference " + \
                                 "of this driver's entire workflow in a" + \
                                 "single block.")
