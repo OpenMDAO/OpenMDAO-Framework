@@ -276,7 +276,7 @@ class NEWSUMTdriver(Driver):
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                                        'termination.')
 
-    default_fd_step_size = Float(0.01, iotype='in', desc='Default finite '
+    default_fd_stepsize = Float(0.01, iotype='in', desc='Default finite '
                                 'difference stepsize. Parameters with '
                                 'specified values override this.')
 
@@ -462,7 +462,7 @@ class NEWSUMTdriver(Driver):
         self._iside = ones(ndv) * 3
 
         # Update default stepsize where specified as non-zero.
-        self.fdcv = ones(ndv) * self.default_fd_step_size
+        self.fdcv = ones(ndv) * self.default_fd_stepsize
         fd_steps = self.get_fd_steps(dtype=None)
         putmask(self.fdcv, fd_steps, fd_steps)
 

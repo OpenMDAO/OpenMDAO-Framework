@@ -97,7 +97,7 @@ OpenMDAO's built-in differentiation capability does not support second derivativ
 NEWSUMT's gradient and Hessian calculation is the only available option.
 
 If you want to use NEWSUMT for the finite difference calculation and want the
-same finite difference step size in all your variables, you can set the ``default_fd_step_size``
+same finite difference step size in all your variables, you can set the ``default_fd_stepsize``
 parameter.
 
 .. testcode:: NEWSUMT_fd
@@ -109,7 +109,7 @@ parameter.
     
 .. testcode:: NEWSUMT_fd
 
-    self.driver.default_fd_step_size = .0025
+    self.driver.default_fd_stepsize = .0025
 
 The default step size will be used for all parameters for which you have not
 set the ``fd_step`` attribute.
