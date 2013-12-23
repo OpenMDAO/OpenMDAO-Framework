@@ -550,7 +550,9 @@ class FiniteDifference(object):
         
         self.fd_step = options.fd_step_size*ones((len(self.inputs)))
         self.form = options.fd_form
+        self.form_custom = {}
         self.step_type = options.fd_step_type
+        self.step_type_custom = {}
         self.relative_threshold = 1.0e-4
 
         in_size = 0
@@ -565,7 +567,13 @@ class FiniteDifference(object):
                                                     srcs[0]))
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
+                
+            if 'fd_step_type' in meta:
+                self.step_type_custom[j] = meta['fd_step_type']
             
+            if 'fd_form' in meta:
+                self.form_custom[j] = meta['fd_form']
+                
             val = self.scope.get(srcs[0])
             width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
@@ -590,8 +598,19 @@ class FiniteDifference(object):
         self.get_inputs(self.x)
         self.get_outputs(self.y_base)
 
-        for src, fd_step in zip(self.inputs, self.fd_step):
+        for j, src, in enumerate(self.inputs):
             
+            # Users can cusomtize the FD per variable
+            fd_step = self.fd_step[j]
+            if j in self.form_custom:
+                form = self.form_custom[j]
+            else:
+                form = self.form
+            if j in self.step_type_custom:
+                step_type = self.step_type_custom[j]
+            else:
+                step_type = self.step_type
+                
             if isinstance(src, basestring):
                 i1, i2 = self.in_bounds[src]
             else:
@@ -600,7 +619,7 @@ class FiniteDifference(object):
             for i in range(i1, i2):
                 
                 # Relative stepsizing
-                if self.step_type == 'relative':
+                if step_type == 'relative':
                     current_val = self.get_value(src, i1, i2, i)
                     if current_val > self.relative_threshold:
                         fd_step = fd_step*current_val
@@ -608,7 +627,7 @@ class FiniteDifference(object):
                 #--------------------
                 # Forward difference
                 #--------------------
-                if self.form == 'forward':
+                if form == 'forward':
 
                     # Step
                     self.set_value(src, fd_step,  i1, i2, i)
@@ -625,7 +644,7 @@ class FiniteDifference(object):
                 #--------------------
                 # Backward difference
                 #--------------------
-                elif self.form == 'backward':
+                elif form == 'backward':
 
                     # Step
                     self.set_value(src, -fd_step,  i1, i2, i)
@@ -642,7 +661,7 @@ class FiniteDifference(object):
                 #--------------------
                 # Central difference
                 #--------------------
-                elif self.form == 'central':
+                elif form == 'central':
 
                     # Forward Step
                     self.set_value(src, fd_step,  i1, i2, i)
