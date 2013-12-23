@@ -4,6 +4,7 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
+import sys
 import cStringIO
 import threading
 import re
@@ -777,7 +778,7 @@ class Assembly(Component):
         return [getattr(self, c).exec_count for c in compnames]
 
     def check_gradient(self, name=None, inputs=None, outputs=None, 
-                       stream=None, mode='auto'):
+                       stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -813,12 +814,15 @@ class Assembly(Component):
             
         stream: (optional) file-like object, str, or None
             Where to write to, default stdout. If a string is supplied,
-            that is used as a filename.
+            that is used as a filename. If None, no output is written.
             
         mode: (optional) str or None
             Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
+        and a list of suspect inputs/outputs.
         """
         driver = self.driver
         obj = None

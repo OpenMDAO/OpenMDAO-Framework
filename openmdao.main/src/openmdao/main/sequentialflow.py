@@ -5,6 +5,7 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 import sys
 from math import isnan
+from StringIO import StringIO
 
 from openmdao.main.array_helpers import flattened_size, \
                                         flattened_names, flatten_slice
@@ -16,13 +17,12 @@ from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.depgraph import find_related_pseudos, base_var, \
-                                    mod_for_derivs, is_basevar_node, \
-                                    edge_dict_to_comp_list, flatten_list_of_iters, \
-                                    is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict, is_boundary_node
+from openmdao.main.depgraph import find_related_pseudos, \
+                                    mod_for_derivs, \
+                                    is_subvar_node, is_boundary_node
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
+from openmdao.util.graph import edges_to_dict
 
 try:
     from numpy import ndarray, zeros
@@ -291,7 +291,7 @@ class SequentialWorkflow(Workflow):
 
                 # Special poke for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
-                   is_boundary_node(dgraph, base_var(dgraph, measure_src)):
+                   is_boundary_node(dgraph, dgraph.base_var(measure_src)):
                     bound = (nEdge, nEdge+width)
                     self.set_bounds(measure_src, bound)
                      
@@ -444,8 +444,8 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges,
-                                       self.get_implicit_info())
+        comps = self._derivative_graph.edge_dict_to_comp_list(self._edges,
+                                            self.get_implicit_info())
         if '@fake' in comps:
             del comps['@fake']
         result = zeros(len(arg))
@@ -528,7 +528,7 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
         
         dgraph = self._derivative_graph
-        comps = edge_dict_to_comp_list(dgraph, self._edges,
+        comps = dgraph.edge_dict_to_comp_list(self._edges,
                                        self.get_implicit_info())
         result = zeros(len(arg))
         
@@ -551,7 +551,7 @@ class SequentialWorkflow(Workflow):
                 
                 # Ouputs define unique edges, so don't duplicate anything
                 if is_subvar_node(dgraph, node):
-                    if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
+                    if dgraph.base_var(node).split('.', 1)[1] in comp_outputs:
                         continue
                     
                 i1, i2 = self.get_bounds(node)
@@ -606,7 +606,7 @@ class SequentialWorkflow(Workflow):
                         
         #print arg, result
         return result
-        
+
     def derivative_graph(self, inputs=None, outputs=None, fd=False, 
                          severed=None, group_nondif=True):
         """Returns the local graph that we use for derivatives.
@@ -733,6 +733,8 @@ class SequentialWorkflow(Workflow):
             nondiff_groups = []
             
             for name in comps:
+                if name.startswith('~'):
+                    continue  # don't want nested pseudoassemblies
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
@@ -752,6 +754,9 @@ class SequentialWorkflow(Workflow):
                 target = edge[1]
                 
                 if '@' in src or '@' in target or '.' not in src:
+                    continue
+                
+                if src.startswith('~') or target.startswith('~'):
                     continue
                 
                 # Default differentiable connections
@@ -813,61 +818,12 @@ class SequentialWorkflow(Workflow):
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
             
-            # First, find our group boundary
-            allnodes = dgraph.find_prefixed_nodes(group)
-            out_edges = nx.edge_boundary(dgraph, allnodes)
-            in_edges = nx.edge_boundary(dgraph, 
-                                        set(dgraph.nodes()).difference(allnodes))
-            solver_states = []
-            if fd is False:
-                for comp in group:
-                    solver_states.extend([node for node in dgraph.predecessors(comp) \
-                                          if 'solver_state' in dgraph.node[node]])
-            
-            pa_inputs = edges_to_dict(in_edges).values()
-            pa_inputs.extend(solver_states)
-            pa_outputs = set([a for a, b in out_edges])          
-                        
             # Create the pseudoassy
-            pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
-            
-            # for full-model fd, turn off fake finite difference
-            if fd==True:
-                pseudo.ffd_order = 0
-            
-            # Add pseudoassys to graph
-            dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
-                            pseudo='assembly', valid=True)
-            
-            renames = {}
-            # Add pseudoassy inputs
-            for varpath in list(flatten_list_of_iters(pa_inputs)) + list(pa_outputs):
-                varname = to_PA_var(varpath, pa_name)
-                if varpath in dgraph:
-                    renames[varpath] = varname
-                    if is_subvar_node(dgraph, varpath):
-                        renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
-                                                                       pa_name)
+            pseudo = PseudoAssembly(pa_name, group, 
+                                    dgraph, self, fd)
 
-            nx.relabel_nodes(dgraph, renames, copy=False)
+            pseudo.add_to_graph(dgraph)            
             
-            for oldname,newname in renames.items():
-                if is_subvar_node(dgraph, newname):
-                    # since we're changing basevar, we need to make our
-                    # own copy of the metadata dict for this node to
-                    # avoid messing up the top level depgraph
-                    dgraph.node[newname] = dict(dgraph.node[newname].items())
-                    dgraph.node[newname]['basevar'] = to_PA_var(dgraph.node[newname]['basevar'], pa_name)
-                if is_input_base_node(dgraph, newname):
-                    dgraph.add_edge(newname, pa_name)
-                elif is_output_base_node(dgraph, newname):
-                    dgraph.add_edge(pa_name, newname)
-                        
-            # Clean up the old nodes in the graph
-            dgraph.remove_nodes_from(allnodes)
-            
-        return None
-
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
         
@@ -889,7 +845,7 @@ class SequentialWorkflow(Workflow):
         # Residuals and states for implicit components
         for cname in comps:
             
-            if cname.startswith('~~'):
+            if cname.startswith('~'):
                 continue
             
             comp = getattr(self.scope, cname)
@@ -939,8 +895,8 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self.derivative_graph(required_inputs, required_outputs), 
-                                       self.edge_list())
+        dgraph = self.derivative_graph(required_inputs, required_outputs)
+        comps = dgraph.edge_dict_to_comp_list(self.edge_list())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
@@ -1092,7 +1048,7 @@ class SequentialWorkflow(Workflow):
         return J
             
     
-    def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):
+    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -1115,19 +1071,23 @@ class SequentialWorkflow(Workflow):
             
         stream: (optional) file-like object or str
             Where to write to, default stdout. If a string is supplied,
-            that is used as a filename.
+            that is used as a filename. If None, no output is written.
             
         mode: (optional) str
             Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
+        and a list of suspect inputs/outputs.
         """
-        stream = stream or sys.stdout
         if isinstance(stream, basestring):
             stream = open(stream, 'w')
             close_stream = True
         else:
             close_stream = False
+            if stream is None:
+                stream = StringIO()
     
         self.config_changed()
         J = self.calc_gradient(inputs, outputs, mode=mode)
@@ -1239,8 +1199,9 @@ class SequentialWorkflow(Workflow):
                               % (out_width, out_name, inp_width, inp_name,
                                  calc, finite, error)
         print >> stream
-        print >> stream, 'Average RelError:', error_sum / error_n
-        print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if error_n:
+            print >> stream, 'Average RelError:', error_sum / error_n
+            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
         if suspects:
             print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
             for out_name, inp_name in suspects:
@@ -1251,6 +1212,6 @@ class SequentialWorkflow(Workflow):
         if close_stream:
             stream.close()
             
-        return suspects  # return suspects to make it easier to check from a test
+        return Jbase, J, suspects  # return arrays and suspects to make it easier to check from a test
 
 

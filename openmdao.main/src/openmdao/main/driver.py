@@ -62,7 +62,7 @@ class Driver(Component):
                      desc='Case recorders for iteration data.')
 
     # Extra variables for adding to CaseRecorders
-    printvars = List(Str, iotype='in',
+    printvars = List(Str, iotype='in', framework_var=True,
                      desc='List of extra variables to output in the recorders.')
 
     # set factory here so we see a default value in the docs, even
@@ -186,7 +186,7 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def list_pseudocomps(self):
         """Return a list of names of pseudocomps resulting from
-        our parameters, objectives, and constraints.
+        our objectives, and constraints.
         """
         pcomps = []
         if hasattr(self, '_delegates_'):

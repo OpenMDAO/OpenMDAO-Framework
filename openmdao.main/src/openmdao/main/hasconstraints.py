@@ -305,7 +305,8 @@ class _HasConstraintsBase(object):
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, self_name)
-        for each component name referenced by a constraint.
+        for each component name referenced by a constraint. Note that this
+        does NOT include pseudo-components.
         """
         conn_list = []
         pname = self._parent.name

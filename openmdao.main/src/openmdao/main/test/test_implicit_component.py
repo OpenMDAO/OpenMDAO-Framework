@@ -612,6 +612,10 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
@@ -658,6 +662,10 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='fd')
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
@@ -667,6 +675,32 @@ class Testcase_implicit(unittest.TestCase):
                                                 mode='fd')
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+    def test_solver_nested_under_double_nested_driver_boundary_var_no_deriv(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_No_Deriv())
+        model.add('bvar', Float(0.0, iotype='in'))
+        model.add('driver', SimpleDriver())
+        model.add('subdriver', SimpleDriver())
+        
+        model.driver.workflow.add('subdriver')
+        model.subdriver.workflow.add('comp')
+        
+        model.subdriver.add_parameter('comp.c', low=-100, high=100)
+        model.subdriver.add_objective('comp.y_out - bvar')
+
+        model.driver.add_parameter('bvar', low=-100, high=100)
+        model.driver.add_objective('bvar - comp.y_out')
+        model.comp.eval_only = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient()
+        
+        edges = model.driver.workflow._edges
+        print edges
+        self.assertEqual(edges['@in0'], ['_pseudo_1.in0', '~~0._pseudo_0|in1'])
+        self.assertEqual(edges['_pseudo_1.out0'], ['@out0'])
         
     def test_list_states(self):
         comp = MyComp_Deriv()

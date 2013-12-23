@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
@@ -26,7 +26,24 @@ class TestBrentDriver(unittest.TestCase):
 
         assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
         assert_rel_error(self, a.comp.f, 0, .0001)
+        
+    def test_errors(self):
+        a = set_as_top(Assembly())
+        comp = a.add('comp', ExecComp(exprs=["f=x"]))
+        driver = a.add('driver', Brent())
+        driver.add_parameter('comp.x', -1e99, 1e99)
+        driver.add_constraint('comp.f=0')
+        comp.n = 1.0
+        comp.c = 0
+        driver.lower_bound = 1.0
+        try:
+            a.run()
+        except Exception as err:
+            self.assertEqual(str(err), "driver: bounds (low=1.0, high=100.0) do not bracket a root")
+        else:
+            self.fail("Exception expected")
+        
 
 if __name__ == "__main__": 
 
-	unittest.main()
+    unittest.main()
