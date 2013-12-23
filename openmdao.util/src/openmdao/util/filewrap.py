@@ -191,7 +191,9 @@ class InputFileGenerator(object):
         instance = 0
         if occurrence > 0:
             count = 0
-            for line in self.data[self.current_row:]:
+            max_lines = len(self.data)
+            for index in xrange(self.current_row, max_lines):
+                line = self.data[index]
                 
                 # If we are marking a new anchor from an existing anchor, and
                 # the anchor is mid-line, then we still search the line, but
@@ -210,13 +212,15 @@ class InputFileGenerator(object):
                 count += 1
                 
         elif occurrence < 0:
-            count = len(self.data)-1
-            for line in reversed(self.data):
+            max_lines = len(self.data)-1
+            count = max_lines
+            for index in xrange(max_lines, -1, -1):
+                line = self.data[index]
                 
                 # If we are marking a new anchor from an existing anchor, and
                 # the anchor is mid-line, then we still search the line, but
                 # only before the anchor.
-                if count == len(self.data)-1 and self.anchored:
+                if count == max_lines and self.anchored:
                     line = line.split(anchor)[0]
 
                 if line.find(anchor) > -1:
@@ -477,15 +481,15 @@ class FileParser(object):
                 count += 1
                 
         elif occurrence < 0:
-            count = len(self.data)-1
-            max_lines = len(self.data)
-            for index in xrange(self.current_row, -1, -1):
+            max_lines = len(self.data)-1
+            count = max_lines
+            for index in xrange(max_lines, -1, -1):
                 line = self.data[index]
                 
                 # If we are marking a new anchor from an existing anchor, and
                 # the anchor is mid-line, then we still search the line, but
                 # only before the anchor.
-                if count == max_lines-1 and self.anchored:
+                if count == max_lines and self.anchored:
                     line = line.split(anchor)[0]
 
                 if anchor in line:
