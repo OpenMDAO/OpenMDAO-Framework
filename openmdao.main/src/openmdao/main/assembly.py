@@ -836,6 +836,10 @@ class Assembly(Component):
         driver = self.driver
         obj = None
         
+        base_fd_form = driver.gradient_options.fd_form
+        base_fd_step_size = driver.gradient_options.fd_step_size
+        base_fd_step_type = driver.gradient_options.fd_step_type
+        
         driver.gradient_options.fd_form = fd_form
         driver.gradient_options.fd_step_size = fd_step_size
         driver.gradient_options.fd_step_type = fd_step_type
@@ -874,10 +878,15 @@ class Assembly(Component):
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
-        return driver.workflow.check_gradient(inputs=inputs, 
-                                              outputs=outputs,
-                                              stream=stream,
-                                              mode=mode)
+        result = driver.workflow.check_gradient(inputs=inputs, 
+                                                outputs=outputs,
+                                                stream=stream,
+                                                mode=mode)
+        
+        driver.gradient_options.fd_form = base_fd_form
+        driver.gradient_options.fd_step_size = base_fd_step_size
+        driver.gradient_options.fd_step_type = base_fd_step_type
+        return result
             
 
     def linearize(self, required_inputs=None, required_outputs=None):

@@ -127,13 +127,21 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertEqual(model.comp.exec_count, 3)
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'])
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'], fd_form='central')
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'], fd_step_type='relative')
+        
         # Full model force FD
         model.comp.force_fd = False
         model.driver.gradient_options.force_fd = True
+        old_count = model.comp.exec_count
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
                                                 outputs=['comp.y'])
-        self.assertEqual(model.comp.exec_count, 5)
+        self.assertEqual(model.comp.exec_count - old_count, 2)
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
 if __name__ == '__main__':
