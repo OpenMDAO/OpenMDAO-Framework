@@ -2,11 +2,11 @@ import unittest
 
 import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
-                                    find_all_connecting, nodes_matching_all, \
-                                    nodes_matching_some, edges_matching_all, \
-                                    edges_matching_some, mod_for_derivs, \
+                                    find_all_connecting, mod_for_derivs, \
                                     _get_inner_edges
-from openmdao.util.graph import edges_to_dict
+from openmdao.util.graph import edges_to_dict, nodes_matching_all, \
+                                nodes_matching_some, edges_matching_all, \
+                                edges_matching_some
 from openmdao.main.interfaces import implements, IImplicitComponent
 
 def fullpaths(cname, names):
@@ -16,6 +16,7 @@ def fullpaths(cname, names):
 class Wflow(object):
     def __init__(self, scope):
         self.scope = scope
+        self._parent = scope
         
     def __iter__(self):
         return iter([])
@@ -69,6 +70,9 @@ class DumbClass(object):
     
     def invalidate_deps(self, vnames=None):
         return None
+    
+    def _get_required_compnames(self):
+        return []
 
 
 def _make_xgraph():

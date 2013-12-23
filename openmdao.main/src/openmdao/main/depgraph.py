@@ -1291,7 +1291,7 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
 
 def replace_subdriver(drv, graph, inputs, outputs, wflow, ancestor_using):
     """Replaces a single driver with a PsuedoAssembly in the given graph."""
-    needed = drv._get_required_compnames()
+    needed = drv.workflow.get_names(full=True)
     using = ancestor_using.union(needed)
     for comp in drv.workflow:
         if has_interface(comp, IDriver):
@@ -1306,9 +1306,10 @@ def replace_subdriver(drv, graph, inputs, outputs, wflow, ancestor_using):
     # need to represent connection from objective and constraint
     # pseudocomps to the driver
     for pcomp in drv.list_pseudocomps():
-        graph.add_edge('%s.out0' % pcomp, pa.name, conn=True)
+        if pcomp in graph:
+            graph.add_edge('%s.out0' % pcomp, pa.name, conn=True)
     
-    return graph            
+    return graph
     
 
 def mod_for_derivs(graph, inputs, outputs, wflow):

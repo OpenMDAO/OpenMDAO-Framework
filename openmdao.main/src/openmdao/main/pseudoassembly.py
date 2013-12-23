@@ -203,3 +203,9 @@ class PseudoAssembly(object):
         # are excluded because they're used by ancestor drivers
         dgraph.remove_nodes_from(dgraph.find_prefixed_nodes([n for n in 
                           self._orig_group_nodes if n not in excludes]))
+
+        # if this PA represents a driver, remove the corresponding driver
+        # node
+        if self.name[1:] in dgraph:
+            dgraph.remove_node(self.name[1:])
+

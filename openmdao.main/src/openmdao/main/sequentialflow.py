@@ -267,7 +267,7 @@ class SequentialWorkflow(Workflow):
                     idx = int(src[3:].split('[')[0])
                     inp = inputs[idx]
                     if not isinstance(inp, basestring):
-                         inp = inp[0]
+                        inp = inp[0]
                     if inp in dgraph:
                         measure_src = inp
                     else:
