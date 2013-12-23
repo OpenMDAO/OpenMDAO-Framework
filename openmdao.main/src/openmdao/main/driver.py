@@ -159,7 +159,7 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def list_pseudocomps(self):
         """Return a list of names of pseudocomps resulting from
-        our parameters, objectives, and constraints.
+        our objectives, and constraints.
         """
         pcomps = []
         if hasattr(self, '_delegates_'):
