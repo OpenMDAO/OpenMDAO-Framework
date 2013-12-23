@@ -267,7 +267,7 @@ class SequentialWorkflow(Workflow):
                     idx = int(src[3:].split('[')[0])
                     inp = inputs[idx]
                     if not isinstance(inp, basestring):
-                         inp = inp[0]
+                        inp = inp[0]
                     if inp in dgraph:
                         measure_src = inp
                     else:
@@ -981,6 +981,10 @@ class SequentialWorkflow(Workflow):
             difference disabled), or 'auto' to let OpenMDAO determine the
             correct mode.
         """
+        
+        # User may request full-model finite difference.
+        if self._parent.gradient_options.force_fd == True:
+            mode = 'fd'
         
         # This function can be called from a parent driver's workflow for
         # assembly recursion. We have to clear our cache if that happens.
