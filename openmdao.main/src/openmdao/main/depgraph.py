@@ -1274,18 +1274,24 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
     """
     # set of comps being used by the current driver, so that
     # subdriver PAs won't remove them from the graph
-    ancestor_using = set(wflow._parent._get_required_compnames())
+    using = set(wflow.get_names(full=True))
 
     inputs = list(flatten_list_of_iters(inputs))
     outputs = list(flatten_list_of_iters(outputs))
 
+    drivers = []
     for comp in wflow:
         if has_interface(comp, IDriver):
+            using.update(comp.workflow.get_names(full=True))
             if has_interface(comp, ISolver):
                 for param in comp.list_param_targets():
                     graph.node[param]['solver_state'] = True
-            graph = replace_subdriver(comp, graph, inputs, outputs, 
-                                      wflow, ancestor_using)
+            else:
+                drivers.append(comp)
+
+    for drv in drivers:
+        graph = replace_subdriver(drv, graph, inputs, outputs, 
+                                  wflow, using)
             
     return graph
 
