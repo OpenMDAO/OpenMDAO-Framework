@@ -381,7 +381,8 @@ def _test_properties(browser):
     time.sleep(0.5)
     eq(workspace_page.props_header, 'Run_Once: top.driver')
     inputs = workspace_page.props_inputs
-    eq(inputs.value, [['printvars',     '[]'],
+    eq(inputs.value, [[' gradient_options', ''],
+                      ['printvars',     '[]'],
                       ['directory',     ''],
                       ['force_execute', 'True'],
                       ['force_fd', 'False'],
@@ -527,8 +528,8 @@ def _test_console_errors(browser):
     editor = top.editor_page(double_click=False, base_type='Driver')
     editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
-    inputs.rows[0].cells[2].click()
-    inputs[0][2] = '42'  # printvars
+    inputs.rows[1].cells[2].click()
+    inputs[1][2] = '42'  # printvars
     expected = "TraitError: The 'printvars' trait of a "     \
                "Run_Once instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
