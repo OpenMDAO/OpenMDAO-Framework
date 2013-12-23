@@ -21,6 +21,9 @@ class Wflow(object):
     def __iter__(self):
         return iter([])
     
+    def get_names(self, **kwargs):
+        return []
+    
 def get_inner_edges(graph, srcs, dests, wflow):
 
     graph = graph.subgraph(graph.nodes())

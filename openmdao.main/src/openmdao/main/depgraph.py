@@ -10,7 +10,7 @@ from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
-from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var
+from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.util.graph import flatten_list_of_iters
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
@@ -1269,8 +1269,8 @@ def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
             graph.node[comp]['non-differentiable'] = True
 
 def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
-    """Return a graph based on the given graph that has
-    subdrivers replaced by PseudoAssemblies.
+    """Update the given graph to replace non-solver subdrivers with PseudoAssemblies.
+    Returns a list of names of drivers that were replaced.
     """
     # set of comps being used by the current driver, so that
     # subdriver PAs won't remove them from the graph
@@ -1279,23 +1279,34 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
     inputs = list(flatten_list_of_iters(inputs))
     outputs = list(flatten_list_of_iters(outputs))
 
-    drivers = []
+    fd_drivers = []
+    slv_edges = set()
     for comp in wflow:
         if has_interface(comp, IDriver):
-            using.update(comp.workflow.get_names(full=True))
             if has_interface(comp, ISolver):
+                dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+                                                    group_nondif=False)
+                slv_edges.update([(u,v) for u,v in dg.list_connections() 
+                                        if '@' not in u and '@' not in v])
                 for param in comp.list_param_targets():
                     graph.node[param]['solver_state'] = True
             else:
-                drivers.append(comp)
+                fd_drivers.append(comp)
 
-    for drv in drivers:
-        graph = replace_subdriver(drv, graph, inputs, outputs, 
+    for u,v in slv_edges:
+        graph.connect(None, u,v, config_change=False, check=False, invalidate=False)
+
+    # for all non-solver subdrivers, replace them with a PA
+    if fd_drivers:
+        # only create a copy of the graph if we have non-solver subdrivers
+        startgraph = graph.subgraph(graph.nodes_iter())
+    for drv in fd_drivers:
+        graph = replace_subdriver(drv, startgraph, graph, inputs, outputs, 
                                   wflow, using)
             
-    return graph
+    return [d.name for d in fd_drivers]
 
-def replace_subdriver(drv, graph, inputs, outputs, wflow, ancestor_using):
+def replace_subdriver(drv, startgraph, graph, inputs, outputs, wflow, ancestor_using):
     """Replaces a single driver with a PsuedoAssembly in the given graph."""
     needed = drv.workflow.get_names(full=True)
     using = ancestor_using.union(needed)
@@ -1304,16 +1315,9 @@ def replace_subdriver(drv, graph, inputs, outputs, wflow, ancestor_using):
             graph = replace_subdriver(comp, graph, inputs, outputs, wflow,
                                       using)
 
-    depgraph = drv.parent._depgraph
-    pa = PseudoAssembly('~'+drv.name, needed, depgraph, wflow)
+    pa = PseudoAssembly('~'+drv.name, needed, startgraph, wflow)
 
-    pa.add_to_graph(graph, excludes=ancestor_using)
-
-    # need to represent connection from objective and constraint
-    # pseudocomps to the driver
-    for pcomp in drv.list_pseudocomps():
-        if pcomp in graph:
-            graph.add_edge('%s.out0' % pcomp, pa.name, conn=True)
+    pa.add_to_graph(graph, excludes=ancestor_using-set([drv.name]))
     
     return graph
     
@@ -1328,8 +1332,15 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
 
     scope = wflow.scope
 
-    graph = get_subdriver_PA_graph(graph, inputs, outputs, wflow)
-
+    # We want our top level graph metadata to be stored in the copy, but not in the
+    # parent, so make our own copy of the metadata dict.
+    graph.graph = {}
+    
+    graph.graph['inputs'] = inputs[:]
+    graph.graph['mapped_inputs'] = inputs[:]
+    graph.graph['outputs'] = outputs[:]
+    graph.graph['mapped_outputs'] = outputs[:]
+    
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
@@ -1354,6 +1365,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
                                iotype='out', valid=False)
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
+
+    rep_drivers = get_subdriver_PA_graph(graph, inputs, outputs, wflow)
 
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))],
@@ -1522,6 +1535,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     # for them
     
     for inp in flatten_list_of_iters(inputs):
+        for drv in rep_drivers:
+            if to_PA_var(inp, '~%s' % drv) in graph:
+                inp = to_PA_var(inp, '~%s' % drv)
+                break
         if inp not in graph:
             if '@fake' not in graph:
                 graph.add_node('@fake')
@@ -1530,6 +1547,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
             graph.add_edge('@fake', inp, conn=True)
 
     for out in flatten_list_of_iters(outputs):
+        for drv in rep_drivers:
+            if to_PA_var(out, '~%s' % drv) in graph:
+                out = to_PA_var(out, '~%s' % drv)
+                break
         if out not in graph:
             if '@fake' not in graph:
                 graph.add_node('@fake')
@@ -1542,14 +1563,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     #for u,v in slv_edges:
         #if u == '@fake' or v == '@fake':
             #graph.add_edge(u, v, conn=True)
-            
-    # We want our top level graph metadata to be stored in the copy, but not in the
-    # parent, so make our own copy of the metadata dict.
-    graph.graph = {}
-    
-    graph.graph['inputs'] = inputs[:]
-    graph.graph['outputs'] = outputs[:]
-    
+                
     return graph
 
 def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):

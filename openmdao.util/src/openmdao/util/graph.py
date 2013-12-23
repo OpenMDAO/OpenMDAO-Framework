@@ -1,4 +1,4 @@
-
+import sys
 import pprint
 from ordereddict import OrderedDict
    
@@ -82,7 +82,7 @@ def dump_valid(graph, filter=None, stream=None):
         dct[node] = graph.node[node]['valid']
     pprint.pprint(dct, stream=stream)
 
-
+            
 def flatten_list_of_iters(lst):
     """Returns a list of simple values, flattening
     any sub-lists or sub-tuples, or if the input is a 

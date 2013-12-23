@@ -112,7 +112,7 @@ class SequentialWorkflow(Workflow):
             if len(drivers) == len(comps): # all comps are drivers
                 iterset = set()
                 for driver in drivers:
-                    iterset.update(driver.iteration_set())
+                    iterset.update([c.name for c in driver.iteration_set()])
                 added = set([n for n in 
                            self._parent._get_required_compnames() 
                               if n not in iterset]) - set(self._names)
@@ -717,13 +717,14 @@ class SequentialWorkflow(Workflow):
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
-        nondiff_map = {}
+        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '|' not in n]
+        pa_excludes = set()
+        for pa in pas:
+            pa_excludes.update(pa._removed_comps)
         
         # Full model finite-difference, so all components go in the PA
         if fd == True:
             nondiff_groups = [comps]
-            for c in comps:
-                nondiff_map[c] = 0
 
         # Find the non-differentiable components
         else:
@@ -733,7 +734,7 @@ class SequentialWorkflow(Workflow):
             nondiff_groups = []
             
             for name in comps:
-                if name.startswith('~'):
+                if name.startswith('~') or name in pa_excludes:
                     continue  # don't want nested pseudoassemblies
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
@@ -785,35 +786,6 @@ class SequentialWorkflow(Workflow):
             for i, item in enumerate(nd_graphs):
                 inodes = item.nodes()
                 nondiff_groups.append(inodes)
-                nondiff_map.update([(n,i) for n in inodes])
-                
-        meta_inputs = dgraph.graph['inputs']
-        meta_outputs = dgraph.graph['outputs']
-        map_inputs = meta_inputs[:]
-        map_outputs = meta_outputs[:]
-        dgraph.graph['mapped_inputs'] = map_inputs
-        dgraph.graph['mapped_outputs'] = map_outputs
-        
-       # Add requested params that point to boundary vars
-        for i, varpath in enumerate(meta_inputs):
-            if isinstance(varpath, basestring):
-                varpath = [varpath]
-                
-            mapped = []
-            for path in varpath:
-                compname, _, varname = path.partition('.')
-                if varname and (compname in nondiff_map):
-                    mapped.append(to_PA_var(path, '~~%d' % nondiff_map[compname]))
-                else:
-                    mapped.append(path)  # keep old value in that spot
-            
-            map_inputs[i] = tuple(mapped)
-            
-        # Add requested outputs
-        for i, varpath in enumerate(meta_outputs):
-            compname, _, varname = varpath.partition('.')
-            if varname and (compname in nondiff_map):
-                map_outputs[i] = to_PA_var(varpath, '~~%d' % nondiff_map[compname])
 
         for j, group in enumerate(nondiff_groups):
             pa_name = '~~%d' % j
