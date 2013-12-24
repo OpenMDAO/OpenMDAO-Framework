@@ -484,7 +484,12 @@ class DependencyGraph(nx.DiGraph):
                 self.add_node(dest, basevar=base, valid=True)
             if i > 0:
                 src = path[i-1][0]
-                self.add_edge(src, dest)
+                try:
+                    self[src][dest]
+                except KeyError:
+                    self.add_edge(src, dest)
+                    if config_change:
+                        self.config_changed()
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -1267,9 +1272,12 @@ def _get_inner_edges(G, srcs, dests):
 #             graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
 #             graph.node[comp]['non-differentiable'] = True
 
-def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
-    """Update the given graph to replace non-solver subdrivers with PseudoAssemblies.
-    Returns a list of names of drivers that were replaced.
+def get_subdriver_graph(graph, inputs, outputs, wflow):
+    """Update the given graph to replace non-solver subdrivers with 
+    PseudoAssemblies and promote edges up from sub-Solvers.
+    Returns a list of names of drivers that were replaced, the set of
+    additional inputs from subsolvers, and the set of additional outputs
+    from subsolvers.
     """
     # set of comps being used by the current driver, so that
     # subdriver PAs won't remove them from the graph
@@ -1279,21 +1287,21 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
     outputs = list(flatten_list_of_iters(outputs))
 
     fd_drivers = []
-    slv_edges = set()
+    xtra_inputs = set()
+    xtra_outputs = set()
     for comp in wflow:
         if has_interface(comp, IDriver):
             if has_interface(comp, ISolver):
                 dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
                                                     group_nondif=False)
-                slv_edges.update([(u,v) for u,v in dg.list_connections() 
-                                        if '@' not in u and '@' not in v])
+                xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
+                xtra_outputs.update(flatten_list_of_iters(dg.graph['outputs']))
+                for u,v,data in dg.edges_iter(data=True):
+                    graph.add_edge(u, v, attr_dict=data)
                 for param in comp.list_param_targets():
                     graph.node[param]['solver_state'] = True
             else:
                 fd_drivers.append(comp)
-
-    for u,v in slv_edges:
-        graph.connect(None, u,v, config_change=False, check=False, invalidate=False)
 
     # for all non-solver subdrivers, replace them with a PA
     if fd_drivers:
@@ -1306,7 +1314,7 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
             
     # return the list of names of subdrivers that were 
     # replaced with PAs
-    return [d.name for d in fd_drivers]
+    return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
 def replace_subdriver(drv, startgraph, graph, inputs, outputs, wflow, ancestor_using):
     """Replaces a single driver with a PsuedoAssembly in the given graph."""
@@ -1368,11 +1376,12 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    rep_drivers = get_subdriver_PA_graph(graph, inputs, outputs, wflow)
+    rep_drivers, xtra_ins, xtra_outs = \
+                   get_subdriver_graph(graph, inputs, outputs, wflow)
 
     edges = _get_inner_edges(graph, 
-                             ['@in%d' % i for i in range(len(inputs))],
-                             ['@out%d' % i for i in range(len(outputs))])
+                             ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
+                             ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
     
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)

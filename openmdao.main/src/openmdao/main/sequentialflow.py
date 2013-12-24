@@ -685,6 +685,12 @@ class SequentialWorkflow(Workflow):
                 self._derivative_graph = dgraph
                 self._group_nondifferentiables(fd, severed)
             else:
+                # we're being called to determine the deriv graph
+                # for a subsolver, so get rid of @in and @out nodes
+                dgraph.remove_nodes_from(['@in%d' % i for i in range(len(inputs))])
+                dgraph.remove_nodes_from(['@out%d' % i for i in range(len(outputs))])
+                dgraph.graph['inputs'] = inputs[:]
+                dgraph.graph['outputs'] = outputs[:]
                 return dgraph
             
         return self._derivative_graph
@@ -808,7 +814,8 @@ class SequentialWorkflow(Workflow):
         """
         info = {}
         
-        comps = self.derivative_graph().all_comps()
+        dgraph = self.derivative_graph()
+        comps = dgraph.component_graph().nodes()
         
         # Full model finite difference = no implcit edges
         if len(comps) == 1 and '~' in comps[0]:
@@ -830,9 +837,8 @@ class SequentialWorkflow(Workflow):
                                      for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
-        dgraph = self._derivative_graph
         pa_comps = [dgraph.node[item]['pa_object'] \
-                    for item in dgraph.all_comps() if '~' in item]
+                    for item in comps if '~' in item]
         for comp in self._parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
                 
