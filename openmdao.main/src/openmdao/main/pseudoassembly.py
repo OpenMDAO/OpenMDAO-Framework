@@ -4,6 +4,7 @@ provide derivatives, and thus must be finite differenced.'''
 import networkx as nx
 
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
+from openmdao.main.interfaces import ISolver
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
@@ -56,6 +57,8 @@ class PseudoAssembly(object):
         self.fd = None
         self.J = None
 
+        cset = set(comps)
+        
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
         else: # use fake finite difference on comps having derivatives
@@ -63,24 +66,26 @@ class PseudoAssembly(object):
         
         #print [comp.name for comp in comps], inputs, outputs
         
-        # if a driver in our parent workflow has an iteration set that
+
+        # if a solver in our parent workflow has an iteration set that
         # is completely contained within this PA, then replace all of
         # our components from its iterset with the solver
-        cset = set(comps)
-
         #solvers = []
-        # for cname in wflow.get_names(full=True):
-        #     comp = getattr(scope, cname)
-        #     if has_interface(comp, IDriver):
-        #         iset = [c.name for c in comp.iteration_set(solver_only=True)]
-        #         if not cset.difference(iset): # all solver comps are contained in this PA
-        #             solvers.append((comp.name, iset))
-                    
-        # for solver, iset in solvers:
-        #     cset = cset.difference(iset)
-        #     cset.add(solver)
+        #for cname in wflow.get_names(full=True):
+            #comp = getattr(scope, cname)
+            #if has_interface(comp, ISolver):
+                #iset = [c.name for c in comp.iteration_set(solver_only=True)]
+                #if not cset.difference(iset): # all solver comps are contained in this PA
+                    #solvers.append((comp.name, iset))
+                   
+        #for solver, iset in solvers:
+            #cset = cset.difference(iset)
+            #cset.add(solver)
             
-        self.itercomps = list(cset)
+        if fd:
+            self.itercomps = [c.name for c in wflow]
+        else:
+            self.itercomps = list(cset)
                 
         
     def _pre_init(self, pa_name, group, dgraph, fd):
@@ -236,4 +241,6 @@ class PseudoAssembly(object):
             compname, _, varname = varpath.partition('.')
             if varname and (compname in self.comps):
                 map_outputs[i] = to_PA_var(varpath, self.name)
+
+        dgraph.config_changed()
 
