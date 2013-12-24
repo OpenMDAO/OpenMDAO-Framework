@@ -274,12 +274,12 @@ def finalize_release(parser, options):
         else:
             check_call(['release', 'push', reldir, 'openmdao@web39.webfaction.com'])
 
-        # push release files to official repo on github (dev branch)
-        print "pushing branch %s up to the official dev branch" % brname
+        # push release files to official repo on github (master branch)
+        print "pushing branch %s up to the official master branch" % brname
         if options.dry_run:
             print 'skipping...'
         else:
-            check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
+            check_call(['git', 'push', '--tags', 'origin', '%s:master' % brname])
 
     finally:
         print 'returning to original branch (%s)' % start_branch
@@ -367,14 +367,14 @@ def build_release(parser, options):
             print "There are uncommitted changes. You must create a release from a clean branch"
             sys.exit(-1)
 
-        if orig_branch == 'dev':
-            print "pulling dev branch from origin..."
+        if orig_branch == 'master':
+            print "pulling master branch from origin..."
             os.system("git pull origin %s" % orig_branch)
             if _has_checkouts():
                 print "something went wrong during pull.  aborting"
                 sys.exit(-1)
         else:
-            print "WARNING: base branch is not 'dev' so it has not been"
+            print "WARNING: base branch is not 'master' so it has not been"
             print "automatically brought up-to-date."
             answer = raw_input("Proceed? (Y/N) ")
             if answer.lower() not in ["y", "yes"]:
@@ -521,8 +521,8 @@ def _get_release_parser():
     parser.add_argument("-m", action="store", type=str, dest="comment",
                         help="optional comment for version tag")
     parser.add_argument("--basebranch", action="store", type=str,
-                        dest="base", default='dev',
-                        help="base branch for release. defaults to dev")
+                        dest="base", default='master',
+                        help="base branch for release. defaults to master")
     parser.add_argument("-t", "--test", action="store_true", dest="test",
                         help="used for testing. A release branch will not be created")
     parser.add_argument("-n", "--nodocbuild", action="store_true",

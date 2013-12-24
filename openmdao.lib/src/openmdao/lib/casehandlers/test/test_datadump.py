@@ -98,6 +98,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.directory: ',
             '      driver.force_execute: True',
             '      driver.force_fd: False',
+            '      driver.gradient_options: <>',
             "      driver.printvars: ['*']",
             '      nested.comp1.directory: ',
             '      nested.comp1.force_execute: False',
@@ -172,6 +173,8 @@ class Data_Dump_TestCase(unittest.TestCase):
                 self.assertTrue(line.startswith('   uuid:'))
             elif template.startswith('   timestamp:'):
                 self.assertTrue(line.startswith('   timestamp:'))
+            elif 'gradient_options' in template:
+                self.assertEqual(line.split('<')[0], template.split('<')[0])
             else:
                 self.assertEqual(line, template)
         
@@ -249,6 +252,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.directory: ',
             '      driver.force_execute: True',
             '      driver.force_fd: False',
+            '      driver.gradient_options: <>',
             "      driver.printvars: ['*']",
             '   outputs:',
             '      comp1.derivative_exec_count: 0',
@@ -271,6 +275,8 @@ class Data_Dump_TestCase(unittest.TestCase):
                 self.assertTrue(line.startswith('   uuid:'))
             elif template.startswith('   timestamp:'):
                 self.assertTrue(line.startswith('   timestamp:'))
+            elif 'gradient_options' in template:
+                self.assertEqual(line.split('<')[0], template.split('<')[0])
             else:
                 self.assertEqual(line, template)
                 
@@ -295,6 +301,7 @@ class Data_Dump_TestCase(unittest.TestCase):
             '      driver.directory: ',
             '      driver.force_execute: True',
             '      driver.force_fd: False',
+            '      driver.gradient_options: <>',
             "      driver.printvars: ['*']",
             '   outputs:',
             '      comp1.derivative_exec_count: 0',
@@ -313,6 +320,8 @@ class Data_Dump_TestCase(unittest.TestCase):
                 self.assertTrue(line.startswith('   uuid:'))
             elif template.startswith('   timestamp:'):
                 self.assertTrue(line.startswith('   timestamp:'))
+            elif 'gradient_options' in template:
+                self.assertEqual(line.split('<')[0], template.split('<')[0])
             else:
                 self.assertEqual(line, template)
                 
