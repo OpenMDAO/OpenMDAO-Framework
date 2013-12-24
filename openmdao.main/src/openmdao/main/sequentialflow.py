@@ -1211,6 +1211,9 @@ class SequentialWorkflow(Workflow):
         error_max = error_loc = None
         suspects = []
         i = -1
+
+        io_pairs = []
+
         for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
             for out_name in flattened_names(oref, out_val):
@@ -1239,6 +1242,7 @@ class SequentialWorkflow(Workflow):
                         print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
                               % (out_width, out_name, inp_width, inp_name,
                                  calc, finite, error)
+                        io_pairs.append("%*s / %*s"%(out_width, out_name, inp_width, inp_name))
         print >> stream
         if error_n:
             print >> stream, 'Average RelError:', error_sum / error_n
@@ -1253,6 +1257,6 @@ class SequentialWorkflow(Workflow):
         if close_stream:
             stream.close()
             
-        return Jbase, J, suspects  # return arrays and suspects to make it easier to check from a test
+        return Jbase.flatten(), J.flatten(), io_pairs, suspects  # return arrays and suspects to make it easier to check from a test
 
 

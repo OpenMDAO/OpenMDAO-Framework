@@ -582,7 +582,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         comp = Paraboloid()
         comp.x = 3
         comp.y = 5
-        Jbase, J, suspects = comp.check_gradient(stream=stream)
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -590,7 +590,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
             
         # now do it again to make sure name and parent were properly reset
-        Jbase, J, suspects = comp.check_gradient(stream=stream)
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
