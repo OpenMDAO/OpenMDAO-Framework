@@ -23,14 +23,21 @@ def _to_id(name):
     dots with hyphens."""
     return name.replace('.', '-')
 
-def _clean_graph(graph):
+def _clean_graph(graph, excludes=()):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
     copies the entire graph.
     """
-    from openmdao.main.component import Component
-    c = Component()
-    excluded_vars = [n for n,v in c.items(framework_var=True)]
+    if not excludes:
+        from openmdao.main.component import Component
+        from openmdao.main.driver import Driver
+
+        c = Component()
+        d = Driver()
+        excluded_vars = set([n for n,v in c.items(framework_var=True)])
+        excluded_vars.update([n for n,v in d.items(framework_var=True)])
+    else:
+        excluded_vars = set(excludes)
 
     # copy the graph since we're changing node/edge metadata
     graph = graph.subgraph(graph.nodes_iter())
@@ -47,11 +54,12 @@ def _clean_graph(graph):
             name = node
         else:
             name = parts[1]
-            if '[' not in node and node not in conn_nodes:
-                nodes_to_remove.append(node)
-                continue
+            # if '[' not in node and node not in conn_nodes:
+            #     nodes_to_remove.append(node)
+            #     continue
 
-        if node in excluded_vars:
+        cmpname, _, nodvar = node.partition('.')
+        if node in excluded_vars or nodvar in excluded_vars:
             nodes_to_remove.append(node)
         else: # update node metadata
             newdata = data
@@ -94,7 +102,7 @@ def _clean_graph(graph):
 
     return graph
 
-def plot_graph(graph, d3page='fixedforce.html'):
+def plot_graph(graph, excludes=(), d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -102,7 +110,7 @@ def plot_graph(graph, d3page='fixedforce.html'):
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
-    graph = _clean_graph(graph)
+    graph = _clean_graph(graph, excludes)
     data = node_link_data(graph)
 
     startdir = os.getcwd()
