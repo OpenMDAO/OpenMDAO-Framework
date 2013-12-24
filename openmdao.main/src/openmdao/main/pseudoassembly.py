@@ -39,6 +39,7 @@ class PseudoAssembly(object):
         self.outputs = list(outputs)
         self.renames = renames
         self.mapped_inputs = []
+        self._removed_comps = []
         for varpath in self.inputs:
             if isinstance(varpath, basestring):
                 val = to_PA_var(varpath, name).partition('.')[2]
@@ -89,7 +90,8 @@ class PseudoAssembly(object):
         """
 
         # First, find our group boundary
-        self._orig_group_nodes = allnodes = dgraph.find_prefixed_nodes(group)
+        self._orig_group_nodes = group[:]
+        allnodes = dgraph.find_prefixed_nodes(group)
         out_edges = nx.edge_boundary(dgraph, allnodes)
         in_edges = nx.edge_boundary(dgraph, 
                             set(dgraph.nodes()).difference(allnodes))
@@ -179,6 +181,8 @@ class PseudoAssembly(object):
         from openmdao.main.depgraph import is_subvar_node, \
                                  is_input_base_node, is_output_base_node
 
+        self._removed_comps = [c for c in self.comps if c not in excludes]
+        
         # Add pseudoassys to graph
         dgraph.add_node(self.name, pa_object=self, comp=True, 
                         pseudo='assembly', valid=True)
@@ -207,5 +211,29 @@ class PseudoAssembly(object):
         # if this PA represents a driver, remove the corresponding driver
         # node
         if self.name[1:] in dgraph:
-            dgraph.remove_node(self.name[1:])
+            dgraph.remove_nodes_from(dgraph.find_prefixed_nodes([self.name[1:]]))
+            
+        # update mapped inputs/outputs in the graph
+        map_inputs = dgraph.graph['mapped_inputs']
+        map_outputs = dgraph.graph['mapped_outputs']
+        
+        for i, varpath in enumerate(map_inputs):
+            if isinstance(varpath, basestring):
+                varpath = [varpath]
+                
+            mapped = []
+            for path in varpath:
+                compname, _, varname = path.partition('.')
+                if varname and (compname in self.comps):
+                    mapped.append(to_PA_var(path, self.name))
+                else:
+                    mapped.append(path)  # keep old value in that spot
+            
+            map_inputs[i] = tuple(mapped)
+            
+        # Add requested outputs
+        for i, varpath in enumerate(map_outputs):
+            compname, _, varname = varpath.partition('.')
+            if varname and (compname in self.comps):
+                map_outputs[i] = to_PA_var(varpath, self.name)
 

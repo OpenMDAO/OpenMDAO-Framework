@@ -693,9 +693,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='forward')
         
         edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['~~0.comp1|y']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['~~0.comp2|y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp1|x', '_pseudo_0.in1']))
+        self.assertEqual(set(edges['~0.comp1|y']), set(['_pseudo_0.in0']))
+        self.assertEqual(set(edges['~0.comp2|y']), set(['_pseudo_0.in2']))
+        self.assertEqual(set(edges['@in0']), set(['~0.comp1|x', '_pseudo_0.in1']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(len(edges), 4)
 
@@ -759,10 +759,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         edges = top.driver.workflow._edges
         #print edges
-        self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
+        self.assertEqual(set(edges['~0.comp|y[0]']), set(['_pseudo_0.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x']))
+        self.assertEqual(set(edges['@in0']), set(['~0.comp|x']))
         self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
         self.assertEqual(len(edges), 5)
         
@@ -1839,7 +1839,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        self.assertTrue(['~0', 'comp4', '~1'] == iterlist)
         
         # Case 2 - differentiable (none)
         
@@ -1863,7 +1863,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0'] == iterlist)
+        self.assertTrue(['~0'] == iterlist)
         
         # Case 3 - differentiable (comp5)
         
@@ -1887,7 +1887,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0', 'comp5'] == iterlist)
+        self.assertTrue(['~0', 'comp5'] == iterlist)
         
         # Case 4 - differentiable (comp1, comp3, comp5)
         
@@ -1913,7 +1913,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
+        self.assertTrue(['comp1', 'comp3', '~0', 'comp5'] == iterlist)
         
         # Put everything in a single pseudo-assy, and run fd with no fake.
         self.top.driver.workflow.config_changed()
