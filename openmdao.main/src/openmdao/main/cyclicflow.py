@@ -16,7 +16,6 @@ except ImportError as err:
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.main.depgraph import edge_dict_to_comp_list
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.vartree import VariableTree
@@ -143,7 +142,7 @@ class CyclicWorkflow(SequentialWorkflow):
         
         # We need to map any of our edges if they are in a
         # pseudo-assy
-        comps = edge_dict_to_comp_list(dgraph, self.edge_list())
+        comps = dgraph.edge_dict_to_comp_list(self.edge_list())
         pa_keys = [name for name in comps if '~' in name]
         
         if len(pa_keys) == 0:

@@ -17,13 +17,12 @@ from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.depgraph import find_related_pseudos, base_var, \
-                                    mod_for_derivs, is_basevar_node, \
-                                    edge_dict_to_comp_list, flatten_list_of_iters, \
-                                    is_input_base_node, is_output_base_node, \
-                                    is_subvar_node, edges_to_dict, is_boundary_node
+from openmdao.main.depgraph import find_related_pseudos, \
+                                    mod_for_derivs, \
+                                    is_subvar_node, is_boundary_node
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
+from openmdao.util.graph import edges_to_dict
 
 try:
     from numpy import ndarray, zeros
@@ -113,7 +112,7 @@ class SequentialWorkflow(Workflow):
             if len(drivers) == len(comps): # all comps are drivers
                 iterset = set()
                 for driver in drivers:
-                    iterset.update(driver.iteration_set())
+                    iterset.update([c.name for c in driver.iteration_set()])
                 added = set([n for n in 
                            self._parent._get_required_compnames() 
                               if n not in iterset]) - set(self._names)
@@ -292,7 +291,7 @@ class SequentialWorkflow(Workflow):
 
                 # Special poke for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
-                   is_boundary_node(dgraph, base_var(dgraph, measure_src)):
+                   is_boundary_node(dgraph, dgraph.base_var(measure_src)):
                     bound = (nEdge, nEdge+width)
                     self.set_bounds(measure_src, bound)
                      
@@ -445,8 +444,8 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
         
-        comps = edge_dict_to_comp_list(self._derivative_graph, self._edges,
-                                       self.get_implicit_info())
+        comps = self._derivative_graph.edge_dict_to_comp_list(self._edges,
+                                            self.get_implicit_info())
         if '@fake' in comps:
             del comps['@fake']
         result = zeros(len(arg))
@@ -529,7 +528,7 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
         
         dgraph = self._derivative_graph
-        comps = edge_dict_to_comp_list(dgraph, self._edges,
+        comps = dgraph.edge_dict_to_comp_list(self._edges,
                                        self.get_implicit_info())
         result = zeros(len(arg))
         
@@ -552,7 +551,7 @@ class SequentialWorkflow(Workflow):
                 
                 # Ouputs define unique edges, so don't duplicate anything
                 if is_subvar_node(dgraph, node):
-                    if base_var(dgraph, node).split('.', 1)[1] in comp_outputs:
+                    if dgraph.base_var(node).split('.', 1)[1] in comp_outputs:
                         continue
                     
                 i1, i2 = self.get_bounds(node)
@@ -607,7 +606,7 @@ class SequentialWorkflow(Workflow):
                         
         #print arg, result
         return result
-        
+
     def derivative_graph(self, inputs=None, outputs=None, fd=False, 
                          severed=None, group_nondif=True):
         """Returns the local graph that we use for derivatives.
@@ -680,12 +679,18 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            mod_for_derivs(dgraph, inputs, outputs, self)
+            mod_for_derivs(dgraph, inputs, outputs, self, fd)
             
             if group_nondif:
                 self._derivative_graph = dgraph
                 self._group_nondifferentiables(fd, severed)
             else:
+                # we're being called to determine the deriv graph
+                # for a subsolver, so get rid of @in and @out nodes
+                dgraph.remove_nodes_from(['@in%d' % i for i in range(len(inputs))])
+                dgraph.remove_nodes_from(['@out%d' % i for i in range(len(outputs))])
+                dgraph.graph['inputs'] = inputs[:]
+                dgraph.graph['outputs'] = outputs[:]
                 return dgraph
             
         return self._derivative_graph
@@ -718,13 +723,14 @@ class SequentialWorkflow(Workflow):
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
-        nondiff_map = {}
+        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '|' not in n]
+        pa_excludes = set()
+        for pa in pas:
+            pa_excludes.update(pa._removed_comps)
         
         # Full model finite-difference, so all components go in the PA
         if fd == True:
             nondiff_groups = [comps]
-            for c in comps:
-                nondiff_map[c] = 0
 
         # Find the non-differentiable components
         else:
@@ -734,6 +740,8 @@ class SequentialWorkflow(Workflow):
             nondiff_groups = []
             
             for name in comps:
+                if name.startswith('~') or name in pa_excludes:
+                    continue  # don't want nested pseudoassemblies
                 comp = self.scope.get(name)
                 if not hasattr(comp, 'apply_deriv') and \
                    not hasattr(comp, 'apply_derivT') and \
@@ -753,6 +761,9 @@ class SequentialWorkflow(Workflow):
                 target = edge[1]
                 
                 if '@' in src or '@' in target or '.' not in src:
+                    continue
+                
+                if src.startswith('~') or target.startswith('~'):
                     continue
                 
                 # Default differentiable connections
@@ -781,94 +792,16 @@ class SequentialWorkflow(Workflow):
             for i, item in enumerate(nd_graphs):
                 inodes = item.nodes()
                 nondiff_groups.append(inodes)
-                nondiff_map.update([(n,i) for n in inodes])
-                
-        meta_inputs = dgraph.graph['inputs']
-        meta_outputs = dgraph.graph['outputs']
-        map_inputs = meta_inputs[:]
-        map_outputs = meta_outputs[:]
-        dgraph.graph['mapped_inputs'] = map_inputs
-        dgraph.graph['mapped_outputs'] = map_outputs
-        
-       # Add requested params that point to boundary vars
-        for i, varpath in enumerate(meta_inputs):
-            if isinstance(varpath, basestring):
-                varpath = [varpath]
-                
-            mapped = []
-            for path in varpath:
-                compname, _, varname = path.partition('.')
-                if varname and (compname in nondiff_map):
-                    mapped.append(to_PA_var(path, '~~%d' % nondiff_map[compname]))
-                else:
-                    mapped.append(path)  # keep old value in that spot
-            
-            map_inputs[i] = tuple(mapped)
-            
-        # Add requested outputs
-        for i, varpath in enumerate(meta_outputs):
-            compname, _, varname = varpath.partition('.')
-            if varname and (compname in nondiff_map):
-                map_outputs[i] = to_PA_var(varpath, '~~%d' % nondiff_map[compname])
 
         for j, group in enumerate(nondiff_groups):
-            pa_name = '~~%d' % j
+            pa_name = '~%d' % j
             
-            # First, find our group boundary
-            allnodes = dgraph.find_prefixed_nodes(group)
-            out_edges = nx.edge_boundary(dgraph, allnodes)
-            in_edges = nx.edge_boundary(dgraph, 
-                                        set(dgraph.nodes()).difference(allnodes))
-            solver_states = []
-            if fd is False:
-                for comp in group:
-                    solver_states.extend([node for node in dgraph.predecessors(comp) \
-                                          if 'solver_state' in dgraph.node[node]])
-            
-            pa_inputs = edges_to_dict(in_edges).values()
-            pa_inputs.extend(solver_states)
-            pa_outputs = set([a for a, b in out_edges])          
-                        
             # Create the pseudoassy
-            pseudo = PseudoAssembly(pa_name, group, pa_inputs, pa_outputs, self)
-            
-            # for full-model fd, turn off fake finite difference
-            if fd==True:
-                pseudo.ffd_order = 0
-            
-            # Add pseudoassys to graph
-            dgraph.add_node(pa_name, pa_object=pseudo, comp=True, 
-                            pseudo='assembly', valid=True)
-            
-            renames = {}
-            # Add pseudoassy inputs
-            for varpath in list(flatten_list_of_iters(pa_inputs)) + list(pa_outputs):
-                varname = to_PA_var(varpath, pa_name)
-                if varpath in dgraph:
-                    renames[varpath] = varname
-                    if is_subvar_node(dgraph, varpath):
-                        renames[base_var(dgraph, varpath)] = to_PA_var(base_var(dgraph, varpath), 
-                                                                       pa_name)
+            pseudo = PseudoAssembly(pa_name, group, 
+                                    dgraph, self, fd)
 
-            nx.relabel_nodes(dgraph, renames, copy=False)
+            pseudo.add_to_graph(dgraph)            
             
-            for oldname,newname in renames.items():
-                if is_subvar_node(dgraph, newname):
-                    # since we're changing basevar, we need to make our
-                    # own copy of the metadata dict for this node to
-                    # avoid messing up the top level depgraph
-                    dgraph.node[newname] = dict(dgraph.node[newname].items())
-                    dgraph.node[newname]['basevar'] = to_PA_var(dgraph.node[newname]['basevar'], pa_name)
-                if is_input_base_node(dgraph, newname):
-                    dgraph.add_edge(newname, pa_name)
-                elif is_output_base_node(dgraph, newname):
-                    dgraph.add_edge(pa_name, newname)
-                        
-            # Clean up the old nodes in the graph
-            dgraph.remove_nodes_from(allnodes)
-            
-        return None
-
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
         
@@ -881,16 +814,17 @@ class SequentialWorkflow(Workflow):
         """
         info = {}
         
-        comps = self.derivative_graph().all_comps()
+        dgraph = self.derivative_graph()
+        comps = dgraph.component_graph().nodes()
         
         # Full model finite difference = no implcit edges
-        if len(comps) == 1 and '~~' in comps[0]:
+        if len(comps) == 1 and '~' in comps[0]:
             return info
         
         # Residuals and states for implicit components
         for cname in comps:
             
-            if cname.startswith('~~'):
+            if cname.startswith('~'):
                 continue
             
             comp = getattr(self.scope, cname)
@@ -903,9 +837,8 @@ class SequentialWorkflow(Workflow):
                                      for n in comp.list_states()]
                     
         # Nested solvers act implicitly.
-        dgraph = self._derivative_graph
         pa_comps = [dgraph.node[item]['pa_object'] \
-                    for item in dgraph.all_comps() if '~~' in item]
+                    for item in comps if '~' in item]
         for comp in self._parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
                 
@@ -940,8 +873,8 @@ class SequentialWorkflow(Workflow):
 
         self._stop = False
         
-        comps = edge_dict_to_comp_list(self.derivative_graph(required_inputs, required_outputs), 
-                                       self.edge_list())
+        dgraph = self.derivative_graph(required_inputs, required_outputs)
+        comps = dgraph.edge_dict_to_comp_list(self.edge_list())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']

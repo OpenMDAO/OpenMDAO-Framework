@@ -585,6 +585,7 @@ class Component(Container):
                        not obj_has_interface(self, IDriver):
 
                         tracing.TRACER.debug(self.get_itername())
+                        #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
                     self.execute()
 
