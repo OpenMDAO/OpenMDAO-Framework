@@ -778,13 +778,10 @@ class Assembly(Component):
         return [getattr(self, c).exec_count for c in compnames]
 
     def check_gradient(self, name=None, inputs=None, outputs=None, 
-<<<<<<< HEAD
-                       stream=sys.stdout, mode='auto'):
-=======
                        stream=None, mode='auto',
                        fd_form = 'forward', fd_step_size=1.0e-6, 
                        fd_step_type='absolute'):
->>>>>>> 38b0d54118fa480e392ca3b1c3919733a2e679fb
+    
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
