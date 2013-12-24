@@ -1332,7 +1332,7 @@ def replace_subdriver(drv, startgraph, graph, inputs, outputs, wflow, ancestor_u
     return graph
     
 
-def mod_for_derivs(graph, inputs, outputs, wflow):
+def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
@@ -1376,7 +1376,12 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    rep_drivers, xtra_ins, xtra_outs = \
+    if full_fd:
+        rep_drivers = []
+        xtra_ins = []
+        xtra_outs = []
+    else:
+        rep_drivers, xtra_ins, xtra_outs = \
                    get_subdriver_graph(graph, inputs, outputs, wflow)
 
     edges = _get_inner_edges(graph, 
