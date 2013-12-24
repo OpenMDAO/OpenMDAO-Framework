@@ -1316,16 +1316,24 @@ def get_subdriver_graph(graph, inputs, outputs, wflow):
     # replaced with PAs
     return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
-def replace_subdriver(drv, startgraph, graph, inputs, outputs, wflow, ancestor_using):
+def replace_subdriver(drv, startgraph, graph, inputs, outputs, 
+                      wflow, ancestor_using):
     """Replaces a single driver with a PsuedoAssembly in the given graph."""
-    needed = drv.workflow.get_names(full=True)
-    using = ancestor_using.union(needed)
-    for comp in drv.workflow:
-        if has_interface(comp, IDriver):
-            graph = replace_subdriver(comp, graph, inputs, outputs, wflow,
-                                      using)
 
-    pa = PseudoAssembly('~'+drv.name, needed, startgraph, wflow)
+    #needed = drv.workflow.get_names(full=True)
+    needed = set([c.name for c in drv.iteration_set()])
+    for cname in needed:
+        if cname in graph and cname not in ancestor_using:
+            graph.node[cname] = graph.node[cname].copy() # don't pollute other graphs with nondiff markers
+            graph.node[cname]['non-differentiable'] = True
+
+    #using = ancestor_using.union(needed)
+    # for comp in drv.workflow:
+    #     if has_interface(comp, IDriver):
+            # graph = replace_subdriver(comp, graph, inputs, outputs, wflow,
+            #                           using, top=False)
+
+    pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow)
 
     pa.add_to_graph(graph, excludes=ancestor_using-set([drv.name]))
     
