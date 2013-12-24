@@ -11,6 +11,7 @@ import sys
 #   we just test on Linux
 if sys.platform.startswith("linux"):
 
+    import glob
     import os
     import glob
     import tempfile

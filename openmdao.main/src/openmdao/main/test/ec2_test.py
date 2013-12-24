@@ -1,6 +1,6 @@
 """
 Exercise an EC2-based ClusterAllocator by performing a global optimization of
-the Goldstein-Price function via a DOEdriver setting sarting points for a
+the Goldstein-Price function via a DOEdriver setting starting points for a
 CONMINdriver.
 
 While this was written for testing an EC2-based cluster, ClusterAllocator is
@@ -27,7 +27,7 @@ from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.doegenerators.api import FullFactorial
 
 # Set False for local debugging and True when an EC2 configuration is defined.
-USE_EC2 = True
+USE_EC2 = False
 
 
 class GoldsteinPrice(Component):
@@ -64,8 +64,8 @@ class GPOptimization(Assembly):
 
         doe = self.add('driver', DOEdriver())
         doe.workflow.add('conmin')
-        doe.add_parameter('gp_fun.x1')
-        doe.add_parameter('gp_fun.x2')
+        doe.add_parameter('gp_fun.x1', low=-1.5, high=1.5, start=1)
+        doe.add_parameter('gp_fun.x2', low=-1.5, high=1.5, start=1)
         doe.DOEgenerator = FullFactorial(5)
         doe.case_outputs = ['gp_fun.f', 'gp_fun.x1', 'gp_fun.x2',
                             'gp_fun.exec_count']
@@ -88,52 +88,67 @@ def main():
 
         machines.append(ClusterHost(
             hostname='ubuntu@ec2-23-22-84-182.compute-1.amazonaws.com',
-            python = 'setowns1_2013-05-06_09.17.04.529682' \
+            python='setowns1_2013-05-06_09.17.04.529682' \
                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
             hostname='ubuntu@ec2-54-224-216-106.compute-1.amazonaws.com',
-            python = 'setowns1_2013-05-06_09.17.03.113077' \
+            python='setowns1_2013-05-06_09.17.03.113077' \
                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
             hostname='ubuntu@ec2-54-235-234-97.compute-1.amazonaws.com',
-            python = 'setowns1_2013-05-06_09.17.05.434412' \
+            python='setowns1_2013-05-06_09.17.05.434412' \
                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/bin/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
             hostname='Administrator@ec2-50-19-1-69.compute-1.amazonaws.com',
-            python = 'setowns1_2013-05-06_09.20.17.379627' \
+            python='setowns1_2013-05-06_09.20.17.379627' \
                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
         machines.append(ClusterHost(
             hostname='Administrator@ec2-174-129-138-250.compute-1.amazonaws.com',
-            python = 'setowns1_2013-05-06_09.19.49.348885' \
+            python='setowns1_2013-05-06_09.19.49.348885' \
                 '/OpenMDAO-OpenMDAO-Framework-testbranch/devenv/Scripts/python',
             tunnel_incoming=True, tunnel_outgoing=True,
             identity_filename=identity_filename))
 
 #        machines.append(ClusterHost(
 #            hostname='viper.grc.nasa.gov',
-#            python = 'OpenMDAO-Framework/devenv/bin/python',
+#            python='OpenMDAO-Framework/devenv/bin/python',
 #            tunnel_incoming=True, tunnel_outgoing=True,
 #            identity_filename=None))
     else:
         # Trivial local 'cluster' for debugging without remote host issues.
         machines.append(ClusterHost(hostname=socket.getfqdn(),
-                                    python = sys.executable))
+                                    python=sys.executable))
+#        machines.append(ClusterHost(
+#            hostname='viper.grc.nasa.gov',
+#            python='OpenMDAO-Framework/devenv/bin/python',
+#            tunnel_incoming=True, tunnel_outgoing=True,
+#            identity_filename=None))
+
     # Start it.
-    cluster = ClusterAllocator(cluster_name, machines, allow_shell=True)
+    cluster = ClusterAllocator(cluster_name, machines, allow_shell=True,
+                               method='load-average')
+#                               method='greedy')
+#                               method='round-robin')
     print 'Cluster initialized'
     RAM.insert_allocator(0, cluster)
+
+    n_servers = RAM.max_servers(dict(allocator=cluster_name))
+    print n_servers, 'Servers:'
+    for name in RAM.get_hostnames(dict(allocator=cluster_name,
+                                       min_cpus=n_servers)):
+        print '   ', name
 
     # Create model.
     top = GPOptimization()

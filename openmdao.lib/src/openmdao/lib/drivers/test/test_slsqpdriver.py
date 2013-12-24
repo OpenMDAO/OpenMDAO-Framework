@@ -10,6 +10,7 @@ from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array, Str
 from openmdao.lib.casehandlers.api import ListCaseRecorder
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
+from openmdao.util.testutil import assert_raises, assert_rel_error
 
 
 class OptRosenSuzukiComponent(Component):
@@ -39,6 +40,7 @@ class OptRosenSuzukiComponent(Component):
     """
 
     x = Array(iotype='in', low=-10, high=99)
+    g = Array([1., 1., 1.], iotype='out')
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
     opt_objective = Float(iotype='out')
@@ -54,11 +56,19 @@ class OptRosenSuzukiComponent(Component):
 
     def execute(self):
         """calculate the new objective value"""
-        self.result = (self.x[0]**2 - 5.*self.x[0] +
-                       self.x[1]**2 - 5.*self.x[1] +
-                       2.*self.x[2]**2 - 21.*self.x[2] +
-                       self.x[3]**2 + 7.*self.x[3] + 50)
+        x = self.x
+
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
+
         self.obj_string = "Bad"
+
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class SLSPQdriverTestCase(unittest.TestCase):
@@ -75,6 +85,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
         self.top = None
 
     def test_opt1(self):
+        # Run with scalar parameters, scalar constraints.
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
@@ -86,6 +97,7 @@ class SLSPQdriverTestCase(unittest.TestCase):
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
+
         self.top.run()
 
         # pylint: disable-msg=E1101
@@ -118,17 +130,14 @@ class SLSPQdriverTestCase(unittest.TestCase):
 
         self.assertEqual(self.top.driver.error_code, 9)
 
-    def test_array_parameter(self):
+    def test_array(self):
+        # Run with array parameter, array constraint.
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x')
-
-        # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+        self.top.driver.add_constraint('comp.g < 0')
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
+
         self.top.run()
 
         # pylint: disable-msg=E1101
@@ -150,6 +159,96 @@ class SLSPQdriverTestCase(unittest.TestCase):
                          end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
+
+    def test_reconfig(self):
+        # Test that ArrayParameters can be configured at run() time.
+
+        class MyComp(Component):
+
+            x = Array([0, 0], iotype="in", dtype=float)
+            y = Array([0, 0], iotype="out", dtype=float)
+
+            def execute(self):
+                self.y = self.x**2
+
+        class MyAssembly(Assembly):
+
+            def configure(self):
+                self.add('comp1', MyComp())
+                self.add('comp2', MyComp())
+                driver = self.add('driver', SLSQPdriver())
+                driver.add_parameter('comp1.x', low=-10, high=10)
+                driver.add_parameter('comp2.x', low=-10, high=10)
+                driver.add_objective('comp1.y[0] + comp2.y[1]')
+
+        asm = set_as_top(MyAssembly())
+        asm.comp1.x = [1, 2, 3]
+        asm.comp2.x = [2.781828, 3.14159]
+        asm.run()
+
+        assert_rel_error(self, asm.comp1.x, [0, 2, 3], 1e-6)
+        assert_rel_error(self, asm.comp1.y, [0, 4, 9], 1e-6)
+        assert_rel_error(self, asm.comp2.x, [2.781828, 0], 1e-6)
+        assert_rel_error(self, asm.comp2.y, [7.738567, 0], 1e-6)
+
+    def test_empty_reconfig(self):
+        # Test that ArrayParameters can be configured at run() time.
+
+        class MyComp(Component):
+
+            x = Array(iotype="in")
+            y = Array(iotype="out")
+
+            def execute(self):
+                self.y = self.x**2
+
+        class MyAssembly(Assembly):
+
+            def configure(self):
+                self.add('comp1', MyComp())
+                self.add('comp2', MyComp())
+                driver = self.add('driver', SLSQPdriver())
+                driver.add_parameter('comp1.x', low=-10, high=10)
+                driver.add_parameter('comp2.x', low=-10, high=10)
+                driver.add_objective('comp1.y[0] + comp2.y[1]')
+
+        asm = set_as_top(MyAssembly())
+        asm.comp1.x = [1, 2, 3]
+        asm.comp2.x = [2.781828, 3.14159]
+        asm.run()
+
+        assert_rel_error(self, asm.comp1.x, [0, 2, 3], 1e-6)
+        assert_rel_error(self, asm.comp1.y, [0, 4, 9], 1e-6)
+        assert_rel_error(self, asm.comp2.x, [2.781828, 0], 1e-6)
+        assert_rel_error(self, asm.comp2.y, [7.738567, 0], 1e-6)
+
+    def test_invalid_reconfig(self):
+        # Test invalid reconfiguration of ArrayParameter.
+
+        class MyComp(Component):
+
+            x = Array([0, 0], iotype="in", dtype=float)
+            y = Array([0, 0], iotype="out", dtype=float)
+
+            def execute(self):
+                self.y = self.x**2
+
+        class MyAssembly(Assembly):
+
+            def configure(self):
+                self.add('comp1', MyComp())
+                self.add('comp2', MyComp())
+                driver = self.add('driver', SLSQPdriver())
+                driver.add_parameter('comp1.x', low=-10, high=[10, 10])
+                driver.add_parameter('comp2.x', low=-10, high=10)
+                driver.add_objective('comp1.y[0] + comp2.y[1]')
+
+        asm = set_as_top(MyAssembly())
+        asm.comp1.x = [1, 2, 3]
+        asm.comp2.x = [2.781828, 3.14159]
+        assert_raises(self, 'asm.run()', globals(), locals(), RuntimeError,
+                      "Parameter comp1.x can't be reconfigured,"
+                      " 'high' was not specified as a scalar")
 
 
 if __name__ == "__main__":

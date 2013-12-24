@@ -1,6 +1,6 @@
 """
     Solution of the sellar analytical problem using MDF.
-    Disciplines coupled using Quasi-Newton-Raphson solver
+    Disciplines coupled using Newton solver
 """
 from openmdao.main.api import Assembly
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver
@@ -40,7 +40,7 @@ class SellarMDF(Assembly):
         # Make all connections
         self.connect('dis1.y1','dis2.y1')
         
-        # Iteration loop
+        # Solver Iteration loop
         self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         # equivilent form
@@ -51,7 +51,7 @@ class SellarMDF(Assembly):
         self.solver.alpha = .4
         self.solver.tol = .0000001
         self.solver.algorithm = "broyden2"
-
+        
         # Optimization parameters
         self.driver.add_objective('(dis1.x1)**2 + dis1.z2 + dis1.y1 + math.exp(-dis2.y2)')
         

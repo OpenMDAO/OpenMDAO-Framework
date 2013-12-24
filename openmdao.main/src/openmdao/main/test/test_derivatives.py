@@ -118,7 +118,7 @@ class Testcase_provideJ(unittest.TestCase):
             inputs['vvt.a1'] = 0
             inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
 
-            applyJ(comp, inputs, outputs)
+            applyJ(comp, inputs, outputs, [])
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -570,6 +570,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             print 'Actual:\n%s' % actual
             self.fail("check_gradient() output doesn't match expected")
 
+        stream = StringIO()
+        top.comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+        stream = StringIO()
+        comp = Paraboloid()
+        comp.x = 3
+        comp.y = 5
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+            
+        # now do it again to make sure name and parent were properly reset
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+
     def test_input_as_output(self):
         
         top = set_as_top(Assembly())
@@ -727,10 +755,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
         
         edges = top.driver.workflow._edges
-        print edges
+        #print edges
         self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
@@ -2180,7 +2208,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
         
-        applyJ(comp, arg, result)
+        applyJ(comp, arg, result, [])
         
         self.assertEqual(result['y1'], 8.0)
         self.assertEqual(result['y2'], 18.0)
@@ -2195,7 +2223,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
@@ -2212,7 +2240,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['y[1, 0]'] = array([0.0])
         
-        applyJ(comp, arg, result)
+        applyJ(comp, arg, result, [])
         
         self.assertEqual(result['y[1, 0]'], 5.0)
         
@@ -2223,7 +2251,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x[0, 1]'], 5.0)
         
@@ -2234,7 +2262,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x[0, 1]'], 138.0)
         

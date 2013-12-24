@@ -3,6 +3,7 @@ Test the MDA driver
 """
 
 import unittest
+from nose import SkipTest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
@@ -13,6 +14,7 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
+from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -172,6 +174,22 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 10)
         
+    def test_gauss_seidel_param_con(self):
+        
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
+        self.top.disconnect('d2.y2')
+        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
+        self.top.driver.add_constraint('d1.y2 = d2.y2')
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
         
     def test_gauss_seidel_sub(self):
         # Note, Fake Finite Difference is active in this test.
@@ -203,6 +221,24 @@ class MDA_SolverTestCase(unittest.TestCase):
         
     def test_newton(self):
         
+        self.top.driver.newton = True
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 5)
+        
+    def test_newton_param_con(self):
+        
+        raise SkipTest('Param/Con not supported on MDA solver yet')
+    
+        self.top.disconnect('d2.y2')
+        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
+        self.top.driver.add_constraint('d1.y2 = d2.y2')
         self.top.driver.newton = True
         self.top.run()
         
@@ -256,6 +292,23 @@ class MDA_SolverTestCase(unittest.TestCase):
                                self.top.d2.y2,
                                1.0e-4)
         
+    def test_newton_none_param_con(self):
+        
+        self.top.disconnect('d2.y2')
+        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
+        self.top.driver.add_constraint('d1.y2 = d2.y2')
+        self.top = set_as_top(Sellar_MDA_None())
+        self.top.driver.newton = True
+        
+        self.top.run()
+        
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        
     def test_scalable_newton(self):
         
         # This verifies that it works for arrays
@@ -283,7 +336,26 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 4)
         
+    #def test_general_solver(self): 
+
+        # TODO: Should MDA solver be able to solve generalized equations?
         
+        #a = set_as_top(Assembly())
+        #comp = a.add('comp', ExecComp(exprs=["f=a * x**n + b * x - c"]))
+        #comp.n = 77.0/27.0
+        #comp.a = 1.0
+        #comp.b = 1.0
+        #comp.c = 10.0
+
+        #driver = a.add('driver', MDASolver())
+        #driver.add_parameter('comp.x', 0, 100)
+        #driver.add_constraint('comp.f=0')
+        #self.top.driver.newton = True
+
+        #a.run()
+
+        #assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
+        #assert_rel_error(self, a.comp.f, 0, .0001)
             
 if __name__ == "__main__":
     unittest.main()

@@ -87,9 +87,9 @@ class PluginsTestCase(unittest.TestCase):
             logging.debug('captured subprocess output:')
             logging.debug(logdata)
 
-        # Existing distribution error.
+        # Overwrite existing distribution.
         logging.debug('')
-        logging.debug('makedist error')
+        logging.debug('makedist overwrite')
         sys.stdout = cStringIO.StringIO()
         sys.stderr = cStringIO.StringIO()
         os.chdir(os.path.join(self.tdir, 'foobar'))
@@ -100,7 +100,7 @@ class PluginsTestCase(unittest.TestCase):
             retval = plugin_makedist(parser, options, args, capture='makedist.out')
             with open('makedist.out', 'r') as inp:
                 logdata = inp.read()
-            self.assertEqual(retval, -1)
+            self.assertEqual(retval, 0)
         finally:
             captured_stdout = sys.stdout.getvalue()
             captured_stderr = sys.stderr.getvalue()
@@ -113,7 +113,6 @@ class PluginsTestCase(unittest.TestCase):
             logging.debug(captured_stderr)
             logging.debug('captured subprocess output:')
             logging.debug(logdata)
-        self.assertTrue('already exists' in captured_stderr)
 
         # Install
         logging.debug('')

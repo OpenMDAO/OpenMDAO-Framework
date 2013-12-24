@@ -42,6 +42,7 @@ class OptRosenSuzukiComponent(Component):
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
     opt_objective = Float(iotype='out')
+    g = Array([1., 1., 1.], iotype='out')
 
     # pylint: disable-msg=C0103
     def __init__(self):
@@ -54,11 +55,19 @@ class OptRosenSuzukiComponent(Component):
 
     def execute(self):
         """calculate the new objective value"""
-        self.result = (self.x[0]**2 - 5.*self.x[0] +
-                       self.x[1]**2 - 5.*self.x[1] +
-                       2.*self.x[2]**2 - 21.*self.x[2] +
-                       self.x[3]**2 + 7.*self.x[3] + 50)
+        x = self.x
+
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
+
         self.obj_string = "Bad"
+
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class COBYLAdriverTestCase(unittest.TestCase):
@@ -120,12 +129,7 @@ class COBYLAdriverTestCase(unittest.TestCase):
     def test_array_parameter(self):
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x')
-
-        # pylint: disable-msg=C0301
-        map(self.top.driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+        self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.recorders = [ListCaseRecorder()]
         self.top.driver.printvars = ['comp.opt_objective']
         self.top.run()

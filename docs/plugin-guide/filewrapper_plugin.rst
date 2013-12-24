@@ -185,7 +185,6 @@ So, if you want to execute a code that you normally run by typing
 ::
 
         /usr/bin/externalcode -v -r1
-        /usr/bin/externalcode -v -r1
 
 at the command prompt, then you need to set the command attribute as follows:
 

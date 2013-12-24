@@ -1936,3 +1936,72 @@ class Component(Container):
                     valids.append(False)
             return valids
 
+    def check_gradient(self, inputs=None, outputs=None, 
+                       stream=sys.stdout, mode='auto',
+                       fd_form = 'forward', fd_step_size=1.0e-6, 
+                       fd_step_type='absolute'):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (apply_deriv and provideJ.)
+        Note that fake finite difference is turned off so that we are
+        doing a straight comparison.
+
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the inputs of this component.
+            
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the outputs of this component.
+            
+        stream: (optional) file-like object, str, or None
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename.  If None, no output is written.
+            
+        mode: (optional) str or None
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
+
+        fd_form: str
+            Finite difference mode. Valid choices are 'forward', 'adjoint' , 
+            'central'. Default is 'forward'
+            
+        fd_step_size: float
+            Default step_size for finite difference. Default is 1.0e-6.
+            
+        fd_step_type: str
+            Finite difference step type. Set to 'absolute' or 'relative'.
+            Default is 'absolute'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
+        a list of the gradient names, and a list of suspect inputs/outputs.
+        """
+        if self.parent is None or not self.name:
+            from openmdao.main.assembly import Assembly, set_as_top
+            asm = set_as_top(Assembly())
+            orig_name = self.name
+            try:
+                asm.add('comp', self)
+                asm.driver.workflow.add('comp')
+                asm.run()
+                return asm.check_gradient(name=self.name,
+                                         inputs=inputs, outputs=outputs,
+                                         stream=stream, mode=mode, 
+                                         fd_form=fd_form, fd_step_size=fd_step_size, 
+                                         fd_step_type=fd_step_type)
+            finally:
+                self.parent = None
+                if orig_name:
+                    self.name = orig_name
+        else:
+            return self.parent.check_gradient(name=self.name, 
+                                              inputs=inputs, outputs=outputs,
+                                              stream=stream, mode=mode, 
+                                              fd_form=fd_form, fd_step_size=fd_step_size, 
+                                              fd_step_type=fd_step_type)
+        
