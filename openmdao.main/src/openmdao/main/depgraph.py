@@ -370,7 +370,6 @@ class DependencyGraph(nx.DiGraph):
             self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])
 
-
         self.config_changed()
 
     def add_boundary_var(self, name, **kwargs):
@@ -1249,24 +1248,24 @@ def _get_inner_edges(G, srcs, dests):
             
 #     return edges
 
-def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
-    """Mark all components as non-differentiable that are in the
-    itersets of any non-solver drivers in the specified workflow or
-    in the graph.
-    """
-    comps = set(wflow)
-    comps.update([getattr(scope,n) for n in graphcomps if n is not None])
-    nondiff_comps = set()
+# def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
+#     """Mark all components as non-differentiable that are in the
+#     itersets of any non-solver drivers in the specified workflow or
+#     in the graph.
+#     """
+#     comps = set(wflow)
+#     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
+#     nondiff_comps = set()
 
-    for comp in comps:
-        if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
-            nondiff_comps.add(comp.name)
-            nondiff_comps.update([comp.name for comp in comp.iteration_set()])
+#     for comp in comps:
+#         if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
+#             nondiff_comps.add(comp.name)
+#             nondiff_comps.update([comp.name for comp in comp.iteration_set()])
 
-    for comp in nondiff_comps:
-        if comp in graph:
-            graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
-            graph.node[comp]['non-differentiable'] = True
+#     for comp in nondiff_comps:
+#         if comp in graph:
+#             graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
+#             graph.node[comp]['non-differentiable'] = True
 
 def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
     """Update the given graph to replace non-solver subdrivers with PseudoAssemblies.
@@ -1300,10 +1299,13 @@ def get_subdriver_PA_graph(graph, inputs, outputs, wflow):
     if fd_drivers:
         # only create a copy of the graph if we have non-solver subdrivers
         startgraph = graph.subgraph(graph.nodes_iter())
-    for drv in fd_drivers:
-        graph = replace_subdriver(drv, startgraph, graph, inputs, outputs, 
-                                  wflow, using)
+        for drv in fd_drivers:
+            graph = replace_subdriver(drv, startgraph, 
+                                      graph, inputs, outputs, 
+                                      wflow, using)
             
+    # return the list of names of subdrivers that were 
+    # replaced with PAs
     return [d.name for d in fd_drivers]
 
 def replace_subdriver(drv, startgraph, graph, inputs, outputs, wflow, ancestor_using):

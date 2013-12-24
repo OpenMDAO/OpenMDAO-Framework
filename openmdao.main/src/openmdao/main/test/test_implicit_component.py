@@ -552,11 +552,11 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
-        self.assertEqual(edges['~~0.comp|res[0]'], ['_pseudo_0.in0'])
-        self.assertEqual(edges['~~0.comp|res[1]'], ['_pseudo_1.in0'])
-        self.assertEqual(edges['~~0.comp|res[2]'], ['_pseudo_2.in0'])
+        self.assertEqual(edges['@in0'], ['~0.comp|c'])
+        self.assertEqual(edges['~0.comp|y_out'], ['@out0'])
+        self.assertEqual(edges['~0.comp|res[0]'], ['_pseudo_0.in0'])
+        self.assertEqual(edges['~0.comp|res[1]'], ['_pseudo_1.in0'])
+        self.assertEqual(edges['~0.comp|res[2]'], ['_pseudo_2.in0'])
         
         
         print J
@@ -606,8 +606,8 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
+        self.assertEqual(edges['@in0'], ['~0.comp|c'])
+        self.assertEqual(edges['~0.comp|y_out'], ['@out0'])
         
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
@@ -656,8 +656,8 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
+        self.assertEqual(edges['@in0'], ['~0.comp|c'])
+        self.assertEqual(edges['~0.comp|y_out'], ['@out0'])
         
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
@@ -699,7 +699,7 @@ class Testcase_implicit(unittest.TestCase):
         
         edges = model.driver.workflow._edges
         print edges
-        self.assertEqual(edges['@in0'], ['_pseudo_1.in0', '~~0._pseudo_0|in1'])
+        self.assertEqual(edges['@in0'], ['_pseudo_1.in0', '~0._pseudo_0|in1'])
         self.assertEqual(edges['_pseudo_1.out0'], ['@out0'])
         
     def test_list_states(self):

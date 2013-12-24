@@ -788,7 +788,7 @@ class SequentialWorkflow(Workflow):
                 nondiff_groups.append(inodes)
 
         for j, group in enumerate(nondiff_groups):
-            pa_name = '~~%d' % j
+            pa_name = '~%d' % j
             
             # Create the pseudoassy
             pseudo = PseudoAssembly(pa_name, group, 
@@ -811,7 +811,7 @@ class SequentialWorkflow(Workflow):
         comps = self.derivative_graph().all_comps()
         
         # Full model finite difference = no implcit edges
-        if len(comps) == 1 and '~~' in comps[0]:
+        if len(comps) == 1 and '~' in comps[0]:
             return info
         
         # Residuals and states for implicit components
@@ -832,7 +832,7 @@ class SequentialWorkflow(Workflow):
         # Nested solvers act implicitly.
         dgraph = self._derivative_graph
         pa_comps = [dgraph.node[item]['pa_object'] \
-                    for item in dgraph.all_comps() if '~~' in item]
+                    for item in dgraph.all_comps() if '~' in item]
         for comp in self._parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
                 
