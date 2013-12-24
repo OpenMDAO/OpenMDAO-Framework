@@ -5,6 +5,7 @@ important workflows: Dataflow and CyclicWorkflow."""
 import networkx as nx
 import sys
 from math import isnan
+from StringIO import StringIO
 
 from openmdao.main.array_helpers import flattened_size, \
                                         flattened_names, flatten_slice
@@ -1092,7 +1093,7 @@ class SequentialWorkflow(Workflow):
         return J
             
     
-    def check_gradient(self, inputs=None, outputs=None, stream=None, mode='auto'):
+    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -1115,19 +1116,23 @@ class SequentialWorkflow(Workflow):
             
         stream: (optional) file-like object or str
             Where to write to, default stdout. If a string is supplied,
-            that is used as a filename.
+            that is used as a filename. If None, no output is written.
             
         mode: (optional) str
             Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
+        and a list of suspect inputs/outputs.
         """
-        stream = stream or sys.stdout
         if isinstance(stream, basestring):
             stream = open(stream, 'w')
             close_stream = True
         else:
             close_stream = False
+            if stream is None:
+                stream = StringIO()
     
         self.config_changed()
         J = self.calc_gradient(inputs, outputs, mode=mode)
@@ -1210,6 +1215,9 @@ class SequentialWorkflow(Workflow):
         error_max = error_loc = None
         suspects = []
         i = -1
+
+        io_pairs = []
+
         for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
             for out_name in flattened_names(oref, out_val):
@@ -1238,9 +1246,11 @@ class SequentialWorkflow(Workflow):
                         print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
                               % (out_width, out_name, inp_width, inp_name,
                                  calc, finite, error)
+                        io_pairs.append("%*s / %*s"%(out_width, out_name, inp_width, inp_name))
         print >> stream
-        print >> stream, 'Average RelError:', error_sum / error_n
-        print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if error_n:
+            print >> stream, 'Average RelError:', error_sum / error_n
+            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
         if suspects:
             print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
             for out_name, inp_name in suspects:
@@ -1251,6 +1261,6 @@ class SequentialWorkflow(Workflow):
         if close_stream:
             stream.close()
             
-        return suspects  # return suspects to make it easier to check from a test
+        return Jbase.flatten(), J.flatten(), io_pairs, suspects  # return arrays and suspects to make it easier to check from a test
 
 

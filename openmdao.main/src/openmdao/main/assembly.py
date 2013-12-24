@@ -4,6 +4,7 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
+import sys
 import cStringIO
 import threading
 import re
@@ -780,6 +781,7 @@ class Assembly(Component):
                        stream=None, mode='auto',
                        fd_form = 'forward', fd_step_size=1.0e-6, 
                        fd_step_type='absolute'):
+    
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -815,7 +817,7 @@ class Assembly(Component):
             
         stream: (optional) file-like object, str, or None
             Where to write to, default stdout. If a string is supplied,
-            that is used as a filename.
+            that is used as a filename. If None, no output is written.
             
         mode: (optional) str or None
             Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
@@ -832,6 +834,9 @@ class Assembly(Component):
         fd_step_type: str
             Finite difference step type. Set to 'absolute' or 'relative'.
             Default is 'absolute'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
+        a list of the gradient names, and a list of suspect inputs/outputs.
         """
         driver = self.driver
         obj = None

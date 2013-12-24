@@ -50,7 +50,7 @@ class CheckGradientTestCase(unittest.TestCase):
         a.x = 3.0
         a.y = 4.0
         a.run()
-        suspects = a.check_gradient('c')
+        Jbase, J, io_pairs, suspects = a.check_gradient('c', stream=None)
         self.assertEqual(suspects, [])
         
 if __name__ == '__main__':

@@ -570,6 +570,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             print 'Actual:\n%s' % actual
             self.fail("check_gradient() output doesn't match expected")
 
+        stream = StringIO()
+        top.comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+        stream = StringIO()
+        comp = Paraboloid()
+        comp.x = 3
+        comp.y = 5
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+            
+        # now do it again to make sure name and parent were properly reset
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+
     def test_input_as_output(self):
         
         top = set_as_top(Assembly())
@@ -727,10 +755,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
         
         edges = top.driver.workflow._edges
-        print edges
+        #print edges
         self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
