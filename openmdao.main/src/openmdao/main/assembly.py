@@ -778,7 +778,13 @@ class Assembly(Component):
         return [getattr(self, c).exec_count for c in compnames]
 
     def check_gradient(self, name=None, inputs=None, outputs=None, 
+<<<<<<< HEAD
                        stream=sys.stdout, mode='auto'):
+=======
+                       stream=None, mode='auto',
+                       fd_form = 'forward', fd_step_size=1.0e-6, 
+                       fd_step_type='absolute'):
+>>>>>>> 38b0d54118fa480e392ca3b1c3919733a2e679fb
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -820,12 +826,31 @@ class Assembly(Component):
             Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
+            
+        fd_form: str
+            Finite difference mode. Valid choices are 'forward', 'adjoint' , 
+            'central'. Default is 'forward'
+            
+        fd_step_size: float
+            Default step_size for finite difference. Default is 1.0e-6.
+            
+        fd_step_type: str
+            Finite difference step type. Set to 'absolute' or 'relative'.
+            Default is 'absolute'.
 
         Returns the finite difference gradient, the OpenMDAO-calculated gradient,
-        and a list of suspect inputs/outputs.
+        a list of the gradient names, and a list of suspect inputs/outputs.
         """
         driver = self.driver
         obj = None
+        
+        base_fd_form = driver.gradient_options.fd_form
+        base_fd_step_size = driver.gradient_options.fd_step_size
+        base_fd_step_type = driver.gradient_options.fd_step_type
+        
+        driver.gradient_options.fd_form = fd_form
+        driver.gradient_options.fd_step_size = fd_step_size
+        driver.gradient_options.fd_step_type = fd_step_type
 
         if inputs and outputs:
             if name:
@@ -861,10 +886,15 @@ class Assembly(Component):
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
-        return driver.workflow.check_gradient(inputs=inputs, 
-                                              outputs=outputs,
-                                              stream=stream,
-                                              mode=mode)
+        result = driver.workflow.check_gradient(inputs=inputs, 
+                                                outputs=outputs,
+                                                stream=stream,
+                                                mode=mode)
+        
+        driver.gradient_options.fd_form = base_fd_form
+        driver.gradient_options.fd_step_size = base_fd_step_size
+        driver.gradient_options.fd_step_type = base_fd_step_type
+        return result
             
 
     def linearize(self, required_inputs=None, required_outputs=None):
