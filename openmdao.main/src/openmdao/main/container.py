@@ -541,7 +541,6 @@ class Container(SafeHasTraits):
         to do internal setup before being used to get/set a trait).
         This retries failed operations recorded in __setstate__().
         """
-        self._logger.critical('_repair_traits %s', self._repair_trait_info)
         for name, trait in self._repair_trait_info['property']:
             val = getattr(self, name)
             self.remove_trait(name)
