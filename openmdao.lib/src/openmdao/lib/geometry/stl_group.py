@@ -22,6 +22,7 @@ class STLGroup(object):
         self._i_comps = {}
         self._n_comps = 0 
 
+
         #used to store set values of parameters from IParametricGeometry
         self.param_vals = {}
         self.param_name_map = {}
@@ -30,55 +31,6 @@ class STLGroup(object):
 
         self._needs_linerize = True
 
-
-    #begin methods for IParametricGeometry
-    def list_parameters(self): 
-        """ returns a dictionary of parameters sets key'd to component names"""
-
-        self.param_name_map = {}
-        params = []
-        for comp in self._comps: 
-            name = comp.name
-            if isinstance(comp, Body): 
-                val = comp.delta_C[1:,0]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':"axial location of control points for the ffd"}
-                tup = ('%s.X'%name, meta)
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_C[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':"radial location of control points for the ffd"}
-                tup = ('%s.R'%name, meta)
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-
-            else: 
-                val = comp.delta_Cc[1:,0]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'axial location of the control points for the centerline of the shell'}
-                tup = ('%s.X'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_Cc[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'radial location of the control points for the centerline of the shell'}
-                tup = ('%s.R'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_Ct[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'thickness of the shell at each axial station'}
-                tup = ('%s.thickness'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-
-        return params
 
     def set_parameter(self, name, val): 
         self.param_name_map[name] = val
@@ -169,6 +121,7 @@ class STLGroup(object):
                 comp.deform(delta_C)
             else:
                 comp.deform(*delta_C)
+            self.list_parameters()        
 
     def _build_ascii_stl(self, facets): 
         """returns a list of ascii lines for the stl file """
@@ -189,46 +142,21 @@ class STLGroup(object):
             lines.append(struct.pack(BINARY_FACET,*facet))  
         return lines      
 
-    def linearize(self): 
+    def linearize(self):
+        if not self._needs_linerize: 
+            return 
+        print "HERE"
+        self.list_parameters() 
+        print "there"
+        print "size J: ", len(self.points)
+        print self.param_loc_map
+
+
+    def old_linearize(self): 
         if not self._needs_linerize: 
             return 
         self.list_parameters() #makes up to date param_loc_map
 
-        points = []
-        triangles = []
-        i_offset = 0
-        offsets = []
-        n_controls = 0
-        deriv_offsets = []
-        for comp in self._comps:
-            offsets.append(i_offset)
-            deriv_offsets.append(n_controls)
-            n_controls += sum(self.comp_param_count[comp])
-
-            if isinstance(comp,Body): 
-                points.extend(comp.stl.points)
-                size = len(points)
-                triangles.extend(comp.stl.triangles + i_offset) 
-                i_offset = size
-                #X and R for each control point, except the first X and the last R (hence the -1)
-            else: 
-                points.extend(comp.outer_stl.points)
-                size = len(points)
-                triangles.extend(comp.outer_stl.triangles + i_offset) 
-                i_offset = size
-                
-                points.extend(comp.inner_stl.points)
-                size = len(points)
-                triangles.extend(comp.inner_stl.triangles + i_offset) 
-                i_offset = size
-
-        self.points = points
-        self.n_controls = n_controls
-        self.n_points = len(points)
-        self.triangles = triangles
-        self.n_triangles = len(triangles)
-        self.offsets = offsets
-        self.deriv_offsets = deriv_offsets
 
         i_comp = 0 #keep track of which comp the points came from
         comp = self._comps[0]
@@ -237,23 +165,26 @@ class STLGroup(object):
         Jdata = []
         Jrow = []
         Jcolumn = []
-        for i,p in enumerate(points): 
+        for i,p in enumerate(self.points): 
             #map point index to proper component
-            if (i_comp < len(self._comps)-1) and (i == offsets[i_comp+1]): #the offset for the next comp: 
+            if (i_comp < len(self._comps)-1) and (i == self.offsets[i_comp+1]): #the offset for the next comp: 
                 i_offset = i
                 i_comp += 1
-                i_deriv_offset = deriv_offsets[i_comp]
+                i_deriv_offset = self.deriv_offsets[i_comp]
                 comp = self._comps[i_comp] 
-            deriv_values = np.zeros((3*n_controls,))
-
+            deriv_values = np.zeros((3*self.n_controls,))
+            
             if isinstance(comp,Body): 
                 size_C = self.comp_param_count[comp]
                 n_C = 3*sum(size_C) 
                 #x value
                 start = i_deriv_offset
                 end = start + 3*size_C[0] #x
+
                 #X is only a function of the x  parameter
-                X = np.array(comp.dXqdC[i-i_offset,1:])                
+
+                X = np.array(comp.dXqdC[i-i_offset,1:])   
+
                 deriv_values[start:end:3] = X.flatten()  
 
                 #r value
@@ -268,8 +199,9 @@ class STLGroup(object):
                 size_C = self.comp_param_count[comp]
                 n_C = 3*sum(size_C)
                 #centerline x value
-                start = i_deriv_offset
+                start = 3*i_deriv_offset
                 end = start + 3*size_C[0] #x
+
                 #determine if point is on upper or lower surface? 
                 outer=True
                 deriv_i = i-i_offset
@@ -288,6 +220,7 @@ class STLGroup(object):
                 #centerline r value
                 start = end
                 end = start + 3*size_C[1] #r
+
                 #Y,Z are only a function of the r parameter
                 if outer: 
                     Y = np.array(comp.dYoqdCc[deriv_i,:])
@@ -321,6 +254,7 @@ class STLGroup(object):
         self.JzT = self.Jy.T
 
         self._needs_linerize = False
+
 
     def writeSTL(self, file_name, ascii=False): 
         """outputs an STL file"""
@@ -408,7 +342,7 @@ class STLGroup(object):
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
                 points = p[indecies]
                 points = points[points[:,0].argsort()]
-                point_ses.append(points)
+                point_sets.append(points)
 
                 p = comp.inner_stl.points
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
@@ -421,10 +355,14 @@ class STLGroup(object):
     #begin methods for OpenMDAO geometry derivatives
     def apply_deriv(self, arg, result): 
         self.linearize()
-
+        #print "test: ", arg
         for name, value in arg.iteritems(): 
+            if name == "geom_out": 
+                continue 
             i_start = self.param_loc_map[name]
             length = value.shape[0]
+            np.set_printoptions(threshold='nan')
+            
             sub_Jx = self.Jx[:,i_start:i_start+length]
             result['geom_out'][:,0] += sub_Jx.dot(value)
 
@@ -432,7 +370,7 @@ class STLGroup(object):
             result['geom_out'][:,1] += sub_Jy.dot(value)
 
             sub_Jz = self.Jz[:,i_start:i_start+length]
-            result['geom_out'][:,2] += sub_Jy.dot(value)
+            result['geom_out'][:,2] += sub_Jz.dot(value)
 
         return result
 
@@ -440,7 +378,7 @@ class STLGroup(object):
         self.linearize()
 
         if 'geom_out' in arg: 
-            for name, value in result.iteritems(): 
+            for name, value in arg.iteritems(): 
 
                 i_start = self.param_loc_map[name]
                 length = value.shape[0]
@@ -465,8 +403,8 @@ class STLGroup(object):
         self.param_loc_map = {} #locate columns of jacobian related to a specific parameter
         self.comp_param_count = {}
         params = []
-        for comp in self._comps: 
-            self.i_J = 0 #jacobian column index
+        self.i_J = 0 #jacobian column index
+        for comp in self._comps:  
             name = comp.name
 
             if isinstance(comp, Body): 
@@ -524,7 +462,45 @@ class STLGroup(object):
                 self.comp_param_count[comp] = (n_X,n_R,n_T)
                 self.i_J += n_T
 
+        #do some point book keeping here
+        points = []
+        triangles = []
+        i_offset = 0
+        offsets = []
+        n_controls = 0
+        deriv_offsets = []
+        for comp in self._comps:
+            offsets.append(i_offset)
+            deriv_offsets.append(n_controls)
+            n_controls += sum(self.comp_param_count[comp])
 
+            if isinstance(comp,Body): 
+                points.extend(comp.stl.points)
+                size = len(points)
+                triangles.extend(comp.stl.triangles + i_offset) 
+                i_offset = size
+            else: 
+                points.extend(comp.outer_stl.points)
+                size = len(points)
+                triangles.extend(comp.outer_stl.triangles + i_offset) 
+                i_offset = size
+                
+                points.extend(comp.inner_stl.points)
+                size = len(points)
+                triangles.extend(comp.inner_stl.triangles + i_offset) 
+                i_offset = size
+
+        self.points = np.array(points)
+        self.n_controls = n_controls
+        self.n_points = len(points)
+        self.triangles = triangles
+        self.n_triangles = len(triangles)
+        self.offsets = offsets
+        self.deriv_offsets = deriv_offsets
+
+        params.append(
+            ('geom_out', {'iotype':'out', 'data_shape':self.points.shape, 'type':IStaticGeometry})
+        )
         return params
 
     def set_parameter(self, name, val): 
@@ -534,11 +510,13 @@ class STLGroup(object):
         return [self.param_name_map[n] for n in names]
 
     def regen_model(self): 
+
         for comp in self._comps: 
 
             #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
             
             #del_C = np.ones((10,2)) * 123.0
+
             if isinstance(comp, Body): 
                 delta_C_shape = comp.delta_C.shape
                 del_C = np.zeros( delta_C_shape )
@@ -549,7 +527,7 @@ class STLGroup(object):
                 delta_Cc_shape = comp.delta_Cc.shape
                 del_Cc = np.zeros( delta_Cc_shape )
                 del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_Cc[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+                del_Cc[:,1] = self.param_name_map[ '%s.R' % comp.name ]
 
                 delta_Ct_shape = comp.delta_Ct.shape
                 del_Ct = np.zeros( delta_Ct_shape )
@@ -558,6 +536,7 @@ class STLGroup(object):
                 # need both delta_Cc and delta_Ct for shells
                 comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
 
+        self.list_parameters() #needed for book-keeping 
 
     def get_static_geometry(self): 
         return self
