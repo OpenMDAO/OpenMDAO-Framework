@@ -273,7 +273,6 @@ class GeomComponent(Component):
         return True
 
     def _input_updated(self, name, fullpath=None):
-        print "testing", name
         if fullpath is None:
             attr = getattr(self, name)
         else:
@@ -283,7 +282,9 @@ class GeomComponent(Component):
                 attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
+        
         super(GeomComponent, self)._input_updated(name.split('.',1)[0])
+
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         # check to see if dest attribute is inside of our parametric_geometry

@@ -87,7 +87,34 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         self.top.run()
 
-    def test_deriv(self): 
+    def test_set_array_vals(self): 
+
+
+        self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
+        self.top.run()
+        p0 = self.top.rec.out.copy()
+
+        self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
+        self.top.run()
+
+        self.top.geom.plug.X[1] = 2
+        self.top.run()
+        p1 = self.top.rec.out.copy()
+
+        self.assertFalse(np.any(p0-p1)) #p0-p1 should be all 0
+
+
+        self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
+        self.top.run()
+        self.top.geom.set('plug.X', 2, index=(1,)) 
+        self.top.run()
+        p2 = self.top.rec.out.copy()
+
+        self.assertFalse(np.any(p0-p2)) #p0-p1 should be all 0
+
+
+
+    def _test_deriv(self): 
 
         #self.top.geom.set('plug.X',[0,1,0,0,0,0,0,0,0]) 
         self.top.run()
@@ -103,9 +130,14 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         print 
         print 
         #self.top.geom.plug.X[1] = 2
-        self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
+        #self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
         #self.top.geom.set('plug.X',[0,2,0,0,0,0,0,0,0]) 
+        self.top.geom.set('plug.X', 2.0, index=(1,)) 
+        print "start"
         print self.top.geom.plug.X
+        print self.top.geom.get('plug.X')
+        print getattr(self.top.geom.plug,'X')
+        print getattr(self.top.geom, 'plug.X')
         self.top.run()
 
         p2 = self.top.rec.out.copy()
