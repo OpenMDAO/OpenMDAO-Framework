@@ -133,6 +133,9 @@ class GeomComponent(Component):
         """
         if self.parametric_geometry is not None:
             try:
+                # params = self.parametric_geometry.list_parameters()
+                # for p in params: 
+                #     self._input_updated(p[0])
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
@@ -270,6 +273,7 @@ class GeomComponent(Component):
         return True
 
     def _input_updated(self, name, fullpath=None):
+        print "testing", name
         if fullpath is None:
             attr = getattr(self, name)
         else:

@@ -35,6 +35,7 @@ class GeomRecieveDerivApplyDeriv(Component):
     def execute(self): 
         self.out = self.geom_in.points
 
+
     def linearize(self): 
         
         self.J = np.eye(len(self.geom_in.points))
@@ -88,7 +89,34 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
     def test_deriv(self): 
 
-        print self.top.geom.linearize()
+        #self.top.geom.set('plug.X',[0,1,0,0,0,0,0,0,0]) 
+        self.top.run()
+        self.top.geom.linearize()
+
+        p1 = self.top.rec.out.copy()
+
+        ins = ['geom.plug.X']
+        outs = ['rec.out']
+
+        #Jx_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
+
+        print 
+        print 
+        #self.top.geom.plug.X[1] = 2
+        self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
+        #self.top.geom.set('plug.X',[0,2,0,0,0,0,0,0,0]) 
+        print self.top.geom.plug.X
+        self.top.run()
+
+        p2 = self.top.rec.out.copy()
+
+
+        print np.any(p2-p1)
+
+        # print self.top.geom.parametric_geometry.dXqdC[1,:9]
+
+        # print 
+        # print np.any(Jx_fd)
 
         self.fail()
 
