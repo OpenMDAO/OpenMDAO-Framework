@@ -28,7 +28,7 @@ class PseudoAssembly(object):
     provide derivatives, and thus must be finite differenced. It is not a real
     assembly, and should never be used in an OpenMDAO model."""
 
-    def __init__(self, name, comps, graph, wflow, fd=False):
+    def __init__(self, name, comps, graph, wflow, fd=False, drv_name=None):
         """Initialized with list of components, and the parent workflow."""
 
         inputs, outputs, renames = self._pre_init(name, comps, graph, fd)
@@ -84,9 +84,10 @@ class PseudoAssembly(object):
             
         if fd:
             self.itercomps = [c.name for c in wflow]
+        elif drv_name is not None:
+            self.itercomps = [drv_name]
         else:
             self.itercomps = list(cset)
-                
         
     def _pre_init(self, pa_name, group, dgraph, fd):
         """Return a tuple of the form (pa_inputs, pa_outputs, renames)
