@@ -145,11 +145,11 @@ class STLGroup(object):
     def linearize(self):
         if not self._needs_linerize: 
             return 
-        print "HERE"
-        self.list_parameters() 
-        print "there"
-        print "size J: ", len(self.points)
-        print self.param_loc_map
+        params = self.list_parameters() 
+
+
+
+
 
 
     def old_linearize(self): 
@@ -362,7 +362,7 @@ class STLGroup(object):
             i_start = self.param_loc_map[name]
             length = value.shape[0]
             np.set_printoptions(threshold='nan')
-            
+
             sub_Jx = self.Jx[:,i_start:i_start+length]
             result['geom_out'][:,0] += sub_Jx.dot(value)
 
