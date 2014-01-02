@@ -167,20 +167,41 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 FDy = ((p1-p0)/step)[:,1]
                 FDz = ((p1-p0)/step)[:,2]
 
-                Ay = self.top.geom.parametric_geometry.dYqdC[:,offset+i]
-                Az = self.top.geom.parametric_geometry.dZqdC[:,offset+i]
+                Ay = self.top.geom.parametric_geometry.dYqdCr[:,offset+i]
+                Az = self.top.geom.parametric_geometry.dZqdCr[:,offset+i]
 
                 #print "%s[%d]"%(param,i), not np.any(np.abs(FDy - Ay) > .00001), not np.any(np.abs(FDz - Az) > .00001)
                 self.assertTrue(np.all(np.abs(FDy - Ay) < .00001))
                 self.assertTrue(np.all(np.abs(FDz - Az) < .00001))
 
             self.top.geom.set(param, np.zeros(shape))
+
+        params = ["cowl.thickness", "cowl2.thickness"]
+        for param in params: 
+            shape = self.top.geom.get(param).shape
+            offset = self.top.geom.parametric_geometry.param_J_map[param]
+            for i in xrange(shape[0]): 
+                tmp = np.zeros(shape)
+                tmp[i] = step
+                self.top.geom.set(param,tmp)
+
+                self.top.run()
+
+                p1 = self.top.rec.out.copy()
+
+                FDy = ((p1-p0)/step)[:,1]
+                FDz = ((p1-p0)/step)[:,2]
+
+                Ay = self.top.geom.parametric_geometry.dYqdCt[:,offset+i]
+                Az = self.top.geom.parametric_geometry.dZqdCt[:,offset+i]
+
+                #print "%s[%d]"%(param,i), not np.any(np.abs(FDy - Ay) > .00001), not np.any(np.abs(FDz - Az) > .00001)
+
+                self.assertTrue(np.all(np.abs(FDy - Ay) < .00001))
+                self.assertTrue(np.all(np.abs(FDz - Az) < .00001))
+
+            self.top.geom.set(param, np.zeros(shape))
         
-
-
-
-
-
 
 
 

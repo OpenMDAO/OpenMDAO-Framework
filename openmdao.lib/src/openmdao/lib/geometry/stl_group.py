@@ -87,10 +87,14 @@ class STLGroup(object):
 
         #get proper sub_jacobians: 
         jx = []
-        jy = []
-        jz = []
+        jyr = []
+        jzr = []
+        jyt = [] #thickness jacobian for shells
+        jzt = [] #thickness jacobian for shells
+
         x_offset = 0
         yz_offset = 0
+        t_offset = 0
         for comp in self._comps: 
             if isinstance(comp, Body): 
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
@@ -99,12 +103,18 @@ class STLGroup(object):
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
-                jy.append(comp.dYqdC[:,:-1]) #constant tip radius
-                jz.append(comp.dZqdC[:,:-1]) 
+                jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
+                jzr.append(comp.dZqdC[:,:-1]) 
                 param_name = "%s.R"%comp.name
                 self.param_J_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
+
+                #zeros for thickness n_pointsx1
+                shape = comp.dXqdC.shape
+                jyt.append(np.zeros((shape[0],1)))
+                jzt.append(np.zeros((shape[0],1)))
+                t_offset += 1
 
             else: 
                 #inner and outer jacobians
@@ -116,22 +126,35 @@ class STLGroup(object):
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
+                #centerline
                 stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:])) 
                 stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:])) 
-                jy.append(stackY) #constant tip radius
-                jz.append(stackZ) 
+                jyr.append(stackY) #constant tip radius
+                jzr.append(stackZ) 
                 param_name = "%s.R"%comp.name
                 self.param_J_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
+
+                #thickness
+                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1])) 
+                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1])) 
+                jyt.append(stackY) #constant tip radius
+                jzt.append(stackZ) 
+                param_name = "%s.thickness"%comp.name
+                self.param_J_map[param_name] = t_offset
+                nCt = self.comp_param_count[comp][2]
+                t_offset += nCt
 
 
                
 
 
         self.dXqdC = np.array(block_diag(jx).todense())
-        self.dYqdC = np.array(block_diag(jy).todense())
-        self.dZqdC = np.array(block_diag(jz).todense())
+        self.dYqdCr = np.array(block_diag(jyr).todense())
+        self.dZqdCr = np.array(block_diag(jzr).todense())
+        self.dYqdCt = np.array(block_diag(jyt).todense())
+        self.dZqdCt = np.array(block_diag(jzt).todense())
 
         nCx = sum([t[0] for t in self.comp_param_count.values()])
         #print self.dXqdC.shape, self.n_points, nCx
