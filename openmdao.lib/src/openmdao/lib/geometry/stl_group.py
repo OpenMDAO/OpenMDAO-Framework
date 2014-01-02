@@ -107,9 +107,31 @@ class STLGroup(object):
                 yz_offset += nCr
 
             else: 
-                pass
+                #inner and outer jacobians
+                #have to stack the outer and inner jacobians
+                stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
+                jx.append(stackX) 
+                param_name = "%s.X"%comp.name
+                self.param_J_map[param_name] = x_offset
+                nCx = self.comp_param_count[comp][0]
+                x_offset += nCx
+
+                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:])) 
+                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:])) 
+                jy.append(stackY) #constant tip radius
+                jz.append(stackZ) 
+                param_name = "%s.R"%comp.name
+                self.param_J_map[param_name] = yz_offset
+                nCr = self.comp_param_count[comp][1]
+                yz_offset += nCr
+
+
+               
+
 
         self.dXqdC = np.array(block_diag(jx).todense())
+        self.dYqdC = np.array(block_diag(jy).todense())
+        self.dZqdC = np.array(block_diag(jz).todense())
 
         nCx = sum([t[0] for t in self.comp_param_count.values()])
         #print self.dXqdC.shape, self.n_points, nCx
@@ -450,7 +472,6 @@ class STLGroup(object):
         return params
 
     def set_parameter(self, name, val): 
-        print "here", name, val
         self.param_name_map[name] = val
 
     def get_parameters(self, names): 

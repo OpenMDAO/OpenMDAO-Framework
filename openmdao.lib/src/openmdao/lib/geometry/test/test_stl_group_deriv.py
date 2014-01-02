@@ -65,11 +65,13 @@ class PlugNozzleGeometry(STLGroup):
         n_c = 10
         body = Body(plug,controls=n_c) #just makes n_C evenly spaced points
         body2 = Body(plug.copy(), controls=n_c)
-        shell = Shell(cowl,cowl.copy(),n_c,n_c)
+        shell = Shell(cowl.copy(),cowl.copy(),n_c,n_c)
+        shell2 = Shell(cowl.copy(),cowl.copy(),n_c,n_c)
 
         self.add(body,name="plug")
+        self.add(shell,name="cowl")
         self.add(body2,name="plug2")
-        #self.add(shell,name="cowl")
+        self.add(shell2,name="cowl2")
 
 
 class TestcaseDerivSTLGroup(unittest.TestCase):
@@ -127,11 +129,12 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         # Jx_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
 
         step = 1
-        params = ["plug.X","plug2.X"]
+        params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
         for param in params: 
+            shape = self.top.geom.get(param).shape
             offset = self.top.geom.parametric_geometry.param_J_map[param]
-            for i in xrange(9): 
-                tmp = np.array([0,0,0,0,0,0,0,0,0])
+            for i in xrange(shape[0]): 
+                tmp = np.zeros(shape)
                 tmp[i] = step
                 self.top.geom.set(param,tmp)
 
@@ -140,38 +143,40 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 p1 = self.top.rec.out.copy()
 
                 FDx = ((p1-p0)/step)[:,0]
-                FDy = ((p1-p0)/step)[:,1]
-                FDz = ((p1-p0)/step)[:,2]
 
                 Ax = self.top.geom.parametric_geometry.dXqdC[:,offset+i]
 
-                print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
+                #print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
+                self.assertTrue(np.all(np.abs(FDx - Ax) < .00001))
 
-            self.top.geom.set(param, np.array([0,0,0,0,0,0,0,0,0]))
+            self.top.geom.set(param, np.zeros(shape))
 
-        # for param in params: 
-        #     offset = self.top.geom.parametric_geometry.param_J_map["plug2.X"]
-        #     for i in xrange(9): 
-        #         tmp = np.array([0,0,0,0,0,0,0,0,0])
-        #         tmp[i] = step
-        #         self.top.geom.set(param,tmp)
+        params = ["plug.R", "plug2.R", "cowl.R", "cowl2.R"]
+        for param in params: 
+            shape = self.top.geom.get(param).shape
+            offset = self.top.geom.parametric_geometry.param_J_map[param]
+            for i in xrange(shape[0]): 
+                tmp = np.zeros(shape)
+                tmp[i] = step
+                self.top.geom.set(param,tmp)
 
-        #         self.top.run()
+                self.top.run()
 
-        #         p1 = self.top.rec.out.copy()
+                p1 = self.top.rec.out.copy()
 
-        #         FDx = ((p1-p0)/step)[:,0]
-        #         FDy = ((p1-p0)/step)[:,1]
-        #         FDz = ((p1-p0)/step)[:,2]
+                FDy = ((p1-p0)/step)[:,1]
+                FDz = ((p1-p0)/step)[:,2]
 
-        #         Ax = self.top.geom.parametric_geometry.dXqdC[:,offset+i]
+                Ay = self.top.geom.parametric_geometry.dYqdC[:,offset+i]
+                Az = self.top.geom.parametric_geometry.dZqdC[:,offset+i]
 
-        #         print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
+                #print "%s[%d]"%(param,i), not np.any(np.abs(FDy - Ay) > .00001), not np.any(np.abs(FDz - Az) > .00001)
+                self.assertTrue(np.all(np.abs(FDy - Ay) < .00001))
+                self.assertTrue(np.all(np.abs(FDz - Az) < .00001))
 
-        #     self.top.geom.set(param, np.array([0,0,0,0,0,0,0,0,0]))
+            self.top.geom.set(param, np.zeros(shape))
         
-    
-        self.fail()
+
 
 
 
