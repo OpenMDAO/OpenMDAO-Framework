@@ -87,15 +87,25 @@ class STLGroup(object):
 
         #get proper sub_jacobians: 
         jx = []
-        comp_offset = 0
+        jy = []
+        jz = []
+        x_offset = 0
+        yz_offset = 0
         for comp in self._comps: 
             if isinstance(comp, Body): 
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
                 param_name = "%s.X"%comp.name
-                self.param_J_map[param_name] = comp_offset
-
+                self.param_J_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
-                comp_offset += nCx
+                x_offset += nCx
+
+                jy.append(comp.dYqdC[:,:-1]) #constant tip radius
+                jz.append(comp.dZqdC[:,:-1]) 
+                param_name = "%s.R"%comp.name
+                self.param_J_map[param_name] = yz_offset
+                nCr = self.comp_param_count[comp][1]
+                yz_offset += nCr
+
             else: 
                 pass
 

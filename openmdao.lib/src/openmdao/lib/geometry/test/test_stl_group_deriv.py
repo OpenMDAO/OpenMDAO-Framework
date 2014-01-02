@@ -129,7 +129,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         step = 1
         params = ["plug.X","plug2.X"]
         for param in params: 
-            offset = self.top.geom.parametric_geometry.param_J_map["plug2.X"]
+            offset = self.top.geom.parametric_geometry.param_J_map[param]
             for i in xrange(9): 
                 tmp = np.array([0,0,0,0,0,0,0,0,0])
                 tmp[i] = step
@@ -148,6 +148,27 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
 
             self.top.geom.set(param, np.array([0,0,0,0,0,0,0,0,0]))
+
+        # for param in params: 
+        #     offset = self.top.geom.parametric_geometry.param_J_map["plug2.X"]
+        #     for i in xrange(9): 
+        #         tmp = np.array([0,0,0,0,0,0,0,0,0])
+        #         tmp[i] = step
+        #         self.top.geom.set(param,tmp)
+
+        #         self.top.run()
+
+        #         p1 = self.top.rec.out.copy()
+
+        #         FDx = ((p1-p0)/step)[:,0]
+        #         FDy = ((p1-p0)/step)[:,1]
+        #         FDz = ((p1-p0)/step)[:,2]
+
+        #         Ax = self.top.geom.parametric_geometry.dXqdC[:,offset+i]
+
+        #         print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
+
+        #     self.top.geom.set(param, np.array([0,0,0,0,0,0,0,0,0]))
         
     
         self.fail()
