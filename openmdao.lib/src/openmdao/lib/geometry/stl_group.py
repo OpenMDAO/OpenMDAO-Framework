@@ -83,17 +83,23 @@ class STLGroup(object):
             return 
         self.list_parameters() 
 
-
+        self.param_J_map = {}
 
         #get proper sub_jacobians: 
         jx = []
+        comp_offset = 0
         for comp in self._comps: 
             if isinstance(comp, Body): 
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
+                param_name = "%s.X"%comp.name
+                self.param_J_map[param_name] = comp_offset
+
+                nCx = self.comp_param_count[comp][0]
+                comp_offset += nCx
             else: 
                 pass
 
-        self.dXqdC = block_diag(jx).todense()
+        self.dXqdC = np.array(block_diag(jx).todense())
 
         nCx = sum([t[0] for t in self.comp_param_count.values()])
         #print self.dXqdC.shape, self.n_points, nCx
@@ -348,10 +354,8 @@ class STLGroup(object):
         """ returns a dictionary of parameters sets key'd to component names"""
 
         self.param_name_map = {}
-        self.param_loc_map = {} #locate columns of jacobian related to a specific parameter
         self.comp_param_count = {}
         params = []
-        self.i_J = 0 #jacobian column index
         for comp in self._comps:  
             name = comp.name
 
@@ -362,9 +366,7 @@ class STLGroup(object):
                 tup = ('%s.X'%name, meta)
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
-                self.param_loc_map[tup[0]] = self.i_J
                 n_X = val.shape[0]
-                self.i_J += n_X
 
                 val = comp.delta_C[:-1,1] #holds the tip radius constant
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
@@ -372,9 +374,7 @@ class STLGroup(object):
                 tup = ('%s.R'%name, meta)
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
-                self.param_loc_map[tup[0]] = self.i_J
                 n_R = val.shape[0]
-                self.i_J += n_R
                 self.comp_param_count[comp] = (n_X,n_R)
 
 
@@ -385,9 +385,7 @@ class STLGroup(object):
                 tup = ('%s.X'%name, meta) 
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
-                self.param_loc_map[tup[0]] = self.i_J
                 n_X = val.shape[0]
-                self.i_J += n_X
 
                 val = comp.delta_Cc[:,1] #can vary all centerlines
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
@@ -395,9 +393,7 @@ class STLGroup(object):
                 tup = ('%s.R'%name, meta) 
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
-                self.param_loc_map[tup[0]] = self.i_J
                 n_R = val.shape[0]
-                self.i_J += n_R
 
                 val = comp.delta_Ct[:-1,1] #except last R, to keep tip size fixed
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
@@ -405,21 +401,15 @@ class STLGroup(object):
                 tup = ('%s.thickness'%name, meta) 
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
-                self.param_loc_map[tup[0]] = self.i_J
                 n_T = val.shape[0]
                 self.comp_param_count[comp] = (n_X,n_R,n_T)
-                self.i_J += n_T
 
         #do some point book keeping here
         points = []
         triangles = []
         i_offset = 0
-        offsets = []
         n_controls = 0
-        deriv_offsets = []
         for comp in self._comps:
-            offsets.append(i_offset)
-            deriv_offsets.append(n_controls)
             n_controls += sum(self.comp_param_count[comp])
 
             if isinstance(comp,Body): 
@@ -443,8 +433,6 @@ class STLGroup(object):
         self.n_points = len(points)
         self.triangles = triangles
         self.n_triangles = len(triangles)
-        self.offsets = offsets
-        self.deriv_offsets = deriv_offsets
         
         params.append(
             ('geom_out', {'iotype':'out', 'data_shape':self.points.shape, 'type':IStaticGeometry})

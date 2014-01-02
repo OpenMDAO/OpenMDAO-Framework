@@ -87,7 +87,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         self.top.run()
 
-    def test_set_array_vals(self): 
+    def _test_set_array_vals(self): 
 
 
         self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
@@ -114,42 +114,42 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
 
 
-    def _test_deriv(self): 
+    def test_deriv(self): 
 
         #self.top.geom.set('plug.X',[0,1,0,0,0,0,0,0,0]) 
         self.top.run()
         self.top.geom.linearize()
 
-        p1 = self.top.rec.out.copy()
+        p0 = self.top.rec.out.copy()
 
-        ins = ['geom.plug.X']
-        outs = ['rec.out']
+        # ins = ['geom.plug.X']
+        # outs = ['rec.out']
+        # Jx_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
 
-        #Jx_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
+        step = 1
+        params = ["plug.X","plug2.X"]
+        for param in params: 
+            offset = self.top.geom.parametric_geometry.param_J_map["plug2.X"]
+            for i in xrange(9): 
+                tmp = np.array([0,0,0,0,0,0,0,0,0])
+                tmp[i] = step
+                self.top.geom.set(param,tmp)
 
-        print 
-        print 
-        #self.top.geom.plug.X[1] = 2
-        #self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
-        #self.top.geom.set('plug.X',[0,2,0,0,0,0,0,0,0]) 
-        self.top.geom.set('plug.X', 2.0, index=(1,)) 
-        print "start"
-        print self.top.geom.plug.X
-        print self.top.geom.get('plug.X')
-        print getattr(self.top.geom.plug,'X')
-        print getattr(self.top.geom, 'plug.X')
-        self.top.run()
+                self.top.run()
 
-        p2 = self.top.rec.out.copy()
+                p1 = self.top.rec.out.copy()
 
+                FDx = ((p1-p0)/step)[:,0]
+                FDy = ((p1-p0)/step)[:,1]
+                FDz = ((p1-p0)/step)[:,2]
 
-        print np.any(p2-p1)
+                Ax = self.top.geom.parametric_geometry.dXqdC[:,offset+i]
 
-        # print self.top.geom.parametric_geometry.dXqdC[1,:9]
+                print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
 
-        # print 
-        # print np.any(Jx_fd)
-
+            self.top.geom.set(param, np.array([0,0,0,0,0,0,0,0,0]))
+        
+    
         self.fail()
 
 
