@@ -150,7 +150,7 @@ class STLGroup(object):
                
 
 
-        self.dXqdC = np.array(block_diag(jx).todense())
+        self.dXqdC = block_diag(jx).toarray()
         self.dYqdCr = np.array(block_diag(jyr).todense())
         self.dZqdCr = np.array(block_diag(jzr).todense())
         self.dYqdCt = np.array(block_diag(jyt).todense())
