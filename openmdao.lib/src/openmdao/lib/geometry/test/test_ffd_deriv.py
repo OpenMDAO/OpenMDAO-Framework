@@ -148,7 +148,7 @@ class TestFFDDerivatives(unittest.TestCase):
 
             dfdx_outer = (f1_outer-f0_outer)/step
             deriv_checkY_outer = np.all(np.abs(shell.dYoqdCt[:,i] - dfdx_outer[:,1]) < 1e-6)
-            deriv_checkZ_outer = np.all(np.abs(shell.dZoqdCc[:,i] - dfdx_outer[:,2]) < 1e-6)
+            deriv_checkZ_outer = np.all(np.abs(shell.dZoqdCt[:,i] - dfdx_outer[:,2]) < 1e-6)
             #print np.abs(shell.dXoqdCc[:,i] - dfdx_outer[:,0]) 
 
             self.assertTrue(np.any(shell.dYoqdCc[:,i] > 0.001))

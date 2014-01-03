@@ -83,7 +83,7 @@ class STLGroup(object):
             return 
         self.list_parameters() 
 
-        self.param_J_map = {}
+        self.param_J_offset_map = {}
 
         #get proper sub_jacobians: 
         jx = []
@@ -99,14 +99,14 @@ class STLGroup(object):
             if isinstance(comp, Body): 
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
                 param_name = "%s.X"%comp.name
-                self.param_J_map[param_name] = x_offset
+                self.param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
                 jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
                 jzr.append(comp.dZqdC[:,:-1]) 
                 param_name = "%s.R"%comp.name
-                self.param_J_map[param_name] = yz_offset
+                self.param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
 
@@ -122,7 +122,7 @@ class STLGroup(object):
                 stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
                 jx.append(stackX) 
                 param_name = "%s.X"%comp.name
-                self.param_J_map[param_name] = x_offset
+                self.param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
@@ -132,7 +132,7 @@ class STLGroup(object):
                 jyr.append(stackY) #constant tip radius
                 jzr.append(stackZ) 
                 param_name = "%s.R"%comp.name
-                self.param_J_map[param_name] = yz_offset
+                self.param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
 
@@ -142,128 +142,33 @@ class STLGroup(object):
                 jyt.append(stackY) #constant tip radius
                 jzt.append(stackZ) 
                 param_name = "%s.thickness"%comp.name
-                self.param_J_map[param_name] = t_offset
+                self.param_J_offset_map[param_name] = t_offset
                 nCt = self.comp_param_count[comp][2]
                 t_offset += nCt
 
+        self.dXqdC = block_diag(jx)
+        self.dYqdCr = block_diag(jyr)
+        self.dZqdCr = block_diag(jzr)
+        self.dYqdCt = block_diag(jyt)
+        self.dZqdCt = block_diag(jzt)
 
-               
+        self.param_J_map = {}
+        #map param names to jacobians: 
+        for comp in self._comps: 
+            param_name = "%s.X"%comp.name
+            offset = self.param_J_offset_map[param_name]
+            self.param_J_map[param_name] = (offset, self.dXqdC, False, False)
 
+            param_name = "%s.R"%comp.name
+            offset = self.param_J_offset_map[param_name]
+            self.param_J_map[param_name] = (offset, False, self.dYqdCr, self.dZqdCr)
 
-        self.dXqdC = block_diag(jx).toarray()
-        self.dYqdCr = np.array(block_diag(jyr).todense())
-        self.dZqdCr = np.array(block_diag(jzr).todense())
-        self.dYqdCt = np.array(block_diag(jyt).todense())
-        self.dZqdCt = np.array(block_diag(jzt).todense())
-
-        nCx = sum([t[0] for t in self.comp_param_count.values()])
-        #print self.dXqdC.shape, self.n_points, nCx
-
-        self._needs_linerize = False
-
-    def old_linearize(self): 
-        if not self._needs_linerize: 
-            return 
-        self.list_parameters() #makes up to date param_loc_map
-
-
-        i_comp = 0 #keep track of which comp the points came from
-        comp = self._comps[0]
-        i_offset=0
-        i_deriv_offset = 0
-        Jdata = []
-        Jrow = []
-        Jcolumn = []
-        for i,p in enumerate(self.points): 
-            #map point index to proper component
-            if (i_comp < len(self._comps)-1) and (i == self.offsets[i_comp+1]): #the offset for the next comp: 
-                i_offset = i
-                i_comp += 1
-                i_deriv_offset = self.deriv_offsets[i_comp]
-                comp = self._comps[i_comp] 
-            deriv_values = np.zeros((3*self.n_controls,))
-            
-            if isinstance(comp,Body): 
-                size_C = self.comp_param_count[comp]
-                n_C = 3*sum(size_C) 
-                #x value
-                start = i_deriv_offset
-                end = start + 3*size_C[0] #x
-
-                #X is only a function of the x  parameter
-
-                X = np.array(comp.dXqdC[i-i_offset,1:])   
-
-                deriv_values[start:end:3] = X.flatten()  
-
-                #r value
-                start = end
-                end = start + 3*size_C[1] #r
-                #Y,Z are only a function of the r parameter
-                Y = np.array(comp.dYqdC[i-i_offset,:-1])
-                Z = np.array(comp.dZqdC[i-i_offset,:-1])
-                deriv_values[start+1:end:3] = Y.flatten() 
-                deriv_values[start+2:end:3] = Z.flatten() 
-            else: 
-                size_C = self.comp_param_count[comp]
-                n_C = 3*sum(size_C)
-                #centerline x value
-                start = 3*i_deriv_offset
-                end = start + 3*size_C[0] #x
-
-                #determine if point is on upper or lower surface? 
-                outer=True
-                deriv_i = i-i_offset
-                if i-i_offset >= comp.n_outer: 
-                    outer=False
-                    deriv_i = i-i_offset-comp.n_outer
-
-                #X is only a function of the x  parameter
-                if outer: 
-                    X = np.array(comp.dXoqdCc[deriv_i,1:])
-                else: 
-                    X = np.array(comp.dXiqdCc[deriv_i,1:])
-
-                deriv_values[start:end:3] = X.flatten()  
-
-                #centerline r value
-                start = end
-                end = start + 3*size_C[1] #r
-
-                #Y,Z are only a function of the r parameter
-                if outer: 
-                    Y = np.array(comp.dYoqdCc[deriv_i,:])
-                    Z = np.array(comp.dZoqdCc[deriv_i,:])
-                else: 
-                    Y = np.array(comp.dYiqdCc[deriv_i,:])
-                    Z = np.array(comp.dZiqdCc[deriv_i,:])
-                deriv_values[start+1:end:3] = Y.flatten() 
-                deriv_values[start+2:end:3] = Z.flatten() 
-
-                #thickness parameter
-                start = end
-                end = start + 3*size_C[2] #t
-                if outer: 
-                    Y = np.array(comp.dYoqdCt[deriv_i,:-1])
-                    Z = np.array(comp.dZoqdCt[deriv_i,:-1])
-                else: 
-                    Y = np.array(comp.dYiqdCt[deriv_i,:-1])
-                    Z = np.array(comp.dZiqdCt[deriv_i,:-1])
-                deriv_values[start+1:end:3] = Y.flatten() 
-                deriv_values[start+2:end:3] = Z.flatten() 
-
-            Jdata.append(deriv_values) 
-        self.J = np.array(Jdata) #weird format used for tecplot fepoint, x,y,z interlaced
-        self.Jx = self.J[:,0::3]
-        self.Jy = self.J[:,1::3]
-        self.Jz = self.J[:,2::3]
-
-        self.JxT = self.Jx.T
-        self.JyT = self.Jy.T
-        self.JzT = self.Jy.T
+            if isinstance(comp, Shell): 
+                param_name = "%s.thickness"%comp.name
+                offset = self.param_J_offset_map[param_name]
+                self.param_J_map[param_name] = (offset, False, self.dYqdCt, self.dZqdCt)
 
         self._needs_linerize = False
-
 
     def writeSTL(self, file_name, ascii=False): 
         """outputs an STL file"""
@@ -317,10 +222,26 @@ class STLGroup(object):
 
         lines.append('ZONE T = group0, I = %d, J = %d, F=FEPOINT'%(self.n_points,self.n_triangles)) #TODO I think this J number depends on the number of variables
         
+        #xyz for each parameter
+        nx = 3*self.dXqdC.shape[1]
+        nr = 3*self.dYqdCr.shape[1]
+        nt = 3*self.dYqdCt.shape[1]
+        j_cols =  (nx+nr+nt)
+
         for i,p in enumerate(self.points): 
             line = "%.8f %.8f %.8f %d "%(p[0],p[1],p[2],i+1) #x,y,z,index coordiantes of point
 
-            deriv_values = self.J[i]
+            #deriv_values = self.J[i]
+            deriv_values = np.zeros((j_cols,))
+            deriv_values[:nx:3] = self.dXqdC.getrow(i).toarray()
+
+            #leave x as zero
+            deriv_values[nx+1:nx+nr:3] = self.dYqdCr.getrow(i).toarray()
+            deriv_values[nx+2:nx+nr:3] = self.dZqdCr.getrow(i).toarray()
+
+            #leave x as zero
+            deriv_values[nx+nr+1::3] = self.dYqdCt.getrow(i).toarray()
+            deriv_values[nx+nr+2::3] = self.dZqdCt.getrow(i).toarray()
             
             line += " ".join(np.char.mod('%.8f',deriv_values))
 
@@ -363,23 +284,13 @@ class STLGroup(object):
 
     #begin methods for OpenMDAO geometry derivatives
     def apply_deriv(self, arg, result): 
-        self.linearize()
-        #print "test: ", arg
+        
         for name, value in arg.iteritems(): 
-            if name == "geom_out": 
-                continue 
-            i_start = self.param_loc_map[name]
-            length = value.shape[0]
-            np.set_printoptions(threshold='nan')
+            
+            
+            result['geom_out'][:,0]
 
-            sub_Jx = self.Jx[:,i_start:i_start+length]
-            result['geom_out'][:,0] += sub_Jx.dot(value)
-
-            sub_Jy = self.Jy[:,i_start:i_start+length]
-            result['geom_out'][:,1] += sub_Jy.dot(value)
-
-            sub_Jz = self.Jz[:,i_start:i_start+length]
-            result['geom_out'][:,2] += sub_Jz.dot(value)
+            
 
         return result
 
