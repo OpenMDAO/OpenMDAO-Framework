@@ -127,10 +127,7 @@ class Array(TraitArray):
             
             value = value.value
             
-        try:
-            return super(Array, self).validate(obj, name, value)
-        except Exception:
-            self.error(obj, name, value)
+        return super(Array, self).validate(obj, name, value)
 
     def error(self, obj, name, value):
         """Returns an informative and descriptive error string."""
@@ -219,6 +216,7 @@ class Array(TraitArray):
         attr['type'] = "ndarray"
         attr['value'] = str(value.tolist())
         attr['dim'] = str(value.shape).strip('()').rstrip(',')
+        attr['fixed'] = self.shape is not None
         
         for field in meta:
             if field not in gui_excludes:
