@@ -132,7 +132,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         for param in params: 
             shape = self.top.geom.get(param).shape
             #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
-            offset, Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
             for i in xrange(shape[0]): 
                 tmp = np.zeros(shape)
                 tmp[i] = step
@@ -144,7 +144,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
                 FDx = ((p1-p0)/step)[:,0]
 
-                Ax = Jx.getcol(offset+i).toarray().flatten()
+                Ax = Jx[:,i]
 
                 #print "%s[%d]"%(param,i), not np.any(np.abs(FDx - Ax) > .00001)
                 self.assertTrue(np.all(np.abs(FDx - Ax) < .00001))
@@ -155,7 +155,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         for param in params: 
             shape = self.top.geom.get(param).shape
             #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
-            offset, Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
             for i in xrange(shape[0]): 
                 tmp = np.zeros(shape)
                 tmp[i] = step
@@ -168,8 +168,8 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 FDy = ((p1-p0)/step)[:,1]
                 FDz = ((p1-p0)/step)[:,2]
 
-                Ay = Jy.getcol(offset+i).toarray().flatten()
-                Az = Jz.getcol(offset+i).toarray().flatten()
+                Ay = Jy[:,i]
+                Az = Jz[:,i]
 
                 #print "%s[%d]"%(param,i), not np.any(np.abs(FDy - Ay) > .00001), not np.any(np.abs(FDz - Az) > .00001)
                 self.assertTrue(np.all(np.abs(FDy - Ay) < .00001))
@@ -181,7 +181,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         for param in params: 
             shape = self.top.geom.get(param).shape
             #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
-            offset, Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
             for i in xrange(shape[0]): 
                 tmp = np.zeros(shape)
                 tmp[i] = step
@@ -194,8 +194,8 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 FDy = ((p1-p0)/step)[:,1]
                 FDz = ((p1-p0)/step)[:,2]
 
-                Ay = Jy.getcol(offset+i).toarray().flatten()
-                Az = Jz.getcol(offset+i).toarray().flatten()
+                Ay = Jy[:,i]
+                Az = Jz[:,i]
 
                 #print "%s[%d]"%(param,i), not np.any(np.abs(FDy - Ay) > .00001), not np.any(np.abs(FDz - Az) > .00001)
 

@@ -83,7 +83,7 @@ class STLGroup(object):
             return 
         self.list_parameters() 
 
-        self.param_J_offset_map = {}
+        param_J_offset_map = {}
 
         #get proper sub_jacobians: 
         jx = []
@@ -99,14 +99,14 @@ class STLGroup(object):
             if isinstance(comp, Body): 
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
                 param_name = "%s.X"%comp.name
-                self.param_J_offset_map[param_name] = x_offset
+                param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
                 jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
                 jzr.append(comp.dZqdC[:,:-1]) 
                 param_name = "%s.R"%comp.name
-                self.param_J_offset_map[param_name] = yz_offset
+                param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
 
@@ -122,7 +122,7 @@ class STLGroup(object):
                 stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
                 jx.append(stackX) 
                 param_name = "%s.X"%comp.name
-                self.param_J_offset_map[param_name] = x_offset
+                param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
@@ -132,7 +132,7 @@ class STLGroup(object):
                 jyr.append(stackY) #constant tip radius
                 jzr.append(stackZ) 
                 param_name = "%s.R"%comp.name
-                self.param_J_offset_map[param_name] = yz_offset
+                param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
 
@@ -142,31 +142,34 @@ class STLGroup(object):
                 jyt.append(stackY) #constant tip radius
                 jzt.append(stackZ) 
                 param_name = "%s.thickness"%comp.name
-                self.param_J_offset_map[param_name] = t_offset
+                param_J_offset_map[param_name] = t_offset
                 nCt = self.comp_param_count[comp][2]
                 t_offset += nCt
 
-        self.dXqdC = block_diag(jx, format="csr")
-        self.dYqdCr = block_diag(jyr, format="csr")
-        self.dZqdCr = block_diag(jzr, format="csr")
-        self.dYqdCt = block_diag(jyt, format="csr")
-        self.dZqdCt = block_diag(jzt, format="csr")
+        self.dXqdC = block_diag(jx).toarray()
+        self.dYqdCr = block_diag(jyr).toarray()
+        self.dZqdCr = block_diag(jzr).toarray()
+        self.dYqdCt = block_diag(jyt).toarray()
+        self.dZqdCt = block_diag(jzt).toarray()
 
         self.param_J_map = {}
         #map param names to jacobians: 
         for comp in self._comps: 
             param_name = "%s.X"%comp.name
-            offset = self.param_J_offset_map[param_name]
-            self.param_J_map[param_name] = (offset, self.dXqdC, False, False)
+            offset = param_J_offset_map[param_name]
+            nCx = self.comp_param_count[comp][0]
+            self.param_J_map[param_name] = (self.dXqdC[:,offset:offset+nCx], False, False)
 
             param_name = "%s.R"%comp.name
-            offset = self.param_J_offset_map[param_name]
-            self.param_J_map[param_name] = (offset, False, self.dYqdCr, self.dZqdCr)
+            offset = param_J_offset_map[param_name]
+            nCr = self.comp_param_count[comp][1]
+            self.param_J_map[param_name] = (False, self.dYqdCr[:,offset:offset+nCr], self.dZqdCr[:,offset:offset+nCr])
 
             if isinstance(comp, Shell): 
                 param_name = "%s.thickness"%comp.name
-                offset = self.param_J_offset_map[param_name]
-                self.param_J_map[param_name] = (offset, False, self.dYqdCt, self.dZqdCt)
+                offset = param_J_offset_map[param_name]
+                nCt = self.comp_param_count[comp][2]
+                self.param_J_map[param_name] = (False, self.dYqdCt[:,offset:offset+nCt], self.dZqdCt[:,offset:offset+nCt])
 
         self._needs_linerize = False
 
@@ -233,15 +236,15 @@ class STLGroup(object):
 
             #deriv_values = self.J[i]
             deriv_values = np.zeros((j_cols,))
-            deriv_values[:nx:3] = self.dXqdC.getrow(i).toarray()
+            deriv_values[:nx:3] = self.dXqdC[i]
 
             #leave x as zero
-            deriv_values[nx+1:nx+nr:3] = self.dYqdCr.getrow(i).toarray()
-            deriv_values[nx+2:nx+nr:3] = self.dZqdCr.getrow(i).toarray()
+            deriv_values[nx+1:nx+nr:3] = self.dYqdCr[i]
+            deriv_values[nx+2:nx+nr:3] = self.dZqdCr[i]
 
             #leave x as zero
-            deriv_values[nx+nr+1::3] = self.dYqdCt.getrow(i).toarray()
-            deriv_values[nx+nr+2::3] = self.dZqdCt.getrow(i).toarray()
+            deriv_values[nx+nr+1::3] = self.dYqdCt[i]
+            deriv_values[nx+nr+2::3] = self.dZqdCt[i]
             
             line += " ".join(np.char.mod('%.8f',deriv_values))
 
@@ -286,11 +289,12 @@ class STLGroup(object):
     def apply_deriv(self, arg, result): 
         
         for name, value in arg.iteritems(): 
-            
-            
-            result['geom_out'][:,0]
-
-            
+            offset, Jx, Jy, Jz = self.param_J_map[name]
+            if Jx: 
+                col = Jx.getcol(offset+i).toarray().flatten()
+                result['geom_out'][:,0]
+            if Jy: 
+                pass
 
         return result
 
