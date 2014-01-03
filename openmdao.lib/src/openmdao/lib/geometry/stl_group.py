@@ -146,11 +146,11 @@ class STLGroup(object):
                 nCt = self.comp_param_count[comp][2]
                 t_offset += nCt
 
-        self.dXqdC = block_diag(jx)
-        self.dYqdCr = block_diag(jyr)
-        self.dZqdCr = block_diag(jzr)
-        self.dYqdCt = block_diag(jyt)
-        self.dZqdCt = block_diag(jzt)
+        self.dXqdC = block_diag(jx, format="csr")
+        self.dYqdCr = block_diag(jyr, format="csr")
+        self.dZqdCr = block_diag(jzr, format="csr")
+        self.dYqdCt = block_diag(jyt, format="csr")
+        self.dZqdCt = block_diag(jzt, format="csr")
 
         self.param_J_map = {}
         #map param names to jacobians: 
