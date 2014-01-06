@@ -237,6 +237,12 @@ class TestCase(unittest.TestCase):
         prob.dis1.y2 = 0.0
         
         prob.run()
+        
+        # In the top workflow, the subdrivers should each become a PA.
+        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
+        self.assertEqual( PA1.itercomps, ['localopt1'])
+        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
+        self.assertEqual( PA2.itercomps, ['localopt2'])
 
         assert_rel_error(self, prob.global_des_var_targets[0], 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.global_des_var_targets[1], 1.0, 0.01)
