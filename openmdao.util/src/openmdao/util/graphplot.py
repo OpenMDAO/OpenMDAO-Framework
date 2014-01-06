@@ -25,6 +25,8 @@ _excluded_tooltip_data = set([
     'invalidation',
     'boundary',
     'iotype',
+    'color_idx',
+    'title',
 ])
 
 def _to_id(name):
@@ -32,7 +34,7 @@ def _to_id(name):
     dots with hyphens."""
     return name.replace('.', '-')
 
-def _clean_graph(graph, excludes=(), scope=None):
+def _clean_graph(graph, excludes=(), scope=None, parent=None):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
     copies the entire graph.
@@ -40,6 +42,16 @@ def _clean_graph(graph, excludes=(), scope=None):
     # make a subgraph, creating new edge/node meta dicts later if
     # we change anything
     graph = graph.subgraph(graph.nodes_iter())
+
+    if parent is None:
+        graph.graph['title'] = 'unknown'
+    else:
+        name = parent.get_pathname()
+        if hasattr(parent, 'workflow'):
+            name += '._derivative_graph'
+        else:
+            name += '._depgraph'
+        graph.graph['title'] = name
 
     if not excludes:
         from openmdao.main.component import Component
@@ -53,9 +65,13 @@ def _clean_graph(graph, excludes=(), scope=None):
                 pass
             else:
                 for cname in cgraph.nodes():
-                    comp = getattr(scope, cname)
-                    if isinstance(comp, Component):
-                        graph.remove_nodes_from(['.'.join([cname,n]) 
+                    try:
+                        comp = getattr(scope, cname)
+                    except AttributeError:
+                        pass
+                    else:
+                        if isinstance(comp, Component):
+                            graph.remove_nodes_from(['.'.join([cname,n]) 
                                     for n,v in comp.items(framework_var=True)])
 
         else: # just exclude some framework vars from Driver and Component
@@ -124,7 +140,8 @@ def _clean_graph(graph, excludes=(), scope=None):
 
     return graph
 
-def plot_graph(graph, scope=None, excludes=(), d3page='fixedforce.html'):
+def plot_graph(graph, scope=None, parent=None, 
+               excludes=(), d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -132,8 +149,11 @@ def plot_graph(graph, scope=None, excludes=(), d3page='fixedforce.html'):
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
-    graph = _clean_graph(graph, excludes, scope=scope)
+    graph = _clean_graph(graph, excludes=excludes, 
+                         scope=scope, parent=parent)
     data = node_link_data(graph)
+    tmp = data.get('graph', [])
+    data['graph'] = [dict(tmp)]
 
     startdir = os.getcwd()
     os.chdir(tmpdir)
@@ -157,13 +177,28 @@ def plot_graph(graph, scope=None, excludes=(), d3page='fixedforce.html'):
         shutil.rmtree(tmpdir)
         print "temp directory removed"
 
+def plot_graphs(obj, recurse=False):
+    """Return a list of tuples of the form (scope, parent, graph)"""
+    from openmdao.main.assembly import Assembly
+    from openmdao.main.driver import Driver
+
+    if isinstance(obj, Assembly):
+        plot_graph(obj._depgraph, scope=obj, parent=obj)
+        if recurse:
+            plot_graphs(obj.driver, recurse)
+    elif isinstance(obj, Driver):
+        plot_graph(obj.workflow.derivative_graph(), 
+                   scope=obj.parent, parent=obj)
+        if recurse:
+            for comp in obj.iteration_set():
+                if isinstance(comp, Assembly) or isinstance(comp, Driver):
+                    plot_graphs(comp, recurse)
 
 def main():
     from argparse import ArgumentParser
     import inspect
 
     from openmdao.main.assembly import Assembly, set_as_top
-    from openmdao.main.driver import Driver
 
     parser = ArgumentParser()
     parser.add_argument('-m', '--module', action='store', dest='module',
@@ -179,20 +214,7 @@ def main():
     if options.module is None:
         parser.print_help()
         sys.exit(-1)
-
-    def get_graphs(obj):
-        """Return a list of tuples of the form (parent, graph)"""
-        graphs = []
-        if isinstance(obj, Assembly):
-            graphs.append((obj, obj._depgraph))
-            graphs.extend(get_graphs(obj.driver))
-        elif isinstance(obj, Driver):
-            graphs.append((obj, obj.workflow.derivative_graph()))
-            for comp in obj.iteration_set():
-                if isinstance(comp, Assembly) or isinstance(comp, Driver):
-                    graphs.extend(get_graphs(comp))
-        return graphs
-                
+               
     __import__(options.module)
 
     mod = sys.modules[options.module]
@@ -215,14 +237,7 @@ def main():
     if not obj.get_pathname():
         obj.name = 'top'
 
-    if options.recurse:
-        graphs = get_graphs(obj)
-    else:
-        graphs = [(obj, obj._depgraph)]
-
-    for obj, graph in graphs:
-        plot_graph(graph, scope=obj)
-
+    plot_graphs(obj, recurse=options.recurse)
 
 if __name__ == '__main__':
     main()
