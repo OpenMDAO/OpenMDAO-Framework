@@ -41,10 +41,8 @@ class GeomRecieveDerivApplyDeriv(Component):
 
     def apply_deriv(self, arg, result):
         if 'geom_in' in arg:
-            points = arg['geom_in'].reshape(self.geom_in.points.shape)
-            result['out'][:,0] += self.J.dot(points[:,0])
-            result['out'][:,1] += self.J.dot(points[:,1])
-            result['out'][:,2] += self.J.dot(points[:,2])
+
+            result['out'] += arg['geom_in'].reshape(-1,3)
     
     def apply_derivT(self, arg, result):
         if 'out' in arg:
@@ -88,7 +86,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         self.top.run()
 
-    def _test_set_array_vals(self): 
+    def test_set_array_vals(self): 
 
 
         self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
@@ -113,9 +111,87 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         self.assertFalse(np.any(p0-p2)) #p0-p1 should be all 0
 
+    def test_apply_deriv(self): 
+
+        self.top.run()
+        self.top.geom.linearize()
+
+        params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
+        for param in params: 
+            self.top.driver.workflow.config_changed()
+            J = self.top.driver.workflow.calc_gradient(['geom.'+param,],['rec.out',], mode='forward')
+            Jx_forward = J[0::3]
+            Jy_forward = J[1::3]
+            Jz_forward = J[2::3]
+            
+            shape = self.top.geom.get(param).shape
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+
+            self.assertTrue(np.any(np.abs(Jx_forward) > 0.0))
+            self.assertTrue(np.all(np.abs(Jx - Jx_forward) < .00001))
+            self.assertTrue(np.all(np.abs(Jy_forward) < 1e-10))
+            self.assertTrue(np.all(np.abs(Jz_forward) < 1e-10))
 
 
-    def test_deriv(self): 
+        params = ["plug.R", "plug2.R", "cowl.R", "cowl2.R"]
+        for param in params: 
+
+            self.top.driver.workflow.config_changed()
+            J = self.top.driver.workflow.calc_gradient(['geom.'+param,],['rec.out',], mode='forward')
+            Jx_forward = J[0::3]
+            Jy_forward = J[1::3]
+            Jz_forward = J[2::3]
+
+            shape = self.top.geom.get(param).shape
+            #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+
+            self.assertTrue(np.all(np.abs(Jx_forward) < 1e-10))
+            self.assertTrue(np.any(np.abs(Jy_forward) > 0.0))
+            self.assertTrue(np.any(np.abs(Jz_forward) > 0.0))
+            self.assertTrue(np.all(np.abs(Jy - Jy_forward) < .00001))
+            self.assertTrue(np.all(np.abs(Jz - Jz_forward) < .00001))
+
+
+        params = ["cowl.thickness", "cowl2.thickness"]
+        for param in params: 
+            self.top.driver.workflow.config_changed()
+            J = self.top.driver.workflow.calc_gradient(['geom.'+param,],['rec.out',], mode='forward')
+            Jx_forward = J[0::3]
+            Jy_forward = J[1::3]
+            Jz_forward = J[2::3]
+
+
+            shape = self.top.geom.get(param).shape
+            #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
+            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+
+            self.assertTrue(np.all(np.abs(Jx_forward) < 1e-10))
+            self.assertTrue(np.any(np.abs(Jy_forward) > 0.0))
+            self.assertTrue(np.any(np.abs(Jz_forward) > 0.0))
+            self.assertTrue(np.all(np.abs(Jy - Jy_forward) < .00001))
+            self.assertTrue(np.all(np.abs(Jz - Jz_forward) < .00001))
+
+
+    def test_apply_deriv_fd(self): 
+
+        self.top.run()
+        self.top.geom.linearize()
+
+        params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X", "plug.R", "plug2.R", "cowl.R", "cowl2.R", "cowl.thickness", "cowl2.thickness"]
+        ins = ['geom.'+param for param in params]
+        outs = ['rec.out',]
+
+        self.top.driver.workflow.config_changed()
+        J_forward = self.top.driver.workflow.calc_gradient(ins,outs, mode='forward')
+        self.top.driver.workflow.config_changed()
+        J_fd = self.top.driver.workflow.calc_gradient(ins,outs, mode='fd')
+
+        self.assertTrue(np.any(np.abs(J_forward) > 0.0))
+        self.assertTrue(np.any(np.abs(J_fd) > 0.0))
+        self.assertTrue(np.all(np.abs(J_forward - J_fd) < .00001))
+
+    def test_jacobian_manual_fd(self): 
 
         #self.top.geom.set('plug.X',[0,1,0,0,0,0,0,0,0]) 
         self.top.run()
@@ -130,9 +206,10 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         step = 1
         params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
         for param in params: 
+            
             shape = self.top.geom.get(param).shape
-            #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
             Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+
             for i in xrange(shape[0]): 
                 tmp = np.zeros(shape)
                 tmp[i] = step
@@ -203,10 +280,6 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
                 self.assertTrue(np.all(np.abs(FDz - Az) < .00001))
 
             self.top.geom.set(param, np.zeros(shape))
-
-
-        
-
 
 
 if __name__ == "__main__": 

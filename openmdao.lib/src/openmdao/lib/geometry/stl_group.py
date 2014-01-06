@@ -112,8 +112,10 @@ class STLGroup(object):
 
                 #zeros for thickness n_pointsx1
                 shape = comp.dXqdC.shape
+                param_name = "%s.thickness"%comp.name #note: this parameter does not exists, so I'll remove the columns from the jacobian
                 jyt.append(np.zeros((shape[0],1)))
                 jzt.append(np.zeros((shape[0],1)))
+                param_J_offset_map[param_name] = t_offset
                 t_offset += 1
 
             else: 
@@ -152,6 +154,7 @@ class STLGroup(object):
         self.dYqdCt = block_diag(jyt).toarray()
         self.dZqdCt = block_diag(jzt).toarray()
 
+
         self.param_J_map = {}
         #map param names to jacobians: 
         for comp in self._comps: 
@@ -170,6 +173,15 @@ class STLGroup(object):
                 offset = param_J_offset_map[param_name]
                 nCt = self.comp_param_count[comp][2]
                 self.param_J_map[param_name] = (False, self.dYqdCt[:,offset:offset+nCt], self.dZqdCt[:,offset:offset+nCt])
+
+        #go through and remove the extra columns from fake body thicknesses
+        for comp in self._comps: 
+            if isinstance(comp, Body): 
+                param_name = "%s.thickness"%comp.name
+                offset = param_J_offset_map[param_name]
+
+                self.dYqdCt = np.delete(self.dYqdCt,offset,1)
+                self.dZqdCt = np.delete(self.dZqdCt,offset,1)
 
         self._needs_linerize = False
 
@@ -208,18 +220,25 @@ class STLGroup(object):
         var_line = 'VARIABLES = "X" "Y" "Z" "ID" '
 
         
-        deriv_names = []
+        deriv_X_names = []
+        deriv_R_names = []
+        deriv_T_names = []
+
         deriv_tmpl = string.Template('"dx_d${name}_${type}$i" "dy_d${name}_${type}$i" "dz_d${name}_${type}$i"')
+
         for comp in self._comps: 
             if isinstance(comp,Body): 
-                deriv_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X_'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
-                deriv_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R_'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
-            else: 
-                deriv_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'CX_'}) for i in xrange(0,comp.n_c_controls-1)]) #x,y,z derivs for each control point
-                deriv_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'CR_'}) for i in xrange(0,comp.n_c_controls)]) #x,y,z derivs for each control point
-                deriv_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'T_'}) for i in xrange(0,comp.n_t_controls-1)]) #x,y,z derivs for each control point
+                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
+                deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
 
-        var_line += " ".join(deriv_names)
+            else: 
+                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_c_controls-1)]) #x,y,z derivs for each control point
+                deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_c_controls)]) #x,y,z derivs for each control point
+                deriv_T_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'T'}) for i in xrange(0,comp.n_t_controls-1)]) #x,y,z derivs for each control point
+
+        var_line += " ".join(deriv_X_names)
+        var_line += " ".join(deriv_R_names)
+        var_line += " ".join(deriv_T_names)
 
         lines.append(var_line)
 
@@ -230,6 +249,7 @@ class STLGroup(object):
         nr = 3*self.dYqdCr.shape[1]
         nt = 3*self.dYqdCt.shape[1]
         j_cols =  (nx+nr+nt)
+
 
         for i,p in enumerate(self.points): 
             line = "%.8f %.8f %.8f %d "%(p[0],p[1],p[2],i+1) #x,y,z,index coordiantes of point
@@ -247,7 +267,6 @@ class STLGroup(object):
             deriv_values[nx+nr+2::3] = self.dZqdCt[i]
             
             line += " ".join(np.char.mod('%.8f',deriv_values))
-
             lines.append(line)
 
         for tri in self.triangles: 
@@ -287,14 +306,14 @@ class STLGroup(object):
 
     #begin methods for OpenMDAO geometry derivatives
     def apply_deriv(self, arg, result): 
-        
         for name, value in arg.iteritems(): 
-            offset, Jx, Jy, Jz = self.param_J_map[name]
-            if Jx: 
-                col = Jx.getcol(offset+i).toarray().flatten()
-                result['geom_out'][:,0]
-            if Jy: 
-                pass
+            if name == "geom_out": continue #TODO: this should not be in the args? Bug? 
+            Jx, Jy, Jz = self.param_J_map[name]
+            if Jx is not False: 
+                result['geom_out'][:,0] += Jx.dot(value)
+            if Jy is not False: 
+                result['geom_out'][:,1] += Jy.dot(value)
+                result['geom_out'][:,2] += Jz.dot(value)
 
         return result
 
