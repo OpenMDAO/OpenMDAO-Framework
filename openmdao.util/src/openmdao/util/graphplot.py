@@ -5,7 +5,7 @@ import shutil
 import json
 import tempfile
 import webbrowser
-
+import pprint
 
 from networkx.readwrite.json_graph import node_link_data
 
@@ -18,29 +18,55 @@ _excluded_link_data = set([
     'dexpr',
 ])
 
+_excluded_tooltip_data = set([
+    'short',
+    'comp',
+    'var',
+    'invalidation',
+    'boundary',
+    'iotype',
+])
+
 def _to_id(name):
     """Convert a given name to a valid html id, replacing
     dots with hyphens."""
     return name.replace('.', '-')
 
-def _clean_graph(graph, excludes=()):
+def _clean_graph(graph, excludes=(), scope=None):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
     copies the entire graph.
     """
+    # make a subgraph, creating new edge/node meta dicts later if
+    # we change anything
+    graph = graph.subgraph(graph.nodes_iter())
+
     if not excludes:
         from openmdao.main.component import Component
         from openmdao.main.driver import Driver
+        excluded_vars = set()
 
-        c = Component()
-        d = Driver()
-        excluded_vars = set([n for n,v in c.items(framework_var=True)])
-        excluded_vars.update([n for n,v in d.items(framework_var=True)])
+        if scope:
+            try:
+                cgraph = graph.component_graph()
+            except AttributeError:
+                pass
+            else:
+                for cname in cgraph.nodes():
+                    comp = getattr(scope, cname)
+                    if isinstance(comp, Component):
+                        graph.remove_nodes_from(['.'.join([cname,n]) 
+                                    for n,v in comp.items(framework_var=True)])
+
+        else: # just exclude some framework vars from Driver and Component
+            c = Component()
+            d = Driver()
+            excluded_vars = set([n for n,v in 
+                                           c.items(framework_var=True)])
+            excluded_vars.update([n for n,v in 
+                                           d.items(framework_var=True)])
     else:
         excluded_vars = set(excludes)
-
-    # copy the graph since we're changing node/edge metadata
-    graph = graph.subgraph(graph.nodes_iter())
 
     conns = graph.list_connections()
 
@@ -49,15 +75,6 @@ def _clean_graph(graph, excludes=()):
 
     nodes_to_remove = []
     for node, data in graph.nodes_iter(data=True):
-        parts = node.split('.',1)
-        if len(parts) == 1:
-            name = node
-        else:
-            name = parts[1]
-            # if '[' not in node and node not in conn_nodes:
-            #     nodes_to_remove.append(node)
-            #     continue
-
         cmpname, _, nodvar = node.partition('.')
         if node in excluded_vars or nodvar in excluded_vars:
             nodes_to_remove.append(node)
@@ -69,6 +86,11 @@ def _clean_graph(graph, excludes=()):
                         newdata = dict(data) # make a copy of metadata since we're changing it
                         graph.node[node] = newdata
                     del newdata[meta]
+            tt_dct = {}
+            for key,val in newdata.items():
+                if key not in _excluded_tooltip_data:
+                    tt_dct[key] = val
+            newdata['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
 
@@ -102,7 +124,7 @@ def _clean_graph(graph, excludes=()):
 
     return graph
 
-def plot_graph(graph, excludes=(), d3page='fixedforce.html'):
+def plot_graph(graph, scope=None, excludes=(), d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -110,7 +132,7 @@ def plot_graph(graph, excludes=(), d3page='fixedforce.html'):
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
-    graph = _clean_graph(graph, excludes)
+    graph = _clean_graph(graph, excludes, scope=scope)
     data = node_link_data(graph)
 
     startdir = os.getcwd()
@@ -159,12 +181,13 @@ def main():
         sys.exit(-1)
 
     def get_graphs(obj):
+        """Return a list of tuples of the form (parent, graph)"""
         graphs = []
         if isinstance(obj, Assembly):
-            graphs.append((obj.name, obj._depgraph))
+            graphs.append((obj, obj._depgraph))
             graphs.extend(get_graphs(obj.driver))
         elif isinstance(obj, Driver):
-            graphs.append((obj.get_pathname(), obj.workflow.derivative_graph()))
+            graphs.append((obj, obj.workflow.derivative_graph()))
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
                     graphs.extend(get_graphs(comp))
@@ -189,14 +212,16 @@ def main():
             obj = klasses[int(var)]
 
     set_as_top(obj)
+    if not obj.get_pathname():
+        obj.name = 'top'
 
     if options.recurse:
         graphs = get_graphs(obj)
     else:
-        graphs = [('top', obj._depgraph)]
+        graphs = [(obj, obj._depgraph)]
 
-    for name, graph in graphs:
-        plot_graph(graph)
+    for obj, graph in graphs:
+        plot_graph(graph, scope=obj)
 
 
 if __name__ == '__main__':

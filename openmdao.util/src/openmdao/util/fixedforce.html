@@ -139,6 +139,11 @@ var link = svg.selectAll(".link"),
       .attr("dy", ".35em")
       .text(function(d) { d.telem = this; return d.short; });
 
+  node.append("svg:title")
+    .text(function(node) {
+      return node.title;
+    })
+
 function tick() {
   // for links, use a two piece path instead of a line so
   // we can easily (using a marker) put an arrow in the
