@@ -916,6 +916,10 @@ class SequentialWorkflow(Workflow):
             correct mode.
         """
         
+        # User may request full-model finite difference.
+        if self._parent.gradient_options.force_fd == True:
+            mode = 'fd'
+        
         # This function can be called from a parent driver's workflow for
         # assembly recursion. We have to clear our cache if that happens.
         # We also have to clear it next time we arrive back in our workflow.

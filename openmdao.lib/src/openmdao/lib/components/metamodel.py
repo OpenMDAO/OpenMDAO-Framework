@@ -104,7 +104,8 @@ class MetaModel(Component):
         self._failed_training_msgs = []
         self._default_surrogate_copies = {}  # need to maintain separate copy of
                                              # default surrogate for each sur_*
-                                             # that doesn't have a surrogate defined
+                                             # that doesn't have a surrogate
+                                             # defined
 
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
@@ -473,7 +474,7 @@ class MetaModel(Component):
         """Adds the specified input variable."""
 
         if "." not in name:  # non vartree variable
-            self.add_trait(name, _clone_trait(self.model.trait(name)))
+            self.add_trait(name, self._clone_trait(name))
             setattr(self, name, getattr(self.model, name))
         else:
             vartreename, subvarname = name.split(".")
@@ -499,7 +500,7 @@ class MetaModel(Component):
                 self._default_surrogate_copies[name] = surrogate
                 self._add_var_for_surrogate(surrogate, name)
             else:
-                self.add_trait(name, _clone_trait(self.model.trait(name)))
+                self.add_trait(name, self._clone_trait(name))
         else:
             self.surrogates[name] = None
             vartreename = name.split(".")[0]
@@ -520,6 +521,28 @@ class MetaModel(Component):
                                                  _clone_trait(model_vartree_node.trait(subvarname)))
 
         self._training_data[name] = []
+
+    def _clone_trait(self, name):
+        """ Return valid new trait for model trait `name`. """
+        trait = self.model.trait(name)
+        if hasattr(trait, 'get'):  # Property trait -- don't use normal clone.
+            val = getattr(self.model, name)
+            metadata = {}
+            for attr in ('iotype', 'desc', 'low', 'high',
+                         'exclude_low', 'exclude_high', 'units'):
+                try:
+                    metadata[attr] = getattr(trait, attr)
+                except AttributeError:
+                    pass
+            if metadata['iotype'] == 'in':
+                metadata['default_value'] = val
+            if isinstance(val, float):
+                trait = Float(**metadata)
+            else:
+                trait = Int(**metadata)
+        else:
+            trait = _clone_trait(trait)
+        return trait
 
     def _remove_input(self, name):
         """Removes the specified input variable.
@@ -569,21 +592,16 @@ class MetaModel(Component):
                 self._surrogate_input_names = []
                 for name in self.model._alltraits(iotype='in').keys():
                     if not isinstance(self.model.get(name), VariableTree):
-                        if self._eligible(name) and name not in self._mm_class_traitnames:
-                            t = type(self.model.get(name))
-                            if t not in [float, int]:
-                                self.raise_exception("Metamodel only supports"
-                                                     " int and float inputs",
-                                                     RuntimeError)
+                        if self._eligible(name) and \
+                           name not in self._mm_class_traitnames:
+                            self._check_type(name, 'inputs')
                             self._surrogate_input_names.append(name)
                     else:
                         subnames = [subvar[0] for subvar in flatteners[VariableTree](name, self.model.get(name))]
                         for subname in subnames:
-                            if self._eligible(subname) and name not in self._mm_class_traitnames:
-                                t = type(self.model.get(subname))
-                                if t not in [float, int]:
-                                    self.raise_exception("Metamodel only supports int and float inputs",
-                                                         RuntimeError)
+                            if self._eligible(subname) and \
+                               name not in self._mm_class_traitnames:
+                                self._check_type(subname, 'inputs')
                                 self._surrogate_input_names.append(subname)
             else:
                 return []
@@ -599,27 +617,29 @@ class MetaModel(Component):
                 self._surrogate_output_names = []
                 for name in self.model._alltraits(iotype='out').keys():
                     if not isinstance(self.model.get(name), VariableTree):
-                        if self._eligible(name) and name not in self._mm_class_traitnames:
-                            t = type(self.model.get(name))
-                            if t not in [float, int]:
-                                self.raise_exception("Metamodel only supports"
-                                                     " int and float outputs",
-                                                     RuntimeError)
+                        if self._eligible(name) and \
+                           name not in self._mm_class_traitnames:
+                            self._check_type(name, 'outputs')
                             self._surrogate_output_names.append(name)
                     else:
                         subnames = [subvar[0] for subvar in flatteners[VariableTree](name, self.model.get(name))]
                         for subname in subnames:
-                            if self._eligible(subname) and name not in self._mm_class_traitnames:
-                                t = type(self.model.get(subname))
-                                if t not in [float, int]:
-                                    self.raise_exception("Metamodel only supports"
-                                                         " int and float outputs",
-                                                         RuntimeError)
+                            if self._eligible(subname) and \
+                               name not in self._mm_class_traitnames:
+                                self._check_type(subname, 'outputs')
                                 self._surrogate_output_names.append(subname)
             else:
                 return []
 
         return self._surrogate_output_names
+
+    def _check_type(self, name, iotype):
+        """ Raise execption if `name` is not a supported type. """
+        typ = type(self.model.get(name))
+        if typ not in (float, int):
+            self.raise_exception("Metamodel only supports int and float %s,"
+                                 " %s is %s" % (iotype, name, typ),
+                                 RuntimeError)
 
     def _update_surrogate_list(self):
 
