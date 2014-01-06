@@ -180,7 +180,7 @@ class PseudoAssembly(object):
 
         return self.wflow.scope.get(from_PA_var(self.name+'.'+varname))
 
-    def add_to_graph(self, dgraph, excludes=()):
+    def add_to_graph(self, startgraph, dgraph, excludes=()):
         """Add this PseudoAssembly to the given graph, absorbing
         nodes that represent components contained in this PA.
         """
@@ -196,7 +196,7 @@ class PseudoAssembly(object):
         #nx.relabel_nodes(dgraph, self.renames, copy=False)
         
         for oldname, newname in self.renames.items():
-            dgraph.add_node(newname, attr_dict=dgraph.node[oldname].copy())
+            dgraph.add_node(newname, attr_dict=startgraph.node[oldname].copy())
             for u, v, data in dgraph.edges(oldname, data=True):
                 dgraph.add_edge(newname, v, attr_dict=data.copy())
             for u, v, data in dgraph.in_edges(oldname, data=True):
@@ -212,7 +212,7 @@ class PseudoAssembly(object):
         # Clean up the old nodes in the graph, leaving out ones that
         # are excluded because they're used by ancestor drivers
         dgraph.remove_nodes_from(dgraph.find_prefixed_nodes([n for n in 
-                          self._orig_group_nodes if n not in excludes]))
+                          self._orig_group_nodes if n not in excludes and n in dgraph]))
 
         # if this PA represents a driver, remove the corresponding driver
         # node

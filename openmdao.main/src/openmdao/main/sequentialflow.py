@@ -800,7 +800,7 @@ class SequentialWorkflow(Workflow):
             pseudo = PseudoAssembly(pa_name, group, 
                                     dgraph, self, fd)
 
-            pseudo.add_to_graph(dgraph)            
+            pseudo.add_to_graph(self.scope._depgraph, dgraph)            
             
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
