@@ -14,13 +14,16 @@ class MyComp(Component):
     
     x1 = Float(1.0, iotype='in')
     x2 = Float(1.0, iotype='in', fd_step = .1)
+    x3 = Float(1.0, iotype='in', fd_step = .1, fd_form='central')
+    x4 = Float(0.001, iotype='in', fd_step = .1, fd_step_type='relative')
     
     y = Float(3.3, iotype='out')
     
     def execute(self):
         ''' Simple eq '''
         
-        self.y = 2.0*self.x1*self.x1 + 2.0*self.x2*self.x2
+        self.y = 2.0*self.x1*self.x1 + 2.0*self.x2*self.x2 + \
+                 2.0*self.x3*self.x3 + 2.0*self.x4*self.x4
 
 class MyCompDerivs(Component):
     
@@ -56,11 +59,13 @@ class TestFiniteDifference(unittest.TestCase):
         
         model.run()
         
-        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2', 'comp.x3', 'comp.x4'],
                                                 outputs=['comp.y'])
         
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
         assert_rel_error(self, J[0, 1], 4.2, 0.0001)
+        assert_rel_error(self, J[0, 2], 4.0, 0.0001)
+        assert_rel_error(self, J[0, 3], 0.0042, 0.0001)
         
     def test_central(self):
         
@@ -122,13 +127,21 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertEqual(model.comp.exec_count, 3)
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'])
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'], fd_form='central')
+        model.check_gradient(inputs=['comp.x1', 'comp.x2'],
+                             outputs=['comp.y'], fd_step_type='relative')
+        
         # Full model force FD
         model.comp.force_fd = False
         model.driver.gradient_options.force_fd = True
+        old_count = model.comp.exec_count
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.x1', 'comp.x2'],
                                                 outputs=['comp.y'])
-        self.assertEqual(model.comp.exec_count, 5)
+        self.assertEqual(model.comp.exec_count - old_count, 2)
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
 if __name__ == '__main__':

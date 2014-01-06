@@ -39,7 +39,7 @@ class Brent(Driver):
 
         # TODO: better error handling.  ideally, if this failed we would attempt to find
         # bounds ourselves rather than throwing an error or returning a value at the bounds
-        if self._eval(self.lower_bound)*self._eval(self.upper_bound) > 0:
+        if (self._eval(self.lower_bound)*self._eval(self.upper_bound)) > 0:
             self.raise_exception('bounds (low=%s, high=%s) do not bracket a root' %
                                  (self.lower_bound, self.upper_bound))
 

@@ -1938,7 +1938,9 @@ class Component(Container):
             return valids
 
     def check_gradient(self, inputs=None, outputs=None, 
-                       stream=sys.stdout, mode='auto'):
+                       stream=sys.stdout, mode='auto',
+                       fd_form = 'forward', fd_step_size=1.0e-6, 
+                       fd_step_type='absolute'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -1966,8 +1968,19 @@ class Component(Container):
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
 
+        fd_form: str
+            Finite difference mode. Valid choices are 'forward', 'adjoint' , 
+            'central'. Default is 'forward'
+            
+        fd_step_size: float
+            Default step_size for finite difference. Default is 1.0e-6.
+            
+        fd_step_type: str
+            Finite difference step type. Set to 'absolute' or 'relative'.
+            Default is 'absolute'.
+
         Returns the finite difference gradient, the OpenMDAO-calculated gradient,
-        and a list of suspect inputs/outputs.
+        a list of the gradient names, and a list of suspect inputs/outputs.
         """
         if self.parent is None or not self.name:
             from openmdao.main.assembly import Assembly, set_as_top
@@ -1979,7 +1992,9 @@ class Component(Container):
                 asm.run()
                 return asm.check_gradient(name=self.name,
                                          inputs=inputs, outputs=outputs,
-                                         stream=stream, mode=mode)
+                                         stream=stream, mode=mode, 
+                                         fd_form=fd_form, fd_step_size=fd_step_size, 
+                                         fd_step_type=fd_step_type)
             finally:
                 self.parent = None
                 if orig_name:
@@ -1987,5 +2002,7 @@ class Component(Container):
         else:
             return self.parent.check_gradient(name=self.name, 
                                               inputs=inputs, outputs=outputs,
-                                              stream=stream, mode=mode)
+                                              stream=stream, mode=mode, 
+                                              fd_form=fd_form, fd_step_size=fd_step_size, 
+                                              fd_step_type=fd_step_type)
         
