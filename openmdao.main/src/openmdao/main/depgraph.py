@@ -1333,7 +1333,8 @@ def replace_subdriver(drv, startgraph, graph, inputs, outputs,
             # graph = replace_subdriver(comp, graph, inputs, outputs, wflow,
             #                           using, top=False)
 
-    pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow, drv.name)
+    pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow, 
+                        drv_name=drv.name)
 
     pa.add_to_graph(startgraph, graph, excludes=ancestor_using-set([drv.name]))
     
