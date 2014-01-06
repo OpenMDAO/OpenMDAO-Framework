@@ -27,6 +27,7 @@ _excluded_tooltip_data = set([
     'iotype',
     'color_idx',
     'title',
+    'pseudo',
 ])
 
 def _to_id(name):
@@ -106,6 +107,11 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None):
             for key,val in newdata.items():
                 if key not in _excluded_tooltip_data:
                     tt_dct[key] = val
+                elif scope is not None and key == 'pseudo':
+                    if val == 'objective':
+                        newdata['objective'] = getattr(scope, node)._orig_src
+                    elif val == 'constraint':
+                        newdata['constraint'] = getattr(scope, node)._orig_src
             newdata['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
