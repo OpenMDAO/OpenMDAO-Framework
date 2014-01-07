@@ -139,7 +139,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.create_passthrough('comp.x')
         code = "self.top.driver.add_parameter('comp.x', 0., 1.e99)"
         assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "driver: 'comp.x' is already a Parameter target")
+                      "driver: 'comp.x' is already connected to 'x'")
         self.top.remove("x")
 
     def test_set_param_by_name(self):
@@ -294,15 +294,15 @@ class HasParametersTestCase(unittest.TestCase):
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
         pg = ParameterGroup([p, p2])
         self.assertEqual(pg.get_metadata(),
-            [('comp.x',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0,
-                        'high': 9.9999999999999997e+98, 'start': None,
-                        'low': 0, 'adder': 0.0}),
-             ('comp.y',{'fd_step': None, 'name': 'comp.x', 'scaler': 1.0,
-                        'high': 9.9999999999999997e+98, 'start': None,
-                        'low': 0, 'adder': 0.0})])
+            [('comp.x', {'fd_step': None, 'name': 'comp.x', 'scaler': 1.0,
+                         'high': 9.9999999999999997e+98, 'start': None,
+                         'low': 0, 'adder': 0.0}),
+             ('comp.y', {'fd_step': None, 'name': 'comp.x', 'scaler': 1.0,
+                         'high': 9.9999999999999997e+98, 'start': None,
+                         'low': 0, 'adder': 0.0})])
 
     def test_connected_input_as_parameter(self):
-        self.top.add('comp2', ExecComp(exprs=['c=x+y','d=x-y']))
+        self.top.add('comp2', ExecComp(exprs=['c=x+y', 'd=x-y']))
         self.top.driver.add_parameter('comp2.x', low=-99.0, high=99.9)
 
         code = "self.top.connect('comp.c', 'comp2.x')"
@@ -350,7 +350,7 @@ class ParametersTestCase(unittest.TestCase):
 
         params2['comp.a'].set(5.0)
         self.assertEqual(self.top.comp.a, 12.)
-        
+
         self.top.driver2.set_parameters([d2val])
         self.assertEqual(self.top.comp.a, 15.)
 
@@ -404,12 +404,12 @@ class ParametersTestCase(unittest.TestCase):
         data = params[('comp.a', 'comp.b')].get_referenced_vars_by_compname()
         self.assertEqual(['comp'], data.keys())
         self.assertEqual(set([param.target for param in data['comp']]),
-                         set(['comp.a','comp.b']))
+                         set(['comp.a', 'comp.b']))
 
         data = params[('comp.c', 'comp.d')].get_referenced_vars_by_compname()
         self.assertEqual(['comp'], data.keys())
         self.assertEqual(set([param.target for param in data['comp']]),
-                         set(('comp.c','comp.d')))
+                         set(('comp.c', 'comp.d')))
 
         # Vars with bounds, params with no bounds
         self.top.comp.add_trait('v1', Float(0.0, low=0.0, high=10.0, iotype='in'))
@@ -570,6 +570,15 @@ class ArrayTest(unittest.TestCase):
                          [[2, 2, 2], [2, 2, 2]])
         self.assertEqual(comp.fx1d, 3)
         self.assertEqual(list(comp.fx2d), [6, 6])
+
+    def test_mixed_use(self):
+        # Connect to one element of array and use another element as parameter.
+        self.top.comp.x1d = [1, 2, 3]
+        self.top.add('exec_comp', ExecComp(exprs=['c=x+y', 'd=x-y']))
+        self.top.driver.workflow.add('exec_comp')
+        self.top.connect('exec_comp.c', 'comp.x1d[0]')
+        self.top.driver.add_parameter('comp.x1d[1]', low=-10, high=10, start=1)
+        self.top.run()
 
 
 if __name__ == "__main__":

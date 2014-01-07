@@ -273,7 +273,7 @@ class Parameter(ParameterBase):
 
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
-        self._expreval.set(self._transform(val), scope)
+        self._expreval.set(self._transform(val), scope, force=True)
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -502,7 +502,7 @@ class ArrayParameter(ParameterBase):
 
         self.valtypename = _val.dtype.name
 
-        if _val.dtype.kind not in ('fi'):
+        if _val.dtype.kind not in 'fi':
             raise TypeError('Only float or int arrays are supported')
 
         dtype = self.dtype = _val.dtype
@@ -703,7 +703,7 @@ class ArrayParameter(ParameterBase):
                                  % (value.size, self._size))
         else:
             value = value * ones(self.shape, self.dtype)
-        self._expreval.set(self._transform(value), scope)
+        self._expreval.set(self._transform(value), scope, force=True)
 
     def copy(self):
         """Return a copy of this parameter."""
@@ -825,8 +825,8 @@ class HasParameters(object):
             parent_cnns = self._parent.parent.list_connections()
             for lhs, rhs in parent_cnns:
                 if rhs == target:
-                    self._parent.raise_exception("'%s' is already a Parameter"
-                                                 " target" % target,
+                    self._parent.raise_exception("'%s' is already connected"
+                                                 " to '%s'" % (target, lhs),
                                                  RuntimeError)
 
         if isinstance(target, (ParameterBase, ParameterGroup)):
@@ -867,7 +867,7 @@ class HasParameters(object):
                     if len(types) > 1:
                         raise ValueError("Can't add parameter %s because "
                                          "%s are not all of the same type" %
-                                         (key," and ".join(names)))
+                                         (key, " and ".join(names)))
                     target = ParameterGroup(parameters)
                 self._parameters[key] = target
             except Exception:
