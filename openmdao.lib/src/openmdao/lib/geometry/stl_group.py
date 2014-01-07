@@ -8,8 +8,15 @@ from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
 from ffd_axisymetric import Body, Shell
 
-from pyV3D.stl import STLSender
-from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
+try: 
+    from pyV3D.stl import STLSender
+    from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
+except ImportError: 
+    #just fake it so you can use this outside openmdao
+    IParametricGeometry = object()
+    IStaticGeometry = object()
+    def implements(*args): 
+        pass
 
 class STLGroup(object): 
 
@@ -501,20 +508,22 @@ class STLGroup(object):
     #end methods for IStaticGeometry
 
 
+try: 
+    class STLGroupSender(STLSender):
+        def __init__(self, *args, **kargs):
+            super(STLGroupSender, self).__init__(*args, **kargs)
+            self.wv.set_context_bias(0)
 
-class STLGroupSender(STLSender):
-    def __init__(self, *args, **kargs):
-        super(STLGroupSender, self).__init__(*args, **kargs)
-        self.wv.set_context_bias(0)
+        @staticmethod
+        def supports(obj):
+            return isinstance(obj, STLGroup)
 
-    @staticmethod
-    def supports(obj):
-        return isinstance(obj, STLGroup)
-
-    def geom_from_obj(self, obj):
-        if isinstance(obj, STLGroup):
-            obj.get_visualization_data(self.wv)
-        else: 
-            raise RuntimeError("object must be a Geometry but is a '%s' instead"%(str(type(obj))))
+        def geom_from_obj(self, obj):
+            if isinstance(obj, STLGroup):
+                obj.get_visualization_data(self.wv)
+            else: 
+                raise RuntimeError("object must be a Geometry but is a '%s' instead"%(str(type(obj))))
+except AttributeError: 
+    pass
             
 
