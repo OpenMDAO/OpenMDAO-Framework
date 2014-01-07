@@ -34,8 +34,7 @@ class TreeWithFloat2(VariableTree):
     z = Float(3.)
 
 class TreeWithArray(VariableTree): 
-    x = Array([0,0])
-    y = Array([0,0,0])
+    x = Array(array((1.0, 2.0)))
 
 
 class DummyComp(Component): 
@@ -90,6 +89,21 @@ class CompWithVarTree(Component):
 
     def provideJ(self): 
         return ('ins.z', 'x1'), ('outs.z', 'z'), self.J
+
+
+class CompWithArrayVarTree(Component): 
+    ins = VarTree(TreeWithArray(), iotype="in")
+    outs = VarTree(TreeWithArray(), iotype="out")
+
+    def execute(self): 
+        self.outs.x[0] = 2*self.ins.x[0] + 6*self.ins.x[1]
+        self.outs.x[1] = 4*self.ins.x[0] + 6*self.ins.x[1]
+
+    def linearize(self): 
+        self.J = array([[2., 6.],[4., 6.]])
+
+    def provideJ(self): 
+        return ('ins.x',), ('outs.x',), self.J
 
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
@@ -389,6 +403,29 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_true - J_reverse), 0, .00001)
 
+    def test_varTree_with_Array(self): 
+        
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        top.add('comp', CompWithArrayVarTree())
+        top.driver.workflow.add(['comp'])
+
+        top.run()
+        inputs = ['comp.ins.x']
+        outputs = ['comp.outs.x']
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode="forward")
+        J_true = top.comp.J
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode="adjoint")
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+        
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
         
 if __name__ == "__main__": 
     unittest.main()
