@@ -4,7 +4,6 @@ provide derivatives, and thus must be finite differenced.'''
 import networkx as nx
 
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
-from openmdao.main.interfaces import ISolver
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''

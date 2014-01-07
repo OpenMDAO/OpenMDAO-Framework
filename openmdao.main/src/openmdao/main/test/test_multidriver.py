@@ -161,6 +161,20 @@ class MultiDriverTestCase(unittest.TestCase):
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
         
+    def test_var_depends(self):
+        print "*** test_var_depends ***"
+        self.rosen_setUp()
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=False)
+        self.assertEqual(set(), srcs)
+        self.assertEqual(set(), dests)
+        self.top.driver1.remove_parameter('comp2.x')
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
+        self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        
     def test_invalidation(self):
         global exec_order
         print "*** test_invalidation ***"
