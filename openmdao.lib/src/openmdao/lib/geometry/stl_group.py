@@ -523,7 +523,7 @@ try:
                 obj.get_visualization_data(self.wv)
             else: 
                 raise RuntimeError("object must be a Geometry but is a '%s' instead"%(str(type(obj))))
-except AttributeError: 
+except NameError: 
     pass
             
 
