@@ -120,6 +120,7 @@ if __name__ == "__main__": # pragma: no cover
     import math
     
     prob = SellarBLISS()
+    prob.name = 'top'
             
     tt = time.time()
     prob.run()
