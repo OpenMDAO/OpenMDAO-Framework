@@ -5,6 +5,7 @@ Testing differentiation of stl group objects.
 
 import os
 import unittest
+import StringIO
 
 import numpy as np
 
@@ -110,6 +111,21 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         p2 = self.top.rec.out.copy()
 
         self.assertFalse(np.any(p0-p2)) #p0-p1 should be all 0
+
+
+    def test_fepoint(self): 
+
+        stream = StringIO.StringIO()
+        self.top.geom.parametric_geometry.writeFEPOINT(stream)
+        stream.seek(0)
+
+        output = stream.readlines()
+
+        baseline_file = os.path.join(os.path.dirname(stl.__file__), 'test', 'test_geom_baseline.fepoint')
+        baseline = open(baseline_file).readlines()
+
+        self.assertEqual(baseline, output)
+
 
     def test_apply_deriv(self): 
 

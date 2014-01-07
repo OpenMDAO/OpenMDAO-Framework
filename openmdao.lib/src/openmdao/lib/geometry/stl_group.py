@@ -206,7 +206,7 @@ class STLGroup(object):
 
         f.close()
 
-    def writeFEPOINT(self, file_name): 
+    def writeFEPOINT(self, stream): 
         """writes out a new FEPOINT file with the given name, using the supplied points.
         derivs is of size (3,len(points),len(control_points)), giving matricies of 
         X,Y,Z drivatives
@@ -274,9 +274,17 @@ class STLGroup(object):
             lines.append(line)
 
 
-        f = open(file_name,'w')
-        f.write("\n".join(lines))
-        f.close()
+        needs_close = False
+        if isinstance(stream, basestring): 
+            stream = open(stream,'w')
+            needs_close = True
+
+        #f.write("\n".join(lines))
+        #f.close()
+
+        print >> stream, "\n".join(lines)
+        if(needs_close): 
+            stream.close()
 
     def project_profile(self): 
         self.linearize()
