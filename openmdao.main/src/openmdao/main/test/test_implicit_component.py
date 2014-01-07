@@ -615,7 +615,7 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
-                                                mode='fd')
+                                                mode='adjoint')
         print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
@@ -659,18 +659,21 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(edges['@in0'], ['~subdriver.comp|c'])
         self.assertEqual(edges['~subdriver.comp|y_out'], ['@out0'])
         
+        print J
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='adjoint')
+        print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        assert_rel_error(self, J[0][0], 0.75, 1e-5)
-        
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
-                                                outputs=['comp.y_out'],
-                                                mode='fd')
+        print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_solver_nested_under_double_nested_driver_boundary_var_no_deriv(self):

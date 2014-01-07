@@ -3,6 +3,8 @@ provide derivatives, and thus must be finite differenced.'''
 
 import networkx as nx
 
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
 def to_PA_var(name, pa_name):
@@ -146,7 +148,11 @@ class PseudoAssembly(object):
             if first and self.ffd_order>0:
                 for name in self.comps:
                     comp = self.wflow.scope.get(name)
-                    comp.calc_derivatives(first, second, True)
+                    
+                    # Comp list contains full graph, so don't double up on
+                    # the drivers.
+                    if not has_interface(comp, IDriver):
+                        comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
         finally:
