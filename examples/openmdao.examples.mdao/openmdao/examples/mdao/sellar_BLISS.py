@@ -118,11 +118,8 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     import math
-    from openmdao.util.graphplot import plot_graph
     
     prob = SellarBLISS()
-    plot_graph(prob._depgraph)
-    prob.name = "top"
             
     tt = time.time()
     prob.run()
