@@ -7,7 +7,7 @@ from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
-    
+    assert(not name.startswith('~'))
     return pa_name + '.' + name.replace('.', '|')
         
 def from_PA_var(name):
@@ -36,6 +36,7 @@ class PseudoAssembly(object):
 
         self.name = name
         self.comps = list(comps)
+        self.boundary_params = list(boundary_params)
         self.wflow = wflow
         self.inputs = list(inputs)
         self.outputs = list(outputs)
@@ -94,6 +95,7 @@ class PseudoAssembly(object):
         pa_outputs = set([a for a, b in out_edges])          
                 
         renames = {}
+
         # Add pseudoassy inputs
         for varpath in list(flatten_list_of_iters(pa_inputs)) + \
                        list(pa_outputs):
@@ -103,6 +105,9 @@ class PseudoAssembly(object):
                 old = dgraph.base_var(varpath)
                 if old != varpath:
                     renames[old] = to_PA_var(old, pa_name)
+
+        # make boundary params outputs of the PA
+        pa_outputs.update(boundary_params)
 
         return pa_inputs, pa_outputs, renames
 
@@ -178,14 +183,18 @@ class PseudoAssembly(object):
         
         empty = {}
         for oldname, newname in self.renames.items():
-            dgraph.add_node(newname, attr_dict=startgraph.node.get(oldname, empty).copy())
+            attrs = startgraph.node.get(oldname, empty).copy()
+            if oldname in self.boundary_params:
+                attrs['iotype'] = 'out'
+            dgraph.add_node(newname, attr_dict=attrs)
             for u, v, data in dgraph.edges(oldname, data=True):
                 dgraph.add_edge(newname, v, attr_dict=data.copy())
             for u, v, data in dgraph.in_edges(oldname, data=True):
                 dgraph.add_edge(u, newname, attr_dict=data.copy())
 
             if is_subvar_node(dgraph, newname):
-                dgraph.node[newname]['basevar'] = to_PA_var(dgraph.node[newname]['basevar'], newname)
+                dgraph.node[newname]['basevar'] = \
+                    newname.split('[', 1)[0]
             if is_input_base_node(dgraph, newname):
                 dgraph.add_edge(newname, self.name)
             elif is_output_base_node(dgraph, newname):
