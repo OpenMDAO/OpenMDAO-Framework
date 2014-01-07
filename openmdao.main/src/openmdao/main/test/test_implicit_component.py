@@ -154,8 +154,6 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
         input_keys = ('x', 'y', 'z', 'c')
         output_keys = ('res', 'y_out')
         return input_keys, output_keys, self.J 
-        
-
 
 class Coupled1(ImplicitComponent):
     ''' This comp only has the first 2 states (x, y). 
@@ -469,14 +467,16 @@ class Testcase_implicit(unittest.TestCase):
         #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
-    def test_derivative_state_connection(self):
+    def test_derivative_state_connection_internal_solve_ProvideJ(self):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv_ProvideJ())
+        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
         model.driver.workflow.add(['comp', 'comp2'])
-        model.connect('comp.x', 'comp2.x')
+        model.connect('comp.z', 'comp2.x')
         
         model.run()
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
@@ -493,23 +493,177 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp2.y']), set(['@out0']))
 
-        #print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        #print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
-        model.driver.gradient_options.fd_step_size = 0.01
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        #print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+    def test_derivative_state_connection_internal_solve_apply_deriv(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv())
+        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        
+        model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
+                                                   ["dy_dx=2"]))
+        model.driver.workflow.add(['comp', 'comp2'])
+        model.connect('comp.z', 'comp2.x')
+        
+        model.run()
+        #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'])
+        info = model.driver.workflow.get_implicit_info()
+        #print info
+        self.assertEqual(set(info[('comp.res',)]),
+                         set(['comp.x', 'comp.y', 'comp.z']))
+        self.assertEqual(len(info), 1)
+
+        edges = model.driver.workflow._edges
+        #print edges
+        self.assertEqual(set(edges['@in0']), set(['comp.c']))
+        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
+
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='adjoint')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+    def test_derivative_state_connection_external_solve_ProvideJ(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv_ProvideJ())
+        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        
+        model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
+                                                   ["dy_dx=2"]))
+        
+        model.add('solver', BroydenSolver())
+        model.solver.workflow.add(['comp', 'comp2'])
+        model.driver.workflow.add(['solver'])
+        model.connect('comp.z', 'comp2.x')
+        
+        model.solver.add_parameter('comp.x', low=-100, high=100)
+        model.solver.add_parameter('comp.y', low=-100, high=100)
+        model.solver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.solver.add_constraint('comp.res[0] = 0')
+        model.solver.add_constraint('comp.res[1] = 0')
+        model.solver.add_constraint('comp.res[2] = 0')
+        
+        model.comp.eval_only = True
+        
+        model.run()
+        #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'])
+        info = model.driver.workflow.get_implicit_info()
+        #print info
+        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0','_pseudo_2.out0')]),
+                         set([('comp.x',), ('comp.y',), ('comp.z',)]))
+        self.assertEqual(len(info), 1)
+
+        edges = model.driver.workflow._edges
+        #print edges
+        self.assertEqual(set(edges['@in0']), set(['comp.c']))
+        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
+
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='adjoint')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+    def test_derivative_state_connection_external_solve_apply_deriv(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv())
+        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        
+        model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
+                                                   ["dy_dx=2"]))
+        
+        model.add('solver', BroydenSolver())
+        model.solver.workflow.add(['comp', 'comp2'])
+        model.driver.workflow.add(['solver'])
+        model.connect('comp.z', 'comp2.x')
+        
+        model.solver.add_parameter('comp.x', low=-100, high=100)
+        model.solver.add_parameter('comp.y', low=-100, high=100)
+        model.solver.add_parameter('comp.z', low=-100, high=100)
+       
+        model.solver.add_constraint('comp.res[0] = 0')
+        model.solver.add_constraint('comp.res[1] = 0')
+        model.solver.add_constraint('comp.res[2] = 0')
+        
+        model.comp.eval_only = True
+        
+        model.run()
+        #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'])
+        info = model.driver.workflow.get_implicit_info()
+        #print info
+        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0','_pseudo_2.out0')]),
+                         set([('comp.x',), ('comp.y',), ('comp.z',)]))
+        self.assertEqual(len(info), 1)
+
+        edges = model.driver.workflow._edges
+        #print edges
+        self.assertEqual(set(edges['@in0']), set(['comp.c']))
+        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
+
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='adjoint')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_no_deriv(self):
 
