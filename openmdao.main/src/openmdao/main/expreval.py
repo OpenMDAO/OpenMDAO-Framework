@@ -99,7 +99,11 @@ class ExprTransformer(ast.NodeTransformer):
             keywords = [ast.keyword('src', ast.Name(id='_local_src_',
                                                     lineno=node.lineno,
                                                     col_offset=1,
-                                                    ctx=ast.Load()))]
+                                                    ctx=ast.Load())),
+                        ast.keyword('force', ast.Name(id='_local_force_',
+                                                      lineno=node.lineno,
+                                                      col_offset=1,
+                                                      ctx=ast.Load()))]
         else:
             fname = self.getter
             keywords = []
@@ -152,7 +156,7 @@ class ExprTransformer(ast.NodeTransformer):
                     elts.append(self._get_slice_vals(val))
                 else:
                     elts.append(self.visit(val.value))
-            subs[0:0] = [ast.Tuple(elts=elts,  ctx=ast.Load())]
+            subs[0:0] = [ast.Tuple(elts=elts, ctx=ast.Load())]
         else:
             raise ValueError("unknown Subscript child node: %s"
                              % node.slice.__class__.__name__)
@@ -198,7 +202,7 @@ class ExprTransformer(ast.NodeTransformer):
             if len(call_list) > 0 or len(elts) > 0:
                 call_list.append(ast.List(elts=elts, ctx=ast.Load()))
 
-        if len(node.args)>0 or len(call_list)>0:
+        if len(node.args) > 0 or len(call_list) > 0:
             call_list.append(ast.List(elts=[self.visit(arg) for arg in node.args],
                                       ctx=ast.Load()))
 
@@ -484,7 +488,7 @@ class ExprEvaluator(object):
         """
         if hasattr(self.scope, name):
             return False
-        if hasattr(__builtin__, name) or name=='_local_setter_':
+        if hasattr(__builtin__, name) or name == '_local_setter_':
             return True
         parts = name.split('.')
         obj = _expr_dict.get(parts[0], _Missing)
@@ -555,8 +559,8 @@ class ExprEvaluator(object):
                 self._parse()
             return eval(self._code, _expr_dict, locals())
         except Exception, err:
-            raise type(err)("can't evaluate expression "+
-                            "'%s': %s" %(self.text,str(err)))
+            raise type(err)("can't evaluate expression "
+                            "'%s': %s" % (self.text, str(err)))
 
     def refs(self, copy=True):
         """Returns a list of all variables referenced,
@@ -614,10 +618,11 @@ class ExprEvaluator(object):
 
                 #Take symbolic gradient of all inputs using sympy
                 try:
-                    for varname, expression in zip(inputs, SymGrad(self.text, inputs)):
+                    for varname, expression in zip(inputs,
+                                                   SymGrad(self.text, inputs)):
                         self.cached_grad_eq[varname] = expression
 
-                except SymbolicDerivativeError, NameError:
+                except (SymbolicDerivativeError, NameError):
                     self.cached_grad_eq[var] = False
 
             # If we have a cached gradient expression:
@@ -717,7 +722,7 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, src=None):
+    def set(self, val, scope=None, src=None, force=False):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
@@ -731,6 +736,7 @@ class ExprEvaluator(object):
             # connected to.
             _local_setter_ = val
             _local_src_ = src
+            _local_force_ = force
             if self._assignment_code is None:
                 _, self._assignment_code = self._parse_set()
             exec(self._assignment_code, _expr_dict, locals())
