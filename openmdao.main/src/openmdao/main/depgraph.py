@@ -1303,44 +1303,48 @@ def get_subdriver_graph(graph, inputs, outputs, wflow):
             else:
                 fd_drivers.append(comp)
 
+    pa_list = []
+
     # for all non-solver subdrivers, replace them with a PA
     if fd_drivers:
         # only create a copy of the graph if we have non-solver subdrivers
         startgraph = graph.subgraph(graph.nodes_iter())
         for drv in fd_drivers:
-            graph = replace_subdriver(drv, startgraph, 
-                                      graph, inputs, outputs, 
-                                      wflow, using)
+            pa_list.append(_create_driver_PA(drv, startgraph, 
+                                             graph, inputs, outputs, 
+                                             wflow, using))
+
+        for pa in pa_list:
+            pa.clean_graph(startgraph, graph, using)
             
     # return the list of names of subdrivers that were 
-    # replaced with PAs
+    # replaced with PAs, along with any subsolver states/resids
     return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
-def replace_subdriver(drv, startgraph, graph, inputs, outputs, 
+def _create_driver_PA(drv, startgraph, graph, inputs, outputs, 
                       wflow, ancestor_using):
-    """Replaces a single driver with a PsuedoAssembly in the given graph."""
-
-    #needed = drv.workflow.get_names(full=True)
+    """Creates a PsuedoAssembly in the given graph for the specified
+    Driver.  It adds nodes/edges to the graph but doesn't remove anything.
+    """
     needed = set([c.name for c in drv.iteration_set()])
     for cname in needed:
         if cname in graph and cname not in ancestor_using:
             graph.node[cname] = graph.node[cname].copy() # don't pollute other graphs with nondiff markers
             graph.node[cname]['non-differentiable'] = True
 
-    #using = ancestor_using.union(needed)
-    # for comp in drv.workflow:
-    #     if has_interface(comp, IDriver):
-            # graph = replace_subdriver(comp, graph, inputs, outputs, wflow,
-            #                           using, top=False)
+    # get any boundary vars referenced by parameters of the subdriver or 
+    # any of its subdrivers
+    srcs, dests = drv.get_expr_var_depends(recurse=True)
+    boundary_params = [v for v in dests if is_boundary_node(startgraph, v)]    
 
     pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow, 
-                        drv_name=drv.name)
+                        drv_name=drv.name,
+                        boundary_params=boundary_params)
 
-    pa.add_to_graph(startgraph, graph, excludes=ancestor_using-set([drv.name]))
+    pa.add_to_graph(startgraph, graph, 
+                    excludes=ancestor_using-set([drv.name]))
+    return pa
     
-    return graph
-    
-
 def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
