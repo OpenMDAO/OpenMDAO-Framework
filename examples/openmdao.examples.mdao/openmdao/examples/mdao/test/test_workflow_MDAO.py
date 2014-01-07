@@ -12,7 +12,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
-from openmdao.lib.drivers.api import CONMINdriver
+from openmdao.lib.drivers.api import CONMINdriver, SLSQPdriver
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
@@ -106,9 +106,9 @@ class SellarCO_Multi(Assembly):
         Optimal Objective = 3.18339"""
         
         # Global Optimization
-        self.add('driver', CONMINdriver())
-        self.add('localopt1', CONMINdriver())
-        self.add('localopt2', CONMINdriver())
+        self.add('driver', SLSQPdriver())
+        self.add('localopt1', SLSQPdriver())
+        self.add('localopt2', SLSQPdriver())
         self.driver.workflow.add(['localopt1', 'localopt2'])
         
         # Local Optimization 1
@@ -273,6 +273,11 @@ class TestCase(unittest.TestCase):
         
         prob.run()
 
+        # In the top workflow, the subdrivers should each become a PA.
+        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
+        self.assertEqual( PA1.itercomps, ['localopt1'])
+        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
+        self.assertEqual( PA2.itercomps, ['localopt2'])
         assert_rel_error(self, prob.z1, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
