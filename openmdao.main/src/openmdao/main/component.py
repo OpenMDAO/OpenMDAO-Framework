@@ -42,6 +42,8 @@ from openmdao.main.vartree import VariableTree
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
+from openmdao.main.numpy_fallback import ndarray
+
 import openmdao.util.log as tracing
 
 __missing__ = object()
@@ -130,7 +132,8 @@ class Component(Container):
                           desc='FileMetadata objects for external files used'
                                ' by this component.')
     force_execute = Bool(False, iotype='in', framework_var=True,
-                         desc="If True, always execute even if all IO traits are valid.")
+                         desc="If True, always execute even if all IO traits"
+                              " are valid.")
     force_fd = Bool(False, iotype='in', framework_var=True,
                     desc="If True, always finite difference this component.")
 
@@ -167,12 +170,14 @@ class Component(Container):
             if trait.iotype:  # input or output
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
 
-        # Components with input CaseIterators will be forced to execute whenever run() is
-        # called on them, even if they don't have any invalid inputs or outputs.
+        # Components with input CaseIterators will be forced to execute whenever
+        # run() is called on them, even if they don't have any invalid inputs
+        # or outputs.
         self._num_input_caseiters = 0
         for name, trait in self.class_traits().items():
-            # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here...
-            if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+            # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here
+            if trait.iotype == 'in' and trait.trait_type \
+               and trait.trait_type.klass is ICaseIterator:
                 self._num_input_caseiters += 1
 
         self._stop = False
@@ -305,11 +310,16 @@ class Component(Container):
                 if value.required is True:
                     if value.is_trait_type(Slot):
                         if obj is None:
-                            self.raise_exception("required plugin '%s' is not present" %
-                                                 name, RuntimeError)
-                    elif value.iotype in ['in', 'state'] and obj == value.default:
-                        self.raise_exception("required variable '%s' was not set" %
-                                             name, RuntimeError)
+                            self.raise_exception("required plugin '%s' is not"
+                                                 " present" % name, RuntimeError)
+                    elif value.iotype in ['in', 'state']:
+                        if isinstance(obj, ndarray):
+                            unset = (obj == value.default).all()
+                        else:
+                            unset = (obj == value.default)
+                        if unset:
+                            self.raise_exception("required variable '%s' was"
+                                                 " not set" % name, RuntimeError)
                 if has_interface(obj, IComponent) and id(obj) not in visited:
                     visited.add(id(obj))
                     obj.check_configuration()
@@ -318,8 +328,8 @@ class Component(Container):
 
     def check_config(self):
         """
-        Override this function to perform configuration checks specific to your class.
-        Bad configurations should raise an exception.
+        Override this function to perform configuration checks specific to your
+        class. Bad configurations should raise an exception.
         """
         pass
 
@@ -352,7 +362,7 @@ class Component(Container):
             # Populate with external files from config directory.
             config_dir = self.directory
             self.directory = new_dir
-                
+
             try:
                 self._restore_files(config_dir, '', [], from_egg=False)
             except Exception:
@@ -379,9 +389,9 @@ class Component(Container):
             self._call_configure = False
 
     def _pre_execute(self, force=False):
-        """Prepares for execution by calling *cpath_updated()* and *check_config()* if
-        their "dirty" flags are set and by requesting that the parent Assembly
-        update this Component's invalid inputs.
+        """Prepares for execution by calling *cpath_updated()* and
+        *check_config()* if their "dirty" flags are set and by requesting that
+        the parent Assembly update this Component's invalid inputs.
 
         Overrides of this function must call this version.
         """
@@ -398,15 +408,17 @@ class Component(Container):
                 self._call_execute = True
             elif self._num_input_caseiters > 0:
                 self._call_execute = True
-                # we're valid, but we're running anyway because of our input CaseIterators,
-                # so we need to notify downstream comps so they grab our new outputs
+                # we're valid, but we're running anyway because of our input
+                # CaseIterators, so we need to notify downstream comps so they
+                # grab our new outputs
                 outs = self.invalidate_deps()
                 if (outs is None) or outs:
                     if self.parent:
                         self.parent.child_invalidated(self.name, outs)
 
-        if self.parent is None:  # if parent is None, we're not part of an Assembly
-                                 # so Variable validity doesn't apply. Just execute.
+        if self.parent is None:
+            # if parent is None, we're not part of an Assembly
+            # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
         else:
             self.parent.update_inputs(self.name)
@@ -466,13 +478,13 @@ class Component(Container):
         required_outputs
             Not needed by Component
         """
-        
+
         # Allow user to force finite difference on a comp. This also turns off
         # fake finite difference (i.e., there must be a reason they don't
         # trust their own derivatives.)
         if self.force_fd == True:
             return
-        
+
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'linearize'):
 
@@ -484,7 +496,7 @@ class Component(Container):
                 return
 
             if has_interface(self, IAssembly):
-                self.linearize(required_inputs=required_inputs, 
+                self.linearize(required_inputs=required_inputs,
                                required_outputs=required_outputs)
             else:
                 self.linearize()
@@ -537,11 +549,10 @@ class Component(Container):
             ffd_order should be 0. (Default is 0.)
 
         case_id: str
-            Identifier for the Case that is associated with this run. (Default is ''.)
-            If applied to the top-level assembly, this will be prepended to
-            all iteration coordinates.
+            Identifier for the Case that is associated with this run.
+            (Default is ''.) If applied to the top-level assembly, this will be
+            prepended to all iteration coordinates.
         """
-
 
         if self.directory:
             self.push_dir()
@@ -602,7 +613,6 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
-
 
     def _run_terminated(self):
         """ Executed at end of top-level run. """
@@ -676,11 +686,13 @@ class Component(Container):
 
         if hasattr(newobj, 'mimic'):
             try:
-                newobj.mimic(tobj)  # this should copy inputs, delegates and set name
+                # this should copy inputs, delegates and set name
+                newobj.mimic(tobj)
             except Exception:
-                self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
-                                       % (target_name, type(tobj).__name__,
-                                          type(newobj).__name__))
+                self.reraise_exception("Couldn't replace '%s' of type %s with"
+                                       " type %s" % (target_name,
+                                                     type(tobj).__name__,
+                                                     type(newobj).__name__))
 
         self.add(target_name, newobj)  # this will remove the old object
 
@@ -698,7 +710,8 @@ class Component(Container):
         self.config_changed()
 
         # TODO: revisit this...
-        if trait.iotype == 'in' and trait.trait_type and trait.trait_type.klass is ICaseIterator:
+        if trait.iotype == 'in' and trait.trait_type \
+           and trait.trait_type.klass is ICaseIterator:
             self._num_input_caseiters += 1
 
         if trait.iotype:
@@ -841,7 +854,8 @@ class Component(Container):
         destpath = destexpr.text
 
         if not srcexpr.refs_parent():
-            self._connected_outputs = None  # reset cached value of connected outputs
+            # reset cached value of connected outputs
+            self._connected_outputs = None
         if not destpath.startswith('parent.'):
             self.config_changed(update_parent=False)
 
@@ -854,7 +868,7 @@ class Component(Container):
         """
         try:
             super(Component, self).disconnect(srcpath, destpath)
-        finally:        
+        finally:
             self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
@@ -872,8 +886,8 @@ class Component(Container):
                       (HasObjective, HasObjectives)]
             matches = {}
 
-            # should be safe assuming only one delegate of each type here, since
-            # multiples would simply overwrite each other
+            # should be safe assuming only one delegate of each type here,
+            # since multiples would simply overwrite each other
             for tname, tdel in target._delegates_.items():
                 for sname, sdel in self._delegates_.items():
                     if sname in matches:
@@ -887,7 +901,8 @@ class Component(Container):
                                 break
                     if sname in matches:
                         break
-                else:  # current tname wasn't matched to anything in self._delegates_
+                else:
+                    # current tname wasn't matched to anything in self._delegates_
                     if hasattr(tdel, '_item_count') and tdel._item_count() > 0:
                         self.raise_exception("target delegate '%s' has no match"
                                              % tname, RuntimeError)
@@ -1336,11 +1351,13 @@ class Component(Container):
                     # Cleanup unused directory.
                     os.rmdir(name)
                     # setting the directory attribute below was causing an
-                    # exception because the parent was unaware of the 'top' object.
-                    # It doesn't seem valid that a newly loaded object would ever have
-                    # a parent, but setting the parent to None up above breaks things...
+                    # exception because the parent was unaware of the 'top'
+                    # object. It doesn't seem valid that a newly loaded object
+                    # would ever have a parent, but setting the parent to None
+                    # up above breaks things...
                     if getattr(top.parent, name, None) is not top:
-                        top.parent = None  # our parent doesn't know us, so why do we have a parent?
+                        # our parent doesn't know us, so why do we have a parent?
+                        top.parent = None
                     top.directory = ''
 
         if call_post_load:
@@ -1684,9 +1701,10 @@ class Component(Container):
 
                     if '[' in inp:
 
-                        io_attr['connection_types'] = io_attr['connection_types'] | 2
+                        io_attr['connection_types'] |= 2
                         array_indices = re.findall("\[\d+\]", inp)
-                        array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
+                        array_indices = [index.split('[')[1].split(']')[0]
+                                         for index in array_indices]
                         array_indices = [int(index) for index in array_indices]
 
                         dimensions = self.get(name).ndim - 1
@@ -1701,7 +1719,7 @@ class Component(Container):
                         partially_connected_indices.append(column_index)
 
                     else: # '[' not in imp
-                        io_attr['connection_types'] = io_attr['connection_types'] | 1
+                        io_attr['connection_types'] |= 1
 
             if connected:
                 io_attr['connected'] = str(connected)
@@ -1713,18 +1731,19 @@ class Component(Container):
                 connections = self._depgraph._var_connections(name)
                 io_attr['connected'] = \
                     str([dst for src, dst in connections])
-            
+
             io_attr['implicit'] = []
 
             if "%s.%s" % (self.name, name) in partial_parameters:
                 implicit_partial_indices = []
                 shape = self.get(name).shape
-                io_attr['connection_types'] = io_attr['connection_types'] | 8
+                io_attr['connection_types'] |= 8
 
                 for key, target in partial_parameters.iteritems():
                     for value in target:
                         array_indices = re.findall("\[\d+\]", value)
-                        array_indices = [index.split('[')[1].split(']')[0] for index in array_indices]
+                        array_indices = [index.split('[')[1].split(']')[0]
+                                         for index in array_indices]
                         array_indices = [int(index) for index in array_indices]
 
                         dimensions = self.get(name).ndim - 1
@@ -1744,7 +1763,7 @@ class Component(Container):
                     driver_name in partial_parameters["%s.%s" % (self.name, name)]])
 
             if "%s.%s" % (self.name, name) in parameters:
-                io_attr['connection_types'] = io_attr['connection_types'] | 4
+                io_attr['connection_types'] |= 4
 
                 io_attr['implicit'].extend([driver_name.split('.')[0] for
                     driver_name in parameters["%s.%s" % (self.name, name)]])
@@ -1752,7 +1771,7 @@ class Component(Container):
                 io_attr['implicit'] = str(io_attr['implicit'])
 
             if "%s.%s" % (self.name, name) in implicit:
-                io_attr['connection_types'] = io_attr['connection_types'] | 4
+                io_attr['connection_types'] |= 4
 
                 io_attr['implicit'] = str([driver_name.split('.')[0] for
                     driver_name in implicit["%s.%s" % (self.name, name)]])
@@ -1904,8 +1923,7 @@ class Component(Container):
 
             if has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
-                                   for path in self.get_events()]
-
+                                     for path in self.get_events()]
         if len(slots) > 0:
             attrs['Slots'] = slots
 
@@ -1921,7 +1939,7 @@ class Component(Container):
         """
         if self.parent and has_interface(self.parent, IAssembly):
             return self.parent.get_valid(
-                ['.'.join([self.name,n]) for n in names])
+                ['.'.join([self.name, n]) for n in names])
         else:
             valids = []
             if self._exec_state == 'INVALID':
@@ -1937,9 +1955,9 @@ class Component(Container):
                     valids.append(False)
             return valids
 
-    def check_gradient(self, inputs=None, outputs=None, 
+    def check_gradient(self, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
-                       fd_form = 'forward', fd_step_size=1.0e-6, 
+                       fd_form='forward', fd_step_size=1.0e-6,
                        fd_step_type='absolute'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
@@ -1952,29 +1970,29 @@ class Component(Container):
             the matrix of values of the output variables with respect
             to these input variables. If no value is provided for inputs,
             they will be determined based on the inputs of this component.
-            
+
         outputs: (optional) iter of str or None
             Names of output variables. The calculated gradient will be
             the matrix of values of these output variables with respect
             to the input variables. If no value is provided for outputs,
             they will be determined based on the outputs of this component.
-            
+
         stream: (optional) file-like object, str, or None
             Where to write to, default stdout. If a string is supplied,
             that is used as a filename.  If None, no output is written.
-            
+
         mode: (optional) str or None
-            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
 
         fd_form: str
-            Finite difference mode. Valid choices are 'forward', 'adjoint' , 
+            Finite difference mode. Valid choices are 'forward', 'adjoint',
             'central'. Default is 'forward'
-            
+
         fd_step_size: float
             Default step_size for finite difference. Default is 1.0e-6.
-            
+
         fd_step_type: str
             Finite difference step type. Set to 'absolute' or 'relative'.
             Default is 'absolute'.
@@ -1992,17 +2010,17 @@ class Component(Container):
                 asm.run()
                 return asm.check_gradient(name=self.name,
                                          inputs=inputs, outputs=outputs,
-                                         stream=stream, mode=mode, 
-                                         fd_form=fd_form, fd_step_size=fd_step_size, 
+                                         stream=stream, mode=mode,
+                                         fd_form=fd_form, fd_step_size=fd_step_size,
                                          fd_step_type=fd_step_type)
             finally:
                 self.parent = None
                 if orig_name:
                     self.name = orig_name
         else:
-            return self.parent.check_gradient(name=self.name, 
+            return self.parent.check_gradient(name=self.name,
                                               inputs=inputs, outputs=outputs,
-                                              stream=stream, mode=mode, 
-                                              fd_form=fd_form, fd_step_size=fd_step_size, 
+                                              stream=stream, mode=mode,
+                                              fd_form=fd_form, fd_step_size=fd_step_size,
                                               fd_step_type=fd_step_type)
-        
+
