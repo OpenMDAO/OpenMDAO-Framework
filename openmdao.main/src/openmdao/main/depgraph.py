@@ -1315,11 +1315,7 @@ def get_subdriver_graph(graph, inputs, outputs, wflow):
                                              wflow, using))
 
         for pa in pa_list:
-            start = set(graph.nodes())
             pa.clean_graph(startgraph, graph, using)
-            after = set(graph.nodes())
-            #print "removing %s removed the following:" % pa.name
-            #pprint.pprint(start - after)
             
     # return the list of names of subdrivers that were 
     # replaced with PAs, along with any subsolver states/resids
