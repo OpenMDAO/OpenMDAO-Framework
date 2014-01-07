@@ -150,7 +150,7 @@ class PseudoAssembly(object):
                     comp = self.wflow.scope.get(name)
                     
                     # Comp list contains full graph, so don't double up on
-                    # the drivers.
+                    # the subdrivers.
                     if not has_interface(comp, IDriver):
                         comp.calc_derivatives(first, second, True)
 

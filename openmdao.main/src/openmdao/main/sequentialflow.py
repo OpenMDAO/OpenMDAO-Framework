@@ -482,7 +482,7 @@ class SequentialWorkflow(Workflow):
                         outputs[varname] = arg[i1].copy()
                 else:
                     if varname in comp_residuals:
-                        outputs[varname] = zeros((i2-i1, 1))
+                        outputs[varname] = zeros((i2-i1))
                     else:
                         inputs[varname] = arg[i1:i2].copy()
                         outputs[varname] = arg[i1:i2].copy()
