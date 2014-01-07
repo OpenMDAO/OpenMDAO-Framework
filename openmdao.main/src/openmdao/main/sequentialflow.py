@@ -722,7 +722,7 @@ class SequentialWorkflow(Workflow):
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
-        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '|' not in n]
+        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '.' not in n]
         pa_excludes = set()
         for pa in pas:
             pa_excludes.update(pa._removed_comps)
