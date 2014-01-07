@@ -3,13 +3,16 @@
 import unittest
 from math import sqrt  # so expr can find it
 
+from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
 from openmdao.main.api import Assembly, Component, Driver, \
                               SequentialWorkflow, set_as_top, \
                               dump_iteration_tree
 from openmdao.main.datatypes.api import Float, Int, Str
-from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
+from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 
@@ -160,6 +163,20 @@ class MultiDriverTestCase(unittest.TestCase):
         # expected optimal values
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
+        
+    def test_var_depends(self):
+        print "*** test_var_depends ***"
+        self.rosen_setUp()
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=False)
+        self.assertEqual(set(), srcs)
+        self.assertEqual(set(), dests)
+        self.top.driver1.remove_parameter('comp2.x')
+        srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
+        self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
+        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
         
     def test_invalidation(self):
         global exec_order
@@ -548,6 +565,43 @@ class MultiDriverTestCase(unittest.TestCase):
                          ['D1', 'C1', 'C1', 'C1', 'C1', 'C1',
                           'D2', 'C2', 'C2', 'C2', 'C2'])
         
+    def test_cascade_opt(self):
+        top = set_as_top(Assembly())
+        
+        eq = ['f = (x-3)**2 + x*y + (y+4)**2 - 3']
+        deriv = ['df_dx = 2.0*x - 6.0 + y',
+                 'df_dy = 2.0*y + 8.0 + x']
+        top.add('comp', ExecCompWithDerivatives(eq, deriv))
+        top.add('driver', SimpleDriver())
+        top.add('opt1', SLSQPdriver())
+        top.add('opt2', SLSQPdriver())
+        
+        top.opt1.workflow.add(['comp'])
+        top.opt2.workflow.add(['comp'])
+        top.driver.workflow.add(['opt1', 'opt2'])
+        
+        top.opt1.add_parameter('comp.x', low=-100, high=100)
+        top.opt1.add_parameter('comp.y', low=-100, high=100)
+        top.opt1.add_objective('comp.f')
+        top.opt1.maxiter = 2
+        top.opt2.add_parameter('comp.x', low=-100, high=100)
+        top.opt2.add_parameter('comp.y', low=-100, high=100)
+        top.opt2.add_objective('comp.f')
+        top.opt2.maxiter = 50
+        
+        top.run()
+        
+        assert_rel_error(self, top.comp.x, 6.666309, 0.01)
+        assert_rel_error(self, top.comp.y, -7.333026, 0.01)
+        
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              outputs=['comp.f'])
+        edges = top.driver.workflow._edges
+        print edges
+        self.assertEqual(set(edges['@in0']), set(['~opt1.comp|x', '~opt2.comp|x']))
+        self.assertEqual(set(edges['@in1']), set(['~opt1.comp|y', '~opt2.comp|y']))
+        self.assertEqual(set(edges['~opt1.comp|f']), set(['@out0']))
+        self.assertEqual(set(edges['~opt2.comp|f']), set(['@out0']))
         
 if __name__ == "__main__":
     

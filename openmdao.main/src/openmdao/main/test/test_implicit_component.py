@@ -11,6 +11,7 @@ from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
                                      FixedPointIterator
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
+from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.mp_support import has_interface
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
@@ -50,6 +51,7 @@ class MyComp_No_Deriv(ImplicitComponent):
         self.res[2] = -x + y/2. - z 
         
         self.y_out = c + x + y + z
+        #print c, x, y, z, self.res
         
 class MyComp_Deriv(MyComp_No_Deriv):
     ''' This time with derivatives.
@@ -130,6 +132,30 @@ class MyComp_Deriv(MyComp_No_Deriv):
                     if outp in arg:
                         result[inp] += self.J_output_input.T[k, j]*arg[outp]
                         
+class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
+    ''' This time with derivatives.
+    '''
+    
+    def linearize(self): 
+        #partial w.r.t c 
+        c, x, y, z = self.c, self.x, self.y, self.z
+
+        dc = [3*x + 2*y - z, 0, 0]
+        dx = [3*c, 2, -1]
+        dy = [2*c, -2, .5]
+        dz = [-c, 4, -1]
+
+        J_res = np.array([dx, dy, dz, dc]).T
+        J_output = np.array([[1.0, 1.0, 1.0, 1.0]])
+        
+        self.J = np.vstack((J_res, J_output))
+        
+    def provideJ(self):
+        input_keys = ('x', 'y', 'z', 'c')
+        output_keys = ('res', 'y_out')
+        return input_keys, output_keys, self.J 
+        
+
 
 class Coupled1(ImplicitComponent):
     ''' This comp only has the first 2 states (x, y). 
@@ -416,33 +442,74 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp.y_out'])
         info = model.driver.workflow.get_implicit_info()
         edges = model.driver.workflow._edges
-        print edges
-        print info
+        #print edges
+        #print info
         self.assertEqual(set(info[('comp.res',)]),
                          set(['comp.x', 'comp.y', 'comp.z']))
         self.assertEqual(len(info), 1)
 
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         edges = model.driver.workflow._edges
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp.y_out']), set(['@out0']))
-        #self.assertEqual(set(edges['comp.res']), set(['comp.x', 'comp.y', 'comp.z']))
 
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+    def test_derivative_state_connection(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Deriv_ProvideJ())
+        model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
+                                                   ["dy_dx=2"]))
+        model.driver.workflow.add(['comp', 'comp2'])
+        model.connect('comp.x', 'comp2.x')
+        
+        model.run()
+        #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'])
+        info = model.driver.workflow.get_implicit_info()
+        #print info
+        self.assertEqual(set(info[('comp.res',)]),
+                         set(['comp.x', 'comp.y', 'comp.z']))
+        self.assertEqual(len(info), 1)
+
+        edges = model.driver.workflow._edges
+        #print edges
+        self.assertEqual(set(edges['@in0']), set(['comp.c']))
+        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
+
+        #print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='adjoint')
+        #print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+        model.driver.workflow.config_changed()
+        model.driver.gradient_options.fd_step_size = 0.01
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp2.y'],
+                                                mode='fd')
+        #print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_derivative_no_deriv(self):
 
@@ -456,21 +523,21 @@ class Testcase_implicit(unittest.TestCase):
         info = model.driver.workflow.get_implicit_info()
         edges = model.driver.workflow._edges
 
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_derivative_nested_solver(self):
@@ -497,7 +564,7 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp.y_out'])
         
         edges = model.driver.workflow._edges
-        print edges
+        #print edges
         self.assertEqual(edges['@in0'], ['comp.c'])
         self.assertEqual(edges['comp.y_out'], ['@out0'])
         self.assertEqual(edges['comp.res[0]'], ['_pseudo_0.in0'])
@@ -510,21 +577,21 @@ class Testcase_implicit(unittest.TestCase):
         self.assertTrue('comp.y' in model.driver.workflow._derivative_graph)
         self.assertTrue('comp.z' in model.driver.workflow._derivative_graph)
         
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_derivative_nested_solver_no_deriv(self):
@@ -551,29 +618,29 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp.y_out'])
         
         edges = model.driver.workflow._edges
-        print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
-        self.assertEqual(edges['~~0.comp|res[0]'], ['_pseudo_0.in0'])
-        self.assertEqual(edges['~~0.comp|res[1]'], ['_pseudo_1.in0'])
-        self.assertEqual(edges['~~0.comp|res[2]'], ['_pseudo_2.in0'])
+        #print edges
+        self.assertEqual(edges['@in0'], ['~0.comp|c'])
+        self.assertEqual(edges['~0.comp|y_out'], ['@out0'])
+        self.assertEqual(edges['~0.comp|res[0]'], ['_pseudo_0.in0'])
+        self.assertEqual(edges['~0.comp|res[1]'], ['_pseudo_1.in0'])
+        self.assertEqual(edges['~0.comp|res[2]'], ['_pseudo_2.in0'])
         
         
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_solver_nested_under_double_nested_driver(self):
@@ -605,21 +672,25 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp.y_out'])
         
         edges = model.driver.workflow._edges
-        print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
+        #print edges
+        self.assertEqual(edges['@in0'], ['~subdriver.comp|c'])
+        self.assertEqual(edges['~subdriver.comp|y_out'], ['@out0'])
         
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
-        print J
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='adjoint')
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
     def test_solver_nested_under_double_nested_driver_no_deriv(self):
@@ -651,22 +722,51 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp.y_out'])
         
         edges = model.driver.workflow._edges
-        print edges
-        self.assertEqual(edges['@in0'], ['~~0.comp|c'])
-        self.assertEqual(edges['~~0.comp|y_out'], ['@out0'])
+        #print edges
+        self.assertEqual(edges['@in0'], ['~subdriver.comp|c'])
+        self.assertEqual(edges['~subdriver.comp|y_out'], ['@out0'])
         
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
-        print J
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
+                                                outputs=['comp.y_out'],
+                                                mode='adjoint')
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp.y_out'],
                                                 mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        
+    def test_solver_nested_under_double_nested_driver_boundary_var_no_deriv(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_No_Deriv())
+        model.add('bvar', Float(0.0, iotype='in'))
+        model.add('driver', SimpleDriver())
+        model.add('subdriver', SimpleDriver())
+        
+        model.driver.workflow.add('subdriver')
+        model.subdriver.workflow.add('comp')
+        
+        model.subdriver.add_parameter('comp.c', low=-100, high=100)
+        model.subdriver.add_objective('comp.y_out - bvar')
+
+        model.driver.add_parameter('bvar', low=-100, high=100)
+        model.driver.add_objective('bvar - comp.y_out')
+        model.comp.eval_only = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient()
+        edges = model.driver.workflow._edges
+        #print edges
+        self.assertEqual(edges['@in0'], ['_pseudo_1.in0', '~subdriver._pseudo_0|in1'])
+        self.assertEqual(edges['_pseudo_1.out0'], ['@out0'])
         
     def test_list_states(self):
         comp = MyComp_Deriv()

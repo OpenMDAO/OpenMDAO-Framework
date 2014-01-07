@@ -91,7 +91,6 @@ class Dataflow(SequentialWorkflow):
         graph_with_subs = graph.component_graph()
         collapsed_graph = graph_with_subs.subgraph(cnames)
 
-        # TODO - Is this recursive?
         for comp in comps:
             cname = comp.name
             if has_interface(comp, IDriver):
