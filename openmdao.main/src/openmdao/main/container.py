@@ -1210,6 +1210,7 @@ class Container(SafeHasTraits):
     def _index_set(self, name, value, index):
         obj = self.get_attr(name, index[:-1])
         idx = index[-1]
+
         try:
             old = process_index_entry(obj, idx)
         except KeyError:
@@ -1230,6 +1231,7 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
+        print "foobar", old, value
         if not isinstance(eq, bool):
             try:
                 eq = all(eq)
