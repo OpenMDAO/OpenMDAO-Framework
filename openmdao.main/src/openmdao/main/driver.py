@@ -62,7 +62,7 @@ class Driver(Component):
                      desc='Case recorders for iteration data.')
 
     # Extra variables for adding to CaseRecorders
-    printvars = List(Str, iotype='in',
+    printvars = List(Str, iotype='in', framework_var=True,
                      desc='List of extra variables to output in the recorders.')
 
     # set factory here so we see a default value in the docs, even
@@ -159,6 +159,40 @@ class Driver(Component):
                 new_list.append((src, dest))
         return new_list
 
+    @rbac(('owner', 'user'))
+    def get_expr_var_depends(self, recurse=True):
+        """Returns a tuple of sets of the form (src_set, dest_set)
+        containing all dependencies introduced by any parameters,
+        objectives, or constraints in this Driver.  If recurse is True,
+        include any refs from subdrivers.
+        """
+        srcset = set()
+        destset = set()
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                delegate = getattr(self, dname)
+                if isinstance(delegate, HasParameters):
+                    destset.update(delegate.get_referenced_varpaths())
+                elif isinstance(delegate, (HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints,
+                                     HasObjective, HasObjectives)):
+                    srcset.update(delegate.get_referenced_varpaths())
+                    
+            if recurse:
+                for sub in self.subdrivers():
+                    srcs, dests = sub.get_expr_var_depends(recurse)
+                    srcset.update(srcs)
+                    destset.update(dests)
+                    
+        return srcset, destset
+    
+    @rbac(('owner', 'user'))
+    def subdrivers(self):
+        """Returns a generator of of subdrivers of this driver."""
+        for d in self.iteration_set():
+            if has_interface(d, IDriver):
+                yield d
+
     def _get_required_compnames(self):
         """Returns a set of names of components that are required by
         this Driver in order to evaluate parameters, objectives
@@ -186,7 +220,7 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def list_pseudocomps(self):
         """Return a list of names of pseudocomps resulting from
-        our parameters, objectives, and constraints.
+        our objectives, and constraints.
         """
         pcomps = []
         if hasattr(self, '_delegates_'):

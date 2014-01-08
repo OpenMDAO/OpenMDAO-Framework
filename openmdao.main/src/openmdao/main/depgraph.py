@@ -10,6 +10,8 @@ from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
+from openmdao.util.graph import flatten_list_of_iters
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -23,32 +25,6 @@ def _is_expr(node):
     vartree attribute.
     """
     return len(_exprchars.intersection(node)) > 0
-
-def base_var(graph, node):
-    """Returns the name of the variable node that is the 'base' for
-    the given node name.  For example, for the node A.b[4], the
-    base variable is A.b.  For the node d.x.y, the base variable
-    is d if d is a boundary variable node, or d.x otherwise.
-    """
-    if node in graph:
-        base = graph.node[node].get('basevar')
-        if base:
-            return base
-        elif 'var' in graph.node[node]:
-            return node
-
-    parts = node.split('[', 1)[0].split('.')
-    # for external connections, we don't do the error checking at
-    # this level so ambiguity in actual base varname doesn't
-    # matter.  So just return the full name and be done with it.
-    if parts[0] == 'parent':
-        return node
-
-    base = parts[0]
-    if base in graph and 'var' in graph.node[base]:
-        return base
-
-    return '.'.join(parts[:2])
 
 def _sub_or_super(s1, s2):
     """Returns True if s1 is a subvar or supervar of s2."""
@@ -214,7 +190,7 @@ def is_nested_node(graph, node):
     nested node while a 'comp1.y' node would not.  If we had a boundary
     var called 'b', then 'b.x' would be a nested node.
     """
-    base = base_var(graph, node)
+    base = graph.base_var(node)
     return '.' in node[len(base):]
 
 # EDGE selectors
@@ -233,6 +209,32 @@ class DependencyGraph(nx.DiGraph):
         self._saved_comp_graph = None
         self._saved_loops = None
         self.config_changed()
+
+    def base_var(self, node):
+        """Returns the name of the variable node that is the 'base' for
+        the given node name.  For example, for the node A.b[4], the
+        base variable is A.b.  For the node d.x.y, the base variable
+        is d if d is a boundary variable node, or d.x otherwise.
+        """
+        if node in self:
+            base = self.node[node].get('basevar')
+            if base:
+                return base
+            elif 'var' in self.node[node]:
+                return node
+
+        parts = node.split('[', 1)[0].split('.')
+        # for external connections, we don't do the error checking at
+        # this level so ambiguity in actual base varname doesn't
+        # matter.  So just return the full name and be done with it.
+        if parts[0] == 'parent':
+            return node
+
+        base = parts[0]
+        if base in self and 'var' in self.node[base]:
+            return base
+
+        return '.'.join(parts[:2])
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -368,7 +370,6 @@ class DependencyGraph(nx.DiGraph):
             self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])
 
-
         self.config_changed()
 
     def add_boundary_var(self, name, **kwargs):
@@ -415,7 +416,7 @@ class DependencyGraph(nx.DiGraph):
         if is_extern_node(self, destpath):  # error will be caught at parent level
             return
 
-        dpbase = base_var(self, destpath)
+        dpbase = self.base_var(destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
         if dest_iotype in ('out','residual') and \
@@ -452,8 +453,8 @@ class DependencyGraph(nx.DiGraph):
         and another edge from B.c.x to base variable B.c.
         """
 
-        base_src  = base_var(self, srcpath)
-        base_dest = base_var(self, destpath)
+        base_src  = self.base_var(srcpath)
+        base_dest = self.base_var(destpath)
 
         for v in [base_src, base_dest]:
             if not v.startswith('parent.'):
@@ -483,7 +484,12 @@ class DependencyGraph(nx.DiGraph):
                 self.add_node(dest, basevar=base, valid=True)
             if i > 0:
                 src = path[i-1][0]
-                self.add_edge(src, dest)
+                try:
+                    self[src][dest]
+                except KeyError:
+                    self.add_edge(src, dest)
+                    if config_change:
+                        self.config_changed()
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -507,7 +513,7 @@ class DependencyGraph(nx.DiGraph):
         execution. Subvars created using this function will be labeled
         as 'fake' in their metadata.
         """
-        base = base_var(self, subvar)
+        base = self.base_var(subvar)
         if base not in self:
             raise RuntimeError("can't find basevar '%s' in graph" % base)
         self.add_node(subvar, basevar=base, valid=True, fake=True)
@@ -1049,6 +1055,80 @@ class DependencyGraph(nx.DiGraph):
         for out in self.get_extern_dests():
             meta[out]['valid'] = True
 
+    def edge_dict_to_comp_list(self, edges, implicit_edges=None):
+        """Converts inner edge dict into an ordered dict whose keys are component
+        names, and whose values are lists of relevant (in the graph) inputs and
+        outputs.
+        """
+        comps = OrderedDict()
+        basevars = set()
+        for src, targets in edges.iteritems():
+            
+            if src == '@fake':
+                continue
+            
+            if not isinstance(targets, list):
+                targets = [targets]
+                
+            numfakes = 0
+            for target in targets:
+                if target.startswith('@fake'):
+                    numfakes += 1
+                if  not target.startswith('@'):
+                    comp, _, var = target.partition('.')
+                    if var:
+                        if comp not in comps:
+                            comps[comp] = {'inputs': [],
+                                           'outputs': [],
+                                           'residuals': [],
+                                           'states': []}
+                        
+                        basevar = self.base_var(target)
+                        if basevar not in basevars:
+                            comps[comp]['inputs'].append(var)
+                            
+                            if target == basevar:
+                                basevars.add(target)
+                                
+            if len(targets) == numfakes:
+                continue
+            
+            if not src.startswith('@'):
+                comp, _, var = src.partition('.')
+                if var:
+                    if comp not in comps:
+                        comps[comp] = {'inputs': [],
+                                       'outputs': [],
+                                       'residuals': [],
+                                       'states': []}
+                    
+                    basevar = self.base_var(src)
+                    if basevar not in basevars:
+                        comps[comp]['outputs'].append(var)
+                        if src == basevar:
+                            basevars.add(src)
+
+        # Implicit edges
+        if implicit_edges is not None:
+            for srcs, targets in implicit_edges.iteritems():
+                for src in srcs:
+                    comp, _, var = src.partition('.')
+                    comps[comp]['residuals'].append(var)
+                    comps[comp]['outputs'].append(var)
+                for target in targets:
+                    if isinstance(target, str):
+                        target = [target]
+                    for itarget in target:
+                        comp, _, var = itarget.partition('.')
+                        comps[comp]['states'].append(var)
+                        comps[comp]['inputs'].append(var)
+                        
+                        # Remove any states that came into outputs via
+                        # input-input connections. 
+                        if var in comps[comp]['outputs']:
+                            comps[comp]['outputs'].remove(var)
+                    
+        return comps
 
 def find_related_pseudos(compgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
@@ -1143,57 +1223,129 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-def get_solver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
-    """Return edges coming from solvers that are in the
-    specified workflow or part of the graph between specified
-    derivative inputs and outputs.
-    """
-    #from openmdao.main.pseudoassembly import from_PA_var # prevent recursive import
-    
-    # add edges from any nested solvers
-    edges = set()
-    comps = set(wflow)
-    comps.update([getattr(scope,n) for n in graphcomps if n is not None])
+# def get_subdriver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
+#     """Return edges coming from solvers that are in the
+#     specified workflow or part of the graph between specified
+#     derivative inputs and outputs.
+#     """
+#     # add edges from any nested drivers
+#     edges = set()
+#     comps = set(wflow)
+#     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
 
-    flat_inputs = flatten_list_of_iters(inputs)
-    for comp in comps:  #._parent.iteration_set():
-        if has_interface(comp, ISolver):
-            g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
-                                               group_nondif=False)
-            for u, v, data in g.edges_iter(data=True):
-                if u.startswith('@'):
-                    # Mark all states (params) from sub-solver
-                    if v not in flat_inputs:
-                        graph.node[v]['solver_state'] = True
-                    continue
-                if v.startswith('@'):
-                    continue
-                if 'conn' in data:
-                    #edges.add((from_PA_var(u), from_PA_var(v)))
-                    edges.add((u, v))
+#     flat_inputs = flatten_list_of_iters(inputs)
+#     for comp in comps:
+#         is_solver = has_interface(comp, ISolver)
+#         if has_interface(comp, IDriver):
+#             g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+#                                                group_nondif=False)
+#             for u, v, data in g.edges_iter(data=True):
+#                 if u.startswith('@'):
+#                     # Mark all states (params) from sub-solver
+#                     if is_solver and v not in flat_inputs:
+#                         graph.node[v]['solver_state'] = True
+#                     continue
+#                 if v.startswith('@'):
+#                     continue
+#                 if 'conn' in data:
+#                     #edges.add((from_PA_var(u), from_PA_var(v)))
+#                     edges.add((u, v))
             
-    return edges
+#     return edges
 
-def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
-    """Mark all components as non-differentiable that are in the
-    itersets of any non-solver drivers in the specified workflow or
-    in the graph.
+# def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
+#     """Mark all components as non-differentiable that are in the
+#     itersets of any non-solver drivers in the specified workflow or
+#     in the graph.
+#     """
+#     comps = set(wflow)
+#     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
+#     nondiff_comps = set()
+
+#     for comp in comps:
+#         if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
+#             nondiff_comps.add(comp.name)
+#             nondiff_comps.update([comp.name for comp in comp.iteration_set()])
+
+#     for comp in nondiff_comps:
+#         if comp in graph:
+#             graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
+#             graph.node[comp]['non-differentiable'] = True
+
+def get_subdriver_graph(graph, inputs, outputs, wflow):
+    """Update the given graph to replace non-solver subdrivers with 
+    PseudoAssemblies and promote edges up from sub-Solvers.
+    Returns a list of names of drivers that were replaced, the set of
+    additional inputs from subsolvers, and the set of additional outputs
+    from subsolvers.
     """
-    comps = set(wflow)
-    comps.update([getattr(scope,n) for n in graphcomps if n is not None])
-    nondiff_comps = set()
+    # set of comps being used by the current driver, so that
+    # subdriver PAs won't remove them from the graph
+    using = set(wflow.get_names(full=True))
 
-    for comp in comps:
-        if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
-            nondiff_comps.add(comp.name)
-            nondiff_comps.update([comp.name for comp in comp.iteration_set()])
+    inputs = list(flatten_list_of_iters(inputs))
+    outputs = list(flatten_list_of_iters(outputs))
 
-    for comp in nondiff_comps:
-        if comp in graph:
-            graph.node[comp] = graph.node[comp].copy() # don't pollute top level graph with nondiff markers
-            graph.node[comp]['non-differentiable'] = True
+    fd_drivers = []
+    xtra_inputs = set()
+    xtra_outputs = set()
+    for comp in wflow:
+        if has_interface(comp, IDriver):
+            if has_interface(comp, ISolver):
+                dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+                                                    group_nondif=False)
+                xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
+                xtra_outputs.update(flatten_list_of_iters(dg.graph['outputs']))
+                for u,v,data in dg.edges_iter(data=True):
+                    graph.add_edge(u, v, attr_dict=data)
+                for param in comp.list_param_targets():
+                    graph.node[param]['solver_state'] = True
+            else:
+                fd_drivers.append(comp)
 
-def mod_for_derivs(graph, inputs, outputs, wflow):
+    pa_list = []
+
+    # for all non-solver subdrivers, replace them with a PA
+    if fd_drivers:
+        # only create a copy of the graph if we have non-solver subdrivers
+        startgraph = graph.subgraph(graph.nodes_iter())
+        for drv in fd_drivers:
+            pa_list.append(_create_driver_PA(drv, startgraph, 
+                                             graph, inputs, outputs, 
+                                             wflow, using))
+
+        for pa in pa_list:
+            pa.clean_graph(startgraph, graph, using)
+            
+    # return the list of names of subdrivers that were 
+    # replaced with PAs, along with any subsolver states/resids
+    return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
+
+def _create_driver_PA(drv, startgraph, graph, inputs, outputs, 
+                      wflow, ancestor_using):
+    """Creates a PsuedoAssembly in the given graph for the specified
+    Driver.  It adds nodes/edges to the graph but doesn't remove anything.
+    """
+    needed = set([c.name for c in drv.iteration_set()])
+    for cname in needed:
+        if cname in graph and cname not in ancestor_using:
+            graph.node[cname] = graph.node[cname].copy() # don't pollute other graphs with nondiff markers
+            graph.node[cname]['non-differentiable'] = True
+
+    # get any boundary vars referenced by parameters of the subdriver or 
+    # any of its subdrivers
+    srcs, dests = drv.get_expr_var_depends(recurse=True)
+    boundary_params = [v for v in dests if is_boundary_node(startgraph, v)]    
+
+    pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow, 
+                        drv_name=drv.name,
+                        boundary_params=boundary_params)
+
+    pa.add_to_graph(startgraph, graph, 
+                    excludes=ancestor_using-set([drv.name]))
+    return pa
+    
+def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
@@ -1203,6 +1355,15 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
 
     scope = wflow.scope
 
+    # We want our top level graph metadata to be stored in the copy, but not in the
+    # parent, so make our own copy of the metadata dict.
+    graph.graph = {}
+    
+    graph.graph['inputs'] = inputs[:]
+    graph.graph['mapped_inputs'] = inputs[:]
+    graph.graph['outputs'] = outputs[:]
+    graph.graph['mapped_outputs'] = outputs[:]
+    
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
@@ -1210,7 +1371,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         graph.add_node(iname, var=True, iotype='in', valid=True)
         for varname in flatten_list_of_iters(varnames):
             if varname not in graph:  # must be a subvar
-                graph.add_node(varname, basevar=base_var(graph, varname), 
+                graph.add_node(varname, basevar=graph.base_var(varname), 
                                iotype='in', valid=True)
             graph.connect(None, iname, varname,
                           check=False, invalidate=False)
@@ -1223,26 +1384,34 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         graph.add_node(oname, var=True, iotype='out', valid=False)
         for varname in flatten_list_of_iters(varnames):
             if varname not in graph:
-                graph.add_node(varname, basevar=base_var(graph, varname), 
+                graph.add_node(varname, basevar=graph.base_var(varname), 
                                iotype='out', valid=False)
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
+    if full_fd:
+        rep_drivers = []
+        xtra_ins = []
+        xtra_outs = []
+    else:
+        rep_drivers, xtra_ins, xtra_outs = \
+                   get_subdriver_graph(graph, inputs, outputs, wflow)
+
     edges = _get_inner_edges(graph, 
-                             ['@in%d' % i for i in range(len(inputs))],
-                             ['@out%d' % i for i in range(len(outputs))])
+                             ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
+                             ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
     
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
     
-    slv_edges = get_solver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
-    edges.update(slv_edges)
+    # slv_edges = get_subdriver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
+    # edges.update(slv_edges)
 
-    mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)
+    # mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)
 
-    # get comps for any new edges due to sub-solvers
-    partition_names_by_comp([e[0] for e in slv_edges], compmap=comps)
-    partition_names_by_comp([e[1] for e in slv_edges], compmap=comps)
+    # # get comps for any new edges due to sub-solvers
+    # partition_names_by_comp([e[0] for e in slv_edges], compmap=comps)
+    # partition_names_by_comp([e[1] for e in slv_edges], compmap=comps)
 
     full = [k for k in comps.keys() if k]
     if None in comps:
@@ -1275,21 +1444,21 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         if src.startswith('@in'):
             # move edges from input boundary nodes if they're
             # connected to an @in node
-            base_dest = base_var(graph, dest)
+            base_dest = graph.base_var(dest)
             if is_boundary_node(graph, base_dest):
                 if base_dest == dest: # dest is a basevar
                     newsrc = src
                 else: # dest is a subvar
                     if graph.out_degree(base_dest) > 0:
                         for s in graph.successors(base_dest):
-                            if base_var(graph, s) != base_dest:
+                            if graph.base_var(s) != base_dest:
                                 newdest = dest.replace(base_dest, s, 1)
                                 if newdest not in graph:
                                     graph.add_subvar(newdest)
                                 graph.add_edge(src, newdest, conn=1)
                         newsrc = src
                     else:
-                        newsrc = dest.replace(base_dest, base_var(graph, src), 1)
+                        newsrc = dest.replace(base_dest, graph.base_var(src), 1)
                     if newsrc not in graph:
                         graph.add_subvar(newsrc)
                 for s, d in graph.edges(dest):
@@ -1300,17 +1469,17 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         elif dest.startswith('@out') and not is_input_node(graph, src):
             # move edges from output boundary nodes if they're
             # connected to an @out node
-            base_src = base_var(graph, src)
+            base_src = graph.base_var(src)
             if is_boundary_node(graph, base_src):
                 for pred in graph.predecessors(base_src):
-                    if not base_src == base_var(graph, pred): # it's not one of our subvars
+                    if not base_src == graph.base_var(pred): # it's not one of our subvars
                         break
                 else:
                     continue  # FIXME: not sure what to really do here.
                 if base_src == src: # src is a basevar
                     newsrc = pred
                 else: # src is a subvar
-                    newsrc = src.replace(base_src, base_var(graph, pred), 1)
+                    newsrc = src.replace(base_src, graph.base_var(pred), 1)
                     if newsrc not in graph:
                         graph.add_subvar(newsrc)
                 graph.add_edge(newsrc, dest, conn=True)
@@ -1338,7 +1507,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
                 preds = graph.predecessors(sub)
                 newsrc = None
                 for p in preds:
-                    if base_var(graph, sub) != p:
+                    if graph.base_var(sub) != p:
                         newsrc = p
                         break
                 if newsrc is None:
@@ -1349,14 +1518,14 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
             to_remove.add((src, dest))
 
         else:
-            base = base_var(graph, src)
+            base = graph.base_var(src)
             if is_boundary_node(graph, base):
                 to_remove.add((src, dest))
     
     # get rid of any left over boundary connections
     for s, d in graph.list_connections():
-        sbase = base_var(graph, s)
-        dbase = base_var(graph, d)
+        sbase = graph.base_var(s)
+        dbase = graph.base_var(d)
         if is_boundary_node(graph, sbase) or is_boundary_node(graph, dbase):
             to_remove.add((s,d))
     
@@ -1370,13 +1539,19 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
         destnames = []
         if '@' not in src and '[' not in src and src not in visited:
             visited.add(src)
-            obj = scope.get(src)
+            if '~' in src:
+                obj = scope.get(from_PA_var(src))
+            else:
+                obj = scope.get(src)
             if has_interface(obj, IVariableTree):
                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                 srcnames = ['.'.join([src, n]) for n in srcnames]
         if '@' not in dest and '[' not in dest and dest not in visited:
             visited.add(dest)
-            obj = scope.get(dest)
+            if '~' in dest:
+                obj = scope.get(from_PA_var(dest))
+            else:
+                obj = scope.get(dest)
             if has_interface(obj, IVariableTree):
                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                 destnames = ['.'.join([dest, n]) for n in destnames]
@@ -1389,6 +1564,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
     # for them
     
     for inp in flatten_list_of_iters(inputs):
+        for drv in rep_drivers:
+            if to_PA_var(inp, '~%s' % drv) in graph:
+                inp = to_PA_var(inp, '~%s' % drv)
+                break
         if inp not in graph:
             if '@fake' not in graph:
                 graph.add_node('@fake')
@@ -1397,6 +1576,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
             graph.add_edge('@fake', inp, conn=True)
 
     for out in flatten_list_of_iters(outputs):
+        for drv in rep_drivers:
+            if to_PA_var(out, '~%s' % drv) in graph:
+                out = to_PA_var(out, '~%s' % drv)
+                break
         if out not in graph:
             if '@fake' not in graph:
                 graph.add_node('@fake')
@@ -1406,17 +1589,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow):
 
     # also add @fake connections for sub-solver related nodes that
     # aren't connected in the final graph
-    for u,v in slv_edges:
-        if u == '@fake' or v == '@fake':
-            graph.add_edge(u, v, conn=True)
-            
-    # We want our top level graph metadata to be stored in the copy, but not in the
-    # parent, so make our own copy of the metadata dict.
-    graph.graph = {}
-    
-    graph.graph['inputs'] = inputs[:]
-    graph.graph['outputs'] = outputs[:]
-    
+    #for u,v in slv_edges:
+        #if u == '@fake' or v == '@fake':
+            #graph.add_edge(u, v, conn=True)
+                
     return graph
 
 def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
@@ -1447,187 +1623,3 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
         graph.connect(None, s, d, check=False, 
                       invalidate=False)
 
-        
-# utility/debugging functions
-
-def edges_to_dict(edges, dct=None):
-    """Take an iterator of edges and return an ordered dict
-    of sources mapped to lists of destinations.
-    """
-    if dct is None:
-        dct = OrderedDict()
-    for u, v in edges:
-        dct.setdefault(u, []).append(v)
-    return dct
-
-
-def edge_dict_to_comp_list(graph, edges, implicit_edges=None):
-    """Converts inner edge dict into an ordered dict whose keys are component
-    names, and whose values are lists of relevant (in the graph) inputs and
-    outputs.
-    """
-    comps = OrderedDict()
-    basevars = set()
-    for src, targets in edges.iteritems():
-        
-        if src == '@fake':
-            continue
-        
-        if not isinstance(targets, list):
-            targets = [targets]
-            
-        numfakes = 0
-        for target in targets:
-            if target.startswith('@fake'):
-                numfakes += 1
-            if  not target.startswith('@'):
-                comp, _, var = target.partition('.')
-                if var:
-                    if comp not in comps:
-                        comps[comp] = {'inputs': [],
-                                       'outputs': [],
-                                       'residuals': [],
-                                       'states': []}
-                    
-                    basevar = base_var(graph, target)
-                    if basevar not in basevars:
-                        comps[comp]['inputs'].append(var)
-                        
-                        if target == basevar:
-                            basevars.add(target)
-                            
-        if len(targets) == numfakes:
-            continue
-        
-        if not src.startswith('@'):
-            comp, _, var = src.partition('.')
-            if var:
-                if comp not in comps:
-                    comps[comp] = {'inputs': [],
-                                   'outputs': [],
-                                   'residuals': [],
-                                   'states': []}
-                
-                basevar = base_var(graph, src)
-                if basevar not in basevars:
-                    comps[comp]['outputs'].append(var)
-                    if src == basevar:
-                        basevars.add(src)
-
-    # Implicit edges
-    if implicit_edges is not None:
-        for srcs, targets in implicit_edges.iteritems():
-            for src in srcs:
-                comp, _, var = src.partition('.')
-                comps[comp]['residuals'].append(var)
-                comps[comp]['outputs'].append(var)
-            for target in targets:
-                if isinstance(target, str):
-                    target = [target]
-                for itarget in target:
-                    comp, _, var = itarget.partition('.')
-                    comps[comp]['states'].append(var)
-                    comps[comp]['inputs'].append(var)
-                    
-                    # Remove any states that came into outputs via
-                    # input-input connections. 
-                    if var in comps[comp]['outputs']:
-                        comps[comp]['outputs'].remove(var)
-                
-    return comps
-
-def nodes_matching_all(graph, **kwargs):
-    """Return an iterator over nodes matching all kwargs names and values. 
-    For example, nodes_matching_all(G, valid=True, boundary=True) would
-    return a list of all nodes that are marked as valid that
-    are also boundary nodes.
-    """
-    for n,data in graph.node.iteritems():
-        for arg,val in kwargs.items():
-            if data.get(arg, _missing) != val:
-                break
-        else:
-            yield n
-
-def nodes_matching_some(graph, **kwargs):
-    """Return an iterator over nodes matching at least one of 
-    the kwargs names and values. For
-    example, nodes_matching_some(G, valid=True, boundary=True) would
-    return a list of all nodes that either are marked as valid or nodes
-    that are boundary nodes, or nodes that are both.
-    """
-    for n,data in graph.node.iteritems():
-        for arg,val in kwargs.items():
-            if data.get(arg, _missing) == val:
-                yield n
-                break
-
-def edges_matching_all(graph, **kwargs):
-    """Return an iterator over edges matching all kwargs names and 
-    values. For example, edges_matching_all(G, foo=True, bar=True) would
-    return a list of all edges that are marked with True
-    values of both foo and bar.
-    """
-    for u,v,d in graph.edges(data=True):
-        for arg,val in kwargs.items():
-            if d.get(arg, _missing) != val:
-                break
-        else:
-            yield (u,v)
-
-def edges_matching_some(graph, **kwargs):
-    """Return an iterator over edges matching some kwargs names 
-    and values. For example, edges_matching_some(G, foo=True, bar=True) 
-    would return a list of all edges that are marked with True
-    values of either foo or bar or both.
-    """
-    for u,v,d in graph.edges(data=True):
-        for arg,val in kwargs.items():
-            if d.get(arg, _missing) == val:
-                yield (u,v)
-                break
-
-def get_valids(graph, val, prefix=None):
-    """Returns all nodes with validity matching the
-    given value.
-    """
-    if prefix:
-        return [n for n in nodes_matching_all(graph, valid=val)
-                    if n.startswith(prefix)]
-    return sorted(nodes_matching_all(graph, valid=val))
-
-def dump_valid(graph, filter=None, stream=None):
-    dct = {}
-    for node in graph.nodes_iter():
-        if filter and not filter(node):
-            continue
-        dct[node] = graph.node[node]['valid']
-    pprint.pprint(dct, stream=stream)
-
-
-def flatten_list_of_iters(lst):
-    """Returns a list of simple values, flattening
-    any sub-lists or sub-tuples, or if the input is a 
-    string it just returns that string.  NOTE: this only
-    goes down one level.
-    """
-    if isinstance(lst, basestring):
-        return [lst]
-    else:
-        ret = []
-        for entry in lst:
-            if isinstance(entry, basestring):
-                ret.append(entry)
-            else:
-                ret.extend(entry)
-        return ret
-
-def bfs_find(G, source, pred):
-    """Return the first target in BFS order that satisfies 
-    pred(graph, target), or None if no target satisfying 
-    pred is found.
-    """
-    for u, v in nx.bfs_edges(G, source):
-        if pred(G, v):
-            return True
-    return None
