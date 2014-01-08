@@ -39,11 +39,13 @@ class ParaboloidDerivative(Component):
         
     def provideJ(self):
         """Provide full Jacobian."""
-        
+
+        return self.J
+    
+    def list_deriv_vars(self):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
         
-        return input_keys, output_keys, self.J
-    
+        return input_keys, output_keys
 
 # End paraboloid_derivative.py

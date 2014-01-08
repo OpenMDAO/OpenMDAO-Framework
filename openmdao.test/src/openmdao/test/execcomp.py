@@ -195,9 +195,14 @@ class ExecCompWithDerivatives(Component):
     def provideJ(self):
         """Return the full Jacobian"""
         
+        return self.J
+            
+    def list_deriv_vars(self):
+        """Return the full Jacobian"""
+        
         input_keys = [x[0] for x in self.items(framework_var=None, 
                                                iotype='in')]
         output_keys = [x[0] for x in self.items(framework_var=None, 
                                                 iotype='out')]
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
             

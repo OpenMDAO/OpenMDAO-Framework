@@ -110,7 +110,10 @@ class Comp_Receive_ProvideJ(Comp_Receive):
                            [0.0, 0.0, 3.0]])
 
     def provideJ(self): 
-        return ('data',), ('q1','q2','q3'), self.J
+        return self.J
+
+    def list_deriv_vars(self): 
+        return ('data',), ('q1','q2','q3')
 
 class Comp_Receive_ApplyDeriv(Comp_Receive):
     '''Takes a data object as input.'''

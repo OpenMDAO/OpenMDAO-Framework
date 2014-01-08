@@ -2,11 +2,11 @@ import struct
 import string
 
 import numpy as np
-from scipy.sparse import csr_matrix
+#from scipy.sparse import csr_matrix
 
 from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
-from ffd_axisymetric import Body, Shell
+from ffd_axisymetric import Body #, Shell
 
 from pyV3D.stl import STLSender
 from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
@@ -30,119 +30,6 @@ class STLGroup(object):
 
         self._needs_linerize = True
 
-
-    #begin methods for IParametricGeometry
-    def list_parameters(self): 
-        """ returns a dictionary of parameters sets key'd to component names"""
-
-        self.param_name_map = {}
-        params = []
-        for comp in self._comps: 
-            name = comp.name
-            if isinstance(comp, Body): 
-                val = comp.delta_C[1:,0]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':"axial location of control points for the ffd"}
-                tup = ('%s.X'%name, meta)
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_C[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':"radial location of control points for the ffd"}
-                tup = ('%s.R'%name, meta)
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-
-            else: 
-                val = comp.delta_Cc[1:,0]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'axial location of the control points for the centerline of the shell'}
-                tup = ('%s.X'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_Cc[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'radial location of the control points for the centerline of the shell'}
-                tup = ('%s.R'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-                val = comp.delta_Ct[:-1,1]
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
-                'desc':'thickness of the shell at each axial station'}
-                tup = ('%s.thickness'%name, meta) 
-                params.append(tup)
-                self.param_name_map[tup[0]] = val
-
-
-        return params
-
-    def set_parameter(self, name, val): 
-        self.param_name_map[name] = val
-
-    def get_parameters(self, names): 
-        return [self.param_name_map[n] for n in names]
-
-    def regen_model(self): 
-        for comp in self._comps: 
-
-            #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
-            
-            #del_C = np.ones((10,2)) * 123.0
-            if isinstance(comp, Body): 
-                delta_C_shape = comp.delta_C.shape
-                del_C = np.zeros( delta_C_shape )
-                del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_C[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
-                comp.deform(delta_C=del_C)
-            else:
-                delta_Cc_shape = comp.delta_Cc.shape
-                del_Cc = np.zeros( delta_Cc_shape )
-                del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_Cc[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
-
-                delta_Ct_shape = comp.delta_Ct.shape
-                del_Ct = np.zeros( delta_Ct_shape )
-                del_Ct[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_Ct[:-1,1] = self.param_name_map[ '%s.thickness' % comp.name ]
-                # need both delta_Cc and delta_Ct for shells
-                comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
-
-
-    def get_static_geometry(self): 
-        return self
-
-    def register_param_list_changedCB(self, callback):
-        self._callbacks.append(callback)
-
-    def _invoke_callbacks(self): 
-        for cb in self._callbacks: 
-            cb()
-    #end methods for IParametricGeometry
-
-    #methods for IStaticGeometry
-    def get_visualization_data(self, wv):
-        self.linearize()
-
-        xyzs = np.array(self.points).flatten().astype(np.float32)
-        tris = np.array(self.triangles).flatten().astype(np.int32)
-        mins = np.min(xyzs.reshape((-1,3)), axis=0)
-        maxs = np.max(xyzs.reshape((-1,3)), axis=0)
-
-        box = [mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]]
-
-        #print box
-
-        wv.set_face_data(xyzs, tris, name="surface")
-
-        #wv.focus_vertices()
-
-
-    #end methods for IStaticGeometry
-
     def add(self, comp ,name=None): 
         """ addes a new component to the geometry""" 
 
@@ -157,8 +44,6 @@ class STLGroup(object):
         self.list_parameters()
         self._invoke_callbacks()
         self._needs_linerize = True
-
-
 
     def deform(self,**kwargs): 
         """ deforms the geometry applying the new locations for the control points, given by body name"""
@@ -235,8 +120,6 @@ class STLGroup(object):
         i_offset=0
         i_deriv_offset = 0
         Jdata = []
-        Jrow = []
-        Jcolumn = []
         for i,p in enumerate(points): 
             #map point index to proper component
             if (i_comp < len(self._comps)-1) and (i == offsets[i_comp+1]): #the offset for the next comp: 
@@ -311,6 +194,7 @@ class STLGroup(object):
                 deriv_values[start+2:end:3] = Z.flatten() 
 
             Jdata.append(deriv_values) 
+
         self.J = np.array(Jdata) #weird format used for tecplot fepoint, x,y,z interlaced
         self.Jx = self.J[:,0::3]
         self.Jy = self.J[:,1::3]
@@ -408,7 +292,7 @@ class STLGroup(object):
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
                 points = p[indecies]
                 points = points[points[:,0].argsort()]
-                point_ses.append(points)
+                point_sets.append(points)
 
                 p = comp.inner_stl.points
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
@@ -432,7 +316,7 @@ class STLGroup(object):
             result['geom_out'][:,1] += sub_Jy.dot(value)
 
             sub_Jz = self.Jz[:,i_start:i_start+length]
-            result['geom_out'][:,2] += sub_Jy.dot(value)
+            result['geom_out'][:,2] += sub_Jz.dot(value)
 
         return result
 

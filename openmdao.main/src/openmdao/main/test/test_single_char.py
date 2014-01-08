@@ -28,10 +28,15 @@ class C(Component):
 
     def provideJ(self):
 
+        return self.J
+
+    def list_deriv_vars(self):
+
         inputs = ('x', 'y')
         outputs = ('v', 'w')
 
-        return inputs, outputs, self.J
+        return inputs, outputs
+
 
 class A(Assembly):
 

@@ -121,7 +121,10 @@ class GeomRecieveDerivProvideJ(GeomRecieve):
         self.J = np.eye(2)
          
     def provideJ(self): 
-        return ('geom_in',), ('out',), self.J
+        return self.J
+
+    def list_deriv_vars(self): 
+        return ('geom_in',), ('out',)
 
 class GeomRecieveDerivApplyDeriv(GeomRecieve): 
 

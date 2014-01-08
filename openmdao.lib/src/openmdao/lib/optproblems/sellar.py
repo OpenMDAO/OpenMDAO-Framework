@@ -74,11 +74,13 @@ class Discipline1_WithDerivatives(Component):
     def provideJ(self):
         """Alternative specification."""
         
+        return self.J
+                
+    def list_deriv_vars(self):
         input_keys = ('x1', 'y2', 'z1', 'z2')
         output_keys = ('y1',)
         
-        return input_keys, output_keys, self.J
-                
+        return input_keys, output_keys
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -144,11 +146,13 @@ class Discipline2_WithDerivatives(Component):
     def provideJ(self):
         """Alternative specification."""
         
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('y1', 'z1', 'z2')
         output_keys = ('y2',)
         
-        return input_keys, output_keys, self.J
-
+        return input_keys, output_keys
            
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""

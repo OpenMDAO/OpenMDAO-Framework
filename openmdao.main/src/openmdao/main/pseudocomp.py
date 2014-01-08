@@ -303,4 +303,7 @@ class PseudoComponent(object):
             self.J = array([[grad[n] for n in self._inputs]])
 
     def provideJ(self):
-        return tuple(self._inputs), ('out0',), self.J
+        return self.J
+
+    def list_deriv_vars(self):
+        return tuple(self._inputs), ('out0',)
