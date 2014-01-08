@@ -2,7 +2,7 @@ import struct
 import string
 
 import numpy as np
-from scipy.sparse import csr_matrix, block_diag
+from scipy.sparse import csr_matrix
 
 from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
@@ -17,6 +17,22 @@ except ImportError:
     IStaticGeometry = object()
     def implements(*args): 
         pass
+
+
+def _block_diag(arrays):
+    """ Create block-diagonal matrix from `arrays`. """
+    result = None
+    for arr in arrays:
+        arr[arr == -0] = 0  # Clean -0 for compatibilty with scipy version.
+        if result is None:
+            result = arr
+        else:
+            r_rows, r_cols = result.shape
+            a_rows, a_cols = arr.shape
+            result = np.vstack((np.hstack((result, np.zeros((r_rows, a_cols)))),
+                                np.hstack((np.zeros((a_rows, r_cols)), arr))))
+    return result
+
 
 class STLGroup(object): 
 
@@ -155,11 +171,11 @@ class STLGroup(object):
                 nCt = self.comp_param_count[comp][2]
                 t_offset += nCt
 
-        self.dXqdC = block_diag(jx).toarray()
-        self.dYqdCr = block_diag(jyr).toarray()
-        self.dZqdCr = block_diag(jzr).toarray()
-        self.dYqdCt = block_diag(jyt).toarray()
-        self.dZqdCt = block_diag(jzt).toarray()
+        self.dXqdC = _block_diag(jx)
+        self.dYqdCr = _block_diag(jyr)
+        self.dZqdCr = _block_diag(jzr)
+        self.dYqdCt = _block_diag(jyt)
+        self.dZqdCt = _block_diag(jzt)
 
 
         self.param_J_map = {}

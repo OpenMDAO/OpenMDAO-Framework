@@ -1231,7 +1231,6 @@ class Container(SafeHasTraits):
         # FIXME: if people register other callbacks on a trait, they won't
         #        be called if we do it this way
         eq = (old == value)
-        print "foobar", old, value
         if not isinstance(eq, bool):
             try:
                 eq = all(eq)
@@ -1241,17 +1240,19 @@ class Container(SafeHasTraits):
         if not eq:
             # need to find first item going up the parent tree that is a Component
             item = self
+            path = name
             while item:
                 # This is the test we are using to detect if this is a Component
                 # If you use a more explicit way, like is_instance(item, Component)
                 # you run into problems with importing Component and having
                 # circular import issues
-                if hasattr( item, '_call_execute' ):
+                if hasattr(item, '_call_execute'):
                     # This is a Component so do Component things
                     item._call_execute = True
-                    if hasattr(item, name):
-                        self._input_updated(name.split('.', 1)[0])
+                    if hasattr(item, path):
+                        item._input_updated(name.split('.', 1)[0], fullpath=path)
                     break
+                path = '.'.join((item.name, path))
                 item = item.parent
 
     def _input_check(self, name, old):
