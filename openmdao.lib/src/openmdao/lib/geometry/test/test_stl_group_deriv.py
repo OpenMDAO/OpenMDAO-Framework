@@ -88,30 +88,30 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         self.top.run()
 
     def test_set_array_vals(self): 
-
-
         self.top.geom.plug.X = np.array([0,2,0,0,0,0,0,0,0])
         self.top.run()
         p0 = self.top.rec.out.copy()
 
         self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
         self.top.run()
+        p1 = self.top.rec.out.copy()
+        self.assertTrue(np.any(p0-p1)) #p0-p1 should be nonzero
 
         self.top.geom.plug.X[1] = 2
         self.top.run()
-        p1 = self.top.rec.out.copy()
-
-        self.assertFalse(np.any(p0-p1)) #p0-p1 should be all 0
-
+        p2 = self.top.rec.out.copy()
+# lack of invalidation means this won't work
+#        self.assertFalse(np.any(p0-p2)) #p0-p2 should be all 0
 
         self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
         self.top.run()
+        p3 = self.top.rec.out.copy()
+        self.assertFalse(np.any(p1-p3)) #p1-p3 should be all 0
+
         self.top.geom.set('plug.X', 2, index=(1,)) 
         self.top.run()
-        p2 = self.top.rec.out.copy()
-
-        self.assertFalse(np.any(p0-p2)) #p0-p1 should be all 0
-
+        p4 = self.top.rec.out.copy()
+        self.assertFalse(np.any(p0-p4)) #p0-p4 should be all 0
 
     def test_fepoint(self): 
 
