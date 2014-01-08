@@ -74,7 +74,7 @@ class MyComp_Explicit(Driver):
     # Outputs
     y_out = Float(iotype='out')
 
-    def evaluate(self): 
+    def execute(self): 
         """run a single step to calculate the residual 
         values for the given state var values"""
 
@@ -527,21 +527,18 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp2.y']), set(['@out0']))
 
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_state_connection_internal_solve_apply_deriv(self):
@@ -570,21 +567,18 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp2.y']), set(['@out0']))
 
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_state_connection_external_solve_ProvideJ(self):
@@ -626,21 +620,18 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp2.y']), set(['@out0']))
 
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_state_connection_external_solve_ProvideJ(self):
@@ -682,21 +673,18 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['comp.c']))
         self.assertEqual(set(edges['comp2.y']), set(['@out0']))
 
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_state_connection_external_solve_apply_deriv_not_implicit(self):
@@ -721,27 +709,22 @@ class Testcase_implicit(unittest.TestCase):
         model.solver.add_constraint('comp.res[1] = 0')
         model.solver.add_constraint('comp.res[2] = 0')
         
-        model.comp.eval_only = True
-        
         model.run()
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'])
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='adjoint')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
         model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'],
                                                 mode='fd')
-        print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
     def test_derivative_no_deriv(self):
