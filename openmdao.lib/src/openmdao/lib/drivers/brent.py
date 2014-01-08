@@ -1,9 +1,10 @@
 from scipy.optimize import brentq
 
 from openmdao.main.driver import Driver
+from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
+                                     ISolver, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-
 from openmdao.util.decorators import add_delegate
 
 from openmdao.lib.datatypes.api import Float, Int
@@ -13,6 +14,8 @@ from openmdao.lib.datatypes.api import Float, Int
 class Brent(Driver):
     """Root finding using Brent's method."""
 
+    implements(IHasParameters, IHasEqConstraints, ISolver)
+    
     lower_bound = Float(0., iotype="in", desc="lower bound for the root search")
     upper_bound = Float(100., iotype="in", desc="upper bound for the root search")
 

@@ -168,7 +168,7 @@ class ExecCompWithDerivatives(Component):
             exec(expr, _expr_dict, self.__dict__ )
                 
         if self.sleep:
-            time.sleep(self.sleep)            
+            time.sleep(self.sleep)
     
     def linearize(self):
         '''Calculate the Jacobian using our derivative expressions.'''
