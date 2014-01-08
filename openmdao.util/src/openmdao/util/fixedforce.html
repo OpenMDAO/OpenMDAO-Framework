@@ -50,6 +50,8 @@
 
 var graph = __mygraph__json;
 
+window.document.title = graph.graph[0]['title']
+
 var width = 960,
     height = 500;
 
@@ -138,6 +140,11 @@ var link = svg.selectAll(".link"),
       .attr("dx", 16)
       .attr("dy", ".35em")
       .text(function(d) { d.telem = this; return d.short; });
+
+  node.append("svg:title")
+    .text(function(node) {
+      return node.title;
+    })
 
 function tick() {
   // for links, use a two piece path instead of a line so

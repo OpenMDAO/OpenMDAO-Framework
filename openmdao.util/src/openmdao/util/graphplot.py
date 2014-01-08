@@ -5,7 +5,7 @@ import shutil
 import json
 import tempfile
 import webbrowser
-
+import pprint
 
 from networkx.readwrite.json_graph import node_link_data
 
@@ -18,22 +18,72 @@ _excluded_link_data = set([
     'dexpr',
 ])
 
+_excluded_tooltip_data = set([
+    'short',
+    'comp',
+    'var',
+    'invalidation',
+    'boundary',
+    'iotype',
+    'color_idx',
+    'title',
+    'pseudo',
+])
+
 def _to_id(name):
     """Convert a given name to a valid html id, replacing
     dots with hyphens."""
     return name.replace('.', '-')
 
-def _clean_graph(graph):
+def _clean_graph(graph, excludes=(), scope=None, parent=None):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
     copies the entire graph.
     """
-    from openmdao.main.component import Component
-    c = Component()
-    excluded_vars = [n for n,v in c.items(framework_var=True)]
-
-    # copy the graph since we're changing node/edge metadata
+    # make a subgraph, creating new edge/node meta dicts later if
+    # we change anything
     graph = graph.subgraph(graph.nodes_iter())
+
+    if parent is None:
+        graph.graph['title'] = 'unknown'
+    else:
+        name = parent.get_pathname()
+        if hasattr(parent, 'workflow'):
+            name += '._derivative_graph'
+        else:
+            name += '._depgraph'
+        graph.graph['title'] = name
+
+    if not excludes:
+        from openmdao.main.component import Component
+        from openmdao.main.driver import Driver
+        excluded_vars = set()
+
+        if scope:
+            try:
+                cgraph = graph.component_graph()
+            except AttributeError:
+                pass
+            else:
+                for cname in cgraph.nodes():
+                    try:
+                        comp = getattr(scope, cname)
+                    except AttributeError:
+                        pass
+                    else:
+                        if isinstance(comp, Component):
+                            graph.remove_nodes_from(['.'.join([cname,n]) 
+                                    for n,v in comp.items(framework_var=True)])
+
+        else: # just exclude some framework vars from Driver and Component
+            c = Component()
+            d = Driver()
+            excluded_vars = set([n for n,v in 
+                                           c.items(framework_var=True)])
+            excluded_vars.update([n for n,v in 
+                                           d.items(framework_var=True)])
+    else:
+        excluded_vars = set(excludes)
 
     conns = graph.list_connections()
 
@@ -42,16 +92,8 @@ def _clean_graph(graph):
 
     nodes_to_remove = []
     for node, data in graph.nodes_iter(data=True):
-        parts = node.split('.',1)
-        if len(parts) == 1:
-            name = node
-        else:
-            name = parts[1]
-            if '[' not in node and node not in conn_nodes:
-                nodes_to_remove.append(node)
-                continue
-
-        if node in excluded_vars:
+        cmpname, _, nodvar = node.partition('.')
+        if node in excluded_vars or nodvar in excluded_vars:
             nodes_to_remove.append(node)
         else: # update node metadata
             newdata = data
@@ -61,6 +103,16 @@ def _clean_graph(graph):
                         newdata = dict(data) # make a copy of metadata since we're changing it
                         graph.node[node] = newdata
                     del newdata[meta]
+            tt_dct = {}
+            for key,val in newdata.items():
+                if key not in _excluded_tooltip_data:
+                    tt_dct[key] = val
+                elif scope is not None and key == 'pseudo':
+                    if val == 'objective':
+                        newdata['objective'] = getattr(scope, node)._orig_src
+                    elif val == 'constraint':
+                        newdata['constraint'] = getattr(scope, node)._orig_src
+            newdata['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
 
@@ -94,7 +146,8 @@ def _clean_graph(graph):
 
     return graph
 
-def plot_graph(graph, d3page='fixedforce.html'):
+def plot_graph(graph, scope=None, parent=None, 
+               excludes=(), d3page='fixedforce.html'):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -102,8 +155,11 @@ def plot_graph(graph, d3page='fixedforce.html'):
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
-    graph = _clean_graph(graph)
+    graph = _clean_graph(graph, excludes=excludes, 
+                         scope=scope, parent=parent)
     data = node_link_data(graph)
+    tmp = data.get('graph', [])
+    data['graph'] = [dict(tmp)]
 
     startdir = os.getcwd()
     os.chdir(tmpdir)
@@ -127,13 +183,28 @@ def plot_graph(graph, d3page='fixedforce.html'):
         shutil.rmtree(tmpdir)
         print "temp directory removed"
 
+def plot_graphs(obj, recurse=False):
+    """Return a list of tuples of the form (scope, parent, graph)"""
+    from openmdao.main.assembly import Assembly
+    from openmdao.main.driver import Driver
+
+    if isinstance(obj, Assembly):
+        plot_graph(obj._depgraph, scope=obj, parent=obj)
+        if recurse:
+            plot_graphs(obj.driver, recurse)
+    elif isinstance(obj, Driver):
+        plot_graph(obj.workflow.derivative_graph(), 
+                   scope=obj.parent, parent=obj)
+        if recurse:
+            for comp in obj.iteration_set():
+                if isinstance(comp, Assembly) or isinstance(comp, Driver):
+                    plot_graphs(comp, recurse)
 
 def main():
     from argparse import ArgumentParser
     import inspect
 
     from openmdao.main.assembly import Assembly, set_as_top
-    from openmdao.main.driver import Driver
 
     parser = ArgumentParser()
     parser.add_argument('-m', '--module', action='store', dest='module',
@@ -149,19 +220,7 @@ def main():
     if options.module is None:
         parser.print_help()
         sys.exit(-1)
-
-    def get_graphs(obj):
-        graphs = []
-        if isinstance(obj, Assembly):
-            graphs.append((obj.name, obj._depgraph))
-            graphs.extend(get_graphs(obj.driver))
-        elif isinstance(obj, Driver):
-            graphs.append((obj.get_pathname(), obj.workflow.derivative_graph()))
-            for comp in obj.iteration_set():
-                if isinstance(comp, Assembly) or isinstance(comp, Driver):
-                    graphs.extend(get_graphs(comp))
-        return graphs
-                
+               
     __import__(options.module)
 
     mod = sys.modules[options.module]
@@ -181,15 +240,10 @@ def main():
             obj = klasses[int(var)]
 
     set_as_top(obj)
+    if not obj.get_pathname():
+        obj.name = 'top'
 
-    if options.recurse:
-        graphs = get_graphs(obj)
-    else:
-        graphs = [('top', obj._depgraph)]
-
-    for name, graph in graphs:
-        plot_graph(graph)
-
+    plot_graphs(obj, recurse=options.recurse)
 
 if __name__ == '__main__':
     main()

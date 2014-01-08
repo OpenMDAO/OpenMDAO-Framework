@@ -108,7 +108,8 @@ class ResourceAllocationManager(object):
     """
 
     _lock = threading.Lock()
-    _RAM = None  # Singleton.
+    _lock_pid = os.getpid()  # For detecting copy from fork.
+    _RAM = None              # Singleton.
 
     def __init__(self, config_filename=None):
         self._logger = logging.getLogger('RAM')
@@ -120,12 +121,14 @@ class ResourceAllocationManager(object):
                                                authkey='PublicKey',
                                                allow_shell=True))
 
-        # If OPENMDA_RAMFILE is specified, use that.
+        # If OPENMDAO_RAMFILE is specified, use that.
         # Set to null during testing for better coverage analysis.
-        config_filename = os.environ.get('OPENMDAO_RAMFILE')
-        if config_filename is not None:
-            if config_filename and not os.path.exists(config_filename):
-                self.log_error('OPENMDAO_RAMFILE %r not found', config_filename)
+        if config_filename is None:
+            config_filename = os.environ.get('OPENMDAO_RAMFILE')
+            if config_filename is not None:
+                if config_filename and not os.path.exists(config_filename):
+                    self._logger.error('OPENMDAO_RAMFILE %r not found',
+                                       config_filename)
 
         if config_filename is None:
             config_filename = os.path.join('~', '.openmdao', 'resources.cfg')
@@ -147,12 +150,10 @@ class ResourceAllocationManager(object):
             Name of configuration file.
             If null, no additional configuration is performed.
         """
-        with ResourceAllocationManager._lock:
-            if ResourceAllocationManager._RAM is None:
-                ResourceAllocationManager._RAM = \
-                    ResourceAllocationManager(config_filename)
-            elif config_filename:
-                ram = ResourceAllocationManager._RAM
+        orig = ResourceAllocationManager._RAM
+        ram = ResourceAllocationManager._get_instance(config_filename)
+        if ram is orig:  # Not configured.
+            with ResourceAllocationManager._lock:
                 ram._configure(config_filename)
 
     def _configure(self, config_filename):
@@ -175,7 +176,7 @@ class ResourceAllocationManager(object):
 
                     classname = cfg.get(name, 'classname')
                     self._logger.debug('    classname: %s', classname)
-                    mod_name, dot, cls_name = classname.rpartition('.')
+                    mod_name, _, cls_name = classname.rpartition('.')
                     try:
                         __import__(mod_name)
                     except ImportError as exc:
@@ -191,18 +192,30 @@ class ResourceAllocationManager(object):
                     self._allocators.append(allocator)
 
     @staticmethod
-    def _get_instance():
+    def _get_instance(config_filename=None):
         """ Return singleton instance. """
+        # May need to release forked lock.
+        if ResourceAllocationManager._lock_pid != os.getpid(): # pragma no cover
+            try:
+                ResourceAllocationManager._lock.release()
+            except threading.ThreadError:
+                pass  # Not locked.
+            else:
+                logging.warning('RAM: released forked lock.')
+            ResourceAllocationManager._lock_pid = os.getpid()
+
         with ResourceAllocationManager._lock:
             ram = ResourceAllocationManager._RAM
             if ram is None:
-                ResourceAllocationManager._RAM = ResourceAllocationManager()
+                ram = ResourceAllocationManager._RAM = \
+                          ResourceAllocationManager(config_filename)
             elif ram._pid != os.getpid():  # pragma no cover
                 # We're a copy from a fork.
                 for allocator in ram._allocators:
                     allocator.invalidate()
-                ResourceAllocationManager._RAM = ResourceAllocationManager()
-            return ResourceAllocationManager._RAM
+                ram = ResourceAllocationManager._RAM = \
+                          ResourceAllocationManager(config_filename)
+            return ram
 
     @staticmethod
     def add_allocator(allocator):
@@ -497,7 +510,7 @@ class ResourceAllocationManager(object):
         if _IPV4_HOST.match(hostid):  # Use all digits to be unique.
             prefix = hostid.replace('.', '')
         else:  # IP hostname (letters, digits, and hyphen are legal).
-            prefix, dot, rest = hostid.partition('.')
+            prefix, _, rest = hostid.partition('.')
             prefix = prefix.replace('-', '')
         return prefix
 
@@ -534,7 +547,7 @@ class ResourceAllocationManager(object):
         """
         req = {}
         for path, obj in assembly.items(recurse=True):
-            prefix, dot, name = path.rpartition('.')
+            prefix, _, name = path.rpartition('.')
             if name == 'resources' and isinstance(obj, dict):
                 req = ResourceAllocationManager._max_request(req, obj)
         return req
@@ -581,7 +594,7 @@ class ResourceAllocationManager(object):
         """
         req = {}
         for path, obj in assembly.items(recurse=True):
-            prefix, dot, name = path.rpartition('.')
+            prefix, _, name = path.rpartition('.')
             if name == 'resources' and isinstance(obj, dict):
                 req = ResourceAllocationManager._total_request(req, obj)
         return req
@@ -1500,9 +1513,11 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
             identity_filename = cfg.get(self.name, 'identity_filename')
             identity_filename = os.path.expanduser(identity_filename)
             if os.path.exists(identity_filename):
-                self._logger.debug('    identity_filename: %s', identity_filename)
+                self._logger.debug('    identity_filename: %s',
+                                   identity_filename)
             else:
-                self._logger.error('identity_filename %r not found', identity_filename)
+                self._logger.error('identity_filename %r not found',
+                                   identity_filename)
         else:
             identity_filename = None
 
@@ -1534,9 +1549,11 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                         _identity = cfg.get(hostname, 'identity_filename')
                         _identity = os.path.expanduser(_identity)
                         if os.path.exists(_identity):
-                            self._logger.debug('    identity_filename: %s', _identity)
+                            self._logger.debug('    identity_filename: %s',
+                                               _identity)
                         else:
-                            self._logger.error('identity_filename %r not found', _identity)
+                            self._logger.error('identity_filename %r not found',
+                                               _identity)
 
                 machines.append(ClusterHost(hostname=hostname, python=_python,
                                             tunnel_incoming=_incoming,

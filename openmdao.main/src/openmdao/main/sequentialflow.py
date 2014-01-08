@@ -482,7 +482,7 @@ class SequentialWorkflow(Workflow):
                         outputs[varname] = arg[i1].copy()
                 else:
                     if varname in comp_residuals:
-                        outputs[varname] = zeros((i2-i1, 1))
+                        outputs[varname] = zeros((i2-i1))
                     else:
                         inputs[varname] = arg[i1:i2].copy()
                         outputs[varname] = arg[i1:i2].copy()
@@ -712,7 +712,6 @@ class SequentialWorkflow(Workflow):
         """
         
         dgraph = self._derivative_graph
-        scope = self.scope
         
         # If we have a cyclic workflow, we need to remove severed edges from
         # the derivatives graph.
@@ -723,7 +722,7 @@ class SequentialWorkflow(Workflow):
             
         cgraph = dgraph.component_graph()
         comps = cgraph.nodes()
-        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '|' not in n]
+        pas = [dgraph.node[n]['pa_object'] for n in dgraph.nodes_iter() if n.startswith('~') and '.' not in n]
         pa_excludes = set()
         for pa in pas:
             pa_excludes.update(pa._removed_comps)
@@ -800,7 +799,8 @@ class SequentialWorkflow(Workflow):
             pseudo = PseudoAssembly(pa_name, group, 
                                     dgraph, self, fd)
 
-            pseudo.add_to_graph(dgraph)            
+            pseudo.add_to_graph(self.scope._depgraph, dgraph) 
+            pseudo.clean_graph(self.scope._depgraph, dgraph)     
             
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """

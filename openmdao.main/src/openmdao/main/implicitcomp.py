@@ -15,7 +15,7 @@ from openmdao.main.rbac import rbac
 class ImplicitComponent(Component):
     implements(IImplicitComponent)
     
-    eval_only = Bool(False, iotype='in', 
+    eval_only = Bool(False, iotype='in', framework_var=True,
                      desc='Set to True to have this comp perform a single '
                            'evaluate when execute() is called.')
     
