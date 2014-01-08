@@ -9,7 +9,7 @@ import numpy as np
 
 from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
                                      FixedPointIterator
-from openmdao.main.api import ImplicitComponent, Assembly, set_as_top
+from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.mp_support import has_interface
@@ -36,6 +36,40 @@ class MyComp_No_Deriv(ImplicitComponent):
 
     # Residuals
     res = Array(np.zeros((3)), iotype="residual")
+    
+    # Outputs
+    y_out = Float(iotype='out')
+
+    def evaluate(self): 
+        """run a single step to calculate the residual 
+        values for the given state var values"""
+
+        c, x, y, z = self.c, self.x, self.y, self.z
+
+        self.res[0] = self.c*(3*x + 2*y - z) - 1
+        self.res[1] = 2*x - 2*y + 4*z + 2
+        self.res[2] = -x + y/2. - z 
+        
+        self.y_out = c + x + y + z
+        #print c, x, y, z, self.res
+        
+class MyComp_Explicit(Driver):
+    ''' Single implicit component with 3 states and residuals. 
+    
+    For c=2.0, (x,y,z) = (1.0, -2.333333, -2.1666667)
+    '''
+
+    # External inputs
+    c = Float(2.0, iotype="in", fd_step = .00001,
+              desc="arbitrary constant that is not iterated on but does affect the results")
+    
+    # States
+    x = Float(0.0, iotype="in")
+    y = Float(0.0, iotype="in")
+    z = Float(0.0, iotype="in")
+
+    # Residuals
+    res = Array(np.zeros((3)), iotype="out")
     
     # Outputs
     y_out = Float(iotype='out')
@@ -665,10 +699,10 @@ class Testcase_implicit(unittest.TestCase):
         print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
-    def test_derivative_state_connection_external_solve_apply_deriv_2(self):
+    def test_derivative_state_connection_external_solve_apply_deriv_not_implicit(self):
 
         model = set_as_top(Assembly())
-        model.add('comp', MyComp_Deriv())
+        model.add('comp', MyComp_Explicit())
         model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
         
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
@@ -693,17 +727,6 @@ class Testcase_implicit(unittest.TestCase):
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
                                                 outputs=['comp2.y'])
-        info = model.driver.workflow.get_implicit_info()
-        #print info
-        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0','_pseudo_2.out0')]),
-                         set([('comp.x',), ('comp.y',), ('comp.z',)]))
-        self.assertEqual(len(info), 1)
-
-        edges = model.driver.workflow._edges
-        #print edges
-        self.assertEqual(set(edges['@in0']), set(['comp.c']))
-        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
-
         print J
         assert_rel_error(self, J[0][0], -0.1666, 1e-3)
         
