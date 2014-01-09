@@ -1272,7 +1272,7 @@ def _get_inner_edges(G, srcs, dests):
 #             graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
 #             graph.node[comp]['non-differentiable'] = True
 
-def get_subdriver_graph(graph, inputs, outputs, wflow):
+def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     """Update the given graph to replace non-solver subdrivers with 
     PseudoAssemblies and promote edges up from sub-Solvers.
     Returns a list of names of drivers that were replaced, the set of
@@ -1306,7 +1306,7 @@ def get_subdriver_graph(graph, inputs, outputs, wflow):
     pa_list = []
 
     # for all non-solver subdrivers, replace them with a PA
-    if fd_drivers:
+    if fd_drivers and not full_fd:
         # only create a copy of the graph if we have non-solver subdrivers
         startgraph = graph.subgraph(graph.nodes_iter())
         for drv in fd_drivers:
@@ -1389,13 +1389,13 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    if full_fd:
-        rep_drivers = []
-        xtra_ins = []
-        xtra_outs = []
-    else:
-        rep_drivers, xtra_ins, xtra_outs = \
-                   get_subdriver_graph(graph, inputs, outputs, wflow)
+    #if full_fd:
+        #rep_drivers = []
+        #xtra_ins = []
+        #xtra_outs = []
+    #else:
+    rep_drivers, xtra_ins, xtra_outs = \
+                   get_subdriver_graph(graph, inputs, outputs, wflow, full_fd)
 
     edges = _get_inner_edges(graph, 
                              ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),

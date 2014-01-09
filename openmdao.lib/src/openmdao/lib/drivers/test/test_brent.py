@@ -1,6 +1,8 @@
 import unittest
 
 from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import ISolver
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
@@ -27,6 +29,8 @@ class TestBrentDriver(unittest.TestCase):
         assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
         assert_rel_error(self, a.comp.f, 0, .0001)
         
+        self.assertTrue(has_interface(driver, ISolver))
+                        
     def test_errors(self):
         a = set_as_top(Assembly())
         comp = a.add('comp', ExecComp(exprs=["f=x"]))
