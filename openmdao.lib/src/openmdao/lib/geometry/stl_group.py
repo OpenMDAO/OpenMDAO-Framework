@@ -349,21 +349,15 @@ class STLGroup(object):
         return result
 
     def apply_derivT(self, arg, result): 
-        self.linearize()
-
-        if 'geom_out' in arg: 
-            for name, value in arg.iteritems(): 
-
-                i_start = self.param_loc_map[name]
-                length = value.shape[0]
-                sub_JxT = self.JxT[i_start:i_start+length,:]
-                result[name] += sub_JxT.dot(arg['geom_out'][:,0])
-
-                sub_JyT = self.JyT[i_start:i_start+length,:]
-                result[name] += sub_JyT.dot(arg['geom_out'][:,1])
-
-                sub_JzT = self.JzT[i_start:i_start+length,:]
-                result[name] += sub_JzT.dot(arg['geom_out'][:,2])
+        
+        for name, value in result.iteritems(): 
+            if name == "geom_out": continue #TODO: this should not be in the result? Bug? 
+            Jx, Jy, Jz = self.param_J_map[name]
+            if Jx is not False: 
+                result[name] -= Jx.T.dot(result['geom_out'][:,0])
+            if Jy is not False: 
+                result[name] -= Jy.T.dot(result['geom_out'][:,1])
+                result[name] -= Jz.T.dot(result['geom_out'][:,2])
 
         return result
 

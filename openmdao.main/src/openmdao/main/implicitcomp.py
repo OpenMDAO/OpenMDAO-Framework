@@ -1,6 +1,6 @@
 """ Class definition for an Implicit Component. """
 
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, check_grad
 from scipy.sparse.linalg import gmres, LinearOperator
 import numpy as np
 
@@ -133,7 +133,7 @@ class ImplicitComponent(Component):
         fprime = None
         if hasattr(self, 'linearize'):
             fprime = self._jacobian_callback
-            
+
         fsolve(self._solve_callback, x0, fprime=fprime)
 
     def _solve_callback(self, X): 
