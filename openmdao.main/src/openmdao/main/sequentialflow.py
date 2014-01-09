@@ -771,8 +771,7 @@ class SequentialWorkflow(Workflow):
                     continue
                 
                 # Custom differentiable connections
-                meta = self.scope.get_metadata(src)
-                if 'data_shape' in meta:
+                if self.scope.get_metadata(src).get('data_shape'):
                     continue
                 
                 #Nothing else is differentiable

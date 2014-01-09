@@ -14,11 +14,11 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import ndarray, arange, array
     
 def is_differentiable_var(name, scope):
-    val = getattr(scope, name)
-    if is_differentiable_val(val):
-        return True
     meta = scope.get_metadata(name)
-    return 'data_shape' in meta
+    if 'data_shape' in meta and meta['data_shape']:
+        return True
+    if is_differentiable_val(getattr(scope, name)):
+        return True
 
 def is_differentiable_val(val):
     if isinstance(val, int_types):
@@ -46,16 +46,15 @@ def flattened_size(name, val, scope=None):
     elif isinstance(val, VariableTree):
         size = 0
         for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            size += flattened_size('.'.join((name, key)), value)
+            size += flattened_size('.'.join((name, key)), getattr(val, key))
         return size
     
     else:
-        meta = scope.get_metadata(name.split('[')[0])
+        dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
         
         # Custom data objects with data_shape in the metadata
-        if 'data_shape' in meta:
-            return prod(meta['data_shape'])
+        if dshape:
+            return prod(dshape)
             
     raise TypeError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))

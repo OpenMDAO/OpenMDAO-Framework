@@ -35,7 +35,7 @@ from openmdao.main.depgraph import DependencyGraph, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
-                                        FileRef
+                                        FileRef, Enum
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -149,6 +149,13 @@ class Component(Container):
 
     itername = Str('', iotype='out', desc='Iteration coordinates.',
                    framework_var=True)
+
+    # TODO: add 'fd' option to missing_deriv_policy
+    missing_deriv_policy = Enum(['error', 'assume_zero'], iotype='in',
+                                framework_var=True,
+                                desc='Determines behavior when some '
+                                     'analytical derivatives are provided '
+                                     'but some are missing')  
 
     create_instance_dir = Bool(False)
 
