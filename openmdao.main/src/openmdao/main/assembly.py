@@ -118,6 +118,8 @@ class Assembly(Component):
 
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
+        self.J_input_keys = None
+        self.J_output_keys = None
 
         # parent depgraph may have to invalidate us multiple times per pass
         self._invalidation_type = 'partial'
@@ -596,6 +598,8 @@ class Assembly(Component):
 
         # Detect and save any loops in the graph.
         self._graph_loops = None
+        
+        self.J_input_keys = self.J_output_keys = None
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         parts = path.split('.', 1)
@@ -953,7 +957,6 @@ class Assembly(Component):
         return self.J
 
     def list_deriv_vars(self):
-        
         return self.J_input_keys, self.J_output_keys
 
     def list_components(self):

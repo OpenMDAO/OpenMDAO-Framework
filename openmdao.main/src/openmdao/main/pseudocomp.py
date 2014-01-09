@@ -173,6 +173,8 @@ class PseudoComponent(object):
 
         self._expr_conn = (src, out)  # the actual expression connection
 
+        self.missing_deriv_policy = 'error'
+
     def check_configuration(self):
         pass
 
