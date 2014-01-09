@@ -166,7 +166,11 @@ class PseudoAssembly(object):
         
     def provideJ(self):
         """Jacobian for this block"""
-        return self.mapped_inputs, self.mapped_outputs, self.J
+        return self.J
+
+    def list_deriv_vars(self):
+        """Derivative inputs and outputs for this block"""
+        return self.mapped_inputs, self.mapped_outputs
 
     def get(self, varname):
         """ Return the value of a variable in the Pseudoassembly. Used

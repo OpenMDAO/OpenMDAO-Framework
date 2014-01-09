@@ -101,112 +101,6 @@ class STLGroup(object):
             lines.append(struct.pack(BINARY_FACET,*facet))  
         return lines      
 
-    def linearize(self):
-        if not self._needs_linerize: 
-            return 
-        self.list_parameters() 
-
-        param_J_offset_map = {}
-
-        #get proper sub_jacobians: 
-        jx = []
-        jyr = []
-        jzr = []
-        jyt = [] #thickness jacobian for shells
-        jzt = [] #thickness jacobian for shells
-
-        x_offset = 0
-        yz_offset = 0
-        t_offset = 0
-        for comp in self._comps: 
-            if isinstance(comp, Body): 
-                jx.append(comp.dXqdC[:,1:]) #skip the root x
-                param_name = "%s.X"%comp.name
-                param_J_offset_map[param_name] = x_offset
-                nCx = self.comp_param_count[comp][0]
-                x_offset += nCx
-
-                jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
-                jzr.append(comp.dZqdC[:,:-1]) 
-                param_name = "%s.R"%comp.name
-                param_J_offset_map[param_name] = yz_offset
-                nCr = self.comp_param_count[comp][1]
-                yz_offset += nCr
-
-                #zeros for thickness n_pointsx1
-                shape = comp.dXqdC.shape
-                param_name = "%s.thickness"%comp.name #note: this parameter does not exists, so I'll remove the columns from the jacobian
-                jyt.append(np.zeros((shape[0],1)))
-                jzt.append(np.zeros((shape[0],1)))
-                param_J_offset_map[param_name] = t_offset
-                t_offset += 1
-
-            else: 
-                #inner and outer jacobians
-                #have to stack the outer and inner jacobians
-                stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
-                jx.append(stackX) 
-                param_name = "%s.X"%comp.name
-                param_J_offset_map[param_name] = x_offset
-                nCx = self.comp_param_count[comp][0]
-                x_offset += nCx
-
-                #centerline
-                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:])) 
-                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:])) 
-                jyr.append(stackY) #constant tip radius
-                jzr.append(stackZ) 
-                param_name = "%s.R"%comp.name
-                param_J_offset_map[param_name] = yz_offset
-                nCr = self.comp_param_count[comp][1]
-                yz_offset += nCr
-
-                #thickness
-                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1])) 
-                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1])) 
-                jyt.append(stackY) #constant tip radius
-                jzt.append(stackZ) 
-                param_name = "%s.thickness"%comp.name
-                param_J_offset_map[param_name] = t_offset
-                nCt = self.comp_param_count[comp][2]
-                t_offset += nCt
-
-        self.dXqdC = _block_diag(jx)
-        self.dYqdCr = _block_diag(jyr)
-        self.dZqdCr = _block_diag(jzr)
-        self.dYqdCt = _block_diag(jyt)
-        self.dZqdCt = _block_diag(jzt)
-
-
-        self.param_J_map = {}
-        #map param names to jacobians: 
-        for comp in self._comps: 
-            param_name = "%s.X"%comp.name
-            offset = param_J_offset_map[param_name]
-            nCx = self.comp_param_count[comp][0]
-            self.param_J_map[param_name] = (self.dXqdC[:,offset:offset+nCx], False, False)
-
-            param_name = "%s.R"%comp.name
-            offset = param_J_offset_map[param_name]
-            nCr = self.comp_param_count[comp][1]
-            self.param_J_map[param_name] = (False, self.dYqdCr[:,offset:offset+nCr], self.dZqdCr[:,offset:offset+nCr])
-
-            if isinstance(comp, Shell): 
-                param_name = "%s.thickness"%comp.name
-                offset = param_J_offset_map[param_name]
-                nCt = self.comp_param_count[comp][2]
-                self.param_J_map[param_name] = (False, self.dYqdCt[:,offset:offset+nCt], self.dZqdCt[:,offset:offset+nCt])
-
-        #go through and remove the extra columns from fake body thicknesses
-        for comp in self._comps: 
-            if isinstance(comp, Body): 
-                param_name = "%s.thickness"%comp.name
-                offset = param_J_offset_map[param_name]
-
-                self.dYqdCt = np.delete(self.dYqdCt,offset,1)
-                self.dZqdCt = np.delete(self.dZqdCt,offset,1)
-
-        self._needs_linerize = False
 
     def writeSTL(self, file_name, ascii=False): 
         """outputs an STL file"""
@@ -336,6 +230,123 @@ class STLGroup(object):
         return point_sets
 
     #begin methods for OpenMDAO geometry derivatives
+    def list_deriv_vars(self): 
+        outs = ['geom_out',]
+        ins = []
+        for comp in self._comps: 
+            ins.append('%s.X'%comp.name)
+            ins.append('%s.R'%comp.name)
+            if isinstance(comp, Shell): 
+                ins.append('%s.thickness'%comp.name)
+
+        return ins, outs
+    def linearize(self):
+        if not self._needs_linerize: 
+            return 
+        self.list_parameters() 
+
+        param_J_offset_map = {}
+
+        #get proper sub_jacobians: 
+        jx = []
+        jyr = []
+        jzr = []
+        jyt = [] #thickness jacobian for shells
+        jzt = [] #thickness jacobian for shells
+
+        x_offset = 0
+        yz_offset = 0
+        t_offset = 0
+        for comp in self._comps: 
+            if isinstance(comp, Body): 
+                jx.append(comp.dXqdC[:,1:]) #skip the root x
+                param_name = "%s.X"%comp.name
+                param_J_offset_map[param_name] = x_offset
+                nCx = self.comp_param_count[comp][0]
+                x_offset += nCx
+
+                jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
+                jzr.append(comp.dZqdC[:,:-1]) 
+                param_name = "%s.R"%comp.name
+                param_J_offset_map[param_name] = yz_offset
+                nCr = self.comp_param_count[comp][1]
+                yz_offset += nCr
+
+                #zeros for thickness n_pointsx1
+                shape = comp.dXqdC.shape
+                param_name = "%s.thickness"%comp.name #note: this parameter does not exists, so I'll remove the columns from the jacobian
+                jyt.append(np.zeros((shape[0],1)))
+                jzt.append(np.zeros((shape[0],1)))
+                param_J_offset_map[param_name] = t_offset
+                t_offset += 1
+
+            else: 
+                #inner and outer jacobians
+                #have to stack the outer and inner jacobians
+                stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
+                jx.append(stackX) 
+                param_name = "%s.X"%comp.name
+                param_J_offset_map[param_name] = x_offset
+                nCx = self.comp_param_count[comp][0]
+                x_offset += nCx
+
+                #centerline
+                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:])) 
+                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:])) 
+                jyr.append(stackY) #constant tip radius
+                jzr.append(stackZ) 
+                param_name = "%s.R"%comp.name
+                param_J_offset_map[param_name] = yz_offset
+                nCr = self.comp_param_count[comp][1]
+                yz_offset += nCr
+
+                #thickness
+                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1])) 
+                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1])) 
+                jyt.append(stackY) #constant tip radius
+                jzt.append(stackZ) 
+                param_name = "%s.thickness"%comp.name
+                param_J_offset_map[param_name] = t_offset
+                nCt = self.comp_param_count[comp][2]
+                t_offset += nCt
+
+        self.dXqdC = _block_diag(jx)
+        self.dYqdCr = _block_diag(jyr)
+        self.dZqdCr = _block_diag(jzr)
+        self.dYqdCt = _block_diag(jyt)
+        self.dZqdCt = _block_diag(jzt)
+
+
+        self.param_J_map = {}
+        #map param names to jacobians: 
+        for comp in self._comps: 
+            param_name = "%s.X"%comp.name
+            offset = param_J_offset_map[param_name]
+            nCx = self.comp_param_count[comp][0]
+            self.param_J_map[param_name] = (self.dXqdC[:,offset:offset+nCx], False, False)
+
+            param_name = "%s.R"%comp.name
+            offset = param_J_offset_map[param_name]
+            nCr = self.comp_param_count[comp][1]
+            self.param_J_map[param_name] = (False, self.dYqdCr[:,offset:offset+nCr], self.dZqdCr[:,offset:offset+nCr])
+
+            if isinstance(comp, Shell): 
+                param_name = "%s.thickness"%comp.name
+                offset = param_J_offset_map[param_name]
+                nCt = self.comp_param_count[comp][2]
+                self.param_J_map[param_name] = (False, self.dYqdCt[:,offset:offset+nCt], self.dZqdCt[:,offset:offset+nCt])
+
+        #go through and remove the extra columns from fake body thicknesses
+        for comp in self._comps: 
+            if isinstance(comp, Body): 
+                param_name = "%s.thickness"%comp.name
+                offset = param_J_offset_map[param_name]
+
+                self.dYqdCt = np.delete(self.dYqdCt,offset,1)
+                self.dZqdCt = np.delete(self.dZqdCt,offset,1)
+
+        self._needs_linerize = False
+
     def apply_deriv(self, arg, result): 
         for name, value in arg.iteritems(): 
             if name == "geom_out": continue #TODO: this should not be in the args? Bug? 

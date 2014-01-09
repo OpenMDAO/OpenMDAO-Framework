@@ -444,7 +444,8 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        input_keys, output_keys, J = self.provideJ()
+        input_keys, output_keys = self.list_deriv_vars()
+        J = self.provideJ()
 
         if ffd_order == 1:
             for j, out_name in enumerate(output_keys):
@@ -507,10 +508,10 @@ class Component(Container):
 
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
-        if savebase and hasattr(self, 'provideJ'):
+        ffd_inputs, ffd_outputs = self.list_deriv_vars()
+        if savebase and ffd_inputs:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
-            ffd_inputs, ffd_outputs, _ = self.provideJ()
 
             for name in ffd_inputs:
                 self._ffd_inputs[name] = self.get(name)
@@ -832,6 +833,10 @@ class Component(Container):
                     names.append(n)
             self._container_names = names
         return self._container_names
+
+    @rbac(('owner', 'user'))
+    def list_deriv_vars(self):
+        return (), ()
 
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):

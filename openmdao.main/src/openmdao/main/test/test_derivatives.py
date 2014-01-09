@@ -69,10 +69,13 @@ class MyComp(Component):
     def provideJ(self):
         """ returns the Jacobian """
 
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('x1', 'x2', 'x3', 'x4', 'vt.a1', 'vt.vt1.d1')
         output_keys = ('xx1', 'xx2', 'xx3', 'xx4', 'vvt.a1', 'vvt.vt1.d1')
-
-        return input_keys, output_keys, self.J
+       
+        return input_keys, output_keys
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -160,11 +163,13 @@ class Paraboloid(Component):
         self.J = array([[df_dx, df_dy]])
         
     def provideJ(self):
-        
+
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
-        return input_keys, output_keys, self.J
-
+        return input_keys, output_keys
 
 class ParaboloidNoDeriv(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -207,7 +212,10 @@ class SimpleComp(Component):
     
     def provideJ(self):
         
-        return ('x',), ('y',), array([[2.0]])    
+        return array([[2.0]])    
+
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
     
         
 class CompFoot(Component):
@@ -229,9 +237,12 @@ class CompFoot(Component):
         
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('x',)
         output_keys = ('y',)
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
         
 class CompInch(Component):
@@ -253,9 +264,13 @@ class CompInch(Component):
 
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
+        
         input_keys = ('x',)
         output_keys = ('y',)
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 class ArrayComp1(Component):
     '''Array component'''
@@ -281,9 +296,14 @@ class ArrayComp1(Component):
 
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
+        
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
+
 
 class ArrayComp1_inch(Component):
     '''Array component'''
@@ -309,10 +329,13 @@ class ArrayComp1_inch(Component):
 
     def provideJ(self):
         
+        return self.J
+    
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
-    
+        return input_keys, output_keys
+
 class ArrayComp1_ft(Component):
     '''Array component'''
     
@@ -337,9 +360,12 @@ class ArrayComp1_ft(Component):
 
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 
 class ArrayComp1_noderiv(Component):
@@ -386,11 +412,13 @@ class ArrayComp2D(Component):
 
     def provideJ(self):
         
+        return self.J
+    
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
     
-
 class Array_Slice_1D(Component):
     '''1D Array with wide arrays for slicing tests'''
     
@@ -422,9 +450,13 @@ class Array_Slice_1D(Component):
 
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
+
     
 class ArrayComp2D_der(Component):
     '''2D Array component'''
@@ -802,7 +834,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
         
         # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys, J = top.nest.provideJ()
+        inkeys, outkeys = top.nest.list_deriv_vars()
+        J = top.nest.provideJ()
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
         self.assertEqual(len(inkeys), 2)
@@ -2117,9 +2150,13 @@ class Comp2(Component):
         
     def provideJ(self):
         
+        return self.J
+
+    def list_deriv_vars(self):
+        
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 class Comp2_array(Component):
     """ two-input, two-output"""
@@ -2364,9 +2401,13 @@ class PreComp(Component):
 
     def provideJ(self):
         
+        return self.J
+    
+    def list_deriv_vars(self):
+        
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
     
     def applyMinv(self, arg, result):
         
@@ -2405,9 +2446,13 @@ class PreCompArray(Component):
 
     def provideJ(self):
         
+        return self.J
+    
+    def list_deriv_vars(self):
+        
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
     
     def applyMinv(self, arg, result):
         

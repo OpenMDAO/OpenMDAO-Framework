@@ -44,9 +44,13 @@ class MyCompDerivs(Component):
         
     def provideJ(self):
         
+        return self.J
+        
+    def list_deriv_vars(self):
+        
         input_keys = ('x1', 'x2')
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
         
 
 class TestFiniteDifference(unittest.TestCase): 

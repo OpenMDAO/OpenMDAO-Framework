@@ -209,7 +209,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
             self.assertTrue(np.all(np.abs(Jz - Jz_adjoint) < .00001))
 
 
-    def _test_apply_deriv_fd(self): 
+    def test_apply_deriv_fd(self): 
 
         self.top.run()
         self.top.geom.linearize()

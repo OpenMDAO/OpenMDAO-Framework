@@ -894,7 +894,7 @@ class Assembly(Component):
         return result
             
 
-    def linearize(self, required_inputs=None, required_outputs=None):
+    def linearize(self, required_inputs, required_outputs):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
@@ -950,7 +950,11 @@ class Assembly(Component):
     def provideJ(self):
         '''Provides the Jacobian calculated in linearize().'''
 
-        return self.J_input_keys, self.J_output_keys, self.J
+        return self.J
+
+    def list_deriv_vars(self):
+        
+        return self.J_input_keys, self.J_output_keys
 
     def list_components(self):
         ''' List the components in the assembly.

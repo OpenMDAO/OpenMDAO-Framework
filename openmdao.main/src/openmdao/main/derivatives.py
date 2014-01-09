@@ -238,7 +238,8 @@ def applyJ(obj, arg, result, residual):
 
     # Otherwise, most users will just specify a Jacobian as a matrix.
     # (Also, all subassemblies use specify J during recursion)
-    input_keys, output_keys, J = obj.provideJ()
+    input_keys, output_keys = obj.list_deriv_vars()
+    J = obj.provideJ()
     
     #print 'J', input_keys, output_keys, J
     
@@ -295,21 +296,22 @@ def applyJ(obj, arg, result, residual):
     #print 'applyJ', arg, result
 
 def applyJT(obj, arg, result, residual):
-    """Multiply an input vector by the transposed Jacobian. For an Explicit
-    Component, this automatically forms the "fake" residual, and calls into
-    the function hook "apply_derivT".
+    """Multiply an input vector by the transposed Jacobian. 
+    For an Explicit Component, this automatically forms the "fake" 
+    residual, and calls into the function hook "apply_derivT".
     """
     
     for key in arg:
         if key not in residual:
             result[key] = -arg[key]
     
-    # If storage of the local Jacobian is a problem, the user can specify the
-    # 'apply_derivT' function instead of provideJ.
+    # If storage of the local Jacobian is a problem, the user can 
+    # specify the 'apply_derivT' function instead of provideJ.
     if hasattr(obj, 'apply_derivT'):
         
-        # The apply_deriv function expects the argument and result dicts for
-        # each input and output to have the same shape as the input/output.
+        # The apply_deriv function expects the argument and 
+        # result dicts for each input and output to have the 
+        # same shape as the input/output.
         resultkeys = result.keys()
         for key in sorted(resultkeys):
             pre_process_dicts(obj, key, result)
@@ -334,7 +336,8 @@ def applyJT(obj, arg, result, residual):
 
     # Optional specification of the Jacobian
     # (Subassemblies do this by default)
-    input_keys, output_keys, J = obj.provideJ()
+    input_keys, output_keys  = obj.list_deriv_vars()
+    J = obj.provideJ()
 
     #print 'J', input_keys, output_keys, J
     

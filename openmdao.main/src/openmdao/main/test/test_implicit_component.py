@@ -185,10 +185,15 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
         self.J = np.vstack((J_res, J_output))
         
     def provideJ(self):
+
+        return self.J 
+        
+    def list_deriv_vars(self):
         input_keys = ('x', 'y', 'z', 'c')
         output_keys = ('res', 'y_out')
-        return input_keys, output_keys, self.J 
 
+        return input_keys, output_keys 
+        
 class Coupled1(ImplicitComponent):
     ''' This comp only has the first 2 states (x, y). 
     

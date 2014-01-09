@@ -325,3 +325,11 @@ class GeomComponent(Component):
     def _provideJ(self):
         return self.parametric_geometry.provideJ()
 
+    def list_deriv_vars(self):
+        if self.parametric_geometry is not None:
+            return self.parametric_geometry.list_deriv_vars()
+        else:
+            return (), ()
+
+
+
