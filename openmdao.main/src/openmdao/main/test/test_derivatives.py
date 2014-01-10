@@ -217,6 +217,27 @@ class SimpleComp(Component):
     def list_deriv_vars(self):
         return ('x',), ('y',)
     
+class SimpleCompMissingDeriv(Component):
+    
+    x = Float(3.0, iotype='in')
+    miss_in = Float(4.0, iotype='in')
+    y = Float(6.0, iotype='out')
+    miss_out = Float(7.0, iotype='out')
+    
+    def execute(self):
+        
+        self.y = 2.0*self.x
+        
+    def linearize(self):
+        pass
+    
+    def provideJ(self):
+        
+        return array([[2.0]])    
+
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
+    
         
 class CompFoot(Component):
     """ Evaluates the equation y=2x"""
@@ -2130,6 +2151,53 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         J = top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
+        
+    def test_missing_derivs_error(self):
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis2', SimpleCompMissingDeriv())
+        self.top.driver.add_objective('(dis2.y)**2')
+        self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
+        
+        self.top.run()
+        
+        try:
+            J = self.top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_out']")
+        else:
+            self.fail("exception expected")
+            
+        self.top.driver.remove_constraint('dis2.miss_out < 24.0')
+        self.top.driver.add_constraint('dis2.y < 24.0')
+        self.top.driver.remove_parameter('dis2.x')
+        self.top.driver.add_parameter('dis2.miss_in', low=-10.0, high=10.0)
+        
+        try:
+            J = self.top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_in']")
+        else:
+            self.fail("exception expected")
+        
+    def test_missing_derivs_assume_zero(self):
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis2', SimpleCompMissingDeriv())
+        self.top.dis2.missing_deriv_policy = 'assume_zero'
+        
+        self.top.driver.add_objective('(dis2.y)**2')
+        self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
+        
+        self.top.run()
+        
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001) 
         
 class Comp2(Component):
     """ two-input, two-output"""

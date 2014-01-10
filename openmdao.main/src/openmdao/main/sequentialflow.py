@@ -868,12 +868,13 @@ class SequentialWorkflow(Workflow):
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
         """ Calculate derivatives and save baseline states for all components
-        in this workflow."""
+        in this workflow.
+        """
 
         self._stop = False
         
         dgraph = self.derivative_graph(required_inputs, required_outputs)
-        comps = dgraph.edge_dict_to_comp_list(self.edge_list())
+        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()))
         for compname, data in comps.iteritems():
             if '~' in compname:
                 node = self._derivative_graph.node[compname]['pa_object']
@@ -882,9 +883,8 @@ class SequentialWorkflow(Workflow):
             else:
                 node = self.scope.get(compname)
 
-            inputs = data['inputs']
-            outputs = data['outputs']
-            node.calc_derivatives(first, second, savebase, inputs, outputs)
+            node.calc_derivatives(first, second, savebase, 
+                                  data['inputs'], data['outputs'])
             if self._stop:
                 raise RunStopped('Stop requested')
 

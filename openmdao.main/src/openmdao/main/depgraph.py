@@ -1056,9 +1056,9 @@ class DependencyGraph(nx.DiGraph):
             meta[out]['valid'] = True
 
     def edge_dict_to_comp_list(self, edges, implicit_edges=None):
-        """Converts inner edge dict into an ordered dict whose keys are component
-        names, and whose values are lists of relevant (in the graph) inputs and
-        outputs.
+        """Converts inner edge dict into an ordered dict whose keys 
+        are component names, and whose values are lists of relevant 
+        (in the graph) inputs and outputs.
         """
         comps = OrderedDict()
         basevars = set()
@@ -1296,6 +1296,44 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
                     excludes=ancestor_using-set([drv.name]))
     return pa
     
+
+def _check_for_missing_derivs(scope, comps):
+    # we have the edges that are actually needed for the derivatives, so
+    # check all of the corresponding components now to see if they are
+    # supplying the needed derivatives
+    removed = []
+    for cname, vnames in comps.items():
+        if cname is None or cname.startswith('~'):
+            # skip boundary vars and pseudoassemblies
+            continue
+        comp = getattr(scope, cname)
+        if has_interface(comp, IAssembly):
+            dins = comp.list_inputs()
+            douts = comp.list_outputs()
+        else:
+            dins, douts = comp.list_deriv_vars()
+        if len(dins) == 0 or len(douts) == 0:
+            continue  # we'll finite difference this comp
+        # handle vartrees
+        dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
+        douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
+        missing = []
+        for name in vnames:
+            if name not in dins and name not in douts:
+                nname = name.split('[', 1)[0].split('.', 1)[0]
+                if nname not in dins and nname not in douts:
+                    missing.append(nname)
+        if missing:
+            if comp.missing_deriv_policy == 'error':
+                raise RuntimeError("'%s' doesn't provide analytical derivatives %s" 
+                                   % (comp.get_pathname(), missing))
+            elif comp.missing_deriv_policy == 'assume_zero':
+                # remove the vars with zero derivatives
+                comps[cname] = [n for n in vnames if n not in missing]
+                removed.extend(['.'.join([cname, m]) for m in missing])
+                
+    return removed
+
 def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
@@ -1350,38 +1388,15 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
 
-    # we have the edges that are actually needed for the derivatives, so
-    # check all of the corresponding components now to see if they are
-    # supplying the needed derivatives
-    for cname, vnames in comps.items():
-        if cname is None or cname.startswith('~'):
-            # skip boundary vars and pseudoassemblies
-            continue
-        comp = getattr(scope, cname)
-        if has_interface(comp, IAssembly):
-            dins = comp.list_inputs()
-            douts = comp.list_outputs()
-        else:
-            dins, douts = comp.list_deriv_vars()
-        if len(dins) == 0 or len(douts) == 0:
-            continue  # we'll finite difference this comp
-        # handle vartrees
-        dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
-        douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
-        missing = []
-        for name in vnames:
-            if name not in dins and name not in douts:
-                nname = name.split('[', 1)[0].split('.', 1)[0]
-                if nname not in dins and nname not in douts:
-                    missing.append(nname)
-        if missing:
-            if comp.missing_deriv_policy == 'error':
-                raise RuntimeError("'%s' doesn't provide analytical derivatives %s" 
-                                   % (comp.get_pathname(), missing))
-            elif comp.missing_deriv_policy == 'assume_zero':
-                # remove the vars with zero derivatives
-                comps[cname] = [n for n in vnames if n not in missing]
+    removed = _check_for_missing_derivs(scope, comps)
     
+    if removed:
+        # remove nodes from graph and recalculate edges
+        graph.remove_nodes_from(removed)
+        edges = _get_inner_edges(graph, 
+                                 ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
+                                 ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
+
     full = [k for k in comps.keys() if k]
     if None in comps:
         full.extend([v.split('[')[0] for v in comps[None] 

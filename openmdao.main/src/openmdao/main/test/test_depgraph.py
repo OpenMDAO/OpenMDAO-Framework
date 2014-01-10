@@ -76,6 +76,9 @@ class DumbClass(object):
     
     def _get_required_compnames(self):
         return []
+    
+    def list_deriv_vars(self):
+        return self._inputs, self._outputs
 
 
 def _make_xgraph():
