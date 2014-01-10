@@ -1,11 +1,12 @@
 import unittest
 
 import networkx as nx
-from openmdao.main.depgraph import DependencyGraph, is_nested_node, base_var, \
-                                    find_all_connecting, nodes_matching_all, \
-                                    nodes_matching_some, edges_matching_all, \
-                                    edges_matching_some, mod_for_derivs, \
-                                    _get_inner_edges, edges_to_dict
+from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
+                                    find_all_connecting, mod_for_derivs, \
+                                    _get_inner_edges
+from openmdao.util.graph import edges_to_dict, nodes_matching_all, \
+                                nodes_matching_some, edges_matching_all, \
+                                edges_matching_some
 from openmdao.main.interfaces import implements, IImplicitComponent
 
 def fullpaths(cname, names):
@@ -15,9 +16,13 @@ def fullpaths(cname, names):
 class Wflow(object):
     def __init__(self, scope):
         self.scope = scope
+        self._parent = scope
         
     def __iter__(self):
         return iter([])
+    
+    def get_names(self, **kwargs):
+        return []
     
 def get_inner_edges(graph, srcs, dests, wflow):
 
@@ -68,6 +73,9 @@ class DumbClass(object):
     
     def invalidate_deps(self, vnames=None):
         return None
+    
+    def _get_required_compnames(self):
+        return []
 
 
 def _make_xgraph():
@@ -202,12 +210,12 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
         
     def test_base_var(self):
-        self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
-        self.assertEqual(base_var(self.dep, 'a'), 'a')
-        self.assertEqual(base_var(self.dep, 'a.x'), 'a')
-        self.assertEqual(base_var(self.dep, 'a.x.y'), 'a')
-        self.assertEqual(base_var(self.dep, 'a.x[3].y'), 'a')
-        self.assertEqual(base_var(self.dep, 'A.c[2]'), 'A.c')
+        self.assertEqual(self.dep.base_var('B.a'), 'B.a')
+        self.assertEqual(self.dep.base_var('a'), 'a')
+        self.assertEqual(self.dep.base_var('a.x'), 'a')
+        self.assertEqual(self.dep.base_var('a.x.y'), 'a')
+        self.assertEqual(self.dep.base_var('a.x[3].y'), 'a')
+        self.assertEqual(self.dep.base_var('A.c[2]'), 'A.c')
         
     def test_is_nested_node(self):
         self.assertEqual(is_nested_node(self.dep, 'B.a'), False)

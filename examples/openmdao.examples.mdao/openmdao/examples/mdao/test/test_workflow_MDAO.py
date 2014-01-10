@@ -12,7 +12,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
-from openmdao.lib.drivers.api import CONMINdriver
+from openmdao.lib.drivers.api import CONMINdriver, SLSQPdriver
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
@@ -106,9 +106,9 @@ class SellarCO_Multi(Assembly):
         Optimal Objective = 3.18339"""
         
         # Global Optimization
-        self.add('driver', CONMINdriver())
-        self.add('localopt1', CONMINdriver())
-        self.add('localopt2', CONMINdriver())
+        self.add('driver', SLSQPdriver())
+        self.add('localopt1', SLSQPdriver())
+        self.add('localopt2', SLSQPdriver())
         self.driver.workflow.add(['localopt1', 'localopt2'])
         
         # Local Optimization 1
@@ -237,6 +237,12 @@ class TestCase(unittest.TestCase):
         prob.dis1.y2 = 0.0
         
         prob.run()
+        
+        # In the top workflow, the subdrivers should each become a PA.
+        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
+        self.assertEqual( PA1.itercomps, ['localopt1'])
+        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
+        self.assertEqual( PA2.itercomps, ['localopt2'])
 
         assert_rel_error(self, prob.global_des_var_targets[0], 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.global_des_var_targets[1], 1.0, 0.01)
@@ -267,6 +273,11 @@ class TestCase(unittest.TestCase):
         
         prob.run()
 
+        # In the top workflow, the subdrivers should each become a PA.
+        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
+        self.assertEqual( PA1.itercomps, ['localopt1'])
+        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
+        self.assertEqual( PA2.itercomps, ['localopt2'])
         assert_rel_error(self, prob.z1, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
@@ -284,8 +295,8 @@ class TestCase(unittest.TestCase):
         prob.sa_dis1.workflow.initialize_residual()
         
         edges = prob.sa_dis1.workflow._edges
-        self.assertEqual(set(edges['@in0']), set(['_pseudo_7.in3', '~~0.dis1|x1']))
-        self.assertEqual(set(edges['~~0.dis1|y1']), set(['_pseudo_5.in0', '_pseudo_7.in0']))
+        self.assertEqual(set(edges['@in0']), set(['_pseudo_7.in3', '~0.dis1|x1']))
+        self.assertEqual(set(edges['~0.dis1|y1']), set(['_pseudo_5.in0', '_pseudo_7.in0']))
         self.assertEqual(set(edges['_pseudo_5.out0']), set(['@out1']))
         #self.assertEqual(set(edges['@source0']), set(['@out1']))
         self.assertEqual(set(edges['_pseudo_7.out0']), set(['@out0']))
@@ -296,11 +307,13 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
-        self.assertEqual(prob.check_gradient()[3], [])
-        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0'])[3], [])
-        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0'])[3], [])
-        self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], 
-                                             outputs=['_pseudo_2.out0', '_pseudo_2.out0'])[3], [])
+        # TODO - These tested behavior that has nothing to do with BLISS. Need
+        # new test for them -- KTM
+        #self.assertEqual(prob.check_gradient()[3], [])
+        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0'])[3], [])
+        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0'])[3], [])
+        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], 
+        #                                     outputs=['_pseudo_2.out0', '_pseudo_2.out0'])[3], [])
         
 
 if __name__ == '__main__':

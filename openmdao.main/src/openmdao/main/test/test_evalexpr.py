@@ -4,25 +4,26 @@ import ast
 
 from openmdao.main.numpy_fallback import array
 from openmdao.main.datatypes.array import Array
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, ExprExaminer
-from openmdao.main.printexpr import ExprPrinter, transform_expression, print_node
-from openmdao.main.api import Assembly, Container, Component, set_as_top
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, \
+                                   ExprExaminer
+from openmdao.main.printexpr import ExprPrinter, print_node
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, List, Slot, Dict
 from openmdao.util.testutil import assert_rel_error
 
-#from numpy import sin,cos
-from math import log, sqrt, sin, cos
+from math import sqrt, sin, cos
 
 try:
-    # as of python2.7, gamma is in the math module (even though docs say it's new as of 3.2)
+    # as of python2.7, gamma is in the math module
+    # (even though docs say it's new as of 3.2)
     from math import gamma
 except ImportError as err:
     import logging
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
     try:
         from scipy.special import gamma
     except ImportError as err:
-        logging.warn("In %s: %r" % (__file__, err))
+        logging.warn("In %s: %r", __file__, err)
 
 class A(Component):
     f = Float(iotype='in')
@@ -70,7 +71,7 @@ class Simple(Component):
     b = Float(iotype='in')
     c = Float(iotype='out')
     d = Float(iotype='out')
-    x_array = Array([0,0,0], iotype='in')
+    x_array = Array([0, 0, 0], iotype='in')
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 4.
@@ -125,29 +126,35 @@ class ExprEvalTestCase(unittest.TestCase):
         ex2 = ExprEvaluator('comp.x', self.top)
         ex3_bad = "test"
 
-        self.assertTrue(ex1==ex2)
-        self.assertTrue(ex2!=ex3_bad)
+
+        self.assertTrue(ex1 == ex2)
+        self.assertTrue(ex2 != ex3_bad)
+
 
     def test_simple(self):
         tests = [
             ('a.f', "scope.get('a.f')"),
             ('a.f**2', "scope.get('a.f')**2"),
-            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_)"),
+            ('a.f/a.a1d[int(a.f)]',
+             "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+            ('a.f = a.a1d[int(a.f)]',
+             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_,force=_local_force_)"),
         ]
         self._do_tests(tests, self.top)
 
     def test_containers(self):
         tests = [
-            ('comp.cont.f',"scope.get('comp.cont.f')"),
-            ('comp.contlist[2].a1d[3]',"scope.get('comp.contlist',[(0,2),(1,'a1d'),(0,3)])"),
+            ('comp.cont.f', "scope.get('comp.cont.f')"),
+            ('comp.contlist[2].a1d[3]',
+             "scope.get('comp.contlist',[(0,2),(1,'a1d'),(0,3)])"),
         ]
         self._do_tests(tests, self.top)
 
     def test_dicts(self):
         tests = [
-            ("comp.indct['foo.bar']","scope.get('comp.indct',[(0,'foo.bar')])"),
-            ("comp.indct['foo.bar']=comp.cont.f","scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')],src=_local_src_)"),
+            ("comp.indct['foo.bar']", "scope.get('comp.indct',[(0,'foo.bar')])"),
+            ("comp.indct['foo.bar']=comp.cont.f",
+             "scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')],src=_local_src_,force=_local_force_)"),
         ]
         self._do_tests(tests, self.top)
 
@@ -159,36 +166,41 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.a1d[0]', "scope.get('a.a1d',[(0,0)])"),
             ('a.a2d[0][0]', "scope.get('a.a2d',[(0,0),(0,0)])"),
             ('a.a2d[:,0]', "scope.get('a.a2d',[(4,(None,None,None),0)])"),
-            ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
+            ('a.a2d[-a.a1d[2]]',
+             "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
             ('a.a2d[-a.a1d[2]][foo.bar]',
              "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
             ('a.a2d[-a.a1d[2]]=a.f',
-             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))],src=_local_src_)"),
-            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
-            ('a.f = a.a1d[int(a.f)]', "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_)"),
+             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))],src=_local_src_,force=_local_force_)"),
+            ('a.f/a.a1d[int(a.f)]',
+             "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+            ('a.f = a.a1d[int(a.f)]',
+             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_,force=_local_force_)"),
             ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[(0,1+3**4*1)])"),
             ('a.b[1][2]', "scope.get('a.b',[(0,1),(0,2)])"),
             ('abs(a.b[1][2])', "abs(scope.get('a.b',[(0,1),(0,2)]))"),
             ('a.b[1][x.y]', "scope.get('a.b',[(0,1),(0,scope.get('x.y'))])"),
-            ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[(0,1)]),src=_local_src_)"),
+            ('comp.x=a.b[1]',
+             "scope.set('comp.x',scope.get('a.b',[(0,1)]),src=_local_src_,force=_local_force_)"),
             ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[(0,-3)])"),
         ]
         self._do_tests(tests, self.top)
 
     def test_calls(self):
         tests = [
-        ('a.b()', "scope.get('a.b',[(2,)])"),
-        ('a.b(5)', "scope.get('a.b',[(2,[5])])"),
-        ('a.b(5,9)', "scope.get('a.b',[(2,[5,9])])"),
-        ('a.b(5,z.y)', "scope.get('a.b',[(2,[5,scope.get('z.y')])])"),
-        ('a.b(5, z.y(2,3))',
-         "scope.get('a.b',[(2,[5,scope.get('z.y',[(2,[2,3])])])])"),
-        ('a.b(5, z.y[3])',
-         "scope.get('a.b',[(2,[5,scope.get('z.y',[(0,3)])])])"),
-         ('a.b(1,23,foo=9)',
-          "scope.get('a.b',[(2,[1,23],[('foo',9)])])"),
-         ('a.b(1,23)[1]', "scope.get('a.b',[(2,[1,23]),(0,1)])"),
-         ('a.b(1).somefunct(2)[1]', "scope.get('a.b',[(2,[1]),(1,'somefunct'),(2,[2]),(0,1)])"),
+            ('a.b()', "scope.get('a.b',[(2,)])"),
+            ('a.b(5)', "scope.get('a.b',[(2,[5])])"),
+            ('a.b(5,9)', "scope.get('a.b',[(2,[5,9])])"),
+            ('a.b(5,z.y)', "scope.get('a.b',[(2,[5,scope.get('z.y')])])"),
+            ('a.b(5, z.y(2,3))',
+             "scope.get('a.b',[(2,[5,scope.get('z.y',[(2,[2,3])])])])"),
+            ('a.b(5, z.y[3])',
+             "scope.get('a.b',[(2,[5,scope.get('z.y',[(0,3)])])])"),
+            ('a.b(1,23,foo=9)',
+             "scope.get('a.b',[(2,[1,23],[('foo',9)])])"),
+            ('a.b(1,23)[1]', "scope.get('a.b',[(2,[1,23]),(0,1)])"),
+            ('a.b(1).somefunct(2)[1]',
+             "scope.get('a.b',[(2,[1]),(1,'somefunct'),(2,[2]),(0,1)])"),
         ]
 
         self._do_tests(tests, self.top)
@@ -228,9 +240,11 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(self.top.a.a2d[1][0], 11.)
 
         ex = ExprEvaluator("a2d[1]", self.top.a)
-        self.assertTrue(all(ex.evaluate() == array([11.,3.])))
-        ex.set([0.1,0.2])
-        self.assertTrue(all(self.top.a.a2d[1] == array([0.1,0.2])))
+
+        self.assertTrue(all(ex.evaluate() == array([11., 3.])))
+        ex.set([0.1, 0.2])
+        self.assertTrue(all(self.top.a.a2d[1] == array([0.1, 0.2])))
+
 
         self.top.comp.cont = A()
 
@@ -252,13 +266,14 @@ class ExprEvalTestCase(unittest.TestCase):
         else:
             ex = ExprEvaluator("numpy.eye(2)", self.top.a)
             val = ex.evaluate()
-            self.assertTrue((val==numpy.eye(2)).all())
+
+            self.assertTrue((val == numpy.eye(2)).all())
 
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
-        self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
+        self.assertEqual(list(ex.evaluate()), [4, 4, 4, 123, 4])
 
         ex = ExprEvaluator("comp.get_attrib('get_cont')(1).a1d", self.top)
-        self.assertEqual(list(ex.evaluate()), [4,4,4,123,4])
+        self.assertEqual(list(ex.evaluate()), [4, 4, 4, 123, 4])
 
 
     def test_reparse_on_scope_change(self):
@@ -284,7 +299,8 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.evaluate(self.top.a)
         except AttributeError as err:
-            self.assertEqual(str(err), "can't evaluate expression 'comp.y': a: 'A' object has no attribute 'comp'")
+            self.assertEqual(str(err), "can't evaluate expression 'comp.y':"
+                             " a: 'A' object has no attribute 'comp'")
         else:
             self.fail("AttributeError expected")
         ex.scope = self.top
@@ -300,7 +316,8 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.evaluate()
         except Exception, err:
-            self.assertEqual(str(err), "can't evaluate expression 'comp.x': 'NoneType' object has no attribute 'get'")
+            self.assertEqual(str(err), "can't evaluate expression 'comp.x':"
+                             " 'NoneType' object has no attribute 'get'")
         else:
             self.fail("Exception expected")
 
@@ -327,7 +344,7 @@ class ExprEvalTestCase(unittest.TestCase):
 
     def test_get_referenced_varpaths(self):
         ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
-        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.x','a.a1d']))
+        self.assertEqual(ex.get_referenced_varpaths(), set(['comp.x', 'a.a1d']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_varpaths(), set(['comp.contlist']))
         ex.scope = self.top.comp
@@ -342,7 +359,7 @@ class ExprEvalTestCase(unittest.TestCase):
 
     def test_get_referenced_compnames(self):
         ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
-        self.assertEqual(ex.get_referenced_compnames(), set(['comp','a']))
+        self.assertEqual(ex.get_referenced_compnames(), set(['comp', 'a']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
         ex.scope = self.top.comp
@@ -357,23 +374,23 @@ class ExprEvalTestCase(unittest.TestCase):
 
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)
-        self.assertTrue(all(array([2.,4.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([2., 4., 6.]) == ex.evaluate()))
         ex.text = 'a1d[2:4]'
-        self.assertTrue(all(array([3.,4.]) == ex.evaluate()))
+        self.assertTrue(all(array([3., 4.]) == ex.evaluate()))
         ex.text = 'a1d[2:]'
-        self.assertTrue(all(array([3.,4.,5.,6.]) == ex.evaluate()))
+        self.assertTrue(all(array([3., 4., 5., 6.]) == ex.evaluate()))
         ex.text = 'a1d[::-1]'
-        self.assertTrue(all(array([6.,5.,4.,3.,2.,1.]) == ex.evaluate()))
+        self.assertTrue(all(array([6., 5., 4., 3., 2., 1.]) == ex.evaluate()))
         ex.text = 'a1d[:2]'
-        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
+        self.assertTrue(all(array([1., 2.]) == ex.evaluate()))
         ex.text = 'a2d[:,0]'
-        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
+        self.assertTrue(all(array([1., 2.]) == ex.evaluate()))
         ex.text = 'a2d[:,1]'
-        self.assertTrue(all(array([1.,3.]) == ex.evaluate()))
+        self.assertTrue(all(array([1., 3.]) == ex.evaluate()))
         ex.text = 'a2d[:,-1]'
-        self.assertTrue(all(array([1.,3.]) == ex.evaluate()))
+        self.assertTrue(all(array([1., 3.]) == ex.evaluate()))
         ex.text = 'a2d[:,-2]'
-        self.assertTrue(all(array([1.,2.]) == ex.evaluate()))
+        self.assertTrue(all(array([1., 2.]) == ex.evaluate()))
 
     def test_boolean(self):
         comp = self.top.comp
@@ -404,10 +421,12 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(False, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
         self.assertEqual(True, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
 
-        self.top.a.b = [1,1,1,1]
+
+        self.top.a.b = [1, 1, 1, 1]
+
         self.assertEqual(True, ExprEvaluator('all(a.b)', self.top).evaluate())
         self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
-        self.top.a.b = [1,1,0,1]
+        self.top.a.b = [1, 1, 0, 1]
         self.assertEqual(False, ExprEvaluator('all(a.b)', self.top).evaluate())
         self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
 
@@ -443,8 +462,10 @@ class ExprEvalTestCase(unittest.TestCase):
             ex = ExprEvaluator('abcd.efg', self.top)
             ex.evaluate()
         except AttributeError, err:
-            self.assertEqual(str(err),
-                "can't evaluate expression 'abcd.efg': : 'Assembly' object has no attribute 'abcd'")
+
+            self.assertEqual(str(err), "can't evaluate expression 'abcd.efg':"
+                             " : 'Assembly' object has no attribute 'abcd'")
+
         else:
             raise AssertionError('AttributeError expected')
 
@@ -460,15 +481,16 @@ class ExprEvalTestCase(unittest.TestCase):
         top.add('comp8', Simple())
         top.add('comp9', Simple())
 
-        top.connect('comp1.c','comp3.a')
-        top.connect('comp2.c','comp3.b')
-        top.connect('comp3.c','comp5.a')
-        top.connect('comp3.d','comp9.a')
-        top.connect('comp3.d','comp4.a')
-        top.connect('comp4.c','comp7.a')
-        top.connect('comp3.c','comp6.a')
-        top.connect('comp6.c','comp7.b')
-        top.connect('comp8.c','comp9.b')
+        top.connect('comp1.c', 'comp3.a')
+        top.connect('comp2.c', 'comp3.b')
+        top.connect('comp3.c', 'comp5.a')
+        top.connect('comp3.d', 'comp9.a')
+        top.connect('comp3.d', 'comp4.a')
+        top.connect('comp4.c', 'comp7.a')
+        top.connect('comp3.c', 'comp6.a')
+        top.connect('comp6.c', 'comp7.b')
+        top.connect('comp8.c', 'comp9.b')
+
 
         # exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
         # self.assertEqual(exp.get_required_compnames(top),
@@ -532,9 +554,11 @@ class ExprEvalTestCase(unittest.TestCase):
 
         exp = ExprEvaluator('sin(cos(comp2.b))+sqrt(comp2.a)/comp1.c', top.driver)
         grad = exp.evaluate_gradient(scope=top)
-        g1=-sin(top.comp2.b)*cos(cos(top.comp2.b)) #true gradient components
-        g2=(2*sqrt(top.comp2.a)*top.comp1.c)**-1
-        g3=-sqrt(top.comp2.a)/top.comp1.c**2
+
+        g1 = -sin(top.comp2.b)*cos(cos(top.comp2.b)) #true gradient components
+        g2 = (2*sqrt(top.comp2.a)*top.comp1.c)**-1
+        g3 = -sqrt(top.comp2.a)/top.comp1.c**2
+
 
         assert_rel_error(self, grad['comp2.b'], g1, 0.00001)
         assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
@@ -543,7 +567,9 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('gamma(comp2.a)', top.driver)
         grad = exp.evaluate_gradient(scope=top)
         from scipy.special import polygamma
-        g1 = gamma(top.comp2.a)*polygamma(0,top.comp2.a) #true partial derivative
+
+        g1 = gamma(top.comp2.a)*polygamma(0, top.comp2.a) #true partial derivative
+
         assert_rel_error(self, grad['comp2.a'], g1, 0.001)
 
         exp = ExprEvaluator('abs(comp2.a)', top.driver)
@@ -587,7 +613,8 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ConnectedExprEvaluator("var1[x]", self.top, is_dest=True)._parse()
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'var1[x]': only constant indices are allowed for arrays and slices")
+            self.assertEqual(str(err), "bad destination expression 'var1[x]':"
+                     " only constant indices are allowed for arrays and slices")
         else:
             self.fail("Exception expected")
 
@@ -595,7 +622,8 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ConnectedExprEvaluator("var1(2.3)", self.top, is_dest=True)._parse()
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'var1(2.3)': not assignable")
+            self.assertEqual(str(err), "bad destination expression 'var1(2.3)':"
+                             " not assignable")
         else:
             self.fail("Exception expected")
 
@@ -606,14 +634,18 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ConnectedExprEvaluator("var1[1:x:2]", self.top, is_dest=True)._parse()
         except Exception as err:
-            self.assertEqual(str(err), "bad destination expression 'var1[1:x:2]': only constant indices are allowed for arrays and slices")
+            self.assertEqual(str(err), "bad destination expression"
+                             " 'var1[1:x:2]': only constant indices are allowed"
+                             " for arrays and slices")
         else:
             self.fail("Exception expected")
 
 
 class ExprExaminerTestCase(unittest.TestCase):
-    def _examine(self, text, simplevar=True, assignable=True, const_indices=True,
-                 refs=None, const=False):
+
+    def _examine(self, text, simplevar=True, assignable=True,
+                 const_indices=True, refs=None, const=False):
+
         ee = ExprExaminer(ast.parse(text, mode='eval'))
         self.assertEqual(ee.simplevar, simplevar)
         self.assertEqual(ee.assignable, assignable)
@@ -632,14 +664,14 @@ class ExprExaminerTestCase(unittest.TestCase):
         self._examine("x[2]", simplevar=False, refs=set(['x[2]']))
         self._examine("x[2]+x", simplevar=False, assignable=False, refs=set(['x[2]', 'x']))
         self._examine("x[2]*y[4]", simplevar=False, assignable=False,
-                      refs=set(['x[2]','y[4]']))
+                      refs=set(['x[2]', 'y[4]']))
         self._examine("x[y]", simplevar=False, const_indices=False, refs=set(['x[y]']))
         self._examine("x[y[5]]", simplevar=False, const_indices=False,
                       refs=set(['x[y[5]]']))
         self._examine("x[1:4:2]", simplevar=False, refs=set(['x[1:4:2]']))
         self._examine("x[1:4:y]", simplevar=False, const_indices=False, refs=set(['x[1:4:y]']))
-        self._examine("x+y", simplevar=False, assignable=False, refs=set(['x','y']))
-        self._examine("x*y", simplevar=False, assignable=False, refs=set(['x','y']))
+        self._examine("x+y", simplevar=False, assignable=False, refs=set(['x', 'y']))
+        self._examine("x*y", simplevar=False, assignable=False, refs=set(['x', 'y']))
         self._examine("x()", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x(7)", simplevar=False, assignable=False, refs=set(['x']))
         self._examine("x==6", simplevar=False, assignable=False, refs=set(['x']))

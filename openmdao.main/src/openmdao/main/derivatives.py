@@ -4,7 +4,6 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.depgraph import base_var
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
@@ -563,8 +562,7 @@ class FiniteDifference(object):
                 srcs = [srcs]
                 
             # Local stepsize support
-            meta = self.scope.get_metadata(base_var(self.scope._depgraph, 
-                                                    srcs[0]))
+            meta = self.scope.get_metadata(self.scope._depgraph.base_var(srcs[0]))
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
                 
@@ -759,7 +757,6 @@ class FiniteDifference(object):
         for src in srcs:    
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
-            old_val = self.scope.get(src)
             
             if i2-i1 == 1:
                 
@@ -773,13 +770,15 @@ class FiniteDifference(object):
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
                     if var_name:
-                        base = base_var(self.scope._depgraph, src)
-                        comp._input_updated(base.split('.')[-1])
+                        base = self.scope._depgraph.base_var(src)
+                        comp._input_updated(base.split('.')[-1], 
+                                            src.split('[')[0].partition('.')[2])
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
     
                 # Scalar
                 else:
+                    old_val = self.scope.get(src)
                     self.scope.set(src, old_val+val, force=True)
     
             # Full vector
@@ -796,21 +795,24 @@ class FiniteDifference(object):
                     exec('self.scope.%s = sliced_src') % src
                     
                 else:
+                    old_val = self.scope.get(src)
                     unravelled = unravel_index(index, old_val.shape)
                     old_val[unravelled] += val
                     
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    base = base_var(self.scope._depgraph, src)
-                    comp._input_updated(base.split('.')[-1])
+                    base = self.scope._depgraph.base_var(src)
+                    comp._input_updated(base.split('.')[-1], 
+                                        src.split('[')[0].partition('.')[2])
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                self.scope.set_valid([base_var(self.scope._depgraph, src)], True)
+                self.scope.set_valid([self.scope._depgraph.base_var(src)], 
+                                    True)
                 
                 # Make sure we execute!
                 comp._call_execute = True

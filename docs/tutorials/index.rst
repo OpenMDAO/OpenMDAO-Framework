@@ -11,4 +11,5 @@ OpenMDAO Tutorials
     surrogate/index
     mdao/index
     geometry/index
-    complex/index        
+    complex/index
+    implicit/index

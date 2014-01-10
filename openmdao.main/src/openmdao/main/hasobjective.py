@@ -195,7 +195,8 @@ class HasObjectives(object):
 
     def get_expr_depends(self):
         """Returns a list of tuples of the form (comp_name, parent_name)
-        for each component referenced by our objectives.
+        for each component referenced by our objectives. Note that this does not
+        include pseudo-components.
         """
         pname = self._parent.name
         conn_list = []
