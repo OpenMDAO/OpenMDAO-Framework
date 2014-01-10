@@ -71,6 +71,7 @@ then the Jacobian would look like:
 |**f_xy**| -6.0   |  8.0  |
 +--------+--------+-------+
 
+Here's what the code to implement these derivatives looks like. 
 
 .. testcode:: Paraboloid_derivative
 
@@ -94,15 +95,17 @@ a small portion of the full Jacobian. OpenMDAO uses a numerical method developed
 to solve for the gradient of the full problem. 
 
 .. note:: 
-    Note that you don't have to include all of the inputs and
+    You don't have to include all of the inputs and
     outputs in the Jacobian. There is certainly no reason to provide the
     derivative of inputs that are never hooked up to other
-    outputs or irrelevant to the gradient for some other reason. 
+    outputs or irrelevant to the gradient for some other reason. If you omit derivatives, 
+    which end up being needed as part of the optimization OpenMDAO will throw an error 
+    to alert you of problem. 
 
 The ParaboloidDerivative component can be placed into a model, and the
 derivatives will be used with no changes required to the
 OptimizationConstrained or OptimizationUnconstrained assembly at this point.
-If the driver uses gradients (or Hessians) and can take advantage of the
+If the driver uses gradients and can take advantage of the
 analytical ones you provide, then it will do so. Below is our model, using
 the new component with derivatives. We put this model in a file called
 :download:`optimization_constrained_derivative.py
