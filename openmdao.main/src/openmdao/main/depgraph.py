@@ -1392,8 +1392,13 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     removed = _check_for_missing_derivs(scope, comps)
     
     if removed:
-        # remove nodes from graph and recalculate edges
-        graph.remove_nodes_from(removed)
+        removed = set(removed)
+
+        # remove edges associated with missing derivs
+        for u,v in graph.list_connections():
+            if u in removed or v in removed:
+                graph.remove_edge(u, v)
+
         edges = _get_inner_edges(graph, 
                                  ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
                                  ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
