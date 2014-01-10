@@ -9,8 +9,9 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver, IAssembly
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
+from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
@@ -1321,7 +1322,7 @@ def _check_for_missing_derivs(scope, comps):
         for name in vnames:
             if name not in dins and name not in douts:
                 nname = name.split('[', 1)[0].split('.', 1)[0]
-                if nname not in dins and nname not in douts:
+                if nname not in dins and nname not in douts and is_differentiable_var(nname, comp):
                     missing.append(nname)
         if missing:
             if comp.missing_deriv_policy == 'error':

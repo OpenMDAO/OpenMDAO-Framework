@@ -19,6 +19,7 @@ def is_differentiable_var(name, scope):
         return True
     if is_differentiable_val(getattr(scope, name)):
         return True
+    return False
 
 def is_differentiable_val(val):
     if isinstance(val, int_types):

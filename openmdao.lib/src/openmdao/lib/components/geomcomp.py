@@ -133,6 +133,9 @@ class GeomComponent(Component):
         """
         if self.parametric_geometry is not None:
             try:
+                # params = self.parametric_geometry.list_parameters()
+                # for p in params: 
+                #     self._input_updated(p[0])
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
@@ -179,8 +182,6 @@ class GeomComponent(Component):
                 'desc':'a geometry generated using the set of current input parameters',
                 'type':IStaticGeometry})
             outps.append(geom_out)
-
-
 
         # these are flattened lists of names, so they 
         # may contain dots
@@ -279,7 +280,9 @@ class GeomComponent(Component):
                 attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
+        
         super(GeomComponent, self)._input_updated(name.split('.',1)[0])
+
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         # check to see if dest attribute is inside of our parametric_geometry
@@ -322,7 +325,9 @@ class GeomComponent(Component):
 
     def list_deriv_vars(self):
         if self.parametric_geometry is not None:
-            return self.parametric_geometry.list_deriv_vars()
+            ins, outs = self.parametric_geometry.list_deriv_vars()
+            if ins or outs and 'geom_out' not in outs:
+                return list(ins), list(outs)+['geom_out']
         else:
             return (), ()
 

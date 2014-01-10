@@ -760,7 +760,6 @@ class FiniteDifference(object):
         for src in srcs:    
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
-            old_val = self.scope.get(src)
             
             if i2-i1 == 1:
                 
@@ -775,12 +774,14 @@ class FiniteDifference(object):
                     # must do it manually.
                     if var_name:
                         base = self.scope._depgraph.base_var(src)
-                        comp._input_updated(base.split('.')[-1])
+                        comp._input_updated(base.split('.')[-1], 
+                                            src.split('[')[0].partition('.')[2])
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
     
                 # Scalar
                 else:
+                    old_val = self.scope.get(src)
                     self.scope.set(src, old_val+val, force=True)
     
             # Full vector
@@ -797,6 +798,7 @@ class FiniteDifference(object):
                     exec('self.scope.%s = sliced_src') % src
                     
                 else:
+                    old_val = self.scope.get(src)
                     unravelled = unravel_index(index, old_val.shape)
                     old_val[unravelled] += val
                     
@@ -804,7 +806,8 @@ class FiniteDifference(object):
                 # do it manually.
                 if var_name:
                     base = self.scope._depgraph.base_var(src)
-                    comp._input_updated(base.split('.')[-1])
+                    comp._input_updated(base.split('.')[-1], 
+                                        src.split('[')[0].partition('.')[2])
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
     

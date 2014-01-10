@@ -132,11 +132,11 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'])
+                             outputs=['comp.y'], stream=None)
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'], fd_form='central')
+                             outputs=['comp.y'], fd_form='central', stream=None)
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'], fd_step_type='relative')
+                             outputs=['comp.y'], fd_step_type='relative', stream=None)
         
         # Full model force FD
         model.comp.force_fd = False
