@@ -271,6 +271,14 @@ def teardown_server():
             print >> sys.stderr, 'teardown_server: %s cleanup failed: %s' \
                                  % (server_dir, exc)
 
+    keymap = glob.glob('/tmp/server-*.xkm')  # From virtual framebuffer.
+    if keymap:
+        try:
+            os.remove(keymap[0])
+        except Exception as exc:
+            print >> sys.stderr, 'teardown_server: %s cleanup failed: %s' \
+                                 % (keymap[0], exc)
+
 
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """

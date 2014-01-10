@@ -22,7 +22,6 @@ from openmdao.devtools.utils import get_git_branch, get_git_branches, \
 from openmdao.devtools.push_release import push_release
 from openmdao.devtools.remote_cfg import add_config_options
 from openmdao.devtools.remotetst import test_release
-from openmdao.devtools.uploadGists import uploadGists
 from openmdao.util.fileutil import cleanup
 from openmdao.test.testing import read_config
 from openmdao.util.fileutil import get_cfg_file, onerror
@@ -246,16 +245,6 @@ def finalize_release(parser, options):
     if options.version is None:
         raise RuntimeError("you must specify the version")
 
-    if options.tutorials:
-        if not uploadGists(options.version):
-            print ""
-            print "Did not upload tutorials to GitHub"
-        else:
-            print "Successfully uploaded tutorials to GitHub"
-
-        print "Only uploaded tutorials, no other action was taken. Now exiting"
-        sys.exit(0)
-
     reldir = 'rel_%s' % options.version
     brname = 'release_%s' % options.version
     # check validity
@@ -285,23 +274,12 @@ def finalize_release(parser, options):
         else:
             check_call(['release', 'push', reldir, 'openmdao@web39.webfaction.com'])
 
-        # push release files to official repo on github (dev branch)
-        print "pushing branch %s up to the official dev branch" % brname
+        # push release files to official repo on github (master branch)
+        print "pushing branch %s up to the official master branch" % brname
         if options.dry_run:
             print 'skipping...'
         else:
-            check_call(['git', 'push', '--tags', 'origin', '%s:dev' % brname])
-
-        # push tutorials to github
-        print "uploading tutorials and examples to GitHub and Cookbook"
-        if options.dry_run or options.nogists:
-            print' skipping...'
-        else:
-            if not uploadGists(options.version):
-                print ""
-                print "Did not upload tutorials to GitHub"
-            else:
-                print "Successfully uploaded tutorials to GitHub"
+            check_call(['git', 'push', '--tags', 'origin', '%s:master' % brname])
 
     finally:
         print 'returning to original branch (%s)' % start_branch
@@ -389,14 +367,14 @@ def build_release(parser, options):
             print "There are uncommitted changes. You must create a release from a clean branch"
             sys.exit(-1)
 
-        if orig_branch == 'dev':
-            print "pulling dev branch from origin..."
+        if orig_branch == 'master':
+            print "pulling master branch from origin..."
             os.system("git pull origin %s" % orig_branch)
             if _has_checkouts():
                 print "something went wrong during pull.  aborting"
                 sys.exit(-1)
         else:
-            print "WARNING: base branch is not 'dev' so it has not been"
+            print "WARNING: base branch is not 'master' so it has not been"
             print "automatically brought up-to-date."
             answer = raw_input("Proceed? (Y/N) ")
             if answer.lower() not in ["y", "yes"]:
@@ -504,8 +482,6 @@ def _get_release_parser():
                         help="don't actually push any changes up to github or openmdao.org")
     parser.add_argument("--tutorials", action="store_true", dest="tutorials",
                         help="Only upload the tutorials, no other action will be taken")
-    parser.add_argument("--nogists", action="store_true", dest="nogists",
-                        help="Do not upload gists when finalizing the release")
     parser.set_defaults(func=finalize_release)
 
     parser = subparsers.add_parser('push',
@@ -545,8 +521,8 @@ def _get_release_parser():
     parser.add_argument("-m", action="store", type=str, dest="comment",
                         help="optional comment for version tag")
     parser.add_argument("--basebranch", action="store", type=str,
-                        dest="base", default='dev',
-                        help="base branch for release. defaults to dev")
+                        dest="base", default='master',
+                        help="base branch for release. defaults to master")
     parser.add_argument("-t", "--test", action="store_true", dest="test",
                         help="used for testing. A release branch will not be created")
     parser.add_argument("-n", "--nodocbuild", action="store_true",

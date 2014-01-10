@@ -4,6 +4,7 @@ import webbrowser
 import tempfile
 import tarfile
 import shutil
+import traceback
 
 import urllib2
 try:
@@ -16,7 +17,6 @@ from ConfigParser import SafeConfigParser
 from argparse import ArgumentParser
 from subprocess import call, check_call, STDOUT
 import fnmatch
-import cPickle as pickle
 
 from ordereddict import OrderedDict
 
@@ -24,7 +24,8 @@ from setuptools import find_packages
 from pkg_resources import WorkingSet, Requirement, resource_stream
 
 from openmdao.main.factorymanager import get_available_types, plugin_groups
-from openmdao.util.fileutil import build_directory, find_files, get_ancestor_dir
+from openmdao.util.fileutil import build_directory, find_files, \
+                                   get_ancestor_dir, find_module
 from openmdao.util.dep import PythonSourceTreeAnalyser
 from openmdao.util.dumpdistmeta import get_metadata
 from openmdao.util.git import download_github_tar
@@ -127,7 +128,7 @@ def _get_srcdocs(destdir, name, srcdir='src'):
     if os.path.exists(srcdir):
         os.chdir(srcdir)
         try:
-            srcmods = _get_src_modules('.', 
+            srcmods = _get_src_modules('.',
                                        dirpred=lambda d: not d.startswith('_') and d not in ['docs'])
         finally:
             os.chdir(startdir)
@@ -301,7 +302,8 @@ def _get_dirs(start):
     for root, dirlist, filelist in os.walk(start):
         newdlist = []
         for d in dirlist:
-            if d.startswith('.') or d.endswith('.egg-info') or d in ['docs', 'build', 'dists', 'sphinx_build']:
+            if d.startswith('.') or d.endswith('.egg-info') or \
+               d in ['docs', 'build', 'dists', 'sphinx_build']:
                 continue
             newdlist.append(d)
         dirlist[:] = newdlist
@@ -538,9 +540,8 @@ def plugin_makedist(parser, options, args=None, capture=None, srcdir='src'):
             disttar = "%s-%s.tar.gz" % (name, version)
         disttarpath = os.path.join(startdir, disttar)
         if os.path.exists(disttarpath):
-            sys.stderr.write("ERROR: distribution %s already exists.\n"
-                             % disttarpath)
-            return -1
+            print "Removing existing distribution %s" % disttar
+            os.remove(disttarpath)
 
         build_directory(dirstruct, force=True)
 
@@ -598,7 +599,8 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
     """
     parts = plugin_name.split('.')
 
-    if len(parts) == 1:  # assume it's a class name and try to find unambiguous module
+    if len(parts) == 1:
+        # assume it's a class name and try to find unambiguous module
         modname = None
         # loop over available types to find a class name that matches
         for name, version in get_available_types():
@@ -611,7 +613,8 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 modname = mname
                 parts = modname.split('.')
 
-        if modname is None:  # didn't find a class, so assume plugin_name is a dist name
+        if modname is None:
+            # didn't find a class, so assume plugin_name is a dist name
             parts = [plugin_name, plugin_name]
 
     for i in range(len(parts)-1):
@@ -620,15 +623,21 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
             __import__(mname)
             mod = sys.modules[mname]
             modname = mname
+            modfile = os.path.abspath(mod.__file__)
             break
         except ImportError:
-            pass
+            # we may be able to locate the docs even if the import fails
+            modfile = find_module(mname)
+            modname = mname
+            if modfile:
+                break
     else:
         # Possibly something in contrib that's a directory.
         try:
             __import__(plugin_name)
             mod = sys.modules[plugin_name]
             modname = plugin_name
+            modfile = os.path.abspath(mod.__file__)
         except ImportError:
             raise RuntimeError("Can't locate package/module '%s'" % plugin_name)
 
@@ -639,7 +648,8 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
         pkg = '.'.join(modname.split('.')[:2])
         anchorpath = '/'.join(['srcdocs', 'packages',
                                '%s.html#module-%s' % (pkg, modname)])
-        if any([p.endswith('.egg') and p.startswith('openmdao.') for p in fparts]):
+        if any([p.endswith('.egg') and p.startswith('openmdao.')
+                for p in fparts]):
             # this is a release version, so use docs packaged with openmdao.main
             htmldir = os.path.join(os.path.dirname(openmdao.main.__file__), "docs")
         else:  # it's a developer version, so use locally built docs
@@ -651,9 +661,9 @@ def find_docs_url(plugin_name=None, build_if_needed=True):
                 check_call(['openmdao', 'build_docs'])
         url += os.path.join(htmldir, anchorpath)
     else:
-        url += os.path.join(os.path.dirname(os.path.abspath(mod.__file__)),
+        url += os.path.join(os.path.dirname(modfile),
                            'sphinx_build', 'html', 'index.html')
-        
+
     url = url.replace('\\', '/')
     return url
 
@@ -688,8 +698,8 @@ def plugin_install(parser, options, args=None, capture=None):
             try:
                 print "Installing plugin:", plugin
                 _github_install(plugin, options.findlinks)
-            except:
-                pass
+            except Exception:
+                traceback.print_exc()
 
     else:  # Install plugin from local file or directory
         develop = False
@@ -762,10 +772,29 @@ def _github_install(dist_name, findLinks):
 
         version = tags[-1]
 
-    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' % (name, version)
+    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' \
+          % (name, version)
     print url
     build_docs_and_install(name, version, findLinks)
 
+def _bld_sdist_and_install(deps=True):
+    check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
+
+    if sys.platform.startswith('win'):
+        tars = fnmatch.filter(os.listdir('.'), "*.zip")
+    else:
+        tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
+    if len(tars) != 1:
+        raise RuntimeError("should have found a single archive file,"
+                           " but found %s instead" % tars)
+
+    if deps:
+        opts = '-NZ'
+    else:
+        opts = '-Z'
+    check_call(['easy_install', opts, tars[0]])
+
+    return tars[0]
 
 # This requires Internet connectivity to github.
 def build_docs_and_install(name, version, findlinks):  # pragma no cover
@@ -787,45 +816,39 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
                                % files)
 
         os.chdir(files[0])  # should be in distrib directory now
-        
-        # create an sdist so we can query metadata for distrib dependencies
-        check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
 
-        if sys.platform.startswith('win'):
-            tars = fnmatch.filter(os.listdir('.'), "*.zip")
+        cfg = SafeConfigParser(dict_type=OrderedDict)
+        cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
+        if cfg.has_option('metadata', 'requires-dist'):
+            reqs = cfg.get('metadata', 'requires-dist').strip()
+            reqs = reqs.replace(',', ' ')
+            reqs = [n.strip() for n in reqs.split()]
         else:
-            tars = fnmatch.filter(os.listdir('.'), "*.tar.gz")
-        if len(tars) != 1:
-            raise RuntimeError("should have found a single archive file,"
-                               " but found %s instead" % tars)
+            # couldn't find requires-dist in setup.cfg, so
+            # create an sdist so we can query metadata for distrib dependencies
+            tarname = _bld_sdist_and_install(deps=False)
 
-        check_call(['easy_install', '-NZ', tars[0]])
+            # now find any dependencies
+            metadict = get_metadata(tarname)
+            reqs = metadict.get('requires', [])
 
-        # now install any dependencies
-        metadict = get_metadata(tars[0])
-        reqs = metadict.get('requires', [])
-        done = set()
-
-        while reqs:
-            r = reqs.pop()
-            if r not in done:
-                done.add(r)
-                ws = WorkingSet()
-                req = Requirement.parse(r)
-                dist = ws.find(req)
-                if dist is None:
-                    check_call(['easy_install', '-NZ', '-f', findlinks, r])
-                    dist = ws.find(req)
-                    if dist is None:
-                        raise RuntimeError("Couldn't find distribution '%s'" % r)
-                    dist.activate()
-                    dct = get_metadata(dist.egg_name().split('-')[0])
-                    for new_r in dct.get('requires', []):
-                        reqs.append(new_r)
+        # install dependencies (some may be needed by sphinx)
+        ws = WorkingSet()
+        for r in reqs:
+            print "Installing dependency '%s'" % r
+            req = Requirement.parse(r)
+            dist = ws.find(req)
+            if dist is None:
+                try:
+                    check_call(['easy_install', '-Z', '-f', findlinks, r])
+                except Exception:
+                    traceback.print_exc()
 
         # build sphinx docs
         check_call(['plugin', 'build_docs', files[0]])
 
+        # make a new sdist with docs in it and install it
+        tarname = _bld_sdist_and_install()
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir, ignore_errors=True)
@@ -887,8 +910,8 @@ def plugin_build_docs(parser, options, args=None):
         'docs': {
             'conf.py': templates['conf.py'] % template_options,
             'pkgdocs.rst': _get_pkgdocs(cfg),
-            'srcdocs.rst': _get_srcdocs(dist_dir, 
-                                        template_options['name'], 
+            'srcdocs.rst': _get_srcdocs(dist_dir,
+                                        template_options['name'],
                                         srcdir=options.srcdir),
         },
     }
@@ -1006,7 +1029,8 @@ def _get_plugin_parser():
                         action='store_true')
     parser.add_argument("-g", "--group", action="append", type=str,
                         dest='groups', default=[],
-                        choices=[p.split('.', 1)[1] for p in plugin_groups.keys()],
+                        choices=[p.split('.', 1)[1]
+                                 for p in plugin_groups.keys()],
                         help="specify plugin group")
     parser.set_defaults(func=plugin_list)
 
@@ -1025,8 +1049,9 @@ def _get_plugin_parser():
     parser.add_argument("-f", "--find-links", action="store", type=str,
                         dest='findlinks', default='http://openmdao.org/dists',
                         help="URL of find-links server")
-    parser.add_argument("--all", help='Install all plugins in the official OpenMDAO-Plugins'
-                        ' repository on github', action='store_true')
+    parser.add_argument("--all", help='Install all plugins in the official'
+                        ' OpenMDAO-Plugins repository on github',
+                        action='store_true')
     parser.set_defaults(func=plugin_install)
 
     parser = subparsers.add_parser('build_docs',
@@ -1036,21 +1061,22 @@ def _get_plugin_parser():
                         help='path to distribution source directory')
     parser.add_argument("-s", "--srcdir", action="store", type=str,
                         dest='srcdir', default='src',
-                        help="top directory in the distribution where python source is located")
+                        help="top directory in the distribution where python"
+                             " source is located")
     parser.set_defaults(func=plugin_build_docs)
 
     parser = subparsers.add_parser('docs',
                                    help="display docs for a plugin")
     parser.usage = "plugin docs <plugin_dist_name>"
-    
+
     parser.add_argument('plugin_dist_name', help='name of plugin distribution')
     parser.add_argument("-b", "--browser", action="store", type=str,
                         dest='browser', choices=webbrowser._browsers.keys(),
                         help="browser name")
     parser.set_defaults(func=plugin_docs)
 
-    parser = subparsers.add_parser('quickstart',
-                                   help="generate some skeleton files for a plugin")
+    parser = subparsers.add_parser('quickstart', help="generate some skeleton"
+                                                      " files for a plugin")
     parser.usage = "plugin quickstart <dist_name> [options]"
     parser.add_argument('dist_name', help='name of distribution')
     parser.add_argument("-v", "--version", action="store", type=str,
@@ -1068,8 +1094,8 @@ def _get_plugin_parser():
                              " 'openmdao.component')" % plugin_groups.keys())
     parser.set_defaults(func=plugin_quickstart)
 
-    parser = subparsers.add_parser('makedist',
-                                   help="create a source distribution for a plugin")
+    parser = subparsers.add_parser('makedist', help="create a source"
+                                                   " distribution for a plugin")
     parser.usage = "plugin makedist [dist_dir_path]"
     parser.add_argument('dist_dir_path', nargs='?',
                         default='.',
@@ -1077,7 +1103,8 @@ def _get_plugin_parser():
                              ' (defaults to current dir')
     parser.add_argument("-s", "--srcdir", action="store", type=str,
                         dest='srcdir', default='src',
-                        help="top directory in the distribution where python source is located")
+                        help="top directory in the distribution where python"
+                             " source is located")
     parser.set_defaults(func=plugin_makedist)
 
     return top_parser

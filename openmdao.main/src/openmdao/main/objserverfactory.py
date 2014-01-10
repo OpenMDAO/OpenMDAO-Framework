@@ -384,6 +384,16 @@ class ObjServer(object):
         self._logger.setLevel(level)
         logging.getLogger().setLevel(level)
 
+    @rbac('owner')
+    def config_ram(self, filename):
+        """
+        Configure the :class:`ResourceAllocationManager` instance from `filename`.
+        Used to define resources needed for model execution.
+        """
+        self._logger.debug('config_ram %r', filename)
+        from openmdao.main.resource import ResourceAllocationManager
+        ResourceAllocationManager.configure(filename)
+
     @rbac('*')
     def echo(self, *args):
         """

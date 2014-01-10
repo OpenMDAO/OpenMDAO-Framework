@@ -172,19 +172,90 @@ more complexity and presents additional features of the framework.
 *Finite Difference*
 ~~~~~~~~~~~~~~~~~~~
 
-If you don't specify a ``provideJ`` function for you component, then OpenMDAO
+If you don't specify a ``provideJ`` function for your component, then OpenMDAO
 will finite difference it during the calculation of the full model gradient. OpenMDAO
 can identify groups of nondifferentiable components to finite difference as a block.
 Also, OpenMDAO can detect a non-differentiable connection between two differentiable
 components (e.g, components passing a file or string) and will include both components
 in with the nondifferentiables.
 
-At present, the user doesn't have much direct control over the finite difference,
-but a stepsize can be assigned to any Float or Array input as a variable attribute:
+There are a number of ways to control how OpenMDAO finite differences your
+components and your full model. Every driver contains a variable tree called
+`gradient_options`. This tree contains the settings that control how that
+driver performs a finite difference. Note that since each driver has one, it
+is possible to use different settings for different drivers. Consider the same
+example from above, but let's see how you can change some settings.
 
 .. testcode:: Paraboloid_derivative
 
-        x = Float(0.0, iotype='in', desc='The variable x', fd_step=0.01)
+        from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+        model = OptimizationConstrained()
+        model.driver.gradient_options.fd_form = 'central'
+        model.driver.gradient_options.fd_step_size = 1.0e-3
+        model.driver.gradient_options.fd_step_type = 'relative'
+
+The default form for finite difference is a forward difference, but sometimes
+you may want the second order accuracy of a central difference (and you are
+fine with the extra execution per call.) The default stepsize is 1.0e-6,
+which will not be adequate for your problem if your variable is very large or
+small, so it is essential to choose this value carefully. Fiinally, the
+default step type is 'absolute', but you may want to set it to 'relative' for
+variables that have a wider range of possible magnitudes. Relative
+differencing calculates a step size by taking the current variable value and
+multipying it by the fd_step_size value.
+
+You can also tell a driver to ignore all analytic derivatives and just use finite
+difference.
+
+.. testcode:: Paraboloid_derivative
+
+        from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+        model = OptimizationConstrained()
+        model.driver.gradient_options.force_fd = True
         
-The default stepsize is 1.0e-6, which will not be adequate for your problem if your
-variable is very large or small, so it is essential to choose this value carefully.
+This also disables fake finite-difference for the driver, so it is truly just finite
+differencing the whole workflow at once.
+
+Finally, there are a couple of settings for the analytic solution of the system equations
+that yields the derivatives. OpenMDAO uses Scipy's GMRES solver, and it exposes both it's
+tolerance and it's maximum iteration count to be controlled by the user.
+
+.. testcode:: Paraboloid_derivative
+
+        from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+        model = OptimizationConstrained()
+        model.driver.gradient_options.gmres_tolerance = 1.0e-9
+        model.driver.gradient_options.maxiter = 100
+
+
+For fine control of the finite difference stepsize, some of the global
+settings are also able to be overriden by specifying them as metadata in the
+`Variable` definition. Consider the following variables:
+
+.. testcode:: Paraboloid_derivative
+
+        x1 = Float(0.0, iotype='in', fd_step=0.01)
+        x2 = Float(0.01, iotype='in', fd_step_type='relative')
+        x3 = Float(1000.0, iotype='in', fd_step = 0.1, fd_form='central')
+        
+Here, we have locally set the finite difference stepsize on x1 to 0.01. For x2,
+we chose to use a relative stepsize instead of an absolute one, which means that the
+global stepsize of 1.0e-6 that is set in the driver is applied to this variable as
+a relative stepsize. Finally, x3 assigns a stepsize of 0.1, but a central difference
+will be performed instead of a forward difference.
+
+You may also want to force OpenMDAO to finite difference a component even though you
+have defined derivatives for it. You can do this by setting its ``force_fd`` attribute
+to True.
+
+.. testcode:: Paraboloid_derivative
+    :hide:
+    
+    from openmdao.main.api import Assembly, set_as_top
+    
+.. testcode:: Paraboloid_derivative
+
+    top = set_as_top(Assembly())
+    top.add('my_comp', ParaboloidDerivative())
+    top.my_comp.force_fd = True
+        

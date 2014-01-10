@@ -4,7 +4,7 @@ numpy fails to import and only very basic numpy functionality is being used.
 """
 
 try:
-    # pylint: disable-msg=E0611,F0401
+    # pylint: disable-msg=E0611,F0401,W0614
     import numpy
     from numpy import *
 except ImportError as err:
@@ -152,6 +152,10 @@ except ImportError as err:
                 raise ValueError("arrays have different shapes")
 
         __truediv__ = __div__
+
+        def copy(self):
+            """Return a copy of the array"""
+            return deepcopy(self)
 
         def flatten(self):
             """Return a copy of the array collapsed into one dimension"""

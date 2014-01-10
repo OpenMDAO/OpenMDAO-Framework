@@ -111,7 +111,7 @@ class ParameterBase(object):
             self.set(self.start, scope)
 
     def set(self, value, scope=None):
-        """Assigns the given value to the array referenced by this parameter,
+        """Assigns the given value to the target referenced by this parameter,
         must be overridden."""
         raise NotImplementedError('set')
 
@@ -251,6 +251,10 @@ class Parameter(ParameterBase):
         """Total scalar items in this parameter."""
         return 1
 
+    def configure(self):
+        """Reconfigure from potentially changed target."""
+        pass
+
     def get_high(self):
         """Returns upper limits as a sequence."""
         return [self.high]
@@ -269,7 +273,7 @@ class Parameter(ParameterBase):
 
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
-        self._expreval.set(self._transform(val), scope)
+        self._expreval.set(self._transform(val), scope, force=True)
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -356,6 +360,11 @@ class ParameterGroup(object):
     def targets(self):
         """A list containing the targets of this parameter."""
         return [p.target for p in self._params]
+
+    def configure(self):
+        """Reconfigure from potentially changed target."""
+        for param in self._params:
+            param.configure()
 
     def get_high(self):
         """Returns upper limits as a sequence."""
@@ -493,7 +502,7 @@ class ArrayParameter(ParameterBase):
 
         self.valtypename = _val.dtype.name
 
-        if _val.dtype.kind not in ('fi'):
+        if _val.dtype.kind not in 'fi':
             raise TypeError('Only float or int arrays are supported')
 
         dtype = self.dtype = _val.dtype
@@ -578,11 +587,19 @@ class ArrayParameter(ParameterBase):
         self._high = array(highs, dtype)
         self._low  = array(lows, dtype)
 
+        _fd_step = self._convert_sequence(fd_step, dtype)
+        if isinstance(_fd_step, ndarray):
+            self._fd_step = _fd_step.ravel()
+        else:
+            self._fd_step = [fd_step] * _val.size
+
     @staticmethod
     def _convert_sequence(val, dtype):
         """Convert sequence to array of dtype."""
         if isinstance(val, (list, tuple)):
             val = array(val, dtype).ravel()
+        elif isinstance(val, ndarray):
+            val = val.ravel()
         return val
 
     def _fetch(self, attr, val, i):
@@ -619,6 +636,38 @@ class ArrayParameter(ParameterBase):
         """Total scalar items in this parameter."""
         return self._size
 
+    def configure(self):
+        """Reconfigure from potentially changed target."""
+        val = self._expreval.evaluate()
+        if val.shape == self.shape:
+            return
+
+        for attr in ('low', 'high', 'scaler', 'adder', 'start', 'fd_step'):
+            if isinstance(getattr(self, attr), (list, tuple, ndarray)):
+                raise RuntimeError("Parameter %s can't be reconfigured,"
+                                   " '%s' was not specified as a scalar"
+                                   % (self, attr))
+        self.shape = val.shape
+        self._size = val.size
+        # .start, ._scaler, and ._adder are scalars.
+
+        if self._low.size:
+            self._low = array([self._low[0]] * val.size, self.dtype)
+            self._high = array([self._high[0]] * val.size, self.dtype)
+            self._fd_step = [self._fd_step[0]] * val.size
+        else:  # Started with empty array.
+            if self.low is None:
+                metadata = self.get_metadata()[1]
+                self._low = array([metadata.get('low')] * val.size, self.dtype)
+            else:
+                self._low = array([self.low] * val.size, self.dtype)
+            if self.high is None:
+                metadata = self.get_metadata()[1]
+                self._high = array([metadata.get('high')] * val.size, self.dtype)
+            else:
+                self._high = array([self.high] * val.size, self.dtype)
+            self._fd_step = [self.fd_step] * val.size
+
     def get_high(self):
         """Returns upper limits as a sequence."""
         return self._high
@@ -629,11 +678,7 @@ class ArrayParameter(ParameterBase):
 
     def get_fd_step(self):
         """Returns finite difference step size as a sequence."""
-        _fd_step = self._convert_sequence(self.fd_step, self.dtype)
-        if isinstance(_fd_step, ndarray):
-            return _fd_step.ravel()
-        else:
-            return [self.fd_step] * self._size
+        return self._fd_step
 
     def evaluate(self, scope=None):
         """Returns the value of this parameter as a sequence."""
@@ -658,10 +703,10 @@ class ArrayParameter(ParameterBase):
                                  % (value.size, self._size))
         else:
             value = value * ones(self.shape, self.dtype)
-        self._expreval.set(self._transform(value), scope)
+        self._expreval.set(self._transform(value), scope, force=True)
 
     def copy(self):
-        """Return a copy of this ParameterArray."""
+        """Return a copy of this parameter."""
         return ArrayParameter(self.target,
                               high=self.high, low=self.low,
                               scaler=self.scaler, adder=self.adder,
@@ -780,8 +825,8 @@ class HasParameters(object):
             parent_cnns = self._parent.parent.list_connections()
             for lhs, rhs in parent_cnns:
                 if rhs == target:
-                    self._parent.raise_exception("'%s' is already a Parameter"
-                                                 " target" % target,
+                    self._parent.raise_exception("'%s' is already connected"
+                                                 " to '%s'" % (target, lhs),
                                                  RuntimeError)
 
         if isinstance(target, (ParameterBase, ParameterGroup)):
@@ -822,10 +867,10 @@ class HasParameters(object):
                     if len(types) > 1:
                         raise ValueError("Can't add parameter %s because "
                                          "%s are not all of the same type" %
-                                         (key," and ".join(names)))
+                                         (key, " and ".join(names)))
                     target = ParameterGroup(parameters)
                 self._parameters[key] = target
-            except Exception as err:
+            except Exception:
                 self._parent.reraise_exception()
 
         self._parent.config_changed()
@@ -855,9 +900,9 @@ class HasParameters(object):
                                   name=name, scope=scope,
                                   _expreval=expreval, _val=val)
         else:
-            return Parameter(target, low=low, high=high, 
+            return Parameter(target, low=low, high=high,
                              scaler=scaler, adder=adder,
-                             start=start, fd_step=fd_step, 
+                             start=start, fd_step=fd_step,
                              name=name, scope=scope,
                              _expreval=expreval, _val=val)
 
@@ -871,6 +916,11 @@ class HasParameters(object):
                                          "that is not in this driver."
                                          % (name,), AttributeError)
         self._parent.config_changed()
+
+    def config_parameters(self):
+        """Reconfigure parameters from potentially changed targets."""
+        for param in self._parameters.values():
+            param.configure()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -909,7 +959,7 @@ class HasParameters(object):
             try:
                 self.add_parameter(param)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore parameter '%s': %s" 
+                self._parent._logger.warning("Couldn't restore parameter '%s': %s"
                                               % (pname, str(err)))
 
     def list_param_targets(self):

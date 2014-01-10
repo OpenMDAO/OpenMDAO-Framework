@@ -50,7 +50,7 @@ if __name__ == "__main__": # pragma: no cover
     import time
     import math
     
-    prob = SellarBLISS()
+    prob = SellarBLISS2000()
     prob.name = "top"
             
     tt = time.time()

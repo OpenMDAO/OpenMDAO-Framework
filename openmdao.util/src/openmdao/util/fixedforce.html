@@ -1,0 +1,199 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+    <style>
+
+    html, body {
+      margin: 0;
+      padding: 0;
+    }
+
+    svg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .link {
+      stroke: #000;
+      stroke-width: 1.5px;
+      marker-mid: url(#mArrow);
+      fill: none;
+    }
+
+    .node {
+      cursor: move;
+      fill: #ccc;
+      stroke: #000;
+      stroke-width: 1.5px;
+    }
+
+    .node.fixed {
+      fill: #f00;
+    }
+
+    #arrowPath {
+      fill: none;
+      stroke: black;
+    }
+
+    </style>
+  <title>Fixed force layout</title>
+  <script type="text/javascript" src="d3.js"></script>
+  <script type="text/javascript" src="__graph.js"></script>
+</head>
+<body>
+<script type="text/javascript" charset="utf-8">
+
+var graph = __mygraph__json;
+
+window.document.title = graph.graph[0]['title']
+
+var width = 960,
+    height = 500;
+
+var color = d3.scale.category20();
+
+var force = d3.layout.force()
+    .size([width, height])
+    .charge(-300)
+    .linkDistance(function(lnk, idx) {
+            // source and target are node objects at this point
+            var sparts = lnk.source.id.split(".");
+            var tparts = lnk.target.id.split(".");
+            // make var comp and var to subvar connections shorter
+            if (sparts[0] === tparts[0]) {
+                return 10;
+            }
+            else {
+                return 40;
+            }
+    })
+    .linkStrength(function(lnk, idx) {
+                var sparts = lnk.source.id.split(".");
+                var tparts = lnk.target.id.split(".");
+                // make var comp and var to subvar connections stronger
+                if (sparts[0] === tparts[0]) {
+                    return 2.8;
+                }
+                else {
+                    return 0.7;
+                }
+    })
+    .on("tick", tick);
+
+var drag = force.drag()
+    .on("dragstart", dragstart);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+
+svg.append("marker")
+   .attr("id", "mArrow")
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 10)
+    .attr("refX", 0)
+    .attr("refY", 4)
+    .attr("orient", "auto")
+   .append("path")
+   .attr("id", "arrowPath")
+   .attr("d", "M 0 0 4 4 0 8");
+
+var link = svg.selectAll(".link"),
+    node = svg.selectAll(".node");
+
+  force.nodes(graph.nodes)
+       .links(graph.links)
+       .start();
+
+  link = link.data(graph.links)
+    .enter()
+    .append("path")
+    .attr("class", "link");
+
+  node = node.data(graph.nodes)
+    .enter()
+    .append("g")
+    .attr("class", "nodegroup")
+    .call(drag);
+
+  node.append("circle")
+      .attr("class", "node")
+      .attr("style", function(node) {
+        return "fill: "+color(node.color_idx)
+      })
+      .attr("r", function(node) {
+        if (node.comp) {
+          node.r = 15
+        }
+        else {
+          node.r = 10;
+        }
+        return node.r;
+      });
+
+  node.append("text")
+      .attr("dx", 16)
+      .attr("dy", ".35em")
+      .text(function(d) { d.telem = this; return d.short; });
+
+  node.append("svg:title")
+    .text(function(node) {
+      return node.title;
+    })
+
+function tick() {
+  // for links, use a two piece path instead of a line so
+  // we can easily (using a marker) put an arrow in the
+  // middle of the link
+  link.attr("d", function(d) {
+        var ratio = d.source.r / d.target.r;
+        var pth = [d.source.x, d.source.y,
+                   d.source.x+(d.target.x-d.source.x)*0.5*ratio,
+                   d.source.y+(d.target.y-d.source.y)*0.5*ratio,
+                   d.target.x, d.target.y
+                  ];
+        return "M "+pth.join(" ");
+      });
+
+  // node.select('.node')
+  //     .attr("r", function(d) {
+  //        return d.telem.getBBox().width * 0.6;
+  //     });
+
+  node.attr("transform", function(d) { 
+    //var w = Number(svg.style("width").split("p")[0]);
+    //var h = Number(svg.style("height").split("p")[0]);
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    
+    if (d.x > w) {
+      d.x = w;
+    }
+    else if (d.x < 0) {
+      d.x = 0;
+    }
+    if (d.y > h) {
+      d.y = h;
+    }
+    else if (d.y < 0) {
+      d.y = 0;
+    }
+
+
+    return "translate(" + d.x + "," + d.y + ")"; });
+}
+
+function dragstart(d) {
+  d.fixed = true;
+  d3.select(this).classed("fixed", true);
+}
+
+</script>
+</body>
+</html>
+

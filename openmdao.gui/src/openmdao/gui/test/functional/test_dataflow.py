@@ -896,13 +896,13 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", "iout", "iprint", "maxiter", "output_filename", "printvars", "directory", "force_execute", "force_fd"],
+        ["accuracy", " gradient_options", "iout", "iprint", "maxiter", "output_filename", "directory", "force_execute", "force_fd", "printvars"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["force_fd", "force_execute", "directory", "printvars", "output_filename", "maxiter", "iprint", "iout", "accuracy"],
+        ["printvars", "force_fd", "force_execute", "directory", "output_filename", "maxiter", "iprint", "iout", " gradient_options", "accuracy"],
         "inputs",
         SortOrder.DESCENDING
     )

@@ -2,7 +2,7 @@
 import ast
 from threading import RLock
 
-from openmdao.main.numpy_fallback import array
+from openmdao.main.numpy_fallback import array, ndarray, hstack
 
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.printexpr import transform_expression, print_node
@@ -297,7 +297,10 @@ class PseudoComponent(object):
     def linearize(self):
         """Calculate analytical first derivatives."""
         grad = self._srcexpr.evaluate_gradient()
-        self.J = array([[grad[n] for n in self._inputs]])
+        if isinstance(grad[self._inputs[0]], ndarray):
+            self.J = hstack([grad[n] for n in self._inputs])
+        else:
+            self.J = array([[grad[n] for n in self._inputs]])
 
     def provideJ(self):
         return tuple(self._inputs), ('out0',), self.J

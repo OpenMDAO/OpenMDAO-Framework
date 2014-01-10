@@ -118,7 +118,7 @@ class Testcase_provideJ(unittest.TestCase):
             inputs['vvt.a1'] = 0
             inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
 
-            applyJ(comp, inputs, outputs)
+            applyJ(comp, inputs, outputs, [])
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -570,6 +570,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             print 'Actual:\n%s' % actual
             self.fail("check_gradient() output doesn't match expected")
 
+        stream = StringIO()
+        top.comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+        stream = StringIO()
+        comp = Paraboloid()
+        comp.x = 3
+        comp.y = 5
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+            
+        # now do it again to make sure name and parent were properly reset
+        Jbase, J, io_pairs, suspects = comp.check_gradient(stream=stream)
+        actual = stream.getvalue()
+        if re.match(expected, actual) is None:
+            print 'Expected:\n%s' % expected
+            print 'Actual:\n%s' % actual
+            self.fail("check_gradient() output doesn't match expected")
+
+
     def test_input_as_output(self):
         
         top = set_as_top(Assembly())
@@ -665,9 +693,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='forward')
         
         edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['~~0.comp1|y']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['~~0.comp2|y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp1|x', '_pseudo_0.in1']))
+        self.assertEqual(set(edges['~0.comp1|y']), set(['_pseudo_0.in0']))
+        self.assertEqual(set(edges['~0.comp2|y']), set(['_pseudo_0.in2']))
+        self.assertEqual(set(edges['@in0']), set(['~0.comp1|x', '_pseudo_0.in1']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(len(edges), 4)
 
@@ -727,14 +755,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         
         top.run()
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
         
         edges = top.driver.workflow._edges
-        print edges
-        self.assertEqual(set(edges['~~0.comp|y[0]']), set(['_pseudo_0.in0']))
+        #print edges
+        self.assertEqual(set(edges['~0.comp|y[0]']), set(['_pseudo_0.in0']))
         self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out1']))
-        self.assertEqual(set(edges['@in0']), set(['~~0.comp|x']))
+        self.assertEqual(set(edges['@in0']), set(['~0.comp|x']))
         self.assertEqual(set(edges['@in0[0]']), set(['_pseudo_1.in0']))
         self.assertEqual(len(edges), 5)
         
@@ -1811,7 +1839,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0', 'comp4', '~~1'] == iterlist)
+        self.assertTrue(['~0', 'comp4', '~1'] == iterlist)
         
         # Case 2 - differentiable (none)
         
@@ -1835,7 +1863,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0'] == iterlist)
+        self.assertTrue(['~0'] == iterlist)
         
         # Case 3 - differentiable (comp5)
         
@@ -1859,7 +1887,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~~0', 'comp5'] == iterlist)
+        self.assertTrue(['~0', 'comp5'] == iterlist)
         
         # Case 4 - differentiable (comp1, comp3, comp5)
         
@@ -1885,7 +1913,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow._derivative_graph._component_graph = None
         cgraph = self.top.driver.workflow._derivative_graph.component_graph()
         iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['comp1', 'comp3', '~~0', 'comp5'] == iterlist)
+        self.assertTrue(['comp1', 'comp3', '~0', 'comp5'] == iterlist)
         
         # Put everything in a single pseudo-assy, and run fd with no fake.
         self.top.driver.workflow.config_changed()
@@ -2055,6 +2083,20 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               outputs=['comp1.y1'],
                                               mode = 'adjoint')
         assert_rel_error(self, J[0, 0], 9.0, .001)
+
+    def test_paramgroup_with_scaler(self):
+        
+        top = set_as_top(Assembly())
+        top.add('comp1', GComp_noD())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+        
+        top.driver.add_parameter(['comp1.x1', 'comp1.x2'], low=-100, high=100, scaler=2.0)
+        top.driver.add_objective('comp1.y1')
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
         
 class Comp2(Component):
     """ two-input, two-output"""
@@ -2166,7 +2208,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
         
-        applyJ(comp, arg, result)
+        applyJ(comp, arg, result, [])
         
         self.assertEqual(result['y1'], 8.0)
         self.assertEqual(result['y2'], 18.0)
@@ -2181,7 +2223,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
@@ -2198,7 +2240,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['y[1, 0]'] = array([0.0])
         
-        applyJ(comp, arg, result)
+        applyJ(comp, arg, result, [])
         
         self.assertEqual(result['y[1, 0]'], 5.0)
         
@@ -2209,7 +2251,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x[0, 1]'], 5.0)
         
@@ -2220,7 +2262,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
         
-        applyJT(comp, arg, result)
+        applyJT(comp, arg, result, [])
         
         self.assertEqual(result['x[0, 1]'], 138.0)
         

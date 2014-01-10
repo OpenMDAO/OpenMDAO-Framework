@@ -20,4 +20,5 @@ from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.distributioncasedriver import DistributionCaseDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.drivers.mda_solver import MDASolver
+from openmdao.lib.drivers.brent import Brent
 
