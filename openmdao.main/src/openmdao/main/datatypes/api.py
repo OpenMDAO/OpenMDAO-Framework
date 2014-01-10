@@ -10,6 +10,7 @@ from openmdao.main.datatypes.float import Float
 from openmdao.main.datatypes.file import File, FileRef
 from openmdao.main.datatypes.geom import Geom
 from openmdao.main.datatypes.int import Int
+from openmdao.main.datatypes.instance import Instance
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.str import Str

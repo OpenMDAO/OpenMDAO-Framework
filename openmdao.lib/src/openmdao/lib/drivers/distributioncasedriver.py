@@ -108,7 +108,7 @@ class DistributionCaseDriver(CaseIterDriverBase):
     implements(IHasParameters)
 
     distribution_generator = Slot(IDistributionGenerator,
-                                  iotype='in', required=True,
+                                  required=True,
                        desc='Iterator supplying values of point distribitions.')
 
     case_outputs = List(Str, iotype='in',

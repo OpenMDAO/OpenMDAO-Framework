@@ -21,7 +21,7 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 
-from openmdao.main.datatypes.api import Float, Bool, Array, Int, Slot, Str, \
+from openmdao.main.datatypes.api import Float, Bool, Array, Instance, Int, Slot, Str, \
                                         List, VarTree
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
@@ -96,7 +96,7 @@ class MyModel(Assembly):
 class Generator(Component):
     """ Generates cases to be evaluated. """
 
-    cases = Slot(ICaseIterator, iotype='out')
+    cases = Instance(ICaseIterator, iotype='out')
 
     def execute(self):
         """ Generate some cases to be evaluated. """
@@ -114,7 +114,7 @@ class Generator(Component):
 class Verifier(Component):
     """ Verifies evaluated cases. """
 
-    cases = Slot(ICaseIterator, iotype='in')
+    cases = Instance(ICaseIterator, iotype='in')
 
     def execute(self):
         """ Verify evaluated cases. """
@@ -581,7 +581,7 @@ class C1_l(Component):
     val = Int(0, iotype='out')
 
     def execute(self):
-        self.val = self.l[self.i]        
+        self.val = self.l[self.i]
 
 class A_l(Assembly):
     def configure(self):
@@ -595,7 +595,7 @@ class A_l(Assembly):
         self.c0.N = N
 
         self.parallel_driver.iterator = \
-            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)]) 
+            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)])
         self.parallel_driver.workflow.add(['c1'])
         self.parallel_driver.recorders.append(ListCaseRecorder())
         self.parallel_driver.printvars=['c1.val']
@@ -619,7 +619,7 @@ class C1_vt(Component):
     val = Int(0, iotype='out')
 
     def execute(self):
-        self.val = self.vt.l[self.i]        
+        self.val = self.vt.l[self.i]
 
 class A_vt(Assembly):
     def configure(self):
@@ -633,7 +633,7 @@ class A_vt(Assembly):
         self.c0.N = N
 
         self.parallel_driver.iterator = \
-            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)]) 
+            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)])
         self.parallel_driver.workflow.add(['c1'])
         self.parallel_driver.recorders.append(ListCaseRecorder())
         self.parallel_driver.printvars=['c1.val']

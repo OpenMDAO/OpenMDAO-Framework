@@ -74,7 +74,7 @@ class Genetic(Driver):
     elitism = Bool(False, iotype="in", desc="Controls the use of elitism in "
                                             "the creation of new generations.")
 
-    best_individual = Slot(klass = GenomeBase.GenomeBase, iotype="out",
+    best_individual = Slot(klass = GenomeBase.GenomeBase,
                                desc="The genome with the "
                                "best score from the optimization.")
 

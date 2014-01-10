@@ -20,17 +20,17 @@ class ParetoFilter(Component):
                          "filtering. Note that only case outputs are allowed as "
                          "criteria.")
 
-    #case_set = Slot(ICaseIterator, iotype="in",
+    #case_set = Slot(ICaseIterator,
     #                    desc="CaseIterator with the cases to be filtered to "
     #                         "Find the pareto optimal subset.")
 
-    case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
+    case_sets = List(Slot(ICaseIterator), value=[],
                      desc="CaseSet with the cases to be filtered to "
                      "find the pareto optimal subset.")
 
-    pareto_set = Slot(CaseSet, iotype="out",
+    pareto_set = Slot(CaseSet,
                         desc="Resulting collection of pareto optimal cases.", copy="shallow")
-    dominated_set = Slot(CaseSet, iotype="out",
+    dominated_set = Slot(CaseSet,
                            desc="Resulting collection of dominated cases.", copy="shallow")
 
     def _is_dominated(self, y1, y2):

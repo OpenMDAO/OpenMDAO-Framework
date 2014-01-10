@@ -72,6 +72,7 @@ class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
     def configure(self):
+	d = DOEdriver()
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
