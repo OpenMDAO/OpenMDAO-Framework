@@ -99,8 +99,6 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         self.top.geom.plug.X[1] = 2
         self.top.run()
         p2 = self.top.rec.out.copy()
-# lack of invalidation means this won't work
-#        self.assertFalse(np.any(p0-p2)) #p0-p2 should be all 0
 
         self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
         self.top.run()

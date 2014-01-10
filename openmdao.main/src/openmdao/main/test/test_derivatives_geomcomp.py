@@ -50,6 +50,9 @@ class DummyGeometry(object):
     def get_parameters(self, names): 
         return [self.vars[n] for n in names]
 
+    def list_deriv_vars(self): 
+        return ('x', 'y', 'z'), ('out')
+
     def linearize(self): 
         self.J = np.array([[2, 0, 1],
                            [0, 2, 1]])
