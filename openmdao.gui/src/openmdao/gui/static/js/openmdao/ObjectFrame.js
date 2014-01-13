@@ -25,6 +25,8 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         _tabNames = [
             'Inputs',
             'Outputs',
+            'States',
+            'Residuals',
             'Parameters',
             'Objectives',
             'Constraints',
@@ -35,7 +37,8 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             'Workflow',
             'Slots'
         ],
-        _panes = {};
+        _panes = {},
+        _updates = [];  // queue for updates
 
     _self.elm.css({'overflow':'hidden'});
 
@@ -59,6 +62,16 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             _panes[name].loadData(val);
         }
         else if (name === 'Outputs') {
+            _panes[name] = new openmdao.PropertiesPane(contentPane, project,
+                                pathname, name, false, true);
+            _panes[name].loadData(val);
+        }
+        else if (name === 'States') {
+            _panes[name] = new openmdao.PropertiesPane(contentPane, project,
+                                pathname, name, false, true);
+            _panes[name].loadData(val);
+        }
+        else if (name === 'Residuals') {
             _panes[name] = new openmdao.PropertiesPane(contentPane, project,
                                 pathname, name, false, true);
             _panes[name].loadData(val);
@@ -141,7 +154,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
     }
 
     /** load object properties into the respective tabbed panes */
-    function loadData(properties) {
+    function loadData(properties, deferred) {
         var names, name, val;
 
         // remove click handlers from existing tabs before updating
@@ -164,6 +177,8 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             _self.close();
         }
 
+        debug.info(pathname, 'Updating tabs', names);
+
         // update existing type/tabs, add any new tabs
         for (var i=0; i<names.length; i++) {
             name = names[i];
@@ -173,6 +188,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
                 _self.setTitle(val + ': ' + pathname);
             }
             else if (_panes[name]) {
+                debug.info('Updating tab', name, val);
                 _panes[name].loadData(val);
             }
             else if (name !== 'Slots' || val.length) {
@@ -206,6 +222,25 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         _tabs.find('.ui-tabs-anchor').on('click', function(ev, data) {
             selectTabName = ev.currentTarget.text;
         });
+
+        deferred.resolve();
+    }
+
+    function queueUpdate(data) {
+        var old_update = _updates.shift(),
+            new_update = jQuery.Deferred();
+
+        _updates.push(new_update);
+
+        if (old_update) {
+            // an update is already in progress, wait until it's done
+            jQuery.when(old_update).done(function() {
+                loadData(data, new_update);
+            });
+        }
+        else {
+            loadData(data, new_update);
+        }
     }
 
     /** update with data from incoming message */
@@ -216,7 +251,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         }
         else {
             if (Object.keys(message[1]).length > 0) {
-                loadData(message[1]);
+                queueUpdate(message[1]);
             }
             else {
                 _self.close();  // no data means the object was deleted
@@ -243,7 +278,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             }
         });
 
-        loadData(properties);
+        queueUpdate(properties);
 
         project.addListener(pathname, handleMessage);
 
@@ -258,7 +293,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
 
     /** get the object properties from project, load data into tabbed panes */
     this.update = function(callback) {
-        callback = callback || loadData;
+        callback = callback || queueUpdate;
         project.getObject(pathname)
             .done(callback)
             .fail(function(jqXHR, textStatus, error) {

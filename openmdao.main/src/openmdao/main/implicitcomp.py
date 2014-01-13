@@ -5,20 +5,21 @@ from scipy.sparse.linalg import gmres, LinearOperator
 import numpy as np
 
 from openmdao.main.array_helpers import flattened_value
-from openmdao.main.component import Component 
+from openmdao.main.component import Component
 from openmdao.main.datatypes.api import Bool
 from openmdao.main.derivatives import applyJ
 from openmdao.main.interfaces import IImplicitComponent, IVariableTree, implements
 from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 
+
 class ImplicitComponent(Component):
     implements(IImplicitComponent)
-    
+
     eval_only = Bool(False, iotype='in', framework_var=True,
                      desc='Set to True to have this comp perform a single '
                            'evaluate when execute() is called.')
-    
+
     def __init__(self):
         super(ImplicitComponent, self).__init__()
         self._state_names = None
@@ -43,9 +44,9 @@ class ImplicitComponent(Component):
 
     @rbac(('owner', 'user'))
     def list_residuals(self):
-        """Return a list of names of residual variables in alphabetical 
-        order. This specifies the order the residual vector, so if you use 
-        a different order internally, override this function to return the 
+        """Return a list of names of residual variables in alphabetical
+        order. This specifies the order the residual vector, so if you use
+        a different order internally, override this function to return the
         residuals in the desired order.
         """
 
@@ -72,12 +73,12 @@ class ImplicitComponent(Component):
         """ Performs either an internal solver or a single evaluation.
         Do not override this function.
         """
-        
+
         if self.eval_only:
             self.evaluate()
         else:
             self.solve()
-        
+
     def get_residuals(self):
         """Return a vector of residual values."""
         resids = []
@@ -93,7 +94,7 @@ class ImplicitComponent(Component):
         return np.array(states)
 
     def set_state(self, X):
-        """Take the given state vector and set its values into the 
+        """Take the given state vector and set its values into the
         correct state variables.
         """
         unused = len(X)
@@ -125,20 +126,20 @@ class ImplicitComponent(Component):
     def solve(self):
         """Calculates the states that satisfy residuals using scipy.fsolve.
         You can override this function to provide your own internal solve."""
-        
+
         x0 = self.get_state()
-        
-        # If our comp doesn't have derivatives, let the internal solver 
+
+        # If our comp doesn't have derivatives, let the internal solver
         # calculate them however it does
         fprime = None
         if hasattr(self, 'linearize'):
             fprime = self._jacobian_callback
-            
+
         fsolve(self._solve_callback, x0, fprime=fprime)
 
-    def _solve_callback(self, X): 
-        """This function is passed to the internal solver to set a new state, 
-        evaluate the residuals, and return them.""" 
+    def _solve_callback(self, X):
+        """This function is passed to the internal solver to set a new state,
+        evaluate the residuals, and return them."""
 
         self.set_state(X)
         self.evaluate()
@@ -148,90 +149,90 @@ class ImplicitComponent(Component):
     def _jacobian_callback(self, X):
         """This function is passed to the internal solver to return the
         jacobian of the states with respect to the residuals."""
-        
+
         n_edge = 2*len(X)
         n_res = n_edge/2
-        
+
         A = LinearOperator((n_edge, n_edge),
                            matvec=self._matvecFWD,
                            dtype=float)
         J = np.zeros((n_res, n_res))
-        
+
         self.linearize()
-        
+
         for irhs in np.arange(n_res):
 
             RHS = np.zeros((n_edge, 1))
             RHS[irhs, 0] = 1.0
-            
+
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
                              tol=1.0e-9,
                              maxiter=100)
-        
+
             J[:, irhs] = dx[n_res:]
-            
+
         return J
 
     def _matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         state-to-residual Jacobian with an incoming vector arg.'''
-        
+
         result = np.zeros(len(arg))
-        
+
         comp_inputs = self.list_states()
         comp_outputs = self.list_residuals()
         inputs = {}
         outputs = {}
-        
+
         idx = 0
-        
+
         for varname in comp_inputs:
             val = getattr(self, varname)
             flatval = flattened_value(varname, val)
             size = len(flatval)
-            
+
             i1, i2 = idx, idx + size
             inputs[varname] = arg[i1:i2].copy()
-            
+
             idx += size
-        
+
         for varname in comp_outputs:
             val = getattr(self, varname)
             flatval = flattened_value(varname, val)
             size = len(flatval)
-            
+
             i1, i2 = idx, idx + size
             inputs[varname] = arg[i1:i2].copy()
             outputs[varname] = arg[i1:i2].copy()
-            
+
             idx += size
-            
+
         applyJ(self, inputs, outputs, [])
         #print inputs, outputs
-        
+
         idx = 0
-        
+
         # Each state input adds an equation
         for varname in comp_inputs:
             val = getattr(self, varname)
             flatval = flattened_value(varname, val)
             size = len(flatval)
-            
+
             i1, i2 = idx, idx + size
             result[i1:i2] = arg[i1:i2].copy()
-            
+
             idx += size
-        
+
         for varname in comp_outputs:
             val = getattr(self, varname)
             flatval = flattened_value(varname, val)
             size = len(flatval)
-            
+
             i1, i2 = idx, idx + size
             result[i1:i2] = outputs[varname]
-            
+
             idx += size
-                
+
         #print arg, result
         return result

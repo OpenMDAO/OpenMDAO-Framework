@@ -22,7 +22,9 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         _collapsed = {},
         _filter = {},
         editableInTable = {};
+
     self.pathname = pathname;
+
     if (editable) {
         options.editable = true;
         options.autoEdit = true;
@@ -113,7 +115,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
        function connectedToString(connections){
            var connected = connections.connected !== undefined ? connections.connected : connections;
            var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
-            
+
            return connected + partially_connected;
        }
 
@@ -121,7 +123,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             "high" : numberToString,
             "low" : numberToString,
             "high-low" : highLowToString,
-            "connected" : connectedToString,
+            "connected" : connectedToString
        };
 
        function hasFormatter(key) {
@@ -247,7 +249,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         newItem = itemFormatter.cloneItem(item);
 
         newItem = itemFormatter.groupFields(["high", "low"], "high-low", item);
-        
+
         newItem = itemFormatter.removeFields(newItem, getExcludes());
 
         fields = itemFormatter.orderFields(newItem, weightedSort);
@@ -562,7 +564,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         dataView.refresh();
         highlightCells();
         jQuery(this).trigger('dialogresizestop');
-    }
+    };
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
