@@ -154,8 +154,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -185,8 +185,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -214,8 +214,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -240,8 +240,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -267,8 +267,8 @@ class CONMINdriverTestCase(unittest.TestCase):
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
                                self.top.comp.x[1], places=2)
-        assert_rel_error(self, self.top.comp.opt_design_vars[2],
-                         self.top.comp.x[2], 0.01)
+        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
+                               self.top.comp.x[2], places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[3], places=1)
 
@@ -406,8 +406,8 @@ class TestCase1D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -431,8 +431,8 @@ class TestCase1D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -449,8 +449,8 @@ class TestCase1D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -472,8 +472,8 @@ class TestCase1D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -507,16 +507,16 @@ class TestCase2D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0][0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[0][1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[1][0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[1][1], places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0][0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[0][1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[1][0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[1][1], 0.05)
 
     def test_openmdao_gradient(self):
         # Run with 2D parameter and OpenMDAO gradient.
@@ -526,8 +526,8 @@ class TestCase2D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0][0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0][0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[0][1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -562,16 +562,16 @@ class TestCaseMixed(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x0, places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x12[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x12[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x3, places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x0, 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x12[0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x12[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x3, 0.05)
 
     def test_openmdao_gradient(self):
         # Run with mixed parameters and OpenMDAO gradient.
@@ -581,8 +581,8 @@ class TestCaseMixed(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x0, places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x0, 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x12[0], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
