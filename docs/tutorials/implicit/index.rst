@@ -10,7 +10,7 @@ explicit function of outputs with respect to its inputs.
     .. math::
          y = F(x)
 
-OpenMDAO also allows you to define a component that represents an implicit function of the
+OpenMDAO also allows us to define a component that represents an implicit function of the
 same variables:
 
     .. math::
@@ -18,7 +18,7 @@ same variables:
 
 Here, the variable `x` is a known input that is passed to the implicit
 component, but the variable `y`, called the `state`, is an unknown that needs
-to be solved in order to satisfy the equation. The left hand side of the
+to be solved to satisfy the equation. The left-hand side of the
 implicit equation is called the `residual`. Since an implicit function may
 not have a closed-form solution, the `state` is typically determined by numerically
 solving the residual equation, or in other words, iterating on the state until the
@@ -27,16 +27,16 @@ residual is driven to zero.
 An implicit equation can be solved using the base `Component` class in
 OpenMDAO as long as the component solves the residual equations in its
 `execute` method. However, there are some advantages to letting OpenMDAO be
-aware of states and residuals. First, this allows you to define analytic
+aware of states and residuals. First, this allows us to define analytic
 derivatives so that the implicit component can form part of the coupled
 solution of the full model gradient without having to resort to finite
 difference. In addition, solving the residual equations can be performed by
 OpenMDAO, both locally as part of the execution of the implicit component, as well
-as globally if you want to converge your implicit component simultaneously with
+as globally if we want to converge our implicit component simultaneously with
 other solver loops in the model.
 
 For the sake of convenience, we've broadened the definition of an implicit component
-to allow the inclusion of additional inputs and outputs that aren't part of the implicit
+to include additional inputs and outputs that aren't part of the implicit
 equations.
 
     .. math::
@@ -45,8 +45,8 @@ equations.
     .. math::
            z = F(x, y, u)
 
-In this set of equations, `u` is an input that does not affect the residuals, and 'z' is
-an output that is not a state, but satisfies an additional explicit equation. This is 
+In this set of equations, `u` is an input that does not affect the residuals, and `z` is
+an output that is not a state but satisfies an additional explicit equation. This is 
 analogous to the output equation of a state space model in control theory.
 
 Let's set up a simple component that can solve this set of equations, three
@@ -68,15 +68,15 @@ of which are implicit while one is explicit:
 In these equations, the states are `x`, `y`, and `z`, and the residuals are
 `r0`, `r1`, and `r2`. The variable `c` is a normal input, and `y_out` is an
 explicit output. Note that the number of states must equal the number of
-residuals in order for the system to have a unique and valid solution. You
-can start defining your implicit component by inheriting from
+residuals for the system to have a unique and valid solution. We
+can start defining our implicit component by inheriting from
 `ImplicitComponent` instead of `Component`. This class allows the definition
 of two additional iotypes: `state` and `residual`.
 
 When an ImplicitComponent executes, it must solve its residual equations to find
-its states. You can provide this method, or you can use the one built into the
-ImplicitComponent base class, which calls scipy.optimize.fsolve. We will use the
-built-in here, and don't need to define a new method called `evaluate` which is
+its states. We can provide this method, or we can use the one built into the
+ImplicitComponent base class, which calls ``scipy.optimize.fsolve``. We will use the
+built-in here and don't need to define a new method called `evaluate` which is
 called during the iterative solution. The `evaluate` function needs to calculate
 the residuals for the current value of the state. It should also calculate any
 explicit outputs.
@@ -123,9 +123,9 @@ Let's write our first implicit component.
             
             self.y_out = c + x + y + z
         
-We have taken our 3 residuals and placed them in a single variable array
-called `res`, but you could also create a separate floating point variable
-for each of them. Also, the initial value of our states serves as their
+We have taken our three residuals and placed them in a single variable array
+called `res`, but we could also create a separate floating point variable
+for each of them. Also, the initial values of our states serve as the 
 initial conditions for their iterative solution. Now, let's put this in an
 assembly:
 
@@ -154,10 +154,10 @@ and run the model. We will let the implicit component solve its own residuals.
 The implicit component completes its iteration until the state values satisfy
 the residual equations. We can also configure an OpenMDAO solver to solve for
 the states. Here, we set up a new assembly with the Brent solver as the top
-driver. Then we assign the states as the solver's parameters, and constrain
+driver. Then we assign the states as the solver's parameters and constrain
 the residuals to be equal to zero. Also, we don't want the implicit
 component's internal solver to solve this in competition with the BroydenSolver
-solver, so we set `eval_only` to True. This means that running the implicit
+solver, so we set ``eval_only`` to True. This means that running the implicit
 component just runs the `eval` statement we defined in the class definition.
 
 .. testcode:: implicit
@@ -191,14 +191,14 @@ Now, when we run the model, we get the same solution for the state.
         >>> print top.comp.x, top.comp.y, top.comp.z
         1.0 -2.3333... -2.1666...
 
-Finally, since one of the advantageous to this implementation of implicit components is
-in the derivative calculation, lets specify the analytic derivatives for this simple
-set of equations using the `apply_deriv` and `apply_derivT` methods. To do this, we need
+Finally, since one of the advantages to this implementation of implicit components is
+in the derivative calculation, let's specify the analytic derivatives for this simple
+set of equations using the ``apply_deriv`` and ``apply_derivT`` methods. To do this, we need
 to provide all permutations of the derivatives: namely, the derivatives of the residuals
 with respect to both the states and the explicit inputs, and the derivatives of the
 explicit output with respect to both the states and the explicit inputs. Here, we specify
-these as separate Jacobians in the `linearize` method, but this was purely to make the
-matrix-vector multiplication in `apply_deriv` and `apply_derivT` clean and simple.
+these as separate Jacobians in the ``linearize`` method, but this was purely to make the
+matrix-vector multiplication in ``apply_deriv`` and ``apply_derivT`` clean and simple.
 
 .. testcode:: implicit
 
@@ -281,5 +281,5 @@ matrix-vector multiplication in `apply_deriv` and `apply_derivT` clean and simpl
                         if outp in arg:
                             result[inp] += self.J_output_input.T[k, j]*arg[outp]
 
-Specifying these derivative function removes the need for finite differencing this 
+Specifying these derivative functions removes the need for finite differencing this 
 component in any workflow.
