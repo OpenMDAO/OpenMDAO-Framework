@@ -263,14 +263,14 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[2], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
