@@ -94,7 +94,7 @@ We are now going to tell the ``DOEdriver`` what parameters to vary. Click the Pa
 Parameter** button in the lower left, add six  parameters using the values in the following table. 
 
 ========================  ==========  ==========
-``Target``                ``Low``     ``High``
+Target                    Low         High
 ========================  ==========  ==========
 ``gc.plug.R[7]``            -0.1        0.5
 ------------------------  ----------  ----------
