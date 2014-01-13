@@ -8,14 +8,12 @@ In the basic tutorial, we learned how to define an OpenMDAO component that repre
 explicit function of outputs with respect to its inputs. 
 
     .. math::
-
-       y = F(x)
+         y = F(x)
 
 OpenMDAO also allows you to define a component that represents an implicit function of the
 same variables:
 
     .. math::
-
        R(x, y) = 0
 
 Here, the variable `x` is a known input that is passed to the implicit
@@ -42,9 +40,9 @@ to allow the inclusion of additional inputs and outputs that aren't part of the 
 equations.
 
     .. math::
-
            R(x, y) = 0
-           
+
+    .. math::
            z = F(x, y, u)
 
 In this set of equations, `u` is an input that does not affect the residuals, and 'z' is
@@ -56,17 +54,19 @@ of which are implicit while one is explicit:
 
 
     .. math::
-
-           r_0(x, y, z) = c*(3x + 2y - z) - 1 = 0
+           r0(x, y, z) = c*(3x + 2y - z) - 1 = 0
            
-           r_1(x, y, z) = 2x - 2y + 4z + 2 = 0
+    .. math::
+           r1(x, y, z) = 2x - 2y + 4z + 2 = 0
            
-           r_2(x, y, z) = -x + y/2. - z =0
+    .. math::
+           r2(x, y, z) = -x + y/2. - z =0
            
-           y_{out} = c + x + y + z
+    .. math::
+           y_out = c + x + y + z
            
 In these equations, the states are `x`, `y`, and `z`, and the residuals are
-`r_0`, `r_1`, and `r_2`. The variable `c` is a normal input, and `y_out` is an
+`r0`, `r1`, and `r2`. The variable `c` is a normal input, and `y_out` is an
 explicit output. Note that the number of states must equal the number of
 residuals in order for the system to have a unique and valid solution. You
 can start defining your implicit component by inheriting from
