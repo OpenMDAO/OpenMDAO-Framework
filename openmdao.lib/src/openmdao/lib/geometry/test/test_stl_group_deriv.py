@@ -35,8 +35,7 @@ class GeomRecieveDerivApplyDeriv(Component):
     def execute(self): 
         self.out = self.geom_in.points
 
-
-    def linearize(self): 
+    def provideJ(self): 
         pass
 
     def apply_deriv(self, arg, result):
@@ -98,7 +97,6 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         self.top.geom.plug.X[1] = 2
         self.top.run()
-        p2 = self.top.rec.out.copy()
 
         self.top.geom.plug.X = np.array([0,0,0,0,0,0,0,0,0]) #reset to 0
         self.top.run()
@@ -113,7 +111,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
     def test_apply_deriv(self): 
 
         self.top.run()
-        self.top.geom.linearize()
+        self.top.geom.provideJ()
 
         params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
         for param in params: 
@@ -210,7 +208,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
     def test_apply_deriv_fd(self): 
 
         self.top.run()
-        self.top.geom.linearize()
+        self.top.geom.provideJ()
 
         params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X", "plug.R", "plug2.R", "cowl.R", "cowl2.R", "cowl.thickness", "cowl2.thickness"]
         ins = ['geom.'+param for param in params]
@@ -229,7 +227,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
 
         #self.top.geom.set('plug.X',[0,1,0,0,0,0,0,0,0]) 
         self.top.run()
-        self.top.geom.linearize()
+        self.top.geom.provideJ()
 
         p0 = self.top.rec.out.copy()
 

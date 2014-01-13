@@ -37,13 +37,10 @@ class MyCompDerivs(Component):
         
         self.y = 2.0*self.x1*self.x1 + 2.0*self.x2*self.x2
     
-    def linearize(self):
+    def provideJ(self):
         ''' Simple eq '''
         
         self.J = np.array([[4.0*self.x1, 4.0*self.x2]])
-        
-    def provideJ(self):
-        
         return self.J
         
     def list_deriv_vars(self):

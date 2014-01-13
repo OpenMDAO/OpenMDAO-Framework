@@ -53,7 +53,7 @@ class DummyGeometry(object):
     def list_deriv_vars(self): 
         return ('x', 'y', 'z'), ('out')
 
-    def linearize(self): 
+    def provideJ(self): 
         self.J = np.array([[2, 0, 1],
                            [0, 2, 1]])
         self.JT = self.J.T
@@ -120,10 +120,8 @@ class GeomRecieve(Component):
 
 class GeomRecieveDerivProvideJ(GeomRecieve):
 
-    def linearize(self): 
-        self.J = np.eye(2)
-         
     def provideJ(self): 
+        self.J = np.eye(2)
         return self.J
 
     def list_deriv_vars(self): 
@@ -131,7 +129,7 @@ class GeomRecieveDerivProvideJ(GeomRecieve):
 
 class GeomRecieveDerivApplyDeriv(GeomRecieve): 
 
-    def linearize(self): 
+    def provideJ(self): 
         self.J = np.eye(2)
 
     def apply_deriv(self, arg, result):

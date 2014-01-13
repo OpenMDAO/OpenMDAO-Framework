@@ -131,7 +131,7 @@ class ImplicitComponent(Component):
         # If our comp doesn't have derivatives, let the internal solver 
         # calculate them however it does
         fprime = None
-        if hasattr(self, 'linearize'):
+        if hasattr(self, 'provideJ'):
             fprime = self._jacobian_callback
 
         fsolve(self._solve_callback, x0, fprime=fprime)
@@ -157,7 +157,7 @@ class ImplicitComponent(Component):
                            dtype=float)
         J = np.zeros((n_res, n_res))
         
-        self.linearize()
+        self.provideJ()
         
         for irhs in np.arange(n_res):
 

@@ -291,21 +291,18 @@ class PseudoComponent(object):
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
         if first:
-            self.linearize()
+            return self.provideJ()
         if second:
             msg = "2nd derivatives not supported in pseudocomponent %s"
             raise RuntimeError(msg % self.name)
 
-    def linearize(self):
+    def provideJ(self):
         """Calculate analytical first derivatives."""
         grad = self._srcexpr.evaluate_gradient()
         if isinstance(grad[self._inputs[0]], ndarray):
-            self.J = hstack([grad[n] for n in self._inputs])
+            return hstack([grad[n] for n in self._inputs])
         else:
-            self.J = array([[grad[n] for n in self._inputs]])
-
-    def provideJ(self):
-        return self.J
+            return array([[grad[n] for n in self._inputs]])
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)

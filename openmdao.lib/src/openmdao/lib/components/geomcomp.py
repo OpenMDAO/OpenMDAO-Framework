@@ -301,7 +301,7 @@ class GeomComponent(Component):
             super(GeomComponent, self)._set_failed(path, value, index, src, force)
 
     def _update_deriv_functs(self, geom):
-        functs = ['linearize','apply_deriv','apply_derivT','provideJ']
+        functs = ['apply_deriv','apply_derivT','provideJ']
         if geom is None: # remove derivative functions
             for funct in functs:
                 if hasattr(self, funct):
@@ -310,9 +310,6 @@ class GeomComponent(Component):
             for funct in functs:
                 if hasattr(geom, funct):
                     setattr(self, funct, getattr(self, '_'+funct))
-
-    def _linearize(self):
-        return self.parametric_geometry.linearize()
 
     def _apply_deriv(self, arg, result):
         return self.parametric_geometry.apply_deriv(arg, result)

@@ -91,7 +91,7 @@ class MyComp_Deriv(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
     
-    def linearize(self): 
+    def provideJ(self): 
         #partial w.r.t c 
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -170,7 +170,7 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
     
-    def linearize(self): 
+    def provideJ(self): 
         #partial w.r.t c 
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -183,10 +183,7 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
         J_output = np.array([[1.0, 1.0, 1.0, 1.0]])
         
         self.J = np.vstack((J_res, J_output))
-        
-    def provideJ(self):
-
-        return self.J 
+        return self.J
         
     def list_deriv_vars(self):
         input_keys = ('x', 'y', 'z', 'c')
@@ -226,7 +223,7 @@ class Coupled1(ImplicitComponent):
         
         self.y_out = c + x + y + z
 
-    def linearize(self): 
+    def provideJ(self): 
         #partial w.r.t c 
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -302,7 +299,7 @@ class Coupled2(ImplicitComponent):
         
         self.y_out = c + x + y + z
 
-    def linearize(self): 
+    def provideJ(self): 
         #partial w.r.t c 
         c, x, y, z = self.c, self.x, self.y, self.z
 

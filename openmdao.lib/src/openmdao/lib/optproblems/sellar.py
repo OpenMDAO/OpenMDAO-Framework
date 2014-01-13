@@ -61,20 +61,17 @@ class Discipline1_WithDerivatives(Component):
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
         #print "Dis 1 (%f, %f, %f, %f, out = %f)" % (z1, z2, x1, y2, self.y1)
 
-    def linearize(self):
+    def provideJ(self):
         """ Calculate the Jacobian """
         
-        self.J = numpy.zeros([1, 4])
+        J = numpy.zeros([1, 4])
         
-        self.J[0, 0] = 1.0
-        self.J[0, 1] = -0.2
-        self.J[0, 2] = 2.0*self.z1
-        self.J[0, 3] = 1.0
-        
-    def provideJ(self):
-        """Alternative specification."""
-        
-        return self.J
+        J[0, 0] = 1.0
+        J[0, 1] = -0.2
+        J[0, 2] = 2.0*self.z1
+        J[0, 3] = 1.0
+
+        return J
                 
     def list_deriv_vars(self):
         input_keys = ('x1', 'y2', 'z1', 'z2')
@@ -134,7 +131,7 @@ class Discipline2_WithDerivatives(Component):
         self.y2 = y1**(.5) + z1 + z2         
         #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
         
-    def linearize(self):
+    def provideJ(self):
         """ Calculate the Jacobian """
         
         self.J = numpy.zeros([1, 3])
@@ -142,10 +139,6 @@ class Discipline2_WithDerivatives(Component):
         self.J[0, 0] = .5*(abs(self.y1))**-0.5
         self.J[0, 1] = 1.0
         self.J[0, 2] = 1.0
-
-    def provideJ(self):
-        """Alternative specification."""
-        
         return self.J
 
     def list_deriv_vars(self):

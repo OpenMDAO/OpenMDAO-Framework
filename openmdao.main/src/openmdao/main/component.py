@@ -466,7 +466,8 @@ class Component(Container):
                          required_inputs=None, required_outputs=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
-        requested. The user must supply *linearize* in the component.
+        requested. The user must supply *provideJ* and *list_deriv_vars*
+        in the component.
 
         This function should not be overriden.
 
@@ -487,6 +488,8 @@ class Component(Container):
             Not needed by Component
         """
 
+        J = None
+
         # Allow user to force finite difference on a comp. This also turns off
         # fake finite difference (i.e., there must be a reason they don't
         # trust their own derivatives.)
@@ -494,7 +497,7 @@ class Component(Container):
             return
 
         # Calculate first derivatives using the new API.
-        if first and hasattr(self, 'linearize'):
+        if first and hasattr(self, 'provideJ'):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
@@ -504,10 +507,10 @@ class Component(Container):
                 return
 
             if has_interface(self, IAssembly):
-                self.linearize(required_inputs=required_inputs,
-                               required_outputs=required_outputs)
+                J = self.provideJ(required_inputs=required_inputs,
+                                  required_outputs=required_outputs)
             else:
-                self.linearize()
+                J = self.provideJ()
 
             self.derivative_exec_count += 1
         else:
@@ -525,6 +528,8 @@ class Component(Container):
 
             for name in ffd_outputs:
                 self._ffd_outputs[name] = self.get(name)
+
+        return J
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.

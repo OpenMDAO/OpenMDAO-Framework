@@ -130,8 +130,7 @@ class STLGroup(object):
 
         jacobian should have a shape of (len(points),len(control_points))"""
         
-        self.linearize()
-  
+        self.provideJ()
         
         lines = ['TITLE = "FFD_geom"',]
         var_line = 'VARIABLES = "X" "Y" "Z" "ID" '
@@ -204,7 +203,7 @@ class STLGroup(object):
             stream.close()
 
     def project_profile(self): 
-        self.linearize()
+        self.provideJ()
 
         point_sets = []
         for comp in self._comps: 
@@ -241,7 +240,7 @@ class STLGroup(object):
 
         return ins, outs
 
-    def linearize(self):
+    def provideJ(self):
         if not self._needs_linerize: 
             return 
         self.list_parameters() 
@@ -513,16 +512,10 @@ class STLGroup(object):
 
     #methods for IStaticGeometry
     def get_visualization_data(self, wv):
-        self.linearize()
+        self.provideJ()
 
         xyzs = np.array(self.points).flatten().astype(np.float32)
         tris = np.array(self.triangles).flatten().astype(np.int32)
-        mins = np.min(xyzs.reshape((-1,3)), axis=0)
-        maxs = np.max(xyzs.reshape((-1,3)), axis=0)
-
-        box = [mins[0], mins[1], mins[2], maxs[0], maxs[1], maxs[2]]
-
-        #print box
 
         wv.set_face_data(xyzs, tris, name="surface")
 
