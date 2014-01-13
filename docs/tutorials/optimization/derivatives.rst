@@ -162,7 +162,7 @@ more complexity and presents additional features of the framework.
 *Finite Difference*
 ~~~~~~~~~~~~~~~~~~~
 
-If you don't specify a ``provideJ`` function for your component, then OpenMDAO
+If you don't specify any derivatives (you don't define ``list_deriv_vars`` or ``provideJ`` functions) for your component, then OpenMDAO
 will finite difference it during the calculation of the full model gradient. OpenMDAO
 can identify groups of nondifferentiable components to finite difference as a block.
 Also, OpenMDAO can detect a non-differentiable connection between two differentiable
@@ -203,8 +203,8 @@ difference.
         model = OptimizationConstrained()
         model.driver.gradient_options.force_fd = True
         
-This also disables fake finite-difference for the driver, so it is truly just finite
-differencing the whole workflow at once.
+When you use this setting, OpenMDAO will finite difference your problem from the inputs to the 
+outputs as one large block. 
 
 Finally, there are a couple of settings for the analytic solution of the system equations
 that yields the derivatives. OpenMDAO uses Scipy's GMRES solver, and it exposes both it's
