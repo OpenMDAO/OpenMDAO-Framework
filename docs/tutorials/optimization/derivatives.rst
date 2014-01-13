@@ -174,14 +174,14 @@ more complexity and presents additional features of the framework.
 
 If you don't specify a ``provideJ`` function for your component, then OpenMDAO
 will finite difference it during the calculation of the full model gradient. OpenMDAO
-can identify groups of nondifferentiable components to finite difference as a block.
+can identify groups of non-differentiable components to finite difference as a block.
 Also, OpenMDAO can detect a non-differentiable connection between two differentiable
-components (e.g, components passing a file or string) and will include both components
-in with the nondifferentiables.
+components (e.g, components passing a file or string) and will include both components 
+with the non-differentiables.
 
 There are a number of ways to control how OpenMDAO finite differences your
 components and your full model. Every driver contains a variable tree called
-`gradient_options`. This tree contains the settings that control how that
+``gradient_options``. This tree contains the settings that control how that
 driver performs a finite difference. Note that since each driver has one, it
 is possible to use different settings for different drivers. Consider the same
 example from above, but let's see how you can change some settings.
@@ -199,10 +199,10 @@ you may want the second order accuracy of a central difference (and you are
 fine with the extra execution per call.) The default stepsize is 1.0e-6,
 which will not be adequate for your problem if your variable is very large or
 small, so it is essential to choose this value carefully. Fiinally, the
-default step type is 'absolute', but you may want to set it to 'relative' for
+default step type is ``'absolute'``, but you may want to set it to ``'relative'`` for
 variables that have a wider range of possible magnitudes. Relative
 differencing calculates a step size by taking the current variable value and
-multipying it by the fd_step_size value.
+multipying it by the ``fd_step_size`` value.
 
 You can also tell a driver to ignore all analytic derivatives and just use finite
 difference.
@@ -217,8 +217,8 @@ This also disables fake finite-difference for the driver, so it is truly just fi
 differencing the whole workflow at once.
 
 Finally, there are a couple of settings for the analytic solution of the system equations
-that yields the derivatives. OpenMDAO uses Scipy's GMRES solver, and it exposes both it's
-tolerance and it's maximum iteration count to be controlled by the user.
+that yields the derivatives. OpenMDAO uses Scipy's GMRES solver, and it exposes both its
+tolerance and its maximum iteration count to be controlled by the user.
 
 .. testcode:: Paraboloid_derivative
 
@@ -229,7 +229,7 @@ tolerance and it's maximum iteration count to be controlled by the user.
 
 
 For fine control of the finite difference stepsize, some of the global
-settings are also able to be overriden by specifying them as metadata in the
+settings can also be overriden by specifying them as metadata in the
 `Variable` definition. Consider the following variables:
 
 .. testcode:: Paraboloid_derivative
