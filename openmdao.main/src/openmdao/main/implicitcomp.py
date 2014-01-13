@@ -128,8 +128,8 @@ class ImplicitComponent(Component):
         
         x0 = self.get_state()
         
-        # If our comp doesn't have derivatives, let the internal solver 
-        # calculate them however it does
+        # If our comp doesn't have derivatives, let the 
+        # internal solver calculate them however it does
         fprime = None
         if hasattr(self, 'provideJ'):
             fprime = self._jacobian_callback
@@ -173,6 +173,13 @@ class ImplicitComponent(Component):
             
         return J
 
+    def calc_derivatives(self, first=False, second=False, savebase=False,
+                         required_inputs=None, required_outputs=None):
+        J = super(ImplicitComponent, self).calc_derivatives(first, second, savebase,
+                                                            required_inputs, required_outputs)
+        self._cache_J = J
+        return J
+
     def _matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         state-to-residual Jacobian with an incoming vector arg.'''
@@ -207,7 +214,7 @@ class ImplicitComponent(Component):
             
             idx += size
             
-        applyJ(self, inputs, outputs, [])
+        applyJ(self, inputs, outputs, [], J=self._cache_J)
         #print inputs, outputs
         
         idx = 0

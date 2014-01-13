@@ -199,7 +199,7 @@ def post_process_dicts(obj, key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
     
-def applyJ(obj, arg, result, residual):
+def applyJ(obj, arg, result, residual, J=None):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -236,13 +236,14 @@ def applyJ(obj, arg, result, residual):
 
         return
 
-    # Otherwise, most users will just specify a Jacobian as a matrix.
-    # (Also, all subassemblies use specify J during recursion)
     input_keys, output_keys = obj.list_deriv_vars()
-    if has_interface(obj, IAssembly):
-        J = obj.provideJ(input_keys, output_keys)
-    else:
-        J = obj.provideJ()
+    if J is None:
+        # Otherwise, most users will just specify a Jacobian as a matrix.
+        # (Also, all subassemblies use specify J during recursion)
+        if has_interface(obj, IAssembly):
+            J = obj.provideJ(input_keys, output_keys)
+        else:
+            J = obj.provideJ()
     
     #print 'J', input_keys, output_keys, J
     
@@ -298,7 +299,7 @@ def applyJ(obj, arg, result, residual):
                         
     #print 'applyJ', arg, result
 
-def applyJT(obj, arg, result, residual):
+def applyJT(obj, arg, result, residual, J=None):
     """Multiply an input vector by the transposed Jacobian. 
     For an Explicit Component, this automatically forms the "fake" 
     residual, and calls into the function hook "apply_derivT".
@@ -337,13 +338,14 @@ def applyJT(obj, arg, result, residual):
 
         return
 
-    # Optional specification of the Jacobian
-    # (Subassemblies do this by default)
-    input_keys, output_keys  = obj.list_deriv_vars()
-    if has_interface(obj, IAssembly):
-        J = obj.provideJ(input_keys, output_keys)
-    else:
-        J = obj.provideJ()
+    if J is None:
+        # Optional specification of the Jacobian
+        # (Subassemblies do this by default)
+        input_keys, output_keys  = obj.list_deriv_vars()
+        if has_interface(obj, IAssembly):
+            J = obj.provideJ(input_keys, output_keys)
+        else:
+            J = obj.provideJ()
 
     #print 'J', input_keys, output_keys, J
     

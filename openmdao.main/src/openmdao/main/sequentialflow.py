@@ -48,6 +48,7 @@ class SequentialWorkflow(Workflow):
         self._derivative_graph = None
         self.res = None
         self._upscoped = False
+        self._J_cache = {}
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -85,6 +86,7 @@ class SequentialWorkflow(Workflow):
         self.res = None
         self._upscoped = False
         self._names = None
+        self._J_cache = {}
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -141,7 +143,7 @@ class SequentialWorkflow(Workflow):
         except TypeError:
             raise TypeError("Components must be added by name to a workflow.")
 
-        # We seem to need this so that get_attributes is correct for the GUI.
+        # workflow deriv graph, etc. must be recalculated
         self.config_changed()
 
         for node in nodes:
@@ -500,7 +502,8 @@ class SequentialWorkflow(Workflow):
             #if hasattr(comp, 'applyMinv'):
                 #inputs = applyMinv(comp, inputs)
 
-            applyJ(comp, inputs, outputs, comp_residuals)
+            applyJ(comp, inputs, outputs, comp_residuals, 
+                   self._J_cache.get(compname))
             #print inputs, outputs
 
             for varname in comp_outputs:
@@ -642,9 +645,9 @@ class SequentialWorkflow(Workflow):
             # when we call with group_nondif = False, we want the union of the
             # passed inputs/outputs plus the inputs/outputs from the solver
             if group_nondif is False:
-                tmp_inputs = inputs
+                tmp_inputs = [] if inputs is None else inputs
+                tmp_outputs = [] if outputs is None else outputs
                 inputs = None
-                tmp_outputs = outputs
                 outputs = None
 
             # If inputs aren't specified, use the parameters
@@ -880,14 +883,19 @@ class SequentialWorkflow(Workflow):
         comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()))
         for compname, data in comps.iteritems():
             if '~' in compname:
-                node = self._derivative_graph.node[compname]['pa_object']
+                comp = self._derivative_graph.node[compname]['pa_object']
             elif compname.startswith('@'):
                 continue
             else:
-                node = self.scope.get(compname)
+                comp = self.scope.get(compname)
 
-            node.calc_derivatives(first, second, savebase, 
-                                  data['inputs'], data['outputs'])
+            J = self._J_cache.get(compname)
+            if J is None:
+                J = comp.calc_derivatives(first, second, savebase, 
+                                    data['inputs'], data['outputs'])
+                if J is not None:
+                    self._J_cache[compname] = J
+
             if self._stop:
                 raise RunStopped('Stop requested')
 
@@ -944,6 +952,9 @@ class SequentialWorkflow(Workflow):
             outputs = dgraph.graph['outputs']
 
         n_edge = self.initialize_residual()
+
+        # cache Jacobians for comps that return them from provideJ
+        
 
         # Size our Jacobian
         num_in = 0

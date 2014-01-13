@@ -501,12 +501,12 @@ class Component(Container):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
-            if savebase and has_interface(self, IAssembly):
-                self.driver.calc_derivatives(first, second, savebase,
-                                             required_inputs, required_outputs)
-                return
-
             if has_interface(self, IAssembly):
+                if savebase:
+                    self.driver.calc_derivatives(first, second, savebase,
+                                                 required_inputs, required_outputs)
+                    return
+
                 J = self.provideJ(required_inputs=required_inputs,
                                   required_outputs=required_outputs)
             else:

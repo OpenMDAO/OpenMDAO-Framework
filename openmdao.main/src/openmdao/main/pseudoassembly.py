@@ -156,7 +156,7 @@ class PseudoAssembly(object):
                     
                     # Comp list contains full graph, so don't double up on
                     # the subdrivers.
-                    if not has_interface(comp, IDriver):
+                    if not has_interface(comp, IDriver) and name not in self.wflow._J_cache:
                         comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
