@@ -346,7 +346,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     hide : false,
                     show : false,
                     position : {
-                        of : "#ObjectFrame_" + pathname.replace(/\./g,'-') + "_" + name,
+                        of : "#ObjectFrame_" + self.pathname.replace(/\./g,'-') + "_" + name,
                         my : "right top",
                         at : "left-20 top"
                     }

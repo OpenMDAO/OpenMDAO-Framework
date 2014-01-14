@@ -1595,7 +1595,7 @@ class Component(Container):
                 lst = []
                 for var in pub_vars:
                     if var == __attributes__:
-                        lst.append((pname, self.get_attributes()))
+                        lst.append((pname, self.get_attributes(io_only=False)))
                     else:
                         lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)

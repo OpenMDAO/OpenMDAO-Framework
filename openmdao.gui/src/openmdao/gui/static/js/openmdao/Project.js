@@ -74,7 +74,7 @@ openmdao.Project=function(listeners_ready) {
                     }
                 };
                 socket.onmessage = function(e) {
-                    //debug.info('websocket message',socket,e);
+                    // debug.info('websocket message', socket, e);
                     handler(e.data);
                 };
 
@@ -595,14 +595,14 @@ openmdao.Project=function(listeners_ready) {
         }
         var jqXHR = jQuery.ajax({
                         type: 'POST',
-                        url:  '/workspace/tools/upload',
+                        url:  'tools/upload',
                         data: formData,
                         processData: false, // Don't assume default data format.
-                        contentType: false, // Don't use default content type.
+                        contentType: false  // Don't use default content type.
                     });
         setModified(true);
         return jqXHR.promise();
-    }
+    };
 
     /** rename file with specified path. */
     this.renameFile = function(filepath, newname) {

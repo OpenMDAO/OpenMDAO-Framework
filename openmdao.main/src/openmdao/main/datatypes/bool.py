@@ -10,6 +10,7 @@ from traits.api import Bool as Enthought_Bool
 
 from openmdao.main.variable import Variable, gui_excludes
 
+
 class Bool(Variable):
     """A variable wrapper for a boolean variable.
        """

@@ -177,8 +177,6 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             _self.close();
         }
 
-        debug.info(pathname, 'Updating tabs', names);
-
         // update existing type/tabs, add any new tabs
         for (var i=0; i<names.length; i++) {
             name = names[i];
@@ -188,7 +186,6 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
                 _self.setTitle(val + ': ' + pathname);
             }
             else if (_panes[name]) {
-                debug.info('Updating tab', name, val);
                 _panes[name].loadData(val);
             }
             else if (name !== 'Slots' || val.length) {
@@ -233,7 +230,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         _updates.push(new_update);
 
         if (old_update) {
-            // an update is already in progress, wait until it's done
+            // make sure old update is done first
             jQuery.when(old_update).done(function() {
                 loadData(data, new_update);
             });
