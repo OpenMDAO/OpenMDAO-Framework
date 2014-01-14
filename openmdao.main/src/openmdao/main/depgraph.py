@@ -203,6 +203,14 @@ def is_connection(graph, src, dest):
         return False
 
 
+def _break_loop(graph, loop):
+    src = loop[0]
+    for dest in loop[1:]:
+        if dest in graph[src]:
+            graph.remove_edge(src, dest)
+            return (src, dest)  
+    
+
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
@@ -931,17 +939,10 @@ class DependencyGraph(nx.DiGraph):
                 break
 
             for group in loops:
-                self._break_loop(group)   
+                _break_loop(csub, group)   
                 
         return nx.topological_sort(csub)
 
-    def _break_loop(self, loop):
-        src = loop[0]
-        for dest in loop[1:]:
-            if self[src].get(dest):
-                self.remove_edge(src, dest)
-                return    
-        
     def get_loops(self):
         if self._loops is None:
             self._loops = [s for s in
