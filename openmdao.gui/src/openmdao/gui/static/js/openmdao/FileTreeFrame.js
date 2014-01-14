@@ -515,25 +515,12 @@ openmdao.FileTreeFrame.prototype.addFile = function(path) {
         .appendTo('body');
 
     function uploadFiles(files, path) {
-        var formData = new FormData(),
-            xhr = new XMLHttpRequest(),
-            filename;
-        for (filename in files) {
-            formData.append('file', files[filename]);
-        }
-        // now post a new XHR request
-        xhr.open('POST', '/workspace/tools/upload');
-        xhr.onload = function() {
-            if (xhr.status !== 200) {
-                alert('error uploading files ('+xhr.status+', '+xhr.statusText+')');
-                debug.error('error uploading files', xhr, files, path);
-            }
-        };
-        if (path) {
-            formData.append('path', path);
-        }
-        xhr.send(formData);
-
+        openmdao.project.addFiles(files, path)
+            .fail(function(jqXHR, textStatus, errorThrown) {
+                alert('error uploading files ('+textStatus+', '+errorThrown+')');
+                debug.error('error uploading files', files, path,
+                            jqXHR, textStatus, errorThrown);
+            });
         filechooser.remove();  // self destruct, one use only
     }
 
