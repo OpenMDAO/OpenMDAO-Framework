@@ -157,7 +157,7 @@ class ImplicitComponent(Component):
                            dtype=float)
         J = np.zeros((n_res, n_res))
         
-        self.provideJ()
+        self._cache_J = self.provideJ()
         
         for irhs in np.arange(n_res):
 
