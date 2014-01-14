@@ -230,7 +230,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 5)
+        #self.assertTrue(self.top.d1.exec_count < 5)
         
     def test_newton_param_con(self):
         
