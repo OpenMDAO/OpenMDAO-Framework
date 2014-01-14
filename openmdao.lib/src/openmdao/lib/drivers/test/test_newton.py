@@ -188,7 +188,6 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 5)
         
     def test_newton_mixed(self):
         
@@ -239,6 +238,8 @@ class MDA_SolverTestCase(unittest.TestCase):
         self.top.driver.add_constraint('d1.y2 = d2.y2')
         self.top = set_as_top(Sellar_MDA_None())
         self.top.driver.newton = True
+        self.top.driver.gradient_options.fd_step_size = 0.01
+        self.top.driver.gradient_options.fd_step_type = 'relative'
         
         self.top.run()
         
@@ -274,7 +275,6 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d2.y_out[1],
                                self.top.d1.y_in[1],
                                1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 4)
         
     def test_general_solver(self): 
 
@@ -287,10 +287,6 @@ class MDA_SolverTestCase(unittest.TestCase):
         comp.x = 0.0
 
         driver = a.add('driver', NewtonKrylov())
-        
-        # Note, for some reason scipy.optimize.newton takes too big a step from 0.0.
-        # use fsolve
-        driver.method = 'fsolve'
         
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')

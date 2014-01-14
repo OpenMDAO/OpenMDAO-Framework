@@ -44,18 +44,6 @@ class CyclicWorkflow(SequentialWorkflow):
         self._severed_edges = []
         self._mapped_severed_edges = []
 
-    def check_config(self):
-        """Any checks we need. For now, drivers are not allowed. You can get
-        around this by placing them in an assembly."""
-
-        super(CyclicWorkflow, self).check_config()
-
-        for comp in self.get_components():
-            if has_interface(comp, IDriver):
-                msg = 'Subdriver not supported in a cyclicflow. Please ' \
-                      'place it in a subassembly.'
-                self.scope.raise_exception(msg, RuntimeError)
-
     def add(self, compnames, index=None, check=False):
         """ Add new component(s) to the workflow by name. """
 
@@ -250,8 +238,25 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         deps = self._parent.eval_eq_constraints(self.scope)
-        sev_deps = [self.scope.get(edge[0])-self.scope.get(edge[1]) \
-                      for edge in self._severed_edges]
+        sev_deps = []
+        for src, target in self._severed_edges:
+            
+            if not isinstance(target, str):
+                target = target[0]
+                
+            target = from_PA_var(target)
+            src = from_PA_var(src)
+            old_val = self.scope.get(src) - self.scope.get(target)
+
+            if isinstance(old_val, float):
+                sev_deps.append(old_val)
+            elif isinstance(old_val, ndarray):
+                sev_deps.extend(list(old_val.flatten()))
+            else:
+                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+                
         return hstack((deps, sev_deps))
 
     def get_independents(self):
@@ -260,7 +265,24 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         indeps = self._parent.eval_parameters(self.scope)
-        sev_indeps = [self.scope.get(edge[1]) for edge in self._severed_edges]
+        sev_indeps = []
+        for _, target in self._severed_edges:
+            
+            if not isinstance(target, str):
+                target = target[0]
+                
+            target = from_PA_var(target)
+            old_val = self.scope.get(target)
+
+            if isinstance(old_val, float):
+                sev_indeps.append(old_val)
+            elif isinstance(old_val, ndarray):
+                sev_indeps.extend(list(old_val.flatten()))
+            else:
+                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+            
         return hstack((indeps, sev_indeps))
 
     def set_independents(self, val):
@@ -298,10 +320,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     elif isinstance(old_val, ndarray):
                         shape = old_val.shape
                         if len(shape) > 1:
-                            new_val = val[i1:i2]
+                            new_val = val[i1:i2].copy()
                             new_val = new_val.reshape(shape)
                         else:
-                            new_val = val[i1:i2]
+                            new_val = val[i1:i2].copy()
                     elif isinstance(old_val, VariableTree):
                         new_val = old_val.copy()
                         self._update(target, new_val, val[i1:i2])

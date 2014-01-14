@@ -36,7 +36,7 @@ class NewtonKrylov(Driver):
     
     max_iteration = Int(50, iotype='in', desc='Maximum number of iterations')
     
-    method = Enum('newton', ['newton', 'fsolve'], iotype='in', 
+    method = Enum('fsolve', ['newton', 'fsolve'], iotype='in', 
                   desc='Solution method (currently only newton and fsolve from scipy optimize)')
     
     def __init__(self):
