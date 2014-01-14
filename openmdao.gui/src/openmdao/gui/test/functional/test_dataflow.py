@@ -207,7 +207,7 @@ def _test_connections(browser):
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.count_variable_figures(), 21)
+    eq(conn_page.count_variable_figures(), 22)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
     time.sleep(0.5)
@@ -496,6 +496,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -516,6 +518,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -534,6 +538,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -554,6 +560,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -592,6 +600,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -615,6 +625,8 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -690,6 +702,7 @@ def _test_parameter_autocomplete(browser):
         'p1.directory',
         'p1.force_execute',
         'p1.force_fd',
+        'p1.missing_deriv_policy',
     ])
 
     autocomplete_targets = [element.text for element in dialog.get_autocomplete_targets('p1')]
@@ -697,7 +710,7 @@ def _test_parameter_autocomplete(browser):
     #For p1 (simplecomp) there should only be
     #8 valid autocomplete targets.
 
-    eq(len(autocomplete_targets), 9)
+    eq(len(autocomplete_targets), 10)
 
     for target in autocomplete_targets:
         eq(target in expected_targets, True)
@@ -819,7 +832,8 @@ def _test_io_filter_with_vartree(browser):
         [u'', u' vt2', u'', u'', u''],
         [u'', u' vt3', u'', u'', u''],
         [u'', u'b', u'12', u'inch', u''],
-        [u'', u'directory', u'', u'', u'If non-blank, the directory to execute in.']
+        [u'', u'directory', u'', u'', u'If non-blank, the directory to execute in.'],
+        [u'', u'missing_deriv_policy', u'error', u'', u'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     eq(expected, editor.get_inputs().value)
@@ -896,14 +910,16 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", " gradient_options", "iout", "iprint", "maxiter", "output_filename", "directory", "force_execute", "force_fd", "printvars"],
-        "inputs",
+        ["accuracy", " gradient_options", "iout", "iprint", "maxiter", 
+         "output_filename", "directory", "force_execute", "force_fd", 
+         "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["printvars", "force_fd", "force_execute", "directory", "output_filename", "maxiter", "iprint", "iout", " gradient_options", "accuracy"],
-        "inputs",
+        ["printvars", "force_fd", "force_execute", 
+         "directory", "output_filename", "maxiter", "iprint", "iout", 
+         " gradient_options", "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
 
@@ -945,13 +961,15 @@ def _test_column_sorting(browser):
     #Testing sort for inputs
 
     test_sorting(
-        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "directory", "force_execute", "force_fd"],
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["force_fd", "force_execute", "directory", " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        ["missing_deriv_policy", "force_fd", "force_execute", "directory", 
+         " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
     )
@@ -959,13 +977,15 @@ def _test_column_sorting(browser):
     #Testing sort for outputs
 
     test_sorting(
-        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", "derivative_exec_count", "exec_count", "itername"],
+        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+         "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["itername", "exec_count", "derivative_exec_count", " cont_out", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+        ["itername", "exec_count", "derivative_exec_count", " cont_out", 
+         " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "outputs",
         SortOrder.DESCENDING
     )

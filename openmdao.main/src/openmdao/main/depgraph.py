@@ -7,10 +7,11 @@ import networkx as nx
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
-                                     IImplicitComponent, ISolver
+                                     IImplicitComponent, ISolver, IAssembly
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
+from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
@@ -201,6 +202,14 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
+
+def _break_loop(graph, loop):
+    src = loop[0]
+    for dest in loop[1:]:
+        if dest in graph[src]:
+            graph.remove_edge(src, dest)
+            return (src, dest)  
+    
 
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
@@ -912,6 +921,28 @@ class DependencyGraph(nx.DiGraph):
         self._component_graph = g
         return g
 
+    def order_components(self, comps):
+        """Return a list of the given components, sorted in 
+        dataflow order.
+        """
+        cgraph = self.component_graph()
+        csub = cgraph.subgraph(comps)
+        if len(csub) != len(comps):
+            missing = [n for n in comps if n not in cgraph]
+            if missing:
+                raise RuntimeError("Components %s are missing from the graph" %
+                                   missing)
+        while True:
+            loops = [s for s in nx.strongly_connected_components(csub)
+                       if len(s) > 1]
+            if not loops:
+                break
+
+            for group in loops:
+                _break_loop(csub, group)   
+                
+        return nx.topological_sort(csub)
+
     def get_loops(self):
         if self._loops is None:
             self._loops = [s for s in
@@ -1056,9 +1087,9 @@ class DependencyGraph(nx.DiGraph):
             meta[out]['valid'] = True
 
     def edge_dict_to_comp_list(self, edges, implicit_edges=None):
-        """Converts inner edge dict into an ordered dict whose keys are component
-        names, and whose values are lists of relevant (in the graph) inputs and
-        outputs.
+        """Converts inner edge dict into an ordered dict whose keys 
+        are component names, and whose values are lists of relevant 
+        (in the graph) inputs and outputs.
         """
         comps = OrderedDict()
         basevars = set()
@@ -1223,55 +1254,6 @@ def _get_inner_edges(G, srcs, dests):
 
     return fwdset.intersection(backset)
 
-# def get_subdriver_edges(wflow, graph, graphcomps, scope, inputs, outputs):
-#     """Return edges coming from solvers that are in the
-#     specified workflow or part of the graph between specified
-#     derivative inputs and outputs.
-#     """
-#     # add edges from any nested drivers
-#     edges = set()
-#     comps = set(wflow)
-#     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
-
-#     flat_inputs = flatten_list_of_iters(inputs)
-#     for comp in comps:
-#         is_solver = has_interface(comp, ISolver)
-#         if has_interface(comp, IDriver):
-#             g = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
-#                                                group_nondif=False)
-#             for u, v, data in g.edges_iter(data=True):
-#                 if u.startswith('@'):
-#                     # Mark all states (params) from sub-solver
-#                     if is_solver and v not in flat_inputs:
-#                         graph.node[v]['solver_state'] = True
-#                     continue
-#                 if v.startswith('@'):
-#                     continue
-#                 if 'conn' in data:
-#                     #edges.add((from_PA_var(u), from_PA_var(v)))
-#                     edges.add((u, v))
-            
-#     return edges
-
-# def mark_nonsolver_driver_comps(wflow, graph, graphcomps, scope):
-#     """Mark all components as non-differentiable that are in the
-#     itersets of any non-solver drivers in the specified workflow or
-#     in the graph.
-#     """
-#     comps = set(wflow)
-#     comps.update([getattr(scope,n) for n in graphcomps if n is not None])
-#     nondiff_comps = set()
-
-#     for comp in comps:
-#         if has_interface(comp, IDriver) and not has_interface(comp, ISolver):
-#             nondiff_comps.add(comp.name)
-#             nondiff_comps.update([comp.name for comp in comp.iteration_set()])
-
-#     for comp in nondiff_comps:
-#         if comp in graph:
-#             graph.node[comp] = graph.node[comp].copy() # don't pollute other graphs with nondiff markers
-#             graph.node[comp]['non-differentiable'] = True
-
 def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     """Update the given graph to replace non-solver subdrivers with 
     PseudoAssemblies and promote edges up from sub-Solvers.
@@ -1345,6 +1327,44 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
                     excludes=ancestor_using-set([drv.name]))
     return pa
     
+
+def _check_for_missing_derivs(scope, comps):
+    # we have the edges that are actually needed for the derivatives, so
+    # check all of the corresponding components now to see if they are
+    # supplying the needed derivatives
+    removed = []
+    for cname, vnames in comps.items():
+        if cname is None or cname.startswith('~'):
+            # skip boundary vars and pseudoassemblies
+            continue
+        comp = getattr(scope, cname)
+        if has_interface(comp, IAssembly):
+            dins = comp.list_inputs()
+            douts = comp.list_outputs()
+        else:
+            dins, douts = comp.list_deriv_vars()
+        if len(dins) == 0 or len(douts) == 0:
+            continue  # we'll finite difference this comp
+        # handle vartrees
+        dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
+        douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
+        missing = []
+        for name in vnames:
+            if name not in dins and name not in douts:
+                nname = name.split('[', 1)[0].split('.', 1)[0]
+                if nname not in dins and nname not in douts and is_differentiable_var(nname, comp):
+                    missing.append(nname)
+        if missing:
+            if comp.missing_deriv_policy == 'error':
+                raise RuntimeError("'%s' doesn't provide analytical derivatives %s" 
+                                   % (comp.get_pathname(), missing))
+            elif comp.missing_deriv_policy == 'assume_zero':
+                # remove the vars with zero derivatives
+                comps[cname] = [n for n in vnames if n not in missing]
+                removed.extend(['.'.join([cname, m]) for m in missing])
+                
+    return removed
+
 def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
@@ -1389,11 +1409,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             graph.connect(None, varname, oname, 
                           check=False, invalidate=False)
 
-    #if full_fd:
-        #rep_drivers = []
-        #xtra_ins = []
-        #xtra_outs = []
-    #else:
     rep_drivers, xtra_ins, xtra_outs = \
                    get_subdriver_graph(graph, inputs, outputs, wflow, full_fd)
 
@@ -1403,19 +1418,25 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
+
+    removed = _check_for_missing_derivs(scope, comps)
     
-    # slv_edges = get_subdriver_edges(wflow, graph, comps.keys(), scope, inputs, outputs)
-    # edges.update(slv_edges)
+    if removed:
+        removed = set(removed)
 
-    # mark_nonsolver_driver_comps(wflow, graph, comps.keys(), scope)
+        # remove edges associated with missing derivs
+        for u,v in graph.list_connections():
+            if u in removed or v in removed:
+                graph.remove_edge(u, v)
 
-    # # get comps for any new edges due to sub-solvers
-    # partition_names_by_comp([e[0] for e in slv_edges], compmap=comps)
-    # partition_names_by_comp([e[1] for e in slv_edges], compmap=comps)
+        edges = _get_inner_edges(graph, 
+                                 ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
+                                 ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
 
     full = [k for k in comps.keys() if k]
     if None in comps:
-        full.extend([v.split('[')[0] for v in comps[None] if v != '@fake'])
+        full.extend([v.split('[')[0] for v in comps[None] 
+                     if v != '@fake'])
         
     subgraph = graph.full_subgraph(full)
     
@@ -1572,7 +1593,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(inp)
-            #graph.add_edge(inp, '@fake', conn=True)
             graph.add_edge('@fake', inp, conn=True)
 
     for out in flatten_list_of_iters(outputs):
@@ -1584,14 +1604,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(out)
-            #graph.add_edge('@fake', out, conn=True)
             graph.add_edge(out, '@fake', conn=True)
-
-    # also add @fake connections for sub-solver related nodes that
-    # aren't connected in the final graph
-    #for u,v in slv_edges:
-        #if u == '@fake' or v == '@fake':
-            #graph.add_edge(u, v, conn=True)
                 
     return graph
 

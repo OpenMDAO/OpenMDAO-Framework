@@ -28,8 +28,7 @@ class ConsoleServerTestCase(unittest.TestCase):
             pass
 
     def test_simple(self):
-        ''' load and inspect the simple example project
-        '''
+        # load and inspect the simple example project
 
         projfile = os.path.join(self.path, 'simple_1.proj')
 
@@ -134,7 +133,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         inputs = attributes['Inputs']
         names = sorted([input['name'] for input in inputs])
         self.assertEqual(names, ['directory', 'force_execute', 'force_fd',
-                                 'x', 'y'])
+                                 'missing_deriv_policy', 'x', 'y'])
         found_x = found_y = False
         for item in inputs:
             self.assertTrue('desc' in item)

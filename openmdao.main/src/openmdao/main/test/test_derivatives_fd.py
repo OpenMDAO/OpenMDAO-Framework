@@ -37,16 +37,17 @@ class MyCompDerivs(Component):
         
         self.y = 2.0*self.x1*self.x1 + 2.0*self.x2*self.x2
     
-    def linearize(self):
+    def provideJ(self):
         ''' Simple eq '''
         
         self.J = np.array([[4.0*self.x1, 4.0*self.x2]])
+        return self.J
         
-    def provideJ(self):
+    def list_deriv_vars(self):
         
         input_keys = ('x1', 'x2')
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
         
 
 class TestFiniteDifference(unittest.TestCase): 
@@ -128,11 +129,11 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertEqual(model.comp.derivative_exec_count, 1)
         
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'])
+                             outputs=['comp.y'], stream=None)
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'], fd_form='central')
+                             outputs=['comp.y'], fd_form='central', stream=None)
         model.check_gradient(inputs=['comp.x1', 'comp.x2'],
-                             outputs=['comp.y'], fd_step_type='relative')
+                             outputs=['comp.y'], fd_step_type='relative', stream=None)
         
         # Full model force FD
         model.comp.force_fd = False

@@ -102,12 +102,10 @@ class EarlyTestInfo(Plugin):
             stream.writeln("The following tests were skipped")
             for test in skips:
                 stream.writeln(test)
-        if failed:
-            stream.writeln("\nThe following tests had failures:")
+        if failed or errors:
+            stream.writeln("\nThe following tests failed:")
             for test in failed:
                 stream.writeln(test)
-        if errors:
-            stream.writeln("\nThe following tests had errors:")
             for test in errors:
                 stream.writeln(test)
 
@@ -130,10 +128,8 @@ class EarlyTestInfo(Plugin):
         self.stream.write(' (%.3g sec) ... ' % tinfo.elapsed)
         if tinfo.status is None:
             self.stream.writeln('OK')
-        elif tinfo.status == 'F':
+        elif tinfo.status in ['F', 'E']:
             self.stream.writeln('FAIL')
-        elif tinfo.status == 'E':
-            self.stream.writeln('ERROR')
         elif tinfo.status == 'S':
             self.stream.writeln('SKIP')
 

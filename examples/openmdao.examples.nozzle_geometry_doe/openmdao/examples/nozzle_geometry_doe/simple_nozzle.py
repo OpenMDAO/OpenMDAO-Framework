@@ -1,4 +1,3 @@
-import time
 import os
 import numpy as np
 
@@ -30,7 +29,7 @@ class PlugNozzleGeometry(STLGroup):
 
 if __name__=="__main__": 
     pn = PlugNozzleGeometry()
-    pn._linearize()
+    pn._provideJ()
 
     arg = dict([(p[0],p[1]['value']) for p in pn.list_parameters()])
     result = {'geom_out':np.zeros((len(pn.points),3))}
