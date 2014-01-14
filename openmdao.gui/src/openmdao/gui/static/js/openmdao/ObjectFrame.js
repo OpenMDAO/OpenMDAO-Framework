@@ -68,7 +68,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         }
         else if (name === 'States') {
             _panes[name] = new openmdao.PropertiesPane(contentPane, project,
-                                pathname, name, false, true);
+                                pathname, name, true, true);
             _panes[name].loadData(val);
         }
         else if (name === 'Residuals') {
