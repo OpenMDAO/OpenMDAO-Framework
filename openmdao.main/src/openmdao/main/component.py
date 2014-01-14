@@ -586,7 +586,7 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ')) \
+                   and (hasattr(self, '_ffd_inputs')) \
                    and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
