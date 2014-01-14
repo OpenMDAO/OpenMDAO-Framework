@@ -244,7 +244,6 @@ class Testcase_geom_deriv(unittest.TestCase):
         self.assertTrue(hasattr(top.geo, 'provideJ'))
 
 
-
 class ND_Send(Component):
     '''Passes a data object as output.'''
 
@@ -271,8 +270,8 @@ class ND_Send(Component):
         pass
 
 class ND_Receive(Component):
-    '''Passes a data object as output.'''
-
+    '''Takes a data object as input.'''
+    
     data = Str("Try to differentiate this!", iotype='in')
 
     x1 = Float(0.0, iotype='in')

@@ -2,7 +2,6 @@ import struct
 import string
 
 import numpy as np
-from scipy.sparse import csr_matrix
 
 from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
@@ -69,8 +68,6 @@ class STLGroup(object):
         self._invoke_callbacks()
         self._needs_linerize = True
 
-
-
     def deform(self,**kwargs): 
         """ deforms the geometry applying the new locations for the control points, given by body name"""
         for name,delta_C in kwargs.iteritems(): 
@@ -100,7 +97,6 @@ class STLGroup(object):
             facet.append(0) #need to pad the end with a unsigned short byte
             lines.append(struct.pack(BINARY_FACET,*facet))  
         return lines      
-
 
     def writeSTL(self, file_name, ascii=False): 
         """outputs an STL file"""
