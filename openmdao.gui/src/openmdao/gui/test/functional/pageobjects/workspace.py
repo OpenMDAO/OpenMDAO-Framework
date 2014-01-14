@@ -253,6 +253,7 @@ class WorkspacePage(BasePageObject):
 
     def get_files(self):
         """ Return names in the file tree. """
+        self('files_tab').click()
         WebDriverWait(self.browser, TMO).until(
             lambda browser: browser.find_element(By.ID, 'ftree_pane'))
         # FIXME: absolute delay for tree population.
