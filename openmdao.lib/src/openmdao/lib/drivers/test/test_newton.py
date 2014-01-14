@@ -290,6 +290,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         driver.add_constraint('comp.f=0')
         self.top.driver.newton = True
         self.top.driver.gradient_options.fd_step_size = 0.1
+        self.top.driver.gradient_options.fd_step_type = 'relative'
 
         a.run()
 
