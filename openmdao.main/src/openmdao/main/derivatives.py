@@ -338,10 +338,10 @@ def applyJT(obj, arg, result, residual, J=None):
 
         return
 
+    input_keys, output_keys  = obj.list_deriv_vars()
     if J is None:
         # Optional specification of the Jacobian
         # (Subassemblies do this by default)
-        input_keys, output_keys  = obj.list_deriv_vars()
         if has_interface(obj, IAssembly):
             J = obj.provideJ(input_keys, output_keys)
         else:

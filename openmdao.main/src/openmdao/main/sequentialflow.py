@@ -588,7 +588,8 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
 
-            applyJT(comp, inputs, outputs, comp_residuals)
+            applyJT(comp, inputs, outputs, comp_residuals, 
+                   self._J_cache.get(compname))
             #print inputs, outputs
 
             for varname in allvars:

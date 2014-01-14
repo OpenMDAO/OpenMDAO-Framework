@@ -819,7 +819,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         # Test that our assembly doesn't calc derivatives for unconnected vars
         inkeys, outkeys = top.nest.list_deriv_vars()
-        J = top.nest.provideJ()
+        J = top.nest.provideJ(inkeys, outkeys)
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
         self.assertEqual(len(inkeys), 2)
