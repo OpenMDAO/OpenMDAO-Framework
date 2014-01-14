@@ -521,7 +521,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
 
-        #print arg, result
+        print arg, result
         return result
 
     def matvecREV(self, arg):

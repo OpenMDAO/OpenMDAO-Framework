@@ -70,6 +70,8 @@ class NewtonKrylov(Driver):
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
         
+        
+        
         x0 = self.workflow.get_independents()
         newton(self._solve_callback, x0, fprime=self._jacobian_callback,
                maxiter=self.max_iteration, tol=self.tolerance)
