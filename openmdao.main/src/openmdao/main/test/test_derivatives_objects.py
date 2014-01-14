@@ -53,7 +53,7 @@ class Comp_Send(Component):
         
         self.data.set(x, y, z)
         
-    def linearize(self):
+    def provideJ(self):
         ''' Jacobian'''
         
         dxdp1 = 2.0*self.p1
@@ -102,20 +102,21 @@ class Comp_Receive(Component):
 class Comp_Receive_ProvideJ(Comp_Receive):
     '''Takes a data object as input.'''
     
-    def linearize(self):
+    def provideJ(self):
         ''' Jacobian'''
         
         self.J = np.array([[-1.0, 0.0, 0.0], 
                            [0.0, 2.0, 0.0], 
                            [0.0, 0.0, 3.0]])
+        return self.J
 
-    def provideJ(self): 
-        return ('data',), ('q1','q2','q3'), self.J
+    def list_deriv_vars(self): 
+        return ('data',), ('q1','q2','q3')
 
 class Comp_Receive_ApplyDeriv(Comp_Receive):
     '''Takes a data object as input.'''
     
-    def linearize(self):
+    def provideJ(self):
         ''' Jacobian'''
         
         self.J = np.array([[-1.0, 0.0, 0.0], 
@@ -205,9 +206,6 @@ class GeoWithDerivatives(BoxParametricGeometry):
 
     implements(IParametricGeometry, IStaticGeometry)
 
-    def linearize(self):
-        pass
-    
     def apply_deriv(self, arg, result):
         pass
     
@@ -234,7 +232,6 @@ class Testcase_geom_deriv(unittest.TestCase):
         top.add('geo', GeomComponent())
         
         # Function not there before we slot
-        self.assertTrue(not hasattr(top.geo, 'linearize'))
         self.assertTrue(not hasattr(top.geo, 'apply_deriv'))
         self.assertTrue(not hasattr(top.geo, 'apply_derivT'))
         self.assertTrue(not hasattr(top.geo, 'provideJ'))
@@ -242,7 +239,6 @@ class Testcase_geom_deriv(unittest.TestCase):
         top.geo.add('parametric_geometry', GeoWithDerivatives())
         
         # Now they should be there.
-        self.assertTrue(hasattr(top.geo, 'linearize'))
         self.assertTrue(hasattr(top.geo, 'apply_deriv'))
         self.assertTrue(hasattr(top.geo, 'apply_derivT'))
         self.assertTrue(hasattr(top.geo, 'provideJ'))
@@ -260,10 +256,9 @@ class ND_Send(Component):
         ''' Load computation result into self.data.'''
         self.data = str(self.p1)
         
-    def linearize(self):
-        ''' Jacobian'''
+    def provideJ(self):
         pass
-        
+
     def apply_deriv(self, arg, result):
         pass
     
@@ -281,10 +276,9 @@ class ND_Receive(Component):
         ''' Load computation result into self.data.'''
         self.p1 = 2.0*float(self.data)
         
-    def linearize(self):
-        ''' Jacobian'''
+    def provideJ(self):
         pass
-        
+
     def apply_deriv(self, arg, result):
         pass
     

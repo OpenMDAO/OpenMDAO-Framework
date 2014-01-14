@@ -4,7 +4,7 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.interfaces import IVariableTree
+from openmdao.main.interfaces import IVariableTree, IAssembly
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
 
@@ -37,6 +37,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
+    options = wflow._parent.gradient_options
 
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -52,7 +53,6 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         else:
             in_range = range(i1, i2)
         
-        options = wflow._parent.gradient_options
         for irhs in in_range:
 
             RHS = zeros((n_edge, 1))
@@ -199,7 +199,7 @@ def post_process_dicts(obj, key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
     
-def applyJ(obj, arg, result, residual):
+def applyJ(obj, arg, result, residual, J=None):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -236,9 +236,14 @@ def applyJ(obj, arg, result, residual):
 
         return
 
-    # Otherwise, most users will just specify a Jacobian as a matrix.
-    # (Also, all subassemblies use specify J during recursion)
-    input_keys, output_keys, J = obj.provideJ()
+    input_keys, output_keys = obj.list_deriv_vars()
+    if J is None:
+        # Otherwise, most users will just specify a Jacobian as a matrix.
+        # (Also, all subassemblies use specify J during recursion)
+        if has_interface(obj, IAssembly):
+            J = obj.provideJ(input_keys, output_keys)
+        else:
+            J = obj.provideJ()
     
     #print 'J', input_keys, output_keys, J
     
@@ -294,22 +299,23 @@ def applyJ(obj, arg, result, residual):
                         
     #print 'applyJ', arg, result
 
-def applyJT(obj, arg, result, residual):
-    """Multiply an input vector by the transposed Jacobian. For an Explicit
-    Component, this automatically forms the "fake" residual, and calls into
-    the function hook "apply_derivT".
+def applyJT(obj, arg, result, residual, J=None):
+    """Multiply an input vector by the transposed Jacobian. 
+    For an Explicit Component, this automatically forms the "fake" 
+    residual, and calls into the function hook "apply_derivT".
     """
     
     for key in arg:
         if key not in residual:
             result[key] = -arg[key]
     
-    # If storage of the local Jacobian is a problem, the user can specify the
-    # 'apply_derivT' function instead of provideJ.
+    # If storage of the local Jacobian is a problem, the user can 
+    # specify the 'apply_derivT' function instead of provideJ.
     if hasattr(obj, 'apply_derivT'):
         
-        # The apply_deriv function expects the argument and result dicts for
-        # each input and output to have the same shape as the input/output.
+        # The apply_deriv function expects the argument and 
+        # result dicts for each input and output to have the 
+        # same shape as the input/output.
         resultkeys = result.keys()
         for key in sorted(resultkeys):
             pre_process_dicts(obj, key, result)
@@ -332,9 +338,14 @@ def applyJT(obj, arg, result, residual):
 
         return
 
-    # Optional specification of the Jacobian
-    # (Subassemblies do this by default)
-    input_keys, output_keys, J = obj.provideJ()
+    input_keys, output_keys  = obj.list_deriv_vars()
+    if J is None:
+        # Optional specification of the Jacobian
+        # (Subassemblies do this by default)
+        if has_interface(obj, IAssembly):
+            J = obj.provideJ(input_keys, output_keys)
+        else:
+            J = obj.provideJ()
 
     #print 'J', input_keys, output_keys, J
     

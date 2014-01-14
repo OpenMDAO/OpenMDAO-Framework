@@ -156,7 +156,7 @@ class PseudoAssembly(object):
                     
                     # Comp list contains full graph, so don't double up on
                     # the subdrivers.
-                    if not has_interface(comp, IDriver):
+                    if not has_interface(comp, IDriver) and name not in self.wflow._J_cache:
                         comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
@@ -166,7 +166,11 @@ class PseudoAssembly(object):
         
     def provideJ(self):
         """Jacobian for this block"""
-        return self.mapped_inputs, self.mapped_outputs, self.J
+        return self.J
+
+    def list_deriv_vars(self):
+        """Derivative inputs and outputs for this block"""
+        return self.mapped_inputs, self.mapped_outputs
 
     def get(self, varname):
         """ Return the value of a variable in the Pseudoassembly. Used

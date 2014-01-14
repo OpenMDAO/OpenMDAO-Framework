@@ -51,7 +51,7 @@ class MyComp(Component):
         """ doubler """
         pass
 
-    def linearize(self):
+    def provideJ(self):
         """ calculates the Jacobian """
 
         self.J = array([[1.5, 3.7, 2.5, 4.1, 5.1, 6.1, 7.1, 8.1, 9.1, 10.1, 11.1],
@@ -66,13 +66,13 @@ class MyComp(Component):
                         [1.10, 2.10, 3.10, 4.10, 5.10, 6.10, 7.10, 8.10, 9.10, 10.10, 11.10],
                         [1.11, 2.11, 3.11, 4.11, 5.11, 6.11, 7.11, 8.11, 9.11, 10.11, 11.11]])
 
-    def provideJ(self):
-        """ returns the Jacobian """
+        return self.J
 
+    def list_deriv_vars(self):
         input_keys = ('x1', 'x2', 'x3', 'x4', 'vt.a1', 'vt.vt1.d1')
         output_keys = ('xx1', 'xx2', 'xx3', 'xx4', 'vvt.a1', 'vvt.vt1.d1')
-
-        return input_keys, output_keys, self.J
+       
+        return input_keys, output_keys
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -89,7 +89,7 @@ class Testcase_provideJ(unittest.TestCase):
     def test_provideJ(self):
 
         comp = MyComp()
-        comp.linearize()
+        comp.provideJ()
 
         inputs = {}
         outputs = { 'xx1': None,
@@ -150,21 +150,20 @@ class Paraboloid(Component):
         y = self.y
 
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-
-    def linearize(self):
+        
+    def provideJ(self):
         """Analytical first derivatives"""
 
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
 
         self.J = array([[df_dx, df_dy]])
-
-    def provideJ(self):
-
+        return self.J
+        
+    def list_deriv_vars(self):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
-        return input_keys, output_keys, self.J
-
+        return input_keys, output_keys
 
 class ParaboloidNoDeriv(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -199,17 +198,31 @@ class SimpleComp(Component):
     y = Float(6.0, iotype='out')
 
     def execute(self):
-
         self.y = 2.0*self.x
-
-    def linearize(self):
-        pass
-
+        
     def provideJ(self):
+        return array([[2.0]])    
 
-        return ('x',), ('y',), array([[2.0]])
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
+    
+class SimpleCompMissingDeriv(Component):
+    
+    x = Float(3.0, iotype='in')
+    miss_in = Float(4.0, iotype='in')
+    y = Float(6.0, iotype='out')
+    miss_out = Float(7.0, iotype='out')
+    
+    def execute(self):
+        self.y = 2.0*self.x
+        
+    def provideJ(self):     
+        return array([[2.0]])    
 
-
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
+    
+        
 class CompFoot(Component):
     """ Evaluates the equation y=2x"""
 
@@ -221,17 +234,17 @@ class CompFoot(Component):
 
         self.y = 2.0*self.x
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy_dx = 2.0
         self.J = array([[dy_dx]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x',)
         output_keys = ('y',)
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 
 class CompInch(Component):
@@ -245,17 +258,17 @@ class CompInch(Component):
 
         self.y = 2.0*self.x
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy_dx = 2.0
         self.J = array([[dy_dx]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x',)
         output_keys = ('y',)
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 class ArrayComp1(Component):
     '''Array component'''
@@ -270,7 +283,7 @@ class ArrayComp1(Component):
         self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
         #print "ran", self.x, self.y
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy1_dx1 = 2.0
@@ -278,12 +291,13 @@ class ArrayComp1(Component):
         dy2_dx1 = 5.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
+
 
 class ArrayComp1_inch(Component):
     '''Array component'''
@@ -298,7 +312,7 @@ class ArrayComp1_inch(Component):
         self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
         #print "ran", self.x, self.y
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy1_dx1 = 2.0
@@ -306,12 +320,12 @@ class ArrayComp1_inch(Component):
         dy2_dx1 = 5.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 class ArrayComp1_ft(Component):
     '''Array component'''
@@ -326,7 +340,7 @@ class ArrayComp1_ft(Component):
         self.y[1] = 5.0*self.x[0] - 3.0*self.x[1]
         #print "ran", self.x, self.y
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy1_dx1 = 2.0
@@ -334,12 +348,12 @@ class ArrayComp1_ft(Component):
         dy2_dx1 = 5.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 
 class ArrayComp1_noderiv(Component):
@@ -376,19 +390,19 @@ class ArrayComp2D(Component):
         self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
                        2.0*self.x[1][0] + 4.0*self.x[1][1]
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = array([[2.0, 1.0, 3.0, 7.0],
                         [4.0, 2.0, 6.0, 5.0],
                         [3.0, 6.0, 9.0, 8.0],
                         [1.0, 3.0, 2.0, 4.0]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 
 class Array_Slice_1D(Component):
@@ -412,20 +426,21 @@ class Array_Slice_1D(Component):
         self.y[3] = 1.0*self.x[0] + 3.0*self.x[1] + \
                     2.0*self.x[2] + 4.0*self.x[3]
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = array([[2.0, 1.0, 3.0, 7.0],
                         [4.0, 2.0, 6.0, 5.0],
                         [3.0, 6.0, 9.0, 8.0],
                         [1.0, 3.0, 2.0, 4.0]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
+    
 class ArrayComp2D_der(Component):
     '''2D Array component'''
 
@@ -447,7 +462,7 @@ class ArrayComp2D_der(Component):
         self.y[1][1] = 1.0*self.x[0][0] + 3.0*self.x[0][1] + \
                        2.0*self.x[1][0] + 4.0*self.x[1][1]
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = array([[2.0, 1.0, 3.0, 7.0],
@@ -803,7 +818,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
         # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys, J = top.nest.provideJ()
+        inkeys, outkeys = top.nest.list_deriv_vars()
+        J = top.nest.provideJ(inkeys, outkeys)
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
         self.assertEqual(len(inkeys), 2)
@@ -2098,6 +2114,54 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         J = top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
+        
+    def test_missing_derivs_error(self):
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis2', SimpleCompMissingDeriv())
+        self.top.driver.add_objective('(dis2.y)**2')
+        self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
+        
+        self.top.run()
+        
+        try:
+            J = self.top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_out']")
+        else:
+            self.fail("exception expected")
+            
+        self.top.driver.remove_constraint('dis2.miss_out < 24.0')
+        self.top.driver.add_constraint('dis2.y < 24.0')
+        self.top.driver.remove_parameter('dis2.x')
+        self.top.driver.add_parameter('dis2.miss_in', low=-10.0, high=10.0)
+        
+        try:
+            J = self.top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_in']")
+        else:
+            self.fail("exception expected")
+        
+    def test_missing_derivs_assume_zero(self):
+        self.top = set_as_top(Assembly())
+    
+        self.top.add('driver', SimpleDriver())
+        self.top.add('dis2', SimpleCompMissingDeriv())
+        self.top.dis2.missing_deriv_policy = 'assume_zero'
+        
+        self.top.driver.add_objective('(dis2.y)**2')
+        self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
+        
+        self.top.run()
+        
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        assert_rel_error(self, J[0, 0], 24.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001) 
+        
 
 class Comp2(Component):
     """ two-input, two-output"""
@@ -2111,16 +2175,16 @@ class Comp2(Component):
         """ Executes it """
         pass
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = array([[3.0, 5.0], [7.0, 11.0]])
-
-    def provideJ(self):
-
+        return self.J
+        
+    def list_deriv_vars(self):
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 class Comp2_array(Component):
     """ two-input, two-output"""
@@ -2132,7 +2196,7 @@ class Comp2_array(Component):
         """ Executes it """
         pass
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = array([[3.0, 133.0, 7.0, 11.0],
@@ -2166,7 +2230,7 @@ class Comp3_array(Component):
         """ Executes it """
         pass
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         self.J = random.random((9, 9))
@@ -2197,7 +2261,7 @@ class Testcase_applyJT(unittest.TestCase):
     def test_applyJ_and_applyJT(self):
 
         comp = Comp2()
-        comp.linearize()
+        comp.provideJ()
 
         arg = {}
         arg['x1'] = 1.0
@@ -2232,8 +2296,8 @@ class Testcase_applyJT(unittest.TestCase):
     def test_deriv_slices(self):
 
         comp = Comp2_array()
-        comp.linearize()
-
+        comp.provideJ()
+        
         arg = {}
         arg['x[0, 1]'] = array([1.0])
         arg['y[1, 0]'] = array([0.0])
@@ -2354,7 +2418,7 @@ class PreComp(Component):
         self.y1 = 2.0*self.x1 + 7.0*self.x2
         self.y2 = 13.0*self.x1 - 3.0*self.x2
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy1_dx1 = 2.0
@@ -2362,13 +2426,14 @@ class PreComp(Component):
         dy2_dx1 = 13.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
+        
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
-        return input_keys, output_keys, self.J
-
+        return input_keys, output_keys
+    
     def applyMinv(self, arg, result):
 
         result['y1'] = 0.03092784*arg['y1'] + 0.07216495*arg['y2']
@@ -2395,7 +2460,7 @@ class PreCompArray(Component):
         self.y[0] = 2.0*self.x[0] + 7.0*self.x[1]
         self.y[1] = 13.0*self.x[0] - 3.0*self.x[1]
 
-    def linearize(self):
+    def provideJ(self):
         """Analytical first derivatives"""
 
         dy1_dx1 = 2.0
@@ -2403,13 +2468,14 @@ class PreCompArray(Component):
         dy2_dx1 = 13.0
         dy2_dx2 = -3.0
         self.J = array([[dy1_dx1, dy1_dx2], [dy2_dx1, dy2_dx2]])
+        return self.J
 
-    def provideJ(self):
-
+    def list_deriv_vars(self):
+        
         input_keys = ('x', )
         output_keys = ('y', )
-        return input_keys, output_keys, self.J
-
+        return input_keys, output_keys
+    
     def applyMinv(self, arg, result):
 
         if 'y' in arg:

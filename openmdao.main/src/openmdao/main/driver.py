@@ -75,6 +75,7 @@ class Driver(Component):
     def __init__(self):
         self._iter = None
         super(Driver, self).__init__()
+
         self.workflow = Dataflow(self)
         self.force_execute = True
 
@@ -83,6 +84,10 @@ class Driver(Component):
         # This flag is triggered by adding or removing any parameters,
         # constraints, or objectives.
         self._invalidated = False
+
+        # clean up unwanted trait from Component
+        self.remove_trait('missing_deriv_policy')
+
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""

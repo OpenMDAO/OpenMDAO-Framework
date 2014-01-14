@@ -47,7 +47,11 @@ class DummyComp(Component):
 
     def provideJ(self): 
 
-        return ("x",),("y",),array([1])
+        return array([1])
+
+    def list_deriv_vars(self): 
+
+        return ("x",),("y",)
 
 class CompWithVarTreeSubTree(Component): 
 
@@ -61,18 +65,19 @@ class CompWithVarTreeSubTree(Component):
         self.outs.z = 2*self.ins.x.x1 + 3*self.ins.x.x2 + 4*self.ins.y
         self.z = self.outs.z
 
-    def linearize(self): 
+    def provideJ(self): 
 
         self.J = ones((2,3))
         self.J[:,0] *= 2 
         self.J[:,1] *= 3
         self.J[:,2] *= 4
+        return self.J
 
-    def provideJ(self): 
+    def list_deriv_vars(self): 
         ins = ('ins.x.x1', 'ins.x.x2', 'ins.y')
         outs = ('outs.z','z')
 
-        return ins, outs, self.J
+        return ins, outs
 
 class CompWithVarTree(Component): 
     x1 = Float(iotype="in")
@@ -84,11 +89,12 @@ class CompWithVarTree(Component):
         self.outs.z = 2*self.ins.z + 6*self.x1
         self.z = 4*self.ins.z + 6*self.x1
 
-    def linearize(self): 
-        self.J = array([[2., 6.],[4., 6.]])
-
     def provideJ(self): 
-        return ('ins.z', 'x1'), ('outs.z', 'z'), self.J
+        self.J = array([[2., 6.],[4., 6.]])
+        return self.J
+
+    def list_deriv_vars(self): 
+        return ('ins.z', 'x1'), ('outs.z', 'z')
 
 
 class CompWithArrayVarTree(Component): 
@@ -99,11 +105,12 @@ class CompWithArrayVarTree(Component):
         self.outs.x[0] = 2*self.ins.x[0] + 6*self.ins.x[1]
         self.outs.x[1] = 4*self.ins.x[0] + 6*self.ins.x[1]
 
-    def linearize(self): 
-        self.J = array([[2., 6.],[4., 6.]])
-
     def provideJ(self): 
-        return ('ins.x',), ('outs.x',), self.J
+        self.J = array([[2., 6.],[4., 6.]])
+        return self.J
+
+    def list_deriv_vars(self): 
+        return ('ins.x',), ('outs.x',)
 
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
