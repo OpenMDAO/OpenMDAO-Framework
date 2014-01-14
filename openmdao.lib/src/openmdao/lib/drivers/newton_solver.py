@@ -11,7 +11,7 @@ import logging
 
 try:
     import numpy
-    from scipy.optimize import newton
+    from scipy.optimize import newton, fsolve
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
@@ -36,11 +36,8 @@ class NewtonKrylov(Driver):
     
     max_iteration = Int(50, iotype='in', desc='Maximum number of iterations')
     
-    method = Enum('newton', ['newton'], iotype='in', 
-                  desc='Solution method (currently only newton from scipy optimize)')
-    
-    print_convergence = Bool(True, iotype='in', desc='Set to False to ' +\
-                             'suppress output of convergence history.')
+    method = Enum('newton', ['newton', 'fsolve'], iotype='in', 
+                  desc='Solution method (currently only newton and fsolve from scipy optimize)')
     
     def __init__(self):
         
@@ -64,8 +61,11 @@ class NewtonKrylov(Driver):
         self.run_iteration()
         self.post_iteration()
         
-        # Only one choice now
-        self.execute_Newton()
+        # Two choicse
+        if self.method == 'newton':
+            self.execute_Newton()
+        else:
+            self.execute_fsolve()
             
     def execute_Newton(self):
         """ Solver execution loop: Newton-Krylov. """
@@ -73,6 +73,13 @@ class NewtonKrylov(Driver):
         x0 = self.workflow.get_independents()
         newton(self._solve_callback, x0, fprime=self._jacobian_callback,
                maxiter=self.max_iteration, tol=self.tolerance)
+        
+    def execute_fsolve(self):
+        """ Solver execution loop: Newton-Krylov. """
+        
+        x0 = self.workflow.get_independents()
+        fsolve(self._solve_callback, x0, fprime=self._jacobian_callback,
+               maxfev=self.max_iteration, xtol=self.tolerance)
         
     def _solve_callback(self, vals):
         """Function hook for evaluating our equations."""
@@ -84,11 +91,12 @@ class NewtonKrylov(Driver):
         self.run_iteration()
         self.post_iteration()
         
+        print "val, res", vals, self.workflow.get_dependents()
         return self.workflow.get_dependents()
 
     def _jacobian_callback(self, vals):
         """This function is passed to the internal solver to return the
         jacobian of the dependents with respect to the independents."""
         J = self.workflow.calc_gradient()
-        print J
+        print 'J', J
         return J

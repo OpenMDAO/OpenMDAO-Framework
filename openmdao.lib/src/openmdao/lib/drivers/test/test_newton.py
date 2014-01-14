@@ -284,12 +284,18 @@ class MDA_SolverTestCase(unittest.TestCase):
         comp.a = 1.0
         comp.b = 1.0
         comp.c = 10.0
+        comp.x = 0.0
 
         driver = a.add('driver', NewtonKrylov())
+        
+        # Note, for some reason scipy.optimize.newton takes too big a step from 0.0.
+        # use fsolve
+        driver.method = 'fsolve'
+        
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')
         self.top.driver.newton = True
-        self.top.driver.gradient_options.fd_step_size = 0.1
+        self.top.driver.gradient_options.fd_step_size = 0.01
         self.top.driver.gradient_options.fd_step_type = 'relative'
 
         a.run()
