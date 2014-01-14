@@ -112,19 +112,22 @@ class FixedPointIterator(Driver):
     def check_config(self):
         """Make sure the problem is set up right."""
 
-        ncon = self.total_eq_constraints()
+        # We need to figure our severed edges before querying.
+        self.workflow._get_topsort()
+        ndep = len(self.workflow.get_dependents())
+        indep = len(self.workflow.get_independents())
 
-        if ncon == 0:
-            msg = "FixedPointIterator requires a constraint equation."
+        if ndep == 0:
+            msg = "FixedPointIterator requires a constraint equation or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
         nparm = self.total_parameters()
 
-        if nparm == 0:
-            msg = "FixedPointIterator requires an input parameter."
+        if indep == 0:
+            msg = "FixedPointIterator requires an input parameter or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
-        if ncon != nparm:
+        if ndep != indep:
             msg = "The number of input parameters must equal the number of" \
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)
