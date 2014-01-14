@@ -27,6 +27,6 @@ class Paraboloid(Component):
         y = self.y
 
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-        print x, y, self.f_xy
+        #print x, y, self.f_xy
 
 # End paraboloid.py
