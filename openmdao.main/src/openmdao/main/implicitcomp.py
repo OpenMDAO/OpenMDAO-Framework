@@ -173,13 +173,6 @@ class ImplicitComponent(Component):
             
         return J
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
-        J = super(ImplicitComponent, self).calc_derivatives(first, second, savebase,
-                                                            required_inputs, required_outputs)
-        self._cache_J = J
-        return J
-
     def _matvecFWD(self, arg):
         '''Callback function for performing the matrix vector product of the
         state-to-residual Jacobian with an incoming vector arg.'''
