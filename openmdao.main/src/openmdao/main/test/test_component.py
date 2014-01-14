@@ -10,15 +10,17 @@ import unittest
 
 from nose import SkipTest
 
-from openmdao.main.api import Assembly, Component, Container, Driver
+from openmdao.main.api import Component, Container, Driver
 from openmdao.main.interfaces import ICaseRecorder, implements
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.container import _get_entry_group
 from openmdao.util.testutil import assert_raises
 
 
 class MyComponent(Component):
     x = Float(1., iotype='in')
+    xreq = Float(iotype='in', required=True)
+    areq = Array(iotype='in', required=True)
     xout = Float(2., iotype='out')
 
     def __init__(self):
@@ -42,6 +44,17 @@ class FakeRecorder(object):
 
     def get_iterator(self):
         pass
+
+
+class DumbComp(Component):
+    myvar = Float(1.1, iotype='in', required=True)
+    def execute(self):
+        print 'running'
+
+class DumbCompA(Component):
+    myvar = Array([1.1], iotype='in', required=True)
+    def execute(self):
+        print 'running'
 
 
 class TestCase(unittest.TestCase):
@@ -169,7 +182,8 @@ class TestCase(unittest.TestCase):
 
     def test_setattr_dependency_invalidation(self):
         # i.e., comp should not need to re-run if you set an input to the same value.
-
+        self.comp.xreq = 1 # set required input so test won't fail
+        self.comp.areq = [1]
         self.comp.set('x', 45.5)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
         self.comp.run()
@@ -178,6 +192,42 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.comp.get_valid(['xout']), [True])
         self.comp.set('x', 99.999)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
+
+    def test_required_input(self):
+        comp = MyComponent()
+        comp.areq = [1]
+        try:
+            comp.run()
+        except Exception as err:
+            self.assertEqual(str(err), ": required variable 'xreq' was not set")
+        else:
+            self.fail("Exception expected")
+
+        comp = MyComponent()
+        comp.xreq = 1
+        try:
+            comp.run()
+        except Exception as err:
+            self.assertEqual(str(err), ": required variable 'areq' was not set")
+        else:
+            self.fail("Exception expected")
+
+    def test_required_input2(self):
+        try:
+            DumbComp()
+        except Exception as err:
+            self.assertEqual(str(err), ": variable 'myvar' is required and"
+                                       " cannot have a default value")
+        else:
+            self.fail("Exception expected")
+
+        try:
+            DumbCompA()
+        except Exception as err:
+            self.assertEqual(str(err), ": variable 'myvar' is required and"
+                                       " cannot have a default value")
+        else:
+            self.fail("Exception expected")
 
     def test_override(self):
         code = """\
@@ -199,29 +249,6 @@ class BadComponent(Component):
         assert_raises(self, code, globals(), locals(), NameError,
                       "Would override attribute 'run' of Component")
 
-    def test_mimic(self):
-        # Ensure we can mimic a driver.
-        top = Assembly()
-        top.add('c1', Component())
-        top.add('c2', Component())
-        top.driver.workflow.add(('c1', 'c2'))
-        top.driver.printvars = ['c1.force_execute', 'c2.force_execute']
-
-        recorder1 = FakeRecorder()
-        recorder2 = FakeRecorder()
-        top.driver.recorders = [recorder1, recorder2]
-
-        workflow_id = id(top.driver.workflow)
-        new_driver = Driver()
-        new_id = id(new_driver)
-        self.assertNotEqual(new_id, id(top.driver))
-
-        top.replace('driver', new_driver)
-        self.assertEqual(new_id, id(top.driver))
-        self.assertEqual(workflow_id, id(top.driver.workflow))
-        self.assertEqual(top.driver.printvars,
-                         ['c1.force_execute', 'c2.force_execute'])
-        self.assertEqual(top.driver.recorders, [recorder1, recorder2])
 
     def test_replace(self):
         # Ensure we can replace a child component.
@@ -244,7 +271,8 @@ class BadComponent(Component):
         except Exception as err:
             self.assertEqual(str(err),
                 "A Driver may only be added to an Assembly")
-            pass
+        else:
+            self.fail("Exception expected")
 
 
 if __name__ == '__main__':

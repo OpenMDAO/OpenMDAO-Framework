@@ -396,7 +396,7 @@ class CONMINdriver(Driver):
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
-                
+
                 # Run the model for this step
                 super(CONMINdriver, self).run_iteration()
 
@@ -404,7 +404,7 @@ class CONMINdriver(Driver):
             self.cnmn1.obj = self.eval_objective()
 
             # update constraint value array
-            self.constraint_vals[0:len(self.get_ineq_constraints())] = \
+            self.constraint_vals[0:self.total_ineq_constraints()] = \
                 self.eval_ineq_constraints()
 
             #self._logger.debug('constraints = %s' % self.constraint_vals)
@@ -417,13 +417,13 @@ class CONMINdriver(Driver):
             # Sometimes, CONMIN wants the derivatives at a different point.
             self.set_parameters(self.design_vals[:-2])
             super(CONMINdriver, self).run_iteration()
-            
+
             inputs = self.list_param_group_targets()
             obj = self.list_objective_targets()
             con = self.list_ineq_constraint_targets()
 
             J = self.workflow.calc_gradient(inputs, obj + con)
-            
+
             nobj = len(obj)
             self.d_obj[:-2] = J[0:nobj, :].ravel()
 
@@ -431,7 +431,7 @@ class CONMINdriver(Driver):
                 self.cons_active_or_violated[i] = 0
 
             self.cnmn1.nac = 0
-            for i in range(len(self.get_ineq_constraints())):
+            for i in range(self.total_ineq_constraints()):
                 if self.constraint_vals[i] >= self.cnmn1.ct:
                     self.cons_active_or_violated[self.cnmn1.nac] = i+1
                     self.d_const[:-2, self.cnmn1.nac] = J[nobj+i, :]
@@ -484,7 +484,7 @@ class CONMINdriver(Driver):
         self.s = zeros(num_dvs+2, 'd')
 
         # size constraint related arrays
-        length = len(self.get_ineq_constraints()) + 2*num_dvs
+        length = self.total_ineq_constraints() + 2*num_dvs
         self.constraint_vals = zeros(length, 'd')
 
         # temp storage of constraint and design vals
@@ -498,16 +498,17 @@ class CONMINdriver(Driver):
         # is not essential and is for efficiency only.
         self._cons_is_linear = zeros(length, 'i')
         if len(self.cons_is_linear) > 0:
-            if len(self.cons_is_linear) != len(self.get_ineq_constraints()):
+            if len(self.cons_is_linear) != self.total_ineq_constraints():
                 self.raise_exception('size of cons_is_linear (%d) does not'
                                      ' match number of constraints (%d)' %
-                               (len(self.cons_is_linear), length), ValueError)
+                                     (len(self.cons_is_linear),
+                                      self.total_ineq_constraints()), ValueError)
             else:
                 for i, val in enumerate(self.cons_is_linear):
                     self._cons_is_linear[i] = val
 
         self.cnmn1.ndv = num_dvs
-        self.cnmn1.ncon = len(self.get_ineq_constraints())
+        self.cnmn1.ncon = self.total_ineq_constraints()
 
         self.cnmn1.nside = 2*num_dvs
 

@@ -32,7 +32,9 @@ from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 @add_delegate(HasParameters, HasEqConstraints)
 class MDASolver(Driver):
     
-    implements(IHasParameters, IHasEqConstraints, ISolver)
+    # TODO - This driver isn't supported by derivatives yet.
+    implements(IHasParameters, IHasEqConstraints)
+    #implements(IHasParameters, IHasEqConstraints, ISolver)
     
     # pylint: disable-msg=E1101
     tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
@@ -141,7 +143,7 @@ class MDASolver(Driver):
             dv, info = gmres(A, -self.workflow.res,
                              tol=self.gmres_tolerance,
                              maxiter=100)
-            
+            print dv, self.workflow._edges
             # Increment the model input edges by dv
             self.workflow.set_new_state(dv)
             

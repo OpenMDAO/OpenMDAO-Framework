@@ -15,14 +15,15 @@ import nose
 import random
 import numpy.random as numpy_random
 
-from openmdao.main.api import Assembly, Component, Case, set_as_top
+from openmdao.main.api import Assembly, Component, Case, VariableTree, \
+                              set_as_top
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 
-from openmdao.main.datatypes.api import Float, Bool, Array, Int, Slot, Str
+from openmdao.main.datatypes.api import Float, Bool, Array, Int, Slot, Str, \
+                                        List, VarTree
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
                                           SequenceCaseFilter
 
@@ -563,6 +564,135 @@ class TestCase(unittest.TestCase):
             os.chdir(orig_dir)
 
         self.assertEqual(retcode, 0)
+
+
+# Test bugs reported by Pierre-Elouan Rethore regarding problems using List.
+
+class C0_l(Component):
+    l = List([], iotype='out')
+    N = Int(10, iotype='in')
+
+    def execute(self):
+        self.l = range(self.N)
+
+class C1_l(Component):
+    l = List([], iotype='in')
+    i = Int(0, iotype='in')
+    val = Int(0, iotype='out')
+
+    def execute(self):
+        self.val = self.l[self.i]        
+
+class A_l(Assembly):
+    def configure(self):
+        self.add('c0', C0_l())
+        self.add('c1', C1_l())
+
+        self.add('parallel_driver', CaseIteratorDriver())
+        self.driver.workflow.add(['c0', 'parallel_driver'])
+
+        N = 10
+        self.c0.N = N
+
+        self.parallel_driver.iterator = \
+            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)]) 
+        self.parallel_driver.workflow.add(['c1'])
+        self.parallel_driver.recorders.append(ListCaseRecorder())
+        self.parallel_driver.printvars=['c1.val']
+
+        self.connect('c0.l', 'c1.l')
+
+
+class V(VariableTree):
+    l = List([])
+
+class C0_vt(Component):
+    vt = VarTree(V(), iotype='out')
+    N = Int(10, iotype='in')
+
+    def execute(self):
+        self.vt.l = range(self.N)
+
+class C1_vt(Component):
+    vt = VarTree(V(), iotype='in')
+    i = Int(0, iotype='in')
+    val = Int(0, iotype='out')
+
+    def execute(self):
+        self.val = self.vt.l[self.i]        
+
+class A_vt(Assembly):
+    def configure(self):
+        self.add('c0', C0_vt())
+        self.add('c1', C1_vt())
+
+        self.add('parallel_driver', CaseIteratorDriver())
+        self.driver.workflow.add(['c0', 'parallel_driver'])
+
+        N = 10
+        self.c0.N = N
+
+        self.parallel_driver.iterator = \
+            ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)]) 
+        self.parallel_driver.workflow.add(['c1'])
+        self.parallel_driver.recorders.append(ListCaseRecorder())
+        self.parallel_driver.printvars=['c1.val']
+
+        self.connect('c0.vt', 'c1.vt')
+
+
+class Rethore(unittest.TestCase):
+
+    def test_l(self):
+
+        # Sequential is base.
+        logging.debug('')
+        logging.debug('test_l: sequential')
+        a = set_as_top(A_l())
+        a.configure()
+        a.parallel_driver.sequential = True
+        a.execute()
+        sequential = [[case['c1.i'], case['c1.val']]
+                      for case in a.parallel_driver.recorders[0].cases]
+
+        # Now run concurrent and verify.
+        logging.debug('')
+        logging.debug('test_l: concurrent')
+        a = set_as_top(A_l())
+        a.configure()
+        a.parallel_driver.sequential = False
+        a.execute()
+        concurrent = [[case['c1.i'], case['c1.val']]
+                      for case in a.parallel_driver.recorders[0].cases]
+
+        concurrent = sorted(concurrent, key=lambda item: item[0])
+        self.assertEqual(concurrent, sequential)
+
+    def test_vt(self):
+
+        # Sequential is base.
+        logging.debug('')
+        logging.debug('test_vt: sequential')
+        a = set_as_top(A_vt())
+        a.configure()
+        a.parallel_driver.sequential = True
+        a.execute()
+        sequential = [[case['c1.i'], case['c1.val']]
+                      for case in a.parallel_driver.recorders[0].cases]
+
+        # Now run concurrent and verify.
+        logging.debug('')
+        logging.debug('test_vt: concurrent')
+        a = set_as_top(A_vt())
+        a.configure()
+        a.parallel_driver.sequential = False
+        a.execute()
+        concurrent = [[case['c1.i'], case['c1.val']]
+                      for case in a.parallel_driver.recorders[0].cases]
+
+        concurrent = sorted(concurrent, key=lambda item: item[0])
+        self.assertEqual(concurrent, sequential)
+
 
 
 if __name__ == '__main__':

@@ -339,6 +339,7 @@
         for (var i=0; i<dim.length; i++) {
             dim[i] = parseFloat(dim[i]);
         }
+        var fixed = args.item['fixed'];
         
         // Button to extend array        
         var $add_button = $("<button id = 'array-edit-add-"+var_name+"'>+</button>").button();
@@ -410,7 +411,7 @@
             jQuery('<br />').appendTo($container);
 
             // For now, you can only extend/contract a 1D array.
-            if (ndim == 1) {
+            if (!fixed && ndim == 1) {
                 $add_button.appendTo($editor_dialog);
                 $subtract_button.appendTo($editor_dialog);
             }

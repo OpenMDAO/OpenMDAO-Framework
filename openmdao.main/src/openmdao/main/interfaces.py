@@ -183,6 +183,8 @@ class IContainer(Interface):
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
 
+class IVariableTree(IContainer):
+    """Marker interface for VariableTrees."""
 
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
@@ -287,6 +289,14 @@ class IComponent(IContainer):
         """Do what is necessary to make the specified output Variables valid.
         For a simple Component, this will result in a *run()*.
         """
+
+
+class IImplicitComponent(IComponent):
+    def list_states(self):
+        """Return a list of names of state variables."""
+
+    def list_residuals(self):
+        """Return a list of names of residual variables."""
 
 
 class IDriver(IComponent):
@@ -679,6 +689,9 @@ class IHasEqConstraints(Interface):
     def get_eq_constraints():
         """Returns an ordered dictionary of equality constraint objects."""
 
+    def total_eq_constraints(self):
+        """Returns the total number of equality constraint values."""
+
     def eval_eq_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values.
         The form of the constraint is transformed if necessary such that the 
@@ -704,6 +717,9 @@ class IHasIneqConstraints(Interface):
     def get_ineq_constraints():
         """Returns an ordered dict of inequality constraint objects."""
 
+    def total_ineq_constraints(self):
+        """Returns the total number of inequality constraint values."""
+
     def eval_ineq_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values. Constraints
         are coerced into a form where the right-hand-side is 0., and the value returned
@@ -722,8 +738,12 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
     def get_constraints():
         """Returns an ordered dict of constraint objects."""
 
+    def total_constraints(self):
+        """Returns the total number of constraint values."""
+
     def eval_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values."""
+
 
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""

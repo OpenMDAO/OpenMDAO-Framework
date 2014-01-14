@@ -86,12 +86,30 @@ class SLSQPdriver(Driver):
         self.x_lower_bounds = zeros(0, 'd')
         self.x_upper_bounds = zeros(0, 'd')
 
+        self.inputs = None
+        self.obj = None
+        self.con = None
+
+        self.nparam = None
+        self.ncon = None
+        self.neqcon = None
+
+        self.ff = 0
+        self.nfunc = 0
+        self.ngrad = 0
+
+        self._continue = None
+
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
 
+        self.inputs = self.list_param_group_targets()
+        self.obj = self.list_objective_targets()
+        self.con = self.list_constraint_targets()
+
         self.nparam = self.total_parameters()
-        self.ncon = len(self.get_constraints())
-        self.neqcon = len(self.get_eq_constraints())
+        self.ncon = self.total_constraints()
+        self.neqcon = self.total_eq_constraints()
 
         self.x = self.eval_parameters(self.parent)
         self.x_lower_bounds = self.get_lower_bounds()
@@ -111,7 +129,7 @@ class SLSQPdriver(Driver):
         meq = self.neqcon
 
         la = max(m, 1)
-        self.gg = zeros([la], 'd')
+        gg = zeros([la], 'd')
         df = zeros([n+1], 'd')
         dg = zeros([la, n+1], 'd')
 
@@ -129,7 +147,7 @@ class SLSQPdriver(Driver):
             dg, self.error_code, self.nfunc, self.ngrad = \
               slsqp(self.ncon, self.neqcon, la, self.nparam,
                     self.x, self.x_lower_bounds, self.x_upper_bounds,
-                    self.ff, self.gg, df, dg, self.accuracy, self.maxiter,
+                    self.ff, gg, df, dg, self.accuracy, self.maxiter,
                     self.iprint-1, self.iout, self.output_filename,
                     self.error_code, w, lw, jw, ljw,
                     self.nfunc, self.ngrad,
@@ -167,7 +185,7 @@ class SLSQPdriver(Driver):
 
         # Constraints. Note that SLSQP defines positive as satisfied.
         if self.ncon > 0:
-            g = array([-v for v in self.eval_constraints(self.parent)])
+            g = -1. * array(self.eval_constraints(self.parent))
 
         if self.iprint > 0:
             pyflush(self.iout)
@@ -181,22 +199,15 @@ class SLSQPdriver(Driver):
         """ Return ndarrays containing the gradients of the objective
         and constraints.
 
-        Note: m, me, la, n, f, g, df, and dg are unused inputs."""
+        Note: m, me, la, n, f, and g are unused inputs."""
 
-        inputs = self.list_param_group_targets()
-        obj = self.list_objective_targets()
-        con = self.list_constraint_targets()
+        J = self.workflow.calc_gradient(self.inputs, self.obj + self.con)
 
-        J = self.workflow.calc_gradient(inputs, obj + con)
-
-        nobj = len(obj)
+        nobj = len(self.obj)
         df[0:self.nparam] = J[0:nobj, :].ravel()
 
-        ncon = len(con)
-        if ncon:
-            n1 = nobj
-            n2 = nobj + ncon
-            dg[0:ncon, 0:self.nparam] = -J[n1:n2, :]
+        if self.ncon > 0:
+            dg[0:self.ncon, 0:self.nparam] = -J[nobj:nobj+self.ncon, :]
 
         return df, dg
 

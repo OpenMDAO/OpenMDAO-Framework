@@ -4,7 +4,9 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.depgraph import base_var
+from openmdao.main.interfaces import IVariableTree
+from openmdao.main.mp_support import has_interface
+from openmdao.main.pseudocomp import PseudoComponent
 
 try:
     from numpy import array, ndarray, zeros, ones, unravel_index, \
@@ -50,6 +52,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         else:
             in_range = range(i1, i2)
         
+        options = wflow._parent.gradient_options
         for irhs in in_range:
 
             RHS = zeros((n_edge, 1))
@@ -57,8 +60,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-9,
-                             maxiter=100)
+                             tol=options.gmres_tolerance,
+                             maxiter=options.gmres_maxiter)
 
             i = 0
             for item in outputs:
@@ -104,6 +107,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         else:
             out_range = range(i1, i2)
             
+        options = wflow._parent.gradient_options
         for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
@@ -111,8 +115,8 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
             # Call GMRES to solve the linear system
             dx, info = gmres(A, RHS,
-                             tol=1.0e-9,
-                             maxiter=100)
+                             tol=options.gmres_tolerance,
+                             maxiter=options.gmres_maxiter)
             
             i = 0
             for param in inputs:
@@ -195,14 +199,15 @@ def post_process_dicts(obj, key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
     
-def applyJ(obj, arg, result):
+def applyJ(obj, arg, result, residual):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
     for key in result:
-        result[key] = -arg[key]
-
+        if key not in residual:
+            result[key] = -arg[key]
+    
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.
     if hasattr(obj, 'apply_deriv'):
@@ -277,20 +282,27 @@ def applyJ(obj, arg, result):
             Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
                                    o1, o2, odx, osh)
             
-            tmp = Jsub.dot(arg[ikey])
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+                tmp = Jsub[0][0] * arg[ikey]
+            else:
+                tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
                         
     #print 'applyJ', arg, result
 
-def applyJT(obj, arg, result):
+def applyJT(obj, arg, result, residual):
     """Multiply an input vector by the transposed Jacobian. For an Explicit
     Component, this automatically forms the "fake" residual, and calls into
     the function hook "apply_derivT".
     """
     
     for key in arg:
-        result[key] = -arg[key]
+        if key not in residual:
+            result[key] = -arg[key]
     
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_derivT' function instead of provideJ.
@@ -366,7 +378,13 @@ def applyJT(obj, arg, result):
             Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
                                    i1, i2, idx, ish).T
             
-            tmp = Jsub.dot(arg[ikey])
+            # for unit pseudocomps, just scalar multiply the args
+            # by the conversion factor
+            if isinstance(obj, PseudoComponent) and \
+               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+                tmp = Jsub[0][0] * arg[ikey]
+            else:
+                tmp = Jsub.dot(arg[ikey])
                 
             result[okey] += tmp.reshape(oshape)
 
@@ -527,8 +545,14 @@ class FiniteDifference(object):
         self.pa = pa
         self.scope = pa.wflow.scope
 
-        self.fd_step = 1.0e-6*ones((len(self.inputs)))
-        self.form = 'forward'
+        options = pa.wflow._parent.gradient_options
+        
+        self.fd_step = options.fd_step_size*ones((len(self.inputs)))
+        self.form = options.fd_form
+        self.form_custom = {}
+        self.step_type = options.fd_step_type
+        self.step_type_custom = {}
+        self.relative_threshold = 1.0e-4
 
         in_size = 0
         for j, srcs in enumerate(self.inputs):
@@ -538,11 +562,16 @@ class FiniteDifference(object):
                 srcs = [srcs]
                 
             # Local stepsize support
-            meta = self.scope.get_metadata(base_var(self.scope._depgraph, 
-                                                    srcs[0]))
+            meta = self.scope.get_metadata(self.scope._depgraph.base_var(srcs[0]))
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
+                
+            if 'fd_step_type' in meta:
+                self.step_type_custom[j] = meta['fd_step_type']
             
+            if 'fd_form' in meta:
+                self.form_custom[j] = meta['fd_form']
+                
             val = self.scope.get(srcs[0])
             width = flattened_size(srcs[0], val, self.scope)
             for src in srcs:
@@ -567,26 +596,43 @@ class FiniteDifference(object):
         self.get_inputs(self.x)
         self.get_outputs(self.y_base)
 
-        for src, fd_step in zip(self.inputs, self.fd_step):
+        for j, src, in enumerate(self.inputs):
             
+            # Users can cusomtize the FD per variable
+            fd_step = self.fd_step[j]
+            if j in self.form_custom:
+                form = self.form_custom[j]
+            else:
+                form = self.form
+            if j in self.step_type_custom:
+                step_type = self.step_type_custom[j]
+            else:
+                step_type = self.step_type
+                
             if isinstance(src, basestring):
                 i1, i2 = self.in_bounds[src]
             else:
                 i1, i2 = self.in_bounds[src[0]]
             
             for i in range(i1, i2):
+                
+                # Relative stepsizing
+                if step_type == 'relative':
+                    current_val = self.get_value(src, i1, i2, i)
+                    if current_val > self.relative_threshold:
+                        fd_step = fd_step*current_val
 
                 #--------------------
                 # Forward difference
                 #--------------------
-                if self.form == 'forward':
+                if form == 'forward':
 
                     # Step
                     self.set_value(src, fd_step,  i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
-
+                    
                     # Forward difference
                     self.J[:, i] = (self.y - self.y_base)/fd_step
 
@@ -596,7 +642,7 @@ class FiniteDifference(object):
                 #--------------------
                 # Backward difference
                 #--------------------
-                elif self.form == 'backward':
+                elif form == 'backward':
 
                     # Step
                     self.set_value(src, -fd_step,  i1, i2, i)
@@ -613,7 +659,7 @@ class FiniteDifference(object):
                 #--------------------
                 # Central difference
                 #--------------------
-                elif self.form == 'central':
+                elif form == 'central':
 
                     # Forward Step
                     self.set_value(src, fd_step,  i1, i2, i)
@@ -647,7 +693,7 @@ class FiniteDifference(object):
                     new_val = new_val.reshape(shape)
                 else:
                     new_val = self.y_base[i1:i2]
-            elif isinstance(old_val, VariableTree):
+            elif has_interface(old_val, IVariableTree):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
 
@@ -656,12 +702,19 @@ class FiniteDifference(object):
                 idx = '[' + idx
                 
                 old_val = self.scope.get(src)
-                exec('old_val%s = new_val' % idx)
+                if isinstance(new_val, ndarray):
+                    exec('old_val%s = new_val.copy()' % idx)
+                else:
+                    exec('old_val%s = new_val' % idx)
+                    
                 self.scope.set(src, old_val, force=True)
             else:
-                self.scope.set(src, new_val, force=True)
+                if isinstance(new_val, ndarray):
+                    self.scope.set(src, new_val.copy(), force=True)
+                else:
+                    self.scope.set(src, new_val, force=True)
                 
-        #print self.J
+        #print 'after FD', self.pa.name, self.J
         return self.J
 
     def get_inputs(self, x):
@@ -677,7 +730,10 @@ class FiniteDifference(object):
                 src_val = self.scope.get(src)
                 src_val = flattened_value(src, src_val)
                 i1, i2 = self.in_bounds[src]
-                x[i1:i2] = src_val
+                if isinstance(src_val, ndarray):
+                    x[i1:i2] = src_val.copy()
+                else:
+                    x[i1:i2] = src_val
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
@@ -686,7 +742,10 @@ class FiniteDifference(object):
             src_val = self.scope.get(src)
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
-            x[i1:i2] = src_val
+            if isinstance(src_val, ndarray):
+                x[i1:i2] = src_val.copy()
+            else:
+                x[i1:i2] = src_val
 
     def set_value(self, srcs, val, i1, i2, index):
         """Set a value in the model"""
@@ -698,8 +757,7 @@ class FiniteDifference(object):
         for src in srcs:    
             comp_name, dot, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
-            old_val = self.scope.get(src)
-    
+            
             if i2-i1 == 1:
                 
                 # Indexed array
@@ -712,12 +770,15 @@ class FiniteDifference(object):
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
                     if var_name:
-                        comp._input_updated(var_name.split('[')[0])
+                        base = self.scope._depgraph.base_var(src)
+                        comp._input_updated(base.split('.')[-1], 
+                                            src.split('[')[0].partition('.')[2])
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
     
                 # Scalar
                 else:
+                    old_val = self.scope.get(src)
                     self.scope.set(src, old_val+val, force=True)
     
             # Full vector
@@ -734,20 +795,24 @@ class FiniteDifference(object):
                     exec('self.scope.%s = sliced_src') % src
                     
                 else:
+                    old_val = self.scope.get(src)
                     unravelled = unravel_index(index, old_val.shape)
                     old_val[unravelled] += val
                     
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
                 if var_name:
-                    comp._input_updated(var_name.split('[', 1)[0])
+                    base = self.scope._depgraph.base_var(src)
+                    comp._input_updated(base.split('.')[-1], 
+                                        src.split('[')[0].partition('.')[2])
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
     
             # Prevent OpenMDAO from stomping on our poked input.
             
             if var_name:
-                self.scope.set_valid([base_var(self.scope._depgraph, src)], True)
+                self.scope.set_valid([self.scope._depgraph.base_var(src)], 
+                                    True)
                 
                 # Make sure we execute!
                 comp._call_execute = True
@@ -755,36 +820,30 @@ class FiniteDifference(object):
             else:
                 self.scope.set_valid([comp_name.split('[', 1)[0]], True)
     
+    def get_value(self, srcs, i1, i2, index):
+        """Get a value from the model. We only need this function for 
+        determining the relative stepsize to take."""
+        
+        # Support for Parameter Groups:
+        if isinstance(srcs, basestring):
+            srcs = [srcs]
+            
+        for src in srcs:
+            old_val = self.scope.get(src)
+            
+            # Full vector
+            if i2-i1 > 1:
+                index = index - i1
+                
+                # Indexed array slice
+                if '[' in src:
+                    sliced_shape = old_val.shape
+                    flattened_src = old_val.flatten()
+                    old_val = flattened_src[index]
+                    
+                else:
+                    unravelled = unravel_index(index, old_val.shape)
+                    old_val = old_val[unravelled]
+                    
+        return old_val
 
-def apply_linear_model(self, comp, ffd_order):
-    """Returns the Fake Finite Difference output for the given output
-    name using the stored baseline and derivatives along with the
-    new inputs in the component.
-    """
-
-    input_keys, output_keys, J = comp.provideJ()
-
-    # First order derivatives
-    if ffd_order == 1:
-
-        for j, out_name in enumerate(output_keys):
-            y = comp.get(out_name)
-            for i, in_name in enumerate(input_keys):
-                y += J[i, j]*(comp.get(in_name) - comp._ffd_inputs[in_name])
-                setattr(comp, name, y)
-
-    # Second order derivatives
-    #elif order == 2:
-    #
-    #    for in_name1, item in self.second_derivatives[out_name].iteritems():
-    #        for in_name2, dx in item.iteritems():
-    #            y += 0.5*dx* \
-    #              (self.parent.get(in_name1) - self.inputs[in_name1])* \
-    #              (self.parent.get(in_name2) - self.inputs[in_name2])
-    #
-    else:
-        msg = 'Fake Finite Difference does not currently support an ' + \
-              'order of %s.' % order
-        raise NotImplementedError(msg)
-
-    return y

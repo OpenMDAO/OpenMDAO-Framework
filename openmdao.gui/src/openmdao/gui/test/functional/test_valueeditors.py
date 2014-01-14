@@ -8,7 +8,11 @@ import time
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 from unittest import TestCase
+
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import ActionChains
+
+from pageobjects.basepageobject import TMO
 
 from util import main, setup_server, teardown_server, generate, \
                  startup, closeout
@@ -126,8 +130,8 @@ def _test_value_editors(browser):
 
     workspace_page.add_library_item_to_dataflow('variable_editors.Topp', 'top')
 
-    paraboloid = workspace_page.get_dataflow_figure('p1', 'top')
-    props = paraboloid.properties_page()
+    dummy_comp = workspace_page.get_dataflow_figure('p1', 'top')
+    props = dummy_comp.properties_page()
     props.move(-100, -100)  # Ensure Project menu fully visible.
     inputs = props.inputs
 
@@ -159,8 +163,8 @@ def _test_value_editors(browser):
     inputs = props.inputs
 
     # string editor - set to "abcd"
-    inputs.rows[8].cells[1].click()
-    inputs[8][1] = "abcd"
+    inputs.rows[9].cells[1].click()
+    inputs[9][1] = "abcd"
     time.sleep(1)
 
     #enum editor - set to 3
@@ -178,7 +182,7 @@ def _test_value_editors(browser):
 
     #bool editor - set to true
     inputs = props.inputs
-    inputs.rows[9].cells[1].click()
+    inputs.rows[10].cells[1].click()
     selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
@@ -196,9 +200,27 @@ def _test_value_editors(browser):
     browser.find_element_by_xpath(submit_path).click()
     time.sleep(0.5)
 
-    # array 2d editor - set to [[1, 4],[9, 16]]
+    #fixed array 1d editor - verify no add
     inputs = props.inputs
     inputs.rows[4].cells[1].click()
+    add_path = '//*[@id="array-edit-add-Xfixed"]'
+    browser.implicitly_wait(1)  # Not expecting to find anything.
+    try:
+        browser.find_element_by_xpath(add_path)
+    except NoSuchElementException:
+        pass
+    else:
+        raise TestCase.failureException('Expecting NoSuchElementException'
+                                        ' for add-Xfixed')
+    finally:
+        browser.implicitly_wait(TMO)
+    cancel_path = '//*[@id="array-edit-Xfixed-cancel"]'
+    browser.find_element_by_xpath(cancel_path).click()
+    time.sleep(0.5)
+
+    # array 2d editor - set to [[1, 4],[9, 16]]
+    inputs = props.inputs
+    inputs.rows[5].cells[1].click()
     for i in range(1, 5):
         cell_path = '//*[@id="array-editor-dialog-Y"]/div/input[' + str(i) + ']'
         cell_input = browser.find_element_by_xpath(cell_path)
@@ -209,7 +231,7 @@ def _test_value_editors(browser):
 
     # array 2d editor - special case for a bug - set to [[5],[7]]
     inputs = props.inputs
-    inputs.rows[5].cells[1].click()
+    inputs.rows[6].cells[1].click()
     cell_path = '//*[@id="array-editor-dialog-Y2"]/div/input[2]'
     cell_input = browser.find_element_by_xpath(cell_path)
     cell_input.clear()
@@ -219,7 +241,7 @@ def _test_value_editors(browser):
 
     # array 2d editor - special case for a bug - set to [[99]]
     inputs = props.inputs
-    inputs.rows[6].cells[1].click()
+    inputs.rows[7].cells[1].click()
     cell_path = '//*[@id="array-editor-dialog-Y3"]/div/input[1]'
     cell_input = browser.find_element_by_xpath(cell_path)
     cell_input.clear()
@@ -229,15 +251,15 @@ def _test_value_editors(browser):
 
     #list editor - set to [1, 2, 3, 4, 5]
     inputs = props.inputs
-    eq(inputs[7][1].startswith("["), True)
-    eq(inputs[7][1].endswith("]"), True)
-    values = [int(value.strip()) for value in inputs[7][1].strip("[]").split(",")]
+    eq(inputs[8][1].startswith("["), True)
+    eq(inputs[8][1].endswith("]"), True)
+    values = [int(value.strip()) for value in inputs[8][1].strip("[]").split(",")]
     eq(len(values), 4)
     eq(values, [1, 2, 3, 4])
 
     values.append(5)
     values = str([value for value in values])
-    inputs[7][1] = values
+    inputs[8][1] = values
 
     props.close()
 
@@ -305,6 +327,8 @@ def _test_Avartrees(browser):
             'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -322,6 +346,8 @@ def _test_Avartrees(browser):
          'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -361,6 +387,8 @@ def _test_Avartrees(browser):
             'If non-blank, the directory to execute in.'],
         ['', 'force_execute', 'False', '',
             'If True, always execute even if all IO traits are valid.'],
+        ['', 'force_fd', 'False', '',
+         'If True, always finite difference this component.'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -379,6 +407,7 @@ def _test_Avartrees(browser):
         [' cont_in',      ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -394,6 +423,7 @@ def _test_Avartrees(browser):
         [' vt2', ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):
@@ -419,6 +449,7 @@ def _test_Avartrees(browser):
         [' cont_in',      ''],
         ['directory',     ''],
         ['force_execute', 'False'],
+        ['force_fd', 'False'],
     ]
 
     for i, row in enumerate(inputs.value):

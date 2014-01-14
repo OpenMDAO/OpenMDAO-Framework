@@ -3,7 +3,6 @@ Test the CONMIN optimizer component
 """
 
 import unittest
-import nose
 import numpy
 
 # pylint: disable-msg=F0401,E0611
@@ -41,6 +40,7 @@ class OptRosenSuzukiComponent(Component):
     """
 
     x = Array(iotype='in', low=-10, high=99)
+    g = Array([1., 1., 1.], iotype='out')
     result = Float(iotype='out')
     obj_string = Str(iotype='out')
     opt_objective = Float(iotype='out')
@@ -56,12 +56,20 @@ class OptRosenSuzukiComponent(Component):
 
     def execute(self):
         """calculate the new objective value"""
-        self.result = (self.x[0]**2 - 5.*self.x[0] +
-                       self.x[1]**2 - 5.*self.x[1] +
-                       2.*self.x[2]**2 - 21.*self.x[2] +
-                       self.x[3]**2 + 7.*self.x[3] + 50)
+        x = self.x
+
+        self.result = (x[0]**2 - 5.*x[0] + x[1]**2 - 5.*x[1] +
+                       2.*x[2]**2 - 21.*x[2] + x[3]**2 + 7.*x[3] + 50)
+
         self.obj_string = "Bad"
         #print "rosen", self.x
+
+        self.g[0] = (x[0]**2 + x[0] + x[1]**2 - x[1] +
+                     x[2]**2 + x[2] + x[3]**2 - x[3] - 8)
+        self.g[1] = (x[0]**2 - x[0] + 2*x[1]**2 + x[2]**2 +
+                     2*x[3]**2 - x[3] - 10)
+        self.g[2] = (2*x[0]**2 + 2*x[0] + x[1]**2 - x[1] +
+                     x[2]**2 - x[3] - 5)
 
 
 class RosenSuzuki2D(Component):
@@ -128,11 +136,12 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.itmax = 30
 
     def test_opt1(self):
+        # Run with scalar parameters, scalar constraints, and OpenMDAO gradient.
         self.top.driver.add_objective('10*comp.result')
+        # pylint: disable-msg=C0301
         map(self.top.driver.add_parameter,
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
 
-        # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
@@ -145,8 +154,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -161,6 +170,29 @@ class CONMINdriverTestCase(unittest.TestCase):
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(self.top.comp.opt_objective,
                          end_case.get_output('comp.opt_objective'))
+
+    def test_opt1_a(self):
+        # Run with scalar parameters, 1D constraint, and OpenMDAO gradient.
+        self.top.driver.add_objective('10*comp.result')
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_parameter,
+            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+
+        self.top.driver.add_constraint('comp.g <= 0')
+        self.top.driver.iprint = 0
+        self.top.run()
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
     def test_opt1_with_CONMIN_gradient(self):
         # Note: all other tests use OpenMDAO gradient
@@ -182,8 +214,34 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
+
+    def test_opt1_with_CONMIN_gradient_a(self):
+        # Scalar parameters, array constraint, CONMIN gradient.
+        # Note: all other tests use OpenMDAO gradient
+        self.top.driver.add_objective('10*comp.result')
+        self.top.driver.add_parameter('comp.x[0]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[1]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[2]', fd_step=.00001)
+        self.top.driver.add_parameter('comp.x[3]', fd_step=.00001)
+
+        self.top.driver.add_constraint('comp.g <= 0')
+
+        self.top.driver.conmin_diff = True
+        self.top.run()
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -205,14 +263,14 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[1], places=2)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
-                         self.top.comp.x[2], 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[3], places=1)
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
@@ -323,7 +381,7 @@ class CONMINdriverTestCase2(unittest.TestCase):
 
 
 class TestCase1D(unittest.TestCase):
-    """Test using 1D array connections."""
+    """Test using 1D array connections and 1D array constraint."""
 
     def setUp(self):
         self.top = set_as_top(Assembly())
@@ -336,14 +394,10 @@ class TestCase1D(unittest.TestCase):
         driver.add_objective('10*comp.result')
         driver.add_parameter('comp.x')
 
-        # pylint: disable-msg=C0301
-        map(driver.add_constraint, [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+    def test_conmin_gradient_a(self):
+        # Run with 1D parameter, 1D constraint, and CONMIN gradient.
 
-    def test_conmin_gradient(self):
-        # Run with 1D parameter and CONMIN gradient.
+        self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = True
         self.top.driver.fdch = .000001
         self.top.driver.fdchm = .000001
@@ -352,8 +406,8 @@ class TestCase1D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -361,16 +415,42 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-    def test_openmdao_gradient(self):
-        # Run with 1D parameter and OpenMDAO gradient.
+    def test_conmin_gradient_s(self):
+        # Run with 1D parameter, scalar constraints, and CONMIN gradient.
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+
+        self.top.driver.conmin_diff = True
+        self.top.driver.fdch = .000001
+        self.top.driver.fdchm = .000001
+        self.top.run()
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
+
+    def test_openmdao_gradient_a(self):
+        # Run with 1D parameter, 1D constraint, and OpenMDAO gradient.
+        self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.conmin_diff = False
         self.top.run()
 
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -378,6 +458,28 @@ class TestCase1D(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
+    def test_openmdao_gradient_s(self):
+        # Run with 1D parameter, scalar constraints, and OpenMDAO gradient.
+        # pylint: disable-msg=C0301
+        map(self.top.driver.add_constraint, [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
+
+        self.top.driver.conmin_diff = False
+        self.top.run()
+
+        # pylint: disable-msg=E1101
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[2], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[3], 0.05)
 
 class TestCase2D(unittest.TestCase):
     """Test using 2D array connections."""
@@ -405,16 +507,16 @@ class TestCase2D(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0][0], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x[0][1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x[1][0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x[1][1], places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0][0], 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x[0][1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x[1][0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x[1][1], 0.05)
 
     def test_openmdao_gradient(self):
         # Run with 2D parameter and OpenMDAO gradient.
@@ -424,8 +526,8 @@ class TestCase2D(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x[0][0], places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x[0][0], 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x[0][1], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],
@@ -460,16 +562,16 @@ class TestCaseMixed(unittest.TestCase):
         self.top.run()
 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective,
-                               self.top.driver.eval_objective(), places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x0, places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
-                               self.top.comp.x12[0], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2],
-                               self.top.comp.x12[1], places=2)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
-                               self.top.comp.x3, places=1)
+        assert_rel_error(self, self.top.comp.opt_objective,
+                         self.top.driver.eval_objective(), 0.01)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x0, 0.05)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1],
+                         self.top.comp.x12[0], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2],
+                         self.top.comp.x12[1], 0.06)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3],
+                         self.top.comp.x3, 0.05)
 
     def test_openmdao_gradient(self):
         # Run with mixed parameters and OpenMDAO gradient.
@@ -479,8 +581,8 @@ class TestCaseMixed(unittest.TestCase):
         # pylint: disable-msg=E1101
         assert_rel_error(self, self.top.comp.opt_objective,
                          self.top.driver.eval_objective(), 0.01)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
-                               self.top.comp.x0, places=1)
+        assert_rel_error(self, 1 + self.top.comp.opt_design_vars[0],
+                         1 + self.top.comp.x0, 0.05)
         assert_rel_error(self, self.top.comp.opt_design_vars[1],
                          self.top.comp.x12[0], 0.06)
         assert_rel_error(self, self.top.comp.opt_design_vars[2],

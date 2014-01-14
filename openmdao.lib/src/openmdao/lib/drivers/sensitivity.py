@@ -39,11 +39,6 @@ class SensitivityDriver(Driver):
                'constraints with respect to the parameters. Index 1 is the '
                'constraint output, while index 2 is the parameter input.')
 
-    F = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the objectives '
-               'which sensitivities are taken around.')
-    G = Array(zeros((0, 0),'d'), iotype='out', desc='Values of the constraints '
-               'which sensitivities are taken around.')
-
     dF_names = List([], iotype='out', desc='Objective names that '
                      'correspond to our array indices.')
     dG_names = List([], iotype='out', desc='Constraint names that '
@@ -66,22 +61,15 @@ class SensitivityDriver(Driver):
         # Run our iteration once, since we can't guarantee it has been.
         self.run_iteration()
 
-        objs = self.get_objectives().keys()
-        constraints = self.get_constraints().keys()
-
         inputs = self.list_param_group_targets()
         obj = self.list_objective_targets()
         con = self.list_constraint_targets()
 
-        nparm = self.total_parameters()
         nobj = len(obj)
-        ncon = len(con)
+        ncon = self.total_constraints()
 
-        self.dF = zeros((nobj, nparm), 'd')
-        self.dG = zeros((ncon, nparm), 'd')
-
-        self.dF_names = objs
-        self.dG_names = constraints
+        self.dF_names = self.get_objectives().keys()
+        self.dG_names = self.get_constraints().keys()
         self.dx_names = inputs
 
         self.F = self.eval_objectives()
@@ -91,11 +79,8 @@ class SensitivityDriver(Driver):
         # Finally, calculate gradient
         J = self.workflow.calc_gradient(inputs, obj + con)
 
-        self.dF = J[0:nobj, :]
-
-        n1 = nobj
-        n2 = nobj + ncon
-        self.dG = J[n1:n2, :]
+        self.dF = J[:nobj, :]
+        self.dG = J[nobj:nobj+ncon, :]
 
         self.record_case()
 
@@ -107,7 +92,7 @@ class SensitivityDriver(Driver):
             msg = "Missing inputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
-        if len(self.get_objectives()) + len(self.get_constraints()) < 1:
+        if len(self.get_objectives()) + self.total_constraints() < 1:
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 

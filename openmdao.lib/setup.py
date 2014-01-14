@@ -70,6 +70,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
       openmdao.lib.drivers.sensitivity.SensitivityDriver = openmdao.lib.drivers.sensitivity:SensitivityDriver
+      openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent
 
       [openmdao.component]
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
@@ -130,11 +131,9 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.architectures.mdf.MDF = openmdao.lib.architectures.mdf:MDF
 
       [openmdao.parametric_geometry]
-      openmdao.lib.geometry.diamond.GEMParametricGeometry = openmdao.lib.geometry.diamond:GEMParametricGeometry
       openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.geometry.box:BoxParametricGeometry
 
       [openmdao.binpub]
-      openmdao.lib.geometry.diamond.GEM_Sender = openmdao.lib.geometry.diamond:GEM_Sender
       openmdao.lib.geometry.stl.STLSender = openmdao.lib.geometry.stl:STLSender
       openmdao.lib.geometry.box.BoxSender = openmdao.lib.geometry.box:BoxSender
       openmdao.lib.geometry.stl_group.STLGroupSender = openmdao.lib.geometry.stl_group:STLGroupSender

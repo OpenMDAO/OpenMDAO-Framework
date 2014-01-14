@@ -401,12 +401,24 @@ class NestedTreeComp(Component):
 class NestedVTTestCase(unittest.TestCase):
     
     def test_nested_iotype(self):
-        # nested tree
+        # No iotype when creating TopTree.
+        top = TopTree()
+        self.assertEqual(top._iotype, '')
+        self.assertEqual(top.iotype, '')
+        self.assertEqual(top.lev1._iotype, '')
+        self.assertEqual(top.lev1.iotype, '')
+        self.assertEqual(top.lev1.lev2._iotype, '')
+        self.assertEqual(top.lev1.lev2.iotype, '')
+
+        # nested tree input -- iotype propagated all the way through.
         comp = NestedTreeComp()
         
-        self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, '')
-        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
+        self.assertEqual(comp.top_tree_in._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.iotype, 'in')
         self.assertEqual(comp.top_tree_in.lev1.lev2._iotype, 'in')
+        self.assertEqual(comp.top_tree_in.lev1.lev2.iotype, 'in')
         
         attr = comp.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])
@@ -503,6 +515,37 @@ class ListConnectTestCase(unittest.TestCase):
 
         self.assertEqual(100, test_asm.f_out)
 
+    def test_connect2(self):
+        class VT(VariableTree):
+        
+            x = Float(iotype='in')
+            y = Float(iotype='in')
+        
+        class C(Component):
+        
+            x = Float(iotype='in')
+            out = Float(iotype='out')
+        
+            def execute(self):
+                self.out = 2*self.x
+        
+        class A(Assembly):
 
+            vt = VarTree(VT(), iotype='in')
+        
+            def configure(self):
+                self.add('c', C())
+                self.driver.workflow.add(['c'])
+                self.connect('vt.x', 'c.x')
+                self.create_passthrough('c.out')
+        
+        a = A()
+        a.vt.x = 1.0
+        a.vt.y = 7.0
+    
+        a.run()
+
+        self.assertEqual(a.out, 2.0)
+            
 if __name__ == "__main__":
     unittest.main()
