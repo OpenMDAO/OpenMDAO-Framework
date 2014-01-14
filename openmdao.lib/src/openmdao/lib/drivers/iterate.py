@@ -56,17 +56,22 @@ class FixedPointIterator(Driver):
         """Perform the iteration."""
 
         # perform an initial run
+        self.pre_iteration()
         self.run_iteration()
+        self.post_iteration()
         self.current_iteration = 0
 
+        # Find dimension of our problem.
+        self.workflow.initialize_residual()
+
         # Get and save the intial value of the input parameters
-        val0 = self.workflow.get_dependents()
+        val0 = self.workflow.get_independents()
 
         nvar = len(val0)
         history = zeros([self.max_iteration, nvar])
         delta = zeros(nvar)
 
-        history[0, :] = self.workflow.get_independents()
+        history[0, :] = self.workflow.get_dependents()
 
         if self.norm_order == 'Infinity':
             order = float('inf')
@@ -89,17 +94,19 @@ class FixedPointIterator(Driver):
 
             # Pass output to input
             val0 += history[self.current_iteration, :]
-            self.workflow.set_dependents(val0)
+            self.workflow.set_independents(val0)
 
             # run the workflow
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             self.record_case()
 
             self.current_iteration += 1
 
             # check convergence
-            delta[:] = self.workflow.get_independents()
+            delta[:] = self.workflow.get_dependents()
             history[self.current_iteration] = delta
 
             if norm(delta, order) < self.tolerance:
@@ -114,20 +121,18 @@ class FixedPointIterator(Driver):
 
         # We need to figure our severed edges before querying.
         self.workflow._get_topsort()
-        ndep = len(self.workflow.get_dependents())
-        indep = len(self.workflow.get_independents())
+        n_dep = len(self.workflow.get_dependents())
+        n_indep = len(self.workflow.get_independents())
 
-        if ndep == 0:
+        if n_dep == 0:
             msg = "FixedPointIterator requires a constraint equation or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
-        nparm = self.total_parameters()
-
-        if indep == 0:
+        if n_indep == 0:
             msg = "FixedPointIterator requires an input parameter or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
-        if ndep != indep:
+        if n_dep != n_indep:
             msg = "The number of input parameters must equal the number of" \
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)

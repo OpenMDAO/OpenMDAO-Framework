@@ -846,6 +846,11 @@ class SequentialWorkflow(Workflow):
             if has_interface(comp, ISolver):
 
                 key = tuple(comp.list_eq_constraint_targets())
+                
+                # For cyclic workflows in a solver, the edge is already there.
+                if len(key) == 0:
+                    continue
+                
                 unmapped_states = comp.list_param_group_targets()
 
                 # Need to map the subdriver parameters to any existing

@@ -7,7 +7,7 @@ import unittest
 from nose import SkipTest
 import numpy as np
 
-from openmdao.lib.drivers.api import BroydenSolver, MDASolver, \
+from openmdao.lib.drivers.api import BroydenSolver, NewtonKrylov, \
                                      FixedPointIterator
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
@@ -411,7 +411,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
-        model.add('driver', MDASolver())
+        model.add('driver', NewtonKrylov())
         model.driver.workflow.add(['comp1', 'comp2'])
         model.driver.newton = True
         
@@ -438,7 +438,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
-        model.add('driver', MDASolver())
+        model.add('driver', NewtonKrylov())
         model.driver.workflow.add(['comp1', 'comp2'])
         
         model.connect('comp1.x', 'comp2.x')

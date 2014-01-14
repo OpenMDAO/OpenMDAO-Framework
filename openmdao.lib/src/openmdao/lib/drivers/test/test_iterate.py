@@ -257,7 +257,7 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
 
         self.top.disconnect('d2.y2')
         self.top.driver.add_parameter('d1.y2', low=-100, high=100)
-        self.top.driver.add_constraint('d1.y2 = d2.y2')
+        self.top.driver.add_constraint('d2.y2 = d1.y2')
         self.top.run()
 
         assert_rel_error(self, self.top.d1.y1,

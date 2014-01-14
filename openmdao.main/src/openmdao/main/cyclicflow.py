@@ -246,110 +246,73 @@ class CyclicWorkflow(SequentialWorkflow):
 
     def get_dependents(self):
         """Returns a list of current values of the dependents. This includes
-        both parameters and severed targets.
+        both constraints and severed sources.
         """
 
-        deps = self._parent.eval_parameters(self.scope)
-        return deps
-
-    def set_dependents(self, val):
-        """Sets all dependent variables to the values in the input array
-        `val`. This includes both parameters and severed targets.
-        """
-
-        self._parent.set_parameters(val)
+        deps = self._parent.eval_eq_constraints(self.scope)
+        sev_deps = [self.scope.get(edge[0])-self.scope.get(edge[1]) \
+                      for edge in self._severed_edges]
+        return hstack((deps, sev_deps))
 
     def get_independents(self):
         """Returns a list of current values of the dependents. This includes
-        both parameters and severed sources.
+        both parameters and severed targets.
         """
 
-        indeps = self._parent.eval_eq_constraints(self.scope)
-        return indeps
+        indeps = self._parent.eval_parameters(self.scope)
+        sev_indeps = [self.scope.get(edge[1]) for edge in self._severed_edges]
+        return hstack((indeps, sev_indeps))
 
-# This stuff below should be deprecated.
-
-    def set_new_state(self, dv):
-        """Adds a vector of new values to the current model state at the
-        input edges.
-
-        dv: ndarray (nEdge, 1)
-            Array of values to add to the model inputs.
+    def set_independents(self, val):
+        """Sets all dependent variables to the values in the input array
+        `val`. This includes both parameters and severed targets.
         """
-        indep = list(self._mapped_severed_edges)
-        parm_const = [edge for edge in self._edges.iteritems() \
-                             if '@in' in edge[0]]
-        indep.extend(parm_const)
+        print 'setting', val
+        nparam = self._parent.total_parameters()
+        if nparam > 0:
+            self._parent.set_parameters(val[:nparam].flatten())
 
-        for src, targets in indep:
+        if len(self._severed_edges) > 0:
+            i = nparam
+            for src, targets in self._mapped_severed_edges:
+                if isinstance(targets, str):
+                    targets = [targets]
 
-            if isinstance(targets, str):
-                targets = [targets]
-
-            i1, i2 = self.get_bounds(src)
-
-            for target in targets:
-
-                target = from_PA_var(target)
-                old_val = self.scope.get(target)
-
-                if isinstance(old_val, float):
-                    new_val = old_val + float(dv[i1:i2])
-                elif isinstance(old_val, ndarray):
-                    shape = old_val.shape
-                    if len(shape) > 1:
-                        new_val = old_val.flatten() + dv[i1:i2]
-                        new_val = new_val.reshape(shape)
-                    else:
-                        new_val = old_val + dv[i1:i2]
-                elif isinstance(old_val, VariableTree):
-                    new_val = old_val.copy()
-                    self._update(target, new_val, dv[i1:i2])
+                i1, i2 = self.get_bounds(src)
+                if isinstance(i1, list):
+                    width = len(i1)
                 else:
-                    msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                          " This type is not supported by the MDA Solver."
-                    self.scope.raise_exception(msg, RuntimeError)
+                    width = i2-i1
+                    
+                i1 = i
+                i2 = i + width
+                i += width
 
-                # Poke new value into the input end of the edge.
-                self.scope.set(target, new_val, force=True)
-                print 'set', target, old_val, new_val
+                for target in targets:
 
-                # Prevent OpenMDAO from stomping on our poked input.
-                self.scope.set_valid([target.split('[',1)[0]], True)
+                    target = from_PA_var(target)
+                    old_val = self.scope.get(target)
 
-                #(An alternative way to prevent the stomping. This is more
-                #concise, but setting an output and allowing OpenMDAO to pull it
-                #felt hackish.)
-                #self.scope.set(src, new_val, force=True)
+                    if isinstance(old_val, float):
+                        new_val = float(val[i1:i2])
+                    elif isinstance(old_val, ndarray):
+                        shape = old_val.shape
+                        if len(shape) > 1:
+                            new_val = val[i1:i2]
+                            new_val = new_val.reshape(shape)
+                        else:
+                            new_val = val[i1:i2]
+                    elif isinstance(old_val, VariableTree):
+                        new_val = old_val.copy()
+                        self._update(target, new_val, val[i1:i2])
+                    else:
+                        msg = "Variable %s is of type %s." % (target, type(old_val)) + \
+                              " This type is not supported by the MDA Solver."
+                        self.scope.raise_exception(msg, RuntimeError)
 
-    def calculate_residuals(self):
-        """Calculate and return the vector of residuals based on the current
-        state of the system in our workflow."""
+                    # Poke new value into the input end of the edge.
+                    self.scope.set(target, new_val, force=True)
+                    print 'set', target, old_val, new_val
 
-        for src, targets in self._edges.iteritems():
-
-            i1, i2 = self.get_bounds(src)
-
-            if '@in' in src:
-                continue
-
-            src_val = self.scope.get(from_PA_var(src))
-            src_val = flattened_value(src, src_val).reshape(-1, 1)
-
-            if isinstance(targets, str):
-                targets = [targets]
-
-            for target in targets:
-
-                if '@out' in target:
-                    self.res[i1:i2] = src_val
-                    continue
-
-                target_val = self.scope.get(from_PA_var(target))
-                target_val = flattened_value(target, target_val).reshape(-1, 1)
-
-                self.res[i1:i2] = src_val - target_val
-
-                break  # only need one target
-
-        return self.res
+                    # Prevent OpenMDAO from stomping on our poked input.
+                    self.scope.set_valid([target.split('[',1)[0]], True)

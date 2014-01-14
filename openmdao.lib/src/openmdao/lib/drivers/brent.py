@@ -1,6 +1,7 @@
 from scipy.optimize import brentq
 
 from openmdao.main.driver import Driver
+from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 from openmdao.main.hasparameters import HasParameters
@@ -27,6 +28,11 @@ class Brent(Driver):
 
     maxiter = Int(100, iotype="in", desc='if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.')
 
+    def __init__(self):
+        
+        super(Brent, self).__init__()
+        self.workflow = CyclicWorkflow()
+        
     def _eval(self, x):
         """evaluate f(x)"""
 

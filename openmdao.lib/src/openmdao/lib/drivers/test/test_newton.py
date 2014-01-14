@@ -1,5 +1,5 @@
 """
-Test the MDA driver
+Test the Newton solver
 """
 
 import unittest
@@ -7,7 +7,7 @@ from nose import SkipTest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.lib.drivers.mda_solver import MDASolver
+from openmdao.lib.drivers.newton_solver import NewtonKrylov
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline2_WithDerivatives, \
@@ -38,7 +38,7 @@ class Sellar_MDA(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
         
-        self.add('driver', MDASolver())
+        self.add('driver', NewtonKrylov())
         self.driver.workflow.add(['d1', 'd2'])
         
         
@@ -62,7 +62,7 @@ class Sellar_MDA_subbed(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
         
-        self.add('subdriver', MDASolver())
+        self.add('subdriver', NewtonKrylov())
         self.driver.workflow.add(['subdriver'])
         self.subdriver.workflow.add(['d1', 'd2'])
         
@@ -87,7 +87,7 @@ class Sellar_MDA_Mixed(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
         
-        self.add('driver', MDASolver())
+        self.add('driver', NewtonKrylov())
         self.driver.workflow.add(['d1', 'd2'])
         
 class Sellar_MDA_Mixed_Flipped(Assembly):
@@ -110,7 +110,7 @@ class Sellar_MDA_Mixed_Flipped(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
         
-        self.add('driver', MDASolver())
+        self.add('driver', NewtonKrylov())
         self.driver.workflow.add(['d1', 'd2'])
         
 class Sellar_MDA_None(Assembly):
@@ -133,7 +133,7 @@ class Sellar_MDA_None(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
         
-        self.add('driver', MDASolver())
+        self.add('driver', NewtonKrylov())
         self.driver.workflow.add(['d1', 'd2'])
         
         
@@ -148,7 +148,7 @@ class Scalable_MDA(Assembly):
         self.connect('d1.y_out', 'd2.y_in')
         self.connect('d2.y_out', 'd1.y_in')
         
-        self.add('driver', MDASolver())
+        self.add('driver', NewtonKrylov())
         self.driver.workflow.add(['d1', 'd2'])
         self.driver.newton = True
         
@@ -162,63 +162,6 @@ class MDA_SolverTestCase(unittest.TestCase):
     def tearDown(self):
         self.top = None
         
-    def test_gauss_seidel(self):
-        
-        self.top.run()
-        
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 10)
-        
-    def test_gauss_seidel_param_con(self):
-        
-        raise SkipTest('Param/Con not supported on MDA solver yet')
-    
-        self.top.disconnect('d2.y2')
-        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
-        self.top.driver.add_constraint('d1.y2 = d2.y2')
-        self.top.run()
-        
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 10)
-        
-    def test_gauss_seidel_sub(self):
-        # Note, Fake Finite Difference is active in this test.
-        
-        self.top = set_as_top(Sellar_MDA_subbed())
-        self.top.run()
-        
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 10)
-        
-        inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
-        outputs = ['d1.y1', 'd2.y2']
-        self.top.driver.workflow.config_changed()
-        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs)
-        self.top.run()
-        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
-                                                   outputs=outputs,
-                                                   mode='fd')
-        
-        J = (J1 - J2)
-        print J.max()
-        self.assertTrue(J.max() < 1.0e-3)
-        
     def test_newton(self):
         
         self.top.driver.newton = True
@@ -230,12 +173,9 @@ class MDA_SolverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.d1.y2,
                                self.top.d2.y2,
                                1.0e-4)
-        self.assertTrue(self.top.d1.exec_count < 5)
         
     def test_newton_param_con(self):
         
-        raise SkipTest('Param/Con not supported on MDA solver yet')
-    
         self.top.disconnect('d2.y2')
         self.top.driver.add_parameter('d1.y2', low=-100, high=100)
         self.top.driver.add_constraint('d1.y2 = d2.y2')
@@ -336,26 +276,25 @@ class MDA_SolverTestCase(unittest.TestCase):
                                1.0e-4)
         self.assertTrue(self.top.d1.exec_count < 4)
         
-    #def test_general_solver(self): 
+    def test_general_solver(self): 
 
-        # TODO: Should MDA solver be able to solve generalized equations?
-        
-        #a = set_as_top(Assembly())
-        #comp = a.add('comp', ExecComp(exprs=["f=a * x**n + b * x - c"]))
-        #comp.n = 77.0/27.0
-        #comp.a = 1.0
-        #comp.b = 1.0
-        #comp.c = 10.0
+        a = set_as_top(Assembly())
+        comp = a.add('comp', ExecComp(exprs=["f=a * x**n + b * x - c"]))
+        comp.n = 77.0/27.0
+        comp.a = 1.0
+        comp.b = 1.0
+        comp.c = 10.0
 
-        #driver = a.add('driver', MDASolver())
-        #driver.add_parameter('comp.x', 0, 100)
-        #driver.add_constraint('comp.f=0')
-        #self.top.driver.newton = True
+        driver = a.add('driver', NewtonKrylov())
+        driver.add_parameter('comp.x', 0, 100)
+        driver.add_constraint('comp.f=0')
+        self.top.driver.newton = True
+        self.top.driver.gradient_options.fd_step_size = 0.1
 
-        #a.run()
+        a.run()
 
-        #assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
-        #assert_rel_error(self, a.comp.f, 0, .0001)
+        assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
+        assert_rel_error(self, a.comp.f, 0, .0001)
             
 if __name__ == "__main__":
     unittest.main()
