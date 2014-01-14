@@ -60,7 +60,7 @@ class PseudoAssembly(object):
         self.fd = None
         self.J = None
 
-        #cset = set(comps)
+        cset = set(comps)
         
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
@@ -72,7 +72,7 @@ class PseudoAssembly(object):
         elif drv_name is not None:
             self.itercomps = [drv_name]
         else:
-            self.itercomps = list(self.comps)
+            self.itercomps = list(wflow.scope._depgraph.order_components(cset))
         
     def _pre_init(self, pa_name, group, dgraph, fd, boundary_params):
         """Return a tuple of the form (pa_inputs, pa_outputs, renames)
