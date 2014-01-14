@@ -253,21 +253,17 @@ class ND_Send(Component):
     data = Str("Try to differentiate this!", iotype='out')
 
     def list_deriv_vars(self):
-        return ['p1'], ['z1']
+        return ('p1',), ('z1',)
 
     def execute(self):
         ''' Load computation result into self.data.'''
         self.data = str(self.p1)
         self.z1 = 2.0*self.p1
+        print self.z1, self.data
 
     def provideJ(self):
         return np.array([[2.0]])
 
-    def apply_deriv(self, arg, result):
-        pass
-
-    def apply_derivT(self, arg, result):
-        pass
 
 class ND_Receive(Component):
     '''Takes a data object as input.'''
@@ -278,7 +274,7 @@ class ND_Receive(Component):
     p1 = Float(0.0, iotype='out')
 
     def list_deriv_vars(self):
-        return ['x1'], ['p1']
+        return ('x1',), ('p1',)
 
     def execute(self):
         ''' Load computation result into self.data.'''
@@ -287,12 +283,6 @@ class ND_Receive(Component):
 
     def provideJ(self):
         return np.array([[3.0]])
-
-    def apply_deriv(self, arg, result):
-        pass
-
-    def apply_derivT(self, arg, result):
-        pass
 
 class TestcaseNonDiff(unittest.TestCase):
     """ Test how OpenMDAO handles differentiation. """

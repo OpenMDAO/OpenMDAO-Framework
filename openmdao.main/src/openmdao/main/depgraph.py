@@ -913,6 +913,35 @@ class DependencyGraph(nx.DiGraph):
         self._component_graph = g
         return g
 
+    def order_components(self, comps):
+        """Return a list of the given components, sorted in 
+        dataflow order.
+        """
+        cgraph = self.component_graph()
+        csub = cgraph.subgraph(comps)
+        if len(csub) != len(comps):
+            missing = [n for n in comps if n not in cgraph]
+            if missing:
+                raise RuntimeError("Components %s are missing from the graph" %
+                                   missing)
+        while True:
+            loops = [s for s in nx.strongly_connected_components(csub)
+                       if len(s) > 1]
+            if not loops:
+                break
+
+            for group in loops:
+                self._break_loop(group)   
+                
+        return nx.topological_sort(csub)
+
+    def _break_loop(self, loop):
+        src = loop[0]
+        for dest in loop[1:]:
+            if self[src].get(dest):
+                self.remove_edge(src, dest)
+                return    
+        
     def get_loops(self):
         if self._loops is None:
             self._loops = [s for s in

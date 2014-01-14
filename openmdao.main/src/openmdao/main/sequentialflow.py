@@ -927,6 +927,8 @@ class SequentialWorkflow(Workflow):
             correct mode.
         """
 
+        self._J_cache = {}
+
         # User may request full-model finite difference.
         if self._parent.gradient_options.force_fd == True:
             mode = 'fd'

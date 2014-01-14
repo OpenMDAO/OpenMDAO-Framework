@@ -36,8 +36,9 @@ class PseudoAssembly(object):
         inputs, outputs, renames = self._pre_init(name, comps, graph, fd,
                                                   boundary_params)
 
+        self.comps = wflow.scope._depgraph.order_components(set(comps))        
+
         self.name = name
-        self.comps = list(comps)
         self.boundary_params = list(boundary_params)
         self.wflow = wflow
         self.inputs = list(inputs)
@@ -59,8 +60,6 @@ class PseudoAssembly(object):
 
         self.fd = None
         self.J = None
-
-        #cset = set(comps)
 
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0

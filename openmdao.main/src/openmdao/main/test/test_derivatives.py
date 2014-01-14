@@ -89,7 +89,7 @@ class Testcase_provideJ(unittest.TestCase):
     def test_provideJ(self):
 
         comp = MyComp()
-        comp.provideJ()
+        J = comp.provideJ()
 
         inputs = {}
         outputs = { 'xx1': None,
@@ -118,7 +118,7 @@ class Testcase_provideJ(unittest.TestCase):
             inputs['vvt.a1'] = 0
             inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
 
-            applyJ(comp, inputs, outputs, [])
+            applyJ(comp, inputs, outputs, [], J)
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -2261,7 +2261,7 @@ class Testcase_applyJT(unittest.TestCase):
     def test_applyJ_and_applyJT(self):
 
         comp = Comp2()
-        comp.provideJ()
+        J = comp.provideJ()
 
         arg = {}
         arg['x1'] = 1.0
@@ -2273,7 +2273,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
 
-        applyJ(comp, arg, result, [])
+        applyJ(comp, arg, result, [], J)
 
         self.assertEqual(result['y1'], 8.0)
         self.assertEqual(result['y2'], 18.0)
@@ -2288,7 +2288,7 @@ class Testcase_applyJT(unittest.TestCase):
         result['y1'] = 0.0
         result['y2'] = 0.0
 
-        applyJT(comp, arg, result, [])
+        applyJT(comp, arg, result, [], J)
 
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
