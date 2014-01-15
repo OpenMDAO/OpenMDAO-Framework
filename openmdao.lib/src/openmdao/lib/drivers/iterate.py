@@ -13,7 +13,7 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, CyclicWorkflow
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
@@ -50,26 +50,33 @@ class FixedPointIterator(Driver):
         self.history = zeros(0)
         self.current_iteration = 0
 
+        self.workflow = CyclicWorkflow()
+
     def execute(self):
         """Perform the iteration."""
 
-        nvar = self.total_parameters()
+        # perform an initial run
+        self.pre_iteration()
+        self.run_iteration()
+        self.post_iteration()
+        self.current_iteration = 0
+
+        # Find dimension of our problem.
+        self.workflow.initialize_residual()
+
+        # Get and save the intial value of the input parameters
+        val0 = self.workflow.get_independents()
+
+        nvar = len(val0)
         history = zeros([self.max_iteration, nvar])
         delta = zeros(nvar)
 
-        # Get and save the intial value of the input parameters
-        val0 = self.eval_parameters(self.parent)
-
-        # perform an initial run
-        self.run_iteration()
-        self.current_iteration = 0
-
-        history[0, :] = self.eval_eq_constraints(self.parent)
+        history[0, :] = self.workflow.get_dependents()
 
         if self.norm_order == 'Infinity':
             order = float('inf')
         else:
-            order = 2
+            order = self.norm_order
 
         unconverged = True
         while unconverged:
@@ -87,17 +94,19 @@ class FixedPointIterator(Driver):
 
             # Pass output to input
             val0 += history[self.current_iteration, :]
-            self.set_parameters(val0)
+            self.workflow.set_independents(val0)
 
             # run the workflow
+            self.pre_iteration()
             self.run_iteration()
+            self.post_iteration()
 
             self.record_case()
 
             self.current_iteration += 1
 
             # check convergence
-            delta[:] = self.eval_eq_constraints(self.parent)
+            delta[:] = self.workflow.get_dependents()
             history[self.current_iteration] = delta
 
             if norm(delta, order) < self.tolerance:
@@ -110,19 +119,20 @@ class FixedPointIterator(Driver):
     def check_config(self):
         """Make sure the problem is set up right."""
 
-        ncon = self.total_eq_constraints()
+        # We need to figure our severed edges before querying.
+        self.workflow._get_topsort()
+        n_dep = len(self.workflow.get_dependents())
+        n_indep = len(self.workflow.get_independents())
 
-        if ncon == 0:
-            msg = "FixedPointIterator requires a constraint equation."
+        if n_dep == 0:
+            msg = "FixedPointIterator requires a constraint equation or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
-        nparm = self.total_parameters()
-
-        if nparm == 0:
-            msg = "FixedPointIterator requires an input parameter."
+        if n_indep == 0:
+            msg = "FixedPointIterator requires an input parameter or a cyclic workflow."
             self.raise_exception(msg, RuntimeError)
 
-        if ncon != nparm:
+        if n_dep != n_indep:
             msg = "The number of input parameters must equal the number of" \
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)

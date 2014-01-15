@@ -156,6 +156,7 @@ class ImplicitComponent(Component):
                            matvec=self._matvecFWD,
                            dtype=float)
         J = np.zeros((n_res, n_res))
+
         self._cache_J = self.provideJ()
 
         for irhs in np.arange(n_res):

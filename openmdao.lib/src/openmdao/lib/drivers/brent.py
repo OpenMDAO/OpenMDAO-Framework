@@ -1,6 +1,7 @@
 from scipy.optimize import brentq
 
 from openmdao.main.driver import Driver
+from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 from openmdao.main.hasparameters import HasParameters
@@ -15,7 +16,7 @@ class Brent(Driver):
     """Root finding using Brent's method."""
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
-    
+
     lower_bound = Float(0., iotype="in", desc="lower bound for the root search")
     upper_bound = Float(100., iotype="in", desc="upper bound for the root search")
 
@@ -27,11 +28,17 @@ class Brent(Driver):
 
     maxiter = Int(100, iotype="in", desc='if convergence is not achieved in maxiter iterations, and error is raised. Must be >= 0.')
 
+    def __init__(self):
+
+        super(Brent, self).__init__()
+        self.workflow = CyclicWorkflow()
+
     def _eval(self, x):
         """evaluate f(x)"""
 
         self._param.set(x)
         self.run_iteration()
+        self.record_case()
 
         f = self.eval_eq_constraints(self.parent)[0]
 
@@ -47,7 +54,7 @@ class Brent(Driver):
                                  (self.lower_bound, self.upper_bound))
 
         kwargs = {'maxiter':self.maxiter, 'a':self.lower_bound, 'b':self.upper_bound}
-        if self.xtol > 0: 
+        if self.xtol > 0:
             kwargs['xtol'] = self.xtol
         if self.rtol > 0:
             kwargs['rtol'] = self.rtol
