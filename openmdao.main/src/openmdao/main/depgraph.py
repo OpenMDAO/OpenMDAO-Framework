@@ -7,7 +7,8 @@ import networkx as nx
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
-                                     IImplicitComponent, ISolver, IAssembly
+                                     IImplicitComponent, ISolver, \
+                                     IAssembly, IComponent
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
@@ -1338,6 +1339,8 @@ def _check_for_missing_derivs(scope, comps):
             # skip boundary vars and pseudoassemblies
             continue
         comp = getattr(scope, cname)
+        if not has_interface(comp, IComponent): # filter out vartrees
+            continue
         if has_interface(comp, IAssembly):
             dins = comp.list_inputs()
             douts = comp.list_outputs()
