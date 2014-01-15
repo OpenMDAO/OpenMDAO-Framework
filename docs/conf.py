@@ -31,9 +31,9 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)),'scripts
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx',
               'sphinx.ext.doctest', 'sphinx.ext.todo', 'sphinx.ext.viewcode',
-              'sphinx.ext.mathjax', 'sphinx.ext.pngmath', 'openmdao.util.doctools',  
+              'sphinx.ext.mathjax', 'sphinx.ext.pngmath', 'openmdao.util.doctools',
       ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -224,12 +224,12 @@ latex_documents = [
 intersphinx_mapping = {'http://docs.python.org/dev': None}
 
 
-# Options for PDF output 
+# Options for PDF output
 #---------------------------------------
 
 # Grouping the document tree into PDF files. List of tuples
 # (source start file, target name, title, author).
-pdf_documents = [ 
+pdf_documents = [
    ('index', u'OpenMDAO', u'OpenMDAO', u''),
 ]
 
