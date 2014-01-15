@@ -204,13 +204,15 @@ class CyclicWorkflow(SequentialWorkflow):
             # Finally, modify our edge list to include the severed edges, and exclude
             # the boundary edges.
             for src, targets in self._edges.iteritems():
-                if '@in' not in src:
+                if '@in' not in src or \
+                   not any(edge in cyclic_edges.values() for edge in targets):
                     if isinstance(targets, str):
                         targets = [targets]
 
                     newtargets = []
                     for target in targets:
-                        if '@out' not in target:
+                        if '@out' not in target or \
+                           src not in cyclic_edges:
                             newtargets.append(target)
 
                     if len(newtargets) > 0:
@@ -277,7 +279,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """Sets all dependent variables to the values in the input array
         `val`. This includes both parameters and severed targets.
         """
-        print 'setting', val
+
         nparam = self._parent.total_parameters()
         if nparam > 0:
             self._parent.set_parameters(val[:nparam].flatten())
@@ -322,7 +324,6 @@ class CyclicWorkflow(SequentialWorkflow):
 
                     # Poke new value into the input end of the edge.
                     self.scope.set(target, new_val, force=True)
-                    print 'set', target, old_val, new_val
 
                     # Prevent OpenMDAO from stomping on our poked input.
                     self.scope.set_valid([target.split('[',1)[0]], True)

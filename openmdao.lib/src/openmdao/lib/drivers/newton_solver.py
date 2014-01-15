@@ -80,13 +80,11 @@ class NewtonSolver(Driver):
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
+        self.record_case()
 
-        print "val, res", vals, self.workflow.get_dependents()
         return self.workflow.get_dependents()
 
     def _jacobian_callback(self, vals):
         """This function is passed to the internal solver to return the
         jacobian of the dependents with respect to the independents."""
-        J = self.workflow.calc_gradient()
-        print 'J', J
-        return J
+        return self.workflow.calc_gradient()
