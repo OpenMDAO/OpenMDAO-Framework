@@ -12,6 +12,7 @@ except ImportError as err:
 
 from openmdao.main.api import Assembly, Component, CyclicWorkflow, VariableTree
 from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.test.test_derivatives import SimpleDriver
 
 
 class MyComp(Component):
@@ -32,6 +33,7 @@ class Simple(Assembly):
         """ set it up """
         self.add('c1', MyComp())
         self.add('c2', MyComp())
+        self.add('driver', SimpleDriver())
 
         self.driver.workflow = CyclicWorkflow()
         self.driver.workflow.add(['c1', 'c2'])
@@ -80,13 +82,13 @@ class TestCase(unittest.TestCase):
                          ['c2', 'c1'])
 
     def test_multi_flow(self):
-        # 2 unique loops, 3 total loops 
+        # 2 unique loops, 3 total loops
         self.model = MultiPath()
         self.model.run()
 
         self.assertEqual(self.model.driver.workflow._topsort,
                          ['c3', 'c4', 'c1', 'c2'])
- 
+
 
 class Tree2(VariableTree):
 
@@ -110,6 +112,7 @@ class TestCase_Residuals(unittest.TestCase):
         self.model = Assembly()
         self.model.add('c1', MyComp())
         self.model.add('c2', MyComp())
+        self.model.add('driver', SimpleDriver())
         self.model.driver.workflow = CyclicWorkflow()
         self.model.driver.workflow.add(['c1', 'c2'])
 
@@ -128,22 +131,20 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c2.y', 'c1.x')
 
         self.model.driver.workflow.initialize_residual()
-
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-2.0], [-4.0]])
-
-        # Note, running zeros the residuals on sliced edges
         self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
 
-        dv = array([3.0, 5.0, 0.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-3.0], [-5.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        self.assertEqual(indep[1], 2.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
+        self.assertEqual(dep[1], 0.0)
 
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([3.0, 5.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 3.0)
+        self.assertEqual(indep[1], 5.0)
 
     def test_row_vector(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -156,23 +157,20 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c2.y', 'c1.x')
 
         self.model.driver.workflow.initialize_residual()
-
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-2.0], [-4.0]])
-
-        # Note, running zeros the residuals on sliced edges
         self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
 
-        dv = array([3.0, 5.0, 0.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0], [-5.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        self.assertEqual(indep[1], 2.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
+        self.assertEqual(dep[1], 0.0)
 
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([3.0, 5.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 3.0)
+        self.assertEqual(indep[1], 5.0)
 
     def test_array_1D(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -185,24 +183,20 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c2.y', 'c1.x')
 
         self.model.driver.workflow.initialize_residual()
-
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-2.0], [-4.0]])
-
-        # Note, running zeros the residuals on sliced edges
-        print res
         self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
 
-        dv = array([3.0, 5.0, 0.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0], [-5.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        self.assertEqual(indep[1], 2.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
+        self.assertEqual(dep[1], 0.0)
 
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([3.0, 5.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 3.0)
+        self.assertEqual(indep[1], 5.0)
 
     def test_full_matrix(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -215,23 +209,26 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c2.y', 'c1.x')
 
         self.model.driver.workflow.initialize_residual()
-
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-1.0], [-3.0], [-8.0], [-13.0]])
-
-        # Note, running zeros the residuals on sliced edges
         self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
 
-        dv = array([3.0, 5.0, 11.0, 23.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0], [-5.0], [-11.0], [-23.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        self.assertEqual(indep[1], 2.0)
+        self.assertEqual(indep[2], 3.0)
+        self.assertEqual(indep[3], 4.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
+        self.assertEqual(dep[1], 0.0)
+        self.assertEqual(dep[2], 0.0)
+        self.assertEqual(dep[3], 0.0)
 
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([3.0, 5.0, -8.0, -13.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 3.0)
+        self.assertEqual(indep[1], 5.0)
+        self.assertEqual(indep[2], -8.0)
+        self.assertEqual(indep[3], -13.0)
 
     def test_matrix_element(self):
         # Array element to scalar.
@@ -244,24 +241,17 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c2.y', 'c1.x')
 
         self.model.driver.workflow.initialize_residual()
-
-        res = self.model.driver.workflow.calculate_residuals()
-       
-        expected = array([[-6.0]])
-
-        # Note, running zeros the residuals on sliced edges
         self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
 
-        dv = array([3.0, 0.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
 
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([35.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 35.0)
 
     def test_vtree(self):
         self.model.c1.add('vt_out', VarTree(Tree1(), iotype='out'))
@@ -277,24 +267,15 @@ class TestCase_Residuals(unittest.TestCase):
 
         self.model.driver.workflow.initialize_residual()
 
-        res = self.model.driver.workflow.calculate_residuals()
-        expected = array([[-1.0], [-4.0], [-5.0],
-                          [-4.0], [6.0], [9.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 1.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], 0.0)
 
-        # Note, running zeros the residuals on sliced edges
-        self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
-
-        dv = array([3.0, 5.0, 11.0, 23.0, 12.0, 4.4])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0], [-5.0], [-11.0],
-                          [-23.0], [-12.0], [-4.4]])
-
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([35.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 35.0)
 
     def test_vtree_leaf(self):
         self.model.c1.add('vt_out', VarTree(Tree1(), iotype='out'))
@@ -307,23 +288,18 @@ class TestCase_Residuals(unittest.TestCase):
 
         self.model.driver.workflow.initialize_residual()
 
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-4.0], [-5.0]])
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 7.0)
+        self.assertEqual(indep[1], 12.0)
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -4.0)
+        self.assertEqual(dep[1], -5.0)
 
-        # Note, running zeros the residuals on sliced edges
-        self.model.run()
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
-        
-        dv = array([3.0, 5.0])
-        self.model.driver.workflow.set_new_state(dv)
-        res = self.model.driver.workflow.calculate_residuals()
-        
-        expected = array([[-3.0], [-5.0]])
-
-        for j in range(len(expected)):
-            self.assertEqual(res[j], expected[j])
+        dv = array([13.0, 15.0])
+        self.model.driver.workflow.set_independents(dv)
+        indep = self.model.driver.workflow.get_independents()
+        self.assertEqual(indep[0], 13.0)
+        self.assertEqual(indep[1], 15.0)
 
 
 if __name__ == '__main__':

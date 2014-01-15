@@ -238,14 +238,7 @@ class CyclicWorkflow(SequentialWorkflow):
             src = from_PA_var(src)
             old_val = self.scope.get(src) - self.scope.get(target)
 
-            if isinstance(old_val, float):
-                sev_deps.append(old_val)
-            elif isinstance(old_val, ndarray):
-                sev_deps.extend(list(old_val.flatten()))
-            else:
-                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
+            sev_deps.extend(flattened_value(src, old_val))
 
         return hstack((deps, sev_deps))
 
@@ -264,14 +257,7 @@ class CyclicWorkflow(SequentialWorkflow):
             target = from_PA_var(target)
             old_val = self.scope.get(target)
 
-            if isinstance(old_val, float):
-                sev_indeps.append(old_val)
-            elif isinstance(old_val, ndarray):
-                sev_indeps.extend(list(old_val.flatten()))
-            else:
-                msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
+            sev_indeps.extend(flattened_value(target, old_val))
 
         return hstack((indeps, sev_indeps))
 
