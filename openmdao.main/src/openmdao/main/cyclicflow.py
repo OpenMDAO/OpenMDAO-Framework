@@ -236,9 +236,11 @@ class CyclicWorkflow(SequentialWorkflow):
 
             target = from_PA_var(target)
             src = from_PA_var(src)
-            old_val = self.scope.get(src) - self.scope.get(target)
+            src_val = self.scope.get(src)
+            targ_val = self.scope.get(target)
+            res = flattened_value(src, src_val) - flattened_value(target, targ_val)
 
-            sev_deps.extend(flattened_value(src, old_val))
+            sev_deps.extend(res)
 
         return hstack((deps, sev_deps))
 
@@ -284,7 +286,6 @@ class CyclicWorkflow(SequentialWorkflow):
 
                 i1 = i
                 i2 = i + width
-                i += width
 
                 for target in targets:
 
@@ -302,14 +303,44 @@ class CyclicWorkflow(SequentialWorkflow):
                             new_val = val[i1:i2].copy()
                     elif isinstance(old_val, VariableTree):
                         new_val = old_val.copy()
-                        self._update(target, new_val, val[i1:i2])
+                        self._vtree_set(target, new_val, val[i1:i2], i1)
                     else:
                         msg = "Variable %s is of type %s." % (target, type(old_val)) + \
                               " This type is not supported by the MDA Solver."
                         self.scope.raise_exception(msg, RuntimeError)
+
+                    i += width
 
                     # Poke new value into the input end of the edge.
                     self.scope.set(target, new_val, force=True)
 
                     # Prevent OpenMDAO from stomping on our poked input.
                     self.scope.set_valid([target.split('[',1)[0]], True)
+
+    def _vtree_set(self, name, vtree, dv, i1=0):
+        """ Update VariableTree `name` value `vtree` from `dv`. """
+        for key in sorted(vtree.list_vars()):  # Force repeatable order.
+            value = getattr(vtree, key)
+            if isinstance(value, float):
+                setattr(vtree, key, float(dv[i1]))
+                i1 += 1
+            elif isinstance(value, ndarray):
+                shape = value.shape
+                size = value.size
+                i2 = i1 + size
+                if len(shape) > 1:
+                    value = dv[i1:i2]
+                    value = value.reshape(shape)
+                else:
+                    value = dv[i1:i2]
+                setattr(vtree, key, value)
+                i1 += size
+            elif isinstance(value, VariableTree):
+                i1 = self._vtree_set('.'.join((name, key)), value, dv, i1)
+            else:
+                msg = "Variable %s is of type %s." % (name, type(value)) + \
+                      " This type is not supported by the MDA Solver."
+                self.scope.raise_exception(msg, RuntimeError)
+
+        return i1
+
