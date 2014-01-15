@@ -36,7 +36,7 @@ class Slot(Base):
                 warnings.simplefilter("always")
                 warnings.warn(DeprecationWarning(
                     "The use of 'iotype' as metadata for 'Slot' is deprecated.\n"
-                    "Use 'Instance' in place of 'Slot' if you need to use 'iotype'.\n"), stacklevel=4)
+                    "Use 'Instance' in place of 'Slot' if you need to use 'iotype'.\n"), stacklevel=2)
 
         super(Slot, self).__init__(klass, allow_none, factory, args, kw, **metadata)
 

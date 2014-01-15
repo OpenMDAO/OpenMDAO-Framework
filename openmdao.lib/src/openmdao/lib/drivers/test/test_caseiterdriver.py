@@ -23,7 +23,7 @@ from openmdao.main.exceptions import RunStopped
 
 from openmdao.main.datatypes.api import Float, Bool, Array, Instance, Int, Slot, Str, \
                                         List, VarTree
-from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver, ConnectableCaseIteratorDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
                                           SequenceCaseFilter
 
@@ -437,7 +437,7 @@ class TestCase(unittest.TestCase):
 
         top = Assembly()
         top.add('generator', Generator())
-        top.add('cid', CaseIteratorDriver())
+        top.add('cid', ConnectableCaseIteratorDriver())
         top.add('driven', DrivenComponent())
         top.add('verifier', Verifier())
 

@@ -30,7 +30,7 @@ from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
 
-from openmdao.main.datatypes.api import Slot, List, Str, Float, Int, Event, \
+from openmdao.main.datatypes.api import Instance, Slot, List, Str, Float, Int, Event, \
      Dict, Bool
 
 from openmdao.util.typegroups import int_types, real_types
@@ -48,8 +48,11 @@ def check_model_only_one_level_vartree(model_node):
     return True
 
 
-class MetaModel(Component):
-
+class MetaModelBase(Component):
+    """
+    Base class for functionality of a meta model.
+    Should be subclassed.
+    """
     # pylint: disable-msg=E1101
     model = Slot(IComponent, allow_none=True,
                    desc='Slot for the Component or Assembly being '
@@ -60,12 +63,6 @@ class MetaModel(Component):
     excludes = List(Str, iotype='in',
                     desc='A list of names of variables to be excluded '
                          'from the public interface.')
-
-    warm_start_data = Slot(ICaseIterator, iotype="in",
-                              desc="CaseIterator containing cases to use as "
-                              "initial training data. When this is set, all "
-                              "previous training data is cleared and replaced "
-                              "with data from this CaseIterator.")
 
     default_surrogate = Slot(ISurrogate, allow_none=True,
                              desc="This surrogate will be used for all "
@@ -733,3 +730,22 @@ class MetaModel(Component):
         elif self.excludes and name in self.excludes:
             return False
         return True
+
+class ConnectableMetaModel(MetaModelBase):
+    """
+    Same functionality as MetaModelBase but warm_start_data is connectable.
+    """
+
+    warm_start_data = Instance(ICaseIterator, iotype="in",
+                              desc="CaseIterator containing cases to use as "
+                              "initial training data. When this is set, all "
+                              "previous training data is cleared and replaced "
+                              "with data from this CaseIterator.")
+
+class MetaModel(MetaModelBase):
+    warm_start_data = Slot(ICaseIterator,
+                              desc="CaseIterator containing cases to use as "
+                              "initial training data. When this is set, all "
+                              "previous training data is cleared and replaced "
+                              "with data from this CaseIterator.")
+

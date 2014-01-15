@@ -133,7 +133,7 @@ class SlotTestCase(unittest.TestCase):
     def test_list_and_dict_slot_attributes(self):
 
         top = Assembly()
-        top.add('sock', Slot(MyClass, iotype='in', desc='Stuff0'))
+        top.add('sock', Slot(MyClass, desc='Stuff0'))
         top.add('list_sock', List(Slot(MyClass), iotype='in', desc='Stuff'))
         top.add('dict_sock', Dict(key_trait=Str,
                                   value_trait=Slot(MyClass),
