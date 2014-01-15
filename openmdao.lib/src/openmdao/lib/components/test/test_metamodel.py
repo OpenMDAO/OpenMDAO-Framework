@@ -32,7 +32,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution, UncertainD
 
 from openmdao.main.datatypes.api import Float, VarTree
 from openmdao.lib.casehandlers.api import ListCaseIterator
-from openmdao.lib.components.metamodel import MetaModel
+from openmdao.lib.components.metamodel import ConnectableMetaModel, MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, FloatKrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
 
@@ -340,7 +340,7 @@ class MetaModelTestCase(unittest.TestCase):
 
     def _trained_asm(self, avals, bvals):
         asm = set_as_top(Assembly())
-        asm.add('metamodel', MetaModel())
+        asm.add('metamodel', ConnectableMetaModel())
         asm.metamodel.default_surrogate = KrigingSurrogate()
         asm.metamodel.model = Simple()
         asm.metamodel.recorder = DumbRecorder()
@@ -355,6 +355,7 @@ class MetaModelTestCase(unittest.TestCase):
         return asm
 
     def test_constant_inputs(self):
+        
         avals = [1.1]*10
         bvals = [2.2]*10
         asm = self._trained_asm(avals, bvals)
@@ -369,10 +370,11 @@ class MetaModelTestCase(unittest.TestCase):
             self.assertEqual("metamodel: ERROR: all training inputs are constant.", str(err))
         else:
             self.fail("Exception expected")
-
+        
         asm = self._trained_asm(avals+[1.2], bvals+[2.2])
         asm.metamodel.a = 1.
         asm.metamodel.b = 2.2
+
         asm.metamodel.run()
 
         # now set b to a value different than the constant training value
