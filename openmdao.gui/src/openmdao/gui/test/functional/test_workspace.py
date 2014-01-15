@@ -275,6 +275,69 @@ def _test_menu(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_file_commit(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # Check that adding a file enables commit.
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
+
+    stl_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+                                               'files/box.stl')
+    workspace_page.add_file(stl_path)
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    if file_names != ['box.stl']:
+        raise TestCase.failureException('Expected box.stl, got %s' % file_names)
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), '')
+    eq(workspace_page('revert_button').get_attribute('class'), '') # Enabled?
+    workspace_page('project_menu').click()
+
+    # Commit and check that commit is disabled but revert is enabled.
+    workspace_page.commit_project()
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()                     # Disabled?
+
+    # Remove file and check commit & revert enabled.
+    workspace_page.delete_file('box.stl')
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    if file_names:
+        raise TestCase.failureException('Unexpected files %s' % file_names)
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), '')
+    eq(workspace_page('revert_button').get_attribute('class'), '')
+    workspace_page('project_menu').click()
+
+    # revert back to version with file.
+    workspace_page = workspace_page.revert_project()
+    time.sleep(0.5)
+    file_names = workspace_page.get_files()
+    if file_names != ['box.stl']:
+        raise TestCase.failureException('Expected box.stl, got %s' % file_names)
+
+    workspace_page('project_menu').click()
+    time.sleep(0.5)
+    eq(workspace_page('commit_button').get_attribute('class'), 'omg-disabled')
+    eq(workspace_page('revert_button').get_attribute('class'), 'omg-disabled')
+    workspace_page('project_menu').click()
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 def _test_macro(browser):
     project_dict, workspace_page = startup(browser)
 
@@ -929,6 +992,8 @@ def _test_arguments(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -978,13 +1043,15 @@ def _test_sorting(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
 
     # Check order of outputs.
-    inputs = editor.get_outputs()
+    outputs = editor.get_outputs()
     expected = [
         ['', 'stress_o1', '0', '', ''],
         ['', 'stress_o2', '0', '', ''],
@@ -996,7 +1063,7 @@ def _test_sorting(browser):
         ['', 'itername', '', '', 'Iteration coordinates.'],
     ]
 
-    for i, row in enumerate(inputs.value):
+    for i, row in enumerate(outputs.value):
         eq(row, expected[i])
 
     editor.close()

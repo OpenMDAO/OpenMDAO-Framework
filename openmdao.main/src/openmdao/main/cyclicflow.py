@@ -56,17 +56,17 @@ class CyclicWorkflow(SequentialWorkflow):
                       'place it in a subassembly.'
                 self.scope.raise_exception(msg, RuntimeError)
                
-    def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name. """
+    # def add(self, compnames, index=None, check=False):
+    #     """ Add new component(s) to the workflow by name. """
         
-        super(CyclicWorkflow, self).add(compnames, index, check)
-        self.config_changed()
+    #     super(CyclicWorkflow, self).add(compnames, index, check)
+    #     self.config_changed()
 
-    def remove(self, compname):
-        """Remove a component from this Workflow by name."""
+    # def remove(self, compname):
+    #     """Remove a component from this Workflow by name."""
         
-        super(CyclicWorkflow, self).remove(compname)
-        self.config_changed()
+    #     super(CyclicWorkflow, self).remove(compname)
+    #     self.config_changed()
         
     def __iter__(self):
         """Iterate through the nodes in some proper order."""

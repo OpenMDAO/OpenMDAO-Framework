@@ -4,7 +4,6 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import sys
 import cStringIO
 import threading
 import re
@@ -49,7 +48,6 @@ def set_as_top(cont, first_only=False):
     If first_only is True, then only set it as a top if a global
     top doesn't already exist.
     """
-    global __toplock__
     global __has_top__
     with __toplock__:
         if __has_top__ is False and isinstance(cont, Assembly):
@@ -118,6 +116,8 @@ class Assembly(Component):
 
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
+        self.J_input_keys = None
+        self.J_output_keys = None
 
         # parent depgraph may have to invalidate us multiple times per pass
         self._invalidation_type = 'partial'
@@ -244,23 +244,26 @@ class Assembly(Component):
                 self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
-                
+
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
-        
+
         # Assemblies sometimes create inputs and outputs in their configure()
         # function, so call it early if possible
         if self._call_cpath_updated is False and isinstance(obj, Container):
             newobj.parent = self
             newobj.name = target_name
             newobj.cpath_updated()
-            
+
         # check that all connected vars exist in the new object
-        req_vars = set([u.split('.',1)[1].split('[',1)[0] for u,v in conns if u.startswith(target_name+'.')])
-        req_vars.update([v.split('.',1)[1].split('[',1)[0] for u,v in conns if v.startswith(target_name+'.')])
+        req_vars = set([u.split('.', 1)[1].split('[', 1)[0]
+                        for u, v in conns if u.startswith(target_name+'.')])
+        req_vars.update([v.split('.', 1)[1].split('[', 1)[0]
+                         for u, v in conns if v.startswith(target_name+'.')])
         missing = [v for v in req_vars if not newobj.contains(v)]
         if missing:
-            self._logger.warning("the following variables are connected to other components but are missing in "
+            self._logger.warning("the following variables are connected to "
+                                 "other components but are missing in "
                                  "the replacement object: %s" % missing)
             mconns = set()
             for m in missing:
@@ -268,7 +271,7 @@ class Assembly(Component):
             # disconnect any vars that are missing in the replacement object
             for u, v in mconns:
                 self.disconnect(u, v)
-            
+
         # remove any existing connections to replacement object
         if has_interface(newobj, IComponent):
             self.disconnect(newobj.name)
@@ -282,8 +285,8 @@ class Assembly(Component):
                 try:
                     self.connect(u, v)
                 except Exception as err:
-                    self._logger.warning("Couldn't connect '%s' to '%s': %s" %
-                                  (u, v, str(err)))
+                    self._logger.warning("Couldn't connect '%s' to '%s': %s",
+                                         u, v, err)
 
         # Restore driver references.
         for dname, _refs in refs.items():
@@ -291,7 +294,7 @@ class Assembly(Component):
             drv.remove_references(target_name)
             drv.restore_references(_refs)
 
-        # add new object (if it's a Component) to any 
+        # add new object (if it's a Component) to any
         # workflows where target was
         if has_interface(newobj, IComponent):
             for wflow, idx in wflows:
@@ -314,7 +317,7 @@ class Assembly(Component):
             self.disconnect(name)
 
         return super(Assembly, self).remove(name)
- 
+
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation, adds it to self, and creates a connection
@@ -407,8 +410,8 @@ class Assembly(Component):
 
     def get_passthroughs(self):
         ''' Get all the inputs and outputs of the assembly's child components
-            and indicate for each whether or not it is a passthrough variable.
-            If it is a passthrough, provide the assembly's name for the variable.
+        and indicate for each whether or not it is a passthrough variable.
+        If it is a passthrough, provide the assembly's name for the variable.
         '''
         inputs = {}
         outputs = {}
@@ -460,11 +463,11 @@ class Assembly(Component):
 
     @rbac(('owner', 'user'))
     def connect(self, src, dest):
-        """Connect one src expression to one destination expression. This could be
-        a normal connection between variables from two internal Components, or
-        it could be a passthrough connection, which connects across the scope boundary
-        of this object.  When a pathname begins with 'parent.', that indicates
-        it is referring to a Variable outside of this object's scope.
+        """Connect one src expression to one destination expression. This could
+        be a normal connection between variables from two internal Components,
+        or it could be a passthrough connection, which connects across the scope
+        boundary of this object.  When a pathname begins with 'parent.', that
+        indicates it is referring to a Variable outside of this object's scope.
 
         src: str
             Source expression string.
@@ -551,20 +554,20 @@ class Assembly(Component):
                 for u, v in graph.list_connections(show_external=True):
                     if (u, v) in to_remove:
                         super(Assembly, self).disconnect(u, v)
-                        to_remove.remove((u,v))
+                        to_remove.remove((u, v))
 
                 for u, v in graph.list_autopassthroughs():
                     if (u, v) in to_remove:
                         super(Assembly, self).disconnect(u, v)
-                        to_remove.remove((u,v))
-                        
+                        to_remove.remove((u, v))
+
             if to_remove:  # look for pseudocomp expression connections
                 for node, data in graph.nodes_iter(data=True):
                     if 'srcexpr' in data:
-                        for u,v in to_remove:
+                        for u, v in to_remove:
                             if data['srcexpr'] == u or data['destexpr'] == v:
                                 pcomps.add(node)
-                        
+
             for name in pcomps:
                 if '_pseudo_' not in varpath:
                     self.remove(name)
@@ -577,7 +580,7 @@ class Assembly(Component):
                     graph.remove(name)
                 except (KeyError, nx.exception.NetworkXError):
                     pass
-        finally:    
+        finally:
             self.config_changed()
 
     def config_changed(self, update_parent=True):
@@ -596,6 +599,8 @@ class Assembly(Component):
 
         # Detect and save any loops in the graph.
         self._graph_loops = None
+        
+        self.J_input_keys = self.J_output_keys = None
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         parts = path.split('.', 1)
@@ -691,7 +696,7 @@ class Assembly(Component):
                         getattr(self, cname).update_outputs(vnames)
                 else:
                     getattr(self, cname).update_outputs(vnames)
-                        
+
         try:
             for inv_dest in invalid_dests:
                 self._depgraph.update_destvar(self, inv_dest)
@@ -710,7 +715,7 @@ class Assembly(Component):
         """
         if childname not in self._depgraph:
             return []
-        
+
         if vnames is None:
             vnames = [childname]
         elif childname:
@@ -777,11 +782,11 @@ class Assembly(Component):
     def exec_counts(self, compnames):
         return [getattr(self, c).exec_count for c in compnames]
 
-    def check_gradient(self, name=None, inputs=None, outputs=None, 
+    def check_gradient(self, name=None, inputs=None, outputs=None,
                        stream=None, mode='auto',
-                       fd_form = 'forward', fd_step_size=1.0e-6, 
+                       fd_form='forward', fd_step_size=1.0e-6,
                        fd_step_type='absolute'):
-    
+
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
@@ -805,7 +810,7 @@ class Assembly(Component):
             If the inputs are not specified and name is not specified,
             then they will be generated from the parameters of
             the object named 'driver'.
-            
+
         outputs: (optional) iter of str or None
             Names of output variables. The calculated gradient will be
             the matrix of values of these output variables with respect
@@ -814,23 +819,23 @@ class Assembly(Component):
             If the outputs are not specified and name is not specified,
             then they will be generated from the objectives and constraints
             of the object named 'driver'.
-            
+
         stream: (optional) file-like object, str, or None
             Where to write to, default stdout. If a string is supplied,
             that is used as a filename. If None, no output is written.
-            
+
         mode: (optional) str or None
-            Set to 'forward' for forward mode, 'adjoint' for adjoint mode, 
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
-            
+
         fd_form: str
-            Finite difference mode. Valid choices are 'forward', 'adjoint' , 
+            Finite difference mode. Valid choices are 'forward', 'adjoint' ,
             'central'. Default is 'forward'
-            
+
         fd_step_size: float
             Default step_size for finite difference. Default is 1.0e-6.
-            
+
         fd_step_type: str
             Finite difference step type. Set to 'absolute' or 'relative'.
             Default is 'absolute'.
@@ -840,20 +845,28 @@ class Assembly(Component):
         """
         driver = self.driver
         obj = None
-        
+
         base_fd_form = driver.gradient_options.fd_form
         base_fd_step_size = driver.gradient_options.fd_step_size
         base_fd_step_type = driver.gradient_options.fd_step_type
-        
+
         driver.gradient_options.fd_form = fd_form
         driver.gradient_options.fd_step_size = fd_step_size
         driver.gradient_options.fd_step_type = fd_step_type
 
+        # tuples cause problems.
+        if inputs:
+            inputs = list(inputs)
+        if outputs:
+            outputs = list(outputs)
+
         if inputs and outputs:
             if name:
-                logger.warning("The 'inputs' and 'outputs' args were specified to "
-                    "check_gradient, so the 'name' arg (%s) is ignored." % name)
-        elif not name: # we're missing either inputs or outputs, so we need a name
+                logger.warning("The 'inputs' and 'outputs' args were specified"
+                               " to check_gradient, so the 'name' arg (%s) is"
+                               " ignored.", name)
+        elif not name:
+            # we're missing either inputs or outputs, so we need a name
             name = 'driver'
 
         if name:
@@ -868,8 +881,9 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull inputs from driver
             elif has_interface(obj, IComponent):
-                inputs = ['.'.join([obj.name, inp]) 
-                            for inp in obj.list_inputs() if is_differentiable_var(inp,obj)]
+                inputs = ['.'.join([obj.name, inp])
+                          for inp in obj.list_inputs()
+                                  if is_differentiable_var(inp, obj)]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any inputs for generating gradient.")
@@ -877,24 +891,25 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 pass # workflow.check_gradient can pull outputs from driver
             elif has_interface(obj, IComponent):
-                outputs = ['.'.join([obj.name, out]) 
-                              for out in obj.list_outputs() if is_differentiable_var(out,obj)]
+                outputs = ['.'.join([obj.name, out])
+                           for out in obj.list_outputs()
+                                   if is_differentiable_var(out, obj)]
                 outputs = sorted(outputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
-        result = driver.workflow.check_gradient(inputs=inputs, 
+        result = driver.workflow.check_gradient(inputs=inputs,
                                                 outputs=outputs,
                                                 stream=stream,
                                                 mode=mode)
-        
+
         driver.gradient_options.fd_form = base_fd_form
         driver.gradient_options.fd_step_size = base_fd_step_size
         driver.gradient_options.fd_step_type = base_fd_step_type
         return result
-            
 
-    def linearize(self, required_inputs=None, required_outputs=None):
+
+    def provideJ(self, required_inputs, required_outputs):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
@@ -913,9 +928,11 @@ class Assembly(Component):
 
         for src in required_inputs:
             varname, _, tail = src.partition('[')
-            target = [n for n in self._depgraph.successors(varname) if not n.startswith('parent.')]
+            target = [n for n in self._depgraph.successors(varname)
+                              if not n.startswith('parent.')]
             if len(target) == 0:
-                target = [n for n in self._depgraph.successors(src) if not n.startswith('parent.')]
+                target = [n for n in self._depgraph.successors(src)
+                                  if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 
@@ -945,12 +962,10 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
 
-        self.J = self.driver.calc_gradient(input_keys, output_keys)
+        return self.driver.calc_gradient(input_keys, output_keys)
 
-    def provideJ(self):
-        '''Provides the Jacobian calculated in linearize().'''
-
-        return self.J_input_keys, self.J_output_keys, self.J
+    def list_deriv_vars(self):
+        return self.J_input_keys, self.J_output_keys
 
     def list_components(self):
         ''' List the components in the assembly.
@@ -1027,13 +1042,13 @@ class Assembly(Component):
                                                HasEqConstraints,
                                                HasIneqConstraints)):
                             for path in inst.get_referenced_varpaths():
-                                name, dot, rest = path.partition('.')
+                                name, _, rest = path.partition('.')
                                 constraints.append([path,
                                                     comp.name + '.' + rest])
                         elif isinstance(inst, (HasObjective,
                                                HasObjectives)):
                             for path in inst.get_referenced_varpaths():
-                                name, dot, rest = path.partition('.')
+                                name, _, rest = path.partition('.')
                                 objectives.append([path,
                                                    comp.name + '.' + name])
 

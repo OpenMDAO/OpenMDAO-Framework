@@ -329,6 +329,8 @@ def _test_Avartrees(browser):
             'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -348,6 +350,8 @@ def _test_Avartrees(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -389,6 +393,8 @@ def _test_Avartrees(browser):
             'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -408,6 +414,7 @@ def _test_Avartrees(browser):
         ['directory',     ''],
         ['force_execute', 'False'],
         ['force_fd', 'False'],
+        ['missing_deriv_policy', 'error']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -424,6 +431,7 @@ def _test_Avartrees(browser):
         ['directory',     ''],
         ['force_execute', 'False'],
         ['force_fd', 'False'],
+        ['missing_deriv_policy', 'error']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -450,6 +458,7 @@ def _test_Avartrees(browser):
         ['directory',     ''],
         ['force_execute', 'False'],
         ['force_fd', 'False'],
+        ['missing_deriv_policy', 'error']
     ]
 
     for i, row in enumerate(inputs.value):
