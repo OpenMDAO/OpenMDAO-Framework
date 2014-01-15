@@ -181,7 +181,7 @@ example from above, but let's see how you can change some settings.
         from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
         model = OptimizationConstrained()
         model.driver.gradient_options.fd_form = 'central'
-        model.driver.gradient_options.fd_step_size = 1.0e-3
+        model.driver.gradient_options.fd_step = 1.0e-3
         model.driver.gradient_options.fd_step_type = 'relative'
 
 The default form for finite difference is a forward difference, but sometimes
@@ -192,7 +192,7 @@ small, so it is essential to choose this value carefully. Fiinally, the
 default step type is ``'absolute'``, but you may want to set it to ``'relative'`` for
 variables that have a wider range of possible magnitudes. Relative
 differencing calculates a step size by taking the current variable value and
-multipying it by the ``fd_step_size`` value.
+multipying it by the ``fd_step`` value.
 
 You can also tell a driver to ignore all analytic derivatives and just use finite
 difference.

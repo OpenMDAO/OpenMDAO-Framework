@@ -155,7 +155,7 @@ class Component(Container):
                                 framework_var=True,
                                 desc='Determines behavior when some '
                                      'analytical derivatives are provided '
-                                     'but some are missing')  
+                                     'but some are missing')
 
     create_instance_dir = Bool(False)
 
@@ -1974,7 +1974,7 @@ class Component(Container):
 
     def check_gradient(self, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
-                       fd_form='forward', fd_step_size=1.0e-6,
+                       fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
@@ -2007,7 +2007,7 @@ class Component(Container):
             Finite difference mode. Valid choices are 'forward', 'adjoint',
             'central'. Default is 'forward'
 
-        fd_step_size: float
+        fd_step: float
             Default step_size for finite difference. Default is 1.0e-6.
 
         fd_step_type: str
@@ -2028,7 +2028,7 @@ class Component(Container):
                 return asm.check_gradient(name=self.name,
                                          inputs=inputs, outputs=outputs,
                                          stream=stream, mode=mode,
-                                         fd_form=fd_form, fd_step_size=fd_step_size,
+                                         fd_form=fd_form, fd_step=fd_step,
                                          fd_step_type=fd_step_type)
             finally:
                 self.parent = None
@@ -2038,6 +2038,6 @@ class Component(Container):
             return self.parent.check_gradient(name=self.name,
                                               inputs=inputs, outputs=outputs,
                                               stream=stream, mode=mode,
-                                              fd_form=fd_form, fd_step_size=fd_step_size,
+                                              fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
 
