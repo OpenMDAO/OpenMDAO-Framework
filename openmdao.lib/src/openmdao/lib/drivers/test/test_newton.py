@@ -7,7 +7,7 @@ from nose import SkipTest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.lib.drivers.newton_solver import NewtonKrylov
+from openmdao.lib.drivers.newton_solver import NewtonSolver
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline2_WithDerivatives, \
@@ -38,7 +38,7 @@ class Sellar_MDA(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
 
-        self.add('driver', NewtonKrylov())
+        self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
 
 
@@ -62,7 +62,7 @@ class Sellar_MDA_subbed(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
 
-        self.add('subdriver', NewtonKrylov())
+        self.add('subdriver', NewtonSolver())
         self.driver.workflow.add(['subdriver'])
         self.subdriver.workflow.add(['d1', 'd2'])
 
@@ -87,7 +87,7 @@ class Sellar_MDA_Mixed(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
 
-        self.add('driver', NewtonKrylov())
+        self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
 
 class Sellar_MDA_Mixed_Flipped(Assembly):
@@ -110,7 +110,7 @@ class Sellar_MDA_Mixed_Flipped(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
 
-        self.add('driver', NewtonKrylov())
+        self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
 
 class Sellar_MDA_None(Assembly):
@@ -133,7 +133,7 @@ class Sellar_MDA_None(Assembly):
         self.connect('d1.y1', 'd2.y1')
         self.connect('d2.y2', 'd1.y2')
 
-        self.add('driver', NewtonKrylov())
+        self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
 
 
@@ -148,7 +148,7 @@ class Scalable_MDA(Assembly):
         self.connect('d1.y_out', 'd2.y_in')
         self.connect('d2.y_out', 'd1.y_in')
 
-        self.add('driver', NewtonKrylov())
+        self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
         self.driver.newton = True
 
@@ -286,7 +286,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         comp.c = 10.0
         comp.x = 0.0
 
-        driver = a.add('driver', NewtonKrylov())
+        driver = a.add('driver', NewtonSolver())
 
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')

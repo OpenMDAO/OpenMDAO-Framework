@@ -19,6 +19,6 @@ from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.distributioncasedriver import DistributionCaseDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
-from openmdao.lib.drivers.newton_solver import NewtonKrylov
+from openmdao.lib.drivers.newton_solver import NewtonSolver
 from openmdao.lib.drivers.brent import Brent
 
