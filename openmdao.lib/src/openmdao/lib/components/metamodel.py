@@ -89,7 +89,7 @@ class MetaModelBase(Component):
     reset_training_data = Event(desc='Reset training data on next execution')
 
     def __init__(self):
-        super(MetaModel, self).__init__()
+        super(MetaModelBase, self).__init__()
         self._surrogate_input_names = None
         self._surrogate_output_names = None
         self._surrogate_overrides = set()  # keeps track of which sur_<name> slots are full
@@ -329,12 +329,12 @@ class MetaModelBase(Component):
 
     def _post_run(self):
         self._train = False
-        super(MetaModel, self)._post_run()
+        super(MetaModelBase, self)._post_run()
 
     def invalidate_deps(self, compname=None, varnames=None, force=False):
         if compname:  # we were called from our model, which expects to be in an Assembly
             return
-        super(MetaModel, self).invalidate_deps(varnames=varnames)
+        super(MetaModelBase, self).invalidate_deps(varnames=varnames)
 
     def exec_counts(self, compnames):
         # we force the run on our model, so it doesn't matter what we tell it the exec counts are
