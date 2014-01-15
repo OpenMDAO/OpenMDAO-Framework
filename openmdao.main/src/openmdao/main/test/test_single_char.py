@@ -19,19 +19,21 @@ class C(Component):
         self.v = self.x + self.y
         self.w = self.x*self.y
 
-    def linearize(self):
+    def provideJ(self):
 
         dv = np.array([1.0, 1.0])
         dw = np.array([self.y, self.x])
 
         self.J = np.vstack((dv, dw))
+        return self.J
 
-    def provideJ(self):
+    def list_deriv_vars(self):
 
         inputs = ('x', 'y')
         outputs = ('v', 'w')
 
-        return inputs, outputs, self.J
+        return inputs, outputs
+
 
 class A(Assembly):
 

@@ -60,13 +60,13 @@ class Discipline(Component):
         self.y_out = array(-1/self.c_y_out*(Cz*z+Cx*x-Cy*y)) 
         #print "running", self.name, self.y_in, self.y_out
         
-    def linearize(self):
+    def provideJ(self):
         """ Calculate the Jacobian """
         
         self.Jx = self.C_x/self.c_y_out
         self.Jy = self.C_y/self.c_y_out
         self.Jz = self.C_z/self.c_y_out
-        
+
         
     def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian."""
@@ -79,9 +79,7 @@ class Discipline(Component):
                 result[key] += self.Jy.dot(arg['y_in'])
             if 'z' in arg:
                 result[key] += self.Jz.dot(arg['z'])
-                              
-        return
-    
+                                  
     
 class UnitScalableProblem(OptProblem):         
     def __init__(self,n_disciplines=3,prob_size=3): 

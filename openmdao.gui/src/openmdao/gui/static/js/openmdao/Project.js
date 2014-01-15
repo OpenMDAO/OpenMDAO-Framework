@@ -584,6 +584,26 @@ openmdao.Project=function(listeners_ready) {
         return _self.createFolder(name);
     };
 
+    /** add one or more files, optionally specifying a dest folder */
+    this.addFiles = function(files, path) {
+        var formData = new FormData();
+        for (var filename in files) {
+            formData.append('file', files[filename]);
+        }
+        if (path) {
+            formData.append('path', path);
+        }
+        var jqXHR = jQuery.ajax({
+                        type: 'POST',
+                        url:  '/workspace/tools/upload',
+                        data: formData,
+                        processData: false, // Don't assume default data format.
+                        contentType: false, // Don't use default content type.
+                    });
+        setModified(true);
+        return jqXHR.promise();
+    }
+
     /** rename file with specified path. */
     this.renameFile = function(filepath, newname) {
         // convert to relative path with forward slashes

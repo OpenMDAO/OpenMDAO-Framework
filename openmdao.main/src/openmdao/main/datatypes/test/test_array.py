@@ -144,7 +144,7 @@ class ArrayTestCase(unittest.TestCase):
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
 
-        self.assertEqual(len(input_attrs), 7)
+        self.assertEqual(len(input_attrs), 8)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
                          'dim': '3',

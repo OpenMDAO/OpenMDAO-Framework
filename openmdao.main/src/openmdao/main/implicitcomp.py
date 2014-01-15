@@ -1,6 +1,6 @@
 """ Class definition for an Implicit Component. """
 
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, check_grad
 from scipy.sparse.linalg import gmres, LinearOperator
 import numpy as np
 
@@ -128,10 +128,15 @@ class ImplicitComponent(Component):
 
         x0 = self.get_state()
 
+<<<<<<< HEAD
         # If our comp doesn't have derivatives, let the internal solver
         # calculate them however it does
+=======
+        # If our comp doesn't have derivatives, let the
+        # internal solver calculate them however it does
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
         fprime = None
-        if hasattr(self, 'linearize'):
+        if hasattr(self, 'provideJ'):
             fprime = self._jacobian_callback
 
         fsolve(self._solve_callback, x0, fprime=fprime)
@@ -156,8 +161,12 @@ class ImplicitComponent(Component):
                            matvec=self._matvecFWD,
                            dtype=float)
         J = np.zeros((n_res, n_res))
+<<<<<<< HEAD
 
         self.linearize()
+=======
+        self._cache_J = self.provideJ()
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
 
         for irhs in np.arange(n_res):
 
@@ -207,7 +216,11 @@ class ImplicitComponent(Component):
 
             idx += size
 
+<<<<<<< HEAD
         applyJ(self, inputs, outputs, [])
+=======
+        applyJ(self, inputs, outputs, [], J=self._cache_J)
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
         #print inputs, outputs
 
         idx = 0

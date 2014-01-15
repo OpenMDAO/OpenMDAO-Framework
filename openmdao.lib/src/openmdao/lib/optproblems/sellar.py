@@ -61,8 +61,9 @@ class Discipline1_WithDerivatives(Component):
         self.y1 = z1**2 + z2 + x1 - 0.2*y2
         #print "Dis 1 (%f, %f, %f, %f, out = %f)" % (z1, z2, x1, y2, self.y1)
 
-    def linearize(self):
+    def provideJ(self):
         """ Calculate the Jacobian """
+<<<<<<< HEAD
 
         self.J = numpy.zeros([1, 4])
 
@@ -79,6 +80,23 @@ class Discipline1_WithDerivatives(Component):
 
         return input_keys, output_keys, self.J
 
+=======
+        
+        J = numpy.zeros([1, 4])
+        
+        J[0, 0] = 1.0
+        J[0, 1] = -0.2
+        J[0, 2] = 2.0*self.z1
+        J[0, 3] = 1.0
+
+        return J
+                
+    def list_deriv_vars(self):
+        input_keys = ('x1', 'y2', 'z1', 'z2')
+        output_keys = ('y1',)
+        
+        return input_keys, output_keys
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
 
 class Discipline2(Component):
     """Component containing Discipline 2."""
@@ -128,11 +146,19 @@ class Discipline2_WithDerivatives(Component):
         # above 3.16, so lets just let it converge, and the optimizer will
         # throw it out
         y1 = abs(self.y1)
+<<<<<<< HEAD
 
         self.y2 = y1**(.5) + z1 + z2
         #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)
 
     def linearize(self):
+=======
+        
+        self.y2 = y1**(.5) + z1 + z2         
+        #print "Dis 2 (%f, %f, %f, out = %f)" % (z1, z2, y1, self.y2)        
+        
+    def provideJ(self):
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
         """ Calculate the Jacobian """
 
         self.J = numpy.zeros([1, 3])
@@ -140,7 +166,9 @@ class Discipline2_WithDerivatives(Component):
         self.J[0, 0] = .5*(abs(self.y1))**-0.5
         self.J[0, 1] = 1.0
         self.J[0, 2] = 1.0
+        return self.J
 
+<<<<<<< HEAD
     def provideJ(self):
         """Alternative specification."""
 
@@ -150,6 +178,14 @@ class Discipline2_WithDerivatives(Component):
         return input_keys, output_keys, self.J
 
 
+=======
+    def list_deriv_vars(self):
+        input_keys = ('y1', 'z1', 'z2')
+        output_keys = ('y2',)
+        
+        return input_keys, output_keys
+           
+>>>>>>> 6a93dff42759d7b104ea1deb1fe5997f4fb1f0e2
 class SellarProblem(OptProblem):
     """ Sellar test problem definition."""
 

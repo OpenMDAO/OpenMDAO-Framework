@@ -44,18 +44,6 @@ class CyclicWorkflow(SequentialWorkflow):
         self._severed_edges = []
         self._mapped_severed_edges = []
 
-    def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the workflow by name. """
-
-        super(CyclicWorkflow, self).add(compnames, index, check)
-        self.config_changed()
-
-    def remove(self, compname):
-        """Remove a component from this Workflow by name."""
-
-        super(CyclicWorkflow, self).remove(compname)
-        self.config_changed()
-
     def __iter__(self):
         """Iterate through the nodes in some proper order."""
 
@@ -240,10 +228,10 @@ class CyclicWorkflow(SequentialWorkflow):
         deps = self._parent.eval_eq_constraints(self.scope)
         sev_deps = []
         for src, target in self._severed_edges:
-            
+
             if not isinstance(target, str):
                 target = target[0]
-                
+
             target = from_PA_var(target)
             src = from_PA_var(src)
             old_val = self.scope.get(src) - self.scope.get(target)
@@ -256,7 +244,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 msg = "Variable %s is of type %s." % (target, type(old_val)) + \
                       " This type is not supported by the MDA Solver."
                 self.scope.raise_exception(msg, RuntimeError)
-                
+
         return hstack((deps, sev_deps))
 
     def get_independents(self):
@@ -267,10 +255,10 @@ class CyclicWorkflow(SequentialWorkflow):
         indeps = self._parent.eval_parameters(self.scope)
         sev_indeps = []
         for _, target in self._severed_edges:
-            
+
             if not isinstance(target, str):
                 target = target[0]
-                
+
             target = from_PA_var(target)
             old_val = self.scope.get(target)
 
@@ -282,7 +270,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 msg = "Variable %s is of type %s." % (target, type(old_val)) + \
                       " This type is not supported by the MDA Solver."
                 self.scope.raise_exception(msg, RuntimeError)
-            
+
         return hstack((indeps, sev_indeps))
 
     def set_independents(self, val):
@@ -305,7 +293,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     width = len(i1)
                 else:
                     width = i2-i1
-                    
+
                 i1 = i
                 i2 = i + width
                 i += width
