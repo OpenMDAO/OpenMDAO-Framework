@@ -174,7 +174,7 @@ openmdao.Project=function(listeners_ready) {
             }
         }
         else {
-            debug.info("no callbacks for out message:", message);
+            debug.warn("no callbacks for out message:", message);
         }
     }
 

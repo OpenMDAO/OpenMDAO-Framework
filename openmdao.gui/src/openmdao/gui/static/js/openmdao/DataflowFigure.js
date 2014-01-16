@@ -523,7 +523,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
             f = new openmdao.PropertiesFrame(id, self.project).editObject(pathname);
         }));
 
-        // expose evaluate() function for an ImplicitComponent
+        // evaluate, for ImplicitComponent only
         if (jQuery.inArray('IImplicitComponent', this.interfaces) >= 0) {
             menu.appendMenuItem(new draw2d.MenuItem("Evaluate", null, function() {
                 var cmd = pathname + '.evaluate();';

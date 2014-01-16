@@ -137,7 +137,6 @@ openmdao.LogFrame = function(id, project) {
     function doCopy(ev) {
         // Tried to copy just the selected text, but the selection gets
         // cleared when the context menu is displayed :-(
-        debug.info('doCopy', logData.html());
         openmdao.Util.htmlWindow(logData.html(), 'Copy of OpenMDAO log');
     }
 

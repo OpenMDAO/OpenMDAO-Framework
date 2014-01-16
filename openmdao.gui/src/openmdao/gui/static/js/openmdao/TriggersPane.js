@@ -144,7 +144,6 @@ openmdao.TriggersPane = function(elm, project, pathname, name) {
         else {
             events.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         events.resizeCanvas();
     };

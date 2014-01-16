@@ -114,7 +114,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
        function connectedToString(connections) {
            var connected = connections.connected !== undefined ? connections.connected : connections;
-           var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
+           var partially_connected = connections.hasOwnProperty("partially_connected") ? connections.partially_connected : "";
 
            return connected + partially_connected;
        }
@@ -631,7 +631,6 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         else {
             props.setData([]);
             alert('Error getting properties for '+self.pathname+' ('+name+')');
-            debug.info(self.pathname,properties);
         }
         highlightCells();
         props.resizeCanvas();
