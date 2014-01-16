@@ -4,14 +4,12 @@ differentiation capability.
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
-from openmdao.main.interfaces import IVariableTree, IAssembly
+from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
 
 try:
-    from numpy import array, ndarray, zeros, ones, unravel_index, \
-         arange, vstack, hstack
-
+    from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
 
@@ -149,21 +147,18 @@ def pre_process_dicts(obj, key, arg_or_result):
     # For arrays, apply_deriv expects full arrays, not
     # indexed ones. We need to create the full array on
     # the fly, then poke in the values.
-    if '[' in key:
-        basekey, _, index = key.partition('[')
-        index = '[' + index
-        var = obj.get(basekey)
-
+    basekey, _, index = key.partition('[')
+    if index:
         if basekey not in arg_or_result:
+            var = obj.get(basekey)
             arg_or_result[basekey] = zeros(var.shape)
 
         sliced_shape = obj.get(key).shape
         value = value.reshape(sliced_shape)
-        exec("arg_or_result[basekey]%s += value" % index)
+        exec("arg_or_result[basekey][%s += value" % index)
 
     else:
         var = obj.get(key)
-
         if isinstance(var, float):
             return
 
@@ -180,7 +175,7 @@ def pre_process_dicts(obj, key, arg_or_result):
 
         arg_or_result[key] = value.reshape(shape)
 
-def post_process_dicts(obj, key, result):
+def post_process_dicts(key, result):
     '''Once we've called apply_deriv or appyMinv (or their adjoint
     counterparts, we need to restore them to their expected format, so
     basically flatten and poke array elements.
@@ -190,11 +185,9 @@ def post_process_dicts(obj, key, result):
 
     # If we have sliced arrays in our index, then we need to
     # poke the data back into the sliced keys.
-    if '[' in key:
-        basekey, _, index = key.partition('[')
-        index = '[' + index
-        var = obj.get(basekey)
-        exec("result[key][:] = result[basekey]%s.flatten()" % index)
+    basekey, _, index = key.partition('[')
+    if index:
+        exec("result[key][:] = result[basekey][%s.flatten()" % index)
     else:
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
@@ -214,8 +207,8 @@ def applyJ(obj, arg, result, residual, J=None):
 
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
-        resultkeys = result.keys()
-        for key in sorted(resultkeys):
+        resultkeys = sorted(result.keys())
+        for key in resultkeys:
             pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
@@ -225,8 +218,8 @@ def applyJ(obj, arg, result, residual, J=None):
         obj.apply_deriv(arg, result)
 
         # Result vector needs to be flattened.
-        for key in sorted(resultkeys, reverse=True):
-            post_process_dicts(obj, key, result)
+        for key in reversed(resultkeys):
+            post_process_dicts(key, result)
 
         # Arg is still called afterwards, so flatten it back.
         for key in argkeys:
@@ -277,13 +270,13 @@ def applyJ(obj, arg, result, residual, J=None):
                     continue
                 used.add((i1, i2, idx))
 
-            Jsub = reduce_jacobian(J, ikey, okey, i1, i2, idx, ish,
-                                   o1, o2, odx, osh)
+            Jsub = reduce_jacobian(J, i1, i2, idx, ish,
+                                      o1, o2, odx, osh)
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
                 tmp = Jsub[0][0] * arg[ikey]
             else:
                 tmp = Jsub.dot(arg[ikey])
@@ -309,8 +302,8 @@ def applyJT(obj, arg, result, residual, J=None):
         # The apply_deriv function expects the argument and
         # result dicts for each input and output to have the
         # same shape as the input/output.
-        resultkeys = result.keys()
-        for key in sorted(resultkeys):
+        resultkeys = sorted(result.keys())
+        for key in resultkeys:
             pre_process_dicts(obj, key, result)
 
         argkeys = arg.keys()
@@ -320,8 +313,8 @@ def applyJT(obj, arg, result, residual, J=None):
         obj.apply_derivT(arg, result)
 
         # Result vector needs to be flattened.
-        for key in sorted(resultkeys, reverse=True):
-            post_process_dicts(obj, key, result)
+        for key in reversed(resultkeys):
+            post_process_dicts(key, result)
 
         # Arg is still called afterwards, so flatten it back.
         for key in argkeys:
@@ -331,7 +324,7 @@ def applyJT(obj, arg, result, residual, J=None):
 
         return
 
-    input_keys, output_keys  = obj.list_deriv_vars()
+    input_keys, output_keys = obj.list_deriv_vars()
 
     #print 'J', input_keys, output_keys, J
 
@@ -372,13 +365,13 @@ def applyJT(obj, arg, result, residual, J=None):
                 basekey, _, idx = ikey.partition('[')
                 i1, i2, ish = ibounds[basekey]
 
-            Jsub = reduce_jacobian(J, okey, ikey, o1, o2, odx, osh,
-                                   i1, i2, idx, ish).T
+            Jsub = reduce_jacobian(J, o1, o2, odx, osh,
+                                      i1, i2, idx, ish).T
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type=='units' and Jsub.shape == (1,1):
+               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
                 tmp = Jsub[0][0] * arg[ikey]
             else:
                 tmp = Jsub.dot(arg[ikey])
@@ -388,12 +381,12 @@ def applyJT(obj, arg, result, residual, J=None):
     #print 'applyJT', arg, result
 
 def applyMinv(obj, inputs):
-    """Simple wrapper around a component's applyMinv where we can reshape the arrays for each
-    input and expand any needed array elements into full arrays".
+    """Simple wrapper around a component's applyMinv where we can reshape the
+    arrays for each input and expand any needed array elements into full arrays.
     """
 
-    inputkeys = inputs.keys()
-    for key in sorted(inputkeys):
+    inputkeys = sorted(inputs.keys())
+    for key in inputkeys:
         pre_process_dicts(obj, key, inputs)
 
     pre_inputs = inputs.copy()
@@ -401,8 +394,8 @@ def applyMinv(obj, inputs):
     inputs = obj.applyMinv(pre_inputs, inputs)
 
     # Result vector needs to be flattened.
-    for key in sorted(inputkeys, reverse=True):
-        post_process_dicts(obj, key, inputs)
+    for key in reversed(inputkeys):
+        post_process_dicts(key, inputs)
 
     # Clean out any leftover keys we added
     for key in inputs.keys():
@@ -412,12 +405,12 @@ def applyMinv(obj, inputs):
     return inputs
 
 def applyMinvT(obj, inputs):
-    """Simple wrapper around a component's applyMinvT where we can reshape the arrays for each
-    input and expand any needed array elements into full arrays".
+    """Simple wrapper around a component's applyMinvT where we can reshape the
+    arrays for each input and expand any needed array elements into full arrays.
     """
 
-    inputkeys = inputs.keys()
-    for key in sorted(inputkeys):
+    inputkeys = sorted(inputs.keys())
+    for key in inputkeys:
         pre_process_dicts(obj, key, inputs)
 
     pre_inputs = inputs.copy()
@@ -425,8 +418,8 @@ def applyMinvT(obj, inputs):
     inputs = obj.applyMinvT(pre_inputs, inputs)
 
     # Result vector needs to be flattened.
-    for key in sorted(inputkeys, reverse=True):
-        post_process_dicts(obj, key, inputs)
+    for key in reversed(inputkeys):
+        post_process_dicts(key, inputs)
 
     # Clean out any leftover keys we added
     for key in inputs.keys():
@@ -473,18 +466,12 @@ def get_bounds(obj, input_keys, output_keys):
 
     return ibounds, obounds
 
-def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
+def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
     """ Return the subportion of the Jacobian that is valid for a particular
     input and output slice.
 
     J: 2D ndarray
         Full Jacobian
-
-    ikey: str
-        Input variable for which we want the reduced Jacobian
-
-    okey: str
-        Output variable for which we want the reduced Jacobian
 
     i1, i2: int, int
         Start and end index for the input variable
@@ -503,28 +490,25 @@ def reduce_jacobian(J, ikey, okey, i1, i2, idx, ish, o1, o2, odx, osh):
         flattened.
     """
 
-    # J inputs
-    if idx:
-        istring, ix = flatten_slice(idx, ish, offset=i1, name='ix')
+    if idx or odx:
+        if idx: # J inputs
+            istring, ix = flatten_slice(idx, ish, offset=i1, name='ix')
+        else: # The entire array, already flat
+            istring = 'i1:i2'
 
-    # The entire array, already flat
+        if odx: # J Outputs
+            ostring, ox = flatten_slice(odx, osh, offset=o1, name='ox')
+        else: # The entire array, already flat
+            ostring = 'o1:o2'
+
+        if ':' not in ostring:
+            ostring = 'vstack(%s)' % ostring
+        if ':' not in istring:
+            istring = 'hstack(%s)' % istring
+
+        return eval('J[%s, %s]' % (ostring, istring))
     else:
-        istring = 'i1:i2'
-
-    # J Outputs
-    if odx:
-        ostring, ox = flatten_slice(odx, osh, offset=o1, name='ox')
-
-    # The entire array, already flat
-    else:
-        ostring = 'o1:o2'
-
-    if ':' not in ostring:
-        ostring = 'vstack(%s)' % ostring
-    if ':' not in istring:
-        istring = 'hstack(%s)' % istring
-
-    return eval('J[%s, %s]' % (ostring, istring))
+        return J[o1:o2, i1:i2]
 
 
 class FiniteDifference(object):
@@ -625,7 +609,7 @@ class FiniteDifference(object):
                 if form == 'forward':
 
                     # Step
-                    self.set_value(src, fd_step,  i1, i2, i)
+                    self.set_value(src, fd_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
@@ -634,7 +618,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y_base)/fd_step
 
                     # Undo step
-                    self.set_value(src, -fd_step,  i1, i2, i)
+                    self.set_value(src, -fd_step, i1, i2, i)
 
                 #--------------------
                 # Backward difference
@@ -642,7 +626,7 @@ class FiniteDifference(object):
                 elif form == 'backward':
 
                     # Step
-                    self.set_value(src, -fd_step,  i1, i2, i)
+                    self.set_value(src, -fd_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
@@ -651,7 +635,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y_base - self.y)/fd_step
 
                     # Undo step
-                    self.set_value(src, fd_step,  i1, i2, i)
+                    self.set_value(src, fd_step, i1, i2, i)
 
                 #--------------------
                 # Central difference
@@ -659,13 +643,13 @@ class FiniteDifference(object):
                 elif form == 'central':
 
                     # Forward Step
-                    self.set_value(src, fd_step,  i1, i2, i)
+                    self.set_value(src, fd_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y)
 
                     # Backward Step
-                    self.set_value(src, -2.0*fd_step,  i1, i2, i)
+                    self.set_value(src, -2.0*fd_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
                     self.get_outputs(self.y2)
@@ -674,7 +658,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
 
                     # Undo step
-                    self.set_value(src, fd_step,  i1, i2, i)
+                    self.set_value(src, fd_step, i1, i2, i)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -694,16 +678,13 @@ class FiniteDifference(object):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
 
-            if '[' in src:
-                src, _, idx = src.partition('[')
-                idx = '[' + idx
-
+            src, _, idx = src.partition('[')
+            if idx:
                 old_val = self.scope.get(src)
                 if isinstance(new_val, ndarray):
-                    exec('old_val%s = new_val.copy()' % idx)
+                    exec('old_val[%s = new_val.copy()' % idx)
                 else:
-                    exec('old_val%s = new_val' % idx)
-
+                    exec('old_val[%s = new_val' % idx)
                 self.scope.set(src, old_val, force=True)
             else:
                 if isinstance(new_val, ndarray):
@@ -752,17 +733,16 @@ class FiniteDifference(object):
             srcs = [srcs]
 
         for src in srcs:
-            comp_name, dot, var_name = src.partition('.')
+            comp_name, _, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
 
             if i2-i1 == 1:
 
                 # Indexed array
-                if '[' in src:
-                    src, _, idx = src.partition('[')
-                    idx = '[' + idx
+                src, _, idx = src.partition('[')
+                if idx:
                     old_val = self.scope.get(src)
-                    exec('old_val%s += val' % idx)
+                    exec('old_val[%s += val' % idx)
 
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -787,7 +767,7 @@ class FiniteDifference(object):
                     sliced_src = self.scope.get(src)
                     sliced_shape = sliced_src.shape
                     flattened_src = sliced_src.flatten()
-                    flattened_src[index] +=val
+                    flattened_src[index] += val
                     sliced_src = flattened_src.reshape(sliced_shape)
                     exec('self.scope.%s = sliced_src') % src
 
@@ -806,7 +786,6 @@ class FiniteDifference(object):
                     self.scope._input_updated(comp_name.split('[', 1)[0])
 
             # Prevent OpenMDAO from stomping on our poked input.
-
             if var_name:
                 self.scope.set_valid([self.scope._depgraph.base_var(src)],
                                     True)
@@ -834,10 +813,8 @@ class FiniteDifference(object):
 
                 # Indexed array slice
                 if '[' in src:
-                    sliced_shape = old_val.shape
                     flattened_src = old_val.flatten()
                     old_val = flattened_src[index]
-
                 else:
                     unravelled = unravel_index(index, old_val.shape)
                     old_val = old_val[unravelled]
