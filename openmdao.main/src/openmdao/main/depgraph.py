@@ -286,7 +286,7 @@ class DependencyGraph(nx.DiGraph):
         self._saved_loops = None
         self._saved_comp_graph = None
 
-    def child_config_changed(self, child):
+    def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
         so we need to update the graph.
         """
@@ -313,34 +313,36 @@ class DependencyGraph(nx.DiGraph):
             new_states = set()
             new_resids = set()
 
-        added_ins = new_ins - old_ins
-        added_outs = new_outs - old_outs
-        added_states = new_states - old_states
-        added_resids = new_resids - old_resids
+        if adding:
+            added_ins = new_ins - old_ins
+            added_outs = new_outs - old_outs
+            added_states = new_states - old_states
+            added_resids = new_resids - old_resids
+            
+            # add new inputs/outputs/states/residuals to the graph
+            self.add_nodes_from(added_ins,    var=True, valid=True,  iotype='in')
+            self.add_nodes_from(added_outs,   var=True, valid=False, iotype='out')
+            self.add_nodes_from(added_states, var=True, valid=False, iotype='state')
+            self.add_nodes_from(added_resids, var=True, valid=False, iotype='residual')
+    
+            # add edges from the variables to their parent component
+            self.add_edges_from([(v,cname) for v in chain(added_ins, added_states)])
+            self.add_edges_from([(cname,v) for v in chain(added_outs, added_states,
+                                                          added_resids)])
+    
+            if added_outs or added_states or added_resids:
+                self.node[cname]['valid'] = False
 
-        rem_ins = old_ins - new_ins
-        rem_outs = old_outs - new_outs
-        rem_states = old_states - new_states
-        rem_resids = old_resids - new_resids
-
-        # add new inputs/outputs/states/residuals to the graph
-        self.add_nodes_from(added_ins,    var=True, valid=True,  iotype='in')
-        self.add_nodes_from(added_outs,   var=True, valid=False, iotype='out')
-        self.add_nodes_from(added_states, var=True, valid=False, iotype='state')
-        self.add_nodes_from(added_resids, var=True, valid=False, iotype='residual')
-
-        # add edges from the variables to their parent component
-        self.add_edges_from([(v,cname) for v in chain(added_ins, added_states)])
-        self.add_edges_from([(cname,v) for v in chain(added_outs, added_states,
-                                                      added_resids)])
-
-        if added_outs or added_states or added_resids:
-            self.node[cname]['valid'] = False
-
-        # for removed inputs/outputs/states/residuals, may need to
-        # remove connections and subvars
-        for n in chain(rem_ins, rem_outs, rem_states, rem_resids):
-            self.remove(n)
+        if removing:
+            rem_ins = old_ins - new_ins
+            rem_outs = old_outs - new_outs
+            rem_states = old_states - new_states
+            rem_resids = old_resids - new_resids
+    
+            # for removed inputs/outputs/states/residuals, may need to
+            # remove connections and subvars
+            for n in chain(rem_ins, rem_outs, rem_states, rem_resids):
+                self.remove(n)
 
     def add_component(self, cname, obj, **kwargs):
         """Create nodes in the graph for the component and all of

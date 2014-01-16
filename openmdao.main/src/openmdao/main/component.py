@@ -741,7 +741,7 @@ class Component(Container):
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
-                    self.parent._depgraph.child_config_changed(self)
+                    self.parent._depgraph.child_config_changed(self, removing=False)
 
     def _set_input_callback(self, name, remove=False):
 
