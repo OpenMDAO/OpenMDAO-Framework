@@ -66,7 +66,9 @@ class Discipline(Component):
         self.Jx = self.C_x/self.c_y_out
         self.Jy = self.C_y/self.c_y_out
         self.Jz = self.C_z/self.c_y_out
-
+        
+    def list_deriv_vars(self):
+        return ('c_y_out','x','z','C_x','C_z','y_in','C_y'), ('y_out',)
         
     def apply_deriv(self, arg, result):
         """Multiply an input vector by the Jacobian."""
