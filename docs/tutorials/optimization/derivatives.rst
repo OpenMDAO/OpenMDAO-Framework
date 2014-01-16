@@ -27,10 +27,7 @@ these two steps:
 ::
 
    #  Define a ``list_deriv_vars`` function that tell openmdao which inputs and outputs you have derivatives w.r.t and of
-   #. Define a ``linearize`` method that calculates and saves the Jacobian that
-      contains the derivatives between its numerical outputs and inputs.
-   #. Define a ``provideJ`` method that returns the Jacobian along with a
-      list of inputs and outputs.
+   #. Define a ``provideJ`` method that calculates and returns the Jacobian.
 
 
 Let's look at an example, using the Paraboloid component, to see how this would work in
@@ -91,7 +88,7 @@ Here's what the code to implement these derivatives looks like.
 So ``J`` is the Jacobian that OpenMDAO will use when assembling the system level derivatives. If
 this component was part of a much larger model with other components, it only contributes
 a small portion of the full Jacobian. OpenMDAO uses a numerical method developed by
-`Martins and Hwang <http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary>`_ [1]
+`Martins and Hwang<http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary>`_ [1]
 to solve for the gradient of the full problem.
 
 .. note::

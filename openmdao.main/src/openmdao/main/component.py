@@ -311,6 +311,16 @@ class Component(Container):
         if self._call_check_config:
             self.check_config()
 
+            # derivatives related checks
+            if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
+                if not hasattr(self, 'provideJ'):
+                    self.raise_exception("required method 'provideJ' is missing")
+                if not hasattr(self, 'list_deriv_vars'):
+                    self.raise_exception("required method 'list_deriv_vars' is missing")
+
+            if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
+                self.raise_exception("required method 'list_deriv_vars' is missing")
+
             visited = set([id(self), id(self.parent)])
             for name, value in self.traits(type=not_event).items():
                 obj = getattr(self, name)
@@ -731,7 +741,7 @@ class Component(Container):
             if name not in self._depgraph:
                 self._depgraph.add_boundary_var(name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
-                    self.parent._depgraph.child_config_changed(self)
+                    self.parent._depgraph.child_config_changed(self, removing=False)
 
     def _set_input_callback(self, name, remove=False):
 

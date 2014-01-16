@@ -105,6 +105,11 @@ class MyComp_Deriv(MyComp_No_Deriv):
 
         self.J_output_input = np.array([[1.0]])
         self.J_output_state = np.array([[1.0, 1.0, 1.0]])
+        
+    def list_deriv_vars(self):
+        input_keys = ('x', 'y', 'z', 'c')
+        output_keys = ('res', 'y_out')
+        return input_keys, output_keys
 
     def apply_deriv(self, arg, result):
 
@@ -223,6 +228,9 @@ class Coupled1(ImplicitComponent):
 
         self.y_out = c + x + y + z
 
+    def list_deriv_vars(self):
+        return ('x','y','z','c'), ('res', 'y_out')
+    
     def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
@@ -312,6 +320,9 @@ class Coupled2(ImplicitComponent):
 
         self.J_output_input = np.array([[1.0, 1.0, 1.0]])
         self.J_output_state = np.array([[1.0]])
+
+    def list_deriv_vars(self):
+        return ('x','y','z','c'), ('res', 'y_out')
 
     def apply_deriv(self, arg, result):
 

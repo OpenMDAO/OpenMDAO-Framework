@@ -32,7 +32,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node
+from openmdao.main.depgraph import is_comp_node, is_boundary_node
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -245,6 +245,8 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
+        exprconns = [(u,v) for u,v in self._exprmapper.list_connections() 
+                                 if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
 
@@ -265,12 +267,17 @@ class Assembly(Component):
             self._logger.warning("the following variables are connected to "
                                  "other components but are missing in "
                                  "the replacement object: %s" % missing)
-            mconns = set()
-            for m in missing:
-                mconns.update(self.find_referring_connections(m))
-            # disconnect any vars that are missing in the replacement object
-            for u, v in mconns:
-                self.disconnect(u, v)
+            # mconns = set()
+            # for m in missing:
+            #     mconns.update(self.find_referring_connections(m))
+            # # disconnect any vars that are missing in the replacement object
+            # for u, v in mconns:
+            #     self.disconnect(u, v)  # TODO: don't think we need this...
+
+        # remove expr connections
+        for u,v in exprconns:
+            print "removing exprconn (%s,%s)" % (u,v)
+            self.disconnect(u, v)
 
         # remove any existing connections to replacement object
         if has_interface(newobj, IComponent):
@@ -279,14 +286,15 @@ class Assembly(Component):
         self.add(target_name, newobj)  # this will remove the old object
                                        # and any connections to it
 
-        # recreate old connections, leaving out pseudocomps
-        for u, v in conns:
-            if '_pseudo_' not in u and '_pseudo_' not in v:
-                try:
-                    self.connect(u, v)
-                except Exception as err:
-                    self._logger.warning("Couldn't connect '%s' to '%s': %s",
-                                         u, v, err)
+        # recreate old connections
+        for u, v in exprconns:
+            try:
+                print "trying (%s,%s)..." % (u,v)
+                self.connect(u, v)
+            except Exception as err:
+                print "failed to connect %s to %s: %s" % (u,v,str(err))
+                self._logger.warning("Couldn't connect '%s' to '%s': %s",
+                                     u, v, err)
 
         # Restore driver references.
         for dname, _refs in refs.items():
@@ -542,7 +550,8 @@ class Assembly(Component):
         and outputs.
         """
         try:
-            if varpath2 is None and self.parent and '.' not in varpath:
+            if varpath2 is None and self.parent and '.' not in varpath and \
+               is_boundary_node(self._depgraph, varpath):
                 # boundary var. make sure it's disconnected in parent
                 self.parent.disconnect('.'.join([self.name, varpath]))
 
