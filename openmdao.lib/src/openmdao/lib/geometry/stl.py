@@ -8,8 +8,9 @@ import numpy as np
 
 
 try: 
-    from pyV3D.stl import STLGeometryObjec
-    from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
+    from pyV3D.stl import STLGeometryObject
+    from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry, \
+                                         classImplements
     classImplements(STLGeometryObject, IStaticGeometry)
 except ImportError: 
     #just fake it so you can use this outside openmdao
