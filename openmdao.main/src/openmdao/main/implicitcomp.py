@@ -14,6 +14,10 @@ from openmdao.main.rbac import rbac
 
 
 class ImplicitComponent(Component):
+    """This is the base class for a component that represents an implicit
+    function
+    """
+
     implements(IImplicitComponent)
 
     eval_only = Bool(False, iotype='in', framework_var=True,
@@ -53,6 +57,13 @@ class ImplicitComponent(Component):
         if self._resid_names is None:
             self._resid_names = sorted([k for k, v in self.items(iotype='residual')])
         return self._resid_names
+
+    def evaluate(self):
+        """run a single step to calculate the residual
+        values for the given state var values.
+        This must be overridden in derived classes.
+        """
+        raise NotImplementedError('%s.evaluate' % self.get_pathname())
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
