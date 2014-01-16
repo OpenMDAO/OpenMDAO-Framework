@@ -58,14 +58,14 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         if (!("columns" in openmdao.preferences.PropertiesPane[compName][name.toLowerCase()])) {
             openmdao.preferences.PropertiesPane[compName][name.toLowerCase()].columns = {
-                info : true,
-                name : true,
-                type : false,
+                info  : true,
+                name  : true,
+                type  : false,
                 value : true,
-                hi : false,
-                low : false,
+                hi    : false,
+                low   : false,
                 units : true,
-                desc : true
+                desc  : true
             };
         }
     }
@@ -98,7 +98,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
        function numberToString(number) {
            if (typeof(number) === "number") {
-               if (number > 1.0e+21){
+               if (number > 1.0e+21) {
                     return number.toExponential(5);
                }
                return number.toFixed(5);
@@ -112,7 +112,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
            return numberToString(high) + " / " + numberToString(low);
        }
 
-       function connectedToString(connections){
+       function connectedToString(connections) {
            var connected = connections.connected !== undefined ? connections.connected : connections;
            var partially_connected = connections["partially_connected"] !== undefined ? connections.partially_connected : "";
 
@@ -131,7 +131,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
        }
 
        function format(key, value) {
-           var formatter = hasFormatter(key) ? formatters[key] : function(value){
+           var formatter = hasFormatter(key) ? formatters[key] : function(value) {
                 return value;
            };
 
@@ -156,7 +156,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
        }
 
        function format(key) {
-           var formatter = hasFormatter(key) ? formatters[key] : function(){
+           var formatter = hasFormatter(key) ? formatters[key] : function() {
                 return key;
            };
 
@@ -225,7 +225,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         this.removeFields = function(item, excludes) {
            var newItem = this.cloneItem(item);
            for (var field in newItem) {
-                if( excludeField(field, excludes)) {
+                if (excludeField(field, excludes)) {
                     delete newItem[field];
                 }
            }
@@ -288,7 +288,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             props.setColumns(visibleColumns);
 
             // Sorting for the first column
-            props.onSort.subscribe(function (e, args) {
+            props.onSort.subscribe(function(e, args) {
                 if (args.sortAsc) {
                     dataView.sort(sortAscending, true);
                 } else {
@@ -309,7 +309,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 }
 
                 for (var columnId in visibility) {
-                    if(columnId in visibleColumnIds){
+                    if (columnId in visibleColumnIds) {
                         visibility[columnId] = true;
                     }
                     else {
@@ -320,7 +320,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             });
 
             var variableFilter = jQuery('#'+name+'_variableFilter');
-            variableFilter.keyup(function (e) {
+            variableFilter.keyup(function(e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
                 self.refreshFilter(variableFilter.val());
             });
@@ -368,7 +368,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             }
         });
 
-        props.onClick.subscribe(function (e) {
+        props.onClick.subscribe(function(e) {
             var cell = props.getCellFromEvent(e);
             var name_col_index = (meta) ? 1 : 0;
             if (cell.cell === name_col_index) {
@@ -387,22 +387,22 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 e.stopImmediatePropagation();
             }
 
-            if ( dataView.getItem(cell.row).value === "Geometry" ) {
+            if (dataView.getItem(cell.row).value === "Geometry") {
                 var p = self.pathname + '.' + dataView.getItem(cell.row).id;
                 openmdao.project.viewGeometry(p);
             }
         });
 
-        props.onCellChange.subscribe(function (e, args) {
+        props.onCellChange.subscribe(function(e, args) {
             dataView.updateItem(args.item.id, args.item);
         });
 
         // wire up project events to drive the grid
-        dataView.onRowCountChanged.subscribe(function (e, args) {
+        dataView.onRowCountChanged.subscribe(function(e, args) {
             props.resizeCanvas();
         });
 
-        dataView.onRowsChanged.subscribe(function (e, args) {
+        dataView.onRowsChanged.subscribe(function(e, args) {
             props.invalidateRows(args.rows);
             props.resizeCanvas();
         });
@@ -413,7 +413,6 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 // the editor for the next variable down (a la Excel)
                 e.stopImmediatePropagation();
 
-                // TODO: better way to do this (e.g. project.setProperty(path,name,value)
                 var subpath = args.item.id;
                 if (subpath.charAt(0) === '~') {
                     // Drop prefix seen on framework vars.
@@ -588,8 +587,8 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                         valueStyle += " cell-editable";
                     }
                     if (value.hasOwnProperty("implicit") &&
-                        ((( value.connection_types & 4 ) === 4 ) ||
-                         (( value.connection_types & 8 ) === 8 ))) {
+                        (((value.connection_types & 4) === 4) ||
+                         ((value.connection_types & 8) === 8))) {
                         //need a css class for highlighting implicitly connected inputs
                         if (name === "Inputs") {
                             nameStyle += " parameter";
