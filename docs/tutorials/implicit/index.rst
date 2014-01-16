@@ -5,7 +5,7 @@ Implicit Components
 ============================
 
 In the basic tutorial, we learned how to define an OpenMDAO component that represents an
-explicit function of outputs with respect to its inputs. 
+explicit function of outputs with respect to its inputs.
 
     .. math::
          y = F(x)
@@ -46,7 +46,7 @@ equations.
            z = F(x, y, u)
 
 In this set of equations, `u` is an input that does not affect the residuals, and `z` is
-an output that is not a state but satisfies an additional explicit equation. This is 
+an output that is not a state but satisfies an additional explicit equation. This is
 analogous to the output equation of a state space model in control theory.
 
 Let's set up a simple component that can solve this set of equations, three
@@ -55,16 +55,16 @@ of which are implicit while one is explicit:
 
     .. math::
            r0(x, y, z) = c*(3x + 2y - z) - 1 = 0
-           
+
     .. math::
            r1(x, y, z) = 2x - 2y + 4z + 2 = 0
-           
+
     .. math::
            r2(x, y, z) = -x + y/2. - z =0
-           
+
     .. math::
            y_out = c + x + y + z
-           
+
 In these equations, the states are `x`, `y`, and `z`, and the residuals are
 `r0`, `r1`, and `r2`. The variable `c` is a normal input, and `y_out` is an
 explicit output. Note that the number of states must equal the number of
@@ -86,55 +86,55 @@ Let's write our first implicit component.
 .. testcode:: implicit
 
     import numpy as np
-    
+
     from openmdao.main.api import ImplicitComponent
     from openmdao.main.datatypes.api import Float, Array
-    
+
     class MyComp_No_Deriv(ImplicitComponent):
-        ''' Single implicit component with 3 states and residuals. 
-        
+        ''' Single implicit component with 3 states and residuals.
+
         For c=2.0, (x,y,z) = (1.0, -2.333333, -2.1666667)
         '''
-    
+
         # External inputs
         c = Float(2.0, iotype="in", fd_step = .00001,
                   desc="non-state input")
-        
+
         # States
         x = Float(0.0, iotype="state")
         y = Float(0.0, iotype="state")
         z = Float(0.0, iotype="state")
-    
+
         # Residuals
         res = Array(np.zeros((3)), iotype="residual")
-        
+
         # Outputs
         y_out = Float(iotype='out')
-    
-        def evaluate(self): 
-            """run a single step to calculate the residual 
+
+        def evaluate(self):
+            """run a single step to calculate the residual
             values for the given state var values"""
-    
+
             c, x, y, z = self.c, self.x, self.y, self.z
-    
+
             self.res[0] = self.c*(3*x + 2*y - z) - 1
             self.res[1] = 2*x - 2*y + 4*z + 2
-            self.res[2] = -x + y/2. - z 
-            
+            self.res[2] = -x + y/2. - z
+
             self.y_out = c + x + y + z
-        
+
 We have taken our three residuals and placed them in a single variable array
 called `res`, but we could also create a separate floating point variable
-for each of them. Also, the initial values of our states serve as the 
+for each of them. Also, the initial values of our states serve as the
 initial conditions for their iterative solution. Now, let's put this in an
 assembly:
 
 .. testcode:: implicit
 
     from openmdao.main.api import Assembly, set_as_top
-    
+
     class Model(Assembly):
-    
+
         def configure(self):
             self.add('comp', MyComp_No_Deriv())
             self.driver.workflow.add('comp')
@@ -164,9 +164,9 @@ component just runs the `eval` statement we defined in the class definition.
 
     from openmdao.main.api import Assembly, set_as_top
     from openmdao.lib.drivers.api import BroydenSolver
-    
+
     class Model2(Assembly):
-    
+
         def configure(self):
             self.add('comp', MyComp_No_Deriv())
             self.comp.eval_only = True
@@ -179,7 +179,7 @@ component just runs the `eval` statement we defined in the class definition.
             self.driver.add_constraint('comp.res[1] = 0')
             self.driver.add_constraint('comp.res[2] = 0')
 
-Now, when we run the model, we get the same solution for the state. 
+Now, when we run the model, we get the same solution for the state.
 
 .. doctest:: implicit
 
@@ -197,7 +197,7 @@ set of equations using the ``apply_deriv`` and ``apply_derivT`` methods. To do t
 to provide all permutations of the derivatives: namely, the derivatives of the residuals
 with respect to both the states and the explicit inputs, and the derivatives of the
 explicit output with respect to both the states and the explicit inputs. Here, we specify
-these as separate Jacobians in the ``linearize`` method, but this was purely to make the
+these as separate Jacobians in the ``provideJ`` method, but this was purely to make the
 matrix-vector multiplication in ``apply_deriv`` and ``apply_derivT`` clean and simple.
 
 .. testcode:: implicit
@@ -205,81 +205,81 @@ matrix-vector multiplication in ``apply_deriv`` and ``apply_derivT`` clean and s
     class MyComp_Deriv(MyComp_No_Deriv):
         ''' This time with derivatives.
         '''
-        
-        def linearize(self): 
-            #partial w.r.t c 
+
+        def provideJ(self):
+            #partial w.r.t c
             c, x, y, z = self.c, self.x, self.y, self.z
-    
+
             dc = [3*x + 2*y - z, 0, 0]
             dx = [3*c, 2, -1]
             dy = [2*c, -2, .5]
             dz = [-c, 4, -1]
-    
+
             self.J_res_state = np.array([dx, dy, dz]).T
             self.J_res_input = np.array([dc]).T
-            
+
             self.J_output_input = np.array([[1.0]])
             self.J_output_state = np.array([[1.0, 1.0, 1.0]])
-    
+
         def apply_deriv(self, arg, result):
-            
+
             # Residual Equation derivatives
             res = self.list_residuals()[0]
             if res in result:
-                
+
                 # wrt States
                 for k, state in enumerate(self.list_states()):
                     if state in arg:
                         result[res] += self.J_res_state[:, k]*arg[state]
-    
+
                 # wrt External inputs
                 for k, inp in enumerate(['c']):
                     if inp in arg:
                         result[res] += self.J_res_input[:, k]*arg[inp]
-                            
+
             # Output Equation derivatives
             for j, outp in enumerate(['y_out']):
                 if outp in result:
-                    
+
                     # wrt States
                     for k, state in enumerate(self.list_states()):
                         if state in arg:
                             result[outp] += self.J_output_state[j, k]*arg[state]
-    
+
                     # wrt External inputs
                     for k, inp in enumerate(['c']):
                         if inp in arg:
                             result[outp] += self.J_output_input[j, k]*arg[inp]
-                            
+
         def apply_derivT(self, arg, result):
-            
+
             # wrt States
             for k, state in enumerate(self.list_states()):
                 if state in result:
-                    
+
                     # Residual Equation derivatives
                     res = self.list_residuals()[0]
                     if res in arg:
                         result[state] += self.J_res_state.T[k, :].dot(arg[res])
-    
+
                     # Output Equation derivatives
                     for j, outp in enumerate(['y_out']):
                         if outp in arg:
                             result[state] += self.J_output_state.T[k, j]*arg[outp]
-                            
+
             # wrt External inputs
             for k, inp in enumerate(['c']):
                 if inp in result:
-    
+
                     # Residual Equation derivatives
                     res = self.list_residuals()[0]
                     if res in arg:
                         result[inp] += self.J_res_input.T[k, :].dot(arg[res])
-    
+
                     # Output Equation derivatives
                     for j, outp in enumerate(['y_out']):
                         if outp in arg:
                             result[inp] += self.J_output_input.T[k, j]*arg[outp]
 
-Specifying these derivative functions removes the need for finite differencing this 
+Specifying these derivative functions removes the need for finite differencing this
 component in any workflow.
