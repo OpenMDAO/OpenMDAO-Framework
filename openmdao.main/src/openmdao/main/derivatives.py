@@ -544,7 +544,7 @@ class FiniteDifference(object):
 
         options = pa.wflow._parent.gradient_options
 
-        self.fd_step = options.fd_step_size*ones((len(self.inputs)))
+        self.fd_step = options.fd_step*ones((len(self.inputs)))
         self.form = options.fd_form
         self.form_custom = {}
         self.step_type = options.fd_step_type

@@ -599,7 +599,7 @@ class Assembly(Component):
 
         # Detect and save any loops in the graph.
         self._graph_loops = None
-        
+
         self.J_input_keys = self.J_output_keys = None
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
@@ -784,7 +784,7 @@ class Assembly(Component):
 
     def check_gradient(self, name=None, inputs=None, outputs=None,
                        stream=None, mode='auto',
-                       fd_form='forward', fd_step_size=1.0e-6,
+                       fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
 
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -833,7 +833,7 @@ class Assembly(Component):
             Finite difference mode. Valid choices are 'forward', 'adjoint' ,
             'central'. Default is 'forward'
 
-        fd_step_size: float
+        fd_step: float
             Default step_size for finite difference. Default is 1.0e-6.
 
         fd_step_type: str
@@ -847,11 +847,11 @@ class Assembly(Component):
         obj = None
 
         base_fd_form = driver.gradient_options.fd_form
-        base_fd_step_size = driver.gradient_options.fd_step_size
+        base_fd_step = driver.gradient_options.fd_step
         base_fd_step_type = driver.gradient_options.fd_step_type
 
         driver.gradient_options.fd_form = fd_form
-        driver.gradient_options.fd_step_size = fd_step_size
+        driver.gradient_options.fd_step = fd_step
         driver.gradient_options.fd_step_type = fd_step_type
 
         # tuples cause problems.
@@ -904,7 +904,7 @@ class Assembly(Component):
                                                 mode=mode)
 
         driver.gradient_options.fd_form = base_fd_form
-        driver.gradient_options.fd_step_size = base_fd_step_size
+        driver.gradient_options.fd_step = base_fd_step
         driver.gradient_options.fd_step_type = base_fd_step_type
         return result
 
