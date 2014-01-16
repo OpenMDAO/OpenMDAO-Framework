@@ -529,7 +529,7 @@ class Component(Container):
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
         ffd_inputs, ffd_outputs = self.list_deriv_vars()
-        if savebase and ffd_inputs:
+        if savebase and J is not None:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
 
