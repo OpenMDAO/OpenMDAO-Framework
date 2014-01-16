@@ -571,11 +571,12 @@ class FiniteDifference(object):
                 self.fd_step[j] = meta['fd_step']
 
             if srcs[0] in driver_targets:
-                if len(srcs) == 1:
+                if srcs[0] in driver_params:
                     param = driver_params[srcs[0]]
                     if param.fd_step is not None:
                         self.fd_step[j] = param.fd_step
                 else:
+                    # have to check through all the param groups
                     for param_group in driver_params:
                         if not isinstance(param_group, str) and \
                            srcs[0] in param_group:
