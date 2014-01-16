@@ -551,6 +551,12 @@ class FiniteDifference(object):
         self.step_type_custom = {}
         self.relative_threshold = 1.0e-4
 
+        driver = self.pa.wflow._parent
+        driver_params = []
+        driver_targets = []
+        if hasattr(driver, 'get_parameters'):
+            driver_params = self.pa.wflow._parent.get_parameters()
+            driver_targets = driver.list_param_targets()
         in_size = 0
         for j, srcs in enumerate(self.inputs):
 
@@ -560,8 +566,23 @@ class FiniteDifference(object):
 
             # Local stepsize support
             meta = self.scope.get_metadata(self.scope._depgraph.base_var(srcs[0]))
+
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
+
+            if srcs[0] in driver_targets:
+                if len(srcs) == 1:
+                    param = driver_params[srcs[0]]
+                    if param.fd_step is not None:
+                        self.fd_step[j] = param.fd_step
+                else:
+                    for param_group in driver_params:
+                        if not isinstance(param_group, str) and \
+                           srcs[0] in param_group:
+                            param = driver_params[param_group]
+                            if param.fd_step is not None:
+                                self.fd_step[j] = param.fd_step
+                                break
 
             if 'fd_step_type' in meta:
                 self.step_type_custom[j] = meta['fd_step_type']
