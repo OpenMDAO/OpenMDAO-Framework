@@ -5,9 +5,12 @@ Test the FixedPointIterator component
 import unittest
 
 # pylint: disable-msg=F0401,E0611
+from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
+from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
+                                            Discipline2_WithDerivatives, \
+                                            Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Array, Float
-from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -153,7 +156,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            msg = "driver: FixedPointIterator requires a constraint equation."
+            msg = "driver: FixedPointIterator requires a constraint equation or a cyclic workflow."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
@@ -163,7 +166,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            msg = "driver: FixedPointIterator requires an input parameter."
+            msg = "driver: FixedPointIterator requires an input parameter or a cyclic workflow."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
@@ -179,6 +182,119 @@ class FixedPointIteratorTestCase(unittest.TestCase):
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
+
+
+class Sellar_MDA(Assembly):
+
+    def configure(self):
+
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+
+        self.add('driver', FixedPointIterator())
+        self.driver.workflow.add(['d1', 'd2'])
+
+
+class Sellar_MDA_subbed(Assembly):
+
+    def configure(self):
+
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+
+        self.add('subdriver', FixedPointIterator())
+        self.driver.workflow.add(['subdriver'])
+        self.subdriver.workflow.add(['d1', 'd2'])
+
+class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
+    """test the FixedPointIterator with cyclic a workflow"""
+
+    def setUp(self):
+        self.top = set_as_top(Sellar_MDA())
+
+    def tearDown(self):
+        self.top = None
+
+    def test_gauss_seidel(self):
+
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
+
+    def test_gauss_seidel_param_con(self):
+
+        self.top.disconnect('d2.y2')
+        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
+        self.top.driver.add_constraint('d2.y2 = d1.y2')
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
+
+    def test_gauss_seidel_sub(self):
+        # Note, Fake Finite Difference is active in this test.
+
+        self.top = set_as_top(Sellar_MDA_subbed())
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+        self.assertTrue(self.top.d1.exec_count < 10)
+
+        inputs = ['d1.z1', 'd1.z2', 'd2.z1', 'd2.z2']
+        outputs = ['d1.y1', 'd2.y2']
+        self.top.driver.workflow.config_changed()
+        J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs)
+        self.top.run()
+        J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
+                                                   outputs=outputs,
+                                                   mode='fd')
+
+        J = (J1 - J2)
+        print J.max()
+        self.assertTrue(J.max() < 1.0e-3)
 
 
 class TestIterateUntill(unittest.TestCase):

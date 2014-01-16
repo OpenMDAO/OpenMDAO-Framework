@@ -47,7 +47,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'openmdao.main',
           'Pyevolve==0.6',
           'ordereddict',
-          'conmin==1.0.1', 
+          'conmin==1.0.1',
           'newsumt==1.1.0',
           'cobyla==1.0.1',
           'slsqp==1.0.1',
@@ -65,7 +65,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
-      openmdao.lib.drivers.mda_solver.MDASolver = openmdao.lib.drivers.mda_solver:MDASolver
+      openmdao.lib.drivers.newton_solver.NewtonSolver = openmdao.lib.drivers.newton_solver:NewtonSolver
       openmdao.lib.drivers.newsumtdriver.NEWSUMTdriver = openmdao.lib.drivers.newsumtdriver:NEWSUMTdriver
       openmdao.lib.drivers.simplecid.SimpleCaseIterDriver = openmdao.lib.drivers.simplecid:SimpleCaseIterDriver
       openmdao.lib.drivers.slsqpdriver.SLSQPdriver = openmdao.lib.drivers.slsqpdriver:SLSQPdriver
@@ -95,7 +95,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
-      
+
       [openmdao.caserecorder]
       openmdao.lib.casehandlers.dumpcase.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcase:DumpCaseRecorder
       openmdao.lib.casehandlers.listcase.ListCaseRecorder = openmdao.lib.casehandlers.listcase:ListCaseRecorder
@@ -110,7 +110,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.casehandlers.csvcase.CSVCaseIterator = openmdao.lib.casehandlers.csvcase:CSVCaseIterator
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
-      
+
       [openmdao.casefilter]
       openmdao.lib.casehandlers.filters.ExprCaseFilter = openmdao.lib.casehandlers.filters:ExprCaseFilter
       openmdao.lib.casehandlers.filters.IteratorCaseFilter = openmdao.lib.casehandlers.filters:IteratorCaseFilter

@@ -502,7 +502,7 @@ class SequentialWorkflow(Workflow):
             #if hasattr(comp, 'applyMinv'):
                 #inputs = applyMinv(comp, inputs)
 
-            applyJ(comp, inputs, outputs, comp_residuals, 
+            applyJ(comp, inputs, outputs, comp_residuals,
                    self._J_cache.get(compname))
             #print inputs, outputs
 
@@ -588,7 +588,7 @@ class SequentialWorkflow(Workflow):
             if hasattr(comp, 'applyMinvT'):
                 inputs = applyMinvT(comp, inputs)
 
-            applyJT(comp, inputs, outputs, comp_residuals, 
+            applyJT(comp, inputs, outputs, comp_residuals,
                    self._J_cache.get(compname))
             #print inputs, outputs
 
@@ -849,6 +849,11 @@ class SequentialWorkflow(Workflow):
             if has_interface(comp, ISolver):
 
                 key = tuple(comp.list_eq_constraint_targets())
+
+                # For cyclic workflows in a solver, the edge is already there.
+                if len(key) == 0:
+                    continue
+
                 unmapped_states = comp.list_param_group_targets()
 
                 # Need to map the subdriver parameters to any existing
@@ -892,7 +897,7 @@ class SequentialWorkflow(Workflow):
 
             J = self._J_cache.get(compname)
             if J is None:
-                J = comp.calc_derivatives(first, second, savebase, 
+                J = comp.calc_derivatives(first, second, savebase,
                                     data['inputs'], data['outputs'])
                 if J is not None:
                     self._J_cache[compname] = J
@@ -957,7 +962,7 @@ class SequentialWorkflow(Workflow):
         n_edge = self.initialize_residual()
 
         # cache Jacobians for comps that return them from provideJ
-        
+
 
         # Size our Jacobian
         num_in = 0

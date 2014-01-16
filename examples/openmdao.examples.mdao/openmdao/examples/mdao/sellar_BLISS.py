@@ -8,7 +8,7 @@
     match the original Sobiesky-Agte implementation.
 """
 
-from openmdao.main.api import Assembly, SequentialWorkflow
+from openmdao.main.api import Assembly
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      SensitivityDriver, FixedPointIterator
@@ -110,7 +110,6 @@ class SellarBLISS(Assembly):
         self.sysopt.iprint = 0
         self.sysopt.linobj = True
             
-        self.driver.workflow = SequentialWorkflow()
         self.driver.workflow.add(['ssa', 'sa_dis1', 'bbopt1', 'sysopt'])
 
         
