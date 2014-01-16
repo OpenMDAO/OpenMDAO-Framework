@@ -238,7 +238,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         self.top.driver.add_constraint('d1.y2 = d2.y2')
         self.top = set_as_top(Sellar_MDA_None())
         self.top.driver.newton = True
-        self.top.driver.gradient_options.fd_step_size = 0.01
+        self.top.driver.gradient_options.fd_step = 0.01
         self.top.driver.gradient_options.fd_step_type = 'relative'
 
         self.top.run()
@@ -291,7 +291,7 @@ class MDA_SolverTestCase(unittest.TestCase):
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')
         self.top.driver.newton = True
-        self.top.driver.gradient_options.fd_step_size = 0.01
+        self.top.driver.gradient_options.fd_step = 0.01
         self.top.driver.gradient_options.fd_step_type = 'relative'
 
         a.run()
