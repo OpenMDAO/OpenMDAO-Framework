@@ -245,6 +245,8 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
+        exprconns = [(u,v) for u,v in self._exprmapper.list_connections() 
+                                 if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
 
@@ -270,7 +272,7 @@ class Assembly(Component):
                 mconns.update(self.find_referring_connections(m))
             # disconnect any vars that are missing in the replacement object
             for u, v in mconns:
-                self.disconnect(u, v)
+                self.disconnect(u, v)  # TODO: don't think we need this...
 
         # remove any existing connections to replacement object
         if has_interface(newobj, IComponent):
@@ -279,14 +281,13 @@ class Assembly(Component):
         self.add(target_name, newobj)  # this will remove the old object
                                        # and any connections to it
 
-        # recreate old connections, leaving out pseudocomps
-        for u, v in conns:
-            if '_pseudo_' not in u and '_pseudo_' not in v:
-                try:
-                    self.connect(u, v)
-                except Exception as err:
-                    self._logger.warning("Couldn't connect '%s' to '%s': %s",
-                                         u, v, err)
+        # recreate old connections
+        for u, v in exprconns:
+            try:
+                self.connect(u, v)
+            except Exception as err:
+                self._logger.warning("Couldn't connect '%s' to '%s': %s",
+                                     u, v, err)
 
         # Restore driver references.
         for dname, _refs in refs.items():

@@ -64,6 +64,9 @@ class Comp_Send(Component):
         dzdp2 = 3.0
 
         self.J = np.array([[dxdp1, dxdp2], [dydp1, dydp2], [dzdp1, dzdp2]])
+        
+    def list_deriv_vars(self):
+        return ('p1', 'p2'), ('data', 'dummy')
 
     def apply_deriv(self, arg, result):
 
@@ -122,6 +125,9 @@ class Comp_Receive_ApplyDeriv(Comp_Receive):
         self.J = np.array([[-1.0, 0.0, 0.0],
                            [0.0, 2.0, 0.0],
                            [0.0, 0.0, 3.0]])
+        
+    def list_deriv_vars(self):
+        return ('data',), ('q1','q2','q3')
 
     def apply_deriv(self, arg, result):
 
