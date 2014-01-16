@@ -267,16 +267,9 @@ class Assembly(Component):
             self._logger.warning("the following variables are connected to "
                                  "other components but are missing in "
                                  "the replacement object: %s" % missing)
-            # mconns = set()
-            # for m in missing:
-            #     mconns.update(self.find_referring_connections(m))
-            # # disconnect any vars that are missing in the replacement object
-            # for u, v in mconns:
-            #     self.disconnect(u, v)  # TODO: don't think we need this...
 
         # remove expr connections
         for u,v in exprconns:
-            print "removing exprconn (%s,%s)" % (u,v)
             self.disconnect(u, v)
 
         # remove any existing connections to replacement object
@@ -289,10 +282,8 @@ class Assembly(Component):
         # recreate old connections
         for u, v in exprconns:
             try:
-                print "trying (%s,%s)..." % (u,v)
                 self.connect(u, v)
             except Exception as err:
-                print "failed to connect %s to %s: %s" % (u,v,str(err))
                 self._logger.warning("Couldn't connect '%s' to '%s': %s",
                                      u, v, err)
 
