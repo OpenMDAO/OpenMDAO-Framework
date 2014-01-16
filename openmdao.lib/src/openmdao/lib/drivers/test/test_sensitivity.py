@@ -37,8 +37,8 @@ class Assy(Assembly):
         self.driver.workflow.add(['comp'])
 
         # Sensitivity inputs
-        self.driver.add_parameter('comp.x', low=-9e99, high=9e99, fd_step=.01)
-        self.driver.add_parameter('comp.u', low=-9e99, high=9e99, fd_step=.01)
+        self.driver.add_parameter('comp.x', low=-9e99, high=9e99)
+        self.driver.add_parameter('comp.u', low=-9e99, high=9e99)
 
         # Sensitivity outputs
         self.driver.add_objective('comp.y')
@@ -124,7 +124,7 @@ class ArrayAssy(Assembly):
         self.driver.workflow.add(['comp'])
 
         # Sensitivity inputs
-        self.driver.add_parameter('comp.x', low=-9e99, high=9e99, fd_step=.01)
+        self.driver.add_parameter('comp.x', low=-9e99, high=9e99)
 
         # Sensitivity outputs
         self.driver.add_objective('comp.y')

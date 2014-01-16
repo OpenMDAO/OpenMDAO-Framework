@@ -469,6 +469,9 @@ class ArrayComp2D_der(Component):
                         [4.0, 2.0, 6.0, 5.0],
                         [3.0, 6.0, 9.0, 8.0],
                         [1.0, 3.0, 2.0, 4.0]])
+        
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
 
     def apply_deriv(self, arg, result):
 
@@ -2236,6 +2239,9 @@ class Comp3_array(Component):
         self.J = random.random((9, 9))
 
         self.JT = self.J.T
+        
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
 
     def apply_deriv(self, arg, result):
 

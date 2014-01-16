@@ -9,7 +9,7 @@ import numpy as np
 
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver, \
                                      FixedPointIterator
-from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver
+from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver, Component
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.mp_support import has_interface
@@ -53,7 +53,7 @@ class MyComp_No_Deriv(ImplicitComponent):
         self.y_out = c + x + y + z
         #print c, x, y, z, self.res
 
-class MyComp_Explicit(Driver):
+class MyComp_Explicit(Component):
     ''' Single implicit component with 3 states and residuals.
 
     For c=2.0, (x,y,z) = (1.0, -2.333333, -2.1666667)
@@ -105,6 +105,11 @@ class MyComp_Deriv(MyComp_No_Deriv):
 
         self.J_output_input = np.array([[1.0]])
         self.J_output_state = np.array([[1.0, 1.0, 1.0]])
+        
+    def list_deriv_vars(self):
+        input_keys = ('x', 'y', 'z', 'c')
+        output_keys = ('res', 'y_out')
+        return input_keys, output_keys
 
     def apply_deriv(self, arg, result):
 
@@ -223,6 +228,9 @@ class Coupled1(ImplicitComponent):
 
         self.y_out = c + x + y + z
 
+    def list_deriv_vars(self):
+        return ('x','y','z','c'), ('res', 'y_out')
+    
     def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
@@ -312,6 +320,9 @@ class Coupled2(ImplicitComponent):
 
         self.J_output_input = np.array([[1.0, 1.0, 1.0]])
         self.J_output_state = np.array([[1.0]])
+
+    def list_deriv_vars(self):
+        return ('x','y','z','c'), ('res', 'y_out')
 
     def apply_deriv(self, arg, result):
 
