@@ -88,7 +88,7 @@ Here's what the code to implement these derivatives looks like.
 So ``J`` is the Jacobian that OpenMDAO will use when assembling the system level derivatives. If
 this component was part of a much larger model with other components, it only contributes
 a small portion of the full Jacobian. OpenMDAO uses a numerical method developed by
-`Martins and Hwang<http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary>`_ [1]
+`Martins and Hwang <http://mdolab.engin.umich.edu/content/review-and-unification-discrete-methods-computing-derivatives-single-and-multi-disciplinary>`_ [1]
 to solve for the gradient of the full problem.
 
 .. note::
