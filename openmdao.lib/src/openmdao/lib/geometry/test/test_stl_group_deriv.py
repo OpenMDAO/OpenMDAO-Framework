@@ -37,6 +37,9 @@ class GeomRecieveDerivApplyDeriv(Component):
 
     def provideJ(self): 
         pass
+    
+    def list_deriv_vars(self):
+        return ('geom_in',), ('out',)
 
     def apply_deriv(self, arg, result):
         if 'geom_in' in arg:
