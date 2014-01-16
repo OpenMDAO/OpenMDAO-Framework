@@ -36,7 +36,7 @@ from openmdao.main.depgraph import DependencyGraph, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
-                                        FileRef
+                                        FileRef, Enum
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -150,6 +150,13 @@ class Component(Container):
 
     itername = Str('', iotype='out', desc='Iteration coordinates.',
                    framework_var=True)
+
+    # TODO: add 'fd' option to missing_deriv_policy
+    missing_deriv_policy = Enum(['error', 'assume_zero'], iotype='in',
+                                framework_var=True,
+                                desc='Determines behavior when some '
+                                     'analytical derivatives are provided '
+                                     'but some are missing')
 
     create_instance_dir = Bool(False)
 
@@ -445,7 +452,8 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        input_keys, output_keys, J = self.provideJ()
+        input_keys, output_keys = self.list_deriv_vars()
+        J = self.provideJ()
 
         if ffd_order == 1:
             for j, out_name in enumerate(output_keys):
@@ -459,7 +467,8 @@ class Component(Container):
                          required_inputs=None, required_outputs=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
-        requested. The user must supply *linearize* in the component.
+        requested. The user must supply *provideJ* and *list_deriv_vars*
+        in the component.
 
         This function should not be overriden.
 
@@ -480,6 +489,8 @@ class Component(Container):
             Not needed by Component
         """
 
+        J = None
+
         # Allow user to force finite difference on a comp. This also turns off
         # fake finite difference (i.e., there must be a reason they don't
         # trust their own derivatives.)
@@ -487,20 +498,20 @@ class Component(Container):
             return
 
         # Calculate first derivatives using the new API.
-        if first and hasattr(self, 'linearize'):
+        if first and hasattr(self, 'provideJ'):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
-            if savebase and has_interface(self, IAssembly):
-                self.driver.calc_derivatives(first, second, savebase,
-                                             required_inputs, required_outputs)
-                return
-
             if has_interface(self, IAssembly):
-                self.linearize(required_inputs=required_inputs,
-                               required_outputs=required_outputs)
+                if savebase:
+                    self.driver.calc_derivatives(first, second, savebase,
+                                                 required_inputs, required_outputs)
+                    return
+
+                J = self.provideJ(required_inputs=required_inputs,
+                                  required_outputs=required_outputs)
             else:
-                self.linearize()
+                J = self.provideJ()
 
             self.derivative_exec_count += 1
         else:
@@ -508,16 +519,18 @@ class Component(Container):
 
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
-        if savebase and hasattr(self, 'provideJ'):
+        ffd_inputs, ffd_outputs = self.list_deriv_vars()
+        if savebase and ffd_inputs:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
-            ffd_inputs, ffd_outputs, _ = self.provideJ()
 
             for name in ffd_inputs:
                 self._ffd_inputs[name] = self.get(name)
 
             for name in ffd_outputs:
                 self._ffd_outputs[name] = self.get(name)
+
+        return J
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -574,7 +587,7 @@ class Component(Container):
                 if ffd_order == 1 \
                    and not has_interface(self, IDriver) \
                    and not has_interface(self, IAssembly) \
-                   and (hasattr(self, 'provideJ')) \
+                   and (hasattr(self, '_ffd_inputs')) \
                    and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
@@ -833,6 +846,10 @@ class Component(Container):
                     names.append(n)
             self._container_names = names
         return self._container_names
+
+    @rbac(('owner', 'user'))
+    def list_deriv_vars(self):
+        return (), ()
 
     @rbac(('owner', 'user'))
     def connect(self, srcexpr, destexpr):
@@ -1988,7 +2005,7 @@ class Component(Container):
 
     def check_gradient(self, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
-                       fd_form='forward', fd_step_size=1.0e-6,
+                       fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
@@ -2021,7 +2038,7 @@ class Component(Container):
             Finite difference mode. Valid choices are 'forward', 'adjoint',
             'central'. Default is 'forward'
 
-        fd_step_size: float
+        fd_step: float
             Default step_size for finite difference. Default is 1.0e-6.
 
         fd_step_type: str
@@ -2042,7 +2059,7 @@ class Component(Container):
                 return asm.check_gradient(name=self.name,
                                          inputs=inputs, outputs=outputs,
                                          stream=stream, mode=mode,
-                                         fd_form=fd_form, fd_step_size=fd_step_size,
+                                         fd_form=fd_form, fd_step=fd_step,
                                          fd_step_type=fd_step_type)
             finally:
                 self.parent = None
@@ -2052,5 +2069,5 @@ class Component(Container):
             return self.parent.check_gradient(name=self.name,
                                               inputs=inputs, outputs=outputs,
                                               stream=stream, mode=mode,
-                                              fd_form=fd_form, fd_step_size=fd_step_size,
+                                              fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)

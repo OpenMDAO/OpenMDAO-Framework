@@ -992,6 +992,8 @@ def _test_arguments(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -1041,13 +1043,15 @@ def _test_sorting(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'missing_deriv_policy', 'error', '', 
+         'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
 
     # Check order of outputs.
-    inputs = editor.get_outputs()
+    outputs = editor.get_outputs()
     expected = [
         ['', 'stress_o1', '0', '', ''],
         ['', 'stress_o2', '0', '', ''],
@@ -1059,7 +1063,7 @@ def _test_sorting(browser):
         ['', 'itername', '', '', 'Iteration coordinates.'],
     ]
 
-    for i, row in enumerate(inputs.value):
+    for i, row in enumerate(outputs.value):
         eq(row, expected[i])
 
     editor.close()

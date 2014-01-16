@@ -170,7 +170,7 @@ class ExecCompWithDerivatives(Component):
         if self.sleep:
             time.sleep(self.sleep)
     
-    def linearize(self):
+    def provideJ(self):
         '''Calculate the Jacobian using our derivative expressions.'''
         
         global _expr_dict
@@ -191,13 +191,15 @@ class ExecCompWithDerivatives(Component):
             
         if self.dsleep:
             time.sleep(self.dsleep)
+
+        return self.J
             
-    def provideJ(self):
+    def list_deriv_vars(self):
         """Return the full Jacobian"""
         
         input_keys = [x[0] for x in self.items(framework_var=None, 
                                                iotype='in')]
         output_keys = [x[0] for x in self.items(framework_var=None, 
                                                 iotype='out')]
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
             

@@ -116,6 +116,8 @@ class Assembly(Component):
 
         self._exprmapper = ExprMapper(self)
         self._graph_loops = []
+        self.J_input_keys = None
+        self.J_output_keys = None
 
         # parent depgraph may have to invalidate us multiple times per pass
         self._invalidation_type = 'partial'
@@ -598,6 +600,8 @@ class Assembly(Component):
         # Detect and save any loops in the graph.
         self._graph_loops = None
 
+        self.J_input_keys = self.J_output_keys = None
+
     def _set_failed(self, path, value, index=None, src=None, force=False):
         parts = path.split('.', 1)
         if len(parts) > 1:
@@ -780,7 +784,7 @@ class Assembly(Component):
 
     def check_gradient(self, name=None, inputs=None, outputs=None,
                        stream=None, mode='auto',
-                       fd_form='forward', fd_step_size=1.0e-6,
+                       fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
 
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -829,7 +833,7 @@ class Assembly(Component):
             Finite difference mode. Valid choices are 'forward', 'adjoint' ,
             'central'. Default is 'forward'
 
-        fd_step_size: float
+        fd_step: float
             Default step_size for finite difference. Default is 1.0e-6.
 
         fd_step_type: str
@@ -843,11 +847,11 @@ class Assembly(Component):
         obj = None
 
         base_fd_form = driver.gradient_options.fd_form
-        base_fd_step_size = driver.gradient_options.fd_step_size
+        base_fd_step = driver.gradient_options.fd_step
         base_fd_step_type = driver.gradient_options.fd_step_type
 
         driver.gradient_options.fd_form = fd_form
-        driver.gradient_options.fd_step_size = fd_step_size
+        driver.gradient_options.fd_step = fd_step
         driver.gradient_options.fd_step_type = fd_step_type
 
         # tuples cause problems.
@@ -900,12 +904,12 @@ class Assembly(Component):
                                                 mode=mode)
 
         driver.gradient_options.fd_form = base_fd_form
-        driver.gradient_options.fd_step_size = base_fd_step_size
+        driver.gradient_options.fd_step = base_fd_step
         driver.gradient_options.fd_step_type = base_fd_step_type
         return result
 
 
-    def linearize(self, required_inputs=None, required_outputs=None):
+    def provideJ(self, required_inputs, required_outputs):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
@@ -958,12 +962,10 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
 
-        self.J = self.driver.calc_gradient(input_keys, output_keys)
+        return self.driver.calc_gradient(input_keys, output_keys)
 
-    def provideJ(self):
-        '''Provides the Jacobian calculated in linearize().'''
-
-        return self.J_input_keys, self.J_output_keys, self.J
+    def list_deriv_vars(self):
+        return self.J_input_keys, self.J_output_keys
 
     def list_components(self):
         ''' List the components in the assembly.

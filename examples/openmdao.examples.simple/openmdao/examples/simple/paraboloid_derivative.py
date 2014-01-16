@@ -29,21 +29,18 @@ class ParaboloidDerivative(Component):
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
         
-    def linearize(self):
-        """Caculate the Jacobian"""
+    def provideJ(self):
+        """Caculate and return the Jacobian"""
         
         df_dx = 2.0*self.x - 6.0 + self.y
         df_dy = 2.0*self.y + 8.0 + self.x
     
-        self.J = array([[df_dx, df_dy]])
-        
-    def provideJ(self):
-        """Provide full Jacobian."""
-        
+        return array([[df_dx, df_dy]])
+    
+    def list_deriv_vars(self):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
         
-        return input_keys, output_keys, self.J
-    
+        return input_keys, output_keys
 
 # End paraboloid_derivative.py

@@ -6,11 +6,15 @@ import os
 
 import numpy as np
 
-from openmdao.main.interfaces import IStaticGeometry, classImplements
 
-from pyV3D.stl import STLGeometryObject, STLSender
-
-classImplements(STLGeometryObject, IStaticGeometry)
+try: 
+    from pyV3D.stl import STLGeometryObject
+    from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry, \
+                                         classImplements
+    classImplements(STLGeometryObject, IStaticGeometry)
+except ImportError: 
+    #just fake it so you can use this outside openmdao
+    pass 
 
 
 ASCII_FACET = """  facet normal  {face[0]:e}  {face[1]:e}  {face[2]:e}

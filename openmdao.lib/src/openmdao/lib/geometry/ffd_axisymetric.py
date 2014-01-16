@@ -82,8 +82,10 @@ class Body(object):
         #sgrab the theta values from the points 
         self.Theta = self.P[:,2]
         #this is too complex. shouldn't need to tile, then flatten later.
-        self.sin_theta = np.tile(np.sin(self.Theta),self.n_controls)
-        self.cos_theta = np.tile(np.cos(self.Theta),self.n_controls)
+        self.sin_theta = np.tile(np.sin(self.Theta),(self.n_controls,1)).T.flatten()
+        self.cos_theta = np.tile(np.cos(self.Theta),(self.n_controls,1)).T.flatten()
+        # self.sin_theta = np.tile(np.sin(self.Theta),self.n_controls)
+        # self.cos_theta = np.tile(np.cos(self.Theta),self.n_controls)
 
         #calculate derivatives
         #in polar coordinates
@@ -206,16 +208,16 @@ class Shell(object):
 
 
         self.outer_theta = self.Po[:,2]
-        self.sin_outer_c_theta = np.tile(np.sin(self.outer_theta),self.n_c_controls)
-        self.cos_outer_c_theta = np.tile(np.cos(self.outer_theta),self.n_c_controls)
-        self.sin_outer_t_theta = np.tile(np.sin(self.outer_theta),self.n_t_controls)
-        self.cos_outer_t_theta = np.tile(np.cos(self.outer_theta),self.n_t_controls)
+        self.sin_outer_c_theta = np.tile(np.sin(self.outer_theta),(self.n_c_controls,1)).T.flatten()
+        self.cos_outer_c_theta = np.tile(np.cos(self.outer_theta),(self.n_c_controls,1)).T.flatten()
+        self.sin_outer_t_theta = np.tile(np.sin(self.outer_theta),(self.n_t_controls,1)).T.flatten()
+        self.cos_outer_t_theta = np.tile(np.cos(self.outer_theta),(self.n_t_controls,1)).T.flatten()
 
         self.inner_theta = self.Pi[:,2]
-        self.sin_inner_c_theta = np.tile(np.sin(self.inner_theta),self.n_c_controls)
-        self.cos_inner_c_theta = np.tile(np.cos(self.inner_theta),self.n_c_controls)
-        self.sin_inner_t_theta = np.tile(np.sin(self.inner_theta),self.n_t_controls)
-        self.cos_inner_t_theta = np.tile(np.cos(self.inner_theta),self.n_t_controls)
+        self.sin_inner_c_theta = np.tile(np.sin(self.inner_theta),(self.n_c_controls,1)).T.flatten()
+        self.cos_inner_c_theta = np.tile(np.cos(self.inner_theta),(self.n_c_controls,1)).T.flatten()
+        self.sin_inner_t_theta = np.tile(np.sin(self.inner_theta),(self.n_t_controls,1)).T.flatten()
+        self.cos_inner_t_theta = np.tile(np.cos(self.inner_theta),(self.n_t_controls,1)).T.flatten()
 
         #calculate derivatives
         #in polar coordinates

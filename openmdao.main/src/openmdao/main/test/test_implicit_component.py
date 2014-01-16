@@ -4,10 +4,9 @@ derivatives solve.
 """
 
 import unittest
-from nose import SkipTest
 import numpy as np
 
-from openmdao.lib.drivers.api import BroydenSolver, MDASolver
+from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
@@ -91,7 +90,7 @@ class MyComp_Deriv(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
 
-    def linearize(self):
+    def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -171,7 +170,7 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
 
-    def linearize(self):
+    def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -184,11 +183,12 @@ class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
         J_output = np.array([[1.0, 1.0, 1.0, 1.0]])
 
         self.J = np.vstack((J_res, J_output))
+        return self.J
 
-    def provideJ(self):
+    def list_deriv_vars(self):
         input_keys = ('x', 'y', 'z', 'c')
         output_keys = ('res', 'y_out')
-        return input_keys, output_keys, self.J
+        return input_keys, output_keys
 
 
 class Coupled1(ImplicitComponent):
@@ -223,7 +223,7 @@ class Coupled1(ImplicitComponent):
 
         self.y_out = c + x + y + z
 
-    def linearize(self):
+    def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -232,7 +232,7 @@ class Coupled1(ImplicitComponent):
         dy = [2*c, -2, .5]
         dz = [-c, 4, -1]
 
-        self.J_res_state = np.array([dx, dy]).T
+        self.J_res_state = np.array([dx, dy])
         self.J_res_input = np.array([dc, dz]).T
 
         self.J_output_input = np.array([[1.0, 1.0]])
@@ -241,18 +241,17 @@ class Coupled1(ImplicitComponent):
     def apply_deriv(self, arg, result):
 
         # Residual Equation derivatives
-        res = self.get_residuals()[0]
-        if res in result:
+        if 'res' in result:
 
             # wrt States
             for k, state in enumerate(self.list_states()):
                 if state in arg:
-                    result[res] += self.J_res_state[:, k]*arg[state]
+                    result['res'] += self.J_res_state[:, k]*arg[state]
 
             # wrt External inputs
             for k, state in enumerate(['c']):
                 if state in arg:
-                    result[res] += self.J_res_input[:, k]*arg[state]
+                    result['res'] += self.J_res_input[:, k]*arg[state]
 
         # Output Equation derivatives
         for j, res in enumerate(['y_out']):
@@ -300,7 +299,7 @@ class Coupled2(ImplicitComponent):
 
         self.y_out = c + x + y + z
 
-    def linearize(self):
+    def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
@@ -309,7 +308,7 @@ class Coupled2(ImplicitComponent):
         dy = [2*c, -2, .5]
         dz = [-c, 4, -1]
 
-        self.J_res_state = np.array([dz]).T
+        self.J_res_state = np.array([dz])
         self.J_res_input = np.array([dc, dx, dy]).T
 
         self.J_output_input = np.array([[1.0, 1.0, 1.0]])
@@ -318,18 +317,17 @@ class Coupled2(ImplicitComponent):
     def apply_deriv(self, arg, result):
 
         # Residual Equation derivatives
-        res = self.get_residuals()[0]
-        if res in result:
+        if 'res' in result:
 
             # wrt States
             for k, state in enumerate(self.list_states()):
                 if state in arg:
-                    result[res] += self.J_res_state[:, k]*arg[state]
+                    result['res'] += self.J_res_state[:, k]*arg[state]
 
             # wrt External inputs
             for k, state in enumerate(['c']):
                 if state in arg:
-                    result[res] += self.J_res_input[:, k]*arg[state]
+                    result['res'] += self.J_res_input[:, k]*arg[state]
 
         # Output Equation derivatives
         for j, res in enumerate(['y_out']):
@@ -410,14 +408,11 @@ class Testcase_implicit(unittest.TestCase):
 
     def test_coupled_comps_internal_solve(self):
 
-        raise SkipTest('Param/Con not supported on MDA solver yet')
-
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
-        model.add('driver', MDASolver())
+        model.add('driver', NewtonSolver())
         model.driver.workflow.add(['comp1', 'comp2'])
-        model.driver.newton = True
 
         model.connect('comp1.x', 'comp2.x')
         model.connect('comp1.y', 'comp2.y')
@@ -437,12 +432,10 @@ class Testcase_implicit(unittest.TestCase):
 
     def test_coupled_comps_external_solve(self):
 
-        raise SkipTest('Param/Con not supported on MDA solver yet')
-
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
-        model.add('driver', MDASolver())
+        model.add('driver', NewtonSolver())
         model.driver.workflow.add(['comp1', 'comp2'])
 
         model.connect('comp1.x', 'comp2.x')
@@ -455,7 +448,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model.driver.add_constraint('comp1.res[0] = 0')
         model.driver.add_constraint('comp1.res[1] = 0')
-        model.driver.add_constraint('comp2.res[2] = 0')
+        model.driver.add_constraint('comp2.res[0] = 0')
 
         model.comp1.eval_only = True
         model.comp2.eval_only = True
