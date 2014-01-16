@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.api import Component, Assembly
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 
 class C1Base(Component):
@@ -36,7 +36,7 @@ class A(Assembly):
 
 class MyTestCase(unittest.TestCase):
     def test_expr_conn_with_replace(self):
-        a = A()
+        a = set_as_top(A())
         a.replace('c1', C1())
         a.c1.fin = 5.0
         a.run()
