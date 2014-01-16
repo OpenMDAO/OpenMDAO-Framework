@@ -63,6 +63,48 @@ def _test_basic(browser):
     closeout(project_dict, workspace_page)
 
 
+def _test_evaluate(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # create an assembly with an implicit component in it's workflow
+    filename = pkg_resources.resource_filename('openmdao.main.test',
+                                               'test_implicit_component.py')
+    workspace_page.add_file(filename)
+
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+
+    workspace_page.add_library_item_to_dataflow('test_implicit_component.MyComp_Deriv',
+                                                'comp', prefix='top')
+
+    workspace_page.add_object_to_workflow('top.comp', 'top')
+
+    # Verify that the evaluate menu option has the expected effect
+    (header, inputs, outputs) = workspace_page.get_properties('comp')
+    eq(outputs.value, [
+        ['y_out', '0'],
+        ['derivative_exec_count', '0'],
+        ['exec_count', '0'],
+        ['itername', '']
+    ])
+
+    workspace_page('workflow_tab').click()
+
+    comp = workspace_page.get_workflow_component_figure('comp')
+    comp.evaluate()
+
+    (header, inputs, outputs) = workspace_page.get_properties('comp')
+    eq(outputs.value, [
+        ['y_out', '2'],
+        ['derivative_exec_count', '0'],
+        ['exec_count', '0'],
+        ['itername', '']
+    ])  # FIXME: printvars is really an empty list...
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
 def _test_update(browser):
     # Adding a parameter to a driver should update the driver's workflow.
     project_dict, workspace_page = startup(browser)

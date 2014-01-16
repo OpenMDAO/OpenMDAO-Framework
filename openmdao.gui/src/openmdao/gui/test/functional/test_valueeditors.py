@@ -34,7 +34,7 @@ def _test_partial_array_connections(browser):
     workspace_page.add_file(file_path)
 
     workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly', 'top')
-   
+
     workspace_page.add_library_item_to_dataflow('partial_connections.PartialConnectionAssembly2', 'top_2')
 
     paraboloid = workspace_page.get_dataflow_figure("paraboloid_1", "top")
@@ -44,7 +44,7 @@ def _test_partial_array_connections(browser):
 
     #array 1d editor - check that implicitly connected elements are disabled
     inputs = props.inputs
-    
+
     # Can't single click on an entry you are focused on, so focus on next line, then come back.
     inputs.rows[1].cells[1].click()
     inputs.rows[0].cells[1].click()
@@ -55,7 +55,7 @@ def _test_partial_array_connections(browser):
 
     for array_input in array_inputs:
         eq(array_input.is_enabled(), False)
-    
+
     browser.find_element_by_xpath(cancel_path).click()
 
     props.close()
@@ -87,11 +87,11 @@ def _test_partial_array_connections(browser):
     array_inputs = browser.find_elements_by_xpath(array_inputs_path)
 
     for index, array_input in enumerate(array_inputs):
-        if( index % 3 == 2):
+        if (index % 3 == 2):
             eq(array_input.is_enabled(), True)
         else:
             eq(array_input.is_enabled(), False)
-    
+
     browser.find_element_by_xpath(cancel_path).click()
 
     props.close()
@@ -108,7 +108,7 @@ def _test_partial_array_connections(browser):
     array_inputs = browser.find_elements_by_xpath(array_inputs_path)
 
     for index, array_input in enumerate(array_inputs):
-        if( index % 3 == 1 ):
+        if (index % 3 == 1):
             eq(array_input.is_enabled(), True)
         else:
             eq(array_input.is_enabled(), False)
@@ -118,7 +118,8 @@ def _test_partial_array_connections(browser):
 
     # Clean up.
     closeout(project_dict, workspace_page)
-    
+
+
 def _test_value_editors(browser):
     # Creates a file in the GUI.
     project_dict, workspace_page = startup(browser)
@@ -264,21 +265,21 @@ def _test_value_editors(browser):
     props.close()
 
     #check that all values were set correctly by the editors
-    commands = ["top.p1.d['pi']", 
-                "top.p1.d['phi']", 
+    commands = ["top.p1.d['pi']",
+                "top.p1.d['phi']",
                 "top.p1.force_execute",
-                "top.p1.e", 
-                "top.p1.x", 
-                "top.p1.X", 
-                "top.p1.directory", 
+                "top.p1.e",
+                "top.p1.x",
+                "top.p1.X",
+                "top.p1.directory",
                 "top.p1.Z"]
-    values = ["3.0", 
-              "1.61", 
-              "True", 
-              "3", 
-              "2.71", 
-              "[ 0.  1.  2.  3.  4.]", 
-              "abcd", 
+    values = ["3.0",
+              "1.61",
+              "True",
+              "3",
+              "2.71",
+              "[ 0.  1.  2.  3.  4.]",
+              "abcd",
               "[1, 2, 3, 4, 5]"]
 
     for cmd_str, check_val in zip(commands, values):
@@ -329,7 +330,7 @@ def _test_Avartrees(browser):
             'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
@@ -350,7 +351,7 @@ def _test_Avartrees(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
@@ -393,7 +394,7 @@ def _test_Avartrees(browser):
             'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 

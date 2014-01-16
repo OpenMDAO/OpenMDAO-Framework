@@ -29,6 +29,7 @@ class DataflowFigure(BasePageObject):
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
     properties_button  = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
+    evaluate_button    = ButtonElement((By.XPATH, "../div/a[text()='Evaluate']"))
     run_button         = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
     connections_button = ButtonElement((By.XPATH, "../div/a[text()='Edit Data Connections']"))
     show_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Show Data Connections']"))
@@ -152,6 +153,10 @@ class DataflowFigure(BasePageObject):
         self('edit_driver').click()
         editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
+
+    def evaluate(self):
+        """ Evaluate this component. (only available for ImplicitComponent) """
+        self._context_click('evaluate_button')
 
     def run(self):
         """ Run this component. """
