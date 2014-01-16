@@ -434,16 +434,20 @@ def _test_properties(browser):
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
-    # Check default 'top.driver'.
     (header, inputs, outputs) = workspace_page.get_properties('top')
+    eq(header, 'Run_Once: top.driver')
     eq(inputs.value, [
-        [' gradient_options', ''],
-        ['directory',     ''],
-        ['force_execute', 'True'],
-        ['force_fd', 'False'],
-        ['printvars',     '[]'],
-    ])  # FIXME: printvars is really an empty list...
-
+        [' gradient_options', ''],  # vartree, has leading space after the [+]
+        ['directory',         ''],
+        ['force_execute',     'True'],
+        ['force_fd',          'False'],
+        ['printvars',         '[]'],
+    ])
+    eq(outputs.value, [
+        ['derivative_exec_count', '0'],
+        ['exec_count',            '0'],
+        ['itername',              '']
+    ])
     # Clean up.
     closeout(project_dict, workspace_page)
 
