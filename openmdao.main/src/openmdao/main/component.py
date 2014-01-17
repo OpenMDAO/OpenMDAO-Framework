@@ -25,7 +25,8 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, ICaseIterator, ICaseRecorder
+                                     IHasEvents, ICaseIterator, ICaseRecorder, \
+                                     IImplicitComponent
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -245,7 +246,7 @@ class Component(Container):
 
         if name.endswith('_items'):
             n = name[:-6]
-            if hasattr(self, n): #if n in self._valid_dict:
+            if hasattr(self, n):  # if n in self._valid_dict:
                 name = n
 
         self._input_check(name, old)
@@ -503,7 +504,7 @@ class Component(Container):
         # Allow user to force finite difference on a comp. This also turns off
         # fake finite difference (i.e., there must be a reason they don't
         # trust their own derivatives.)
-        if self.force_fd == True:
+        if self.force_fd is True:
             return
 
         # Calculate first derivatives using the new API.
@@ -1621,7 +1622,7 @@ class Component(Container):
                 lst = []
                 for var in pub_vars:
                     if var == __attributes__:
-                        lst.append((pname, self.get_attributes()))
+                        lst.append((pname, self.get_attributes(io_only=False)))
                     else:
                         lst.append(('.'.join([pname, var]), getattr(self, var)))
                 pub.publish_list(lst)
@@ -1638,9 +1639,6 @@ class Component(Container):
         attrs = {}
         attrs['type'] = type(self).__name__
 
-        parameters = {}
-        implicit = {}
-        partial_parameters = {}
         # We need connection information before we process the variables.
         if self.parent is None:
             connected_inputs = []
@@ -1653,6 +1651,10 @@ class Component(Container):
         # param, objective, or constraint.
         # Objectives and constraints are "implicit" connections. Parameters
         # are as well, though they lock down their variable targets.
+        parameters = {}
+        implicit = {}
+        partial_parameters = {}
+
         if self.parent and has_interface(self.parent, IAssembly):
             dataflow = self.parent.get_dataflow()
             for parameter, target in dataflow['parameters']:
@@ -1685,19 +1687,20 @@ class Component(Container):
         io_list      = inputs_list + outputs_list
 
         for name in io_list:
-
-            #for variable trees
+            # for variable trees
             if '.' in name:
                 continue
 
-            trait = self.get_trait(name)
-            meta = self.get_metadata(name)
             value = getattr(self, name)
-            ttype = trait.trait_type
+
+            meta  = self.get_metadata(name)
 
             # If this is a passthrough, reach in to get the trait
             if 'validation_trait' in meta:
                 trait = meta['validation_trait']
+                ttype = trait.trait_type
+            else:
+                trait = self.get_trait(name)
                 ttype = trait.trait_type
 
             # Each variable type provides its own basic attributes
@@ -1705,13 +1708,15 @@ class Component(Container):
 
             io_attr['id'] = name
 
-            # Framework variables
+            # prepend tilde to id of framework variables for sorting purposes
             if 'framework_var' in meta:
                 io_attr['id'] = '~' + name
 
             io_attr['indent'] = 0
 
             io_attr['valid'] = self.get_valid([name])[0]
+
+            # connections
             io_attr['connected'] = ''
             io_attr['connection_types'] = 0
 
@@ -1745,7 +1750,7 @@ class Component(Container):
 
                         partially_connected_indices.append(column_index)
 
-                    else: # '[' not in imp
+                    else:  # '[' not in imp
                         io_attr['connection_types'] |= 1
 
             if connected:
@@ -1838,21 +1843,19 @@ class Component(Container):
         attrs['Outputs'] = outputs
 
         # Find any event traits
-
         tset1 = set(self._alltraits(events=True))
         tset2 = set(self._alltraits(events=False))
         event_set = tset1.difference(tset2)
+
         # Remove the Enthought events common to all has_traits objects
         event_set.remove('trait_added')
         event_set.remove('trait_modified')
 
         events = []
         for name in event_set:
-
+            meta  = self.get_metadata(name)
             trait = self.get_trait(name)
-            meta = self.get_metadata(name)
             ttype = trait.trait_type
-
             event_attr = ttype.get_attribute(name, meta)
             events.append(event_attr)
 
@@ -1951,6 +1954,34 @@ class Component(Container):
             if has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                      for path in self.get_events()]
+
+            if has_interface(self, IImplicitComponent):
+                states = []
+                names = self.list_states()
+                for name in names:
+                    value = getattr(self, name)
+                    meta  = self.get_metadata(name)
+                    trait = self.get_trait(name)
+                    ttype = trait.trait_type
+
+                    attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                    attr['id'] = name
+                    states.append(attr)
+                attrs['States'] = states
+
+                residuals = []
+                names = self.list_residuals()
+                for name in names:
+                    value = getattr(self, name)
+                    meta  = self.get_metadata(name)
+                    trait = self.get_trait(name)
+                    ttype = trait.trait_type
+
+                    attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
+                    attr['id'] = name
+                    residuals.append(attr)
+                attrs['Residuals'] = residuals
+
         if len(slots) > 0:
             attrs['Slots'] = slots
 
@@ -2050,4 +2081,3 @@ class Component(Container):
                                               stream=stream, mode=mode,
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
-

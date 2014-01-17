@@ -8,7 +8,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import GenericElement, ButtonElement, TextElement
-from component import ComponentPage, DriverPage, PropertiesPage, AssemblyPage
+from component import ComponentPage, ImplicitComponentPage, DriverPage, PropertiesPage, AssemblyPage
 from connections import ConnectionsPage
 
 
@@ -29,6 +29,7 @@ class DataflowFigure(BasePageObject):
     # Context menu.
     edit_button        = ButtonElement((By.XPATH, "../div/a[text()='Edit']"))
     properties_button  = ButtonElement((By.XPATH, "../div/a[text()='Properties']"))
+    evaluate_button    = ButtonElement((By.XPATH, "../div/a[text()='Evaluate']"))
     run_button         = ButtonElement((By.XPATH, "../div/a[text()='Run']"))
     connections_button = ButtonElement((By.XPATH, "../div/a[text()='Edit Data Connections']"))
     show_dataflows     = ButtonElement((By.XPATH, "../div/a[text()='Show Data Connections']"))
@@ -118,6 +119,9 @@ class DataflowFigure(BasePageObject):
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
         elif base_type == 'Driver':
             return DriverPage(self.browser, self.port, (By.ID, editor_id))
+        elif base_type == 'ImplicitComponent':
+            return ImplicitComponentPage(self.browser, self.port, (By.ID, editor_id),
+                                 version=version)
         else:
             return ComponentPage(self.browser, self.port, (By.ID, editor_id),
                                  version=version)
@@ -152,6 +156,10 @@ class DataflowFigure(BasePageObject):
         self('edit_driver').click()
         editor_id = 'ObjectFrame_%s' % driver_pathname.replace('.', '-')
         return DriverPage(self.browser, self.port, (By.ID, editor_id))
+
+    def evaluate(self):
+        """ Evaluate this component. (only available for ImplicitComponent) """
+        self._context_click('evaluate_button')
 
     def run(self):
         """ Run this component. """

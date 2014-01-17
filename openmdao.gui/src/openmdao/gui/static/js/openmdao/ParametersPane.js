@@ -132,7 +132,7 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
                     }
 
                     //Do not include vartree roots
-                    if(input.hasOwnProperty('vt')){
+                    if (input.hasOwnProperty('vt')) {
                         return;
                     }
 
@@ -145,11 +145,11 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
                         highlimit = input.high;
                     }
 
-                    if(input.hasOwnProperty("parent")){
+                    if (input.hasOwnProperty("parent")) {
                         fullpath = comppath + '.' + input.id;
                     }
-                    
-                    else{
+
+                    else {
                         fullpath = comppath + '.' + input.name;
                     }
 
@@ -292,7 +292,6 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
         else {
             parms.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         parms.resizeCanvas();
 

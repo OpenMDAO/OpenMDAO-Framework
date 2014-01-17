@@ -9,22 +9,24 @@
  *      elm:      jQuery element which will contain the WorkflowComponentFigure
  *      project:  object that provides access to the openmdao project
  *      driver:   pathname of the driver of the parent workflow, if any
- *      pathname: the pathname of the component
- *      type:     the type of the component
- *      valid:    the initial valid state of the component
+ *      comp:     object representing the component, has the following attributes
+ *          pathname:   the pathname of the component
+ *          type:       the type of the component
+ *          interfaces: the interfaces implemented by the component
+ *          valid:      the initial valid state of the component
  **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, valid) {
+openmdao.WorkflowComponentFigure=function(elm, project, driver, comp) {
     /***********************************************************************
      *  private
      ***********************************************************************/
 
     var self = this,
-        id = 'WorkflowComponentFigure-'+pathname.replace(/\./g,'-'),
-        name = openmdao.Util.getName(pathname),
-        parent = openmdao.Util.getPath(pathname),
+        id = 'WorkflowComponentFigure-'+comp.pathname.replace(/\./g,'-'),
+        name = openmdao.Util.getName(comp.pathname),
+        parent = openmdao.Util.getPath(comp.pathname),
         parentName = openmdao.Util.getName(parent),
         svg = jQuery('<svg height="60" width="100">'
                    + '    <rect x="0" y="5" height="50" width="100" rx="15" ry="15";" />'
@@ -44,31 +46,38 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
         name = parentName + '.driver';
     }
 
-    // set the content text to be the type name (in italics)
-    var tok = type.split('.');
+    // remove path from type name
+    var tok = comp.type.split('.');
     if (tok.length > 1) {
-        type = tok[tok.length-1];
+        comp.type = tok[tok.length-1];
     }
 
-    // set name, id, tooltip and width
+    // set the content text to be the name and type
+    svg.find('#name').text(name);
+    svg.find('#klass').text(comp.type);
+
+    // set ids
     fig.attr('id',id);
     svg.uniqueId();
-    svg.find('#name').text(name);
-    svg.find('#klass').text(type);
     contextMenu.uniqueId();
 
     // create context menu
     contextMenu.append(jQuery('<li><b>'+name+'</b></li>'));
     contextMenu.append(jQuery('<li>Edit</li>').click(function(e) {
-        var frame = new openmdao.ObjectFrame(project,pathname);
+        var frame = new openmdao.ObjectFrame(project, comp.pathname);
     }));
     contextMenu.append(jQuery('<li>Properties</li>').click(function(e) {
-        var id = (pathname+'-properties').replace(/\./g,'-'),
-            frame = new openmdao.PropertiesFrame(id,project).editObject(pathname);
+        var id = (comp.pathname+'-properties').replace(/\./g,'-'),
+            frame = new openmdao.PropertiesFrame(id,project).editObject(comp.pathname);
     }));
+    if (jQuery.inArray('IImplicitComponent', comp.interfaces) >= 0) {
+        contextMenu.append(jQuery('<li>Evaluate</li>').click(function(e) {
+            var cmd = comp.pathname + '.evaluate();';
+            project.issueCommand(cmd);
+        }));
+    }
     contextMenu.append(jQuery('<li>Run</li>').click(function(e) {
-        var cmd = pathname + '.run();';
-        project.issueCommand(cmd);
+        project.runComponent(comp.pathname);
     }));
     if (driver.length > 0) {
         contextMenu.append(jQuery('<li>Remove from Workflow</li>').click(function(e) {
@@ -86,7 +95,7 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
 
     /** open object editor on double click */
     fig.dblclick(function(e) {
-        frame = new openmdao.ObjectFrame(project, pathname);
+        frame = new openmdao.ObjectFrame(project, comp.pathname);
     });
 
     // set rectangle color based on state
@@ -104,23 +113,24 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
     }
 
     // set initial state & add listener for updates
-    if (valid) {
+    if (comp.valid) {
         setState('VALID');
     }
     else {
         setState('INVALID');
     }
 
+    // handle exec_state messages
     function handleMessage(message) {
-        if (message.length !== 2 || message[0] !== pathname+'.exec_state') {
-            debug.warn('Invalid exec_state data for:', pathname, message);
+        if (message.length !== 2 || message[0] !== comp.pathname+'.exec_state') {
+            debug.warn('Invalid exec_state data for:', comp.pathname, message);
         }
         else {
             setState(message[1]);
         }
     }
 
-    project.addListener(pathname+'.exec_state', handleMessage);
+    project.addListener(comp.pathname+'.exec_state', handleMessage);
 
     /***********************************************************************
      *  privileged
@@ -133,7 +143,7 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
 
     /** get pathname */
     this.getPathname = function() {
-        return pathname;
+        return comp.pathname;
     };
 
     /** get width */
@@ -148,13 +158,13 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
 
     /** set type */
     this.setType = function(new_type) {
-        type = new_type;
+        comp.type = new_type;
     };
 
     /** set valid flag */
     this.setValid = function(new_valid) {
-        valid = new_valid;
-        if (valid) {
+        comp.valid = new_valid;
+        if (comp.valid) {
             setState('VALID');
         }
         else {
@@ -164,7 +174,7 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, pathname, type, 
 
     /** clean up listener */
     this.destroy = function() {
-        project.removeListener(pathname+'.exec_state', handleMessage);
+        project.removeListener(comp.pathname+'.exec_state', handleMessage);
         fig.remove();
     };
 };

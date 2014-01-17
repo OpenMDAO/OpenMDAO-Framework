@@ -20,7 +20,7 @@ openmdao.WorkflowFigure = function(elm, project, driver, json) {
         id = elm.attr('id')+'-'+pathname.replace(/\./g,'-')+'-WorkflowFigure',
         fig = jQuery('<div class="WorkflowFigure" id='+id+' style="float:left;position:relative;left:0px" />')
             .appendTo(elm),
-        drvr_fig = new openmdao.WorkflowComponentFigure(fig,project,driver,json.pathname,json.type,json.valid),
+        drvr_fig = new openmdao.WorkflowComponentFigure(fig, project, driver, json),
         flow_css = 'background-repeat:no-repeat', //;border-style:solid;border-color:yellow;border-width:thin;',
         flow_div = jQuery('<div style="'+flow_css+'" id='+id.replace(/WorkflowFigure/g,'flow')+'/>')
             .appendTo(fig),
@@ -349,8 +349,7 @@ openmdao.WorkflowFigure = function(elm, project, driver, json) {
                 }
                 else {
                     comp_fig = new openmdao.WorkflowComponentFigure(flow_div,
-                                               project, pathname, comp.pathname,
-                                               comp.type, comp.valid);
+                                               project, pathname, comp);
                 }
                 var removed = comp_figs.splice(idx, remove, comp_fig);
                 if (removed.length) {

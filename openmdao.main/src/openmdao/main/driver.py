@@ -5,6 +5,8 @@ __all__ = ["Driver"]
 
 import fnmatch
 
+from zope.interface import implementedBy
+
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.case import Case
@@ -39,8 +41,8 @@ class GradientOptions(VariableTree):
     fd_step_type = Enum('absolute', ['absolute', 'relative'],
                         desc='Set to absolute or relative stepsizes')
 
-    force_fd = Bool(False, desc="Set to True to force finite difference " + \
-                                "of this driver's entire workflow in a" + \
+    force_fd = Bool(False, desc="Set to True to force finite difference " +
+                                "of this driver's entire workflow in a" +
                                 "single block.")
     # KTM - story up for this one.
     #fd_blocks = List([], desc='User can specify nondifferentiable blocks ' + \
@@ -87,7 +89,6 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
-
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -559,19 +560,25 @@ class Driver(Component):
 
             pathname = comp.get_pathname()
             if is_instance(comp, Assembly) and comp.driver:
+                inames = [cls.__name__
+                          for cls in list(implementedBy(comp.__class__))]
                 ret['workflow'].append({
-                    'pathname': pathname,
-                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                    'driver':   comp.driver.get_workflow(),
-                    'valid':    comp.is_valid()
+                    'pathname':   pathname,
+                    'type':       type(comp).__module__ + '.' + type(comp).__name__,
+                    'interfaces': inames,
+                    'driver':     comp.driver.get_workflow(),
+                    'valid':      comp.is_valid()
                 })
             elif is_instance(comp, Driver):
                 ret['workflow'].append(comp.get_workflow())
             else:
+                inames = [cls.__name__
+                          for cls in list(implementedBy(comp.__class__))]
                 ret['workflow'].append({
-                    'pathname': pathname,
-                    'type':     type(comp).__module__ + '.' + type(comp).__name__,
-                    'valid':    comp.is_valid()
+                    'pathname':   pathname,
+                    'type':       type(comp).__module__ + '.' + type(comp).__name__,
+                    'interfaces': inames,
+                    'valid':      comp.is_valid()
                 })
         return ret
 

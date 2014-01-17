@@ -95,7 +95,6 @@ openmdao.CouplingVarsPane = function(elm, project, pathname, name, editable) {
         else {
             couplingVars.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         couplingVars.updateRowCount();
         couplingVars.render();
