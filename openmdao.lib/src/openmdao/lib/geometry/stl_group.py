@@ -7,14 +7,14 @@ from stl import ASCII_FACET, BINARY_HEADER, BINARY_FACET
 
 from ffd_axisymetric import Body, Shell
 
-try: 
+try:
     from pyV3D.stl import STLSender
     from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
-except ImportError: 
+except ImportError:
     #just fake it so you can use this outside openmdao
     IParametricGeometry = object()
     IStaticGeometry = object()
-    def implements(*args): 
+    def implements(*args):
         pass
 
 
@@ -33,16 +33,16 @@ def _block_diag(arrays):
     return result
 
 
-class STLGroup(object): 
+class STLGroup(object):
 
 
     implements(IParametricGeometry, IStaticGeometry)
 
-    def __init__(self): 
+    def __init__(self):
 
         self._comps = []
         self._i_comps = {}
-        self._n_comps = 0 
+        self._n_comps = 0
 
 
         #used to store set values of parameters from IParametricGeometry
@@ -53,10 +53,10 @@ class STLGroup(object):
 
         self._needs_linerize = True
 
-    def add(self, comp ,name=None): 
-        """ addes a new component to the geometry""" 
+    def add(self, comp ,name=None):
+        """ addes a new component to the geometry"""
 
-        if (name is None) and (comp.name is None): 
+        if (name is None) and (comp.name is None):
             name = "comp_%d"%self._n_comps
         comp.name = name
         self._i_comps[name] = self._n_comps
@@ -68,22 +68,22 @@ class STLGroup(object):
         self._invoke_callbacks()
         self._needs_linerize = True
 
-    def deform(self,**kwargs): 
+    def deform(self,**kwargs):
         """ deforms the geometry applying the new locations for the control points, given by body name"""
-        for name,delta_C in kwargs.iteritems(): 
+        for name,delta_C in kwargs.iteritems():
             i = self._i_comps[name]
             comp = self._comps[i]
             if isinstance(comp,Body):
                 comp.deform(delta_C)
             else:
                 comp.deform(*delta_C)
-            self.list_parameters()        
+            self.list_parameters()
 
-    def _build_ascii_stl(self, facets): 
+    def _build_ascii_stl(self, facets):
         """returns a list of ascii lines for the stl file """
 
         lines = ['solid ffd_geom',]
-        for facet in facets: 
+        for facet in facets:
             lines.append(ASCII_FACET.format(face=facet))
         lines.append('endsolid ffd_geom')
         return lines
@@ -92,58 +92,58 @@ class STLGroup(object):
         """returns a string of binary binary data for the stl file"""
 
         lines = [struct.pack(BINARY_HEADER,b'Binary STL Writer',len(facets)),]
-        for facet in facets: 
+        for facet in facets:
             facet = list(facet)
             facet.append(0) #need to pad the end with a unsigned short byte
-            lines.append(struct.pack(BINARY_FACET,*facet))  
-        return lines      
+            lines.append(struct.pack(BINARY_FACET,*facet))
+        return lines
 
-    def writeSTL(self, file_name, ascii=False): 
+    def writeSTL(self, file_name, ascii=False):
         """outputs an STL file"""
-        
+
         facets = []
-        for comp in self._comps: 
-            if isinstance(comp,Body): 
-               facets.extend(comp.stl.get_facets())
-            else: 
-               facets.extend(comp.outer_stl.get_facets())
-               facets.extend(comp.inner_stl.get_facets())
+        for comp in self._comps:
+            if isinstance(comp,Body):
+                facets.extend(comp.stl.get_facets())
+            else:
+                facets.extend(comp.outer_stl.get_facets())
+                facets.extend(comp.inner_stl.get_facets())
 
         f = open(file_name,'w')
-        if ascii: 
+        if ascii:
             lines = self._build_ascii_stl(facets)
             f.write("\n".join(lines))
-        else: 
+        else:
             data = self._build_binary_stl(facets)
             f.write("".join(data))
 
         f.close()
 
-    def writeFEPOINT(self, stream): 
+    def writeFEPOINT(self, stream):
         """writes out a new FEPOINT file with the given name, using the supplied points.
-        derivs is of size (3,len(points),len(control_points)), giving matricies of 
+        derivs is of size (3,len(points),len(control_points)), giving matricies of
         X,Y,Z drivatives
 
         jacobian should have a shape of (len(points),len(control_points))"""
-        
+
         self.provideJ()
-        
+
         lines = ['TITLE = "FFD_geom"',]
         var_line = 'VARIABLES = "X" "Y" "Z" "ID" '
 
-        
+
         deriv_X_names = []
         deriv_R_names = []
         deriv_T_names = []
 
         deriv_tmpl = string.Template('"dx_d${name}_${type}$i" "dy_d${name}_${type}$i" "dz_d${name}_${type}$i"')
 
-        for comp in self._comps: 
-            if isinstance(comp,Body): 
+        for comp in self._comps:
+            if isinstance(comp,Body):
                 deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
                 deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
 
-            else: 
+            else:
                 deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_c_controls-1)]) #x,y,z derivs for each control point
                 deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_c_controls)]) #x,y,z derivs for each control point
                 deriv_T_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'T'}) for i in xrange(0,comp.n_t_controls-1)]) #x,y,z derivs for each control point
@@ -155,7 +155,7 @@ class STLGroup(object):
         lines.append(var_line)
 
         lines.append('ZONE T = group0, I = %d, J = %d, F=FEPOINT'%(self.n_points,self.n_triangles)) #TODO I think this J number depends on the number of variables
-        
+
         #xyz for each parameter
         nx = 3*self.dXqdC.shape[1]
         nr = 3*self.dYqdCr.shape[1]
@@ -163,7 +163,7 @@ class STLGroup(object):
         j_cols =  (nx+nr+nt)
 
 
-        for i,p in enumerate(self.points): 
+        for i,p in enumerate(self.points):
             line = "%.8f %.8f %.8f %d "%(p[0],p[1],p[2],i+1) #x,y,z,index coordiantes of point
 
             #deriv_values = self.J[i]
@@ -177,17 +177,17 @@ class STLGroup(object):
             #leave x as zero
             deriv_values[nx+nr+1::3] = self.dYqdCt[i]
             deriv_values[nx+nr+2::3] = self.dZqdCt[i]
-            
+
             line += " ".join(np.char.mod('%.8f',deriv_values))
             lines.append(line)
 
-        for tri in self.triangles: 
+        for tri in self.triangles:
             line = "%d %d %d %d"%(tri[0]+1,tri[1]+1,tri[2]+1,tri[2]+1) #tecplot wants 1 bias indecies
             lines.append(line)
 
 
         needs_close = False
-        if isinstance(stream, basestring): 
+        if isinstance(stream, basestring):
             stream = open(stream,'w')
             needs_close = True
 
@@ -195,21 +195,21 @@ class STLGroup(object):
         #f.close()
 
         print >> stream, "\n".join(lines)
-        if(needs_close): 
+        if(needs_close):
             stream.close()
 
-    def project_profile(self): 
+    def project_profile(self):
         self.provideJ()
 
         point_sets = []
-        for comp in self._comps: 
+        for comp in self._comps:
             if isinstance(comp,Body):
                 p = comp.stl.points
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
                 points = p[indecies]
                 points = points[points[:,0].argsort()]
                 point_sets.append(points)
-            else: 
+            else:
                 p = comp.outer_stl.points
                 indecies = np.logical_and(abs(p[:,2])<.0001,p[:,1]>0)
                 points = p[indecies]
@@ -225,25 +225,25 @@ class STLGroup(object):
         return point_sets
 
     #begin methods for OpenMDAO geometry derivatives
-    def list_deriv_vars(self): 
+    def list_deriv_vars(self):
         outs = []
         ins = []
-        for comp in self._comps: 
+        for comp in self._comps:
             ins.append('%s.X'%comp.name)
             ins.append('%s.R'%comp.name)
-            if isinstance(comp, Shell): 
+            if isinstance(comp, Shell):
                 ins.append('%s.thickness'%comp.name)
 
         return ins, outs
 
     def provideJ(self):
-        if not self._needs_linerize: 
-            return 
-        self.list_parameters() 
+        if not self._needs_linerize:
+            return
+        self.list_parameters()
 
         param_J_offset_map = {}
 
-        #get proper sub_jacobians: 
+        #get proper sub_jacobians:
         jx = []
         jyr = []
         jzr = []
@@ -253,8 +253,8 @@ class STLGroup(object):
         x_offset = 0
         yz_offset = 0
         t_offset = 0
-        for comp in self._comps: 
-            if isinstance(comp, Body): 
+        for comp in self._comps:
+            if isinstance(comp, Body):
                 jx.append(comp.dXqdC[:,1:]) #skip the root x
                 param_name = "%s.X"%comp.name
                 param_J_offset_map[param_name] = x_offset
@@ -262,7 +262,7 @@ class STLGroup(object):
                 x_offset += nCx
 
                 jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
-                jzr.append(comp.dZqdC[:,:-1]) 
+                jzr.append(comp.dZqdC[:,:-1])
                 param_name = "%s.R"%comp.name
                 param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
@@ -276,31 +276,31 @@ class STLGroup(object):
                 param_J_offset_map[param_name] = t_offset
                 t_offset += 1
 
-            else: 
+            else:
                 #inner and outer jacobians
                 #have to stack the outer and inner jacobians
                 stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
-                jx.append(stackX) 
+                jx.append(stackX)
                 param_name = "%s.X"%comp.name
                 param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
                 #centerline
-                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:])) 
-                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:])) 
+                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:]))
+                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:]))
                 jyr.append(stackY) #constant tip radius
-                jzr.append(stackZ) 
+                jzr.append(stackZ)
                 param_name = "%s.R"%comp.name
                 param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
                 yz_offset += nCr
 
                 #thickness
-                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1])) 
-                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1])) 
+                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1]))
+                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1]))
                 jyt.append(stackY) #constant tip radius
-                jzt.append(stackZ) 
+                jzt.append(stackZ)
                 param_name = "%s.thickness"%comp.name
                 param_J_offset_map[param_name] = t_offset
                 nCt = self.comp_param_count[comp][2]
@@ -314,8 +314,8 @@ class STLGroup(object):
 
 
         self.param_J_map = {}
-        #map param names to jacobians: 
-        for comp in self._comps: 
+        #map param names to jacobians:
+        for comp in self._comps:
             param_name = "%s.X"%comp.name
             offset = param_J_offset_map[param_name]
             nCx = self.comp_param_count[comp][0]
@@ -326,15 +326,15 @@ class STLGroup(object):
             nCr = self.comp_param_count[comp][1]
             self.param_J_map[param_name] = (False, self.dYqdCr[:,offset:offset+nCr], self.dZqdCr[:,offset:offset+nCr])
 
-            if isinstance(comp, Shell): 
+            if isinstance(comp, Shell):
                 param_name = "%s.thickness"%comp.name
                 offset = param_J_offset_map[param_name]
                 nCt = self.comp_param_count[comp][2]
                 self.param_J_map[param_name] = (False, self.dYqdCt[:,offset:offset+nCt], self.dZqdCt[:,offset:offset+nCt])
 
         #go through and remove the extra columns from fake body thicknesses
-        for comp in self._comps: 
-            if isinstance(comp, Body): 
+        for comp in self._comps:
+            if isinstance(comp, Body):
                 param_name = "%s.thickness"%comp.name
                 offset = param_J_offset_map[param_name]
 
@@ -343,26 +343,26 @@ class STLGroup(object):
 
         self._needs_linerize = False
 
-    def apply_deriv(self, arg, result): 
-        for name, value in arg.iteritems(): 
-            if name == "geom_out": continue #TODO: this should not be in the args? Bug? 
+    def apply_deriv(self, arg, result):
+        for name, value in arg.iteritems():
+            if name == "geom_out": continue #TODO: this should not be in the args? Bug?
             Jx, Jy, Jz = self.param_J_map[name]
-            if Jx is not False: 
+            if Jx is not False:
                 result['geom_out'][:,0] += Jx.dot(value)
-            if Jy is not False: 
+            if Jy is not False:
                 result['geom_out'][:,1] += Jy.dot(value)
                 result['geom_out'][:,2] += Jz.dot(value)
 
         return result
 
-    def apply_derivT(self, arg, result): 
-        
-        for name, value in result.iteritems(): 
-            if name == "geom_out": continue #TODO: this should not be in the result? Bug? 
+    def apply_derivT(self, arg, result):
+
+        for name, value in result.iteritems():
+            if name == "geom_out": continue #TODO: this should not be in the result? Bug?
             Jx, Jy, Jz = self.param_J_map[name]
-            if Jx is not False: 
+            if Jx is not False:
                 result[name] -= Jx.T.dot(result['geom_out'][:,0])
-            if Jy is not False: 
+            if Jy is not False:
                 result[name] -= Jy.T.dot(result['geom_out'][:,1])
                 result[name] -= Jz.T.dot(result['geom_out'][:,2])
 
@@ -371,18 +371,18 @@ class STLGroup(object):
     #end methods for OpenMDAO geometry derivatives
 
     #begin methods for IParametricGeometry
-    def list_parameters(self): 
+    def list_parameters(self):
         """ returns a dictionary of parameters sets key'd to component names"""
 
         self.param_name_map = {}
         self.comp_param_count = {}
         params = []
-        for comp in self._comps:  
+        for comp in self._comps:
             name = comp.name
 
-            if isinstance(comp, Body): 
+            if isinstance(comp, Body):
                 val = comp.delta_C[1:,0] #holds the root x constant
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':"axial location of control points for the ffd"}
                 tup = ('%s.X'%name, meta)
                 params.append(tup)
@@ -390,7 +390,7 @@ class STLGroup(object):
                 n_X = val.shape[0]
 
                 val = comp.delta_C[:-1,1] #holds the tip radius constant
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':"radial location of control points for the ffd"}
                 tup = ('%s.R'%name, meta)
                 params.append(tup)
@@ -399,27 +399,27 @@ class STLGroup(object):
                 self.comp_param_count[comp] = (n_X,n_R)
 
 
-            else: 
+            else:
                 val = comp.delta_Cc[1:,0] #fixes the x location of the geometry root
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':'axial location of the control points for the centerline of the shell'}
-                tup = ('%s.X'%name, meta) 
+                tup = ('%s.X'%name, meta)
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
                 n_X = val.shape[0]
 
                 val = comp.delta_Cc[:,1] #can vary all centerlines
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':'radial location of the control points for the centerline of the shell'}
-                tup = ('%s.R'%name, meta) 
+                tup = ('%s.R'%name, meta)
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
                 n_R = val.shape[0]
 
                 val = comp.delta_Ct[:-1,1] #except last R, to keep tip size fixed
-                meta = {'value':val, 'iotype':'in', 'shape':val.shape, 
+                meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':'thickness of the shell at each axial station'}
-                tup = ('%s.thickness'%name, meta) 
+                tup = ('%s.thickness'%name, meta)
                 params.append(tup)
                 self.param_name_map[tup[0]] = val
                 n_T = val.shape[0]
@@ -433,20 +433,20 @@ class STLGroup(object):
         for comp in self._comps:
             n_controls += sum(self.comp_param_count[comp])
 
-            if isinstance(comp,Body): 
+            if isinstance(comp,Body):
                 points.extend(comp.stl.points)
                 size = len(points)
-                triangles.extend(comp.stl.triangles + i_offset) 
+                triangles.extend(comp.stl.triangles + i_offset)
                 i_offset = size
-            else: 
+            else:
                 points.extend(comp.outer_stl.points)
                 size = len(points)
-                triangles.extend(comp.outer_stl.triangles + i_offset) 
+                triangles.extend(comp.outer_stl.triangles + i_offset)
                 i_offset = size
-                
+
                 points.extend(comp.inner_stl.points)
                 size = len(points)
-                triangles.extend(comp.inner_stl.triangles + i_offset) 
+                triangles.extend(comp.inner_stl.triangles + i_offset)
                 i_offset = size
 
         self.points = np.array(points)
@@ -454,26 +454,26 @@ class STLGroup(object):
         self.n_points = len(points)
         self.triangles = triangles
         self.n_triangles = len(triangles)
-        
+
         params.append(
             ('geom_out', {'iotype':'out', 'data_shape':self.points.shape, 'type':IStaticGeometry})
         )
         return params
 
-    def set_parameter(self, name, val): 
+    def set_parameter(self, name, val):
         self.param_name_map[name] = val
 
-    def get_parameters(self, names): 
+    def get_parameters(self, names):
         return [self.param_name_map[n] for n in names]
 
-    def regen_model(self): 
-        for comp in self._comps: 
+    def regen_model(self):
+        for comp in self._comps:
 
             #print "inside STLGroup.regen_model, plug.R is ", self.meta['plug.R']['value']
-            
+
             #del_C = np.ones((10,2)) * 123.0
 
-            if isinstance(comp, Body): 
+            if isinstance(comp, Body):
                 delta_C_shape = comp.delta_C.shape
                 del_C = np.zeros( delta_C_shape )
                 del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
@@ -492,17 +492,17 @@ class STLGroup(object):
                 # need both delta_Cc and delta_Ct for shells
                 comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
 
-        self.list_parameters() #needed for book-keeping 
+        self.list_parameters() #needed for book-keeping
 
 
-    def get_static_geometry(self): 
+    def get_static_geometry(self):
         return self
 
     def register_param_list_changedCB(self, callback):
         self._callbacks.append(callback)
 
-    def _invoke_callbacks(self): 
-        for cb in self._callbacks: 
+    def _invoke_callbacks(self):
+        for cb in self._callbacks:
             cb()
     #end methods for IParametricGeometry
 
@@ -519,7 +519,7 @@ class STLGroup(object):
     #end methods for IStaticGeometry
 
 
-try: 
+try:
     class STLGroupSender(STLSender):
         def __init__(self, *args, **kargs):
             super(STLGroupSender, self).__init__(*args, **kargs)
@@ -532,9 +532,9 @@ try:
         def geom_from_obj(self, obj):
             if isinstance(obj, STLGroup):
                 obj.get_visualization_data(self.wv)
-            else: 
+            else:
                 raise RuntimeError("object must be a Geometry but is a '%s' instead"%(str(type(obj))))
-except NameError: 
+except NameError:
     pass
-            
+
 
