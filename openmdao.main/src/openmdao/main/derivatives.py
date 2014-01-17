@@ -149,11 +149,11 @@ def pre_process_dicts(obj, key, arg_or_result):
     # the fly, then poke in the values.
     basekey, _, index = key.partition('[')
     if index:
+        var = obj.get(basekey)
         if basekey not in arg_or_result:
-            var = obj.get(basekey)
             arg_or_result[basekey] = zeros(var.shape)
 
-        sliced_shape = obj.get(key).shape
+        sliced_shape = eval("var[%s" % index).shape
         value = value.reshape(sliced_shape)
         exec("arg_or_result[basekey][%s += value" % index)
 
