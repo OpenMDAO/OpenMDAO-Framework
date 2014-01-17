@@ -579,14 +579,16 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     }
                 }
 
+                // set styles for connected, framework and editable values
+                var nameStyle = '',
+                    valueStyle = '';
+
                 if (value.hasOwnProperty("connected")) {
-                    var nameStyle = '',
-                        valueStyle = '';
                     if (options.editable && ((value.connection_types & 1) !== 1)
                         && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
-                    if (value.hasOwnProperty("implicit") &&
+                    if (value.hasOwnProperty("implicit") && 
                         (((value.connection_types & 4) === 4) ||
                          ((value.connection_types & 8) === 8))) {
                         //need a css class for highlighting implicitly connected inputs
@@ -599,20 +601,26 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                             valueStyle += " objective";
                         }
                     }
-                    if (value.hasOwnProperty("framework_var")) {
-                        nameStyle += " framework_var";
-                    }
-                    var css = {};
-                    if (nameStyle !== '') {
-                        css.name = nameStyle;
-                    }
-                    if (valueStyle !== '') {
-                        css.value = valueStyle;
-                    }
-                    if (css !== {}) {
-                        editableInTable[value.id] = css;
-                    }
                 }
+                else if (options.editable) {
+                    valueStyle += " cell-editable";
+                }
+
+                if (value.hasOwnProperty("framework_var")) {
+                    nameStyle += " framework_var";
+                }
+
+                var css = {};
+                if (nameStyle !== '') {
+                    css.name = nameStyle;
+                }
+                if (valueStyle !== '') {
+                    css.value = valueStyle;
+                }
+                if (css !== {}) {
+                    editableInTable[value.id] = css;
+                }
+
                 value.info = "";
             });
 
