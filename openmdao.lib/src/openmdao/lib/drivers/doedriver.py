@@ -84,7 +84,7 @@ class DOEdriverBase(CaseIterDriverBase):
             self._csv_file.close()
             self._csv_file = None
 
-class ConnectableDoedriver(DOEdriverBase):
+class ConnectableDOEdriver(DOEdriverBase):
     DOEgenerator = Instance(IDOEgenerator, required=True, iotype="in",
                         desc='Iterator supplying normalized DOE values.')
 

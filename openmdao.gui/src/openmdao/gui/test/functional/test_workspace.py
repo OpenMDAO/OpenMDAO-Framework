@@ -924,10 +924,14 @@ def _test_libsearch(browser):
     objects = workspace_page.get_object_types()
     eq(objects, [
         'CentralComposite',
+        'ConnectableDOEdriver',
+        'ConnectableNeighborhoodDOEdriver',
         'CSVFile',
         'DOEdriver',
+        'DOEdriverBase',
         'FullFactorial',
         'NeighborhoodDOEdriver',
+        'NeighborhoodDOEdriverBase',
         'OptLatinHypercube',
         'PlugNozzleGeometry',
         'Uniform'])

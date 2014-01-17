@@ -16,7 +16,7 @@ except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
 
-from openmdao.main.datatypes.api import Slot, Str, Float
+from openmdao.main.datatypes.api import Slot, Str, Float, Instance
 from openmdao.lib.casehandlers.api import CaseSet
 
 from openmdao.main.api import Component
@@ -25,19 +25,11 @@ from openmdao.util.decorators import stub_if_missing_deps
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 @stub_if_missing_deps(*_check)
-class ExpectedImprovement(Component):
-    best_case = Slot(CaseSet,
-                       desc="CaseSet which contains a single case "
-                            "representing the criteria value.")
-
+class ExpectedImprovementBase(Component):
     criteria = Str(iotype="in",
                    desc="Name of the variable to maximize the expected "
                         "improvement around. Must be a NormalDistrubtion type.")
 
-    predicted_value = Slot(NormalDistribution,
-                             desc="The Normal Distribution of the predicted value "
-                                  "for some function at some point where you wish to"
-                                  " calculate the EI.")
 
     EI = Float(0.0, iotype="out",
                desc="The expected improvement of the predicted_value.")
@@ -72,3 +64,22 @@ class ExpectedImprovement(Component):
 
 
 
+class ConnectableExpectedImprovement(ExpectedImprovementBase):
+    best_case = Instance(CaseSet, iotype="in",
+                       desc="CaseSet which contains a single case "
+                            "representing the criteria value.")
+    
+    predicted_value = Instance(NormalDistribution, iotype="in",
+                             desc="The Normal Distribution of the predicted value "
+                                  "for some function at some point where you wish to"
+                                  " calculate the EI.")
+
+class ExpectedImprovement(ExpectedImprovementBase):
+    best_case = Slot(CaseSet,
+                       desc="CaseSet which contains a single case "
+                            "representing the criteria value.")
+    
+    predicted_value = Slot(NormalDistribution,
+                             desc="The Normal Distribution of the predicted value "
+                                  "for some function at some point where you wish to"
+                                  " calculate the EI.")

@@ -58,10 +58,16 @@ Component, Driver, Variable and other plugins for OpenMDAO
       [openmdao.driver]
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
+      openmdao.lib.drivers.caseiterdriver.ConnectableCaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:ConnectableCaseIteratorDriver
+      openmdao.lib.drivers.caseiterdriver.CaseIteratorDriverBase = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriverBase
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.cobyladriver.COBYLAdriver = openmdao.lib.drivers.cobyladriver:COBYLAdriver
+      openmdao.lib.drivers.doedriver.DOEdriverBase = openmdao.lib.drivers.doedriver:DOEdriverBase
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
+      openmdao.lib.drivers.doedriver.ConnectableDOEdriver = openmdao.lib.drivers.doedriver:ConnectableDOEdriver
+      openmdao.lib.drivers.doedriver.NeighborhoodDOEdriverBase = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriverBase
       openmdao.lib.drivers.doedriver.NeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriver
+      openmdao.lib.drivers.doedriver.ConnectableNeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:ConnectableNeighborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
@@ -73,14 +79,22 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent
 
       [openmdao.component]
+      openmdao.lib.components.expected_improvement.ExpectedImprovementBase = openmdao.lib.components.expected_improvement:ExpectedImprovementBase
+      openmdao.lib.components.expected_improvement.ConnectableExpectedImprovement = openmdao.lib.components.expected_improvement:ConnectedExpectedImprovement
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
+      openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovementBase = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovementBase
       openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovement
+      openmdao.lib.components.expected_improvement_multiobj.ConnectableMultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:ConnectableMultiObjExpectedImprovement
       openmdao.lib.components.external_code.ExternalCode = openmdao.lib.components.external_code:ExternalCode
+      openmdao.lib.components.metamodel.MetaModelBase = openmdao.lib.components.metamodel:MetaModelBase
       openmdao.lib.components.metamodel.MetaModel = openmdao.lib.components.metamodel:MetaModel
+      openmdao.lib.components.metamodel.ConnectableMetaModel = openmdao.lib.components.metamodel:ConnectableMetaModel
       openmdao.lib.components.mux.Mux = openmdao.lib.components.mux:Mux
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
+      openmdao.lib.components.pareto_filter.ParetoFilterBase = openmdao.lib.components.pareto_filter:ParetoFilterBase
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
+      openmdao.lib.components.pareto_filter.ConnectableParetoFilter = openmdao.lib.components.pareto_filter:ConnectableParetoFilter
       openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.lazy_comp.LazyComponent = openmdao.lib.components.lazy_comp:LazyComponent
