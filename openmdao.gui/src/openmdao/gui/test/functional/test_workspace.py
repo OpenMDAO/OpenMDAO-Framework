@@ -475,39 +475,32 @@ def _test_implicit_component(browser):
 
     states = comp_editor.get_states()
     eq(states.value, [
-        ['x', '0'],
-        ['y', '0'],
-        ['z', '0']
+        ['', 'x', '0', '', ''],
+        ['', 'y', '0', '', ''],
+        ['', 'z', '0', '', ''],
     ])
 
     residuals = comp_editor.get_residuals()
     eq(residuals.value, [
-        ['res', '0']
+        ['', 'res', '[0.0, 0.0, 0.0]', '', '']
     ])
 
-    comp_editor.set_state('x', 1)
-    comp_editor.set_state('y', 2)
-    comp_editor.set_state('z', 3)
-
-    states = comp_editor.get_states()
-    eq(states.value, [
-        ['x', '1'],
-        ['y', '2'],
-        ['z', '3']
-    ])
+    comp_editor.set_state('x', '1')
+    comp_editor.set_state('y', '2')
+    comp_editor.set_state('z', '3')
 
     comp.evaluate()
 
     states = comp_editor.get_states()
     eq(states.value, [
-        ['x', '1'],
-        ['y', '2'],
-        ['z', '3']
+        ['', 'x', '1', '', ''],
+        ['', 'y', '2', '', ''],
+        ['', 'z', '3', '', ''],
     ])
 
     residuals = comp_editor.get_residuals()
     eq(residuals.value, [
-        ['res', '[7.0, 12.0, -3.0]']
+        ['', 'res', '[7.0, 12.0, -3.0]', '', '']
     ])
 
     # Clean up.

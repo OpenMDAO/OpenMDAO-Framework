@@ -221,7 +221,7 @@ class ImplicitComponentPage(ComponentPage):
     residuals_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Residuals']"))
 
     states  = GridElement((By.ID, 'States_props'))
-    residuals = GridElement((By.ID, 'Outputs_props'))
+    residuals = GridElement((By.ID, 'Residuals_props'))
 
     states_filter = InputElement((By.ID, 'States_variableFilter'))
     states_clear = ButtonElement((By.ID, 'States_clear'))
