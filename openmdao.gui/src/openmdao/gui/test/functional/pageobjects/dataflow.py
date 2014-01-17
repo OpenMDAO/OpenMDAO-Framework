@@ -8,7 +8,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 
 from basepageobject import BasePageObject, TMO
 from elements import GenericElement, ButtonElement, TextElement
-from component import ComponentPage, DriverPage, PropertiesPage, AssemblyPage
+from component import ComponentPage, ImplicitComponentPage, DriverPage, PropertiesPage, AssemblyPage
 from connections import ConnectionsPage
 
 
@@ -119,6 +119,9 @@ class DataflowFigure(BasePageObject):
             return AssemblyPage(self.browser, self.port, (By.ID, editor_id))
         elif base_type == 'Driver':
             return DriverPage(self.browser, self.port, (By.ID, editor_id))
+        elif base_type == 'ImplicitComponent':
+            return ImplicitComponentPage(self.browser, self.port, (By.ID, editor_id),
+                                 version=version)
         else:
             return ComponentPage(self.browser, self.port, (By.ID, editor_id),
                                  version=version)

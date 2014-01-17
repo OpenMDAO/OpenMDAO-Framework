@@ -99,7 +99,7 @@ def _test_evaluate(browser):
         ['derivative_exec_count', '0'],
         ['exec_count', '0'],
         ['itername', '']
-    ])  # FIXME: printvars is really an empty list...
+    ])
 
     # Clean up.
     closeout(project_dict, workspace_page)

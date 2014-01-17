@@ -46,10 +46,10 @@ class ComponentPage(DialogPage):
     As = type('Enum', (), {"GRID": 0, "ROW": 1, "VARIABLE": 2})
     SortOrder = type('Enum', (), {"ASCENDING": 0, "DESCENDING": 1})
 
-    inputs_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
-    slots_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
-    outputs_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
-    events_tab  = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
+    inputs_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Inputs']"))
+    outputs_tab   = ButtonElement((By.XPATH, "div/ul/li/a[text()='Outputs']"))
+    slots_tab     = ButtonElement((By.XPATH, "div/ul/li/a[text()='Slots']"))
+    events_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='Events']"))
 
     inputs  = GridElement((By.ID, 'Inputs_props'))
     outputs = GridElement((By.ID, 'Outputs_props'))
@@ -214,6 +214,62 @@ class ComponentPage(DialogPage):
         raise RuntimeError('%r not found in inputs %s' % (name, found))
 
 
+class ImplicitComponentPage(ComponentPage):
+    """ Implicit Component editor page. """
+
+    states_tab    = ButtonElement((By.XPATH, "div/ul/li/a[text()='States']"))
+    residuals_tab = ButtonElement((By.XPATH, "div/ul/li/a[text()='Residuals']"))
+
+    states  = GridElement((By.ID, 'States_props'))
+    residuals = GridElement((By.ID, 'Outputs_props'))
+
+    states_filter = InputElement((By.ID, 'States_variableFilter'))
+    states_clear = ButtonElement((By.ID, 'States_clear'))
+
+    residuals_filter = InputElement((By.ID, 'Residuals_variableFilter'))
+    residuals_clear = ButtonElement((By.ID, 'Residuals_clear'))
+
+    def set_state(self, name, value):
+        """ Set state `name` to `value`. """
+        self('states_tab').click()
+        grid = self.states
+        found = []
+        for row in grid.rows:
+            if row[1] == name:
+                row[2] = value
+                return
+            found.append(row[1])
+        raise RuntimeError('%r not found in states %s' % (name, found))
+
+    def get_states(self, return_type=None):
+        """ Return states grid. """
+        self('states_tab').click()
+        return self._get_variables(self.states, return_type)
+
+    def get_residuals(self, return_type=None):
+        """ Return residuals grid. """
+        self('residuals_tab').click()
+        return self._get_variables(self.residuals, return_type)
+
+    def get_state(self, name, return_type=None):
+        """ Return first state variable with `name`. """
+        self('states_tab').click()
+        return self._get_variable(name, self.states, return_type)
+
+    def get_residual(self, name, return_type=None):
+        """ Return first residual variable with `name`. """
+        self('residuals_tab').click()
+        return self._get_variable(name, self.residuals, return_type)
+
+    def show_states(self):
+        """switch to states tab"""
+        self('states_tab').click()
+
+    def show_residuals(self):
+        """switch to residuals tab"""
+        self('residuals_tab').click()
+
+
 class DriverPage(ComponentPage):
     """ Driver editor page. """
 
@@ -313,7 +369,6 @@ class ParameterDialog(DialogPage):
     def get_autocomplete_targets(self, target):
         self.target = target
         return self.browser.find_elements_by_xpath("//ul[contains(@class, 'ui-autocomplete')]/li")
-
 
 
 class ObjectiveDialog(DialogPage):
