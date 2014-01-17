@@ -47,8 +47,8 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
    }
     objectives.onClick.subscribe(function (e) {
         var cell = objectives.getCellFromEvent(e);
-        if (cell.cell==0) {
-            var delname = objectives.getData()[cell.row].name
+        if (cell.cell === 0) {
+            var delname = objectives.getData()[cell.row].name;
             cmd = pathname+'.remove_objective("'+delname+'");';
             project.issueCommand(cmd);
         }
@@ -128,7 +128,6 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
         else {
             objectives.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         objectives.updateRowCount();
         objectives.render();

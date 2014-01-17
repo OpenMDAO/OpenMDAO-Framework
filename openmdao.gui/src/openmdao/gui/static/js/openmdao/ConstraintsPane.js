@@ -47,8 +47,8 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
    }
     constraints.onClick.subscribe(function (e) {
         var cell = constraints.getCellFromEvent(e);
-        if (cell.cell==0) {
-            var delname = constraints.getData()[cell.row].name
+        if (cell.cell === 0) {
+            var delname = constraints.getData()[cell.row].name;
             cmd = pathname+'.remove_constraint("'+delname+'");';
             project.issueCommand(cmd);
         }
@@ -128,7 +128,6 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
         else {
             constraints.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         constraints.resizeCanvas();
     };

@@ -166,6 +166,7 @@ class WorkflowComponentFigure(BasePageObject):
     edit_button       = ButtonElement((By.XPATH, "./ul/li[text()='Edit']"))
     properties_button = ButtonElement((By.XPATH, "./ul/li[text()='Properties']"))
     run_button        = ButtonElement((By.XPATH, "./ul/li[text()='Run']"))
+    evaluate_button   = ButtonElement((By.XPATH, "./ul/li[text()='Evaluate']"))
     remove_button     = ButtonElement((By.XPATH, "./ul/li[text()='Remove from Workflow']"))
 
     @property
@@ -190,6 +191,16 @@ class WorkflowComponentFigure(BasePageObject):
             return 'RUNNING'
         else:
             return 'UNKNOWN'
+
+    def evaluate(self):
+        """ Evaluate this component. (only available for ImplicitComponent) """
+        rect = self.root.find_element_by_css_selector('rect')
+        chain = ActionChains(self.browser)
+        chain.move_to_element_with_offset(rect, 15, 15)
+        chain.context_click(None)
+        chain.perform()
+        time.sleep(0.5)
+        self('evaluate_button').click()
 
     def run(self):
         """ Run this component. """

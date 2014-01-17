@@ -74,7 +74,7 @@ openmdao.Project=function(listeners_ready) {
                     }
                 };
                 socket.onmessage = function(e) {
-                    //debug.info('websocket message',socket,e);
+                    // debug.info('websocket message', socket, e);
                     handler(e.data);
                 };
 
@@ -174,7 +174,7 @@ openmdao.Project=function(listeners_ready) {
             }
         }
         else {
-            debug.info("no callbacks for out message:", message);
+            debug.warn("no callbacks for out message:", message);
         }
     }
 
@@ -224,6 +224,7 @@ openmdao.Project=function(listeners_ready) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
+
     /** add a listener (i.e. a function to be called)
         for messages with the given topic.
         Topics beginning with '@' are for messaging within the GUI.
@@ -286,8 +287,7 @@ openmdao.Project=function(listeners_ready) {
         return jqXHR.promise();
     };
 
-    /** I split this function out from commit so I could call it directly
-       from js_unit_test */
+    /** commit project to the repository with comment */
     this.commit_with_comment = function(comment) {
         jQuery.ajax({
             type: 'POST',
@@ -302,7 +302,7 @@ openmdao.Project=function(listeners_ready) {
         setModified(false);
     };
 
-    /** commit the current project to the repository (after supplying a comment)*/
+    /** commit project to the repository after prompting for comment */
     this.commit = function() {
         openmdao.Util.promptForValue("Enter a commit comment", _self.commit_with_comment);
     };
@@ -595,14 +595,14 @@ openmdao.Project=function(listeners_ready) {
         }
         var jqXHR = jQuery.ajax({
                         type: 'POST',
-                        url:  '/workspace/tools/upload',
+                        url:  'tools/upload',
                         data: formData,
                         processData: false, // Don't assume default data format.
-                        contentType: false, // Don't use default content type.
+                        contentType: false  // Don't use default content type.
                     });
         setModified(true);
         return jqXHR.promise();
-    }
+    };
 
     /** rename file with specified path. */
     this.renameFile = function(filepath, newname) {
