@@ -541,7 +541,7 @@ Finite Difference Comparison
 ------------------------
 \[\[  5.[0-9]+[ ]+21.[0-9]+\]\]
 
-                    Calculated         FiniteDiff         RelError
+                    Calculated         FiniteDiff         RelError[^\n]+
 ----------------------------------------------------------------------------
 comp.f_xy / comp.x: 5.0                5.[0-9]+[ ]+[^\n]+
 comp.f_xy / comp.y: 21.0               21.[0-9]+[ ]+[^\n]+
