@@ -82,23 +82,34 @@ def setup_chrome():
     exe = 'chromedriver'
     path = find_executable(exe)
     if not path:
-        # Download, unpack, and install chromedriver in OpenMDAO 'bin'.
-        prefix = 'http://chromedriver.googlecode.com/files/'
-        version = '2.2' if _chrome_version > 28 else '23.0.1240.0'
+        # Download, unpack, and install chromedriver into OpenMDAO 'bin'.
+        if _chrome_version > 29:
+            version = 2.8
+        elif _chrome_version > 28:
+            version = 2.6
+        else:
+            version = 2.3
+
         if sys.platform == 'darwin':
-            flavor = 'mac32' if _chrome_version > 28 else 'mac'
+            flavor = 'mac32'
         elif sys.platform == 'win32':
-            flavor = 'win32' if _chrome_version > 28 else 'win'
+            flavor = 'win32'
         elif '64bit' in platform.architecture():
             flavor = 'linux64'
         else:
             flavor = 'linux32'
-        filename = '%s_%s_%s.zip' % (exe, flavor, version)
+
+        filename = '%s_%s.zip' % (exe, flavor)
+
         orig_dir = os.getcwd()
         os.chdir(os.path.dirname(sys.executable))
+
+        prefix = 'http://chromedriver.storage.googleapis.com'
+        url = '/'.join([prefix, str(version), filename])
+        logging.critical('Downloading %s for chrome version %d to %s',
+                         url, _chrome_version, os.getcwd())
         try:
-            logging.critical('Downloading %s to %s', filename, os.getcwd())
-            src = urllib2.urlopen(prefix + filename)
+            src = urllib2.urlopen(url)
             with open(filename, 'wb') as dst:
                 dst.write(src.read())
             src.close()
