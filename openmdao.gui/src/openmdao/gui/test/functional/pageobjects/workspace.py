@@ -537,8 +537,12 @@ class WorkspacePage(BasePageObject):
         element.click()
         time.sleep(1)  # Wait for cute animation.
 
-    def show_dataflow(self, component_name):
+    def show_dataflow(self, component_name=None):
         """ Show dataflow of `component_name`. """
+        if component_name is None:
+            self('dataflow_tab').click()
+            return
+
         self('objects_tab').click()
         xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
@@ -556,8 +560,12 @@ class WorkspacePage(BasePageObject):
                 if retry >= 2:
                     raise
 
-    def show_workflow(self, component_name):
+    def show_workflow(self, component_name=None):
         """ Show workflow of `component_name`. """
+        if component_name is None:
+            self('workflow_tab').click()
+            return
+
         self('objects_tab').click()
         xpath = "//div[@id='otree_pane']//li[(@path='%s')]//a" % component_name
         element = WebDriverWait(self.browser, TMO).until(
@@ -591,6 +599,16 @@ class WorkspacePage(BasePageObject):
                 break
         else:
             raise RuntimeError('Too many TimeoutExceptions')
+
+    def get_properties(self, name, prefix=None):
+        self.show_properties()
+        self.show_dataflow()
+        obj = self.get_dataflow_figure(name, prefix=prefix)
+        chain = ActionChains(self.browser)
+        chain.click(obj.root)
+        chain.perform()
+        time.sleep(0.5)
+        return (self.props_header, self.props_inputs, self.props_outputs)
 
     def show_library(self):
         """ Display library. """

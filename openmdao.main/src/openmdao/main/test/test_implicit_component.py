@@ -4,15 +4,12 @@ derivatives solve.
 """
 
 import unittest
-from nose import SkipTest
 import numpy as np
 
-from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver, \
-                                     FixedPointIterator
-from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Driver, Component
+from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
+from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Component
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
-from openmdao.main.mp_support import has_interface
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -26,7 +23,7 @@ class MyComp_No_Deriv(ImplicitComponent):
     '''
 
     # External inputs
-    c = Float(2.0, iotype="in", fd_step = .00001,
+    c = Float(2.0, iotype="in", fd_step=.00001,
               desc="arbitrary constant that is not iterated on but does affect the results")
 
     # States
@@ -53,6 +50,7 @@ class MyComp_No_Deriv(ImplicitComponent):
         self.y_out = c + x + y + z
         #print c, x, y, z, self.res
 
+
 class MyComp_Explicit(Component):
     ''' Single implicit component with 3 states and residuals.
 
@@ -60,7 +58,7 @@ class MyComp_Explicit(Component):
     '''
 
     # External inputs
-    c = Float(2.0, iotype="in", fd_step = .00001,
+    c = Float(2.0, iotype="in", fd_step=.00001,
               desc="arbitrary constant that is not iterated on but does affect the results")
 
     # States
@@ -87,6 +85,7 @@ class MyComp_Explicit(Component):
         self.y_out = c + x + y + z
         #print c, x, y, z, self.res
 
+
 class MyComp_Deriv(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
@@ -105,7 +104,7 @@ class MyComp_Deriv(MyComp_No_Deriv):
 
         self.J_output_input = np.array([[1.0]])
         self.J_output_state = np.array([[1.0, 1.0, 1.0]])
-        
+
     def list_deriv_vars(self):
         input_keys = ('x', 'y', 'z', 'c')
         output_keys = ('res', 'y_out')
@@ -171,6 +170,7 @@ class MyComp_Deriv(MyComp_No_Deriv):
                     if outp in arg:
                         result[inp] += self.J_output_input.T[k, j]*arg[outp]
 
+
 class MyComp_Deriv_ProvideJ(MyComp_No_Deriv):
     ''' This time with derivatives.
     '''
@@ -229,8 +229,8 @@ class Coupled1(ImplicitComponent):
         self.y_out = c + x + y + z
 
     def list_deriv_vars(self):
-        return ('x','y','z','c'), ('res', 'y_out')
-    
+        return ('x', 'y', 'z', 'c'), ('res', 'y_out')
+
     def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
@@ -274,6 +274,7 @@ class Coupled1(ImplicitComponent):
                 for k, state in enumerate(['c', 'z']):
                     if state in arg:
                         result[res] += self.J_output_input[j, k]*arg[state]
+
 
 class Coupled2(ImplicitComponent):
     ''' This comp only has the last state (z).
@@ -322,7 +323,7 @@ class Coupled2(ImplicitComponent):
         self.J_output_state = np.array([[1.0]])
 
     def list_deriv_vars(self):
-        return ('x','y','z','c'), ('res', 'y_out')
+        return ('x', 'y', 'z', 'c'), ('res', 'y_out')
 
     def apply_deriv(self, arg, result):
 
@@ -352,6 +353,7 @@ class Coupled2(ImplicitComponent):
                 for k, state in enumerate(['c', 'x', 'y']):
                     if state in arg:
                         result[res] += self.J_output_input[j, k]*arg[state]
+
 
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
@@ -428,8 +430,8 @@ class Testcase_implicit(unittest.TestCase):
         model.connect('comp2.z', 'comp1.z')
 
         d_edges = model._depgraph.get_directional_interior_edges('comp1', 'comp2')
-        self.assertTrue( ('comp1.x', 'comp2.x') in d_edges)
-        self.assertTrue( ('comp1.y', 'comp2.y') in d_edges)
+        self.assertTrue(('comp1.x', 'comp2.x') in d_edges)
+        self.assertTrue(('comp1.y', 'comp2.y') in d_edges)
 
         model.run()
 
@@ -440,8 +442,6 @@ class Testcase_implicit(unittest.TestCase):
         assert_rel_error(self, model.comp1.y_out, -1.5, 1e-5)
 
     def test_coupled_comps_external_solve(self):
-
-        #raise SkipTest('Param/Con not supported on MDA solver yet')
 
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
@@ -513,7 +513,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv_ProvideJ())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -553,7 +553,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -593,7 +593,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv_ProvideJ())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -619,7 +619,7 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp2.y'])
         info = model.driver.workflow.get_implicit_info()
         #print info
-        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0','_pseudo_2.out0')]),
+        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0')]),
                          set([('comp.x',), ('comp.y',), ('comp.z',)]))
         self.assertEqual(len(info), 1)
 
@@ -646,7 +646,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv_ProvideJ())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -672,7 +672,7 @@ class Testcase_implicit(unittest.TestCase):
                                                 outputs=['comp2.y'])
         info = model.driver.workflow.get_implicit_info()
         #print info
-        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0','_pseudo_2.out0')]),
+        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0')]),
                          set([('comp.x',), ('comp.y',), ('comp.z',)]))
         self.assertEqual(len(info), 1)
 
@@ -699,7 +699,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Explicit())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step = .001))
+        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -849,7 +849,6 @@ class Testcase_implicit(unittest.TestCase):
         self.assertEqual(edges['~0.comp|res[1]'], ['_pseudo_1.in0'])
         self.assertEqual(edges['~0.comp|res[2]'], ['_pseudo_2.in0'])
 
-
         #print J
         assert_rel_error(self, J[0][0], 0.75, 1e-5)
 
@@ -994,7 +993,7 @@ class Testcase_implicit(unittest.TestCase):
 
     def test_list_states(self):
         comp = MyComp_Deriv()
-        self.assertEqual(set(comp.list_states()), set(['x','y','z']))
+        self.assertEqual(set(comp.list_states()), set(['x', 'y', 'z']))
 
     def test_list_residuals(self):
         comp = MyComp_Deriv()

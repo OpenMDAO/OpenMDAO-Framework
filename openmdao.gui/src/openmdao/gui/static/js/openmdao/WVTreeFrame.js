@@ -92,7 +92,7 @@ openmdao.WVTreeFrame = function(id, wv) {
             },
             state: openNodes.indexOf('Faces') >= 0 ? 'open' : 'closed',
             children: []
-        }]
+        }];
 
         // get data for edge and face gprims in sceneGraph
         for (gprim_name in wv.sceneGraph) {
@@ -114,7 +114,7 @@ openmdao.WVTreeFrame = function(id, wv) {
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
-                })
+                });
             }
             else if (gprim.GPtype === 2) {
                 _facesData[0].children.push({
@@ -133,7 +133,7 @@ openmdao.WVTreeFrame = function(id, wv) {
                     },
                     state: openNodes.indexOf(gprim_name) >= 0 ? 'open' : undefined,
                     children: []
-                })
+                });
             }
             else {
                 console.log('ERROR: unknown GPtype for', gprim_name, '=', gprim.GPtype, gprim);
@@ -215,7 +215,7 @@ openmdao.WVTreeFrame = function(id, wv) {
             orientation_disabled = 0,
             selector = 'input[type=checkbox][name*="NAME"][value="VALUE"]';
 
-        for (gprim_name in wv.sceneGraph) {
+        for (var gprim_name in wv.sceneGraph) {
             gprim = wv.sceneGraph[gprim_name];
             if (gprim.GPtype === 1) {
                 is_viz = isAttributeSet(gprim.attrs, wv.plotAttrs.ON);
@@ -284,13 +284,13 @@ openmdao.WVTreeFrame = function(id, wv) {
         checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.POINTS));
         checkbox.prop('checked', is_grd);
         if (points_disabled === edges_cnt) {
-            checkbox.prop('disabled', true)
+            checkbox.prop('disabled', true);
         }
 
         checkbox = _elem.find(selector.replace('NAME', 'Edges').replace('VALUE', wv.plotAttrs.ORIENTATION));
         checkbox.prop('checked', is_ori);
         if (orientation_disabled === edges_cnt) {
-            checkbox.prop('disabled', true)
+            checkbox.prop('disabled', true);
         }
 
         // set checkboxes for faces root node
@@ -347,7 +347,7 @@ openmdao.WVTreeFrame = function(id, wv) {
             return;
         }
         makeTrees();
-    }
+    };
 
     /** if the scene graph has been updated, recreate the trees
         if checkboxes need updated, update the checkboxes
@@ -367,6 +367,6 @@ openmdao.WVTreeFrame = function(id, wv) {
             _setCheckboxes = false;
             setCheckboxes();
         }
-    }
+    };
 
-}
+};

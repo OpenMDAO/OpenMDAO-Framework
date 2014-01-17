@@ -59,13 +59,17 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
             stream.on_recv(self._write_message)
 
     def _write_message(self, message):
-        if len(message) == 1:  # assume message[0] is some json object
+        if self.websocket_closed:
+            print 'ZMQStreamHandler message received after websocket closed'
+            return
+
+        if len(message) == 1:  # assume message[0] is a json string
             binary = False
             try:
                 message = message[0]
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info
-                print 'ZMQStreamHandler ERROR converting message to unicode:', str(message), err
+                print 'ZMQStreamHandler ERROR parsing message:', str(message), err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
@@ -81,18 +85,14 @@ class ZMQStreamHandler(websocket.WebSocketHandler):
                 message = message[0].ljust(NAME_SIZE, '\0') + message[1]  # FIXME: message is copied here
             except Exception as err:
                 exc_type, exc_value, exc_traceback = sys.exc_info()
-                print 'ZMQStreamHandler ERROR:', str(message), err
+                print 'ZMQStreamHandler ERROR parsing binary message:', str(message), err
                 traceback.print_exception(exc_type, exc_value, exc_traceback)
                 return
 
-        # write message to websocket
-        if self.websocket_closed:
-            print 'ZMQStreamHandler message received after websocket closed:', message
-        else:
-            try:
-                self.write_message(message, binary=binary)
-            except Exception as err:
-                print 'ZMQStreamHandler ERROR writing message to websocket:', err
+        try:
+            self.write_message(message, binary=binary)
+        except Exception as err:
+            print 'ZMQStreamHandler ERROR writing message to websocket:', err
 
     def on_message(self, message):
         pass
