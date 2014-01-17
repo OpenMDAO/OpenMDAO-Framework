@@ -52,6 +52,8 @@ def _test_basic(browser):
     assert driver.state == 'INVALID'
     driver.run()
     time.sleep(2.0)
+    message = NotifierPage.wait(workspace_page)
+    eq(message, 'Run complete: success')
     assert driver.state == 'VALID'
 
     # Verify workflow can be cleared
