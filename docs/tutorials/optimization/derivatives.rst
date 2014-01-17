@@ -27,10 +27,7 @@ these two steps:
 ::
 
    #  Define a ``list_deriv_vars`` function that tell openmdao which inputs and outputs you have derivatives w.r.t and of
-   #. Define a ``linearize`` method that calculates and saves the Jacobian that
-      contains the derivatives between its numerical outputs and inputs.
-   #. Define a ``provideJ`` method that returns the Jacobian along with a
-      list of inputs and outputs.
+   #. Define a ``provideJ`` method that calculates and returns the Jacobian.
 
 
 Let's look at an example, using the Paraboloid component, to see how this would work in

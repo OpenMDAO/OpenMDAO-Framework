@@ -64,6 +64,9 @@ class Comp_Send(Component):
         dzdp2 = 3.0
 
         self.J = np.array([[dxdp1, dxdp2], [dydp1, dydp2], [dzdp1, dzdp2]])
+        
+    def list_deriv_vars(self):
+        return ('p1', 'p2'), ('data', 'dummy')
 
     def apply_deriv(self, arg, result):
 
@@ -122,6 +125,9 @@ class Comp_Receive_ApplyDeriv(Comp_Receive):
         self.J = np.array([[-1.0, 0.0, 0.0],
                            [0.0, 2.0, 0.0],
                            [0.0, 0.0, 3.0]])
+        
+    def list_deriv_vars(self):
+        return ('data',), ('q1','q2','q3')
 
     def apply_deriv(self, arg, result):
 
@@ -244,60 +250,60 @@ class Testcase_geom_deriv(unittest.TestCase):
         self.assertTrue(hasattr(top.geo, 'provideJ'))
 
 
-class ND_Send(Component):
-    '''Passes a data object as output.'''
+#class ND_Send(Component):
+    #'''Passes a data object as output.'''
 
-    p1 = Float(5.0, iotype='in')
+    #p1 = Float(5.0, iotype='in')
 
-    data = Str("Try to differentiate this!", iotype='out')
+    #data = Str("Try to differentiate this!", iotype='out')
 
-    def list_deriv_vars(self):
-        return (), ()
+    #def list_deriv_vars(self):
+        #return (), ()
 
-    def execute(self):
-        ''' Load computation result into self.data.'''
-        self.data = str(self.p1)
+    #def execute(self):
+        #''' Load computation result into self.data.'''
+        #self.data = str(self.p1)
 
-    def provideJ(self):
-        return None
+    #def provideJ(self):
+        #return None
 
 
-class ND_Receive(Component):
-    '''Takes a data object as input.'''
+#class ND_Receive(Component):
+    #'''Takes a data object as input.'''
     
-    data = Str("Try to differentiate this!", iotype='in')
+    #data = Str("Try to differentiate this!", iotype='in')
 
-    p1 = Float(0.0, iotype='out')
+    #p1 = Float(0.0, iotype='out')
 
-    def list_deriv_vars(self):
-        return (), ()
+    #def list_deriv_vars(self):
+        #return (), ()
 
-    def execute(self):
-        ''' Load computation result into self.data.'''
-        self.p1 = 2.0*float(self.data)
+    #def execute(self):
+        #''' Load computation result into self.data.'''
+        #self.p1 = 2.0*float(self.data)
 
-    def provideJ(self):
-        return None
+    #def provideJ(self):
+        #return None
 
-class TestcaseNonDiff(unittest.TestCase):
-    """ Test how OpenMDAO handles differentiation. """
+#class TestcaseNonDiff(unittest.TestCase):
+    #""" Test how OpenMDAO handles differentiation. """
 
-    def test_non_diff(self):
-        # Test grouping comps with non-differentiable connections.
-        model = set_as_top(Assembly())
-        model.add('comp1', ND_Send())
-        model.add('comp2', ND_Receive())
-        model.connect('comp1.data', 'comp2.data')
-        model.driver.workflow.add(['comp1', 'comp2'])
-        model.run()
+    #def test_non_diff(self):
+        ## Test grouping comps with non-differentiable connections.
+        #model = set_as_top(Assembly())
+        #model.add('comp1', ND_Send())
+        #model.add('comp2', ND_Receive())
+        #model.connect('comp1.data', 'comp2.data')
+        #model.driver.workflow.add(['comp1', 'comp2'])
+        #model.run()
 
-        inputs = ['comp1.p1']
-        outputs = ['comp2.p1']
-        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        self.assertAlmostEqual(J[0, 0], 2.0)
+        #inputs = ['comp1.p1']
+        #outputs = ['comp2.p1']
+        #J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        #self.assertAlmostEqual(J[0, 0], 2.0)
 
-        edges = model.driver.workflow._edges
-        self.assertTrue('c1.data' not in edges)
+        #edges = model.driver.workflow._edges
+        #self.assertTrue('c1.data' not in edges)
 
 if __name__ == '__main__':
     import nose

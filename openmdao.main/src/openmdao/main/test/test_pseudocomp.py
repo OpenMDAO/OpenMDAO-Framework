@@ -9,6 +9,7 @@ from openmdao.main.pseudocomp import unit_xform
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.printexpr import print_node
 import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
+from openmdao.util.testutil import assert_rel_error
 
 class Simple(Component):
     a = Float(iotype='in', units='inch')
@@ -19,7 +20,7 @@ class Simple(Component):
     time = Float(iotype='out', units='s')
     speed = Float(iotype='in', units='inch/s')
     arr = Array([1.,2.,3.], iotype='out', units='ft')
-    
+
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 1
@@ -37,7 +38,7 @@ class SimpleNoUnits(Component):
     c = Float(iotype='out')
     d = Float(iotype='out')
     arr = Array([1.,2.,3.], iotype='out')
-    
+
     def __init__(self):
         super(SimpleNoUnits, self).__init__()
         self.a = 1
@@ -48,7 +49,7 @@ class SimpleNoUnits(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
-        
+
 
 def _simple_model(units=True):
     if units:
@@ -84,7 +85,7 @@ class PseudoCompTestCase(unittest.TestCase):
         self.assertEqual(set(top._depgraph.component_graph().nodes()),
                          set(['comp1','comp2','_pseudo_0', 'driver']))
         self.assertEqual(set(top._depgraph.list_connections()),
-                         set([('_pseudo_0.out0', 'comp2.a'), 
+                         set([('_pseudo_0.out0', 'comp2.a'),
                               ('comp1.c', '_pseudo_0.in0')]))
 
         self.assertEqual(top._pseudo_0._expr_conn, ('comp1.c*12.0', 'comp2.a'))
@@ -93,7 +94,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top.run()
         self.assertAlmostEqual(top.comp1.c, 3.)
         self.assertAlmostEqual(top.comp2.a, 36.)
-        
+
     def test_multi_src(self):
         top = _simple_model()  # comp1.c --> comp2.a
         top.connect('comp1.dist/comp1.time', 'comp2.speed')
@@ -119,11 +120,11 @@ class PseudoCompTestCase(unittest.TestCase):
                               ('comp1.dist', '_pseudo_1.in1'), ('comp1.time', '_pseudo_1.in0'),
                               ('_pseudo_1.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
-                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'), 
-                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_1.in1'), 
-                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
+                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_1.in1'),
+                              ('comp1.dist/comp1.time', 'comp2.speed'),
                               ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in0')]))
-        
+
         # disconnect two linked expressions
         top.disconnect('comp1.dist/comp1.time')
         self.assertEqual(set(top._depgraph.list_connections()),
@@ -140,7 +141,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set(['_pseudo_0']))
         self.assertEqual(set(top.list_connections(visible_only=True)),
                          set([('comp1.c', 'comp2.a')]))
-        
+
         top.run()
         top.connect('comp1.dist/comp1.time', 'comp2.speed')
         self.assertTrue(hasattr(top, '_pseudo_2'))
@@ -151,9 +152,9 @@ class PseudoCompTestCase(unittest.TestCase):
                               ('comp1.dist', '_pseudo_2.in1'), ('comp1.time', '_pseudo_2.in0'),
                               ('_pseudo_2.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
-                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'), 
-                              ('_pseudo_2.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_2.in1'), 
-                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
+                              ('_pseudo_2.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_2.in1'),
+                              ('comp1.dist/comp1.time', 'comp2.speed'),
                               ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_2.in0')]))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
                          set(['_pseudo_0', '_pseudo_2']))
@@ -161,7 +162,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('comp1.time', 'comp2.speed'),
                               ('comp1.dist', 'comp2.speed'),
                               ('comp1.c', 'comp2.a')]))
-        
+
         # disconnect a single variable
         top.disconnect('comp1.dist')
         self.assertFalse(hasattr(top, '_pseudo_2'))
@@ -186,9 +187,9 @@ class PseudoCompTestCase(unittest.TestCase):
                               ('comp1.dist', '_pseudo_3.in1'), ('comp1.time', '_pseudo_3.in0'),
                               ('_pseudo_3.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
-                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'), 
-                              ('_pseudo_3.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_3.in1'), 
-                              ('comp1.dist/comp1.time', 'comp2.speed'), 
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
+                              ('_pseudo_3.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_3.in1'),
+                              ('comp1.dist/comp1.time', 'comp2.speed'),
                               ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_3.in0')]))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
                          set(['_pseudo_0', '_pseudo_3']))
@@ -196,7 +197,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('comp1.time', 'comp2.speed'),
                               ('comp1.dist', 'comp2.speed'),
                               ('comp1.c', 'comp2.a')]))
-        
+
         # disconnect a whole component
         top.disconnect('comp2')
         self.assertFalse(hasattr(top, '_pseudo_3'))
@@ -236,11 +237,11 @@ class PseudoCompTestCase(unittest.TestCase):
                               ('comp1.arr[1]', '_pseudo_1.in1'), ('comp1.time', '_pseudo_1.in0'),
                               ('_pseudo_1.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
-                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'), 
-                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.arr[1]', '_pseudo_1.in1'), 
-                              ('comp1.arr[1]/comp1.time', 'comp2.speed'), 
+                         set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
+                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.arr[1]', '_pseudo_1.in1'),
+                              ('comp1.arr[1]/comp1.time', 'comp2.speed'),
                               ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in0')]))
-        
+
         # disconnect a single variable
         top.disconnect('comp1.arr[1]')
         self.assertFalse(hasattr(top, '_pseudo_2'))
@@ -259,18 +260,56 @@ class PseudoCompTestCase(unittest.TestCase):
         top = _simple_model()  # comp1.c --> comp2.a
         top.add('arr', Array([1.,2.,3.,4.], iotype='in', units='ft'))
         top.add('spd_out', Float(0., iotype='out', units='inch/s'))
-        
+
         top.connect('arr[1]/comp1.time', 'spd_out')
         top.arr[1] = 10.
         top.comp1.time = 5.
         # arr[1]/time = 2 ft/sec
         top.run()
         self.assertAlmostEqual(top.spd_out, 24.) # spd_out = 24 inch/s
-        
 
 
-    # disconnect() for a boundary var in an expr  
-       
+
+    # disconnect() for a boundary var in an expr
+
+
+class Comp1(Component):
+
+    a = Array([0,0], iotype="in")
+    b = Float(iotype="out")
+
+    def execute(self):
+
+        self.b = (self.a[0]+self.a[1]-1)**2
+
+class SubAsmb(Assembly):
+
+    x = Array([1,1], iotype="in")
+    y = Float(2, iotype="in")
+
+    z = Float(iotype="out")
+
+    def configure(self):
+
+        self.add('comp', Comp1())
+        self.connect('x+y', 'comp.a')
+        self.connect('comp.b', 'z')
+        self.driver.workflow.add('comp')
+
+class Test_Pseudo_Deriv(unittest.TestCase):
+
+    def test_scaler_array_expression(self):
+
+        model = Assembly()
+        model.add('sub', SubAsmb())
+        model.driver.workflow.add('sub')
+        model.run()
+        J = model.driver.workflow.calc_gradient(inputs=['sub.x', 'sub.y'],
+                                                outputs=['sub.z'])
+
+        assert_rel_error(self, J[0,0], 10.0, .001)
+        assert_rel_error(self, J[0,1], 10.0, .001)
+        assert_rel_error(self, J[0,2], 20.0, .001)
 
 class UnitXformerTestCase(unittest.TestCase):
     def setUp(self):
@@ -290,10 +329,10 @@ class UnitXformerTestCase(unittest.TestCase):
         cnv = unit_xform(node, 'degC', 'degF')
         newexpr = print_node(cnv)
         self.assertEqual(newexpr, '(a+17.7777777778)*1.8')
-        
+
 
 
 if __name__ == '__main__':
     unittest.main()
 
-    
+

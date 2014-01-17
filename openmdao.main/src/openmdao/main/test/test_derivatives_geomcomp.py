@@ -131,6 +131,9 @@ class GeomRecieveDerivApplyDeriv(GeomRecieve):
 
     def provideJ(self): 
         self.J = np.eye(2)
+        
+    def list_deriv_vars(self):
+        return ('geom_in',), ('out',)
 
     def apply_deriv(self, arg, result):
         if 'geom_in' in arg:
