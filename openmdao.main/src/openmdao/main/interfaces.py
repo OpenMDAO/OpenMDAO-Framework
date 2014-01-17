@@ -183,8 +183,10 @@ class IContainer(Interface):
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
 
+
 class IVariableTree(IContainer):
     """Marker interface for VariableTrees."""
+
 
 class IComponent(IContainer):
     """Interface for an IContainer object that can be executed to update the values of
@@ -292,11 +294,19 @@ class IComponent(IContainer):
 
 
 class IImplicitComponent(IComponent):
+    """An interface for a component that represents an implicit function
+    """
+
     def list_states(self):
         """Return a list of names of state variables."""
 
     def list_residuals(self):
         """Return a list of names of residual variables."""
+
+    def evaluate(self):
+        """run a single step to calculate the residual
+        values for the given state var values.
+        """
 
 
 class IDriver(IComponent):
@@ -694,7 +704,7 @@ class IHasEqConstraints(Interface):
 
     def eval_eq_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values.
-        The form of the constraint is transformed if necessary such that the 
+        The form of the constraint is transformed if necessary such that the
         right-hand-side is 0.0.  The values returned are the evaluation of the
         left-hand-side.
         """

@@ -12,7 +12,6 @@ from nose.tools import with_setup
 
 from unittest import TestCase
 
-from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, \
@@ -296,7 +295,7 @@ def _test_file_commit(browser):
     workspace_page('project_menu').click()
     time.sleep(0.5)
     eq(workspace_page('commit_button').get_attribute('class'), '')
-    eq(workspace_page('revert_button').get_attribute('class'), '') # Enabled?
+    eq(workspace_page('revert_button').get_attribute('class'), '')  # Enabled?
     workspace_page('project_menu').click()
 
     # Commit and check that commit is disabled but revert is enabled.
@@ -435,21 +434,75 @@ def _test_properties(browser):
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
-    # Check default 'top.driver'.
-    workspace_page('properties_tab').click()
-    obj = workspace_page.get_dataflow_figure('top')
-    chain = ActionChains(browser)
-    chain.click(obj.root)
-    chain.perform()
-    time.sleep(0.5)
-    eq(workspace_page.props_header, 'Run_Once: top.driver')
-    inputs = workspace_page.props_inputs
-    eq(inputs.value, [[' gradient_options', ''],
-                      ['directory',     ''],
-                      ['force_execute', 'True'],
-                      ['force_fd', 'False'],
-                      ['printvars',     '[]'],
-                      ])  # FIXME: printvars is really an empty list...
+    (header, inputs, outputs) = workspace_page.get_properties('top')
+    eq(header, 'Run_Once: top.driver')
+    eq(inputs.value, [
+        [' gradient_options', ''],  # vartree, has leading space after the [+]
+        ['directory',         ''],
+        ['force_execute',     'True'],
+        ['force_fd',          'False'],
+        ['printvars',         '[]'],
+    ])
+    eq(outputs.value, [
+        ['derivative_exec_count', '0'],
+        ['exec_count',            '0'],
+        ['itername',              '']
+    ])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
+
+
+def _test_implicit_component(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # create an assembly with an implicit component in it's workflow
+    filename = pkg_resources.resource_filename('openmdao.main.test',
+                                               'test_implicit_component.py')
+    workspace_page.add_file(filename)
+
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+
+    workspace_page.add_library_item_to_dataflow('test_implicit_component.MyComp_Deriv',
+                                                'comp', prefix='top')
+
+    workspace_page.add_object_to_workflow('top.comp', 'top')
+
+    # Verify that the evaluate menu option has the expected effect
+    comp = workspace_page.get_dataflow_figure('comp', 'top')
+    comp_editor = comp.editor_page(base_type='ImplicitComponent')
+
+    states = comp_editor.get_states()
+    eq(states.value, [
+        ['', 'x', '0', '', ''],
+        ['', 'y', '0', '', ''],
+        ['', 'z', '0', '', ''],
+    ])
+
+    residuals = comp_editor.get_residuals()
+    eq(residuals.value, [
+        ['', 'res', '[0.0, 0.0, 0.0]', '', '']
+    ])
+
+    comp_editor.set_state('x', '1')
+    comp_editor.set_state('y', '2')
+    comp_editor.set_state('z', '3')
+
+    comp.evaluate()
+
+    states = comp_editor.get_states()
+    eq(states.value, [
+        ['', 'x', '1', '', ''],
+        ['', 'y', '2', '', ''],
+        ['', 'z', '3', '', ''],
+    ])
+
+    residuals = comp_editor.get_residuals()
+    eq(residuals.value, [
+        ['', 'res', '[7.0, 12.0, -3.0]', '', '']
+    ])
+
     # Clean up.
     closeout(project_dict, workspace_page)
 
@@ -495,7 +548,7 @@ def _test_editable_inputs(browser):
     raise SkipTest
 
     def test_color(actual, expected, alpha=False):
-        if(alpha):
+        if (alpha):
             eq(actual, expected)
         else:
             eq(actual[0:3], expected[0:3])
@@ -996,7 +1049,7 @@ def _test_arguments(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
@@ -1047,7 +1100,7 @@ def _test_sorting(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 

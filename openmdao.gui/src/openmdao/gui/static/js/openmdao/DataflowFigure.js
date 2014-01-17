@@ -7,6 +7,7 @@ openmdao.DataflowFigure=function(project, pathname, prop_fn, type, valid, interf
     this.name = openmdao.Util.getName(pathname);
     this.type = type || '';
     this.valid = valid;
+    this.interfaces = interfaces;
 
     if (arguments.length < 5) { // Refresh doesn't pass all arguments.
         this.baseType = pathname === '' ? 'Component' : 'Assembly';
@@ -522,11 +523,18 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
             f = new openmdao.PropertiesFrame(id, self.project).editObject(pathname);
         }));
 
+        // evaluate, for ImplicitComponent only
+        if (jQuery.inArray('IImplicitComponent', this.interfaces) >= 0) {
+            menu.appendMenuItem(new draw2d.MenuItem("Evaluate", null, function() {
+                var cmd = pathname + '.evaluate();';
+                self.project.issueCommand(cmd);
+            }));
+        }
+
         // run
         menu.appendMenuItem(new draw2d.MenuItem("Run", null, function() {
             self.project.runComponent(pathname);
         }));
-
 
         // menu spacer
         menu.appendMenuItem(new draw2d.MenuItem("-", null, function() {
@@ -692,7 +700,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
     flows = flows.concat(json.constraints);
     flows = flows.concat(json.objectives);
 
-    jQuery.each(json.components,function(idx,comp) {
+    jQuery.each(json.components,function(idx, comp) {
         var name = comp.name,
             type = comp.type,
             valid = comp.valid,

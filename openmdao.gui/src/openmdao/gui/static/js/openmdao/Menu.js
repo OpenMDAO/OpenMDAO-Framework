@@ -135,7 +135,7 @@ openmdao.Menu = function(id, json) {
             dataType: 'json',
             success: buildMenus,
             error: function(x,y,z) {
-                debug.info("Error getting Menu data:",x,y,z);
+                debug.error("Error getting Menu data:",x,y,z);
             }
         });
     };

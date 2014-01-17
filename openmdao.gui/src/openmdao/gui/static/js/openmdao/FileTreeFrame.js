@@ -426,7 +426,7 @@ openmdao.FileTreeFrame = function(id, project) {
         _updates.push(new_update);
 
         if (old_update) {
-            // an update is already in progress, wait until it's done
+            // make sure old update is done first
             jQuery.when(old_update).done(function() {
                 updateFiles(files, new_update);
             });

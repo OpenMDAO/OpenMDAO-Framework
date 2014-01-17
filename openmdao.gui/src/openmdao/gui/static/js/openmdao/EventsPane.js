@@ -8,7 +8,7 @@ openmdao.EventsPane = function(elm, project, pathname, name) {
         eventsDiv = jQuery("<div id='"+name+"_events' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         columns = [
             {id:"name",      name:"Name",        field:"name",      width:150 },
-            {id:"desc",      name:"Description", field:"desc",      width:450 },
+            {id:"desc",      name:"Description", field:"desc",      width:450 }
         ],
         options = {
             asyncEditorLoading: false,
@@ -35,7 +35,6 @@ openmdao.EventsPane = function(elm, project, pathname, name) {
         else {
             events.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
-            debug.info(properties);
         }
         events.resizeCanvas();
     };
