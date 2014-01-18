@@ -7,7 +7,7 @@ import numpy as np
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.main.api import Assembly, Component, set_as_top
 
-N = 1000
+N = 200
 np.random.seed(12345)
 
 class Model(Assembly):
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     t0 = time()
     J = top.driver.workflow.calc_gradient(inputs=inputs,
                                           outputs=outputs,
-                                          mode = 'fd')
+                                          mode = 'forward')
     print 'Time elapsed', time() - t0
 
 
