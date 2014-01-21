@@ -257,12 +257,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
             basekey, _, odx = okey.partition('[')
             o1, o2, osh = obounds[basekey]
 
-        if o2 - o1 == 1:
-            oshape = (1, )
-        else:
-            oshape = result[okey].shape
-
-        tmp = zeros(oshape)
+        tmp = result[okey]
         used = set()
         for ikey in arg:
             if ikey in result:
@@ -291,9 +286,6 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
                 tmp += Jsub[0][0] * arg[ikey]
             else:
                 tmp += Jsub.dot(arg[ikey])
-
-        #tmp = tmp.reshape(oshape)
-        result[okey] += tmp
 
     #print 'applyJ', arg, result
 
@@ -365,12 +357,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
                 continue
             used.add((o1, o2, odx))
 
-        if o2 - o1 == 1:
-            oshape = 1
-        else:
-            oshape = result[okey].shape
-
-        tmp = zeros(oshape)
+        tmp = result[okey]
         for ikey in arg:
 
             idx = None
@@ -387,12 +374,9 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
                obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
+                result[okey] += Jsub[0][0] * arg[ikey]
             else:
-                tmp += Jsub.dot(arg[ikey])
-
-        #tmp = tmp.reshape(oshape)
-        result[okey] += tmp
+                result[okey] += Jsub.dot(arg[ikey])
 
     #print 'applyJT', arg, result
 
