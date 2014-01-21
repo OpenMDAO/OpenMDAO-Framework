@@ -49,6 +49,7 @@ class SequentialWorkflow(Workflow):
         self.res = None
         self._upscoped = False
         self._J_cache = {}
+        self._bounds_cache = {}
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -87,6 +88,7 @@ class SequentialWorkflow(Workflow):
         self._upscoped = False
         self._names = None
         self._J_cache = {}
+        self._bounds_cache = {}
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -94,8 +96,8 @@ class SequentialWorkflow(Workflow):
         """
         if edges:
             params = self._parent.get_parameters()
-            non_param_edges = [(src, targ) for (src, targ) in edges \
-                               if targ not in params]
+            non_param_edges = [(src, targ) for (src, targ) in edges
+                                           if targ not in params]
             self.scope._depgraph.sever_edges(non_param_edges)
 
     def unsever_edges(self):
@@ -106,8 +108,7 @@ class SequentialWorkflow(Workflow):
         If full is True, include hidden pseudo-components in the list.
         """
         if self._names is None:
-            comps = [getattr(self.scope, n)
-                               for n in self._explicit_names]
+            comps = [getattr(self.scope, n) for n in self._explicit_names]
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
 
@@ -115,9 +116,8 @@ class SequentialWorkflow(Workflow):
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in
-                           self._parent._get_required_compnames()
-                              if n not in iterset]) - set(self._names)
+                added = set([n for n in self._parent._get_required_compnames()
+                                if n not in iterset]) - set(self._names)
                 self._names.extend(added)
 
             self._fullnames = self._names[:]
@@ -225,7 +225,7 @@ class SequentialWorkflow(Workflow):
         edges = self.edge_list()
         implicit_edges = self.get_implicit_info()
         sortedkeys = sorted(implicit_edges)
-        sortedkeys.extend(sorted(self.edge_list().keys()))
+        sortedkeys.extend(sorted(edges.keys()))
 
         nEdge = 0
         for src in sortedkeys:
@@ -372,21 +372,25 @@ class SequentialWorkflow(Workflow):
         """ Return a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        dgraph = self._derivative_graph
-        i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
+        bounds = self._bounds_cache.get(node)
+        if bounds is None:
+            dgraph = self._derivative_graph
+            i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
 
-        # Handle index slices
-        if isinstance(i1, str):
-            if ':' in i1:
-                i3 = i2 + 1
+            # Handle index slices
+            if isinstance(i1, str):
+                if ':' in i1:
+                    i3 = i2 + 1
+                else:
+                    i2 = i2.tolist()
+                    i3 = 0
+                bounds = (i2, i3)
             else:
-                i2 = i2.tolist()
-                i3 = 0
-            return i2, i3
-        else:
-            i2 = i2
+                bounds = (i1, i2)
 
-        return i1, i2
+            self._bounds_cache[node] = bounds
+
+        return bounds
 
     def set_bounds(self, node, bounds):
         """ Set a tuple containing the start and end indices into the
@@ -463,6 +467,7 @@ class SequentialWorkflow(Workflow):
 
             inputs = {}
             outputs = {}
+            out_bounds = []
 
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
@@ -476,6 +481,7 @@ class SequentialWorkflow(Workflow):
             for varname in comp_outputs:
                 node = '%s.%s' % (compname, varname)
                 i1, i2 = self.get_bounds(node)
+                out_bounds.append((varname, i1, i2))
 
                 if isinstance(i1, list):
                     if varname in comp_residuals:
@@ -506,9 +512,7 @@ class SequentialWorkflow(Workflow):
                    self._J_cache.get(compname))
             #print inputs, outputs
 
-            for varname in comp_outputs:
-                node = '%s.%s' % (compname, varname)
-                i1, i2 = self.get_bounds(node)
+            for varname, i1, i2 in out_bounds:
                 if isinstance(i1, list):
                     result[i1] = outputs[varname].copy()
                 else:
@@ -548,9 +552,9 @@ class SequentialWorkflow(Workflow):
 
             inputs = {}
             outputs = {}
+            out_bounds = []
 
             for varname in comp_outputs:
-
                 node = '%s.%s' % (compname, varname)
 
                 # Ouputs define unique edges, so don't duplicate anything
@@ -563,10 +567,12 @@ class SequentialWorkflow(Workflow):
                     inputs[varname] = arg[i1].copy()
                     if varname not in comp_residuals:
                         outputs[varname] = zeros(len(i1))
+                        out_bounds.append((varname, i1, i2))
                 else:
                     inputs[varname] = arg[i1:i2].copy()
                     if varname not in comp_residuals:
                         outputs[varname] = zeros(i2-i1)
+                        out_bounds.append((varname, i1, i2))
 
             for varname in comp_inputs:
                 node = '%s.%s' % (compname, varname)
@@ -576,8 +582,7 @@ class SequentialWorkflow(Workflow):
                     outputs[varname] = zeros(len(i1))
                 else:
                     outputs[varname] = zeros(i2-i1)
-
-            allvars = outputs.keys()
+                out_bounds.append((varname, i1, i2))
 
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -589,12 +594,10 @@ class SequentialWorkflow(Workflow):
                 inputs = applyMinvT(comp, inputs)
 
             applyJT(comp, inputs, outputs, comp_residuals,
-                   self._J_cache.get(compname))
+                    self._J_cache.get(compname))
             #print inputs, outputs
 
-            for varname in allvars:
-                node = '%s.%s' % (compname, varname)
-                i1, i2 = self.get_bounds(node)
+            for varname, i1, i2 in out_bounds:
                 if isinstance(i1, list):
                     result[i1] += outputs[varname]
                 else:
@@ -666,11 +669,11 @@ class SequentialWorkflow(Workflow):
             if outputs is None:
                 outputs = []
                 if hasattr(self._parent, 'get_objectives'):
-                    outputs.extend(["%s.out0" % item.pcomp_name for item in \
-                            self._parent.get_objectives().values()])
+                    outputs.extend(["%s.out0" % item.pcomp_name for item in
+                                    self._parent.get_objectives().values()])
                 if hasattr(self._parent, 'get_constraints'):
-                    outputs.extend(["%s.out0" % item.pcomp_name for item in \
-                                   self._parent.get_constraints().values()])
+                    outputs.extend(["%s.out0" % item.pcomp_name for item in
+                                    self._parent.get_constraints().values()])
 
             if group_nondif is False:
                 outputs = list(set(tmp_outputs).union(outputs))
@@ -794,7 +797,7 @@ class SequentialWorkflow(Workflow):
             # set of component names.
             sub = cgraph.subgraph(nondiff)
             nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-            for i, item in enumerate(nd_graphs):
+            for item in nd_graphs:
                 inodes = item.nodes()
                 nondiff_groups.append(inodes)
 
@@ -811,7 +814,8 @@ class SequentialWorkflow(Workflow):
     def edge_list(self):
         """ Return the list of edges for the derivatives of this workflow. """
 
-        self._edges = edges_to_dict(self.derivative_graph().list_connections())
+        if self._edges is None:
+            self._edges = edges_to_dict(self.derivative_graph().list_connections())
 
         return self._edges
 
@@ -843,7 +847,7 @@ class SequentialWorkflow(Workflow):
                                      for n in comp.list_states()]
 
         # Nested solvers act implicitly.
-        pa_comps = [dgraph.node[item]['pa_object'] \
+        pa_comps = [dgraph.node[item]['pa_object']
                     for item in comps if '~' in item]
         for comp in self._parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
@@ -898,7 +902,7 @@ class SequentialWorkflow(Workflow):
             J = self._J_cache.get(compname)
             if J is None:
                 J = comp.calc_derivatives(first, second, savebase,
-                                    data['inputs'], data['outputs'])
+                                          data['inputs'], data['outputs'])
                 if J is not None:
                     self._J_cache[compname] = J
 
@@ -1077,8 +1081,8 @@ class SequentialWorkflow(Workflow):
             or 'auto' to let OpenMDAO determine the correct mode.
             Defaults to 'auto'.
 
-        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
-        and a list of suspect inputs/outputs.
+        Returns the finite difference gradient, the OpenMDAO-calculated
+        gradient, and a list of suspect inputs/outputs.
         """
         # tuples cause problems
         if inputs:
@@ -1132,13 +1136,13 @@ class SequentialWorkflow(Workflow):
             outputs = []
             output_refs = []
             if hasattr(self._parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in \
-                        self._parent.get_objectives().values()]
+                obj = ["%s.out0" % item.pcomp_name for item in
+                       self._parent.get_objectives().values()]
                 outputs.extend(obj)
                 output_refs.extend(self._parent.get_objectives().keys())
             if hasattr(self._parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in \
-                               self._parent.get_constraints().values()]
+                con = ["%s.out0" % item.pcomp_name for item in
+                       self._parent.get_constraints().values()]
                 outputs.extend(con)
                 output_refs.extend(self._parent.get_constraints().keys())
 
