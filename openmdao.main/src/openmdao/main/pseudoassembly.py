@@ -36,7 +36,7 @@ class PseudoAssembly(object):
         inputs, outputs, renames = self._pre_init(name, comps, graph, fd,
                                                   boundary_params)
 
-        self.comps = wflow.scope._depgraph.order_components(set(comps))        
+        self.comps = wflow.scope._depgraph.order_components(set(comps))
 
         self.name = name
         self.boundary_params = list(boundary_params)
@@ -46,6 +46,7 @@ class PseudoAssembly(object):
         self.renames = renames
         self.mapped_inputs = []
         self._removed_comps = []
+        self._provideJ_bounds = None
         for varpath in self.inputs:
             if isinstance(varpath, basestring):
                 val = to_PA_var(varpath, name).partition('.')[2]
@@ -155,7 +156,8 @@ class PseudoAssembly(object):
 
                     # Comp list contains full graph, so don't double up on
                     # the subdrivers.
-                    if not has_interface(comp, IDriver) and name not in self.wflow._J_cache:
+                    if not has_interface(comp, IDriver) and \
+                       name not in self.wflow._J_cache:
                         comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
