@@ -71,7 +71,7 @@ class MyComp(Component):
     def list_deriv_vars(self):
         input_keys = ('x1', 'x2', 'x3', 'x4', 'vt.a1', 'vt.vt1.d1')
         output_keys = ('xx1', 'xx2', 'xx3', 'xx4', 'vvt.a1', 'vvt.vt1.d1')
-       
+
         return input_keys, output_keys
 
 
@@ -150,7 +150,7 @@ class Paraboloid(Component):
         y = self.y
 
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
-        
+
     def provideJ(self):
         """Analytical first derivatives"""
 
@@ -159,7 +159,7 @@ class Paraboloid(Component):
 
         self.J = array([[df_dx, df_dy]])
         return self.J
-        
+
     def list_deriv_vars(self):
         input_keys = ('x', 'y')
         output_keys = ('f_xy',)
@@ -199,30 +199,30 @@ class SimpleComp(Component):
 
     def execute(self):
         self.y = 2.0*self.x
-        
+
     def provideJ(self):
-        return array([[2.0]])    
+        return array([[2.0]])
 
     def list_deriv_vars(self):
         return ('x',), ('y',)
-    
+
 class SimpleCompMissingDeriv(Component):
-    
+
     x = Float(3.0, iotype='in')
     miss_in = Float(4.0, iotype='in')
     y = Float(6.0, iotype='out')
     miss_out = Float(7.0, iotype='out')
-    
+
     def execute(self):
         self.y = 2.0*self.x
-        
-    def provideJ(self):     
-        return array([[2.0]])    
+
+    def provideJ(self):
+        return array([[2.0]])
 
     def list_deriv_vars(self):
         return ('x',), ('y',)
-    
-        
+
+
 class CompFoot(Component):
     """ Evaluates the equation y=2x"""
 
@@ -440,7 +440,7 @@ class Array_Slice_1D(Component):
         output_keys = ('y', )
         return input_keys, output_keys
 
-    
+
 class ArrayComp2D_der(Component):
     '''2D Array component'''
 
@@ -469,7 +469,7 @@ class ArrayComp2D_der(Component):
                         [4.0, 2.0, 6.0, 5.0],
                         [3.0, 6.0, 9.0, 8.0],
                         [1.0, 3.0, 2.0, 4.0]])
-        
+
     def list_deriv_vars(self):
         return ('x',), ('y',)
 
@@ -541,7 +541,7 @@ Finite Difference Comparison
 ------------------------
 \[\[  5.[0-9]+[ ]+21.[0-9]+\]\]
 
-                    Calculated         FiniteDiff         RelError          
+                    Calculated         FiniteDiff         RelError[^\n]+
 ----------------------------------------------------------------------------
 comp.f_xy / comp.x: 5.0                5.[0-9]+[ ]+[^\n]+
 comp.f_xy / comp.y: 21.0               21.[0-9]+[ ]+[^\n]+
@@ -1351,6 +1351,38 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
+    def test_array2D_with_apply_deriv(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', ArrayComp2D_der())
+        top.driver.workflow.add(['comp1'])
+
+        top.run()
+        top.driver.workflow.config_changed()
+        inputs = ['comp1.x[0, 0]', 'comp1.x[0, 1]']
+        outputs = ['comp1.y[1, 0]', 'comp1.y[1, 1]']
+
+        J = top.driver.workflow.calc_gradient(inputs=inputs,
+                                              outputs=outputs,
+                                              mode='forward')
+        Jsub = top.comp1.J[2:4, 0:2]
+        diff = J - Jsub
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=inputs,
+                                              outputs=outputs,
+                                              mode='adjoint')
+        diff = J - Jsub
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=inputs,
+                                              outputs=outputs,
+                                              mode='fd')
+        diff = J - Jsub
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
     def test_array_slice_1D(self):
 
         top = set_as_top(Assembly())
@@ -2117,54 +2149,54 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         J = top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 12.0*2.0, .001)
-        
+
     def test_missing_derivs_error(self):
         self.top = set_as_top(Assembly())
-    
+
         self.top.add('driver', SimpleDriver())
         self.top.add('dis2', SimpleCompMissingDeriv())
         self.top.driver.add_objective('(dis2.y)**2')
         self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
-        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
-        
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')
+
         self.top.run()
-        
+
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_out']")
         else:
             self.fail("exception expected")
-            
+
         self.top.driver.remove_constraint('dis2.miss_out < 24.0')
         self.top.driver.add_constraint('dis2.y < 24.0')
         self.top.driver.remove_parameter('dis2.x')
         self.top.driver.add_parameter('dis2.miss_in', low=-10.0, high=10.0)
-        
+
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['miss_in']")
         else:
             self.fail("exception expected")
-        
+
     def test_missing_derivs_assume_zero(self):
         self.top = set_as_top(Assembly())
-    
+
         self.top.add('driver', SimpleDriver())
         self.top.add('dis2', SimpleCompMissingDeriv())
         self.top.dis2.missing_deriv_policy = 'assume_zero'
-        
+
         self.top.driver.add_objective('(dis2.y)**2')
         self.top.driver.add_parameter('dis2.x', low = -10.0, high = 10.0)
-        self.top.driver.add_constraint('dis2.miss_out < 24.0')   
-        
+        self.top.driver.add_constraint('dis2.miss_out < 24.0')
+
         self.top.run()
-        
+
         J = self.top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .001)
-        assert_rel_error(self, J[1, 0], 0.0, .001) 
-        
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+
 
 class Comp2(Component):
     """ two-input, two-output"""
@@ -2183,7 +2215,7 @@ class Comp2(Component):
 
         self.J = array([[3.0, 5.0], [7.0, 11.0]])
         return self.J
-        
+
     def list_deriv_vars(self):
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
@@ -2239,7 +2271,7 @@ class Comp3_array(Component):
         self.J = random.random((9, 9))
 
         self.JT = self.J.T
-        
+
     def list_deriv_vars(self):
         return ('x',), ('y',)
 
@@ -2303,7 +2335,7 @@ class Testcase_applyJT(unittest.TestCase):
 
         comp = Comp2_array()
         comp.provideJ()
-        
+
         arg = {}
         arg['x[0, 1]'] = array([1.0])
         arg['y[1, 0]'] = array([0.0])
@@ -2435,11 +2467,11 @@ class PreComp(Component):
         return self.J
 
     def list_deriv_vars(self):
-        
+
         input_keys = ('x1', 'x2')
         output_keys = ('y1', 'y2')
         return input_keys, output_keys
-    
+
     def applyMinv(self, arg, result):
 
         result['y1'] = 0.03092784*arg['y1'] + 0.07216495*arg['y2']
@@ -2477,11 +2509,11 @@ class PreCompArray(Component):
         return self.J
 
     def list_deriv_vars(self):
-        
+
         input_keys = ('x', )
         output_keys = ('y', )
         return input_keys, output_keys
-    
+
     def applyMinv(self, arg, result):
 
         if 'y' in arg:
