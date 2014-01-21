@@ -16,7 +16,7 @@ from openmdao.main.container import Container, deep_hasattr, \
                                     create_io_traits
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.api import Slot, Float, Int, Bool, List, Dict
+from openmdao.main.datatypes.api import Instance, Slot, Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir, assert_raises
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -33,7 +33,7 @@ class DumbTrait(Variable):
 
 
 class MyContainer(Container):
-    uncertain = Slot(NormalDistribution, iotype="out")
+    uncertain = Instance(NormalDistribution, iotype="out")
 
     def __init__(self):
         super(MyContainer, self).__init__()

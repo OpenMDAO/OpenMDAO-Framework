@@ -13,18 +13,16 @@ zope.interface).
 #public symbols
 __all__ = ["Slot"]
 
-from inspect import isclass
-
 # pylint: disable-msg=E0611,F0401
-from traits.api import Instance, Interface
-import zope.interface
 
-from openmdao.main.variable import Variable, gui_excludes
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IContainer
+from openmdao.main.variable import gui_excludes
+from openmdao.main.datatypes.instance import Base
 
 
-class Slot(Variable):
+import warnings
+
+class Slot(Base):
+
     """A trait for an object of a particular type or implementing a particular
     interface. Both Traits Interfaces and zope.interface.Interfaces are
     supported.
@@ -33,81 +31,14 @@ class Slot(Variable):
     def __init__(self, klass=object, allow_none=True, factory=None,
                  args=None, kw=None, **metadata):
 
-        default_value = None
-        try:
-            iszopeiface = issubclass(klass, zope.interface.Interface)
-        except TypeError:
-            iszopeiface = False
-            if not isclass(klass):
-                default_value = klass
-                klass = klass.__class__
+        if 'iotype' in metadata:
+            with warnings.catch_warnings():
+                warnings.simplefilter("always")
+                warnings.warn(DeprecationWarning(
+                    "The use of 'iotype' as metadata for 'Slot' is deprecated.\n"
+                    "Use 'Instance' in place of 'Slot' if you need to use 'iotype'.\n"), stacklevel=2)
 
-        metadata.setdefault('copy', 'deep')
-
-        self._allow_none = allow_none
-        self.klass = klass
-
-        if has_interface(klass, IContainer) or \
-           (isclass(klass) and IContainer.implementedBy(klass)):
-            self._is_container = True
-        else:
-            self._is_container = False
-
-        if iszopeiface:
-            self._instance = None
-            self.factory = factory
-            self.args = args
-            self.kw = kw
-        else:
-            self._instance = Instance(klass=klass, allow_none=allow_none,
-                                      factory=factory, args=args, kw=kw,
-                                      **metadata)
-            if default_value:
-                self._instance.default_value = default_value
-            else:
-                default_value = self._instance.default_value
-
-            if klass.__name__ == 'VariableTree':
-                raise TypeError('Slotting of VariableTrees is not supported,'
-                                ' please use VarTree instead')
-
-        super(Slot, self).__init__(default_value, **metadata)
-
-    def validate(self, obj, name, value):
-        ''' wrapper around Enthought validate method'''
-
-        if value is None:
-            if self._allow_none:
-                return value
-            self.validate_failed(obj, name, value)
-
-        if self._instance is None:  # our iface is a zope.interface
-            if not self.klass.providedBy(value):
-                self._iface_error(obj, name, self.klass.__name__)
-        else:
-            try:
-                value = self._instance.validate(obj, name, value)
-            except Exception:
-                if issubclass(self._instance.klass, Interface):
-                    self._iface_error(obj, name, self._instance.klass.__name__)
-                else:
-                    obj.raise_exception("%s must be an instance of class '%s', got %s" %
-                                        (name, self._instance.klass.__name__, type(value)),
-                                        TypeError)
-
-        return value
-
-    def post_setattr(self, obj, name, value):
-        '''Containers must know their place within the hierarchy, so set their
-        parent here.  This keeps side effects out of validate()'''
-
-        if self._is_container and value is not None:
-            if value.parent is not obj:
-                value.parent = obj
-
-    def _iface_error(self, obj, name, iface_name):
-        obj.raise_exception("%s must provide interface '%s'" %
-                            (name, iface_name), TypeError)
+        super(Slot, self).__init__(klass, allow_none, factory, args, kw, **metadata)
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is

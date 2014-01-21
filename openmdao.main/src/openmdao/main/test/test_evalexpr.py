@@ -55,7 +55,7 @@ class Comp(Component):
     y = Float(iotype='in')
     indct = Dict(iotype='in')
     outdct = Dict(iotype='out')
-    cont = Slot(A, iotype='in')
+    cont = Slot(A)
     contlist = List(Slot(A), iotype='in')
 
     def get_cont(self, i):
@@ -126,8 +126,10 @@ class ExprEvalTestCase(unittest.TestCase):
         ex2 = ExprEvaluator('comp.x', self.top)
         ex3_bad = "test"
 
+
         self.assertTrue(ex1 == ex2)
         self.assertTrue(ex2 != ex3_bad)
+
 
     def test_simple(self):
         tests = [
@@ -238,9 +240,11 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(self.top.a.a2d[1][0], 11.)
 
         ex = ExprEvaluator("a2d[1]", self.top.a)
+
         self.assertTrue(all(ex.evaluate() == array([11., 3.])))
         ex.set([0.1, 0.2])
         self.assertTrue(all(self.top.a.a2d[1] == array([0.1, 0.2])))
+
 
         self.top.comp.cont = A()
 
@@ -262,6 +266,7 @@ class ExprEvalTestCase(unittest.TestCase):
         else:
             ex = ExprEvaluator("numpy.eye(2)", self.top.a)
             val = ex.evaluate()
+
             self.assertTrue((val == numpy.eye(2)).all())
 
         ex = ExprEvaluator("comp.get_cont(1).a1d", self.top)
@@ -416,7 +421,9 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(False, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
         self.assertEqual(True, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
 
+
         self.top.a.b = [1, 1, 1, 1]
+
         self.assertEqual(True, ExprEvaluator('all(a.b)', self.top).evaluate())
         self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
         self.top.a.b = [1, 1, 0, 1]
@@ -455,8 +462,10 @@ class ExprEvalTestCase(unittest.TestCase):
             ex = ExprEvaluator('abcd.efg', self.top)
             ex.evaluate()
         except AttributeError, err:
+
             self.assertEqual(str(err), "can't evaluate expression 'abcd.efg':"
                              " : 'Assembly' object has no attribute 'abcd'")
+
         else:
             raise AssertionError('AttributeError expected')
 
@@ -481,6 +490,7 @@ class ExprEvalTestCase(unittest.TestCase):
         top.connect('comp3.c', 'comp6.a')
         top.connect('comp6.c', 'comp7.b')
         top.connect('comp8.c', 'comp9.b')
+
 
         # exp = ExprEvaluator('comp9.c+comp5.d', top.driver)
         # self.assertEqual(exp.get_required_compnames(top),
@@ -544,9 +554,11 @@ class ExprEvalTestCase(unittest.TestCase):
 
         exp = ExprEvaluator('sin(cos(comp2.b))+sqrt(comp2.a)/comp1.c', top.driver)
         grad = exp.evaluate_gradient(scope=top)
+
         g1 = -sin(top.comp2.b)*cos(cos(top.comp2.b)) #true gradient components
         g2 = (2*sqrt(top.comp2.a)*top.comp1.c)**-1
         g3 = -sqrt(top.comp2.a)/top.comp1.c**2
+
 
         assert_rel_error(self, grad['comp2.b'], g1, 0.00001)
         assert_rel_error(self, grad['comp2.a'], g2, 0.00001)
@@ -555,7 +567,9 @@ class ExprEvalTestCase(unittest.TestCase):
         exp = ExprEvaluator('gamma(comp2.a)', top.driver)
         grad = exp.evaluate_gradient(scope=top)
         from scipy.special import polygamma
+
         g1 = gamma(top.comp2.a)*polygamma(0, top.comp2.a) #true partial derivative
+
         assert_rel_error(self, grad['comp2.a'], g1, 0.001)
 
         exp = ExprEvaluator('abs(comp2.a)', top.driver)
@@ -628,8 +642,10 @@ class ExprEvalTestCase(unittest.TestCase):
 
 
 class ExprExaminerTestCase(unittest.TestCase):
+
     def _examine(self, text, simplevar=True, assignable=True,
                  const_indices=True, refs=None, const=False):
+
         ee = ExprExaminer(ast.parse(text, mode='eval'))
         self.assertEqual(ee.simplevar, simplevar)
         self.assertEqual(ee.assignable, assignable)

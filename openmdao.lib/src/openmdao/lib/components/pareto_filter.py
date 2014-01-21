@@ -1,37 +1,18 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import Slot, List, Str
+from openmdao.main.datatypes.api import Instance, Slot, List, Str
 from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
 
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ICaseIterator
 
 
-class ParetoFilter(Component):
-    """Takes a set of cases and filters out the subset of cases which are
-    pareto optimal. Assumes that smaller values for model responses are
-    better, so all problems must be posed as minimization problems.
+class ParetoFilterBase(Component):
     """
-
-    # pylint: disable-msg=E1101
-    criteria = List(Str, iotype="in",
-                    desc="List of outputs from the case to consider for "
-                         "filtering. Note that only case outputs are allowed as "
-                         "criteria.")
-
-    #case_set = Slot(ICaseIterator, iotype="in",
-    #                    desc="CaseIterator with the cases to be filtered to "
-    #                         "Find the pareto optimal subset.")
-
-    case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
-                     desc="CaseSet with the cases to be filtered to "
-                     "find the pareto optimal subset.")
-
-    pareto_set = Slot(CaseSet, iotype="out",
-                        desc="Resulting collection of pareto optimal cases.", copy="shallow")
-    dominated_set = Slot(CaseSet, iotype="out",
-                           desc="Resulting collection of dominated cases.", copy="shallow")
+    Base functionality for a pareto filter.
+    Not to be instantiated directly. Should be subclassed.
+    """
 
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2.
@@ -87,6 +68,57 @@ class ParetoFilter(Component):
                     break
             if not dominated:
                 self.pareto_set.record(case)
+
+class ConnectableParetoFilter(ParetoFilterBase):
+    """
+    Same functionality as ParetoFilter but without slots.
+    Allows for issuing connections to pareto_set and dominated_set
+    """
+
+    criteria = List(Str, iotype="in",
+                    desc="List of outputs from the case to consider for "
+                         "filtering. Note that only case outputs are allowed as "
+                         "criteria.")
+
+    #case_set = Slot(ICaseIterator,
+    #                    desc="CaseIterator with the cases to be filtered to "
+    #                         "Find the pareto optimal subset.")
+
+    case_sets = List(Instance(ICaseIterator), value=[], iotype="in",
+                     desc="CaseSet with the cases to be filtered to "
+                     "find the pareto optimal subset.")
+
+    pareto_set = Instance(CaseSet, iotype="out",
+                        desc="Resulting collection of pareto optimal cases.", copy="shallow")
+
+    dominated_set = Instance(CaseSet, iotype="out",
+                           desc="Resulting collection of dominated cases.", copy="shallow")
+
+class ParetoFilter(ParetoFilterBase):
+    """Takes a set of cases and filters out the subset of cases which are
+    pareto optimal. Assumes that smaller values for model responses are
+    better, so all problems must be posed as minimization problems.
+    """
+
+    # pylint: disable-msg=E1101
+    criteria = List(Str, iotype="in",
+                    desc="List of outputs from the case to consider for "
+                         "filtering. Note that only case outputs are allowed as "
+                         "criteria.")
+
+    #case_set = Slot(ICaseIterator,
+    #                    desc="CaseIterator with the cases to be filtered to "
+    #                         "Find the pareto optimal subset.")
+
+    case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
+                     desc="CaseSet with the cases to be filtered to "
+                     "find the pareto optimal subset.")
+
+    pareto_set = Slot(CaseSet,
+                        desc="Resulting collection of pareto optimal cases.", copy="shallow")
+
+    dominated_set = Slot(CaseSet,
+                           desc="Resulting collection of dominated cases.", copy="shallow")
 
 if __name__ == "__main__":  # pragma: no cover
 

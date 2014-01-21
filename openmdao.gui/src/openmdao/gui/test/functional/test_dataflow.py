@@ -890,6 +890,7 @@ def _test_column_sorting(browser):
         if (grid == "inputs"):
             editor.show_inputs()
             editor.sort_inputs_column("Name", sort_order)
+            
             variables = editor.get_inputs()
 
         else:
@@ -954,12 +955,9 @@ def _test_column_sorting(browser):
     editor.get_input(" vt2").name.click()
     editor.get_input(" vt3").name.click()
 
-    editor.get_output(" cont_out").name.click()
-    editor.get_output(" vt2").name.click()
-    editor.get_output(" vt3").name.click()
 
     #Testing sort for inputs
-
+    editor.get_input("missing_deriv_policy") 
     test_sorting(
         [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
          "directory", "force_execute", "force_fd", "missing_deriv_policy"],
@@ -975,6 +973,9 @@ def _test_column_sorting(browser):
     )
 
     #Testing sort for outputs
+    editor.get_output(" cont_out").name.click()
+    editor.get_output(" vt2").name.click()
+    editor.get_output(" vt3").name.click()
 
     test_sorting(
         [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
