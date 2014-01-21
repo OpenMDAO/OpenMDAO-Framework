@@ -6,7 +6,7 @@ import shutil
 from openmdao.main.api import Assembly, Driver, \
      SequentialWorkflow, Case
 
-from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
+from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ConnectableParetoFilter, ConnectableExpectedImprovement
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
 from openmdao.lib.drivers.api import DOEdriver, Genetic, IterateUntil
 
@@ -49,10 +49,10 @@ class Analysis(Assembly):
         self.branin_meta_model.force_execute = True
         
         
-        self.add("EI",ExpectedImprovement())
+        self.add("EI",ConnectableExpectedImprovement())
         self.EI.criteria = "branin_meta_model.f_xy"
         
-        self.add("filter",ParetoFilter())
+        self.add("filter",ConnectableParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_sets = [self.branin_meta_model.recorder.get_iterator(),]
         self.filter.force_execute = True

@@ -17,7 +17,7 @@ except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
 
-from openmdao.main.datatypes.api import Slot, Enum, Float, Array, Event, Int
+from openmdao.main.datatypes.api import Slot, Enum, Float, Array, Event, Int, Instance
 
 from openmdao.main.component import Component
 from openmdao.util.decorators import stub_if_missing_deps
@@ -27,11 +27,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 @stub_if_missing_deps(*_check)
-class MultiObjExpectedImprovement(Component):
-    best_cases = Slot(CaseSet, iotype="in",
-                    desc="CaseIterator which contains only Pareto optimal cases \
-                    according to criteria.")
-
+class MultiObjExpectedImprovementBase(Component):
     criteria = Array(iotype="in",
                     desc="Names of responses to maximize expected improvement around. \
                     Must be NormalDistribution type.")
@@ -53,7 +49,7 @@ class MultiObjExpectedImprovement(Component):
     reset_y_star = Event(desc='Reset Y* on next execution')
 
     def __init__(self):
-        super(MultiObjExpectedImprovement, self).__init__()
+        super(MultiObjExpectedImprovementBase, self).__init__()
         self.y_star = None
 
     def _reset_y_star_fired(self):
@@ -188,3 +184,16 @@ class MultiObjExpectedImprovement(Component):
                 """execute EI calculations"""
                 self.raise_exception("EI calculations not supported"
                                         " for more than 2 objectives", ValueError)
+
+class ConnectableMultiObjExpectedImprovement(MultiObjExpectedImprovementBase):
+    best_cases = Instance(CaseSet, iotype="in",
+                    desc="CaseIterator which contains only Pareto optimal cases \
+                    according to criteria.")
+    pass
+
+
+class MultiObjExpectedImprovement(MultiObjExpectedImprovementBase):
+    best_cases = Slot(CaseSet,
+                    desc="CaseIterator which contains only Pareto optimal cases \
+                    according to criteria.")
+    pass

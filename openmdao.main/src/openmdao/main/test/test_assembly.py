@@ -8,7 +8,7 @@ import logging
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
                               set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Int, Str, Slot, List, Array
+from openmdao.main.datatypes.api import Float, Instance, Int, Str, Slot, List, Array
 from openmdao.util.log import enable_trace, disable_trace
 from openmdao.util.fileutil import onerror
 from openmdao.util.decorators import add_delegate
@@ -107,9 +107,9 @@ class DummyComp(Component):
     sout = Str(iotype='out')
     slistout = List(Str, iotype='out')
 
-    dummy_in = Slot(Component, iotype='in')
-    dummy_out = Slot(Component, iotype='out')
-    dummy_out_no_copy = Slot(Component, iotype='out', copy=None)
+    dummy_in = Instance(Component, iotype='in')
+    dummy_out = Instance(Component, iotype='out')
+    dummy_out_no_copy = Instance(Component, iotype='out', copy=None)
 
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -780,8 +780,8 @@ class AssemblyTestCase(unittest.TestCase):
         top.run(case_id='ReRun')
 
         expected = """\
-: 
-driver: 
+:
+driver:
 comp1: 1-1
 driverA: 1-2
 comp1: 1-2.1-1
@@ -820,8 +820,8 @@ subassy: 2-3.2-2
 subassy.driver: 2-3.2-2
 subassy.comp3: 2-3.2-2.1-1
 subassy.comp3: 2-3.2-2.2-1
-: 
-driver: 
+:
+driver:
 comp1: ReRun.1-1
 driverA: ReRun.1-2
 comp1: ReRun.1-2.1-1
@@ -862,8 +862,9 @@ subassy.comp3: ReRun.2-3.2-2.1-1
 subassy.comp3: ReRun.2-3.2-2.2-1"""
         expected = expected.split('\n')
         errors = 0
+
         for i, line in enumerate(trace_buf):
-            if line != expected[i]:
+            if line.strip() != expected[i].strip():
                 logging.error('%d: expected %r, got %r', i, expected[i], line)
                 errors += 1
         self.assertEqual(errors, 0)

@@ -11,7 +11,7 @@ import thread
 import threading
 import traceback
 
-from openmdao.main.datatypes.api import Bool, Dict, Enum, Int, Slot
+from openmdao.main.datatypes.api import Bool, Dict, Enum, Instance, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
@@ -725,22 +725,11 @@ class CaseIterDriverBase(Driver):
         """ Return execute status from model. """
         return self._exceptions[server]
 
-
-class CaseIteratorDriver(CaseIterDriverBase):
+class CaseIteratorDriverBase(CaseIterDriverBase):
     """
-    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent
-    evaluation is supported, with the various evaluations executed across
-    servers obtained from the :class:`ResourceAllocationManager`.
+    Base functionality for a case iterator driver.
+    Not to be instantiated directly. Should be subclassed.
     """
-
-    iterator = Slot(ICaseIterator, iotype='in',
-                      desc='Iterator supplying Cases to evaluate.')
-    
-    evaluated = Slot(ICaseIterator, iotype='out',
-                      desc='Iterator supplying evaluated Cases.')
-    
-    filter = Slot(ICaseFilter, iotype='in',
-                  desc='Filter used to select cases to evaluate.')
 
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
@@ -763,7 +752,33 @@ class CaseIteratorDriver(CaseIterDriverBase):
         self.evaluated = None
         self.recorders.append(ListCaseRecorder())
         try:
-            super(CaseIteratorDriver, self).execute()
+            super(CaseIteratorDriverBase, self).execute()
         finally:
             self.evaluated = self.recorders.pop().get_iterator()
 
+class ConnectableCaseIteratorDriver(CaseIteratorDriverBase):
+    """
+    Same functionality as CaseIteratorDriver but without slots.
+    Allows for creating connections between iterator, evaluated
+    and filter.
+    """
+
+    iterator = Instance(ICaseIterator, iotype="in")
+    evaluated = Instance(ICaseIterator, iotype="out")
+    filter = Instance(ICaseFilter, iotype="in")
+
+class CaseIteratorDriver(CaseIteratorDriverBase):
+    """
+    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent
+    evaluation is supported, with the various evaluations executed across
+    servers obtained from the :class:`ResourceAllocationManager`.
+    """
+
+    iterator = Slot(ICaseIterator,
+                      desc='Iterator supplying Cases to evaluate.')
+    
+    evaluated = Slot(ICaseIterator,
+                      desc='Iterator supplying evaluated Cases.')
+    
+    filter = Slot(ICaseFilter,
+                  desc='Filter used to select cases to evaluate.')
