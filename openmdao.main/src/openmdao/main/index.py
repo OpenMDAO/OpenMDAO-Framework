@@ -7,25 +7,25 @@ EXTSLICE = 4
 
 def process_index_entry(obj, idx):
     """
-    
+
     Return a new object based on a starting object and some operation
-    indicated by idx that can be either an index into a container, an 
+    indicated by idx that can be either an index into a container, an
     attribute access, or a function call.  idx can be a non-tuple hashable
     object, which will be interpreted as an index to a container, or it can
-    be a tuple of the form (operation_id, stuff) where operation_id is 
+    be a tuple of the form (operation_id, stuff) where operation_id is
     as follows (the named constants are defined in expreval.py)::
-          
+
           INDEX = 0
           ATTR = 1
           CALL = 2
           SLICE = 3
           EXTSLICE = 4
-          
+
     On the off chance that you want to use a tuple as a key into a dict, you'll have to
     nest your key tuple inside of an INDEX tuple to avoid ambiguity, e.g., (INDEX, my_tuple)
-          
+
     The forms of the various tuples are::
-          
+
           INDEX:   (0, idx)  where idx is some hashable value
           ATTR:    (1, name) where name is the attribute name
           CALL:    (2, args, kwargs) where args is a list of values, and kwargs is a list
@@ -66,7 +66,7 @@ def process_index_entry(obj, idx):
             else:
                 args.append(a)
         return obj.__getitem__(args)
-    
+
     raise ValueError("invalid index: %s" % idx)
 
 def index_retains_metadata(index):
@@ -75,7 +75,7 @@ def index_retains_metadata(index):
         if idx[0] in fails:
             return False
     return True
-        
+
 def get_indexed_value(obj, name, index=None):
     if name:
         obj = getattr(obj, name)
@@ -83,7 +83,7 @@ def get_indexed_value(obj, name, index=None):
         for idx in index:
             obj = process_index_entry(obj, idx)
     return obj
-        
+
 def index_to_text(index):
     """Returns a string representation of the given index. Doesn't work for functions"""
     if index:
