@@ -71,7 +71,7 @@ Built-in Variable Types
 |          | desc = None, low = None, high = None,                        |
 |          | exclude_low = False, exclude_high = False] )``               |
 +----------+--------------------------------------------------------------+
-| Slot     | ``Slot( [klass = None, desc = None, iotype = None,           |
+| Slot     | ``Slot( [klass = None, desc = None,                          |
 |          | factory = None, args = None, kw = None,                      |
 |          | allow_none = True, adapt = None,                             |
 |          | required = False] )``                                        |
@@ -530,13 +530,7 @@ A *Slot* is a variable that requires any value assigned to it to be either an in
 specific class or an implementation of a specific Interface. The class or Interface to be matched is
 the first argument to the constructor. Failure to match the specified class or Interface will result
 in an exception being raised. Slot traits are typically used to implement 
-placeholders for plugins within a component, but they may also be used to implement Variables by
-setting their *iotype* metadata attribute to ``'in'`` or ``'out'``.  In this case, it is important
-to  also set the *copy* metadata attribute so the framework knows how to copy the data to connected
-components.  Allowable values for *copy* are ``'deep'`` (the default), ``'shallow'``, and ``None``. 
-A copy value of ``None`` indicates that the data will be passed by reference and no copy will be
-made.
-
+placeholders for plugins within a component. 
 
 .. testcode:: instance_example
 
@@ -550,13 +544,11 @@ made.
     
         recorder = Slot(ICaseRecorder, desc='Something to append() to.',
                           required=True)
-        caseiter = Slot(ICaseIterator, desc='set of cases to run.',
-                          iotype='in')
+        caseiter = Slot(ICaseIterator, desc='set of cases to run.')
  
-In this example, we have one Slot and one input that is a Slot. The
-input called *caseiter* requires data objects that implement the ``ICaseIterator``
-interface. The Slot called *recorder* is required to implement the
-``ICaseRecorder`` interface.
+In this example, we have tow Slots. The Slot called *caseiter* requires data objects 
+that implement the ``ICaseIterator`` interface. The Slot called *recorder* is required to implement 
+the ``ICaseRecorder`` interface.
 
 The attribute *required* is used to indicate whether the object that plugs into
 a Slot is required. If ``required`` is True, then an exception will be raised
