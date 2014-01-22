@@ -273,6 +273,7 @@ class Parameter(ParameterBase):
 
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
+        print "set", self._expreval.text, val
         self._expreval.set(self._transform(val), scope, force=True)
 
     def copy(self):
