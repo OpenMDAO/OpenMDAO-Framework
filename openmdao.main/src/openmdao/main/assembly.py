@@ -245,7 +245,7 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
-        exprconns = [(u,v) for u,v in self._exprmapper.list_connections() 
+        exprconns = [(u,v) for u,v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
@@ -925,6 +925,7 @@ class Assembly(Component):
         # Parent-assembly sourced
         self.J_input_keys = []
         self.J_output_keys = []
+        self._provideJ_bounds = None
 
         for src in required_inputs:
             varname, _, tail = src.partition('[')

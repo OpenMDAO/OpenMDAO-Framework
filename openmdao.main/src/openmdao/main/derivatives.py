@@ -135,7 +135,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     #print inputs, '\n', outputs, '\n', J, dx
     return J
 
-def pre_process_dicts(obj, key, arg_or_result):
+def pre_process_dicts(obj, key, arg_or_result, shape_cache):
     '''If the component supplies apply_deriv or applyMinv or their adjoint
     counterparts, it expects the contents to be shaped like the original
     variables. Also, it doesn't know how to handle array elements, so we need
@@ -149,13 +149,19 @@ def pre_process_dicts(obj, key, arg_or_result):
     # the fly, then poke in the values.
     basekey, _, index = key.partition('[')
     if index:
-        var = obj.get(basekey)
-        if basekey not in arg_or_result:
-            arg_or_result[basekey] = zeros(var.shape)
+        if key not in shape_cache:
+            var = obj.get(basekey)
+            shape_cache[basekey] = var.shape
+            shape_cache[key] = eval("var[%s" % index).shape
 
-        sliced_shape = eval("var[%s" % index).shape
-        value = value.reshape(sliced_shape)
-        exec("arg_or_result[basekey][%s += value" % index)
+        if basekey not in arg_or_result:
+            arg_or_result[basekey] = zeros(shape_cache[basekey])
+
+        shape = shape_cache[key]
+        if shape:
+            value = value.reshape(shape_cache[key])
+        var = arg_or_result[basekey] # This speeds up the eval
+        exec("var[%s = value" % index)
 
     else:
         var = obj.get(key)
@@ -187,12 +193,14 @@ def post_process_dicts(key, result):
     # poke the data back into the sliced keys.
     basekey, _, index = key.partition('[')
     if index:
-        exec("result[key][:] = result[basekey][%s.flatten()" % index)
+        base = result[basekey]
+        exec("var2 = base[%s" % index)
+        value[:] = var2.flatten()
     else:
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(obj, arg, result, residual, J=None):
+def applyJ(obj, arg, result, residual, shape_cache, J=None):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -209,11 +217,11 @@ def applyJ(obj, arg, result, residual, J=None):
         # each input and output to have the same shape as the input/output.
         resultkeys = sorted(result.keys())
         for key in resultkeys:
-            pre_process_dicts(obj, key, result)
+            pre_process_dicts(obj, key, result, shape_cache)
 
         argkeys = arg.keys()
         for key in sorted(argkeys):
-            pre_process_dicts(obj, key, arg)
+            pre_process_dicts(obj, key, arg, shape_cache)
 
         obj.apply_deriv(arg, result)
 
@@ -236,7 +244,9 @@ def applyJ(obj, arg, result, residual, J=None):
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
-    ibounds, obounds = get_bounds(obj, input_keys, output_keys)
+    if obj._provideJ_bounds is None:
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+    ibounds, obounds = obj._provideJ_bounds
 
     for okey in result:
 
@@ -247,11 +257,7 @@ def applyJ(obj, arg, result, residual, J=None):
             basekey, _, odx = okey.partition('[')
             o1, o2, osh = obounds[basekey]
 
-        if o2 - o1 == 1:
-            oshape = 1
-        else:
-            oshape = result[okey].shape
-
+        tmp = result[okey]
         used = set()
         for ikey in arg:
             if ikey in result:
@@ -277,15 +283,13 @@ def applyJ(obj, arg, result, residual, J=None):
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
                obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp = Jsub[0][0] * arg[ikey]
+                tmp += Jsub[0][0] * arg[ikey]
             else:
-                tmp = Jsub.dot(arg[ikey])
-
-            result[okey] += tmp.reshape(oshape)
+                tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJ', arg, result
 
-def applyJT(obj, arg, result, residual, J=None):
+def applyJT(obj, arg, result, residual, shape_cache, J=None):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
@@ -304,11 +308,11 @@ def applyJT(obj, arg, result, residual, J=None):
         # same shape as the input/output.
         resultkeys = sorted(result.keys())
         for key in resultkeys:
-            pre_process_dicts(obj, key, result)
+            pre_process_dicts(obj, key, result, shape_cache)
 
         argkeys = arg.keys()
         for key in sorted(argkeys):
-            pre_process_dicts(obj, key, arg)
+            pre_process_dicts(obj, key, arg, shape_cache)
 
         obj.apply_derivT(arg, result)
 
@@ -331,7 +335,9 @@ def applyJT(obj, arg, result, residual, J=None):
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
-    obounds, ibounds = get_bounds(obj, input_keys, output_keys)
+    if obj._provideJ_bounds is None:
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+    obounds, ibounds = obj._provideJ_bounds
 
     used = set()
     for okey in result:
@@ -351,11 +357,7 @@ def applyJT(obj, arg, result, residual, J=None):
                 continue
             used.add((o1, o2, odx))
 
-        if o2 - o1 == 1:
-            oshape = 1
-        else:
-            oshape = result[okey].shape
-
+        tmp = result[okey]
         for ikey in arg:
 
             idx = None
@@ -372,11 +374,9 @@ def applyJT(obj, arg, result, residual, J=None):
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
                obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp = Jsub[0][0] * arg[ikey]
+                tmp += Jsub[0][0] * arg[ikey]
             else:
-                tmp = Jsub.dot(arg[ikey])
-
-            result[okey] += tmp.reshape(oshape)
+                tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJT', arg, result
 
@@ -404,14 +404,14 @@ def applyMinv(obj, inputs):
 
     return inputs
 
-def applyMinvT(obj, inputs):
+def applyMinvT(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinvT where we can reshape the
     arrays for each input and expand any needed array elements into full arrays.
     """
 
     inputkeys = sorted(inputs.keys())
     for key in inputkeys:
-        pre_process_dicts(obj, key, inputs)
+        pre_process_dicts(obj, key, inputs, shape_cache)
 
     pre_inputs = inputs.copy()
 
@@ -501,9 +501,9 @@ def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
         else: # The entire array, already flat
             ostring = 'o1:o2'
 
-        if ':' not in ostring:
+        if ':' not in ostring and len(ox) > 1:
             ostring = 'vstack(%s)' % ostring
-        if ':' not in istring:
+        if ':' not in istring and len(ox) > 1:
             istring = 'hstack(%s)' % istring
 
         return eval('J[%s, %s]' % (ostring, istring))
@@ -739,7 +739,15 @@ class FiniteDifference(object):
         """Return matrix of flattened values from output edges."""
 
         for src in self.outputs:
-            src_val = self.scope.get(src)
+
+            # Speedhack: getting an indexed var in OpenMDAO is slow
+            if '[' in src:
+                basekey, _, index = src.partition('[')
+                base = self.scope.get(basekey)
+                exec("src_val = base[%s" % index)
+            else:
+                src_val = self.scope.get(src)
+
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
             if isinstance(src_val, ndarray):

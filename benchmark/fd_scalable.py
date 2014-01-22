@@ -7,7 +7,7 @@ import numpy as np
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.main.api import Assembly, Component, set_as_top
 
-N = 1000
+N = 100
 np.random.seed(12345)
 
 class Model(Assembly):
@@ -26,8 +26,8 @@ if __name__ == "__main__":
 
     inputs = ['comp.y_in']
     outputs = ['comp.y_out']
-    #inputs = ['comp.y_in[%d, 0]'%n for n in range(N)]
-    #outputs = ['comp.y_out[%d, 0]'%n for n in range(N)]
+    inputs = ['comp.y_in[%d, 0]'%n for n in range(N)]
+    outputs = ['comp.y_out[%d, 0]'%n for n in range(N)]
 
     t0 = time()
     J = top.driver.workflow.calc_gradient(inputs=inputs,

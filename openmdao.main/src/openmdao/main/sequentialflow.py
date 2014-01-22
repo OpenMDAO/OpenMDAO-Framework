@@ -45,11 +45,13 @@ class SequentialWorkflow(Workflow):
 
         # Bookkeeping
         self._edges = None
+        self._comp_edges = None
         self._derivative_graph = None
         self.res = None
         self._upscoped = False
         self._J_cache = {}
         self._bounds_cache = {}
+        self._shape_cache = {}
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -83,12 +85,14 @@ class SequentialWorkflow(Workflow):
         super(SequentialWorkflow, self).config_changed()
 
         self._edges = None
+        self._comp_edges = None
         self._derivative_graph = None
         self.res = None
         self._upscoped = False
         self._names = None
         self._J_cache = {}
         self._bounds_cache = {}
+        self._shape_cache = {}
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -451,8 +455,8 @@ class SequentialWorkflow(Workflow):
         '''Callback function for performing the matrix vector product of the
         workflow's full Jacobian with an incoming vector arg.'''
 
-        comps = self._derivative_graph.edge_dict_to_comp_list(self._edges,
-                                            self.get_implicit_info())
+        comps = self._comp_edge_list()
+
         if '@fake' in comps:
             del comps['@fake']
         result = zeros(len(arg))
@@ -509,7 +513,7 @@ class SequentialWorkflow(Workflow):
                 #inputs = applyMinv(comp, inputs)
 
             applyJ(comp, inputs, outputs, comp_residuals,
-                   self._J_cache.get(compname))
+                   self._shape_cache.get(compname), self._J_cache.get(compname))
             #print inputs, outputs
 
             for varname, i1, i2 in out_bounds:
@@ -536,8 +540,7 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
 
         dgraph = self._derivative_graph
-        comps = dgraph.edge_dict_to_comp_list(self._edges,
-                                       self.get_implicit_info())
+        comps = self._comp_edge_list()
         result = zeros(len(arg))
 
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -591,10 +594,10 @@ class SequentialWorkflow(Workflow):
 
             # Preconditioning
             if hasattr(comp, 'applyMinvT'):
-                inputs = applyMinvT(comp, inputs)
+                inputs = applyMinvT(comp, inputs, self._shape_cache)
 
             applyJT(comp, inputs, outputs, comp_residuals,
-                    self._J_cache.get(compname))
+                    self._shape_cache, self._J_cache.get(compname))
             #print inputs, outputs
 
             for varname, i1, i2 in out_bounds:
@@ -819,6 +822,13 @@ class SequentialWorkflow(Workflow):
 
         return self._edges
 
+    def _comp_edge_list(self):
+        """ Caches the result of edge_dict_to_comp_list. """
+        if self._comp_edges is None:
+            edge2comp = self._derivative_graph.edge_dict_to_comp_list
+            self._comp_edges = edge2comp(self._edges, self.get_implicit_info())
+        return self._comp_edges
+
     def get_implicit_info(self):
         """ Return a dict of the form {(residuals) : [states]}
         """
@@ -900,6 +910,8 @@ class SequentialWorkflow(Workflow):
                 comp = self.scope.get(compname)
 
             J = self._J_cache.get(compname)
+            if compname not in self._shape_cache:
+                self._shape_cache[compname] = {}
             if J is None:
                 J = comp.calc_derivatives(first, second, savebase,
                                           data['inputs'], data['outputs'])
@@ -945,14 +957,12 @@ class SequentialWorkflow(Workflow):
         # This function can be called from a parent driver's workflow for
         # assembly recursion. We have to clear our cache if that happens.
         # We also have to clear it next time we arrive back in our workflow.
-        if upscope:
+        if upscope or self._upscoped:
             self._derivative_graph = None
             self._edges = None
-            self._upscoped = True
-        elif self._upscoped:
-            self._derivative_graph = None
-            self._edges = None
-            self._upscoped = False
+            self._comp_edges = None
+
+            self._upscoped = upscope
 
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
 
