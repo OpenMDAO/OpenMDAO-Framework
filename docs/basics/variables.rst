@@ -1,4 +1,3 @@
-
 .. _Variables:
 
 Working with Variables
@@ -546,7 +545,7 @@ placeholders for plugins within a component.
                           required=True)
         caseiter = Slot(ICaseIterator, desc='set of cases to run.')
  
-In this example, we have tow Slots. The Slot called *caseiter* requires data objects 
+In this example, we have two Slots. The Slot called *caseiter* requires data objects 
 that implement the ``ICaseIterator`` interface. The Slot called *recorder* is required to implement 
 the ``ICaseRecorder`` interface.
 
