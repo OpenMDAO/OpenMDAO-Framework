@@ -374,9 +374,9 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
             # by the conversion factor
             if isinstance(obj, PseudoComponent) and \
                obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                result[okey] += Jsub[0][0] * arg[ikey]
+                tmp += Jsub[0][0] * arg[ikey]
             else:
-                result[okey] += Jsub.dot(arg[ikey])
+                tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJT', arg, result
 
