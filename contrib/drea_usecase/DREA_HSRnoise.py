@@ -2,7 +2,7 @@
     DREA_HSRnoise.py - Code to run a DREA followed by HSRnoise for M-E off-design analysis
 """
 
-from openmdao.main.api import Assembly, Slot, Case
+from openmdao.main.api import Assembly, Slot, Case, Instance
 from openmdao.main.datatypes.api import Float, Enum
 from openmdao.lib.casehandlers.api import ListCaseIterator, DBCaseRecorder
 from openmdao.lib.drivers.api import CaseIteratorDriver
@@ -17,7 +17,7 @@ from ACDgen import ACDgen
 class DREA_HSRnoise(Assembly):
     """Assembly to execute on DREA followed by HSRnoise."""
     
-    geo = Slot(Geometry, iotype='in')
+    geo = Instance(Geometry, iotype='in')
     alt = Float(0.0, iotype='in', units='ft', desc='Altitude')
     point = Enum(1, [1,2,3],  iotype='in', desc='Certification observer point')
     

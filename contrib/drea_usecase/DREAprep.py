@@ -12,7 +12,7 @@ class DREAprep(Component):
 
     # Variables from MEflows variable tree
     # -------------------------
-    flow_out = Slot(MEflows, iotype='out')    
+    flow_out = Slot(MEflows)    
     
     # Input variables
     # -----------------------------

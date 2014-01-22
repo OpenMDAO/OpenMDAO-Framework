@@ -8,7 +8,7 @@ from openmdao.main.interfaces import ICaseIterator
 
 class ACDgen(Component):
     
-    case_data = Slot(ICaseIterator,iotype="in")
+    case_data = Slot(ICaseIterator)
     
     def execute(self):
 

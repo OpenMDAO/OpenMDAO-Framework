@@ -21,7 +21,7 @@ class PGrafObject(object):
 class PGrafComponent(Component):
 
     num = Int(iotype = 'in')
-    obj = Slot(PGrafObject, iotype='in')
+    obj = Slot(PGrafObject)
     result = Int(iotype='out')
 
     def execute(self):
