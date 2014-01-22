@@ -104,21 +104,21 @@ class Testcase_provideJ(unittest.TestCase):
 
         for i in range(num):
 
-            inputs['x1'] = ident[i, 0]
-            inputs['x2'] = ident[i, 1]
-            inputs['x3'] = ident[i, 2:4].reshape((2, 1)).flatten()
-            inputs['x4'] = ident[i, 4:8].reshape((2, 2)).flatten()
-            inputs['vt.a1'] = ident[i, 8]
+            inputs['x1'] = ident[i:i+1, 0]
+            inputs['x2'] = ident[i:i+1, 1]
+            inputs['x3'] = ident[i:i+1, 2:4].reshape((2, 1)).flatten()
+            inputs['x4'] = ident[i:i+1, 4:8].reshape((2, 2)).flatten()
+            inputs['vt.a1'] = ident[i:i+1, 8]
             inputs['vt.vt1.d1'] = ident[i, 9:11].reshape((1, 2)).flatten()
 
-            inputs['xx1'] = 0
-            inputs['xx2'] = 0
+            inputs['xx1'] = zeros((1, ))
+            inputs['xx2'] = zeros((1, ))
             inputs['xx3'] = zeros((2, 1)).flatten()
             inputs['xx4'] = zeros((2, 2)).flatten()
-            inputs['vvt.a1'] = 0
+            inputs['vvt.a1'] = zeros((1, ))
             inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
 
-            applyJ(comp, inputs, outputs, [], J)
+            applyJ(comp, inputs, outputs, [], {}, J)
 
             self.assertEqual(outputs['xx1'], comp.J[0, i])
             self.assertEqual(outputs['xx2'], comp.J[1, i])
@@ -2302,31 +2302,31 @@ class Testcase_applyJT(unittest.TestCase):
         J = comp.provideJ()
 
         arg = {}
-        arg['x1'] = 1.0
-        arg['x2'] = 1.0
-        arg['y1'] = 0.0
-        arg['y2'] = 0.0
+        arg['x1'] = array([1.0])
+        arg['x2'] = array([1.0])
+        arg['y1'] = array([0.0])
+        arg['y2'] = array([0.0])
 
         result = {}
-        result['y1'] = 0.0
-        result['y2'] = 0.0
+        result['y1'] = array([0.0])
+        result['y2'] = array([0.0])
 
-        applyJ(comp, arg, result, [], J)
+        applyJ(comp, arg, result, [], {}, J)
 
         self.assertEqual(result['y1'], 8.0)
         self.assertEqual(result['y2'], 18.0)
 
         arg = {}
-        arg['y1'] = 1.0
-        arg['y2'] = 1.0
+        arg['y1'] = array([1.0])
+        arg['y2'] = array([1.0])
 
         result = {}
-        result['x1'] = 0.0
-        result['x2'] = 0.0
-        result['y1'] = 0.0
-        result['y2'] = 0.0
+        result['x1'] = array([0.0])
+        result['x2'] = array([0.0])
+        result['y1'] = array([0.0])
+        result['y2'] = array([0.0])
 
-        applyJT(comp, arg, result, [], J)
+        applyJT(comp, arg, result, [], {}, J)
 
         self.assertEqual(result['x1'], 10.0)
         self.assertEqual(result['x2'], 16.0)
@@ -2343,7 +2343,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['y[1, 0]'] = array([0.0])
 
-        applyJ(comp, arg, result, [])
+        applyJ(comp, arg, result, [], {})
 
         self.assertEqual(result['y[1, 0]'], 5.0)
 
@@ -2354,7 +2354,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
 
-        applyJT(comp, arg, result, [])
+        applyJT(comp, arg, result, [], {})
 
         self.assertEqual(result['x[0, 1]'], 5.0)
 
@@ -2365,7 +2365,7 @@ class Testcase_applyJT(unittest.TestCase):
         result = {}
         result['x[0, 1]'] = array([0.0])
 
-        applyJT(comp, arg, result, [])
+        applyJT(comp, arg, result, [], {})
 
         self.assertEqual(result['x[0, 1]'], 138.0)
 

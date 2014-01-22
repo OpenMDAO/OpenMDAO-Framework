@@ -28,6 +28,7 @@ class ImplicitComponent(Component):
         super(ImplicitComponent, self).__init__()
         self._state_names = None
         self._resid_names = None
+        self._shape_cache = {}
 
         # register callbacks for all of our 'state' traits
         for name, trait in self.class_traits().items():
@@ -72,6 +73,7 @@ class ImplicitComponent(Component):
         super(ImplicitComponent, self).config_changed(update_parent)
         self._state_names = None
         self._resid_names = None
+        self._shape_cache = {}
 
     def check_config(self):
         """
@@ -219,7 +221,7 @@ class ImplicitComponent(Component):
 
             idx += size
 
-        applyJ(self, inputs, outputs, [], J=self._cache_J)
+        applyJ(self, inputs, outputs, [], self._shape_cache, J=self._cache_J)
         #print inputs, outputs
 
         idx = 0
