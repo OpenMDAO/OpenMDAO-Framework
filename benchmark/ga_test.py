@@ -31,7 +31,7 @@ if __name__=='__main__':
     import time
     prob = set_as_top(RBOpt())
     tt = time.time()
-    
+
     import sys
     if len(sys.argv) > 1 and '-prof' in sys.argv:
         import cProfile
@@ -45,7 +45,7 @@ if __name__=='__main__':
         print '\n\n---------------------\n\n'
         p.print_callers()
         print '\n\n---------------------\n\n'
-        p.print_callees()    
+        p.print_callees()
     else:
         prob.run()
         print prob.func.x1, prob.func.x2
