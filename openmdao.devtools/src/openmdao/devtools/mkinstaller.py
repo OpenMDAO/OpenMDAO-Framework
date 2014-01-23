@@ -590,7 +590,7 @@ def after_install(options, home_dir, activated=False):
     excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
     dists = working_set.resolve([Requirement.parse(r[0])
                                    for r in openmdao_packages if r[0] != 'openmdao.gui'])
-    import pdb; pdb.set_trace()
+
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
     guinames = set([d.project_name for d in gui_dists])-distnames-excludes
