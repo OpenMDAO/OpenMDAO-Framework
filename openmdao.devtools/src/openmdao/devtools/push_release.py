@@ -57,8 +57,8 @@ def _push_release(release_dir, destination, obj, py='python'):
     # for now, put the go-openmdao script up without the version
     # id in the name
     obj.put(os.path.join(release_dir, 'go-openmdao-%s.py' % version), 
-        '%s/downloads/%s/go-openmdao.py' % (destination, version))
-    obj.run('chmod 755 %s/downloads/%s/go-openmdao.py' % (destination, version))
+        '%s/downloads/%s/go-openmdao-%s.py' % (destination, version, version))
+    obj.run('chmod 755 %s/downloads/%s/go-openmdao-%s.py' % (destination, version, version))
 
     # put the docs on the server
     obj.put_dir(os.path.join(release_dir, 'docs'), 
