@@ -589,6 +589,28 @@ name. This is a shortcut for adding it later.
 .. index:: Float; Array; unit conversion with
 .. index:: unit conversion; with Float
 
+*Instance Variables*
+
+*Instance* variables behave almost identically to *Slot* variables, but they allow for having "iotype" metadata.
+This means they can be handled as input or output variables. 
+
+.. testcode:: instance_example
+
+    from openmdao.main.api import Component
+    from openmdao.lib.datatypes.api import Instance
+    from openmdao.lib.casehandlers.api import CSVCaseRecorder
+    
+    
+    class Fred(Component):
+        """ A component that takes a class as an input """
+    
+        recorder = Instance(CSVCaseRecorder, iotype="in" desc='Something to append() to.)
+ 
+In the above example, the *Instance* called *recorder* can, and should be used the same way as *recorder*
+from the previous *Slot* example. However, you can connect *recorder* to output variables should you choose. Such
+connections allow for passing generic objects between components that support a specific interface or class. 
+
+
 *Unit Conversions with Float and Array*
 ++++++++++++++++++++++++++++++++++++++++
 
