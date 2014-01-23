@@ -319,13 +319,13 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 columnpicker.destroy();
             });
 
-            var variableFilter = jQuery('#'+name+'_variableFilter');
+            var variableFilter = elm.find('#'+name+'_variableFilter');
             variableFilter.keyup(function(e) {
                 Slick.GlobalEditorLock.cancelCurrentEdit();
                 self.refreshFilter(variableFilter.val());
             });
 
-            var clrButton = jQuery('#'+name+'_clear');
+            var clrButton = elm.find('#'+name+'_clear');
             clrButton.click(function() {
                 variableFilter.val('');
                 self.refreshFilter('');
@@ -337,7 +337,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         props.onMouseEnter.subscribe(function(e, args) {
             var cell = args.grid.getCellFromEvent(e);
             if (cell.cell === 0) {
-                jQuery(".variableInfo").tooltip({
+                elm.find(".variableInfo").tooltip({
                     content : function() {
                         var item = dataView.getItem(cell.row);
                         return getToolTip(item);
@@ -382,7 +382,6 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                     // dataView needs to know to update.
                     dataView.updateItem(item.id, item);
                     highlightCells();
-                    jQuery("#" + name + "_variableFilter").trigger('dialogresizestop');
                 }
                 e.stopImmediatePropagation();
             }
@@ -399,12 +398,13 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
 
         // wire up project events to drive the grid
         dataView.onRowCountChanged.subscribe(function(e, args) {
-            props.resizeCanvas();
+            props.updateRowCount();
+            props.render();
         });
 
         dataView.onRowsChanged.subscribe(function(e, args) {
             props.invalidateRows(args.rows);
-            props.resizeCanvas();
+            props.render();
         });
 
         if (editable) {
@@ -588,7 +588,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                         && (value.ttype != 'vartree')) {
                         valueStyle += " cell-editable";
                     }
-                    if (value.hasOwnProperty("implicit") && 
+                    if (value.hasOwnProperty("implicit") &&
                         (((value.connection_types & 4) === 4) ||
                          ((value.connection_types & 8) === 8))) {
                         //need a css class for highlighting implicitly connected inputs
@@ -631,7 +631,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             dataView.sort(sortAscending, true);
             props.invalidate();
 
-            var searchString = jQuery('#'+name+'_variableFilter').val();
+            var searchString = elm.find('#'+name+'_variableFilter').val();
             if (searchString) {
                 self.refreshFilter(searchString);
             }
