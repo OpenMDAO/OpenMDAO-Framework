@@ -318,18 +318,18 @@ class DependencyGraph(nx.DiGraph):
             added_outs = new_outs - old_outs
             added_states = new_states - old_states
             added_resids = new_resids - old_resids
-            
+
             # add new inputs/outputs/states/residuals to the graph
             self.add_nodes_from(added_ins,    var=True, valid=True,  iotype='in')
             self.add_nodes_from(added_outs,   var=True, valid=False, iotype='out')
             self.add_nodes_from(added_states, var=True, valid=False, iotype='state')
             self.add_nodes_from(added_resids, var=True, valid=False, iotype='residual')
-    
+
             # add edges from the variables to their parent component
             self.add_edges_from([(v,cname) for v in chain(added_ins, added_states)])
             self.add_edges_from([(cname,v) for v in chain(added_outs, added_states,
                                                           added_resids)])
-    
+
             if added_outs or added_states or added_resids:
                 self.node[cname]['valid'] = False
 
@@ -338,7 +338,7 @@ class DependencyGraph(nx.DiGraph):
             rem_outs = old_outs - new_outs
             rem_states = old_states - new_states
             rem_resids = old_resids - new_resids
-    
+
             # for removed inputs/outputs/states/residuals, may need to
             # remove connections and subvars
             for n in chain(rem_ins, rem_outs, rem_states, rem_resids):
@@ -643,7 +643,7 @@ class DependencyGraph(nx.DiGraph):
         for u,v in self.in_edges_iter(name):
             if is_connection(self, u, v):
                 srcs.append(u)
-            else:
+            elif is_subvar_node(self, u):
                 for uu,vv in self.in_edges_iter(u):
                     if is_connection(self, uu, vv):
                         srcs.append(uu)

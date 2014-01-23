@@ -213,7 +213,7 @@ class Container(SafeHasTraits):
                 variable_tree = getattr(self, name)
                 new_tree = variable_tree.copy()
                 setattr(self, name, new_tree)
-            
+
             if obj.required:
                 _check_bad_default(name, obj, self)
 
@@ -571,7 +571,7 @@ class Container(SafeHasTraits):
             if name in base.__dict__:
                 raise NameError('Would override attribute %r of %s'
                                 % (name, base.__name__))
-        
+
         for t in trait:
             _check_bad_default(name, t)
             break  # just check the first arg in the list

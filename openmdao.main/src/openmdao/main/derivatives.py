@@ -826,28 +826,28 @@ class FiniteDifference(object):
             else:
                 self.scope.set_valid([comp_name.split('[', 1)[0]], True)
 
-    def get_value(self, srcs, i1, i2, index):
+    def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for
         determining the relative stepsize to take."""
 
-        # Support for Parameter Groups:
-        if isinstance(srcs, basestring):
-            srcs = [srcs]
+        # Parameters groups all have same value, so only take from
+        # first one.
+        if not isinstance(src, basestring):
+            src = src[0]
 
-        for src in srcs:
-            old_val = self.scope.get(src)
+        old_val = self.scope.get(src)
 
-            # Full vector
-            if i2-i1 > 1:
-                index = index - i1
+        # Full vector
+        if i2-i1 > 1:
+            index = index - i1
 
-                # Indexed array slice
-                if '[' in src:
-                    flattened_src = old_val.flatten()
-                    old_val = flattened_src[index]
-                else:
-                    unravelled = unravel_index(index, old_val.shape)
-                    old_val = old_val[unravelled]
+            # Indexed array slice
+            if '[' in src:
+                flattened_src = old_val.flatten()
+                old_val = flattened_src[index]
+            else:
+                unravelled = unravel_index(index, old_val.shape)
+                old_val = old_val[unravelled]
 
         return old_val
 

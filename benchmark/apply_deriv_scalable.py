@@ -29,11 +29,27 @@ if __name__ == "__main__":
     inputs = ['comp.y_in[%d, 0]'%n for n in range(N)]
     outputs = ['comp.y_out[%d, 0]'%n for n in range(N)]
 
-    t0 = time()
-    J = top.driver.workflow.calc_gradient(inputs=inputs,
-                                          outputs=outputs,
-                                          mode = 'forward')
-    print 'Time elapsed', time() - t0
+
+    import sys
+    if len(sys.argv) > 1 and '-prof' in sys.argv:
+        import cProfile
+        import pstats
+        sys.argv.remove('-prof') #unittest doesn't like -prof
+        cProfile.run('J = top.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs, mode = "forward")', 'profout')
+        p = pstats.Stats('profout')
+        p.strip_dirs()
+        p.sort_stats('cumulative', 'time')
+        p.print_stats()
+        print '\n\n---------------------\n\n'
+        p.print_callers()
+        print '\n\n---------------------\n\n'
+        p.print_callees()
+    else:
+        t0 = time()
+        J = top.driver.workflow.calc_gradient(inputs=inputs,
+                                              outputs=outputs,
+                                              mode = 'forward')
+        print 'Time elapsed', time() - t0
 
 
     # python -m cProfile -s time fd_scalable.py >z
