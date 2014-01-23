@@ -204,6 +204,7 @@ class Component(Container):
         self._dir_context = None
 
         self.ffd_order = 0
+        self._provideJ_bounds = None
         self._case_id = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
