@@ -1108,7 +1108,7 @@ class DependencyGraph(nx.DiGraph):
             for target in targets:
                 if target.startswith('@fake'):
                     numfakes += 1
-                if  not target.startswith('@'):
+                elif not target.startswith('@'):
                     comp, _, var = target.partition('.')
                     if var:
                         if comp not in comps:
