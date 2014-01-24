@@ -460,7 +460,7 @@ components.  The source component generates both text and binary files.
                                content_type='data'), iotype='out')
         def execute(self):
             # Create the files.
-            with open(self.outfile.path, 'w') as out:
+            with open(self.txtfile.path, 'w') as out:
                 out.write('Hello world!\n')
             self.txtfile = self.txtfile.copy(self)  # Force new value.
 
