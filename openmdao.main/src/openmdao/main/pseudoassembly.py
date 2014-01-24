@@ -150,7 +150,7 @@ class PseudoAssembly(object):
             # Note: Only needed for differentiable islands, which are handled
             # with Fake Finite Difference.
             # Don't do this for full-model finite difference.
-            if first and self.ffd_order>0:
+            if first and self.ffd_order > 0:
                 for name in self.comps:
                     comp = self.wflow.scope.get(name)
 

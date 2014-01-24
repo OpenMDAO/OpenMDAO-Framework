@@ -1,3 +1,7 @@
+"""
+Solver based on scipy.optimize.brentq
+"""
+
 from scipy.optimize import brentq
 
 from openmdao.main.driver import Driver
@@ -60,7 +64,7 @@ class Brent(Driver):
             kwargs['rtol'] = self.rtol
 
         # Brent's method
-        xstar = brentq(self._eval,**kwargs)
+        xstar = brentq(self._eval, **kwargs)
 
         # set result
         #param.set(xstar)

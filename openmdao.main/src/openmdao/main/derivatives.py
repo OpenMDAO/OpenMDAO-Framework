@@ -17,8 +17,9 @@ except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, zeros, \
-                                             ones
+                                    ones, unravel_index, vstack, hstack
 
+# pylint: disable-msg=C0103
 
 def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
