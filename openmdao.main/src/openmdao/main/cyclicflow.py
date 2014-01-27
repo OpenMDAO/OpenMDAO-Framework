@@ -6,11 +6,11 @@ from ordereddict import OrderedDict
 from networkx.algorithms.components import strongly_connected_components
 
 try:
-    from numpy import ndarray, hstack
+    from numpy import ndarray, hstack, zeros
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray
+    from openmdao.main.numpy_fallback import ndarray, hstack, zeros
 
 
 from openmdao.main.array_helpers import flattened_value
@@ -222,12 +222,36 @@ class CyclicWorkflow(SequentialWorkflow):
 
         return self._edges
 
-    def get_dependents(self):
+    def get_dependents(self, fixed_point=False):
         """Returns a list of current values of the dependents. This includes
         both constraints and severed sources.
+
+        fixed_point: bool
+            Set to True if we are doing fixed-point iteration instead of a more
+            general solve. In such a case, we need to swap the order of the
+            constraints to match the parameter order. We also may need to swap
+            signs on the constraints.
         """
 
         deps = self._parent.eval_eq_constraints(self.scope)
+
+        # Reorder for fixed point
+        if fixed_point == True:
+            newdeps = zeros(len(deps))
+            eqcons = self._parent.get_eq_constraints()
+            old_j = 0
+            for key, value in eqcons.iteritems():
+                con_targets = value.get_referenced_varpaths()
+                new_j = 0
+                for params in self._parent.list_param_group_targets():
+                    if params[0] == value.rhs.text:
+                        newdeps[new_j] = deps[old_j]
+                    elif params[0] == value.lhs.text:
+                        newdeps[new_j] = -deps[old_j]
+                    new_j += 1
+                old_j += 1
+            deps = newdeps
+
         sev_deps = []
         for src, target in self._severed_edges:
 
