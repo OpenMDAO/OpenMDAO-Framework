@@ -604,7 +604,7 @@ This means they can be handled as input or output variables.
     class Fred(Component):
         """ A component that takes a class as an input """
     
-        recorder = Instance(CSVCaseRecorder, iotype="in" desc='Something to append() to.)
+        recorder = Instance(CSVCaseRecorder, iotype="in", desc='Something to append() to.')
  
 In the above example, the *Instance* called *recorder* can, and should be used the same way as *recorder*
 from the previous *Slot* example. However, you can connect *recorder* to output variables should you choose. Such
