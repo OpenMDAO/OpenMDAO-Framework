@@ -1,7 +1,7 @@
 """
-This is a simple iteration driver that basically runs a workflow, passing the output
-to the input for the next iteration. Relative change and number of iterations
-are used as termination criteria.
+This is a simple iteration driver that basically runs a workflow, passing the
+output to the input for the next iteration. Relative change and number of
+iterations are used as termination criteria.
 """
 
 import logging
@@ -47,7 +47,6 @@ class FixedPointIterator(Driver):
     def __init__(self):
         super(FixedPointIterator, self).__init__()
 
-        self.history = zeros(0)
         self.current_iteration = 0
 
         self.workflow = CyclicWorkflow()
@@ -68,10 +67,9 @@ class FixedPointIterator(Driver):
         val0 = self.workflow.get_independents()
 
         nvar = len(val0)
-        history = zeros([self.max_iteration, nvar])
         delta = zeros(nvar)
 
-        history[0, :] = self.workflow.get_dependents()
+        res = self.workflow.get_dependents(fixed_point=True)
 
         if self.norm_order == 'Infinity':
             order = float('inf')
@@ -86,14 +84,14 @@ class FixedPointIterator(Driver):
 
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
-                self.history = history[:self.current_iteration+1, :]
 
                 self._logger.warning('Max iterations exceeded without '
                                      'convergence.')
+                self.record_case()
                 return
 
             # Pass output to input
-            val0 += history[self.current_iteration, :]
+            val0 += res
             self.workflow.set_independents(val0)
 
             # run the workflow
@@ -106,22 +104,21 @@ class FixedPointIterator(Driver):
             self.current_iteration += 1
 
             # check convergence
-            delta[:] = self.workflow.get_dependents()
-            history[self.current_iteration] = delta
+            delta[:] = self.workflow.get_dependents(fixed_point=True)
+            res = delta
 
             if norm(delta, order) < self.tolerance:
                 break
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
-        self.history = history[:self.current_iteration+1, :]
 
     def check_config(self):
         """Make sure the problem is set up right."""
 
         # We need to figure our severed edges before querying.
         self.workflow._get_topsort()
-        n_dep = len(self.workflow.get_dependents())
+        n_dep = len(self.workflow.get_dependents(fixed_point=True))
         n_indep = len(self.workflow.get_independents())
 
         if n_dep == 0:
