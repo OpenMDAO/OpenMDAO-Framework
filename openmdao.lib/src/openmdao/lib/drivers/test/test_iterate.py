@@ -99,13 +99,41 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("simple", Simple2())
         self.top.driver.workflow.add('simple')
 
-        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_constraint('simple.outvar = simple.invar')
         self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.run()
 
         self.assertAlmostEqual(self.top.simple.invar,
                                self.top.simple.outvar, places=6)
         self.assertEqual(self.top.driver.current_iteration, 1)
+
+    def test_badcon(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Simple2())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.invar - simple.outvar = 0')
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: Please specify constraints in the form 'A=B'"
+            msg += ': simple.invar - simple.outvar = 0'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
+        self.top.driver.clear_constraints()
+        self.top.driver.add_constraint('simple.invar - simple.outvar = simple.exec_count')
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: Please specify constraints in the form 'A=B'"
+            msg += ': simple.invar - simple.outvar = simple.exec_count'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
 
     def test_multi_success(self):
         self.top.add("driver", FixedPointIterator())

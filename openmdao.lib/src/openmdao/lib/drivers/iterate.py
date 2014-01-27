@@ -134,6 +134,20 @@ class FixedPointIterator(Driver):
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)
 
+        # Check the eq constraints to make sure they look ok.
+        for eqcon in self.get_constraints().values():
+
+            if eqcon.rhs.text == '0' or eqcon.lhs.text == '0':
+                msg = "Please specify constraints in the form 'A=B'"
+                msg += ': %s = %s' % (eqcon.lhs.text, eqcon.rhs.text)
+                self.raise_exception(msg, RuntimeError)
+
+            if len(eqcon.get_referenced_varpaths()) > 2:
+                msg = "Please specify constraints in the form 'A=B'"
+                msg += ': %s = %s' % (eqcon.lhs.text, eqcon.rhs.text)
+                self.raise_exception(msg, RuntimeError)
+
+
 
 @add_delegate(HasStopConditions)
 class IterateUntil(Driver):
