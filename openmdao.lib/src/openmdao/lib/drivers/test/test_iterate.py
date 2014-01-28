@@ -216,7 +216,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            msg = "driver: FixedPointIterator requires a constraint equation or a cyclic workflow."
+            msg = "driver: FixedPointIterator requires a cyclic workflow, or a " + \
+            "parameter/constraint pair."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
@@ -226,7 +227,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            msg = "driver: FixedPointIterator requires an input parameter or a cyclic workflow."
+            msg = "driver: The number of input parameters must equal the " \
+                  "number of output constraint equations in FixedPointIterator."
             self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
