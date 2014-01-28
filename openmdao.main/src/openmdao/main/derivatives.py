@@ -504,7 +504,7 @@ def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
 
         if ':' not in ostring and len(ox) > 1:
             ostring = 'vstack(%s)' % ostring
-        if ':' not in istring and len(ox) > 1:
+        if ':' not in istring and len(ix) > 1:
             istring = 'hstack(%s)' % istring
 
         return eval('J[%s, %s]' % (ostring, istring))
