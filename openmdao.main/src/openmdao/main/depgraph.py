@@ -217,9 +217,7 @@ def _break_loop(graph, loop):
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
-        self._severed_edges = {}
-        self._saved_comp_graph = None
-        self._saved_loops = None
+        self._severed_edges = []
         self.config_changed()
 
     def base_var(self, node):
@@ -287,6 +285,7 @@ class DependencyGraph(nx.DiGraph):
         self._loops = None
         self._saved_loops = None
         self._saved_comp_graph = None
+        self._chvars = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -678,6 +677,10 @@ class DependencyGraph(nx.DiGraph):
         by the starting node.  This captures all var and subvar
         nodes associated with the starting node.
         """
+        ret = self._chvars.get((node, direction))
+        if ret is not None:
+            return ret
+        
         bunch = set()
         ndot = node+'.'
         nbrack = node+'['
@@ -697,8 +700,10 @@ class DependencyGraph(nx.DiGraph):
                 # sucessors instead of predecessors
                 bunch.update(self.successors_iter(p))
 
-        return [n for n in bunch if n.startswith(ndot)
+        ret = [n for n in bunch if n.startswith(ndot)
                                  or n.startswith(nbrack)]
+        self._chvars[(node, direction)] = ret
+        return ret[:]
 
     def subvars(self, node):
         if is_basevar_node(self, node):

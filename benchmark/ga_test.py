@@ -28,6 +28,7 @@ class RBOpt(Assembly):
         self.driver.add_constraint('func.x1+func.x2-2.0<=0.0')
 
 if __name__=='__main__':
+    import sys
     import time
     prob = set_as_top(RBOpt())
     tt = time.time()
