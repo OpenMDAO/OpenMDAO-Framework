@@ -1108,7 +1108,7 @@ class DependencyGraph(nx.DiGraph):
             for target in targets:
                 if target.startswith('@fake'):
                     numfakes += 1
-                if  not target.startswith('@'):
+                elif not target.startswith('@'):
                     comp, _, var = target.partition('.')
                     if var:
                         if comp not in comps:
@@ -1332,9 +1332,9 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
 
 
 def _check_for_missing_derivs(scope, comps):
-    # we have the edges that are actually needed for the derivatives, so
-    # check all of the corresponding components now to see if they are
-    # supplying the needed derivatives
+    ''' we have the edges that are actually needed for the derivatives, so
+    check all of the corresponding components now to see if they are
+    supplying the needed derivatives.'''
     removed = []
     for cname, vnames in comps.items():
         if cname is None or cname.startswith('~'):

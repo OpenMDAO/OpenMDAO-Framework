@@ -72,7 +72,7 @@ class Multi(Component):
 
     def execute(self):
         self.out1 = self.in1/10.0
-        self.out2 = self.in2/10.0
+        self.out2 = self.in2/15.0
 
 
 class ArrayMulti(Component):
@@ -99,13 +99,41 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("simple", Simple2())
         self.top.driver.workflow.add('simple')
 
-        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_constraint('simple.outvar = simple.invar')
         self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.run()
 
         self.assertAlmostEqual(self.top.simple.invar,
                                self.top.simple.outvar, places=6)
         self.assertEqual(self.top.driver.current_iteration, 1)
+
+    def test_badcon(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Simple2())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.invar - simple.outvar = 0')
+        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: Please specify constraints in the form 'A=B'"
+            msg += ': simple.invar - simple.outvar = 0'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
+        self.top.driver.clear_constraints()
+        self.top.driver.add_constraint('simple.invar - simple.outvar = simple.exec_count')
+        try:
+            self.top.run()
+        except RuntimeError, err:
+            msg = "driver: Please specify constraints in the form 'A=B'"
+            msg += ': simple.invar - simple.outvar = simple.exec_count'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
 
     def test_multi_success(self):
         self.top.add("driver", FixedPointIterator())
@@ -114,6 +142,38 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out1 = simple.in1')
         self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.in1, .01, .002)
+        assert_rel_error(self, self.top.simple.out1, .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+    def test_multi_swapped(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Multi())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_constraint('simple.out1 = simple.in1')
+        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.in1, .01, .002)
+        assert_rel_error(self, self.top.simple.out1, .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+    def test_multi_swapped_reversed(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Multi())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_constraint('simple.in1 = simple.out1')
         self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
         self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
         self.top.driver.tolerance = .02
@@ -141,7 +201,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple1())
         self.top.driver.workflow.add('simple')
-        self.top.driver.add_constraint('simple.outvar - simple.invar = 0')
+        self.top.driver.add_constraint('simple.outvar = simple.invar')
         self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
         self.top.driver.max_iteration = 3
 

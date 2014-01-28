@@ -1,6 +1,5 @@
 """
-    ``broydensolver.py`` -- Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
-
+Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
 """
 
 # pylint: disable-msg=C0103
@@ -23,7 +22,7 @@ else:
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.datatypes.api import Float, Int, Enum
 
-from openmdao.main.api import Driver, CyclicWorkflow  
+from openmdao.main.api import Driver, CyclicWorkflow
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
