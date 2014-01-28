@@ -174,6 +174,16 @@ class BLISS(Architecture):
             
        
                 
-        
-    
+if __name__ == "__main__": 
+
+    from openmdao.lib.optproblems.api import SellarProblem
+    #from openmdao.main.api import ArchitectureAssembly
+
+
+    sp = SellarProblem()
+    sp.architecture = BLISS()
+
+    sp.check_config()
+
+    sp.run()
         
