@@ -20,6 +20,7 @@ class BLISS(Architecture):
         self.has_global_des_vars = True
         
     def configure(self): 
+
         
         global_dvs = self.parent.get_global_des_vars()
         local_dvs = self.parent.get_local_des_vars_by_comp()

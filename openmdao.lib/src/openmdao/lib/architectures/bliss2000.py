@@ -7,8 +7,7 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 """
 
 
-from openmdao.main.api import Driver, Architecture, SequentialWorkflow, \
-                              Component, Assembly
+from openmdao.main.api import Driver, Architecture, Component, Assembly
 from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
                                      IterateUntil, FixedPointIterator, \
                                      NeighborhoodDOEdriver, SLSQPdriver
@@ -93,7 +92,7 @@ class SubSystemOpt(Assembly):
             self.weights = self.objective_comp.weights
             self.var_names = self.objective_comp.var_names
         
-            self.add('driver',CONMINdriver())
+            self.add('driver',SLSQPdriver())
             self.driver.add_objective("objective_comp.f_wy")
             self.driver.fdch = .00001
             #self.driver.fdchm = .0001
@@ -148,7 +147,7 @@ class SubSystemOpt(Assembly):
 class BLISS2000(Architecture):
     
     def __init__(self, *args, **kwargs):
-        super(BLISS2000, self).__init__(*args, **kwargs)
+        super(BLISS2000, self).__init__()
         
         # the following variables determine the behavior of check_config
         self.param_types = ['continuous']
@@ -178,7 +177,6 @@ class BLISS2000(Architecture):
         
         driver=self.parent.add("driver",FixedPointIterator())
                
-        driver.workflow = SequentialWorkflow()           
         driver.max_iteration=15 #should be enough to converge
         driver.tolerance = .005
         meta_models = {}
@@ -226,9 +224,9 @@ class BLISS2000(Architecture):
             dis_doe.alpha= .1
             dis_doe.beta = .01
 
-            dis_doe.add_event("meta_model_%s.train_next"%comp)
+            dis_doe.add_event("%s.train_next"%meta_model.name)
             dis_doe.force_execute = True
-            driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
+            #driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
                 
       
         
@@ -274,7 +272,7 @@ class BLISS2000(Architecture):
                     new_c = new_c.replace(var,mapped_name)
                 sysopt.add_constraint(new_c)
         
-        driver.workflow.add('sysopt')
+        #driver.workflow.add('sysopt')
 
         #setup paramter for fixedpointiterator
         
@@ -286,24 +284,40 @@ class BLISS2000(Architecture):
             s=system_var_map[l[0]].replace(".","_")
             
             s2='%s_store'%s
-            self.parent.add(s2,Float(0.0))
+            self.parent.add(s2,Float(0.0,iotype="in"))
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))
             
             
         for i,g in enumerate(global_dvs):
             s2='global%d_store'%i
-            self.parent.add(s2,Float(0.0)) 
+            self.parent.add(s2,Float(0.0,iotype="in")) 
             driver.add_parameter(s2 , low=g[1].low, high=g[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[g[1].target],s2))       
             
+
+        driver.workflow.add(['DOE_Trainer_dis2','DOE_Trainer_dis1'])
             
 if __name__=="__main__": 
     
     from openmdao.lib.optproblems.api import UnitScalableProblem
+    from openmdao.lib.optproblems.api import SellarProblem
     
-    p = UnitScalableProblem()
+    p = SellarProblem()
     
     p.architecture = BLISS2000()
-    
+
+    p.check_config()
+
+    print p.driver
+    print [n.name for n in p.driver.workflow]
+    #print [n.name for n in p.DOE_Trainer_dis1.workflow]
+
+    #print p.DOE_Trainer_dis1.get_events()
+
+    # from openmdao.util.graphplot import plot_graphs
+
+    # plot_graphs(p)
+    # exit()
+
     p.run()
