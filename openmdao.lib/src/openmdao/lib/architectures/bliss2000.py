@@ -8,9 +8,9 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 
 
 from openmdao.main.api import Driver, Architecture, Component, Assembly
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      IterateUntil, FixedPointIterator, \
-                                     NeighborhoodDOEdriver, SLSQPdriver
+                                     NeighborhoodDOEdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, \
                                            OptLatinHypercube, LatinHypercube
@@ -113,7 +113,7 @@ class SubSystemOpt(Assembly):
 
                 self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
                 self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
-                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high) #optimizer varries broadcast input
+                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high, start=p.start) #optimizer varries broadcast input
             
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
@@ -215,7 +215,7 @@ class BLISS2000(Architecture):
                 dis_doe.add_parameter(mapped_name,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
             for dv in global_dvs_by_comp[comp]:
-                dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high,start=dv.start)
+                dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high)
             if local_dvs_by_comp.get(comp): #add weights if they are there
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
@@ -226,7 +226,7 @@ class BLISS2000(Architecture):
 
             dis_doe.add_event("%s.train_next"%meta_model.name)
             dis_doe.force_execute = True
-            #driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
+            driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
                 
       
         
@@ -272,7 +272,7 @@ class BLISS2000(Architecture):
                     new_c = new_c.replace(var,mapped_name)
                 sysopt.add_constraint(new_c)
         
-        #driver.workflow.add('sysopt')
+        driver.workflow.add('sysopt')
 
         #setup paramter for fixedpointiterator
         
@@ -296,7 +296,7 @@ class BLISS2000(Architecture):
             driver.add_constraint('%s = %s'%(system_var_map[g[1].target],s2))       
             
 
-        driver.workflow.add(['DOE_Trainer_dis2','DOE_Trainer_dis1'])
+        #driver.workflow.add(['DOE_Trainer_dis2','DOE_Trainer_dis1'])
             
 if __name__=="__main__": 
     
@@ -309,15 +309,9 @@ if __name__=="__main__":
 
     p.check_config()
 
-    print p.driver
-    print [n.name for n in p.driver.workflow]
-    #print [n.name for n in p.DOE_Trainer_dis1.workflow]
-
-    #print p.DOE_Trainer_dis1.get_events()
-
-    # from openmdao.util.graphplot import plot_graphs
-
-    # plot_graphs(p)
-    # exit()
-
+    #print [param for param in p.DOE_Trainer_dis2.get_parameters()]
+    #exit()
     p.run()
+
+    for k,v in p.check_solution().iteritems(): 
+        print "    ",k,": ",v
