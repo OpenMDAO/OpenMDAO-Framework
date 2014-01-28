@@ -285,7 +285,9 @@ class DependencyGraph(nx.DiGraph):
         self._loops = None
         self._saved_loops = None
         self._saved_comp_graph = None
-        self._chvars = {}
+        self._chvars = {} # cache for child vars
+        self._bndryins = {} # cache for boundary inputs
+        self._bndryouts = {} # cache for boundary outputs
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -808,6 +810,10 @@ class DependencyGraph(nx.DiGraph):
         If connected is True, return a list of only those nodes
         that are connected externally.
         """
+        ret = self._bndryins.get(connected)
+        if ret is not None:
+            return ret
+        
         ins = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -817,13 +823,18 @@ class DependencyGraph(nx.DiGraph):
                             ins.append(node)
                     else:
                         ins.append(node)
-        return ins
+        self._bndryins[connected] = ins
+        return ins[:]
 
     def get_boundary_outputs(self, connected=False):
         """Returns outputs that are on the component boundary.
         If connected is True, return a list of only those nodes
         that are connected externally.
         """
+        ret = self._bndryouts.get(connected)
+        if ret is not None:
+            return ret
+        
         outs = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -833,7 +844,8 @@ class DependencyGraph(nx.DiGraph):
                             outs.append(node)
                     else:
                         outs.append(node)
-        return outs
+        self._bndryouts[connected] = outs
+        return outs[:]
 
     def get_extern_srcs(self):
         """Returns sources from external to our parent
