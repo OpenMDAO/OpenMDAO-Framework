@@ -3,6 +3,8 @@
 #public symbols
 __all__ = ["Driver"]
 
+from uuid import uuid1
+
 import fnmatch
 
 from zope.interface import implementedBy
@@ -393,6 +395,8 @@ class Driver(Component):
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
+        if self._case_id == '' and self._parent._case_id: 
+            self._case_id = self._parent._case_id
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
@@ -496,6 +500,8 @@ class Driver(Component):
                     self.raise_exception(msg, ValueError)
 
         case = Case(case_input, case_output, parent_uuid=self._case_id)
+
+
 
         for recorder in self.recorders:
             recorder.record(case)

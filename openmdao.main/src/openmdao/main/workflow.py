@@ -92,7 +92,12 @@ class Workflow(object):
         self._exec_count += 1
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
-                
+        
+        # print "workflow check", case_id, iterbase, 
+        # if self._parent: 
+        #     print self._parent.name
+        # else:
+        #     print "blank"
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order, case_id=case_id)
