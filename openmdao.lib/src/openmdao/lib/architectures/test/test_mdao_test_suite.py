@@ -54,26 +54,28 @@ class TestArchTestSuite(unittest.TestCase):
 
     def test_architectures(self): 
 
-        archs = build_arch_list(include=['ScalableProblem', 'SellarProblem'])
-        probs = build_optproblem_list(include=['IDF','MDF','CO','BLISS','BLISS2000',])
+        probs = build_optproblem_list(include=['UnitScalableProblem', 'SellarProblem'])
+        archs = build_arch_list(include=['MDF','IDF','BLISS','CO'])
 
         for p in probs: 
             for a in archs: 
 
-               
-
+        
                 prob_name = p.__class__.__name__
                 arch_name = a.__class__.__name__
 
                 prob = set_as_top(p.__class__())
 
                 prob.architecture = a.__class__()
+                prob.architecture.parent = prob
+
                 try:
                     prob.check_config()
+                    prob.run()
                 except: 
                     import traceback
                     traceback.print_exc()
                     self.fail('%s architecture could not be configured for %s'%(prob_name, arch_name))
-   
+
 if __name__ == '__main__':
     unittest.main()

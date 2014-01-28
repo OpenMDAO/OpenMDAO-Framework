@@ -112,25 +112,18 @@ class CO(Architecture):
             local_opt.add_objective(residuals)
 
 
-        """    print local_opt.name
-            print local_opt.get_objectives().keys()[0]
-            for param in local_opt.get_parameters(): 
-                print param
-            print "constraints: "     
-            for constraint in local_opt.list_constraints(): 
-                print constraint
-            
-            print 
-            print
-            
-        print global_opt.name
-        print global_opt.get_objectives().keys()[0]
-        for param in global_opt.get_parameters(): 
-            print param
-        print "constraints: "     
-        for constraint in global_opt.list_constraints(): 
-            print constraint
-        
-        print 
-        print"""            
+if __name__ == "__main__": 
+    from openmdao.lib.optproblems.api import SellarProblem
+    #from openmdao.main.api import ArchitectureAssembly
+
+
+    sp = SellarProblem()
+    sp.architecture = CO()
+
+    sp.check_config()
+
+    sp.run()
+
+    for k,v in sp.check_solution().iteritems(): 
+        print "    ",k,": ",v          
             
