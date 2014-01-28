@@ -291,6 +291,7 @@ class DependencyGraph(nx.DiGraph):
         self._extrnsrcs = None
         self._extrndsts = None
         self._srcs = {}
+        self._conns = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -627,18 +628,21 @@ class DependencyGraph(nx.DiGraph):
 
     def list_connections(self, show_passthrough=True,
                                show_external=False):
-        conns = [(u,v) for u,v in self.edges_iter()
-                          if is_connection(self, u, v)]
-
-        if show_passthrough is False:
-            conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
-
-        if show_external is False:
-            conns = [(u,v) for u,v in conns
-                          if not (u.startswith('parent.')
-                               or v.startswith('parent.'))]
-
-        return conns
+        conns = self._conns.get((show_passthrough, show_external))
+        if conns is None:
+            conns = [(u,v) for u,v in self.edges_iter()
+                              if is_connection(self, u, v)]
+    
+            if show_passthrough is False:
+                conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
+    
+            if show_external is False:
+                conns = [(u,v) for u,v in conns
+                              if not (u.startswith('parent.')
+                                   or v.startswith('parent.'))]
+    
+            self._conns[(show_passthrough, show_external)] = conns
+        return conns[:]
 
     def get_sources(self, name):
         """Return the node that's actually a source for the
