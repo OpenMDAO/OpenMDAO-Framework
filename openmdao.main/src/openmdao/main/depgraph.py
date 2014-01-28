@@ -285,9 +285,12 @@ class DependencyGraph(nx.DiGraph):
         self._loops = None
         self._saved_loops = None
         self._saved_comp_graph = None
-        self._chvars = {} # cache for child vars
-        self._bndryins = {} # cache for boundary inputs
-        self._bndryouts = {} # cache for boundary outputs
+        self._chvars = {} 
+        self._bndryins = {} 
+        self._bndryouts = {} 
+        self._extrnsrcs = None
+        self._extrndsts = None
+        self._srcs = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -643,15 +646,18 @@ class DependencyGraph(nx.DiGraph):
         This should only be called for destination nodes (inputs
         or output boundary vars).
         """
-        srcs = []
-        for u,v in self.in_edges_iter(name):
-            if is_connection(self, u, v):
-                srcs.append(u)
-            elif is_subvar_node(self, u):
-                for uu,vv in self.in_edges_iter(u):
-                    if is_connection(self, uu, vv):
-                        srcs.append(uu)
-        return srcs
+        ret = self._srcs.get(name)
+        if ret is None:
+            srcs = []
+            for u,v in self.in_edges_iter(name):
+                if is_connection(self, u, v):
+                    srcs.append(u)
+                elif is_subvar_node(self, u):
+                    for uu,vv in self.in_edges_iter(u):
+                        if is_connection(self, uu, vv):
+                            srcs.append(uu)
+            self._srcs[name] = ret = srcs
+        return ret[:]
 
     def _check_source(self, path, src):
         """Raise an exception if the specified source differs from
@@ -851,15 +857,19 @@ class DependencyGraph(nx.DiGraph):
         """Returns sources from external to our parent
         component that are connected to our boundary inputs.
         """
-        return [n for n in self.nodes_iter()
-                    if is_extern_src(self, n)]
+        if self._extrnsrcs is None:
+            self._extrnsrcs = [n for n in self.nodes_iter()
+                                      if is_extern_src(self, n)]
+        return self._extrnsrcs[:]
 
     def get_extern_dests(self):
         """Returns destinations that are external to our parent
         component that are connected to our boundary outputs.
         """
-        return [n for n in self.nodes_iter()
-                    if is_extern_dest(self, n)]
+        if self._extrndsts is None:
+            self._extrndsts = [n for n in self.nodes_iter()
+                                   if is_extern_dest(self, n)]
+        return self._extrndsts[:]
 
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
