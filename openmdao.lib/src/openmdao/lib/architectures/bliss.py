@@ -97,7 +97,7 @@ class BLISS(Architecture):
             
             for i,param in enumerate(local_params): 
                 x_store_i = "%s[%d]"%(x_store,i)
-                bbopt.add_parameter(x_store_i,low=param.low,high=param.high)
+                bbopt.add_parameter(x_store_i,low=param.low,high=param.high, start=param.start)
                 dx = "(%s-%s)"%(x_store_i,param.targets[0])
                 delta_x.append(dx)
                 move_limit = (param.high-param.low)*20.0/100.0
@@ -136,7 +136,7 @@ class BLISS(Architecture):
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i
             target = list(param.targets)[0]
-            sysopt.add_parameter(z_store,low=param.low,high=param.high)
+            sysopt.add_parameter(z_store,low=param.low,high=param.high, start=param.start)
             dz = "(%s-%s)"%(z_store,target)
             delta_z.append(dz)
             move_limit = (param.high-param.low)*20.00/100.0  
