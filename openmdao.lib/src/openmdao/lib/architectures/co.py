@@ -42,7 +42,7 @@ class CO(Architecture):
         
         initial_conditions = [param.evaluate() for comp,param in global_dvs]
         #print "global initial conditions: ", initial_conditions
-        self.parent.add_trait('global_des_var_targets',Array(initial_conditions))
+        self.parent.add_trait('global_des_var_targets',Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(global_dvs): 
             target_var = 'global_des_var_targets[%d]'%i
             
@@ -54,7 +54,7 @@ class CO(Architecture):
                 
         initial_conditions = [couple.indep.evaluate() for key,couple in coupling.iteritems()]   
         #print "coupling initial conditions: ", initial_conditions
-        self.parent.add_trait('coupling_var_targets',Array(initial_conditions))
+        self.parent.add_trait('coupling_var_targets',Array(initial_conditions, iotype="in"))
         for i,(key,couple) in enumerate(coupling.iteritems()): 
             target_var = 'coupling_var_targets[%d]'%i
             low = couple.indep.low or -1e99
@@ -66,7 +66,7 @@ class CO(Architecture):
         
         initial_conditions = [param.evaluate() for comp,param in local_dvs]    
         #print "local initial conditions: ", initial_conditions
-        self.parent.add_trait("local_des_var_targets",Array(initial_conditions))
+        self.parent.add_trait("local_des_var_targets",Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(local_dvs):
             #Target variables for the local optimizations
             target_var = 'local_des_var_targets[%d]'%i
