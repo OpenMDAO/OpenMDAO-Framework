@@ -117,25 +117,25 @@ class FixedPointIterator(Driver):
         """Make sure the problem is set up right."""
 
         # We need to figure our severed edges before querying.
-        self.workflow._get_topsort()
-        n_dep = len(self.workflow.get_dependents(fixed_point=True))
-        n_indep = len(self.workflow.get_independents())
-
-        if n_dep == 0:
-            msg = "FixedPointIterator requires a constraint equation or a cyclic workflow."
-            self.raise_exception(msg, RuntimeError)
-
-        if n_indep == 0:
-            msg = "FixedPointIterator requires an input parameter or a cyclic workflow."
-            self.raise_exception(msg, RuntimeError)
+        eqcons = self.get_constraints().values()
+        n_dep = len(eqcons)
+        n_indep = len(self.get_parameters())
 
         if n_dep != n_indep:
             msg = "The number of input parameters must equal the number of" \
                   " output constraint equations in FixedPointIterator."
             self.raise_exception(msg, RuntimeError)
 
+        # Check to make sure we don't have a null problem.
+        if n_dep==0:
+            self.workflow._get_topsort()
+            if len(self.workflow._severed_edges) == 0:
+                msg = "FixedPointIterator requires a cyclic workflow, or a " + \
+                "parameter/constraint pair."
+                self.raise_exception(msg, RuntimeError)
+
         # Check the eq constraints to make sure they look ok.
-        for eqcon in self.get_constraints().values():
+        for eqcon in eqcons:
 
             if eqcon.rhs.text == '0' or eqcon.lhs.text == '0':
                 msg = "Please specify constraints in the form 'A=B'"
