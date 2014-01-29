@@ -597,7 +597,6 @@ class FiniteDifference(object):
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.out_bounds[src] = (out_size, out_size+width)
-            print src, val, width
             out_size += width
 
         self.J = zeros((out_size, in_size))
