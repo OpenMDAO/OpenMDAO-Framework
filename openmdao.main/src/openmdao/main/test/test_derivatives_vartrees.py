@@ -53,6 +53,7 @@ class DummyComp(Component):
 
         return ("x",),("y",)
 
+
 class CompWithVarTreeSubTree(Component): 
 
     ins = VarTree(TreeWithSubTree(), iotype="in")
@@ -111,6 +112,42 @@ class CompWithArrayVarTree(Component):
 
     def list_deriv_vars(self): 
         return ('ins.x',), ('outs.x',)
+
+class DummyCompVarTree(Component): 
+
+    ins = VarTree(TreeWithFloat(), iotype="in")
+    y = Float(iotype="out")
+
+    def execute(self): 
+        self.y = self.ins.x1
+
+    def provideJ(self): 
+
+        return array([1])
+
+    def list_deriv_vars(self): 
+
+        return ("ins.x",),("y",)
+
+
+class CompWithVarTreeMissingDeriv(Component):
+
+    x1 = Float(iotype="in")
+    outs = VarTree(TreeWithFloat(), iotype="out")
+    z = Float(iotype="out")
+
+
+    def execute(self): 
+        self.outs.x1 = 6*self.x1**2
+        self.outs.x2 = 10.0
+        self.z = 7.0
+
+    def provideJ(self): 
+        self.J = array([[12*self.x1,]])
+        return self.J
+
+    def list_deriv_vars(self): 
+        return ('x1'), ('outs.x1')
 
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
@@ -433,6 +470,76 @@ class TestDerivativeVarTree(unittest.TestCase):
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
         assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
+
+    def test_vartree_missing_derivs_error(self):
+        top = set_as_top(Assembly())
+
+        top.add('driver', SimpleDriver())
+        top.add('dis1', CompWithVarTreeMissingDeriv())
+        top.add('dis2',DummyCompVarTree())
+
+        top.dis1.missing_deriv_policy = 'error'
+        top.dis2.missing_deriv_policy = 'error'
+
+        top.connect('dis1.outs', 'dis2.ins')
+
+        top.driver.add_objective('(dis2.y)**2')
+        top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
+        top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
+
+        top.run()
+
+        try:
+            J = top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['outs.x2']")
+        else:
+            self.fail("exception expected")
+
+        top.driver.remove_constraint('dis1.outs.x1 < 24.0')
+        top.driver.add_constraint('dis2.ins.x2 < 5')
+        top.driver.remove_parameter('dis1.x')
+        top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
+
+        try:
+            J = top.driver.workflow.calc_gradient(mode='forward')
+        except Exception as err:
+            self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['ins.x2']")
+        else:
+            self.fail("exception expected")
+
+    def test_vartree_missing_derivs_zero(self):
+        top = set_as_top(Assembly())
+
+        top.add('driver', SimpleDriver())
+        top.add('dis1', CompWithVarTreeMissingDeriv())
+        top.add('dis2',DummyCompVarTree())
+
+        top.dis1.missing_deriv_policy = 'assume_zero'
+        top.dis2.missing_deriv_policy = 'assume_zero'
+
+        top.connect('dis1.outs', 'dis2.ins')
+
+        top.driver.add_objective('(dis2.y)**2')
+        top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
+        top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
+
+        top.run()
+
+        J_forward = top.driver.workflow.calc_gradient(mode='forward')
+        top.driver.workflow.config_changed()
+        J_fd = top.driver.workflow.calc_gradient(mode='forward')
+
+        assert_rel_error(self, linalg.norm(J_forward - J_fd), 0, .00001)
+
+
+        # self.top.driver.remove_constraint('dis1.outs.x1 < 24.0')
+        # self.top.driver.add_constraint('dis2.ins.x2 < 5')
+        # self.top.driver.remove_parameter('dis1.x')
+        # self.top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
+
+
+       
         
 if __name__ == "__main__": 
     unittest.main()
