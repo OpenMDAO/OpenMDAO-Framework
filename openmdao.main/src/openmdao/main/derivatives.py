@@ -469,10 +469,7 @@ def get_bounds(obj, input_keys, output_keys):
     obounds = {}
     nvar = 0
     for key in output_keys:
-        try:
-            val = obj.get(key)
-        except:
-            print 'hey'
+        val = obj.get(key)
         width = flattened_size('.'.join((obj.name, key)), val)
         shape = val.shape if hasattr(val, 'shape') else None
         obounds[key] = (nvar, nvar+width, shape)
