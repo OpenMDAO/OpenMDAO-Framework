@@ -51,7 +51,7 @@ class DummyGeometry(object):
         return [self.vars[n] for n in names]
 
     def list_deriv_vars(self): 
-        return ('x', 'y', 'z'), ('out')
+        return ('x', 'y', 'z'), ('geom_out')
 
     def provideJ(self): 
         self.J = np.array([[2, 0, 1],
@@ -199,16 +199,16 @@ class Testcase_deriv_obj(unittest.TestCase):
     def test_geom_provide_deriv_check_fd_tail(self):    
         
         raise nose.SkipTest("OpenMDAO can't identify when half a connection is non-differntiable yet")
-        self.top.run()
-        self._check_derivs()
+        #self.top.run()
+        #self._check_derivs()
 
     def test_geom_provide_deriv_check_analytic_tail_provideJ(self):    
         
         raise nose.SkipTest('ProvideJ not supported for non-differentiable conections yet')
     
-        self.top.replace('c2', GeomRecieveDerivProvideJ())
-        self.top.run()
-        self._check_derivs()
+        #self.top.replace('c2', GeomRecieveDerivProvideJ())
+        #self.top.run()
+        #self._check_derivs()
 
     def test_geom_provide_deriv_check_analytic_tail_apply_deriv(self):    
         self.top.replace('c2', GeomRecieveDerivApplyDeriv())

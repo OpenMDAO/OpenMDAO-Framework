@@ -1337,6 +1337,8 @@ def _check_for_missing_derivs(scope, comps):
     supplying the needed derivatives.'''
     removed = []
     for cname, vnames in comps.items():
+        vnames = set(vnames) # vnames may have dups
+        comps[cname] = vnames
         if cname is None or cname.startswith('~'):
             # skip boundary vars and pseudoassemblies
             continue
@@ -1348,19 +1350,28 @@ def _check_for_missing_derivs(scope, comps):
             douts = comp.list_outputs()
         else:
             dins, douts = comp.list_deriv_vars()
+            # correct for the one item tuple missing comma problem
+            if isinstance(dins, basestring):
+                dins = (dins,)
+            if isinstance(douts, basestring):
+                douts = (douts,)
+            for name in chain(dins, douts):
+                if not comp.contains(name):
+                    raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
+                                        (comp.get_pathname(), name))
         if len(dins) == 0 or len(douts) == 0:
             if hasattr(comp, 'provideJ'):
                 raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
             else:
                 continue  # we'll finite difference this comp
-        # handle vartrees
-        dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
-        douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
+        ## handle vartrees
+        #dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
+        #douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
         missing = []
         for name in vnames:
             if name not in dins and name not in douts:
-                nname = name.split('[', 1)[0].split('.', 1)[0]
-                if nname not in dins and nname not in douts and is_differentiable_var(nname, comp):
+                nname = name.split('[', 1)[0] #.split('.', 1)[0]
+                if nname not in dins and nname not in douts and is_differentiable_var(nname.split('.',1)[0], comp):
                     missing.append(nname)
         if missing:
             if comp.missing_deriv_policy == 'error':
@@ -1419,6 +1430,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
 
     rep_drivers, xtra_ins, xtra_outs = \
                    get_subdriver_graph(graph, inputs, outputs, wflow, full_fd)
+
+    _explode_vartrees(graph, scope)
 
     edges = _get_inner_edges(graph,
                              ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
@@ -1560,6 +1573,35 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
 
     graph.remove_edges_from(to_remove)
 
+    # disconnected boundary vars that are explicitly specified as inputs
+    # or outputs need to be added back so that bounds data can be kept
+    # for them
+
+    for inp in flatten_list_of_iters(inputs):
+        for drv in rep_drivers:
+            if to_PA_var(inp, '~%s' % drv) in graph:
+                inp = to_PA_var(inp, '~%s' % drv)
+                break
+        if inp not in graph:
+            if '@fake' not in graph:
+                graph.add_node('@fake')
+            graph.add_node(inp)
+            graph.add_edge('@fake', inp, conn=True)
+
+    for out in flatten_list_of_iters(outputs):
+        for drv in rep_drivers:
+            if to_PA_var(out, '~%s' % drv) in graph:
+                out = to_PA_var(out, '~%s' % drv)
+                break
+        if out not in graph:
+            if '@fake' not in graph:
+                graph.add_node('@fake')
+            graph.add_node(out)
+            graph.add_edge(out, '@fake', conn=True)
+
+    return graph
+
+def _explode_vartrees(graph, scope):
     # if full vartrees are connected, create subvar nodes for all of their
     # internal variables
     visited = set()
@@ -1587,32 +1629,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
                                             dest, destnames)
-
-    # disconnected boundary vars that are explicitly specified as inputs
-    # or outputs need to be added back so that bounds data can be kept
-    # for them
-
-    for inp in flatten_list_of_iters(inputs):
-        for drv in rep_drivers:
-            if to_PA_var(inp, '~%s' % drv) in graph:
-                inp = to_PA_var(inp, '~%s' % drv)
-                break
-        if inp not in graph:
-            if '@fake' not in graph:
-                graph.add_node('@fake')
-            graph.add_node(inp)
-            graph.add_edge('@fake', inp, conn=True)
-
-    for out in flatten_list_of_iters(outputs):
-        for drv in rep_drivers:
-            if to_PA_var(out, '~%s' % drv) in graph:
-                out = to_PA_var(out, '~%s' % drv)
-                break
-        if out not in graph:
-            if '@fake' not in graph:
-                graph.add_node('@fake')
-            graph.add_node(out)
-            graph.add_edge(out, '@fake', conn=True)
 
     return graph
 
