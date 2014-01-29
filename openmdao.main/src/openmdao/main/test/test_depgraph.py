@@ -46,6 +46,9 @@ class DumbClass(object):
         self._outputs = outputs[:]
         self._states = states[:]
         self._resids = resids[:]
+        
+    def get_pathname(self):
+        return self.name
 
     def get(self, name):
         return getattr(self, name, None)
@@ -69,7 +72,7 @@ class DumbClass(object):
         return self._resids
 
     def contains(self, name):
-        return hasattr(self, name)
+        return name in self._inputs or name in self._outputs or hasattr(self, name)
     
     def invalidate_deps(self, vnames=None):
         return None
