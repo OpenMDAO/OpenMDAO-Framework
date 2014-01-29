@@ -239,7 +239,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
         return
 
     input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the insideous one item tuple missing comma
+    # correct for the one item tuple missing comma problem
     if isinstance(input_keys, basestring):
         input_keys = (input_keys,)
     if isinstance(output_keys, basestring):
@@ -335,7 +335,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
         return
 
     input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the insideous one item tuple missing comma
+    # correct for the one item tuple missing comma problem
     if isinstance(input_keys, basestring):
         input_keys = (input_keys,)
     if isinstance(output_keys, basestring):

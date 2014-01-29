@@ -464,7 +464,7 @@ class Component(Container):
         """
 
         input_keys, output_keys = self.list_deriv_vars()
-        # correct for the insideous one item tuple missing comma
+        # correct for the one item tuple missing comma problem
         if isinstance(input_keys, basestring):
             input_keys = (input_keys,)
         if isinstance(output_keys, basestring):
@@ -536,7 +536,7 @@ class Component(Container):
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
         ffd_inputs, ffd_outputs = self.list_deriv_vars()
-        # correct for the insideous one item tuple missing comma
+        # correct for the one item tuple missing comma problem
         if isinstance(ffd_inputs, basestring):
             ffd_inputs = (ffd_inputs,)
         if isinstance(ffd_outputs, basestring):

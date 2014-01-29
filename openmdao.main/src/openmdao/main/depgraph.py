@@ -1350,7 +1350,7 @@ def _check_for_missing_derivs(scope, comps):
             douts = comp.list_outputs()
         else:
             dins, douts = comp.list_deriv_vars()
-            # correct for the insideous one item tuple missing comma
+            # correct for the one item tuple missing comma problem
             if isinstance(dins, basestring):
                 dins = (dins,)
             if isinstance(douts, basestring):
