@@ -230,6 +230,9 @@ class PseudoComponent(object):
                                     for dest in self._outdests])
         return conns
 
+    def contains(self, name):
+        return name=='out0' or name in self._inputs
+
     def make_connections(self, scope):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
