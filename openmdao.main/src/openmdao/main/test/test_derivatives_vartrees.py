@@ -123,11 +123,11 @@ class DummyCompVarTree(Component):
 
     def provideJ(self): 
 
-        return array([1])
+        return array([[1]])
 
     def list_deriv_vars(self): 
 
-        return ("ins.x",),("y",)
+        return ("ins.x1",),("y",)
 
 
 class CompWithVarTreeMissingDeriv(Component):
@@ -147,7 +147,7 @@ class CompWithVarTreeMissingDeriv(Component):
         return self.J
 
     def list_deriv_vars(self): 
-        return ('x1'), ('outs.x1')
+        return ('x1',), ('outs.x1',)
 
 
 @add_delegate(HasParameters, HasObjective, HasConstraints)
@@ -492,19 +492,19 @@ class TestDerivativeVarTree(unittest.TestCase):
         try:
             J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
-            self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['outs.x2']")
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['ins.x2']")
         else:
             self.fail("exception expected")
 
-        top.driver.remove_constraint('dis1.outs.x1 < 24.0')
+        top.driver.remove_constraint('dis1.outs.x2 < 24.0')
         top.driver.add_constraint('dis2.ins.x2 < 5')
-        top.driver.remove_parameter('dis1.x')
-        top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
+        top.driver.remove_parameter('dis1.x1')
+        top.driver.add_parameter('dis2.ins.x2', low=-10.0, high=10.0)
 
         try:
             J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
-            self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['ins.x2']")
+            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['ins.x2']")
         else:
             self.fail("exception expected")
 
