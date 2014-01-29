@@ -906,6 +906,11 @@ class Assembly(Component):
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
+
+        if not inputs or not outputs:
+            msg = 'Component %s has no analytic derivatives.' % obj.name
+            self.raise_exception(msg)
+            
         result = driver.workflow.check_gradient(inputs=inputs,
                                                 outputs=outputs,
                                                 stream=stream,

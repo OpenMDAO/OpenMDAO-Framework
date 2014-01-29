@@ -557,7 +557,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -574,7 +575,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
