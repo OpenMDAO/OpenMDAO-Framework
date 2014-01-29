@@ -2196,6 +2196,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = self.top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
+        
+        # This will error unless we ignore missing derivs
+        derivs = self.top.check_gradient(name='dis2')
+        self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
 
 class Comp2(Component):

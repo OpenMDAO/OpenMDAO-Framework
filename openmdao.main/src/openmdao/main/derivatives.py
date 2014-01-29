@@ -459,7 +459,10 @@ def get_bounds(obj, input_keys, output_keys):
     obounds = {}
     nvar = 0
     for key in output_keys:
-        val = obj.get(key)
+        try:
+            val = obj.get(key)
+        except:
+            print 'hey'
         width = flattened_size('.'.join((obj.name, key)), val)
         shape = val.shape if hasattr(val, 'shape') else None
         obounds[key] = (nvar, nvar+width, shape)
@@ -587,6 +590,7 @@ class FiniteDifference(object):
             val = self.scope.get(src)
             width = flattened_size(src, val)
             self.out_bounds[src] = (out_size, out_size+width)
+            print src, val, width
             out_size += width
 
         self.J = zeros((out_size, in_size))
