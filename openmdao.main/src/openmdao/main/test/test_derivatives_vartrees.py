@@ -472,61 +472,72 @@ class TestDerivativeVarTree(unittest.TestCase):
         assert_rel_error(self, linalg.norm(J_true - J), 0, .00001)
 
     def test_vartree_missing_derivs_error(self):
-        self.top = set_as_top(Assembly())
+        top = set_as_top(Assembly())
 
-        self.top.add('driver', SimpleDriver())
-        self.top.add('dis1', CompWithVarTreeMissingDeriv())
-        self.top.add('dis2',DummyCompVarTree())
+        top.add('driver', SimpleDriver())
+        top.add('dis1', CompWithVarTreeMissingDeriv())
+        top.add('dis2',DummyCompVarTree())
 
-        self.top.dis1.missing_deriv_policy = 'error'
-        self.top.dis2.missing_deriv_policy = 'error'
+        top.dis1.missing_deriv_policy = 'error'
+        top.dis2.missing_deriv_policy = 'error'
 
-        self.top.connect('dis1.outs', 'dis2.ins')
+        top.connect('dis1.outs', 'dis2.ins')
 
-        self.top.driver.add_objective('(dis2.y)**2')
-        self.top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
-        self.top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
+        top.driver.add_objective('(dis2.y)**2')
+        top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
+        top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
 
-        self.top.run()
+        top.run()
 
         try:
-            J = self.top.driver.workflow.calc_gradient(mode='forward')
+            J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['outs.x2']")
         else:
             self.fail("exception expected")
 
-        self.top.driver.remove_constraint('dis1.outs.x1 < 24.0')
-        self.top.driver.add_constraint('dis2.ins.x2 < 5')
-        self.top.driver.remove_parameter('dis1.x')
-        self.top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
+        top.driver.remove_constraint('dis1.outs.x1 < 24.0')
+        top.driver.add_constraint('dis2.ins.x2 < 5')
+        top.driver.remove_parameter('dis1.x')
+        top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
 
         try:
-            J = self.top.driver.workflow.calc_gradient(mode='forward')
+            J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err), "'dis1' doesn't provide analytical derivatives ['ins.x2']")
         else:
             self.fail("exception expected")
 
     def test_vartree_missing_derivs_zero(self):
-        self.top = set_as_top(Assembly())
+        top = set_as_top(Assembly())
 
-        self.top.add('driver', SimpleDriver())
-        self.top.add('dis1', CompWithVarTreeMissingDeriv())
-        self.top.add('dis2',DummyCompVarTree())
+        top.add('driver', SimpleDriver())
+        top.add('dis1', CompWithVarTreeMissingDeriv())
+        top.add('dis2',DummyCompVarTree())
 
-        self.top.dis1.missing_deriv_policy = 'assume_zero'
-        self.top.dis2.missing_deriv_policy = 'assume_zero'
+        top.dis1.missing_deriv_policy = 'assume_zero'
+        top.dis2.missing_deriv_policy = 'assume_zero'
 
-        self.top.connect('dis1.outs', 'dis2.ins')
+        top.connect('dis1.outs', 'dis2.ins')
 
-        self.top.driver.add_objective('(dis2.y)**2')
-        self.top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
-        self.top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
+        top.driver.add_objective('(dis2.y)**2')
+        top.driver.add_parameter('dis1.x1', low = -10.0, high = 10.0)
+        top.driver.add_constraint('dis1.outs.x2 < 24.0') #missing derivative
 
-        self.top.run()
+        top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        J_forward = top.driver.workflow.calc_gradient(mode='forward')
+        top.driver.workflow.config_changed()
+        J_fd = top.driver.workflow.calc_gradient(mode='forward')
+
+        assert_rel_error(self, linalg.norm(J_forward - J_fd), 0, .00001)
+
+
+        # self.top.driver.remove_constraint('dis1.outs.x1 < 24.0')
+        # self.top.driver.add_constraint('dis2.ins.x2 < 5')
+        # self.top.driver.remove_parameter('dis1.x')
+        # self.top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
+
 
        
         
