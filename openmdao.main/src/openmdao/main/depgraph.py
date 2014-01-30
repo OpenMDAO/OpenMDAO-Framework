@@ -282,6 +282,7 @@ class DependencyGraph(nx.DiGraph):
             self._srcs = {}
             self._conns = {}
             self._indegs = {}
+            self._dstvars = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -1058,27 +1059,33 @@ class DependencyGraph(nx.DiGraph):
         """Update the value of the given variable in the
         given scope using upstream variables.
         """
-        valid_set = set(self.find_prefixed_nodes([vname]))
-        for u,v,data in self.in_edges_iter(vname, data=True):
-            if 'conn' in data:
-                try:
-                    data['dexpr'].set(data['sexpr'].evaluate(scope=scope),
-                                      src=u, scope=scope)
-                except Exception as err:
-                    raise err.__class__("cannot set '%s' from '%s': %s" %
-                                         (v, u, str(err)))
-                valid_set.add(v)
-            else:
-                for uu,vv,ddata in self.in_edges_iter(u, data=True):
-                    if 'conn' in ddata:
-                        try:
-                            ddata['dexpr'].set(ddata['sexpr'].evaluate(scope=scope),
-                                               src=uu, scope=scope)
-                        except Exception as err:
-                            raise err.__class__("cannot set '%s' from '%s': %s" %
-                                                 (v, u, str(err)))
-                        valid_set.add(vv)
+        tup = self._dstvars.get(vname)
+        if tup is None:
+            valid_set = set(self.find_prefixed_nodes([vname]))
+            sexprs = []
+            dexprs = []
+            for u,v,data in self.in_edges_iter(vname, data=True):
+                if 'conn' in data:
+                    dexprs.append(data['dexpr'])
+                    sexprs.append(data['sexpr'])
+                    valid_set.add(v)
+                else:
+                    for uu,vv,ddata in self.in_edges_iter(u, data=True):
+                        if 'conn' in ddata:
+                            dexprs.append(ddata['dexpr'])
+                            sexprs.append(ddata['sexpr'])
+                            valid_set.add(vv)
+            self._dstvars[vname] = (sexprs, dexprs, valid_set)
+        else:
+            sexprs, dexprs, valid_set = tup
 
+        try:
+            for sexpr, dexpr in zip(sexprs, dexprs):
+                dexpr.set(sexpr.evaluate(scope=scope), src=sexpr.text, scope=scope)
+        except Exception as err:
+            raise err.__class__("cannot set '%s' from '%s': %s" %
+                                 (dexpr.text, sexpr.text, str(err)))
+        
         for node in valid_set:
             self.node[node]['valid'] = True
 
