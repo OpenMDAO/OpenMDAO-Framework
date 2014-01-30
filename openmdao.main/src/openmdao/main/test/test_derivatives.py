@@ -1300,6 +1300,22 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
 
+    def test_arrays_broadcast_fd(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', MyComp())
+        top.driver.workflow.add(['comp1'])
+
+        top.comp1.x3 = zeros((4, 1))
+        top.comp1.x4 = zeros((4, 1))
+        top.run()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2', ('comp1.x3', 'comp1.x4')],
+                                              outputs=['comp1.xx1'],
+                                              mode='fd')
+
+        self.assertEqual(0.0, abs(J).max())
+
     def test_array2D(self):
 
         top = set_as_top(Assembly())
@@ -2198,7 +2214,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = self.top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
-        
+
         # This will error unless we ignore missing derivs
         derivs = self.top.check_gradient(name='dis2')
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
