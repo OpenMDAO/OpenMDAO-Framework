@@ -281,6 +281,7 @@ class DependencyGraph(nx.DiGraph):
             self._extrndsts = None
             self._srcs = {}
             self._conns = {}
+            self._indegs = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -771,24 +772,34 @@ class DependencyGraph(nx.DiGraph):
                 continue
             else:
                 visited.add(src)
-
-            oldvalid = ndata[src]['valid']
+            sdata = ndata[src]
+            oldvalid = sdata['valid']
             if oldvalid is True:
-                if self.in_degree(src) or src.startswith('parent.'): # don't invalidate unconnected inputs
+                if src.startswith('parent.'):
                     ndata[src]['valid'] = False
-                if is_boundary_node(self, src) and is_output_base_node(self, src):
+                else:
+                    indeg = self._indegs.get(src)
+                    if indeg is None:
+                        indeg = self.in_degree(src)
+                        self._indegs[src] = indeg
+                    if indeg:  # don't invalidate unconnected inputs
+                        ndata[src]['valid'] = False
+                if 'boundary' in sdata and sdata.get('iotype') == 'out':
                     outset.add(src)
 
-            parsources = self.get_sources(src)
+            parsources = None
             for node in neighbors:
-                if is_comp_node(self, node):
-                    if ndata[node]['valid'] or ndata[node].get('invalidation')=='partial':
-                        outs = getattr(scope, node).invalidate_deps(['.'.join(['parent', n])
+                ddata = ndata[node]
+                if 'comp' in ddata:
+                    if ddata['valid'] or ddata.get('invalidation')=='partial':
+                        if parsources is None:
+                            parsources = self.get_sources(src)
+                        outs = getattr(scope, node).invalidate_deps(['.'.join(('parent', n))
                                                                       for n in parsources])
                         if outs is None:
                             stack.append((node, self.successors_iter(node), True))
-                        else: # partial invalidation
-                            stack.append((node, ['.'.join([node,n]) for n in outs], False))
+                        elif outs: # partial invalidation
+                            stack.append((node, ['.'.join((node,n)) for n in outs], False))
                 else:
                     stack.append((node, self.successors_iter(node), True))
 
