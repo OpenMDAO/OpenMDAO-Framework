@@ -631,8 +631,8 @@ class DependencyGraph(nx.DiGraph):
         This should only be called for destination nodes (inputs
         or output boundary vars).
         """
-        ret = self._srcs.get(name)
-        if ret is None:
+        srcs = self._srcs.get(name)
+        if srcs is None:
             srcs = []
             for u,v in self.in_edges_iter(name):
                 if is_connection(self, u, v):
@@ -641,8 +641,8 @@ class DependencyGraph(nx.DiGraph):
                     for uu,vv in self.in_edges_iter(u):
                         if is_connection(self, uu, vv):
                             srcs.append(uu)
-            self._srcs[name] = ret = srcs
-        return ret[:]
+            self._srcs[name] = srcs
+        return srcs[:]
 
     def _check_source(self, path, src):
         """Raise an exception if the specified source differs from
@@ -1671,11 +1671,11 @@ def _explode_vartrees(graph, scope):
                 destnames = ['.'.join([dest, n]) for n in destnames]
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
-                                            dest, destnames)
+                                            dest, destnames, scope)
 
     return graph
 
-def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
+def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
     fail = False
     if len(srcnames) != len(destnames):
         fail = True
@@ -1700,6 +1700,6 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
     graph.disconnect(src, dest)
 
     for s, d in zip(srcnames, destnames):
-        graph.connect(None, s, d, check=False,
+        graph.connect(scope, s, d, check=False,
                       invalidate=False)
 

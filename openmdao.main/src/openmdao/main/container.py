@@ -38,7 +38,7 @@ from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, IComponent
-from openmdao.main.index import get_indexed_value, \
+from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
@@ -1726,28 +1726,6 @@ def get_default_name(obj, scope):
     while '%s%d' % (classname, ver) in sdict:
         ver += 1
     return '%s%d' % (classname, ver)
-
-
-def deep_hasattr(obj, pathname):
-    """Returns True if the attrbute indicated by the given pathname
-    exists; False otherwise.
-    """
-    try:
-        parts = pathname.split('.')
-        for name in parts[:-1]:
-            obj = getattr(obj, name)
-    except Exception:
-        return False
-    return hasattr(obj, parts[-1])
-
-
-def deep_getattr(obj, pathname):
-    """Returns the attrbute indicated by the given pathname or raises
-    an exception if it doesn't exist.
-    """
-    for name in pathname.split('.'):
-        obj = getattr(obj, name)
-    return obj
 
 
 def find_trait_and_value(obj, pathname):

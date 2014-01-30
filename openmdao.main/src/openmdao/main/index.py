@@ -121,3 +121,25 @@ def index_to_text(index):
         return ''.join(parts)
     else:
         return ''
+
+
+def deep_hasattr(obj, pathname):
+    """Returns True if the attrbute indicated by the given pathname
+    exists; False otherwise.
+    """
+    try:
+        parts = pathname.split('.')
+        for name in parts[:-1]:
+            obj = getattr(obj, name)
+    except Exception:
+        return False
+    return hasattr(obj, parts[-1])
+
+
+def deep_getattr(obj, pathname):
+    """Returns the attrbute indicated by the given pathname or raises
+    an exception if it doesn't exist.
+    """
+    for name in pathname.split('.'):
+        obj = getattr(obj, name)
+    return obj

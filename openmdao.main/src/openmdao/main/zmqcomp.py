@@ -10,7 +10,7 @@ import zmq
 from zmq.eventloop import ioloop, zmqstream
 
 from openmdao.main.api import set_as_top
-from openmdao.main.container import deep_getattr
+from openmdao.main.index import deep_getattr
 from openmdao.util.debug import DEBUG, debug
 
 
