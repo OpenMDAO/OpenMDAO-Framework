@@ -801,20 +801,20 @@ class FiniteDifference(object):
 
             # Full vector
             else:
-                index = index - i1
+                idx = index - i1
 
                 # Indexed array
                 if '[' in src:
                     sliced_src = self.scope.get(src)
                     sliced_shape = sliced_src.shape
                     flattened_src = sliced_src.flatten()
-                    flattened_src[index] += val
+                    flattened_src[idx] += val
                     sliced_src = flattened_src.reshape(sliced_shape)
                     exec('self.scope.%s = sliced_src') % src
 
                 else:
                     old_val = self.scope.get(src)
-                    unravelled = unravel_index(index, old_val.shape)
+                    unravelled = unravel_index(idx, old_val.shape)
                     old_val[unravelled] += val
 
                 # In-place array editing doesn't activate callback, so we must
