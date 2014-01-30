@@ -880,24 +880,37 @@ class Assembly(Component):
         if not inputs:
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull inputs from driver
-            elif has_interface(obj, IComponent):
+            elif has_interface(obj, IAssembly):
                 inputs = ['.'.join([obj.name, inp])
                           for inp in obj.list_inputs()
                                   if is_differentiable_var(inp, obj)]
+                inputs = sorted(inputs)
+            elif has_interface(obj, IComponent):
+                inputs = ['.'.join([obj.name, inp])
+                          for inp in obj.list_deriv_vars()[0]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any inputs for generating gradient.")
         if not outputs:
             if has_interface(obj, IDriver):
                 pass # workflow.check_gradient can pull outputs from driver
-            elif has_interface(obj, IComponent):
+            elif has_interface(obj, IAssembly):
                 outputs = ['.'.join([obj.name, out])
                            for out in obj.list_outputs()
                                    if is_differentiable_var(out, obj)]
                 outputs = sorted(outputs)
+            elif has_interface(obj, IComponent):
+                outputs = ['.'.join([obj.name, outp])
+                          for outp in obj.list_deriv_vars()[1]]
+                inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
+
+        if not inputs or not outputs:
+            msg = 'Component %s has no analytic derivatives.' % obj.name
+            self.raise_exception(msg)
+            
         result = driver.workflow.check_gradient(inputs=inputs,
                                                 outputs=outputs,
                                                 stream=stream,

@@ -557,7 +557,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -574,7 +575,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -2196,6 +2198,10 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = self.top.driver.workflow.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
+        
+        # This will error unless we ignore missing derivs
+        derivs = self.top.check_gradient(name='dis2')
+        self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
 
 class Comp2(Component):
