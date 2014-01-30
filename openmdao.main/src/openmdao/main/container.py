@@ -189,6 +189,9 @@ class Container(SafeHasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
 
+        # keep track of ExprEvaluators to save some overhead
+        self._exprcache = {}
+
         self._parent = None
         self._name = None
         self._cached_traits_ = None
@@ -648,19 +651,12 @@ class Container(SafeHasTraits):
             if trait is None:
                 self.raise_exception("trait '%s' does not exist" %
                                      name, AttributeError)
-
-            # trait itself is most likely a CTrait, which doesn't have
-            # access to member functions on the original trait, aside
-            # from validate and one or two others, so we need to get access
-            # to the original trait which is held in the 'trait_type' attribute.
-            ttype = trait.trait_type
-
             # copy value if 'copy' found in metadata
-            if ttype.copy:
+            if trait.copy:
                 if isinstance(val, Container):
                     val = val.copy()
                 else:
-                    val = _copydict[ttype.copy](val)
+                    val = _copydict[trait.copy](val)
         else: # index is not None
             val = get_indexed_value(self, name, index)
 
@@ -1101,21 +1097,28 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
-        else:
-            if ('[' in path or '(' in path) and index is None:
+
+        if index is None:
+            if ('[' in path or '(' in path):
                 # caller has put indexing in the string instead of
                 # using the indexing protocol
-                # TODO: document somewhere that passing indexing
-                #       information as part of the path string has
-                #       higher overhead than constructing the index
-                #       using the indexing protocol or using ExprEvaluators
-                #       that you keep around and evaluate repeatedly.
-                obj = ExprEvaluator(path, scope=self).evaluate()
+                expr = self._exprcache.get(path)
+                if expr is None:
+                    expr = ExprEvaluator(path, scope=self)
+                    self._exprcache[path] = expr
+                obj = expr.evaluate()
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
-            return get_indexed_value(obj, '', index)
+            return obj
+        else: # has an index
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
+            for idx in index:
+                obj = process_index_entry(obj, idx)
+            return obj
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -1217,7 +1220,10 @@ class Container(SafeHasTraits):
                 setattr(self, path, value)
 
     def _index_set(self, name, value, index):
-        obj = self.get_attr(name, index[:-1])
+        if len(index) == 1:
+            obj = getattr(self, name)
+        else:
+            obj = self.get(name, index[:-1])
         idx = index[-1]
 
         try:

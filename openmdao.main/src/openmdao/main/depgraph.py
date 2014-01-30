@@ -504,9 +504,6 @@ class DependencyGraph(nx.DiGraph):
         sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
         dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
 
-        #svars = sexpr.get_referenced_varpaths()
-        #dvars = sexpr.get_referenced_varpaths()
-
         self.edge[srcpath][destpath]['sexpr'] = sexpr
         self.edge[srcpath][destpath]['dexpr'] = dexpr
 
