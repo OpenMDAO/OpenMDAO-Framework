@@ -614,48 +614,48 @@ class ExprEvaluator(object):
                 continue
 
             # First time, try to differentiate symbolically
-            if (var not in self.cached_grad_eq) or self._code is None:
+            #if (var not in self.cached_grad_eq) or self._code is None:
 
                 #Take symbolic gradient of all inputs using sympy
-                try:
-                    for varname, expression in zip(inputs,
-                                                   SymGrad(self.text, inputs)):
-                        self.cached_grad_eq[varname] = expression
-
-                except (SymbolicDerivativeError, NameError):
-                    self.cached_grad_eq[var] = False
-
-            # If we have a cached gradient expression:
-            if self.cached_grad_eq[var]:
-
-                # This is not the way I wanted to do it, but I didn't want
-                # to mess with everything that's is in self._parse
-                grad_text = self.cached_grad_eq[var]
-                for name in inputs:
-                    if '[' in name:
-                        new_expr = ExprEvaluator(name, scope)
-                        replace_val = new_expr.evaluate()
-                    else:
-                        replace_val = scope.get(name)
-                    grad_text = grad_text.replace(name, str(replace_val))
-
-                grad_root = ast.parse(grad_text, mode='eval')
-                grad_code = compile(grad_root, '<string>', 'eval')
-                try:
-                    gradient[var] = eval(grad_code, _expr_dict, locals())
-
-                # Some functions are not defined (like re and imag).
-                # Resort to finite difference for those cases.
-                except Exception:
-                    self.cached_grad_eq[var] = False
-                else:
-                    # sympy doesn't 'sympify' matrices, so SymGrad() thinks
-                    # everything is a scalar. Here we expand that scalar to
-                    # an appropriate shape identity matrix.
-                    # This may be assuming too much here...
-                    wrt_val = scope.get(var)
-                    if isinstance(wrt_val, ndarray):
-                        gradient[var] = gradient[var] * identity(wrt_val.size)
+            #    try:
+            #        for varname, expression in zip(inputs,
+            #                                       SymGrad(self.text, inputs)):
+            #            self.cached_grad_eq[varname] = expression
+#
+            #    except (SymbolicDerivativeError, NameError):
+            #        self.cached_grad_eq[var] = False
+#
+            ## If we have a cached gradient expression:
+            #if self.cached_grad_eq[var]:
+#
+            #    # This is not the way I wanted to do it, but I didn't want
+            #    # to mess with everything that's is in self._parse
+            #    grad_text = self.cached_grad_eq[var]
+            #    for name in inputs:
+            #        if '[' in name:
+            #            new_expr = ExprEvaluator(name, scope)
+            #            replace_val = new_expr.evaluate()
+            #        else:
+            #            replace_val = scope.get(name)
+            #        grad_text = grad_text.replace(name, str(replace_val))
+#
+            #    grad_root = ast.parse(grad_text, mode='eval')
+            #    grad_code = compile(grad_root, '<string>', 'eval')
+            #    try:
+            #        gradient[var] = eval(grad_code, _expr_dict, locals())
+#
+            #    # Some functions are not defined (like re and imag).
+            #    # Resort to finite difference for those cases.
+            #    except Exception:
+            #        self.cached_grad_eq[var] = False
+            #    else:
+            #        # sympy doesn't 'sympify' matrices, so SymGrad() thinks
+            #        # everything is a scalar. Here we expand that scalar to
+            #        # an appropriate shape identity matrix.
+            #        # This may be assuming too much here...
+            #        wrt_val = scope.get(var)
+            #        if isinstance(wrt_val, ndarray):
+            #            gradient[var] = gradient[var] * identity(wrt_val.size)
 
             # Otherwise resort to finite difference (1st order central)
             if self.cached_grad_eq[var] == False:
