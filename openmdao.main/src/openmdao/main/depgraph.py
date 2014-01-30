@@ -856,27 +856,24 @@ class DependencyGraph(nx.DiGraph):
         If connected is True, return only connected inputs.  If
         invalid is True, return only invalid inputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
-
         if connected:
-            lst = [n for n in self.pred[cname]
-                                            if self.in_degree(n)>0]
+            if invalid:
+                data = self.node
+                return [n for n in self.pred[cname] 
+                           if data[n]['valid'] is False and self.in_degree(n)]
+            else:
+                return [n for n in self.pred[cname]
+                                            if self.in_degree(n)]
+        elif invalid:
+            data = self.node
+            return [n for n in self.pred[cname] if data[n]['valid'] is False]
         else:
-            lst = self.pred[cname].keys()
-
-        if invalid:
-            return [n for n in lst if self.node[n]['valid'] is False]
-
-        return lst
+            return self.pred[cname].keys()
 
     def list_input_outputs(self, cname):
         """Return a list of names of input or state nodes that are used
         as outputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
-
         return [n for n in self.pred[cname]
                              if self.out_degree(n)>1]
 
@@ -884,8 +881,6 @@ class DependencyGraph(nx.DiGraph):
         """Return a list of names of output, state or residual nodes for a component.
         If connected is True, return only connected outputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
         if connected:
             return [n for n in self.succ[cname]
                                             if self.out_degree(n)>0]

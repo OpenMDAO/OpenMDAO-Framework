@@ -1170,7 +1170,8 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
+                #src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
+                src = 'parent.'+src
             obj.set(restofpath, value, index, src=src, force=force)
         else:
             try:
