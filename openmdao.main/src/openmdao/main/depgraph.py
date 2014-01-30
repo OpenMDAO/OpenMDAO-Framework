@@ -8,7 +8,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver, \
                                      IAssembly, IComponent
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.util.nameutil import partition_names_by_comp
@@ -501,8 +501,14 @@ class DependencyGraph(nx.DiGraph):
 
         # create expression objects to handle setting of
         # array indces, etc.
-        self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath, getter='get_attr')
-        self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath, getter='get_attr')
+        sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
+        dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
+
+        #svars = sexpr.get_referenced_varpaths()
+        #dvars = sexpr.get_referenced_varpaths()
+
+        self.edge[srcpath][destpath]['sexpr'] = sexpr
+        self.edge[srcpath][destpath]['dexpr'] = dexpr
 
         if invalidate:
             self.invalidate_deps(scope, [srcpath])

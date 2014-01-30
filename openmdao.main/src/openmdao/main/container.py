@@ -37,7 +37,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
+                                     IContainer, IParametricGeometry, IComponent
 from openmdao.main.index import process_index_entry, get_indexed_value, \
                                 INDEX, ATTR, SLICE
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
@@ -636,21 +636,25 @@ class Container(SafeHasTraits):
             obj = getattr(self, scopename)
             if is_instance(obj, Container):
                 return obj.get_attr(restofpath, index)
-            return get_indexed_value(obj, restofpath)
+            if index:
+                return get_indexed_value(obj, restofpath, index)
+            else:
+                return getattr(obj, restofpath)
 
-        trait = self.get_trait(name)
-        if trait is None:
-            self.raise_exception("trait '%s' does not exist" %
-                                 name, AttributeError)
-
-        # trait itself is most likely a CTrait, which doesn't have
-        # access to member functions on the original trait, aside
-        # from validate and one or two others, so we need to get access
-        # to the original trait which is held in the 'trait_type' attribute.
-        ttype = trait.trait_type
-
-        val = getattr(self, name)
         if index is None:
+            val = getattr(self, name)
+
+            trait = self.get_trait(name)
+            if trait is None:
+                self.raise_exception("trait '%s' does not exist" %
+                                     name, AttributeError)
+
+            # trait itself is most likely a CTrait, which doesn't have
+            # access to member functions on the original trait, aside
+            # from validate and one or two others, so we need to get access
+            # to the original trait which is held in the 'trait_type' attribute.
+            ttype = trait.trait_type
+
             # copy value if 'copy' found in metadata
             if ttype.copy:
                 if isinstance(val, Container):
@@ -1200,9 +1204,8 @@ class Container(SafeHasTraits):
                     # _call_execute is set in the on-trait-changed
                     # callback, so it's a good test for whether the
                     # value changed.
-                    if hasattr(self, "_call_execute") and self._call_execute:
-                        if iotype == 'in':
-                            self._input_updated(path.split('.', 1)[0])
+                    if iotype == 'in' and getattr(self, "_call_execute", False):
+                        self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1248,17 +1251,10 @@ class Container(SafeHasTraits):
             item = self
             path = name
             while item:
-                # This is the test we are using to detect if this is a Component
-                # If you use a more explicit way, like is_instance(item, Component)
-                # you run into problems with importing Component and having
-                # circular import issues
-                if hasattr(item, '_call_execute'):
-                    # This is a Component so do Component things
-                    item._call_execute = True
-                    if hasattr(item, path):
-                        item._input_updated(name.split('.', 1)[0], fullpath=path)
+                if has_interface(item, IComponent):
+                    item._input_updated(path, fullpath=path)
                     break
-                path = '.'.join((item.name, path))
+                path = item.name
                 item = item.parent
 
     def _input_check(self, name, old):

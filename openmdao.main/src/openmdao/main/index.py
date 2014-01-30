@@ -44,6 +44,16 @@ def process_index_entry(obj, idx):
         return obj[idx]
     if idx[0] == INDEX:
         return obj[idx[1]]
+    elif idx[0] == SLICE:
+        return obj.__getitem__(slice(*idx[1]))
+    elif idx[0] == EXTSLICE:
+        args = []
+        for a in idx[1:]:
+            if isinstance(a, tuple):
+                args.append(slice(a[0],a[1],a[2]))
+            else:
+                args.append(a)
+        return obj.__getitem__(args)
     elif idx[0] == ATTR:
         return getattr(obj, idx[1])
     elif idx[0] == CALL:
@@ -56,16 +66,6 @@ def process_index_entry(obj, idx):
             else:
                 kwargs = {}
             return obj.__call__(*args, **kwargs)
-    elif idx[0] == SLICE:
-        return obj.__getitem__(slice(*idx[1]))
-    elif idx[0] == EXTSLICE:
-        args = []
-        for a in idx[1:]:
-            if isinstance(a, tuple):
-                args.append(slice(a[0],a[1],a[2]))
-            else:
-                args.append(a)
-        return obj.__getitem__(args)
 
     raise ValueError("invalid index: %s" % idx)
 
