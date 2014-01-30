@@ -48,7 +48,7 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity
+from numpy import ndarray, ndindex, zeros, identity, complex, imag
 
 
 _Missing = object()
@@ -658,67 +658,71 @@ class ExprEvaluator(object):
             #            gradient[var] = gradient[var] * identity(wrt_val.size)
 
             # Otherwise resort to finite difference (1st order central)
-            if self.cached_grad_eq[var] == False:
+            #if self.cached_grad_eq[var] == False:
                 # Always need to assemble list of constant inputs, for
                 # replacement in the gradient expression text
-                var_dict = {}
-                grad_text = self.text
-                for name in inputs:
-                    if '[' in name:
-                        new_expr = ExprEvaluator(name, scope)
-                        replace_val = new_expr.evaluate()
-                    else:
-                        replace_val = scope.get(name)
-
-                    if name == var:
-                        var_dict[name] = replace_val
-                        new_name = "var_dict['%s']" % name
-                        grad_text = grad_text.replace(name, new_name)
-                    else:
-                        # If we don't need derivative of a var,
-                        # replace with its value
-                        grad_text = grad_text.replace(name, str(replace_val))
-
-                grad_root = ast.parse(grad_text, mode='eval')
-                grad_code = compile(grad_root, '<string>', 'eval')
-
-                # Finite difference (Central difference)
-                val = var_dict[var]
-
-                if isinstance(val, ndarray):
-                    yp = eval(grad_code, _expr_dict, locals())
-
-                    if isinstance(yp, ndarray):
-                        gradient[var] = zeros((yp.size, val.size))
-                    else:
-                        gradient[var] = zeros((1, val.size))
-
-                    for i, index in enumerate(ndindex(*val.shape)):
-                        save = val[index]
-                        val[index] += 0.5*stepsize
-                        yp = eval(grad_code, _expr_dict, locals())
-                        if isinstance(yp, ndarray):
-                            # Need copy in case ym is same array.
-                            yp = yp.flatten()
-                        val[index] -= stepsize
-                        ym = eval(grad_code, _expr_dict, locals())
-                        if isinstance(ym, ndarray):
-                            ym = ym.flat
-                        gradient[var][:, i] = (yp - ym) / stepsize
-                        val[index] = save
+            
+            var_dict = {}
+            grad_text = self.text
+            for name in inputs:
+                if '[' in name:
+                    new_expr = ExprEvaluator(name, scope)
+                    replace_val = new_expr.evaluate()
                 else:
-                    var_dict[var] += 0.5*stepsize
+                    replace_val = scope.get(name)
+
+                if name == var:
+                    var_dict[name] = replace_val
+                    new_name = "var_dict['%s']" % name
+                    grad_text = grad_text.replace(name, new_name)
+                else:
+                    # If we don't need derivative of a var,
+                    # replace with its value
+                    grad_text = grad_text.replace(name, str(replace_val))
+
+            grad_root = ast.parse(grad_text, mode='eval')
+            grad_code = compile(grad_root, '<string>', 'eval')
+
+            # Finite difference (Central difference)
+            val = var_dict[var]
+
+            real_stepsize = stepsize
+            imag_stepsize = complex(stepsize*1j)
+
+            if isinstance(val, ndarray):
+                yp = eval(grad_code, _expr_dict, locals())
+
+                if isinstance(yp, ndarray):
+                    gradient[var] = zeros((yp.size, val.size))
+                else:
+                    gradient[var] = zeros((1, val.size))
+
+                for i, index in enumerate(ndindex(*val.shape)):
+                    save = val[index]
+                    val[index] += imag_stepsize
                     yp = eval(grad_code, _expr_dict, locals())
                     if isinstance(yp, ndarray):
                         # Need copy in case ym is same array.
                         yp = yp.flatten()
-                    var_dict[var] -= stepsize
-                    ym = eval(grad_code, _expr_dict, locals())
-                    if isinstance(ym, ndarray):
-                        ym = ym.flat
-                    gradient[var] = (yp - ym) / stepsize
-                    if isinstance(yp, ndarray):
-                        gradient[var] = gradient[var].reshape((yp.size, 1))
+                    #val[index] -= stepsize
+                    #ym = eval(grad_code, _expr_dict, locals())
+                    #if isinstance(ym, ndarray):
+                    #    ym = ym.flat
+                    gradient[var][:, i] = imag(yp) / real_stepsize
+                    val[index] = save
+            else:
+                var_dict[var] += imag_stepsize
+                yp = eval(grad_code, _expr_dict, locals())
+                if isinstance(yp, ndarray):
+                    # Need copy in case ym is same array.
+                    yp = yp.flatten()
+                #var_dict[var] -= stepsize
+                #ym = eval(grad_code, _expr_dict, locals())
+                #if isinstance(ym, ndarray):
+                #    ym = ym.flat
+                gradient[var] = imag(yp) / real_stepsize
+                if isinstance(yp, ndarray):
+                    gradient[var] = gradient[var].reshape((yp.size, 1))
 
         return gradient
 
