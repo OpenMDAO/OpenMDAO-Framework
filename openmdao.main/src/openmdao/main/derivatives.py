@@ -773,6 +773,9 @@ class FiniteDifference(object):
         if isinstance(srcs, basestring):
             srcs = [srcs]
 
+        # For keeping track of arrays that share the same memory.
+        array_base_val = None
+
         for src in srcs:
             comp_name, _, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -808,14 +811,18 @@ class FiniteDifference(object):
                     sliced_src = self.scope.get(src)
                     sliced_shape = sliced_src.shape
                     flattened_src = sliced_src.flatten()
-                    flattened_src[idx] += val
-                    sliced_src = flattened_src.reshape(sliced_shape)
-                    exec('self.scope.%s = sliced_src') % src
+                    if flattened_src[idx] != array_base_val:
+                        flattened_src[idx] += val
+                        array_base_val = flattened_src[idx]
+                        sliced_src = flattened_src.reshape(sliced_shape)
+                        exec('self.scope.%s = sliced_src') % src
 
                 else:
                     old_val = self.scope.get(src)
                     unravelled = unravel_index(idx, old_val.shape)
-                    old_val[unravelled] += val
+                    if old_val[unravelled] != array_base_val:
+                        old_val[unravelled] += val
+                        array_base_val = old_val[unravelled]
 
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.
