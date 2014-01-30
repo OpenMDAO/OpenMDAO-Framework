@@ -594,7 +594,6 @@ class ExprEvalTestCase(unittest.TestCase):
         expr = "2*comp1.in1 + 3*comp1.in11"
 
         exp = ExprEvaluator(expr, top.driver)
-        import pdb;pdb.set_trace()
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp1.in1'], 2.0, 0.00001)
         assert_rel_error(self, grad['comp1.in11'], 3.0, 0.00001)
