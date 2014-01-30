@@ -38,8 +38,8 @@ from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, IComponent
-from openmdao.main.index import process_index_entry, get_indexed_value, \
-                                INDEX, ATTR, SLICE
+from openmdao.main.index import get_indexed_value, \
+                                INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
@@ -627,40 +627,46 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, name, index=None):
-        """The value will be copied if the variable has a 'copy' metadata
-        attribute that is not None. Possible values for 'copy' are
-        'shallow' and 'deep'.
+    def get_attr(self, path, index=None):
+        """Same as the 'get' method, except that the value will be copied 
+        if the variable has a 'copy' metadata attribute that is not None. 
+        Possible values for 'copy' are 'shallow' and 'deep'.
         Raises an exception if the variable cannot be found.
 
         """
-        scopename, _, restofpath = name.partition('.')
+        childname, _, restofpath = path.partition('.')
         if restofpath:
-            obj = getattr(self, scopename)
-            if is_instance(obj, Container):
-                return obj.get_attr(restofpath, index)
-            if index:
-                return get_indexed_value(obj, restofpath, index)
-            else:
-                return getattr(obj, restofpath)
+            obj = getattr(self, childname, Missing)
+            if obj is Missing or not is_instance(obj, Container):
+                return self._get_failed(path, index)
+            return obj.get_attr(restofpath, index)
 
         if index is None:
-            val = getattr(self, name)
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
 
-            trait = self.get_trait(name)
+            trait = self.get_trait(path)
             if trait is None:
                 self.raise_exception("trait '%s' does not exist" %
-                                     name, AttributeError)
+                                     path, AttributeError)
             # copy value if 'copy' found in metadata
             if trait.copy:
-                if isinstance(val, Container):
-                    val = val.copy()
+                if isinstance(obj, Container):
+                    obj = obj.copy()
                 else:
-                    val = _copydict[trait.copy](val)
+                    obj = _copydict[trait.copy](obj)
         else: # index is not None
-            val = get_indexed_value(self, name, index)
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
+            for idx in index:
+                if isinstance(idx, tuple):
+                    obj = _index_functs[idx[0]](obj, idx)
+                else:
+                    obj = obj[idx]
 
-        return val
+        return obj
 
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
@@ -1117,7 +1123,10 @@ class Container(SafeHasTraits):
             if obj is Missing:
                 return self._get_failed(path, index)
             for idx in index:
-                obj = process_index_entry(obj, idx)
+                if isinstance(idx, tuple):
+                    obj = _index_functs[idx[0]](obj, idx)
+                else:
+                    obj = obj[idx]
             return obj
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
@@ -1227,7 +1236,10 @@ class Container(SafeHasTraits):
         idx = index[-1]
 
         try:
-            old = process_index_entry(obj, idx)
+            if isinstance(idx, tuple):
+                old = _index_functs[idx[0]](obj, idx)
+            else:
+                old = obj[idx]
         except KeyError:
             old = _missing
 
