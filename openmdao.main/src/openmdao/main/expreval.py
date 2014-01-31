@@ -63,7 +63,7 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity, complex, imag
+from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
 
 
 _Missing = object()
@@ -590,6 +590,61 @@ class ExprEvaluator(object):
         else:
             return self._examiner.refs
 
+    def _is_complex_stepable(self, grad_code):
+        
+        try:
+            #diff_method = self._complex_step
+            result = self._complex_step(grad_code, 1.0e-6)
+        except TypeError:
+            return False
+        else:
+            if not isinstance(result, ndarray):
+                result = array([result])
+
+            if not issubdtype(result.dtype, complex) :
+                return False
+
+            return True
+
+
+    def _finite_difference(self, grad_code, var_dict, target_var, stepsize):
+        """
+        """
+        var_dict[target_var] += 0.5*stepsize
+        yp = eval(grad_code, _expr_dict, locals())
+
+        if(isinstance(yp, ndarray)):
+            yp = yp.flatten()
+
+        var_dict[target_var] -= stepsize 
+        ym = eval(grad_code, _expr_dict, locals())
+        
+        if isinstance(ym, ndarray):
+            ym = ym.flatten()
+        
+        grad = (yp - ym) / stepsize
+
+        if isinstance(yp, ndarray):
+            grad = grad.reshape((yp.size, 1))
+
+        return grad
+
+    def _complex_step(self, grad_code, var_dict, target_var, stepsize):
+        """
+        """
+        var_dict[target_var] += stepsize*1j
+        yp = eval(grad_code, _expr_dict, locals())
+
+        if(isinstance(yp, ndarray)):
+            yp = yp.flatten()
+        
+        grad = imag(yp)/stepsize
+
+        if isinstance(yp, ndarray):
+            grad = grad.reshape((yp.size, 1))
+
+        return grad
+
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect
         to each of the referenced varpaths. The gradient is calculated by 1st
@@ -650,19 +705,19 @@ class ExprEvaluator(object):
                 new_names[name] = new_name
             grad_text = transform_expression(self.text, new_names)
 
-
-
-
             grad_root = ast.parse(grad_text, mode='eval')
             grad_code = compile(grad_root, '<string>', 'eval')
 
-            # Finite difference (Central difference)
             val = var_dict[var]
 
-            real_stepsize = stepsize
-            imag_stepsize = complex(stepsize*1j)
+            if self._is_complex_stepable(grad_code): 
+                diff_method = self._complex_step
+            else: 
+                diff_method = self._finite_difference
+
 
             if isinstance(val, ndarray):
+                foobar
                 yp = eval(grad_code, _expr_dict, locals())
 
                 if isinstance(yp, ndarray):
@@ -671,31 +726,13 @@ class ExprEvaluator(object):
                     gradient[var] = zeros((1, val.size))
 
                 for i, index in enumerate(ndindex(*val.shape)):
-                    save = val[index]
-                    val[index] += imag_stepsize
-                    yp = eval(grad_code, _expr_dict, locals())
-                    if isinstance(yp, ndarray):
-                        # Need copy in case ym is same array.
-                        yp = yp.flatten()
-                    #val[index] -= stepsize
-                    #ym = eval(grad_code, _expr_dict, locals())
-                    #if isinstance(ym, ndarray):
-                    #    ym = ym.flat
-                    gradient[var][:, i] = imag(yp) / real_stepsize
-                    val[index] = save
+                    foobar
+                    gradient[var][:, i] = diff_method(grad_code, val, index, stepsize)
+                    
             else:
-                var_dict[var] += imag_stepsize
-                yp = eval(grad_code, _expr_dict, locals())
-                if isinstance(yp, ndarray):
-                    # Need copy in case ym is same array.
-                    yp = yp.flatten()
-                #var_dict[var] -= stepsize
-                #ym = eval(grad_code, _expr_dict, locals())
-                #if isinstance(ym, ndarray):
-                #    ym = ym.flat
-                gradient[var] = imag(yp) / real_stepsize
-                if isinstance(yp, ndarray):
-                    gradient[var] = gradient[var].reshape((yp.size, 1))
+                gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
+                if isinstance(gradient[var], ndarray):
+                    gradient[var] = gradient[var].reshape((gradient[var].size, 1))
 
         return gradient
 
