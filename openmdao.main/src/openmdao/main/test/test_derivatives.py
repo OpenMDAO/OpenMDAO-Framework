@@ -2278,8 +2278,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
                                               outputs=['c2.y'],
                                               mode = 'fd')
-        print J
+        assert_rel_error(self, J[0, 0], 4.0, .001)
 
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 4.0, .001)
+        assert_rel_error(self, J[0, 1], 4.0, .001)
 
 class Comp2(Component):
     """ two-input, two-output"""
