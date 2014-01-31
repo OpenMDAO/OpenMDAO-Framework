@@ -28,26 +28,30 @@ class RBOpt(Assembly):
         self.driver.add_constraint('func.x1+func.x2-2.0<=0.0')
 
 if __name__=='__main__':
+    import sys
     import time
     prob = set_as_top(RBOpt())
     tt = time.time()
 
-    import sys
-    if len(sys.argv) > 1 and '-prof' in sys.argv:
+    if '-prof' in sys.argv:
         import cProfile
         import pstats
-        sys.argv.remove('-prof') #unittest doesn't like -prof
+        
         cProfile.run('prob.run()', 'profout')
         p = pstats.Stats('profout')
         p.strip_dirs()
+        p.sort_stats('calls', 'time')
+        p.print_stats()
+        print '\n\n#####################\n\n'
         p.sort_stats('cumulative', 'time')
         p.print_stats()
-        print '\n\n---------------------\n\n'
+        print '\n\n+++++++++++++++++++++\n\n'
         p.print_callers()
         print '\n\n---------------------\n\n'
         p.print_callees()
     else:
         prob.run()
-        print prob.func.x1, prob.func.x2
-        print "Elapsed time: ", time.time() - tt, "seconds"
-        print "Function Evaluations: ", prob.func.exec_count
+
+    print prob.func.x1, prob.func.x2
+    print "Elapsed time: ", time.time() - tt, "seconds"
+    print "Function Evaluations: ", prob.func.exec_count
