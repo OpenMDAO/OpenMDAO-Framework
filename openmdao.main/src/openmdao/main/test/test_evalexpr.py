@@ -587,6 +587,12 @@ class ExprEvalTestCase(unittest.TestCase):
         assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
         assert_rel_error(self, grad['comp1.b2d[1][1]'], 4.0, 0.00001)
 
+        exp = ExprEvaluator('comp1.a2d**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        print grad
+        #assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
+        
+
     def test_eval_gradient_lots_of_vars(self):
         top = set_as_top(Assembly())
         top.add('comp1', B())

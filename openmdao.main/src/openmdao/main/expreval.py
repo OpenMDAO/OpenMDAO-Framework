@@ -607,16 +607,27 @@ class ExprEvaluator(object):
             return True
 
 
-    def _finite_difference(self, grad_code, var_dict, target_var, stepsize):
+    def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
         """
         """
-        var_dict[target_var] += 0.5*stepsize
+        if index:
+            #grad = np.zeros(index)
+            var_dict[target_var][index] += 0.5*stepsize
+
+        else:
+            var_dict[target_var] += 0.5*stepsize
+
         yp = eval(grad_code, _expr_dict, locals())
 
         if(isinstance(yp, ndarray)):
             yp = yp.flatten()
 
-        var_dict[target_var] -= stepsize 
+        if index:
+            var_dict[target_var][index] -= stepsize
+
+        else:
+            var_dict[target_var] -= stepsize
+
         ym = eval(grad_code, _expr_dict, locals())
         
         if isinstance(ym, ndarray):
@@ -624,24 +635,23 @@ class ExprEvaluator(object):
         
         grad = (yp - ym) / stepsize
 
-        if isinstance(yp, ndarray):
-            grad = grad.reshape((yp.size, 1))
-
         return grad
 
-    def _complex_step(self, grad_code, var_dict, target_var, stepsize):
+    def _complex_step(self, grad_code, var_dict, target_var, stepsize, index):
         """
         """
-        var_dict[target_var] += stepsize*1j
+        if index:
+            var_dict[target_var][index] += stepsize * 1j
+
+        else:
+            var_dict[target_var] += stepsize * 1j
+
         yp = eval(grad_code, _expr_dict, locals())
 
         if(isinstance(yp, ndarray)):
             yp = yp.flatten()
         
         grad = imag(yp)/stepsize
-
-        if isinstance(yp, ndarray):
-            grad = grad.reshape((yp.size, 1))
 
         return grad
 
@@ -717,7 +727,6 @@ class ExprEvaluator(object):
 
 
             if isinstance(val, ndarray):
-                foobar
                 yp = eval(grad_code, _expr_dict, locals())
 
                 if isinstance(yp, ndarray):
@@ -726,8 +735,7 @@ class ExprEvaluator(object):
                     gradient[var] = zeros((1, val.size))
 
                 for i, index in enumerate(ndindex(*val.shape)):
-                    foobar
-                    gradient[var][:, i] = diff_method(grad_code, val, index, stepsize)
+                    gradient[var][:, i] = diff_method(grad_code, var_dict, var, stepsize, index)
                     
             else:
                 gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
