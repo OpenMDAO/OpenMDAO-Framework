@@ -812,6 +812,8 @@ class FiniteDifference(object):
                 if '[' in src:
                     base_val = self.scope.get(src.partition('[')[0])
                     if base_val is not array_base_val:
+                        # Note: could speed this up with an eval
+                        # (until Bret looks into the expression speed)
                         sliced_src = self.scope.get(src)
                         sliced_shape = sliced_src.shape
                         flattened_src = sliced_src.flatten()
