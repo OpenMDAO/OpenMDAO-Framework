@@ -786,9 +786,9 @@ class FiniteDifference(object):
                 src, _, idx = src.partition('[')
                 if idx:
                     old_val = self.scope.get(src)
-                    if old_val is not array_base_val:
+                    if (idx, old_val) is not array_base_val:
                         exec('old_val[%s += val' % idx)
-                        array_base_val = old_val
+                        array_base_val = (idx, old_val)
 
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -810,8 +810,10 @@ class FiniteDifference(object):
                     
                 # Indexed array
                 if '[' in src:
-                    base_val = self.scope.get(src.partition('[')[0])
-                    if base_val is not array_base_val:
+                    base_src, _, base_idx = src.partition('[')
+                    base_val = self.scope.get(base_src)
+                    print base_src, base_idx, (base_idx, base_val) is not array_base_val, base_idx, base_val, array_base_val
+                    if (base_idx, base_val) is not array_base_val:
                         # Note: could speed this up with an eval
                         # (until Bret looks into the expression speed)
                         sliced_src = self.scope.get(src)
@@ -820,7 +822,7 @@ class FiniteDifference(object):
                         flattened_src[idx] += val
                         sliced_src = flattened_src.reshape(sliced_shape)
                         exec('self.scope.%s = sliced_src') % src
-                        array_base_val = base_val
+                        array_base_val = (base_idx, base_val)
 
                 else:
     

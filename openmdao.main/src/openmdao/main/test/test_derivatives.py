@@ -2271,6 +2271,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode = 'fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
+        top.disconnect('c1.y', 'c2.b')
+        top.c2.b = array([0.0, 0.0, 0.0, 0.0])
+        top.run()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        print J
 
 
 class Comp2(Component):
