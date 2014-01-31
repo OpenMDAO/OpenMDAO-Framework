@@ -5,7 +5,10 @@ derivatives solve.
 
 import unittest
 import numpy as np
+from mock import patch, Mock
+import scipy.sparse.linalg
 
+import openmdao.main.implicitcomp
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Component
 from openmdao.main.datatypes.api import Float, Array
@@ -360,6 +363,54 @@ class Testcase_implicit(unittest.TestCase):
 
     def setUp(self):
         pcompmod._count = 0  # reset pseudocomp numbering
+
+    def test_error_logging1(self):
+
+        orig_gmres = openmdao.main.implicitcomp.gmres
+
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+                     maxiter=None, xtype=None, M=None, callback=None, restrt=None):
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+                                  xtype, M, callback, restrt)
+            return dx, 13
+
+        openmdao.main.implicitcomp.gmres = my_gmres
+
+        try:
+            model = set_as_top(Assembly())
+            model.add('comp', MyComp_Deriv())
+            model.comp._logger = Mock()
+            model.driver.workflow.add('comp')
+            model.run()
+        finally:
+            openmdao.main.implicitcomp.gmres = orig_gmres
+
+        model.comp._logger.error.assert_called_with(
+            "ERROR in 'comp': gmres failed to converge after 13 iterations at index 2")
+
+    def test_error_logging2(self):
+
+        orig_gmres = openmdao.main.implicitcomp.gmres
+
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+                     maxiter=None, xtype=None, M=None, callback=None, restrt=None):
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+                                  xtype, M, callback, restrt)
+            return dx, -13
+
+        openmdao.main.implicitcomp.gmres = my_gmres
+
+        try:
+            model = set_as_top(Assembly())
+            model.add('comp', MyComp_Deriv())
+            model.comp._logger = Mock()
+            model.driver.workflow.add('comp')
+            model.run()
+        finally:
+            openmdao.main.implicitcomp.gmres = orig_gmres
+
+        model.comp._logger.error.assert_called_with(
+            "ERROR in 'comp': gmres failed at index 2")
 
     def test_single_comp_self_solve(self):
 

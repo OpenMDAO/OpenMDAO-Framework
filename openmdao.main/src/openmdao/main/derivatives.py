@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.log import logger
 
 try:
     from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
@@ -14,8 +15,7 @@ try:
     from scipy.sparse.linalg import gmres, LinearOperator
 
 except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
+    logger.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, zeros, \
                                     ones, unravel_index, vstack, hstack
 
@@ -61,6 +61,14 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+            if info > 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
+                      "after %d iterations for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, param, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed " \
+                      "for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), param, irhs))
 
             i = 0
             for item in outputs:
@@ -116,6 +124,15 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+
+            if info > 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed to converge " \
+                      "after %d iterations for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, output, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed " \
+                      "for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), output, irhs))
 
             i = 0
             for param in inputs:
