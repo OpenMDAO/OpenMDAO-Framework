@@ -18,7 +18,6 @@ namecheck_rgx = re.compile(
 
 gui_excludes = ['type', 'vartypename', 'iotype', 'copy', 'validation_trait']
 
-
 def is_legal_name(name):
     '''Verifies a Pythonic legal name for use as an OpenMDAO object.'''
 

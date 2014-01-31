@@ -1,7 +1,6 @@
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
-import pprint
 
 import networkx as nx
 
@@ -9,7 +8,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver, \
                                      IAssembly, IComponent
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.util.nameutil import partition_names_by_comp
@@ -136,24 +135,6 @@ def is_var_node_with_solution_bounds(graph, node):
     """
     return 'bounds' in graph.node.get(node, '')
 
-def is_connected_src_node(graph, node):
-    """Return True if this node is part of a connection,
-    i.e., there is at least one successor edge that
-    satisfies 'is_connection'.
-    """
-    for u,v in graph.edges_iter(node):
-        if is_connection(graph, u, v):
-            return True
-
-def is_connected_dest_node(graph, node):
-    """Return True if this node is part of a connection,
-    i.e., there is at least one predecessor edge that
-    satisfies 'is_connection'.
-    """
-    for u,v in graph.in_edges_iter(node):
-        if is_connection(graph, u, v):
-            return True
-
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node.get(node, '')
 
@@ -215,9 +196,8 @@ def _break_loop(graph, loop):
 class DependencyGraph(nx.DiGraph):
     def __init__(self):
         super(DependencyGraph, self).__init__()
-        self._severed_edges = {}
-        self._saved_comp_graph = None
-        self._saved_loops = None
+        self._severed_edges = []
+        self._allow_config_changed = True
         self.config_changed()
 
     def base_var(self, node):
@@ -264,16 +244,24 @@ class DependencyGraph(nx.DiGraph):
 
         self._severed_edges = list(edges)
 
-        for u,v in edges:
-            self.disconnect(u, v, config_change=False)
+        self._allow_config_changed = False
+        try:
+            for u,v in edges:
+                self.disconnect(u, v)
+        finally:
+            self._allow_config_changed = True
 
     def unsever_edges(self, scope):
         """Restore previously severed edges."""
         if not self._severed_edges:
             return
 
-        for u,v in self._severed_edges:
-            self.connect(scope, u, v, config_change=False)
+        self._allow_config_changed = False
+        try:
+            for u,v in self._severed_edges:
+                self.connect(scope, u, v)
+        finally:
+            self._allow_config_changed = True
 
         self._severed_edges = []
 
@@ -281,10 +269,20 @@ class DependencyGraph(nx.DiGraph):
         self._component_graph = self._saved_comp_graph
 
     def config_changed(self):
-        self._component_graph = None
-        self._loops = None
-        self._saved_loops = None
-        self._saved_comp_graph = None
+        if self._allow_config_changed:
+            self._component_graph = None
+            self._loops = None
+            self._saved_loops = None
+            self._saved_comp_graph = None
+            self._chvars = {} 
+            self._bndryins = {} 
+            self._bndryouts = {} 
+            self._extrnsrcs = None
+            self._extrndsts = None
+            self._srcs = {}
+            self._conns = {}
+            self._indegs = {}
+            self._dstvars = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -382,8 +380,6 @@ class DependencyGraph(nx.DiGraph):
             self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])
 
-        self.config_changed()
-
     def add_boundary_var(self, name, **kwargs):
         """Add a boundary variable, i.e., one not associated
         with any component in the graph.
@@ -408,7 +404,6 @@ class DependencyGraph(nx.DiGraph):
         kwargs['valid'] = valid
         kwargs['boundary'] = True
         self.add_node(name, **kwargs)
-        self.config_changed()
 
     def remove(self, name):
         """Remove the named node and all nodes prefixed by the
@@ -419,7 +414,7 @@ class DependencyGraph(nx.DiGraph):
         self.disconnect(name)  # updates validity
         if nodes:
             self.remove_nodes_from(nodes)
-        self.config_changed()
+
 
     def check_connect(self, srcpath, destpath):
         """Raise an exception if the specified destination is already
@@ -440,10 +435,11 @@ class DependencyGraph(nx.DiGraph):
         if conns:
             if destpath == dpbase:
                 connected = True
-            elif destpath in [v for u,v in conns]:
-                connected = True
             else:
                 for u, v in conns:
+                    if destpath == v:
+                        connected = True
+                        break
                     if is_basevar_node(self, v):
                         connected = True
                         break
@@ -456,7 +452,7 @@ class DependencyGraph(nx.DiGraph):
                                   (conns[0][1], conns[0][0]))
 
     def connect(self, scope, srcpath, destpath,
-                config_change=True, check=True, invalidate=True):
+                check=True, invalidate=True):
         """Create a connection between srcpath and destpath,
         and create any necessary additional subvars with connections to base
         variable nodes.  For example, connecting A.b[3] to
@@ -500,8 +496,6 @@ class DependencyGraph(nx.DiGraph):
                     self[src][dest]
                 except KeyError:
                     self.add_edge(src, dest)
-                    if config_change:
-                        self.config_changed()
 
         # mark the actual connection edge to distinguish it
         # from other edges (for list_connections, etc.)
@@ -509,14 +503,14 @@ class DependencyGraph(nx.DiGraph):
 
         # create expression objects to handle setting of
         # array indces, etc.
-        self.edge[srcpath][destpath]['sexpr'] = ExprEvaluator(srcpath, getter='get_attr')
-        self.edge[srcpath][destpath]['dexpr'] = ExprEvaluator(destpath, getter='get_attr')
+        sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
+        dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
+
+        self.edge[srcpath][destpath]['sexpr'] = sexpr
+        self.edge[srcpath][destpath]['dexpr'] = dexpr
 
         if invalidate:
             self.invalidate_deps(scope, [srcpath])
-
-        if config_change:
-            self.config_changed()
 
     def add_subvar(self, subvar):
         """ Adds a subvar node for a model input. This node is used to
@@ -540,7 +534,7 @@ class DependencyGraph(nx.DiGraph):
             else:
                 self.add_edge(base, subvar)
 
-    def disconnect(self, srcpath, destpath=None, config_change=True):
+    def disconnect(self, srcpath, destpath=None):
 
         if destpath is None:
             if is_comp_node(self, srcpath):
@@ -589,9 +583,6 @@ class DependencyGraph(nx.DiGraph):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
-        if config_change:
-            self.config_changed()
-
     def get_directional_interior_edges(self, comp1, comp2):
         """ Behaves like get_interior_edges, except that it only
         returns interior edges that originate in comp1 and and end in comp2.
@@ -620,18 +611,21 @@ class DependencyGraph(nx.DiGraph):
 
     def list_connections(self, show_passthrough=True,
                                show_external=False):
-        conns = [(u,v) for u,v in self.edges_iter()
-                          if is_connection(self, u, v)]
-
-        if show_passthrough is False:
-            conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
-
-        if show_external is False:
-            conns = [(u,v) for u,v in conns
-                          if not (u.startswith('parent.')
-                               or v.startswith('parent.'))]
-
-        return conns
+        conns = self._conns.get((show_passthrough, show_external))
+        if conns is None:
+            conns = [(u,v) for u,v in self.edges_iter()
+                              if is_connection(self, u, v)]
+    
+            if show_passthrough is False:
+                conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
+    
+            if show_external is False:
+                conns = [(u,v) for u,v in conns
+                              if not (u.startswith('parent.')
+                                   or v.startswith('parent.'))]
+    
+            self._conns[(show_passthrough, show_external)] = conns
+        return conns[:]
 
     def get_sources(self, name):
         """Return the node that's actually a source for the
@@ -639,15 +633,18 @@ class DependencyGraph(nx.DiGraph):
         This should only be called for destination nodes (inputs
         or output boundary vars).
         """
-        srcs = []
-        for u,v in self.in_edges_iter(name):
-            if is_connection(self, u, v):
-                srcs.append(u)
-            elif is_subvar_node(self, u):
-                for uu,vv in self.in_edges_iter(u):
-                    if is_connection(self, uu, vv):
-                        srcs.append(uu)
-        return srcs
+        srcs = self._srcs.get(name)
+        if srcs is None:
+            srcs = []
+            for u,v in self.in_edges_iter(name):
+                if is_connection(self, u, v):
+                    srcs.append(u)
+                elif is_subvar_node(self, u):
+                    for uu,vv in self.in_edges_iter(u):
+                        if is_connection(self, uu, vv):
+                            srcs.append(uu)
+            self._srcs[name] = srcs
+        return srcs[:]
 
     def _check_source(self, path, src):
         """Raise an exception if the specified source differs from
@@ -660,7 +657,7 @@ class DependencyGraph(nx.DiGraph):
             if src == pred:
                 return
             if pred.startswith(path):  # subvar
-                for p in self.predecessors(pred):
+                for p in self.predecessors_iter(pred):
                     if src == p:
                         return
         if len(preds) > 0:
@@ -675,29 +672,31 @@ class DependencyGraph(nx.DiGraph):
         by the starting node.  This captures all var and subvar
         nodes associated with the starting node.
         """
-        bunch = []
-        ndot = node+'.'
-        nbrack = node+'['
+        ret = self._chvars.get((node, direction))
+        if ret is None:        
+            bunch = set()
+            ndot = node+'.'
+            nbrack = node+'['
 
-        if direction != 'in':
-            succ = self.successors(node)
-            bunch.extend(succ)
-            for s in succ:
-                bunch.extend(self.successors_iter(s))
+            if direction != 'in':
+                succ = self.successors(node)
+                bunch.update(succ)
+                for s in succ:
+                    bunch.update(self.successors_iter(s))
 
-        if direction != 'out':
-            pred = self.predecessors(node)
-            bunch.extend(pred)
-            for p in pred:
-                bunch.extend(self.predecessors_iter(p))
-                # it's possible for some input basevars to have subvars thar are
-                # sucessors instead of predecessors
-                for succ in self.successors_iter(p):
-                    if succ not in bunch:
-                        bunch.append(succ)
+            if direction != 'out':
+                pred = self.predecessors(node)
+                bunch.update(pred)
+                for p in pred:
+                    bunch.update(self.predecessors_iter(p))
+                    # it's possible for some input basevars to have subvars thar are
+                    # sucessors instead of predecessors
+                    bunch.update(self.successors_iter(p))
 
-        return [n for n in bunch if n.startswith(ndot)
-                                 or n.startswith(nbrack)]
+            ret = [n for n in bunch if n.startswith(ndot)
+                                     or n.startswith(nbrack)]
+            self._chvars[(node, direction)] = ret
+        return ret[:]
 
     def subvars(self, node):
         if is_basevar_node(self, node):
@@ -774,24 +773,34 @@ class DependencyGraph(nx.DiGraph):
                 continue
             else:
                 visited.add(src)
-
-            oldvalid = ndata[src]['valid']
+            sdata = ndata[src]
+            oldvalid = sdata['valid']
             if oldvalid is True:
-                if self.in_degree(src) or src.startswith('parent.'): # don't invalidate unconnected inputs
+                if src.startswith('parent.'):
                     ndata[src]['valid'] = False
-                if is_boundary_node(self, src) and is_output_base_node(self, src):
+                else:
+                    indeg = self._indegs.get(src)
+                    if indeg is None:
+                        indeg = self.in_degree(src)
+                        self._indegs[src] = indeg
+                    if indeg:  # don't invalidate unconnected inputs
+                        ndata[src]['valid'] = False
+                if 'boundary' in sdata and sdata.get('iotype') == 'out':
                     outset.add(src)
 
-            parsources = self.get_sources(src)
+            parsources = None
             for node in neighbors:
-                if is_comp_node(self, node):
-                    if ndata[node]['valid'] or ndata[node].get('invalidation')=='partial':
-                        outs = getattr(scope, node).invalidate_deps(['.'.join(['parent', n])
+                ddata = ndata[node]
+                if 'comp' in ddata:
+                    if ddata['valid'] or ddata.get('invalidation')=='partial':
+                        if parsources is None:
+                            parsources = self.get_sources(src)
+                        outs = getattr(scope, node).invalidate_deps(['.'.join(('parent', n))
                                                                       for n in parsources])
                         if outs is None:
                             stack.append((node, self.successors_iter(node), True))
-                        else: # partial invalidation
-                            stack.append((node, ['.'.join([node,n]) for n in outs], False))
+                        elif outs: # partial invalidation
+                            stack.append((node, ['.'.join((node,n)) for n in outs], False))
                 else:
                     stack.append((node, self.successors_iter(node), True))
 
@@ -802,6 +811,10 @@ class DependencyGraph(nx.DiGraph):
         If connected is True, return a list of only those nodes
         that are connected externally.
         """
+        ret = self._bndryins.get(connected)
+        if ret is not None:
+            return ret
+        
         ins = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -811,13 +824,18 @@ class DependencyGraph(nx.DiGraph):
                             ins.append(node)
                     else:
                         ins.append(node)
-        return ins
+        self._bndryins[connected] = ins
+        return ins[:]
 
     def get_boundary_outputs(self, connected=False):
         """Returns outputs that are on the component boundary.
         If connected is True, return a list of only those nodes
         that are connected externally.
         """
+        ret = self._bndryouts.get(connected)
+        if ret is not None:
+            return ret
+        
         outs = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -827,48 +845,50 @@ class DependencyGraph(nx.DiGraph):
                             outs.append(node)
                     else:
                         outs.append(node)
-        return outs
+        self._bndryouts[connected] = outs
+        return outs[:]
 
     def get_extern_srcs(self):
         """Returns sources from external to our parent
         component that are connected to our boundary inputs.
         """
-        return [n for n in self.nodes_iter()
-                    if is_extern_src(self, n)]
+        if self._extrnsrcs is None:
+            self._extrnsrcs = [n for n in self.nodes_iter()
+                                      if is_extern_src(self, n)]
+        return self._extrnsrcs[:]
 
     def get_extern_dests(self):
         """Returns destinations that are external to our parent
         component that are connected to our boundary outputs.
         """
-        return [n for n in self.nodes_iter()
-                    if is_extern_dest(self, n)]
+        if self._extrndsts is None:
+            self._extrndsts = [n for n in self.nodes_iter()
+                                   if is_extern_dest(self, n)]
+        return self._extrndsts[:]
 
     def list_inputs(self, cname, connected=False, invalid=False):
         """Return a list of names of input nodes to a component.
         If connected is True, return only connected inputs.  If
         invalid is True, return only invalid inputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
-
         if connected:
-            lst = [n for n in self.pred[cname]
-                                            if self.in_degree(n)>0]
+            if invalid:
+                data = self.node
+                return [n for n in self.pred[cname] 
+                           if data[n]['valid'] is False and self.in_degree(n)]
+            else:
+                return [n for n in self.pred[cname]
+                                            if self.in_degree(n)]
+        elif invalid:
+            data = self.node
+            return [n for n in self.pred[cname] if data[n]['valid'] is False]
         else:
-            lst = self.pred[cname].keys()
-
-        if invalid:
-            return [n for n in lst if self.node[n]['valid'] is False]
-
-        return lst
+            return self.pred[cname].keys()
 
     def list_input_outputs(self, cname):
         """Return a list of names of input or state nodes that are used
         as outputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
-
         return [n for n in self.pred[cname]
                              if self.out_degree(n)>1]
 
@@ -876,8 +896,6 @@ class DependencyGraph(nx.DiGraph):
         """Return a list of names of output, state or residual nodes for a component.
         If connected is True, return only connected outputs.
         """
-        if not is_comp_node(self, cname):
-            raise RuntimeError("'%s' is not a component node" % cname)
         if connected:
             return [n for n in self.succ[cname]
                                             if self.out_degree(n)>0]
@@ -1041,27 +1059,33 @@ class DependencyGraph(nx.DiGraph):
         """Update the value of the given variable in the
         given scope using upstream variables.
         """
-        valid_set = set(self.find_prefixed_nodes([vname]))
-        for u,v,data in self.in_edges_iter(vname, data=True):
-            if 'conn' in data:
-                try:
-                    data['dexpr'].set(data['sexpr'].evaluate(scope=scope),
-                                      src=u, scope=scope)
-                except Exception as err:
-                    raise err.__class__("cannot set '%s' from '%s': %s" %
-                                         (v, u, str(err)))
-                valid_set.add(v)
-            else:
-                for uu,vv,ddata in self.in_edges_iter(u, data=True):
-                    if 'conn' in ddata:
-                        try:
-                            ddata['dexpr'].set(ddata['sexpr'].evaluate(scope=scope),
-                                               src=uu, scope=scope)
-                        except Exception as err:
-                            raise err.__class__("cannot set '%s' from '%s': %s" %
-                                                 (v, u, str(err)))
-                        valid_set.add(vv)
+        tup = self._dstvars.get(vname)
+        if tup is None:
+            valid_set = set(self.find_prefixed_nodes([vname]))
+            sexprs = []
+            dexprs = []
+            for u,v,data in self.in_edges_iter(vname, data=True):
+                if 'conn' in data:
+                    dexprs.append(data['dexpr'])
+                    sexprs.append(data['sexpr'])
+                    valid_set.add(v)
+                else:
+                    for uu,vv,ddata in self.in_edges_iter(u, data=True):
+                        if 'conn' in ddata:
+                            dexprs.append(ddata['dexpr'])
+                            sexprs.append(ddata['sexpr'])
+                            valid_set.add(vv)
+            self._dstvars[vname] = (sexprs, dexprs, valid_set)
+        else:
+            sexprs, dexprs, valid_set = tup
 
+        try:
+            for sexpr, dexpr in zip(sexprs, dexprs):
+                dexpr.set(sexpr.evaluate(scope=scope), src=sexpr.text, scope=scope)
+        except Exception as err:
+            raise err.__class__("cannot set '%s' from '%s': %s" %
+                                 (dexpr.text, sexpr.text, str(err)))
+        
         for node in valid_set:
             self.node[node]['valid'] = True
 
@@ -1163,6 +1187,44 @@ class DependencyGraph(nx.DiGraph):
                             comps[comp]['outputs'].remove(var)
 
         return comps
+
+    def add_node(self, n, attr_dict=None, **attr):
+        super(DependencyGraph, self).add_node(n, 
+                                              attr_dict=attr_dict,
+                                              **attr)
+        self.config_changed()
+
+    def add_nodes_from(self, nodes, **attr):
+        super(DependencyGraph, self).add_nodes_from(nodes, **attr)
+        self.config_changed()
+
+    def remove_node(self, n):
+        super(DependencyGraph, self).remove_node(n)
+        self.config_changed()
+
+    def remove_nodes_from(self, nbunch):
+        super(DependencyGraph, self).remove_nodes_from(nbunch)
+        self.config_changed()
+
+    def add_edge(self, u, v, attr_dict=None, **attr):
+        super(DependencyGraph, self).add_edge(u, v, 
+                                      attr_dict=attr_dict, **attr)
+        self.config_changed()
+
+    def add_edges_from(self, ebunch, attr_dict=None, **attr):
+        super(DependencyGraph, self).add_edges_from(ebunch,
+                                        attr_dict=attr_dict,
+                                        **attr)
+        self.config_changed()
+
+    def remove_edge(self, u, v):
+        super(DependencyGraph, self).remove_edge(u, v)
+        self.config_changed()
+
+    def remove_edges_from(self, ebunch):
+        super(DependencyGraph, self).remove_edges_from(ebunch)
+        self.config_changed()
+
 
 def find_related_pseudos(compgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
@@ -1335,7 +1397,7 @@ def _check_for_missing_derivs(scope, comps):
     ''' we have the edges that are actually needed for the derivatives, so
     check all of the corresponding components now to see if they are
     supplying the needed derivatives.'''
-    removed = []
+    remove = []
     for cname, vnames in comps.items():
         vnames = set(vnames) # vnames may have dups
         comps[cname] = vnames
@@ -1380,9 +1442,9 @@ def _check_for_missing_derivs(scope, comps):
             elif comp.missing_deriv_policy == 'assume_zero':
                 # remove the vars with zero derivatives
                 comps[cname] = [n for n in vnames if n not in missing]
-                removed.extend(['.'.join([cname, m]) for m in missing])
+                remove.extend(['.'.join([cname, m]) for m in missing])
 
-    return removed
+    return remove
 
 def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     """Adds needed nodes and connections to the given graph
@@ -1440,16 +1502,15 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
 
-    removed = _check_for_missing_derivs(scope, comps)
+    remove = _check_for_missing_derivs(scope, comps)
 
-    if removed:
-        removed = set(removed)
+    if remove:
+        remove = set(remove)
 
         # remove edges associated with missing derivs
         for u,v in graph.list_connections():
-            if u in removed or v in removed:
+            if u in remove or v in remove:
                 graph.remove_edge(u, v)
-
         edges = _get_inner_edges(graph,
                                  ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
                                  ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
@@ -1503,7 +1564,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                         newsrc = dest.replace(base_dest, graph.base_var(src), 1)
                     if newsrc not in graph:
                         graph.add_subvar(newsrc)
-                for s, d in graph.edges(dest):
+                for s, d in graph.edges_iter(dest):
                     graph.add_edge(newsrc, d, attr_dict=graph.edge[s][d])
                     to_remove.add((s,d))
                 to_remove.add((src, dest))
@@ -1513,7 +1574,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             # connected to an @out node
             base_src = graph.base_var(src)
             if is_boundary_node(graph, base_src):
-                for pred in graph.predecessors(base_src):
+                for pred in graph.predecessors_iter(base_src):
                     if not base_src == graph.base_var(pred): # it's not one of our subvars
                         break
                 else:
@@ -1628,11 +1689,11 @@ def _explode_vartrees(graph, scope):
                 destnames = ['.'.join([dest, n]) for n in destnames]
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
-                                            dest, destnames)
+                                            dest, destnames, scope)
 
     return graph
 
-def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
+def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
     fail = False
     if len(srcnames) != len(destnames):
         fail = True
@@ -1657,6 +1718,6 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames):
     graph.disconnect(src, dest)
 
     for s, d in zip(srcnames, destnames):
-        graph.connect(None, s, d, check=False,
+        graph.connect(scope, s, d, check=False,
                       invalidate=False)
 

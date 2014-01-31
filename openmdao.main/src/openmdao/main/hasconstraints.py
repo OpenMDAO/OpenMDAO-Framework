@@ -100,8 +100,6 @@ class Constraint(object):
             except AttributeError:
                 pass
             else:
-                # pcomp.remove_connections(scope)
-                # if hasattr(scope, pcomp.name):
                 scope.remove(pcomp.name)
             finally:  
                 self.pcomp_name = None

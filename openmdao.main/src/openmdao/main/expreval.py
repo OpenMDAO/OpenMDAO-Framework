@@ -53,6 +53,70 @@ from numpy import ndarray, ndindex, zeros, identity
 
 _Missing = object()
 
+def is_in_process(scope, vname):
+    """Return True if the object referenced by vname is accessible
+    within scope via getattr from this process.
+    """
+    vname = vname.split('[', 1)[0]
+    obj = scope
+    for name in vname.split('.'):
+        obj = getattr(obj, name, _Missing)
+        if obj is _Missing:
+            return False
+    return True
+
+def in_expr_locals(scope, name):
+    """Return True if the given (dotted) name refers to something in our
+    _expr_dict dict, e.g., math.sin.  Raises a KeyError if the name
+    refers to something in _expr_dict that doesn't exist, e.g., math.foobar.
+    Returns False if the name refers to nothing in _expr_dict,
+    e.g., mycomp.x.
+    """
+    if hasattr(scope, name):
+        return False
+    if hasattr(__builtin__, name) or name == '_local_setter_':
+        return True
+    parts = name.split('.')
+    obj = _expr_dict.get(parts[0], _Missing)
+    if obj is _Missing:
+        return False
+    for part in parts[1:]:
+        obj = getattr(obj, part, _Missing)
+        if obj is _Missing:
+            raise KeyError("Can't find '%s' in current scope" % name)
+    return True
+
+class ExprVarScanner(ast.NodeVisitor):
+    """This node visitor collects all attribute names (including dotted ones)
+    that occur in the given AST.
+    """
+    def __init__(self):
+        self.varnames = set()
+
+    def visit_Name(self, node):
+        self.varnames.add(node.id)
+
+    def visit_Attribute(self, node):
+        long_name = _get_long_name(node)
+        if long_name:
+            self.varnames.add(long_name)
+
+    def get_names(self, scope):
+        """Returns a tuple of the form (local_vars, external_vars)."""
+        local_vars = []
+        extern_vars = []
+
+        for v in self.varnames:
+            if in_expr_locals(scope, v):
+                continue
+            if is_in_process(scope, v):
+                local_vars.append(v)
+            else:
+                extern_vars.append(v)
+
+        return (local_vars, extern_vars)
+
+
 class ExprTransformer(ast.NodeTransformer):
     """Transforms dotted name references, e.g., abc.d.g in an expression AST
     into scope.get('abc.d.g') and turns assignments into the appropriate
@@ -86,7 +150,7 @@ class ExprTransformer(ast.NodeTransformer):
         if name is None:
             return super(ExprTransformer, self).generic_visit(node)
 
-        if self.expreval.is_local(name):
+        if in_expr_locals(self.expreval.scope, name):
             return node
 
         names = ['scope']
@@ -174,7 +238,7 @@ class ExprTransformer(ast.NodeTransformer):
     def visit_Call(self, node, subs=None):
         name = _get_long_name(node.func)
         if name is not None:
-            if self.expreval.is_local(name) or '.' not in name:
+            if in_expr_locals(self.expreval.scope, name) or '.' not in name:
                 return self.generic_visit(node)
 
         if subs is None:
@@ -241,6 +305,7 @@ class ExprExaminer(ast.NodeVisitor):
     """"Examines various properties of an expression for later analysis."""
     def __init__(self, node, evaluator=None):
         super(ExprExaminer, self).__init__()
+        self.ref_ok = True
         self.const = True
         self.simplevar = True  # if true, it's just a simple variable name
                                # (possibly with dots)
@@ -252,24 +317,11 @@ class ExprExaminer(ast.NodeVisitor):
 
         self.visit(node)
 
-        # get rid of any refs that are just substrings of real refs, e.g., if
-        # the real ref is 'x[3]', then there will also be a 'fake' ref for 'x'
-        if len(self.refs) > 1:
-            ep = ExprPrinter() # first we have to convert back into a string
-            ep.visit(node)
-            txt = ep.get_text()
-            # now we loop through the refs from longest to shortest, removing
-            # each from the expression string.  As we get to each ref, we
-            # search for it in what's left of the expression string. If we find
-            # it, then it's a real ref.
-            for ref in sorted(self.refs, key=len, reverse=True):
-                if ref not in txt:
-                    self.refs.remove(ref)
-                txt = txt.replace(ref, '')
-
     def _maybe_add_ref(self, name):
         """Will add a ref if it's not a name from the locals dict."""
-        if self._evaluator and self._evaluator.is_local(name):
+        if not self.ref_ok:
+            return
+        if self._evaluator and in_expr_locals(self._evaluator.scope, name):
             return
         self.refs.add(name)
 
@@ -331,7 +383,11 @@ class ExprExaminer(ast.NodeVisitor):
         p = ExprPrinter()
         p.visit(node)
         self._maybe_add_ref(p.get_text())
-        super(ExprExaminer, self).generic_visit(node)
+        ok = self.ref_ok
+        self.ref_ok = False
+        self.visit(node.value)
+        self.visit(node.slice)
+        self.ref_ok = ok
 
     def visit_Num(self, node):
         self.simplevar = False
@@ -339,17 +395,14 @@ class ExprExaminer(ast.NodeVisitor):
             self.assignable = False
         super(ExprExaminer, self).generic_visit(node)
 
-    def _ignore(self, node):
-        super(ExprExaminer, self).generic_visit(node)
-
     def _no_assign(self, node):
         self.assignable = self.simplevar = False
         super(ExprExaminer, self).generic_visit(node)
 
-    visit_Load       = _ignore
-    visit_Store      = _ignore
-    visit_Expr       = _ignore
-    visit_Expression = _ignore
+    visit_Load       = ast.NodeVisitor.generic_visit
+    visit_Store      = ast.NodeVisitor.generic_visit
+    visit_Expr       = ast.NodeVisitor.generic_visit
+    visit_Expression = ast.NodeVisitor.generic_visit
 
     visit_Call       = _no_assign
     visit_USub       = _no_assign
@@ -479,27 +532,6 @@ class ExprEvaluator(object):
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
 
-    def is_local(self, name):
-        """Return True if the given (dotted) name refers to something in our
-        _expr_dict dict, e.g., math.sin.  Raises a KeyError if the name
-        refers to something in _expr_dict that doesn't exist, e.g., math.foobar.
-        Returns False if the name refers to nothing in _expr_dict,
-        e.g., mycomp.x.
-        """
-        if hasattr(self.scope, name):
-            return False
-        if hasattr(__builtin__, name) or name == '_local_setter_':
-            return True
-        parts = name.split('.')
-        obj = _expr_dict.get(parts[0], _Missing)
-        if obj is _Missing:
-            return False
-        for part in parts[1:]:
-            obj = getattr(obj, part, _Missing)
-            if obj is _Missing:
-                raise KeyError("Can't find '%s' in current scope" % name)
-        return True
-
     def _pre_parse(self, root=None):
         if root is None:
             try:
@@ -509,6 +541,7 @@ class ExprEvaluator(object):
                 root = ast.parse(self.text, mode='exec')
                 self._allow_set = False
                 return root
+
         if not isinstance(root.body,
                           (ast.Attribute, ast.Name, ast.Subscript)):
             self._allow_set = False
@@ -517,7 +550,11 @@ class ExprEvaluator(object):
         return root
 
     def _parse_get(self, root=None):
-        new_ast = ExprTransformer(self, getter=self.getter).visit(self._pre_parse(root))
+        astree = self._pre_parse(root)
+        #varscanner = ExprVarScanner()
+        #varscanner.visit(astree)
+
+        new_ast = ExprTransformer(self, getter=self.getter).visit(astree)
 
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
@@ -726,7 +763,10 @@ class ExprEvaluator(object):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
-        if self.is_valid_assignee():
+        if self._code is None:
+            self._pre_parse()
+
+        if self._allow_set:
             # self.assignment_code is a compiled version of an assignment
             # statement of the form 'somevar = _local_setter_', so we set
             # _local_setter_ here and the exec call will pull it out of the
@@ -782,32 +822,6 @@ class ExprEvaluator(object):
                 nameset.add(parts[0])
         return nameset
 
-    # def get_required_compnames(self, assembly):
-    #     """Return the set of all names of Components that evaluation
-    #     of our expression string depends on, either directly or indirectly.
-    #     """
-    #     compset = self.get_referenced_compnames()
-    #     graph = assembly._depgraph.copy_graph()
-    #     visited = set()
-    #     while compset:
-    #         comp = compset.pop()
-    #         if comp not in visited:
-    #             visited.add(comp)
-    #             diff = set(graph.predecessors(comp)).difference(visited)
-    #             compset.update(diff)
-    #     return visited
-
-    # def refs_valid(self):
-    #     """Return True if all variables referenced by our expression
-    #     are valid.
-    #     """
-    #     if self.scope:
-    #         if self._code is None:
-    #             self._parse()
-    #         if not all(self.scope.get_valid(self.var_names)):
-    #             return False
-    #     return True
-
     def refs_parent(self):
         """Return True if this expression references a variable in parent."""
         if self._code is None:
@@ -816,13 +830,6 @@ class ExprEvaluator(object):
             if name.startswith('parent.'):
                 return True
         return False
-
-    # def invalid_refs(self):
-    #     """Return a list of invalid variables referenced by this expression."""
-    #     if self._code is None:
-    #         self._parse()
-    #     valids = self.scope.get_valid(self.var_names)
-    #     return [n for n,v in zip(self.var_names, valids) if v is False]
 
     def check_resolve(self):
         """Return True if all variables referenced by our expression can
@@ -895,14 +902,14 @@ class ConnectedExprEvaluator(ExprEvaluator):
         super(ConnectedExprEvaluator, self)._parse()
         self._examiner = ExprExaminer(ast.parse(self.text, mode='eval'), self)
         if self._is_dest:
-            if len(self._examiner.refs) != 1:
-                raise RuntimeError("bad connected expression '%s' must"
-                                   " reference exactly one variable" %
-                                   self.text)
             if not self._examiner.const_indices:
                 raise RuntimeError("bad destination expression '%s': only"
                                    " constant indices are allowed for arrays"
                                    " and slices" % self.text)
+            if len(self._examiner.refs) != 1:
+                raise RuntimeError("bad connected expression '%s' must"
+                                   " reference exactly one variable" %
+                                   self.text)
             if not self._examiner.assignable:
                 raise RuntimeError("bad destination expression '%s': not"
                                    " assignable" % self.text)

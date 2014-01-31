@@ -26,7 +26,7 @@ class Objective(ConnectedExprEvaluator):
         if self.pcomp_name:
             scope = self.scope
             try:
-                pcomp = getattr(scope, self.pcomp_name)
+                getattr(scope, self.pcomp_name)
             except AttributeError:
                 pass
             else:
@@ -91,7 +91,7 @@ class HasObjectives(object):
                                          AttributeError)
 
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope, getter='get_attr')
+        expreval = Objective(expr, scope)
         if not expreval.check_resolve():
             self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr,
                                          ValueError)
