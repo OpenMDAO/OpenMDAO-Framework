@@ -183,6 +183,13 @@ class ImplicitComponent(Component):
                              tol=1.0e-9,
                              maxiter=100)
 
+            if info > 0:
+                msg = "ERROR in '%s': gmres failed to converge after %d iterations at index %d"
+                self._logger.error(msg % (self.get_pathname(), info, irhs))
+            elif info < 0:
+                self._logger.error("ERROR in '%s': gmres failed at index %d" % 
+                                   (self.get_pathname(),irhs))
+
             J[:, irhs] = dx[n_res:]
 
         return J

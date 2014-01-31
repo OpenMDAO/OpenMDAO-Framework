@@ -48,6 +48,7 @@ setup(name='openmdao.main',
       install_requires=[
           'argparse',
           'decorator',
+          'mock',
           'networkx',
           'openmdao.units',
           'openmdao.util',
