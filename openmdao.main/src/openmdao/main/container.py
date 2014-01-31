@@ -1268,11 +1268,13 @@ class Container(SafeHasTraits):
             # need to find first item going up the parent tree that is a Component
             item = self
             path = name
+            full = name
             while item:
                 if has_interface(item, IComponent):
-                    item._input_updated(path, fullpath=path)
+                    item._input_updated(path, fullpath=full)
                     break
                 path = item.name
+                full = '.'.join((path, full))
                 item = item.parent
 
     def _input_check(self, name, old):
