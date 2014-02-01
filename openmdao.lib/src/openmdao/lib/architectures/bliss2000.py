@@ -167,6 +167,10 @@ class BLISS2000(Architecture):
         global_dvs_by_comp = self.parent.get_global_des_vars_by_comp()
         
         locals=self.parent.get_local_des_vars()
+
+        #set initial values 
+        for comp,param in global_dvs+local_dvs: 
+            param.initialize(self.parent)
         
         
         objective = self.parent.get_objectives().items()[0]

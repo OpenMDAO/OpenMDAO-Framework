@@ -38,12 +38,18 @@ class CO(Architecture):
         #Global Driver    
         global_opt = self.parent.add('driver', SLSQPdriver())
         global_opt.recorders = self.data_recorders
-        global_opt.print_vars = ['dis1.y1', 'dis2.y2']
-        global_opt.iprint = 0
-       
+
+        #set initial values 
+        for comp,param in global_dvs: 
+            param.initialize(self.parent)
+
+        for comp,param in local_dvs: 
+            param.initialize(self.parent)
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
         
         initial_conditions = np.array([param.evaluate() for comp,param in global_dvs]).flatten()
-        #print "global initial conditions: ", initial_conditions
         self.parent.add_trait('global_des_var_targets',Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(global_dvs): 
             target_var = 'global_des_var_targets[%d]'%i
@@ -86,6 +92,8 @@ class CO(Architecture):
             
         global_opt.add_objective(new_objective)
         
+
+
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
             local_opt = self.parent.add('local_opt_%s'%comp,SLSQPdriver())
@@ -97,8 +105,18 @@ class CO(Architecture):
                 residuals.append("(%s-%s)**2"%(self.target_var_map[param.target],param.target))
             if comp in coupl_indeps_by_comp: 
                 for couple in coupl_indeps_by_comp[comp]: 
-                    low = couple.indep.low or -1e99
-                    high = couple.indep.high or 1e99
+                    if couple.indep.low is not None: 
+                        low = couple.indep.low 
+                    else: 
+                        low = -1e99
+                    
+                    if couple.indep.high is not None: 
+                        high = couple.indep.high 
+                    else: 
+                        high = 1e99
+
+                    #print couple, couple.indep.get_metadata()
+                    #exit()
                     local_opt.add_parameter(couple.indep.target,low=low,high=high)
                     residuals.append("(%s-%s)**2"%(self.target_var_map[couple.indep.target],couple.indep.target))
             if comp in coupl_deps_by_comp: 
@@ -114,23 +132,13 @@ class CO(Architecture):
             local_opt.add_objective(residuals)
 
 
+
 if __name__ == "__main__": 
     from openmdao.lib.optproblems.api import SellarProblem
     #from openmdao.main.api import ArchitectureAssembly
 
 
     prob = SellarProblem()
-
-    prob.dis1.z1 = 5.0
-    prob.dis2.z1 = 5.0
-
-    prob.dis1.z2 = 2.0
-    prob.dis2.z2 = 2.0
-
-    prob.dis1.x1 = 1.0
-    
-    prob.dis1.y2 = 0.0
-    prob.dis2.y1 = 3.16    
     
     prob.architecture = CO()
 
@@ -148,5 +156,4 @@ if __name__ == "__main__":
     print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
     print "Minimum objective: ", prob.driver.eval_objective()
-    print "Elapsed time: ", time.time()-tt, "seconds"
-            
+

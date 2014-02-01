@@ -32,6 +32,18 @@ class BLISS(Architecture):
         self.parent.add('driver',FixedPointIterator())
         self.parent.driver.max_iteration = 50
         self.parent.driver.tolerance = .005
+
+        #set initial values 
+        for comp,param in global_dvs: 
+            param.initialize(self.parent)
+
+        for comp,local_params in local_dvs.iteritems(): 
+            for param in local_params: 
+                param.initialize(self.parent)
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
+            print couple.indep.evaluate() 
         
         
         initial_conditions = [param.start for comp,param in global_dvs]

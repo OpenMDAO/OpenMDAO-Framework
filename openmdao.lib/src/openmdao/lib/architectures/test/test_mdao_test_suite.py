@@ -70,8 +70,9 @@ class TestArchTestSuite(unittest.TestCase):
                 prob.architecture.parent = prob
 
                 try:
+                    print prob_name, arch_name
                     prob.check_config()
-                    prob.run()
+                    #prob.run()
                 except: 
                     import traceback
                     traceback.print_exc()
