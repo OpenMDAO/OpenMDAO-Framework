@@ -790,6 +790,10 @@ class FiniteDifference(object):
         if isinstance(srcs, basestring):
             srcs = [srcs]
 
+        # For keeping track of arrays that share the same memory.
+        array_base_val = None
+        index_base_val = None
+
         for src in srcs:
             comp_name, _, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -800,7 +804,11 @@ class FiniteDifference(object):
                 src, _, idx = src.partition('[')
                 if idx:
                     old_val = self.scope.get(src)
-                    exec('old_val[%s += val' % idx)
+                    if old_val is not array_base_val or \
+                       idx != index_base_val:
+                        exec('old_val[%s += val' % idx)
+                        array_base_val = old_val
+                        index_base_val = idx
 
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -822,17 +830,28 @@ class FiniteDifference(object):
 
                 # Indexed array
                 if '[' in src:
-                    sliced_src = self.scope.get(src)
-                    sliced_shape = sliced_src.shape
-                    flattened_src = sliced_src.flatten()
-                    flattened_src[idx] += val
-                    sliced_src = flattened_src.reshape(sliced_shape)
-                    exec('self.scope.%s = sliced_src') % src
+                    base_src, _, base_idx = src.partition('[')
+                    base_val = self.scope.get(base_src)
+                    if base_val is not array_base_val or \
+                       base_idx != index_base_val:
+                        # Note: could speed this up with an eval
+                        # (until Bret looks into the expression speed)
+                        sliced_src = self.scope.get(src)
+                        sliced_shape = sliced_src.shape
+                        flattened_src = sliced_src.flatten()
+                        flattened_src[idx] += val
+                        sliced_src = flattened_src.reshape(sliced_shape)
+                        exec('self.scope.%s = sliced_src') % src
+                        array_base_val = base_val
+                        index_base_val = base_idx
 
                 else:
+
                     old_val = self.scope.get(src)
-                    unravelled = unravel_index(idx, old_val.shape)
-                    old_val[unravelled] += val
+                    if old_val is not array_base_val:
+                        unravelled = unravel_index(idx, old_val.shape)
+                        old_val[unravelled] += val
+                        array_base_val = old_val
 
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.

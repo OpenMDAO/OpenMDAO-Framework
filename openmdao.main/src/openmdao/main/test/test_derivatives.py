@@ -2310,6 +2310,73 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         derivs = self.top.check_gradient(name='dis2')
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
+    def test_fd_param_group_arrays_sharing_memory(self):
+
+        class CompSource(Component):
+
+            y = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='out')
+
+            def execute(self):
+                self.y = array([1.0, 1.0, 1.0, 1.0])
+
+        class CompSink(Component):
+
+            a = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='in')
+            b = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='in')
+            y = Float(0.0, iotype='out')
+
+            def execute(self):
+                self.y = 2.0*sum(self.a) + 3.0*sum(self.b)
+
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        top.add('c1', CompSource())
+        top.add('c2', CompSink())
+        top.driver.workflow.add(['c1', 'c2'])
+
+        top.connect('c1.y', 'c2.a')
+        top.connect('c1.y', 'c2.b')
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.disconnect('c1.y', 'c2.b')
+        top.c2.b = array([0.0, 0.0, 0.0, 0.0])
+        top.run()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 4.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 4.0, .001)
+        assert_rel_error(self, J[0, 1], 4.0, .001)
 
 class Comp2(Component):
     """ two-input, two-output"""

@@ -1615,7 +1615,10 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                         break
                 if newsrc is None:
                     continue
-                graph.add_edge(newsrc, sub.replace(src, dest, 1),
+                new_target = sub.replace(src, dest, 1)
+                if new_target not in graph:
+                    graph.add_subvar(new_target)
+                graph.add_edge(newsrc, new_target,
                                attr_dict=graph.edge[src][dest])
 
             to_remove.add((src, dest))
