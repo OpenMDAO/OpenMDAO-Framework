@@ -1,5 +1,7 @@
 """Implementation of the Collaborative Optimization Architecture"""
 
+import numpy as np
+
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver
 from openmdao.main.datatypes.api import Float, Array
@@ -40,7 +42,7 @@ class CO(Architecture):
         global_opt.iprint = 0
        
         
-        initial_conditions = [param.evaluate() for comp,param in global_dvs]
+        initial_conditions = np.array([param.evaluate() for comp,param in global_dvs]).flatten()
         #print "global initial conditions: ", initial_conditions
         self.parent.add_trait('global_des_var_targets',Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(global_dvs): 
@@ -64,8 +66,8 @@ class CO(Architecture):
             self.target_var_map[couple.dep.target] = target_var
             
         
-        initial_conditions = [param.evaluate() for comp,param in local_dvs]    
-        #print "local initial conditions: ", initial_conditions
+        initial_conditions = [param.evaluate()[0] for comp,param in local_dvs]    
+        #print "local initial conditions: ", initial_conditions, initial_conditions.shape; exit()
         self.parent.add_trait("local_des_var_targets",Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(local_dvs):
             #Target variables for the local optimizations
@@ -78,11 +80,11 @@ class CO(Architecture):
         #create the new objective with the target variables
         obj = objective.items()[0]
 
-        new_objective = obj[1].text
+        new_objective = str(obj[1].text)
         for old_var,new_var in sorted(self.target_var_map.items(),key=lambda x: len(x[0]), reverse=True):    
             new_objective = new_objective.replace(old_var,new_var)
             
-        global_opt.add_objective(new_objective,name=obj[1])
+        global_opt.add_objective(new_objective)
         
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
@@ -107,7 +109,7 @@ class CO(Architecture):
                     local_opt.add_constraint(str(const))
                 
             residuals = "+".join(residuals)    
-            global_constraint = "%s<=.001"%residuals
+            global_constraint = "%s<=0"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
 
@@ -117,13 +119,34 @@ if __name__ == "__main__":
     #from openmdao.main.api import ArchitectureAssembly
 
 
-    sp = SellarProblem()
-    sp.architecture = CO()
+    prob = SellarProblem()
 
-    sp.check_config()
+    prob.dis1.z1 = 5.0
+    prob.dis2.z1 = 5.0
 
-    sp.run()
+    prob.dis1.z2 = 2.0
+    prob.dis2.z2 = 2.0
 
-    for k,v in sp.check_solution().iteritems(): 
-        print "    ",k,": ",v          
+    prob.dis1.x1 = 1.0
+    
+    prob.dis1.y2 = 0.0
+    prob.dis2.y1 = 3.16    
+    
+    prob.architecture = CO()
+
+    prob.check_config()
+    
+    prob.run()
+
+    print "\n"
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
+                                             prob.dis1.z2, \
+                                             prob.dis1.x1)
+    print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0], \
+                                             prob.global_des_var_targets[1], \
+                                             prob.local_des_var_targets[0])
+    print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
+    print "Minimum objective: ", prob.driver.eval_objective()
+    print "Elapsed time: ", time.time()-tt, "seconds"
             
