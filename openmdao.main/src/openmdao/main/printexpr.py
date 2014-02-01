@@ -31,10 +31,10 @@ def _get_long_name(node):
         else:  # it's more than just a simple dotted name
             return None
     return '.'.join(parts[::-1])
-    
+
 
 # dict with operator precedence.  We need this because otherwise we can't
-# tell where to put parens when we print out an expression with mixed operators.  
+# tell where to put parens when we print out an expression with mixed operators.
 # We could just put them around every operation, but that's a little ugly...
 _op_preds = {}
 _prec = 0
@@ -94,33 +94,31 @@ class ExprPrinter(ast.NodeVisitor):
     def __init__(self):
         super(ExprPrinter, self).__init__()
         self.txtlist = []
-        
-    def write(self, txt):
-        self.txtlist.append(txt)
-        
+        self.append = self.txtlist.append
+
     def get_text(self):
         return ''.join(self.txtlist)
 
     def visit_Attribute(self, node):
         self.visit(node.value)
-        self.write(".%s" % node.attr)
-        
+        self.append(".%s" % node.attr)
+
     def visit_Assign(self, node):
         for i,t in enumerate(node.targets):
-            if i>0: self.write(',')
+            if i>0: self.append(',')
             self.visit(t)
-        self.write(' = ')
+        self.append(' = ')
         self.visit(node.value)
-        
+
     def visit_Name(self, node):
-        self.write(node.id)
-        
+        self.append(node.id)
+
     def visit_UnaryOp(self, node):
         if isinstance(node.operand, ast.BinOp):
             self.visit(node.op)
-            self.write('(')
+            self.append('(')
             self.visit(node.operand)
-            self.write(')')
+            self.append(')')
         else:
             super(ExprPrinter, self).generic_visit(node)
 
@@ -128,9 +126,9 @@ class ExprPrinter(ast.NodeVisitor):
         # we have to add parens around any immediate BinOp child
         # that has a lower precedence operation than we do
         if isinstance(node.left, ast.BinOp) and _pred_cmp(node.left.op, node.op) < 0:
-            self.write('(')
+            self.append('(')
             self.visit(node.left)
-            self.write(')')
+            self.append(')')
         else:
             self.visit(node.left)
         self.visit(node.op)
@@ -140,9 +138,9 @@ class ExprPrinter(ast.NodeVisitor):
             # is equal, we still need parentheses.
             if pred_comp < 0 or \
               (pred_comp == 0 and (isinstance(node.op, ast.Sub) or isinstance(node.op, ast.Div))):
-                self.write('(')
+                self.append('(')
                 self.visit(node.right)
-                self.write(')')
+                self.append(')')
             else:
                 self.visit(node.right)
         else:
@@ -150,124 +148,124 @@ class ExprPrinter(ast.NodeVisitor):
 
     def visit_IfExp(self, node):
         self.visit(node.body)
-        self.write(' if ')
+        self.append(' if ')
         self.visit(node.test)
-        self.write(' else ')
+        self.append(' else ')
         self.visit(node.orelse)
-        
+
     def visit_Call(self, node):
         self.visit(node.func)
-        self.write('(')
+        self.append('(')
         total_args = 0
         for arg in node.args:
-            if total_args>0: self.write(',')
+            if total_args>0: self.append(',')
             self.visit(arg)
             total_args += 1
-            
+
         if hasattr(node, 'keywords'):
             for kw in node.keywords:
-                if total_args>0: self.write(',')
+                if total_args>0: self.append(',')
                 self.visit(kw)
                 total_args += 1
-            
+
         if hasattr(node, 'starargs'):
             if node.starargs:
-                if total_args>0: self.write(',')
-                self.write('*%s'%node.starargs)
+                if total_args>0: self.append(',')
+                self.append('*%s'%node.starargs)
                 total_args += 1
-            
+
         if hasattr(node, 'kwargs'):
             if node.kwargs:
-                if total_args>0: self.write(',')
-                self.write('**%s'%node.kwargs)
-    
-        self.write(')')
-        
+                if total_args>0: self.append(',')
+                self.append('**%s'%node.kwargs)
+
+        self.append(')')
+
     def visit_keyword(self, node):
-        self.write("%s=" % node.arg)
+        self.append("%s=" % node.arg)
         self.visit(node.value)
-        
+
     def visit_Num(self, node):
-        self.write(str(node.n))
-        
+        self.append(str(node.n))
+
     def visit_Str(self, node):
-        self.write("'%s'" % node.s)
-        
+        self.append("'%s'" % node.s)
+
     def visit_Index(self, node):
-        self.write('[')
+        self.append('[')
         self.visit(node.value)
-        self.write(']')
+        self.append(']')
 
     def visit_Slice(self, node):
-        self.write('[')
+        self.append('[')
         if node.lower is not None:
             if not(isinstance(node.lower, ast.Name) and node.lower.id == 'None'):
                 self.visit(node.lower)
-        self.write(':')
+        self.append(':')
         if node.upper is not None:
             if not(isinstance(node.upper, ast.Name) and node.upper.id == 'None'):
                 self.visit(node.upper)
-        self.write(':')
+        self.append(':')
         if node.step is not None:
             if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
                 self.visit(node.step)
-        self.write(']')
-        
-    def visit_List(self, node):  
-        self.write('[')
+        self.append(']')
+
+    def visit_List(self, node):
+        self.append('[')
         for i,e in enumerate(node.elts):
-            if i>0: self.write(',')
+            if i>0: self.append(',')
             self.visit(e)
-        self.write(']')
-        
-    def visit_Dict(self, node):  
-        self.write('{')
+        self.append(']')
+
+    def visit_Dict(self, node):
+        self.append('{')
         for i,tup in enumerate(zip(node.keys,node.values)):
-            if i>0: self.write(',')
-            self.write("'%s':" % tup[0].s)
+            if i>0: self.append(',')
+            self.append("'%s':" % tup[0].s)
             self.visit(tup[1])
-        self.write('}')
-        
-    def visit_Tuple(self, node): 
-        self.write('(')
+        self.append('}')
+
+    def visit_Tuple(self, node):
+        self.append('(')
         length = len(node.elts)
         for i,e in enumerate(node.elts):
-            if i>0: self.write(',')
+            if i>0: self.append(',')
             self.visit(e)
-        if length==1: self.write(',')
-        self.write(')')
-        
-    def visit_USub(self, node): self.write('-')
-    def visit_UAdd(self, node): self.write('+')
-    def visit_And(self, node):  self.write(' and ')
-    def visit_Or(self, node):   self.write(' or ')
-        
+        if length==1: self.append(',')
+        self.append(')')
+
+    def visit_USub(self, node): self.append('-')
+    def visit_UAdd(self, node): self.append('+')
+    def visit_And(self, node):  self.append(' and ')
+    def visit_Or(self, node):   self.append(' or ')
+
     # operators
-    def visit_Add(self, node):      self.write('+')
-    def visit_Sub(self, node):      self.write('-')
-    def visit_Mult(self, node):     self.write('*')
-    def visit_Div(self, node):      self.write('/')
-    def visit_Mod(self, node):      self.write('%')
-    def visit_Pow(self, node):      self.write('**')
-    def visit_LShift(self, node):   self.write('<<')
-    def visit_Rshift(self, node):   self.write('>>')
-    def visit_BitOr(self, node):    self.write('|')
-    def visit_BitXor(self, node):   self.write('^')
-    def visit_BitAnd(self, node):   self.write('&')
-    def visit_FloorDiv(self, node): self.write('//')
-        
+    def visit_Add(self, node):      self.append('+')
+    def visit_Sub(self, node):      self.append('-')
+    def visit_Mult(self, node):     self.append('*')
+    def visit_Div(self, node):      self.append('/')
+    def visit_Mod(self, node):      self.append('%')
+    def visit_Pow(self, node):      self.append('**')
+    def visit_LShift(self, node):   self.append('<<')
+    def visit_Rshift(self, node):   self.append('>>')
+    def visit_BitOr(self, node):    self.append('|')
+    def visit_BitXor(self, node):   self.append('^')
+    def visit_BitAnd(self, node):   self.append('&')
+    def visit_FloorDiv(self, node): self.append('//')
+
     # cmp operators
-    def visit_Eq(self, node):    self.write('==')
-    def visit_NotEq(self, node): self.write('!=')
-    def visit_Lt(self, node):    self.write('<')
-    def visit_LtE(self, node):   self.write('<=')
-    def visit_Gt(self, node):    self.write('>')
-    def visit_GtE(self, node):   self.write('>=')
-    def visit_Is(self, node):    self.write(' is ')
-    def visit_IsNot(self, node): self.write(' is not ')
-    def visit_In(self, node):    self.write(' in ')
-    def visit_NotIn(self, node): self.write(' not in ')
-    
+    def visit_Eq(self, node):    self.append('==')
+    def visit_NotEq(self, node): self.append('!=')
+    def visit_Lt(self, node):    self.append('<')
+    def visit_LtE(self, node):   self.append('<=')
+    def visit_Gt(self, node):    self.append('>')
+    def visit_GtE(self, node):   self.append('>=')
+    def visit_Is(self, node):    self.append(' is ')
+    def visit_IsNot(self, node): self.append(' is not ')
+    def visit_In(self, node):    self.append(' in ')
+    def visit_NotIn(self, node): self.append(' not in ')
+
     def _ignore(self, node):
         super(ExprPrinter, self).generic_visit(node)
 
@@ -279,23 +277,23 @@ class ExprPrinter(ast.NodeVisitor):
     visit_Subscript  = _ignore
     visit_Load       = _ignore
     visit_Store      = _ignore
-    
+
     def generic_visit(self, node):
         # We want to fail if we see any nodes we don't know about rather than
         # generating code that isn't correct.
         raise RuntimeError("ExprPrinter can't handle a node of type %s" % node.__class__.__name__)
 
-    
+
 
 class ExprNameTransformer(ast.NodeTransformer):
     def __init__(self, mapping):
         self.mapping = mapping.copy()
         super(ExprNameTransformer, self).__init__()
-        
+
     def visit_Name(self, node):
-        return ast.Name(id=self.mapping.get(node.id, node.id), 
+        return ast.Name(id=self.mapping.get(node.id, node.id),
                         ctx=ast.Load())
-    
+
     def visit_Attribute(self, node):
         long_name = _get_long_name(node)
         if long_name is None or long_name not in self.mapping:
@@ -308,8 +306,8 @@ class ExprNameTransformer(ast.NodeTransformer):
         if xform is not None:
             return _get_attr_node(xform.split('.'))
         return super(ExprNameTransformer, self).generic_visit(node)
-        
-    
+
+
 def transform_expression(expr, mapping):
     """Returns a new expression string with the names transformed based on
     the value of the mapping dict.  Note that this transforms only "complete"
@@ -320,14 +318,14 @@ def transform_expression(expr, mapping):
 
     new_ast = ExprNameTransformer(mapping).visit(ast.parse(expr, mode='eval'))
     ast.fix_missing_locations(new_ast)
-    
+
     ep = ExprPrinter()
     ep.visit(new_ast)
     return ep.get_text()
 
 
 def eliminate_expr_ws(expr):
-    """Return the expression string with whitespace removed, except for 
+    """Return the expression string with whitespace removed, except for
     whitespace within string literals passed as function args.
     """
     node = ast.parse(expr, mode='eval')
@@ -345,6 +343,6 @@ if __name__ == '__main__':
     import sys
     mapping = { 'foo.bar': 'a.b.c.def', 'blah': 'hohum' }
     print transform_expression(sys.argv[1], mapping)
-    
-    
-    
+
+
+

@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.log import logger
 
 try:
     from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
@@ -14,8 +15,7 @@ try:
     from scipy.sparse.linalg import gmres, LinearOperator
 
 except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
+    logger.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, zeros, \
                                     ones, unravel_index, vstack, hstack
 
@@ -61,6 +61,14 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+            if info > 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
+                      "after %d iterations for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, param, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed " \
+                      "for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), param, irhs))
 
             i = 0
             for item in outputs:
@@ -116,6 +124,15 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+
+            if info > 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed to converge " \
+                      "after %d iterations for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, output, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed " \
+                      "for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), output, irhs))
 
             i = 0
             for param in inputs:
@@ -239,6 +256,11 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
         return
 
     input_keys, output_keys = obj.list_deriv_vars()
+    # correct for the one item tuple missing comma problem
+    if isinstance(input_keys, basestring):
+        input_keys = (input_keys,)
+    if isinstance(output_keys, basestring):
+        output_keys = (output_keys,)
 
     #print 'J', input_keys, output_keys, J
 
@@ -330,6 +352,11 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
         return
 
     input_keys, output_keys = obj.list_deriv_vars()
+    # correct for the one item tuple missing comma problem
+    if isinstance(input_keys, basestring):
+        input_keys = (input_keys,)
+    if isinstance(output_keys, basestring):
+        output_keys = (output_keys,)
 
     #print 'J', input_keys, output_keys, J
 
@@ -504,7 +531,7 @@ def reduce_jacobian(J, i1, i2, idx, ish, o1, o2, odx, osh):
 
         if ':' not in ostring and len(ox) > 1:
             ostring = 'vstack(%s)' % ostring
-        if ':' not in istring and len(ox) > 1:
+        if ':' not in istring and len(ix) > 1:
             istring = 'hstack(%s)' % istring
 
         return eval('J[%s, %s]' % (ostring, istring))
@@ -763,6 +790,10 @@ class FiniteDifference(object):
         if isinstance(srcs, basestring):
             srcs = [srcs]
 
+        # For keeping track of arrays that share the same memory.
+        array_base_val = None
+        index_base_val = None
+
         for src in srcs:
             comp_name, _, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -773,7 +804,11 @@ class FiniteDifference(object):
                 src, _, idx = src.partition('[')
                 if idx:
                     old_val = self.scope.get(src)
-                    exec('old_val[%s += val' % idx)
+                    if old_val is not array_base_val or \
+                       idx != index_base_val:
+                        exec('old_val[%s += val' % idx)
+                        array_base_val = old_val
+                        index_base_val = idx
 
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -791,21 +826,32 @@ class FiniteDifference(object):
 
             # Full vector
             else:
-                index = index - i1
+                idx = index - i1
 
                 # Indexed array
                 if '[' in src:
-                    sliced_src = self.scope.get(src)
-                    sliced_shape = sliced_src.shape
-                    flattened_src = sliced_src.flatten()
-                    flattened_src[index] += val
-                    sliced_src = flattened_src.reshape(sliced_shape)
-                    exec('self.scope.%s = sliced_src') % src
+                    base_src, _, base_idx = src.partition('[')
+                    base_val = self.scope.get(base_src)
+                    if base_val is not array_base_val or \
+                       base_idx != index_base_val:
+                        # Note: could speed this up with an eval
+                        # (until Bret looks into the expression speed)
+                        sliced_src = self.scope.get(src)
+                        sliced_shape = sliced_src.shape
+                        flattened_src = sliced_src.flatten()
+                        flattened_src[idx] += val
+                        sliced_src = flattened_src.reshape(sliced_shape)
+                        exec('self.scope.%s = sliced_src') % src
+                        array_base_val = base_val
+                        index_base_val = base_idx
 
                 else:
+
                     old_val = self.scope.get(src)
-                    unravelled = unravel_index(index, old_val.shape)
-                    old_val[unravelled] += val
+                    if old_val is not array_base_val:
+                        unravelled = unravel_index(idx, old_val.shape)
+                        old_val[unravelled] += val
+                        array_base_val = old_val
 
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.

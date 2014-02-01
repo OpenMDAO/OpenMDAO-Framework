@@ -140,13 +140,13 @@ class STLGroup(object):
 
         for comp in self._comps:
             if isinstance(comp,Body):
-                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
-                deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_controls-1)]) #x,y,z derivs for each control point
+                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_controls)]) #x,y,z derivs for each control point
+                deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_controls)]) #x,y,z derivs for each control point
 
             else:
-                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_c_controls-1)]) #x,y,z derivs for each control point
+                deriv_X_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'X'}) for i in xrange(0,comp.n_c_controls)]) #x,y,z derivs for each control point
                 deriv_R_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'R'}) for i in xrange(0,comp.n_c_controls)]) #x,y,z derivs for each control point
-                deriv_T_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'T'}) for i in xrange(0,comp.n_t_controls-1)]) #x,y,z derivs for each control point
+                deriv_T_names.extend([deriv_tmpl.substitute({'name':comp.name,'i':str(i),'type':'T'}) for i in xrange(0,comp.n_t_controls)]) #x,y,z derivs for each control point
 
         var_line += " ".join(deriv_X_names)
         var_line += " ".join(deriv_R_names)
@@ -255,14 +255,14 @@ class STLGroup(object):
         t_offset = 0
         for comp in self._comps:
             if isinstance(comp, Body):
-                jx.append(comp.dXqdC[:,1:]) #skip the root x
+                jx.append(comp.dXqdC)
                 param_name = "%s.X"%comp.name
                 param_J_offset_map[param_name] = x_offset
                 nCx = self.comp_param_count[comp][0]
                 x_offset += nCx
 
-                jyr.append(comp.dYqdC[:,:-1]) #constant tip radius
-                jzr.append(comp.dZqdC[:,:-1])
+                jyr.append(comp.dYqdC) 
+                jzr.append(comp.dZqdC)
                 param_name = "%s.R"%comp.name
                 param_J_offset_map[param_name] = yz_offset
                 nCr = self.comp_param_count[comp][1]
@@ -279,7 +279,7 @@ class STLGroup(object):
             else:
                 #inner and outer jacobians
                 #have to stack the outer and inner jacobians
-                stackX = np.vstack((comp.dXoqdCc[:,1:], comp.dXiqdCc[:,1:])) #skip the root x
+                stackX = np.vstack((comp.dXoqdCc, comp.dXiqdCc))
                 jx.append(stackX)
                 param_name = "%s.X"%comp.name
                 param_J_offset_map[param_name] = x_offset
@@ -287,8 +287,8 @@ class STLGroup(object):
                 x_offset += nCx
 
                 #centerline
-                stackY = np.vstack((comp.dYoqdCc[:,:], comp.dYiqdCc[:,:]))
-                stackZ = np.vstack((comp.dZoqdCc[:,:], comp.dZiqdCc[:,:]))
+                stackY = np.vstack((comp.dYoqdCc, comp.dYiqdCc))
+                stackZ = np.vstack((comp.dZoqdCc, comp.dZiqdCc))
                 jyr.append(stackY) #constant tip radius
                 jzr.append(stackZ)
                 param_name = "%s.R"%comp.name
@@ -297,8 +297,8 @@ class STLGroup(object):
                 yz_offset += nCr
 
                 #thickness
-                stackY = np.vstack((comp.dYoqdCt[:,:-1], comp.dYiqdCt[:,:-1]))
-                stackZ = np.vstack((comp.dZoqdCt[:,:-1], comp.dZiqdCt[:,:-1]))
+                stackY = np.vstack((comp.dYoqdCt, comp.dYiqdCt))
+                stackZ = np.vstack((comp.dZoqdCt, comp.dZiqdCt))
                 jyt.append(stackY) #constant tip radius
                 jzt.append(stackZ)
                 param_name = "%s.thickness"%comp.name
@@ -381,7 +381,7 @@ class STLGroup(object):
             name = comp.name
 
             if isinstance(comp, Body):
-                val = comp.delta_C[1:,0] #holds the root x constant
+                val = comp.delta_C[:,0] #holds the root x constant
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':"axial location of control points for the ffd"}
                 tup = ('%s.X'%name, meta)
@@ -389,7 +389,7 @@ class STLGroup(object):
                 self.param_name_map[tup[0]] = val
                 n_X = val.shape[0]
 
-                val = comp.delta_C[:-1,1] #holds the tip radius constant
+                val = comp.delta_C[:,1] #holds the tip radius constant
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':"radial location of control points for the ffd"}
                 tup = ('%s.R'%name, meta)
@@ -400,7 +400,7 @@ class STLGroup(object):
 
 
             else:
-                val = comp.delta_Cc[1:,0] #fixes the x location of the geometry root
+                val = comp.delta_Cc[:,0] #fixes the x location of the geometry root
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':'axial location of the control points for the centerline of the shell'}
                 tup = ('%s.X'%name, meta)
@@ -416,7 +416,7 @@ class STLGroup(object):
                 self.param_name_map[tup[0]] = val
                 n_R = val.shape[0]
 
-                val = comp.delta_Ct[:-1,1] #except last R, to keep tip size fixed
+                val = comp.delta_Ct[:,1] #except last R, to keep tip size fixed
                 meta = {'value':val, 'iotype':'in', 'shape':val.shape,
                 'desc':'thickness of the shell at each axial station'}
                 tup = ('%s.thickness'%name, meta)
@@ -476,19 +476,19 @@ class STLGroup(object):
             if isinstance(comp, Body):
                 delta_C_shape = comp.delta_C.shape
                 del_C = np.zeros( delta_C_shape )
-                del_C[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_C[:-1,1] = self.param_name_map[ '%s.R' % comp.name ]
+                del_C[:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_C[:,1] = self.param_name_map[ '%s.R' % comp.name ]
                 comp.deform(delta_C=del_C)
             else:
                 delta_Cc_shape = comp.delta_Cc.shape
                 del_Cc = np.zeros( delta_Cc_shape )
-                del_Cc[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Cc[:,0] = self.param_name_map[ '%s.X' % comp.name ]
                 del_Cc[:,1] = self.param_name_map[ '%s.R' % comp.name ]
 
                 delta_Ct_shape = comp.delta_Ct.shape
                 del_Ct = np.zeros( delta_Ct_shape )
-                del_Ct[1:,0] = self.param_name_map[ '%s.X' % comp.name ]
-                del_Ct[:-1,1] = self.param_name_map[ '%s.thickness' % comp.name ]
+                del_Ct[:,0] = self.param_name_map[ '%s.X' % comp.name ]
+                del_Ct[:,1] = self.param_name_map[ '%s.thickness' % comp.name ]
                 # need both delta_Cc and delta_Ct for shells
                 comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
 

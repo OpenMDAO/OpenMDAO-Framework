@@ -213,8 +213,6 @@ class PseudoAssembly(object):
             elif is_output_base_node(dgraph, newname):
                 dgraph.add_edge(self.name, newname)
 
-        dgraph.config_changed()
-
     def clean_graph(self, startgraph, dgraph, excludes=()):
         """ Clean up the old nodes in the graph, leaving out ones that
         are excluded because they're used by ancestor drivers.
@@ -252,4 +250,3 @@ class PseudoAssembly(object):
             if varname and (compname in self.comps):
                 map_outputs[i] = to_PA_var(varpath, self.name)
 
-        dgraph.config_changed()

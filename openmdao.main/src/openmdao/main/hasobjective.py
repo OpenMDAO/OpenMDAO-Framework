@@ -26,21 +26,21 @@ class Objective(ConnectedExprEvaluator):
         if self.pcomp_name:
             scope = self.scope
             try:
-                pcomp = getattr(scope, self.pcomp_name)
+                getattr(scope, self.pcomp_name)
             except AttributeError:
                 pass
             else:
                 scope.remove(self.pcomp_name)
-                            
+
             self.pcomp_name = None
 
 
-class HasObjectives(object): 
+class HasObjectives(object):
     """This class provides an implementation of the IHasObjectives interface."""
 
     _do_not_promote = ['get_expr_depends','get_referenced_compnames',
                        'get_referenced_varpaths']
-    
+
     def __init__(self, parent, max_objectives=0):
         self._objectives = ordereddict.OrderedDict()
         self._max_objectives = max_objectives # max_objectives of 0 means unlimited objectives
@@ -52,7 +52,7 @@ class HasObjectives(object):
         replacing object doesn't have this delegate.
         """
         return len(self._objectives)
-    
+
     def add_objectives(self, obj_iter, scope=None):
         """Takes an iterator of objective strings and creates
         objectives for them in the driver.
@@ -64,15 +64,15 @@ class HasObjectives(object):
             self._parent.add_objective(expr, scope=scope)
 
     def add_objective(self, expr, name=None, scope=None):
-        """Adds an objective to the driver. 
-        
+        """Adds an objective to the driver.
+
         expr: string
             String containing the objective expression.
-            
+
         name: string (optional)
             Name to be used to refer to the objective in place of the expression
             string.
-            
+
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
 
@@ -81,7 +81,7 @@ class HasObjectives(object):
             self._parent.raise_exception("Can't add objective '%s'. Only %d objectives are allowed" % (expr,self._max_objectives),
                                          RuntimeError)
         expr = _remove_spaces(expr)
-        if expr in self._objectives: 
+        if expr in self._objectives:
             self._parent.raise_exception("Trying to add objective "
                                          "'%s' to driver, but it's already there" % expr,
                                          AttributeError)
@@ -89,21 +89,21 @@ class HasObjectives(object):
             self._parent.raise_exception("Trying to add objective "
                                          "'%s' to driver using name '%s', but name is already used" % (expr,name),
                                          AttributeError)
-            
+
         scope = self._get_scope(scope)
-        expreval = Objective(expr, scope, getter='get_attr')
+        expreval = Objective(expr, scope)
         if not expreval.check_resolve():
-            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr, 
+            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr,
                                          ValueError)
 
         name = expr if name is None else name
 
         expreval.activate()
-      
+
         self._objectives[name] = expreval
-            
+
         self._parent.config_changed()
-            
+
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
         the expression are ignored.
@@ -152,25 +152,25 @@ class HasObjectives(object):
         refs: object
             Value returned by :meth:`get_references`.
         """
-        old = self._objectives.copy()
-        self.clear_objectives()
-        for name, obj in old.items():
-            cnst = refs.get(name, old[name])
+
+        # Old objective seems to get removed automatically so no need to
+        # clear objectives and recreate them.
+        for name, obj in refs.items():
             try:
-                self.add_objective(str(cnst), name, cnst.scope)
+                self.add_objective(str(obj), name, obj.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore objective '%s': %s" 
+                self._parent._logger.warning("Couldn't restore objective '%s': %s"
                                               % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
         return self._objectives
-    
+
     def clear_objectives(self):
         """Removes all objectives."""
         for name in self._objectives.keys():
             self.remove_objective(name)
-        
+
     def eval_objectives(self):
         """Returns a list of values of the evaluated objectives."""
         scope = self._get_scope()
@@ -186,7 +186,7 @@ class HasObjectives(object):
         """Returns a list of pseudocomponent names associated with our
         parameters.
         """
-        return [obj.pcomp_name for obj in self._objectives.values() 
+        return [obj.pcomp_name for obj in self._objectives.values()
                       if obj.pcomp_name]
 
     def list_objective_targets(self):
@@ -203,7 +203,7 @@ class HasObjectives(object):
         for obj in self._objectives.values():
             conn_list.extend([(c,pname) for c in obj.get_referenced_compnames()])
         return conn_list
-    
+
     def get_referenced_compnames(self):
         """Returns the names of components referenced by the objectives."""
         lst = []
@@ -217,7 +217,7 @@ class HasObjectives(object):
         for obj in self._objectives.values():
             lst.extend(obj.get_referenced_varpaths(copy=False))
         return lst
-    
+
     def _get_scope(self, scope=None):
         if scope is None:
             try:
@@ -225,7 +225,7 @@ class HasObjectives(object):
             except AttributeError:
                 pass
         return scope
-    
+
     def mimic(self, target):
         """Copy what objectives we can from the target."""
         if self._max_objectives > 0 and len(target._objectives) > self._max_objectives:
@@ -240,7 +240,7 @@ class HasObjectives(object):
 class HasObjective(HasObjectives):
     def __init__(self, parent):
         super(HasObjective, self).__init__(parent, max_objectives=1)
-        
+
     def eval_objective(self):
         """Returns a list of values of the evaluated objectives."""
         if len(self._objectives) > 0:

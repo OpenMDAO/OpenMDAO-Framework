@@ -6,12 +6,14 @@ from cStringIO import StringIO
 import networkx as nx
 import re
 import unittest
+from mock import Mock
 
 try:
     from numpy import zeros, array, identity, random
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array, identity, random
 
+import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.main.derivatives import applyJ, applyJT
@@ -508,6 +510,95 @@ class Testcase_derivatives(unittest.TestCase):
     def setUp(self):
         pcompmod._count = 0 # keep pseudocomp names consistent
 
+    def test_error_logging1(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000,
+                                           high=1000)
+        top.driver.add_parameter('comp.y', low=-1000,
+                                           high=1000)
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.comp.run()
+
+        orig_gmres = openmdao.main.derivatives.gmres
+        orig_logger = openmdao.main.derivatives.logger
+
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+                     maxiter=None, xtype=None, M=None, callback=None, restrt=None):
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+                                  xtype, M, callback, restrt)
+            return dx, 13
+
+        openmdao.main.derivatives.gmres = my_gmres
+        openmdao.main.derivatives.logger = mocklogger = Mock()
+
+        try:
+            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+                                                  mode='forward')
+            
+            mocklogger.error.assert_called_with(
+                "ERROR in calc_gradient in 'driver': gmres failed to converge after 13 iterations for parameter 'comp.y' at index 1")
+
+            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+                                                  mode='adjoint')
+            
+            mocklogger.error.assert_called_with(
+                "ERROR in calc_gradient_adjoint in 'driver': gmres failed to converge after 13 iterations for output 'comp.f_xy' at index 2")
+
+
+        finally:
+            openmdao.main.derivatives.gmres = orig_gmres
+            openmdao.main.derivatives.logger = orig_logger
+
+    def test_error_logging2(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000,
+                                           high=1000)
+        top.driver.add_parameter('comp.y', low=-1000,
+                                           high=1000)
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.comp.run()
+
+        orig_gmres = openmdao.main.derivatives.gmres
+        orig_logger = openmdao.main.derivatives.logger
+
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+                     maxiter=None, xtype=None, M=None, callback=None, restrt=None):
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+                                  xtype, M, callback, restrt)
+            return dx, -13
+
+        openmdao.main.derivatives.gmres = my_gmres
+        openmdao.main.derivatives.logger = mocklogger = Mock()
+
+        try:
+            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+                                                  mode='forward')
+            mocklogger.error.assert_called_with(
+                "ERROR in calc_gradient in 'driver': gmres failed for parameter 'comp.y' at index 1")
+            
+            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+                                                  mode='adjoint')
+            mocklogger.error.assert_called_with(
+                "ERROR in calc_gradient_adjoint in 'driver': gmres failed for output 'comp.f_xy' at index 2")
+            
+        finally:
+            openmdao.main.derivatives.gmres = orig_gmres
+            openmdao.main.derivatives.logger = orig_logger
+        
+
+
     def test_first_derivative(self):
 
         top = set_as_top(Assembly())
@@ -557,7 +648,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -574,7 +666,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.fail("check_gradient() output doesn't match expected")
 
         stream = StringIO()
-        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream)
+        top.check_gradient(name='driver', outputs=['comp.f_xy'], stream=stream,
+                           inputs=['comp.x', 'comp.y'])
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected
@@ -1297,6 +1390,22 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], -7.0, .001)
         assert_rel_error(self, J[1, 0], -5.0, .001)
         assert_rel_error(self, J[1, 1], 44.0, .001)
+
+    def test_arrays_broadcast_fd(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', MyComp())
+        top.driver.workflow.add(['comp1'])
+
+        top.comp1.x3 = zeros((4, 1))
+        top.comp1.x4 = zeros((4, 1))
+        top.run()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2', ('comp1.x3', 'comp1.x4')],
+                                              outputs=['comp1.xx1'],
+                                              mode='fd')
+
+        self.assertEqual(0.0, abs(J).max())
 
     def test_array2D(self):
 
@@ -2197,6 +2306,77 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
 
+        # This will error unless we ignore missing derivs
+        derivs = self.top.check_gradient(name='dis2')
+        self.assertTrue('dis2.y / dis2.x' in derivs[2])
+
+    def test_fd_param_group_arrays_sharing_memory(self):
+
+        class CompSource(Component):
+
+            y = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='out')
+
+            def execute(self):
+                self.y = array([1.0, 1.0, 1.0, 1.0])
+
+        class CompSink(Component):
+
+            a = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='in')
+            b = Array(array([0.0, 0.0, 0.0, 0.0]), iotype='in')
+            y = Float(0.0, iotype='out')
+
+            def execute(self):
+                self.y = 2.0*sum(self.a) + 3.0*sum(self.b)
+
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+        top.add('c1', CompSource())
+        top.add('c2', CompSink())
+        top.driver.workflow.add(['c1', 'c2'])
+
+        top.connect('c1.y', 'c2.a')
+        top.connect('c1.y', 'c2.b')
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+
+        top.disconnect('c1.y', 'c2.b')
+        top.c2.b = array([0.0, 0.0, 0.0, 0.0])
+        top.run()
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 4.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+                                              outputs=['c2.y'],
+                                              mode = 'fd')
+        assert_rel_error(self, J[0, 0], 4.0, .001)
+        assert_rel_error(self, J[0, 1], 4.0, .001)
 
 class Comp2(Component):
     """ two-input, two-output"""
