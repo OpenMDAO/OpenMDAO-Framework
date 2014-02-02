@@ -14,8 +14,6 @@ import sys
 import weakref
 import re
 
-from uuid import uuid1
-
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
