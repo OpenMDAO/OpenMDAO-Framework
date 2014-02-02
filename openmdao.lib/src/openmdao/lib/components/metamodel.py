@@ -222,7 +222,6 @@ class MetaModelBase(Component):
         if self._train:
             try:
                 inputs = self.update_model_inputs()
-                #print self.name, inputs; exit()
                 self.model.run(force=True)
 
             except Exception as err:
