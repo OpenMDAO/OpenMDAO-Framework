@@ -10,7 +10,7 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 from openmdao.main.api import Driver, Architecture, Component, Assembly
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      IterateUntil, FixedPointIterator, \
-                                     NeighborhoodDOEdriver
+                                     NeighborhoodDOEdriver, CONMINdriver as SLSQPdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, \
                                            OptLatinHypercube, LatinHypercube
@@ -169,15 +169,21 @@ class BLISS2000(Architecture):
         locals=self.parent.get_local_des_vars()
 
         #set initial values 
-        for comp,param in global_dvs+local_dvs: 
+        for comp,param in global_dvs: 
             param.initialize(self.parent)
-        
+
+        for comp,local_params in local_dvs_by_comp.iteritems(): 
+            for param in local_params: 
+                param.initialize(self.parent)
         
         objective = self.parent.get_objectives().items()[0]
         comp_constraints = self.parent.get_constraints_by_comp()
         coupling = self.parent.list_coupling_vars()
         couple_deps = self.parent.get_coupling_deps_by_comp()
         couple_indeps = self.parent.get_coupling_indeps_by_comp()
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
         
         driver=self.parent.add("driver",FixedPointIterator())
                
@@ -190,7 +196,7 @@ class BLISS2000(Architecture):
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
-            driver.add_event("%s.reset_training_data"%mm_name)
+            #driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
             meta_model.default_surrogate = ResponseSurface()

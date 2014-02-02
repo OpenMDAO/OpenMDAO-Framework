@@ -43,7 +43,6 @@ class BLISS(Architecture):
 
         for key,couple in coupling.iteritems(): 
             couple.indep.set(couple.start)   
-            print couple.indep.evaluate() 
         
         
         initial_conditions = [param.start for comp,param in global_dvs]
