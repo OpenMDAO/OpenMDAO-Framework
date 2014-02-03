@@ -976,7 +976,7 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
         
-        if check_only or input_keys is None or output_keys is None:
+        if check_only:
             return None
         
         return self.driver.calc_gradient(input_keys, output_keys)
