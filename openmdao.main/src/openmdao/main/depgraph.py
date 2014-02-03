@@ -1408,8 +1408,15 @@ def _check_for_missing_derivs(scope, comps):
         if not has_interface(comp, IComponent): # filter out vartrees
             continue
         if has_interface(comp, IAssembly):
+            
+            # Assemblies need to call into provideJ so that we can determine
+            # what derivatives are available. Note that boundary variables
+            # that are unconnected on the interior need a missing_deriv_policy
+            # of 'assume_zero' to calculate them as zero.
             dins = comp.list_inputs()
             douts = comp.list_outputs()
+            comp.provideJ(dins, douts, check_only=True)
+            dins, douts = comp.list_deriv_vars()
         else:
             dins, douts = comp.list_deriv_vars()
             # correct for the one item tuple missing comma problem

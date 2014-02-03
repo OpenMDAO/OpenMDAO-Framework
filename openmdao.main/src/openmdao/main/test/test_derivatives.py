@@ -921,6 +921,59 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertEqual(len(inkeys), 2)
         self.assertTrue('f_xy' in outkeys)
         self.assertEqual(len(outkeys), 1)
+        
+        # Now, let's find the derivative of the unconnected. Behaviour depends
+        # on deriv policy.
+        top.driver.workflow.config_changed()
+        top.nest.add('stuff', Float(1.0, iotype='in'))
+        top.nest.add('junk', Float(1.0, iotype='out'))
+        top.add('first', Paraboloid())
+        top.add('last', Paraboloid())
+        top.connect('first.f_xy', 'nest.stuff')
+        top.connect('nest.junk', 'last.x')
+        top.run()
+        
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
+                                                  outputs=['nest.f_xy', 'last.f_xy'],
+                                                  mode='forward')
+        except RuntimeError as err:
+            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("RuntimeError expected")            
+
+        top.nest.missing_deriv_policy = 'assume_zero'
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
+                                              outputs=['nest.f_xy', 'last.f_xy'],
+                                              mode='forward')
+        
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 0.0, .001)
+    
+        top.nest.missing_deriv_policy = 'error'
+        top.driver.workflow.config_changed()
+        
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=['first.x'],
+                                                  outputs=['last.f_xy'],
+                                                  mode='forward')
+        except RuntimeError as err:
+            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("RuntimeError expected")            
+    
+        top.nest.missing_deriv_policy = 'assume_zero'
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['first.x'],
+                                              outputs=['last.f_xy'],
+                                              mode='forward')
+        
+        assert_rel_error(self, J[0, 0], 0.0, .001)
 
     def test_5in_1out(self):
 

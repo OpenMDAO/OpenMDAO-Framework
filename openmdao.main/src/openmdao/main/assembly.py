@@ -922,7 +922,7 @@ class Assembly(Component):
         return result
 
 
-    def provideJ(self, required_inputs, required_outputs):
+    def provideJ(self, required_inputs, required_outputs, check_only=False):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
@@ -975,7 +975,10 @@ class Assembly(Component):
 
             output_keys.append(src)
             self.J_output_keys.append(target)
-
+        
+        if check_only:
+            return None
+        
         return self.driver.calc_gradient(input_keys, output_keys)
 
     def list_deriv_vars(self):
