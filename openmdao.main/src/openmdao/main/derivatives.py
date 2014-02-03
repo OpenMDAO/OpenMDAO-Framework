@@ -630,7 +630,6 @@ class FiniteDifference(object):
         for j, src, in enumerate(self.inputs):
 
             # Users can cusomtize the FD per variable
-            fd_step = self.fd_step[j]
             if j in self.form_custom:
                 form = self.form_custom[j]
             else:
@@ -648,6 +647,7 @@ class FiniteDifference(object):
             for i in range(i1, i2):
 
                 # Relative stepsizing
+                fd_step = self.fd_step[j]
                 if step_type == 'relative':
                     current_val = self.get_value(src, i1, i2, i)
                     if current_val > self.relative_threshold:
