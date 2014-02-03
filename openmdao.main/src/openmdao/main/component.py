@@ -332,7 +332,9 @@ class Component(Container):
                             self.raise_exception("required plugin '%s' is not"
                                                  " present" % name, RuntimeError)
                     elif value.iotype in ['in', 'state']:
-                        if isinstance(obj, ndarray):
+                        if self._depgraph.get_sources(name):
+                            unset = False
+                        elif isinstance(obj, ndarray):
                             unset = (obj == value.default).all()
                         else:
                             unset = (obj == value.default)
