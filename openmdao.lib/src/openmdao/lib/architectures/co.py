@@ -1,5 +1,7 @@
 """Implementation of the Collaborative Optimization Architecture"""
 
+import numpy as np
+
 from openmdao.main.api import Driver, Architecture
 from openmdao.lib.drivers.api import SLSQPdriver#, COBYLAdriver as SLSQPdriver
 from openmdao.main.datatypes.api import Float, Array
@@ -36,13 +38,19 @@ class CO(Architecture):
         #Global Driver    
         global_opt = self.parent.add('driver', SLSQPdriver())
         global_opt.recorders = self.data_recorders
-        global_opt.print_vars = ['dis1.y1', 'dis2.y2']
-        global_opt.iprint = 0
-       
+
+        #set initial values 
+        for comp,param in global_dvs: 
+            param.initialize(self.parent)
+
+        for comp,param in local_dvs: 
+            param.initialize(self.parent)
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
         
-        initial_conditions = [param.evaluate() for comp,param in global_dvs]
-        #print "global initial conditions: ", initial_conditions
-        self.parent.add_trait('global_des_var_targets',Array(initial_conditions))
+        initial_conditions = np.array([param.evaluate() for comp,param in global_dvs]).flatten()
+        self.parent.add_trait('global_des_var_targets',Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(global_dvs): 
             target_var = 'global_des_var_targets[%d]'%i
             
@@ -54,7 +62,7 @@ class CO(Architecture):
                 
         initial_conditions = [couple.indep.evaluate() for key,couple in coupling.iteritems()]   
         #print "coupling initial conditions: ", initial_conditions
-        self.parent.add_trait('coupling_var_targets',Array(initial_conditions))
+        self.parent.add_trait('coupling_var_targets',Array(initial_conditions, iotype="in"))
         for i,(key,couple) in enumerate(coupling.iteritems()): 
             target_var = 'coupling_var_targets[%d]'%i
             low = couple.indep.low or -1e99
@@ -64,9 +72,9 @@ class CO(Architecture):
             self.target_var_map[couple.dep.target] = target_var
             
         
-        initial_conditions = [param.evaluate() for comp,param in local_dvs]    
-        #print "local initial conditions: ", initial_conditions
-        self.parent.add_trait("local_des_var_targets",Array(initial_conditions))
+        initial_conditions = [param.evaluate()[0] for comp,param in local_dvs]    
+        #print "local initial conditions: ", initial_conditions, initial_conditions.shape; exit()
+        self.parent.add_trait("local_des_var_targets",Array(initial_conditions, iotype="in"))
         for i,(comp,param) in enumerate(local_dvs):
             #Target variables for the local optimizations
             target_var = 'local_des_var_targets[%d]'%i
@@ -78,12 +86,14 @@ class CO(Architecture):
         #create the new objective with the target variables
         obj = objective.items()[0]
 
-        new_objective = obj[1].text
+        new_objective = str(obj[1].text)
         for old_var,new_var in sorted(self.target_var_map.items(),key=lambda x: len(x[0]), reverse=True):    
             new_objective = new_objective.replace(old_var,new_var)
             
-        global_opt.add_objective(new_objective,name=obj[1])
+        global_opt.add_objective(new_objective)
         
+
+
         #setup the local optimizations
         for comp,params in all_dvs_by_comp.iteritems(): 
             local_opt = self.parent.add('local_opt_%s'%comp,SLSQPdriver())
@@ -95,8 +105,18 @@ class CO(Architecture):
                 residuals.append("(%s-%s)**2"%(self.target_var_map[param.target],param.target))
             if comp in coupl_indeps_by_comp: 
                 for couple in coupl_indeps_by_comp[comp]: 
-                    low = couple.indep.low or -1e99
-                    high = couple.indep.high or 1e99
+                    if couple.indep.low is not None: 
+                        low = couple.indep.low 
+                    else: 
+                        low = -1e99
+                    
+                    if couple.indep.high is not None: 
+                        high = couple.indep.high 
+                    else: 
+                        high = 1e99
+
+                    #print couple, couple.indep.get_metadata()
+                    #exit()
                     local_opt.add_parameter(couple.indep.target,low=low,high=high)
                     residuals.append("(%s-%s)**2"%(self.target_var_map[couple.indep.target],couple.indep.target))
             if comp in coupl_deps_by_comp: 
@@ -107,30 +127,33 @@ class CO(Architecture):
                     local_opt.add_constraint(str(const))
                 
             residuals = "+".join(residuals)    
-            global_constraint = "%s<=.001"%residuals
+            global_constraint = "%s<=0"%residuals
             global_opt.add_constraint(global_constraint)
             local_opt.add_objective(residuals)
 
 
-        """    print local_opt.name
-            print local_opt.get_objectives().keys()[0]
-            for param in local_opt.get_parameters(): 
-                print param
-            print "constraints: "     
-            for constraint in local_opt.list_constraints(): 
-                print constraint
-            
-            print 
-            print
-            
-        print global_opt.name
-        print global_opt.get_objectives().keys()[0]
-        for param in global_opt.get_parameters(): 
-            print param
-        print "constraints: "     
-        for constraint in global_opt.list_constraints(): 
-            print constraint
-        
-        print 
-        print"""            
-            
+
+if __name__ == "__main__": 
+    from openmdao.lib.optproblems.api import SellarProblem
+    #from openmdao.main.api import ArchitectureAssembly
+
+
+    prob = SellarProblem()
+    
+    prob.architecture = CO()
+
+    prob.check_config()
+    
+    prob.run()
+
+    print "\n"
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
+                                             prob.dis1.z2, \
+                                             prob.dis1.x1)
+    print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0], \
+                                             prob.global_des_var_targets[1], \
+                                             prob.local_des_var_targets[0])
+    print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
+    print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
+    print "Minimum objective: ", prob.driver.eval_objective()
+

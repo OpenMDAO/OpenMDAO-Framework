@@ -149,39 +149,41 @@ where you defined the SellarProblem class from above:
                         print "Function calls dis1: %d, dis2: %d"%(problem.dis1.exec_count,problem.dis2.exec_count)
                         print "\n"  
                 
-                    print "Running SellarProblem with IDF"
-                    problem = SellarProblem()
-                    problem.architecture = IDF()
-                    problem.run()
-                    
-                    display_results()
-                    
                     print "Running SellarProblem with MDF"
                     problem = SellarProblem()
                     problem.architecture = MDF()
                     problem.run()
-                    
+
                     display_results()
-                    
+
                     print "Running SellarProblem with CO"
                     problem = SellarProblem()
                     problem.architecture = CO()
                     problem.run()
-                    
+
                     display_results()
-                    
+
                     print "Running SellarProblem with BLISS"
                     problem = SellarProblem()
                     problem.architecture = BLISS()
                     problem.run()
-                    
+
                     display_results()
-                    
+
                     print "Running SellarProblem with BLISS2000"
+                    #Note that BLISS2000 is stochastic and unstable and does not reliably converge 
+                    # you might get an OverflowError
                     problem = SellarProblem()
                     problem.architecture = BLISS2000()
                     problem.run()
-                    
+
+                    display_results()
+
+                    print "Running SellarProblem with IDF"
+                    problem = SellarProblem()
+                    problem.architecture = IDF()
+                    problem.run()
+
                     display_results()
         
     

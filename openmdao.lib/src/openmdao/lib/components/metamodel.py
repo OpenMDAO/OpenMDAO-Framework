@@ -219,11 +219,9 @@ class MetaModelBase(Component):
         """If the training flag is set, train the metamodel. Otherwise,
         predict outputs.
         """
-
         if self._train:
             try:
                 inputs = self.update_model_inputs()
-
                 self.model.run(force=True)
 
             except Exception as err:

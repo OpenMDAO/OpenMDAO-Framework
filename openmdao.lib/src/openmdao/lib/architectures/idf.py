@@ -31,11 +31,13 @@ class IDF(Architecture):
         for k,v in self.parent.get_global_des_vars(): 
             global_dvs.append(v)
             self.parent.driver.add_parameter(v,name=k) # and add the broadcast parameters to the driver
+            v.initialize(self.parent)
         
         for k,v in self.parent.get_local_des_vars(): 
             local_dvs.append(v)
             #add the local design variables to the driver
             self.parent.driver.add_parameter(v,name=k)
+            v.initialize(self.parent)
 
         #TODO: possibly add method for passing constraint directly?
         #add the constraints to the driver

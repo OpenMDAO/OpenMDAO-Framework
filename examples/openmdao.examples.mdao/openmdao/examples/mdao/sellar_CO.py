@@ -108,10 +108,15 @@ if __name__ == "__main__":
 
     prob.dis1.x1 = 1.0
     
-    prob.dis1.y2 = 0.0
-    prob.dis2.y1 = 3.16
+    prob.dis1.y2 = 1.0
+    prob.dis2.y1 = 1.0
+
+    prob.global_des_var_targets  = [5.0, 2.0]
+    prob.local_des_var_targets = [1.0,]
+    prob.coupling_var_targets = [1.0, 1.0]
     
     tt = time.time()
+
     prob.run()
 
     #prob.driver.workflow.check_gradient()

@@ -393,6 +393,7 @@ class Driver(Component):
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
+        
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
@@ -496,6 +497,8 @@ class Driver(Component):
                     self.raise_exception(msg, ValueError)
 
         case = Case(case_input, case_output, parent_uuid=self._case_id)
+
+
 
         for recorder in self.recorders:
             recorder.record(case)

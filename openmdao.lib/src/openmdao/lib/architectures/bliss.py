@@ -1,6 +1,6 @@
 from string import Template
 
-from openmdao.main.api import Driver, Architecture,SequentialWorkflow
+from openmdao.main.api import Driver, Architecture
 
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
@@ -20,6 +20,7 @@ class BLISS(Architecture):
         self.has_global_des_vars = True
         
     def configure(self): 
+
         
         global_dvs = self.parent.get_global_des_vars()
         local_dvs = self.parent.get_local_des_vars_by_comp()
@@ -29,22 +30,33 @@ class BLISS(Architecture):
         coupling = self.parent.list_coupling_vars()
         
         self.parent.add('driver',FixedPointIterator())
-        self.parent.driver.max_iteration = 15
+        self.parent.driver.max_iteration = 50
         self.parent.driver.tolerance = .005
+
+        #set initial values 
+        for comp,param in global_dvs: 
+            param.initialize(self.parent)
+
+        for comp,local_params in local_dvs.iteritems(): 
+            for param in local_params: 
+                param.initialize(self.parent)
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
         
         
         initial_conditions = [param.start for comp,param in global_dvs]
-        self.parent.add_trait('global_des_vars',Array(initial_conditions))
+        self.parent.add_trait('global_des_vars',Array(initial_conditions, iotype="in"))
         for i,(comps,param) in enumerate(global_dvs): 
             targets = param.targets
-            self.parent.driver.add_parameter(targets,low=param.low,high=param.high)
+            self.parent.driver.add_parameter(targets,low=param.low,high=param.high, start=param.start)
             self.parent.driver.add_constraint("global_des_vars[%d]=%s"%(i,targets[0]))
             
         for comp,local_params in local_dvs.iteritems(): 
             initial_conditions = [param.start for param in local_params]
-            self.parent.add_trait('%s_local_des_vars'%comp,Array(initial_conditions))
+            self.parent.add_trait('%s_local_des_vars'%comp,Array(initial_conditions, iotype="in"))
             for i,param in enumerate(local_params): 
-                self.parent.driver.add_parameter(param.targets,low=param.low,high=param.high)
+                self.parent.driver.add_parameter(param.targets,low=param.low,high=param.high, start=param.start)
                 self.parent.driver.add_constraint('%s_local_des_vars[%d]=%s'%(comp,i,param.targets[0]))
             
         # Multidisciplinary Analysis
@@ -97,7 +109,7 @@ class BLISS(Architecture):
             
             for i,param in enumerate(local_params): 
                 x_store_i = "%s[%d]"%(x_store,i)
-                bbopt.add_parameter(x_store_i,low=param.low,high=param.high)
+                bbopt.add_parameter(x_store_i,low=param.low,high=param.high, start=param.start)
                 dx = "(%s-%s)"%(x_store_i,param.targets[0])
                 delta_x.append(dx)
                 move_limit = (param.high-param.low)*20.0/100.0
@@ -136,7 +148,7 @@ class BLISS(Architecture):
         for i,(comps,param) in enumerate(global_dvs): 
             z_store = "global_des_vars[%d]"%i
             target = list(param.targets)[0]
-            sysopt.add_parameter(z_store,low=param.low,high=param.high)
+            sysopt.add_parameter(z_store,low=param.low,high=param.high, start=param.start)
             dz = "(%s-%s)"%(z_store,target)
             delta_z.append(dz)
             move_limit = (param.high-param.low)*20.00/100.0  
@@ -162,8 +174,7 @@ class BLISS(Architecture):
             lin_constraint = "%s < 0"%"+".join(constraint_parts)
             sysopt.add_constraint(lin_constraint)
 
-        self.parent.driver.workflow = SequentialWorkflow()
-        self.parent.driver.workflow.add("mda")
+        #self.parent.driver.workflow.add("mda")
         self.parent.driver.workflow.add(sa_s)
         if global_dvs: 
             self.parent.driver.workflow.add("ssa")
@@ -174,6 +185,19 @@ class BLISS(Architecture):
             
        
                 
-        
-    
+if __name__ == "__main__": 
+
+    from openmdao.lib.optproblems.api import SellarProblem
+    #from openmdao.main.api import ArchitectureAssembly
+
+
+    sp = SellarProblem()
+    sp.architecture = BLISS()
+
+    sp.check_config()
+
+    sp.run()
+
+    for k,v in sp.check_solution().iteritems(): 
+        print "    ",k,": ",v
         

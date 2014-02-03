@@ -176,8 +176,10 @@ run_arch_test_suite.__test__ = False
 
 
 if __name__ == "__main__": 
-    archs = build_arch_list(include=['IDF','MDF','BLISS2000','BLISS','CO'])
+    archs = build_arch_list(include=['CO',])
     probs = build_optproblem_list(include=["SellarProblem"])
+
+    
     
     data = run_arch_test_suite(archs, probs)    
     

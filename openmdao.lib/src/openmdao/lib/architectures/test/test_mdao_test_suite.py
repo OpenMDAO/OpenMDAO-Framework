@@ -2,10 +2,11 @@ import unittest
 
 from openmdao.main.problem_formulation import OptProblem
 from openmdao.main.arch import Architecture
+from openmdao.main.api import set_as_top
 
 from openmdao.lib.optproblems.sellar import SellarProblem
 from openmdao.lib.architectures.mdf import MDF
-from openmdao.lib.architectures.mdao_test_suite import build_arch_list, build_optproblem_list
+from openmdao.lib.architectures.mdao_test_suite import build_arch_list, build_optproblem_list, run_arch_test_suite
 
 class TestArchTestSuite(unittest.TestCase): 
     
@@ -49,7 +50,33 @@ class TestArchTestSuite(unittest.TestCase):
         
         archs = build_arch_list(exclude=['MDF']) 
         self.assertFalse(MDF in [a.__class__ for a in archs])    
+
+
+    def test_architectures(self): 
+
+        probs = build_optproblem_list(include=['UnitScalableProblem', 'SellarProblem'])
+        archs = build_arch_list(include=['MDF','IDF','BLISS','CO'])
+
+        for p in probs: 
+            for a in archs: 
+
         
-   
+                prob_name = p.__class__.__name__
+                arch_name = a.__class__.__name__
+
+                prob = set_as_top(p.__class__())
+
+                prob.architecture = a.__class__()
+                prob.architecture.parent = prob
+
+                try:
+                    print prob_name, arch_name
+                    prob.check_config()
+                    #prob.run()
+                except: 
+                    import traceback
+                    traceback.print_exc()
+                    self.fail('%s architecture could not be configured for %s'%(prob_name, arch_name))
+
 if __name__ == '__main__':
     unittest.main()
