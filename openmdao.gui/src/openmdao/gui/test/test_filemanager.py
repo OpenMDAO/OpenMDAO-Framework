@@ -43,7 +43,6 @@ class FileManagerTestCase(unittest.TestCase):
         # get_file
         (contents, mimetype, encoding) = filemanager.get_file(sname)
         self.assertEqual(contents, hello)
-        self.assertEqual(mimetype, 'text/x-python')
         self.assertEqual(encoding, None)
 
         # get_files
