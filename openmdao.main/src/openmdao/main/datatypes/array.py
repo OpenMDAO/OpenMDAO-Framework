@@ -62,10 +62,14 @@ class Array(TraitArray):
         required = metadata.get('required', False)
         if required:
             if shape:
+                sshape = []
                 entries = 1
                 for s in shape:
+                    if s is None:
+                        s = 1
                     entries *= s
-                _missing = array([object()]*entries, shape=shape)
+                    sshape.append(s)
+                _missing = array([object()]*entries, shape=tuple(sshape))
             else:
                 _missing = array([object()])
 
@@ -82,8 +86,10 @@ class Array(TraitArray):
 
         # Determine default_value if unspecified
         if default_value is None:
-            if shape:
+            if shape and None not in shape:
                 default_value = zeros(shape=shape)
+            elif shape:
+                default_value = zeros(shape=tuple([1]*len(shape)))
             else:
                 default_value = array([])
         elif isinstance(default_value, ndarray):
