@@ -821,6 +821,7 @@ class Component(Container):
         self._expr_sources = None
         self._call_check_config = True
         self._call_execute = True
+        self._provideJ_bounds = None
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):

@@ -528,9 +528,9 @@ class Testcase_derivatives(unittest.TestCase):
         orig_gmres = openmdao.main.derivatives.gmres
         orig_logger = openmdao.main.derivatives.logger
 
-        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
                      maxiter=None, xtype=None, M=None, callback=None, restrt=None):
-            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter,
                                   xtype, M, callback, restrt)
             return dx, 13
 
@@ -540,13 +540,13 @@ class Testcase_derivatives(unittest.TestCase):
         try:
             J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='forward')
-            
+
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in 'driver': gmres failed to converge after 13 iterations for parameter 'comp.y' at index 1")
 
             J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='adjoint')
-            
+
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient_adjoint in 'driver': gmres failed to converge after 13 iterations for output 'comp.f_xy' at index 2")
 
@@ -573,9 +573,9 @@ class Testcase_derivatives(unittest.TestCase):
         orig_gmres = openmdao.main.derivatives.gmres
         orig_logger = openmdao.main.derivatives.logger
 
-        def my_gmres(A, b, x0=None, tol=1e-05, restart=None, 
+        def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
                      maxiter=None, xtype=None, M=None, callback=None, restrt=None):
-            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter, 
+            dx, info = orig_gmres(A, b, x0, tol, restart, maxiter,
                                   xtype, M, callback, restrt)
             return dx, -13
 
@@ -587,16 +587,16 @@ class Testcase_derivatives(unittest.TestCase):
                                                   mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in 'driver': gmres failed for parameter 'comp.y' at index 1")
-            
+
             J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='adjoint')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient_adjoint in 'driver': gmres failed for output 'comp.f_xy' at index 2")
-            
+
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
             openmdao.main.derivatives.logger = orig_logger
-        
+
 
 
     def test_first_derivative(self):
@@ -921,7 +921,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertEqual(len(inkeys), 2)
         self.assertTrue('f_xy' in outkeys)
         self.assertEqual(len(outkeys), 1)
-        
+
         # Now, let's find the derivative of the unconnected. Behaviour depends
         # on deriv policy.
         top.driver.workflow.config_changed()
@@ -932,7 +932,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('first.f_xy', 'nest.stuff')
         top.connect('nest.junk', 'last.x')
         top.run()
-        
+
         try:
             J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
                                                   outputs=['nest.f_xy', 'last.f_xy'],
@@ -941,22 +941,22 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
             self.assertEqual(str(err), msg)
         else:
-            self.fail("RuntimeError expected")            
+            self.fail("RuntimeError expected")
 
         top.nest.missing_deriv_policy = 'assume_zero'
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
                                               outputs=['nest.f_xy', 'last.f_xy'],
                                               mode='forward')
-        
+
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], 0.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
         assert_rel_error(self, J[1, 1], 0.0, .001)
-    
+
         top.nest.missing_deriv_policy = 'error'
         top.driver.workflow.config_changed()
-        
+
         try:
             J = top.driver.workflow.calc_gradient(inputs=['first.x'],
                                                   outputs=['last.f_xy'],
@@ -965,14 +965,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
             self.assertEqual(str(err), msg)
         else:
-            self.fail("RuntimeError expected")            
-    
+            self.fail("RuntimeError expected")
+
         top.nest.missing_deriv_policy = 'assume_zero'
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['first.x'],
                                               outputs=['last.f_xy'],
                                               mode='forward')
-        
+
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
     def test_5in_1out(self):
@@ -2430,6 +2430,26 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode = 'fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
         assert_rel_error(self, J[0, 1], 4.0, .001)
+
+    def test_jacobian_size_error(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', Array_Slice_1D())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1'])
+
+        top.comp1.x = zeros((3, 2))
+        top.driver.workflow.config_changed()
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')],
+                                                  outputs=['comp1.y'],
+                                                  mode = 'forward')
+        except RuntimeError as err:
+            msg = 'comp1: Jacobian is the wrong size. Expected (4x6) but got (4x4)'
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
+
 
 class Comp2(Component):
     """ two-input, two-output"""
