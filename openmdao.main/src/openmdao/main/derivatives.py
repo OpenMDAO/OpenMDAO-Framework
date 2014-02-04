@@ -268,7 +268,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
     if obj._provideJ_bounds is None:
-        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     ibounds, obounds = obj._provideJ_bounds
 
     for okey in result:
@@ -364,7 +364,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
     if obj._provideJ_bounds is None:
-        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     obounds, ibounds = obj._provideJ_bounds
 
     used = set()
@@ -456,7 +456,7 @@ def applyMinvT(obj, inputs, shape_cache):
 
     return inputs
 
-def get_bounds(obj, input_keys, output_keys):
+def get_bounds(obj, input_keys, output_keys, J):
     """ Returns a pair of dictionaries that contain the stop and end index
     for each input and output in a pair of lists.
     """
@@ -483,6 +483,8 @@ def get_bounds(obj, input_keys, output_keys):
             ibounds[item] = (nvar, nvar+width, shape)
         nvar += width
 
+    num_input = nvar
+
     obounds = {}
     nvar = 0
     for key in output_keys:
@@ -491,6 +493,16 @@ def get_bounds(obj, input_keys, output_keys):
         shape = val.shape if hasattr(val, 'shape') else None
         obounds[key] = (nvar, nvar+width, shape)
         nvar += width
+
+    num_output = nvar
+
+    # Give the user an intelligible error if the size of J is wrong.
+    J_output, J_input = J.shape
+    if num_output != J_output or num_input != J_input:
+        msg = 'Jacobian is the wrong size. Expected ' + \
+               '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                            J_output, J_input)
+        obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 
