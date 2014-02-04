@@ -37,7 +37,8 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, IComponent
+                                     IContainer, IParametricGeometry, IComponent, \
+                                     IVariableTree
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
@@ -162,7 +163,7 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename != 'Slot' and trait.required == True and \
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
            trait._illegal_default_ is True:
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
@@ -214,8 +215,9 @@ class Container(SafeHasTraits):
             ttype = obj.trait_type
             if isinstance(ttype, VarTree):
                 variable_tree = getattr(self, name)
-                new_tree = variable_tree.copy()
-                setattr(self, name, new_tree)
+                if not obj.required:
+                    new_tree = variable_tree.copy()
+                    setattr(self, name, new_tree)
 
             if obj.required:
                 _check_bad_default(name, obj, self)

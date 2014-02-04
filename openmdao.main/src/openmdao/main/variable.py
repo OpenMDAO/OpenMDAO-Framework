@@ -9,7 +9,8 @@ from keyword import iskeyword
 
 from traits.api import TraitType
 from traits.trait_handlers import NoDefaultSpecified
-from openmdao.main.interfaces import implements, IVariable
+from openmdao.main.interfaces import implements, IVariable, IVariableTree
+from openmdao.main.mp_support import has_interface
 from openmdao.main.expreval import _expr_dict
 
 # regex to check for valid names.
@@ -45,16 +46,21 @@ class Variable(TraitType):
         if 'vartypename' not in metadata:
             metadata['vartypename'] = self.__class__.__name__
 
+        is_vt = False
         # force default value to a value that will always be different
         # than any value assigned to the variable so that the callback
         # will always fire the first time the variable is set.
         if metadata['vartypename'] != 'Slot' and metadata.get('required') == True:
             if default_value is not NoDefaultSpecified:
-                # set a marker in the metadata that we can check for later
-                # since we don't know the variable name yet and can't generate
-                # a good error message from here.
-                metadata['_illegal_default_'] = True
-            default_value = _missing
+                is_vt = has_interface(default_value, IVariableTree)
+                if not is_vt:
+                    # set a marker in the metadata that we can check for later
+                    # since we don't know the variable name yet and can't generate
+                    # a good error message from here.
+                    metadata['_illegal_default_'] = True
+
+            if not is_vt:
+                default_value = _missing
         super(Variable, self).__init__(default_value=default_value, **metadata)
 
     def get_attribute(self, name, value, trait, meta):

@@ -36,7 +36,7 @@ from openmdao.main.depgraph import DependencyGraph, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
-                                        FileRef, Enum
+                                        FileRef, Enum, VarTree
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 
@@ -297,6 +297,24 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
+    def _check_req_trait(self, name, obj, trait):
+        if trait.iotype in ['in', 'state']:
+            if trait.required is True:
+                if self._depgraph.get_sources(name):
+                    unset = False
+                else:
+                    unset = (obj == trait.trait_type.default_value)
+                    if not isinstance(unset, bool):
+                        try:
+                            unset = unset.all()
+                        except:
+                            pass
+                if unset:
+                    self.raise_exception("required variable '%s' was"
+                                         " not set" % name, RuntimeError)
+            elif trait.is_trait_type(VarTree):
+                obj._check_req_traits(self)
+
     @rbac(('owner', 'user'))
     def check_configuration(self):
         """
@@ -324,21 +342,13 @@ class Component(Container):
                 self.raise_exception("required method 'list_deriv_vars' is missing")
 
             visited = set([id(self), id(self.parent)])
-            for name, value in self.traits(type=not_event).items():
+            for name, trait in self.traits(type=not_event).items():
                 obj = getattr(self, name)
-                if value.required is True:
-                    if value.is_trait_type(Slot):
-                        if obj is None:
-                            self.raise_exception("required plugin '%s' is not"
-                                                 " present" % name, RuntimeError)
-                    elif value.iotype in ['in', 'state']:
-                        if isinstance(obj, ndarray):
-                            unset = (obj == value.default).all()
-                        else:
-                            unset = (obj == value.default)
-                        if unset:
-                            self.raise_exception("required variable '%s' was"
-                                                 " not set" % name, RuntimeError)
+                self._check_req_trait(name, obj, trait)
+                if trait.required is True and trait.is_trait_type(Slot):
+                    if obj is None:
+                        self.raise_exception("required plugin '%s' is not"
+                                             " present" % name, RuntimeError)
                 if has_interface(obj, IComponent) and id(obj) not in visited:
                     visited.add(id(obj))
                     obj.check_configuration()

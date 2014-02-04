@@ -16,10 +16,10 @@ from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
 try:
-    from numpy import array, ndarray
+    from numpy import array, zeros, ndarray
 except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray
+    from openmdao.main.numpy_fallback import array, zeros, ndarray
     from openmdao.main.variable import Variable
 
     class TraitArray(Variable):
@@ -47,8 +47,6 @@ else:
     from traits.api import Array as TraitArray
 
 
-_missing = array([])
-
 
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
@@ -63,25 +61,31 @@ class Array(TraitArray):
 
         required = metadata.get('required', False)
         if required:
-            if default_value is not None or shape is not None:
+            if shape:
+                entries = 1
+                for s in shape:
+                    entries *= s
+                _missing = array([object()]*entries, shape=shape)
+            else:
+                _missing = array([object()])
+
+            if default_value is not None: # or shape is not None:
                 # set a marker in the metadata that we can check for later
                 # since we don't know the variable name yet and can't generate
                 # a good error message from here.
                 metadata['_illegal_default_'] = True
 
-            # force default value to a value that will always be different
+            # force default value to a value that will be different
             # than any value assigned to the variable so that the callback
             # will always fire the first time the variable is set.
             default_value = _missing
 
         # Determine default_value if unspecified
         if default_value is None:
-            if shape is None or len(shape) == 1:
+            if shape:
+                default_value = zeros(shape=shape)
+            else:
                 default_value = array([])
-            elif len(shape) == 2:
-                default_value = array([[]])
-            elif len(shape) == 3:
-                default_value = array([[[]]])
         elif isinstance(default_value, ndarray):
             pass
         elif isinstance(default_value, list):
@@ -104,7 +108,7 @@ class Array(TraitArray):
 
             # Since there are units, test them by creating a physical quantity
             try:
-                pq = PhysicalQuantity(0., units)
+                PhysicalQuantity(0., units)
             except:
                 raise ValueError("Units of '%s' are invalid" % units)
 

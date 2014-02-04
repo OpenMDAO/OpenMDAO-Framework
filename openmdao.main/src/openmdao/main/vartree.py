@@ -4,6 +4,7 @@ from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
 from traits.has_traits import FunctionType
+from traits.trait_base import not_event
 
 from openmdao.main.interfaces import IVariable, IVariableTree
 from openmdao.main.container import Container
@@ -14,7 +15,7 @@ from openmdao.main.mp_support import is_instance
 
 
 class VariableTree(Container):
-    """A container of variables with an input or output sense."""
+    """A tree of variables having the same input or output sense."""
 
     _iotype = Str('')
 
@@ -185,6 +186,30 @@ class VariableTree(Container):
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
                             yield ('.'.join([name, chname]), child)
+
+    def _check_req_traits(self, comp):
+        """Raise an exception if any child traits with required=True have not
+        been set to a non-default value.
+        """
+        for name, trait in self.traits(type=not_event).items():
+            obj = getattr(self, name)
+            if obj is self.parent:
+                continue
+            trait = self.trait(name)
+            if is_instance(obj, VariableTree):
+                obj._check_req_traits(comp)
+            elif trait.required is True:
+                if comp._depgraph.get_sources(name):
+                    unset = False
+                else:
+                    unset = (obj == trait.default)
+                    try:
+                        unset = unset.all()
+                    except:
+                        pass
+                if unset:
+                    self.raise_exception("required variable '%s' was"
+                                         " not set" % name, RuntimeError)
 
     def get_attributes(self, io_only=True, indent=0, parent='', valid='false'):
         """ Get attributes for this variable tree. Used by the GUI.
