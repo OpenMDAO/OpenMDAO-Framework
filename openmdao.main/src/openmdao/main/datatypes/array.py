@@ -47,6 +47,8 @@ else:
     from traits.api import Array as TraitArray
 
 
+# FIXME: an empty array might actually be a valid value, so use something
+#        else if we can to guarantee that the first value set will be different.
 _missing = array([])
 
 
@@ -69,7 +71,7 @@ class Array(TraitArray):
                 # a good error message from here.
                 metadata['_illegal_default_'] = True
 
-            # force default value to a value that will always be different
+            # force default value to a value that will be different
             # than any value assigned to the variable so that the callback
             # will always fire the first time the variable is set.
             default_value = _missing
@@ -86,6 +88,8 @@ class Array(TraitArray):
             pass
         elif isinstance(default_value, list):
             default_value = array(default_value)
+        elif required:
+            pass
         else:
             raise TypeError("Default value should be an array-like object, "
                             "not a %s." % type(default_value))
@@ -104,7 +108,7 @@ class Array(TraitArray):
 
             # Since there are units, test them by creating a physical quantity
             try:
-                pq = PhysicalQuantity(0., units)
+                PhysicalQuantity(0., units)
             except:
                 raise ValueError("Units of '%s' are invalid" % units)
 
