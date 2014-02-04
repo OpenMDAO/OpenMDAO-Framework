@@ -16,10 +16,10 @@ from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
 try:
-    from numpy import array, ndarray
+    from numpy import array, zeros, ndarray
 except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray
+    from openmdao.main.numpy_fallback import array, zeros, ndarray
     from openmdao.main.variable import Variable
 
     class TraitArray(Variable):
@@ -47,10 +47,6 @@ else:
     from traits.api import Array as TraitArray
 
 
-# FIXME: an empty array might actually be a valid value, so use something
-#        else if we can to guarantee that the first value set will be different.
-_missing = array([])
-
 
 class Array(TraitArray):
     """A variable wrapper for a numpy array with optional units.
@@ -65,7 +61,15 @@ class Array(TraitArray):
 
         required = metadata.get('required', False)
         if required:
-            if default_value is not None or shape is not None:
+            if shape:
+                entries = 1
+                for s in shape:
+                    entries *= s
+                _missing = array([object()]*entries, shape=shape)
+            else:
+                _missing = array([object()])
+
+            if default_value is not None: # or shape is not None:
                 # set a marker in the metadata that we can check for later
                 # since we don't know the variable name yet and can't generate
                 # a good error message from here.
@@ -78,18 +82,14 @@ class Array(TraitArray):
 
         # Determine default_value if unspecified
         if default_value is None:
-            if shape is None or len(shape) == 1:
+            if shape:
+                default_value = zeros(shape=shape)
+            else:
                 default_value = array([])
-            elif len(shape) == 2:
-                default_value = array([[]])
-            elif len(shape) == 3:
-                default_value = array([[[]]])
         elif isinstance(default_value, ndarray):
             pass
         elif isinstance(default_value, list):
             default_value = array(default_value)
-        elif required:
-            pass
         else:
             raise TypeError("Default value should be an array-like object, "
                             "not a %s." % type(default_value))

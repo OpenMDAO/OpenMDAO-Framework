@@ -303,11 +303,12 @@ class Component(Container):
                 if self._depgraph.get_sources(name):
                     unset = False
                 else:
-                    unset = (obj == trait.default)
-                    try:
-                        unset = unset.all()
-                    except:
-                        pass
+                    unset = (obj == trait.trait_type.default_value)
+                    if not isinstance(unset, bool):
+                        try:
+                            unset = unset.all()
+                        except:
+                            pass
                 if unset:
                     self.raise_exception("required variable '%s' was"
                                          " not set" % name, RuntimeError)

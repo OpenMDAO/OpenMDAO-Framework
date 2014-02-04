@@ -193,6 +193,8 @@ class VariableTree(Container):
         """
         for name, trait in self.traits(type=not_event).items():
             obj = getattr(self, name)
+            if obj is self.parent:
+                continue
             trait = self.trait(name)
             if is_instance(obj, VariableTree):
                 obj._check_req_traits(comp)
