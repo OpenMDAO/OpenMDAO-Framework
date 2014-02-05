@@ -35,16 +35,16 @@ _expr_dict = {
 # make numpy functions available if possible
 try:
     import numpy
-    names = ['cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs', 
-    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf', 
-    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc', 
+    names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
+    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
     'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
     _import_functs(numpy, _expr_dict, names=names)
 
-    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is! 
+    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
 
 
-    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial', 
+    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
     'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
     _import_functs(math, _expr_dict, names=math_names)
 
@@ -591,7 +591,7 @@ class ExprEvaluator(object):
             return self._examiner.refs
 
     def _is_complex_stepable(self, grad_code):
-        
+
         try:
             #diff_method = self._complex_step
             result = self._complex_step(grad_code, 1.0e-6)
@@ -629,10 +629,10 @@ class ExprEvaluator(object):
             var_dict[target_var] -= stepsize
 
         ym = eval(grad_code, _expr_dict, locals())
-        
+
         if isinstance(ym, ndarray):
             ym = ym.flatten()
-        
+
         grad = (yp - ym) / stepsize
 
         return grad
@@ -650,7 +650,7 @@ class ExprEvaluator(object):
 
         if(isinstance(yp, ndarray)):
             yp = yp.flatten()
-        
+
         grad = imag(yp)/stepsize
 
         return grad
@@ -692,7 +692,7 @@ class ExprEvaluator(object):
             if var not in inputs:
                 gradient[var] = 0.0
                 continue
-            
+
             var_dict = {}
             #grad_text = self.text
             new_names = {}
@@ -711,7 +711,8 @@ class ExprEvaluator(object):
                     # If we don't need derivative of a var,
                     # replace with its value
                     #grad_text = grad_text.replace(name, str(replace_val))
-                    new_name = str(replace_val)
+                    #if isinstance(replace_val, ndarray)
+                    new_name = repr(replace_val)
                 new_names[name] = new_name
             grad_text = transform_expression(self.text, new_names)
 
@@ -720,9 +721,9 @@ class ExprEvaluator(object):
 
             val = var_dict[var]
 
-            if self._is_complex_stepable(grad_code): 
+            if self._is_complex_stepable(grad_code):
                 diff_method = self._complex_step
-            else: 
+            else:
                 diff_method = self._finite_difference
 
 
@@ -736,7 +737,7 @@ class ExprEvaluator(object):
 
                 for i, index in enumerate(ndindex(*val.shape)):
                     gradient[var][:, i] = diff_method(grad_code, var_dict, var, stepsize, index)
-                    
+
             else:
                 gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
                 if isinstance(gradient[var], ndarray):
