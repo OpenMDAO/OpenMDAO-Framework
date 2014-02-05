@@ -113,6 +113,7 @@ class CompWithArrayVarTree(Component):
     def list_deriv_vars(self): 
         return ('ins.x',), ('outs.x',)
 
+
 class DummyCompVarTree(Component): 
 
     ins = VarTree(TreeWithFloat(), iotype="in")
@@ -128,6 +129,16 @@ class DummyCompVarTree(Component):
     def list_deriv_vars(self): 
 
         return ("ins.x1",),("y",)
+
+
+class AssemblyWrapperDummyCompVarTree(Assembly): 
+
+    def configure(self): 
+        self.add('d1', DummyCompVarTree())
+        self.create_passthrough('d1.ins')
+        self.create_passthrough('d1.y')
+
+        self.driver.workflow.add('d1')
 
 
 class CompWithVarTreeMissingDeriv(Component):
@@ -172,6 +183,18 @@ class AssemblyWithCompVarTree(Assembly):
 
         self.driver.workflow.add('comp1') 
 
+
+class AssemblyWithBoundryVarTree(Assembly): 
+
+    def configure(self): 
+        self.add('comp1', DummyCompVarTree())
+        self.create_passthrough('comp1.ins')
+        self.create_passthrough('comp1.y')
+
+        self.driver.workflow.add('comp1')
+
+
+
 class AssemblyWithBurriedVarTree(Assembly): 
 
     x1 = Float(iotype="in")
@@ -211,6 +234,27 @@ class AssemblyWithConnectedVarTree(Assembly):
 
 
 class TestDerivativeVarTreeSubAssembly(unittest.TestCase): 
+
+
+    def test_varTree_on_boundary_subassenbly(self): 
+        top = set_as_top(Assembly())
+        top.add('comp', AssemblyWithBoundryVarTree())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.driver.add_parameter('comp.ins.x1', low=-100, high=100)
+        top.driver.add_objective('comp.y')
+
+        top.run()
+        inputs = ['comp.ins.x1',]
+        outputs = ['comp.y']
+        J_fd = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        top.driver.workflow.config_changed()
+        J_forward = top.driver.workflow.calc_gradient(inputs, outputs, mode="forward")
+        top.driver.workflow.config_changed()
+        J_reverse = top.driver.workflow.calc_gradient(inputs, outputs, mode="adjoint")
+
+        assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
 
     def test_varTree_in_subassembly(self): 
 
