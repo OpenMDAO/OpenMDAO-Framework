@@ -353,6 +353,11 @@ class MetaModelBase(Component):
         self.reset_training_data = True
 
         if newmodel:
+
+            # We can metamodel assemblies too.
+            newmodel.configure()
+            newmodel._call_configure = False
+
             if not check_model_only_one_level_vartree(newmodel):
                 self.raise_exception('metamodels currently do not support multi'
                                      ' level vartrees', TypeError)
