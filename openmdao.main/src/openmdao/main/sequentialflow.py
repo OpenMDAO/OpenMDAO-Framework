@@ -986,19 +986,27 @@ class SequentialWorkflow(Workflow):
             if not isinstance(item, basestring):
                 item = item[0]
 
-            i1, i2 = self.get_bounds(item)
-            if isinstance(i1, list):
-                num_in += len(i1)
-            else:
-                num_in += i2-i1
+            try:
+                i1, i2 = self.get_bounds(item)
+                if isinstance(i1, list):
+                    num_in += len(i1)
+                else:
+                    num_in += i2-i1
+            except KeyError:
+                val = self.scope.get(item)
+                num_in += flattened_size(item, val, self.scope)
 
         num_out = 0
         for item in outputs:
-            i1, i2 = self.get_bounds(item)
-            if isinstance(i1, list):
-                num_out += len(i1)
-            else:
-                num_out += i2-i1
+            try:
+                i1, i2 = self.get_bounds(item)
+                if isinstance(i1, list):
+                    num_out += len(i1)
+                else:
+                    num_out += i2-i1
+            except KeyError:
+                val = self.scope.get(item)
+                num_out += flattened_size(item, val, self.scope)
 
         shape = (num_out, num_in)
 
