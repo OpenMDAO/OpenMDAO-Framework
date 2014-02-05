@@ -1052,7 +1052,10 @@ class SequentialWorkflow(Workflow):
             else:
                 pname = from_PA_var(name)
 
-            i1, i2 = self.get_bounds(name)
+            try:
+                i1, i2 = self.get_bounds(name)
+            except KeyError:
+                continue
 
             if isinstance(i1, list):
                 width = len(i1)
