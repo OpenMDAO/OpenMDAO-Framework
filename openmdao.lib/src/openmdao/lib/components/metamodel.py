@@ -355,8 +355,9 @@ class MetaModelBase(Component):
         if newmodel:
 
             # We can metamodel assemblies too.
-            newmodel.configure()
-            newmodel._call_configure = False
+            if newmodel._call_configure:
+                newmodel.configure()
+                newmodel._call_configure = False
 
             if not check_model_only_one_level_vartree(newmodel):
                 self.raise_exception('metamodels currently do not support multi'
