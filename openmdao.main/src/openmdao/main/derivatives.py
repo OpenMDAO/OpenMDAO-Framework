@@ -45,7 +45,10 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         if isinstance(param, tuple):
             param = param[0]
 
-        i1, i2 = wflow.get_bounds(param)
+        try:
+            i1, i2 = wflow.get_bounds(param)
+        except KeyError:
+            continue
 
         if isinstance(i1, list):
             in_range = i1
@@ -72,7 +75,11 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             i = 0
             for item in outputs:
-                k1, k2 = wflow.get_bounds(item)
+                try:
+                    k1, k2 = wflow.get_bounds(item)
+                except KeyError:
+                    continue
+
                 if isinstance(k1, list):
                     J[i:i+(len(k1)), j] = dx[k1]
                     i += len(k1)
@@ -107,7 +114,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         if isinstance(output, tuple):
             output = output[0]
 
-        i1, i2 = wflow.get_bounds(output)
+        try:
+            i1, i2 = wflow.get_bounds(output)
+        except KeyError:
+            continue
 
         if isinstance(i1, list):
             out_range = i1
@@ -140,7 +150,11 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 if isinstance(param, tuple):
                     param = param[0]
 
-                k1, k2 = wflow.get_bounds(param)
+                try:
+                    k1, k2 = wflow.get_bounds(param)
+                except KeyError:
+                    continue
+
                 if isinstance(k1, list):
                     J[j, i:i+(len(k1))] = dx[k1:k2]
                     i += len(k1)

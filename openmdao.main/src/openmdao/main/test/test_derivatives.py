@@ -975,6 +975,45 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
+                                              outputs=['nest.f_xy', 'nest.junk'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 0.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
+                                              outputs=['nest.f_xy', 'nest.junk'],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 0.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
+                                              outputs=['nest.junk'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+
+        top.nest.missing_deriv_policy = 'error'
+        top.driver.workflow.config_changed()
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
+                                                  outputs=['nest.junk'],
+                                                  mode='forward')
+        except RuntimeError as err:
+            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("RuntimeError expected")
+
     def test_5in_1out(self):
 
         self.top = set_as_top(Assembly())
