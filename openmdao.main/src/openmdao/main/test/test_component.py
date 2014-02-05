@@ -19,8 +19,8 @@ from openmdao.util.testutil import assert_raises
 
 class MyComponent(Component):
     x = Float(1., iotype='in')
-    xreq = Float(iotype='in', required=True)
-    areq = Array(iotype='in', required=True)
+    xreq = Float(iotype='in')
+    areq = Array(iotype='in')
     xout = Float(2., iotype='out')
 
     def __init__(self):
@@ -44,17 +44,6 @@ class FakeRecorder(object):
 
     def get_iterator(self):
         pass
-
-
-class DumbComp(Component):
-    myvar = Float(1.1, iotype='in', required=True)
-    def execute(self):
-        print 'running'
-
-class DumbCompA(Component):
-    myvar = Array([1.1], iotype='in', required=True)
-    def execute(self):
-        print 'running'
 
 
 class TestCase(unittest.TestCase):
@@ -193,42 +182,6 @@ class TestCase(unittest.TestCase):
         self.comp.set('x', 99.999)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
 
-    def test_required_input(self):
-        comp = MyComponent()
-        comp.areq = [1]
-        try:
-            comp.run()
-        except Exception as err:
-            self.assertEqual(str(err), ": required variable 'xreq' was not set")
-        else:
-            self.fail("Exception expected")
-
-        comp = MyComponent()
-        comp.xreq = 1
-        try:
-            comp.run()
-        except Exception as err:
-            self.assertEqual(str(err), ": required variable 'areq' was not set")
-        else:
-            self.fail("Exception expected")
-
-    def test_required_input2(self):
-        try:
-            DumbComp()
-        except Exception as err:
-            self.assertEqual(str(err), ": variable 'myvar' is required and"
-                                       " cannot have a default value")
-        else:
-            self.fail("Exception expected")
-
-        try:
-            DumbCompA()
-        except Exception as err:
-            self.assertEqual(str(err), ": variable 'myvar' is required and"
-                                       " cannot have a default value")
-        else:
-            self.fail("Exception expected")
-
     def test_override(self):
         code = """\
 class BadComponent(Component):
@@ -248,7 +201,6 @@ class BadComponent(Component):
         code = "comp.add_trait('run', Float(iotype='in'))"
         assert_raises(self, code, globals(), locals(), NameError,
                       "Would override attribute 'run' of Component")
-
 
     def test_replace(self):
         # Ensure we can replace a child component.

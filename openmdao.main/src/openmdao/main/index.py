@@ -5,6 +5,44 @@ CALL = 2
 SLICE = 3
 EXTSLICE = 4
 
+def _handle_simple_index(obj, idx):
+    return obj[idx[1]]
+
+def _handle_attr(obj, idx):
+    return getattr(obj, idx[1])
+
+def _handle_call(obj, idx):
+    if len(idx) == 1:
+        return obj.__call__()
+    else:
+        args = idx[1]
+        if len(idx) == 3:
+            kwargs = dict(idx[2])
+        else:
+            kwargs = {}
+        return obj.__call__(*args, **kwargs)
+
+def _handle_slice(obj, idx):
+    return obj.__getitem__(slice(*idx[1]))
+
+def _handle_extslice(obj, idx):
+    args = []
+    for a in idx[1:]:
+        if isinstance(a, tuple):
+            args.append(slice(a[0],a[1],a[2]))
+        else:
+            args.append(a)
+    return obj.__getitem__(args)
+
+# dict of functions to handle various index tuples
+_index_functs = {
+    INDEX: _handle_simple_index,
+    ATTR: _handle_attr,
+    CALL: _handle_call,
+    SLICE: _handle_slice,
+    EXTSLICE: _handle_extslice,
+}
+
 def process_index_entry(obj, idx):
     """
 
@@ -38,36 +76,10 @@ def process_index_entry(obj, idx):
           EXTSLICE:  (4, plus a combination of (lower,upper,step) tuples and indexes)
                      For example, (4, (None,None,None), 2)
     """
-    if not isinstance(idx, tuple):
-        #print obj, type(obj)
-        #print obj[idx]
+    if isinstance(idx, tuple):
+        return _index_functs[idx[0]](obj, idx)
+    else:
         return obj[idx]
-    if idx[0] == INDEX:
-        return obj[idx[1]]
-    elif idx[0] == ATTR:
-        return getattr(obj, idx[1])
-    elif idx[0] == CALL:
-        if len(idx) == 1:
-            return obj.__call__()
-        else:
-            args = idx[1]
-            if len(idx) == 3:
-                kwargs = dict(idx[2])
-            else:
-                kwargs = {}
-            return obj.__call__(*args, **kwargs)
-    elif idx[0] == SLICE:
-        return obj.__getitem__(slice(*idx[1]))
-    elif idx[0] == EXTSLICE:
-        args = []
-        for a in idx[1:]:
-            if isinstance(a, tuple):
-                args.append(slice(a[0],a[1],a[2]))
-            else:
-                args.append(a)
-        return obj.__getitem__(args)
-
-    raise ValueError("invalid index: %s" % idx)
 
 def index_retains_metadata(index):
     fails = (CALL, ATTR)
@@ -81,7 +93,10 @@ def get_indexed_value(obj, name, index=None):
         obj = getattr(obj, name)
     if index:
         for idx in index:
-            obj = process_index_entry(obj, idx)
+            if isinstance(idx, tuple):
+                obj = _index_functs[idx[0]](obj, idx)
+            else:
+                obj = obj[idx]
     return obj
 
 def index_to_text(index):
@@ -106,3 +121,25 @@ def index_to_text(index):
         return ''.join(parts)
     else:
         return ''
+
+
+def deep_hasattr(obj, pathname):
+    """Returns True if the attrbute indicated by the given pathname
+    exists; False otherwise.
+    """
+    try:
+        parts = pathname.split('.')
+        for name in parts[:-1]:
+            obj = getattr(obj, name)
+    except Exception:
+        return False
+    return hasattr(obj, parts[-1])
+
+
+def deep_getattr(obj, pathname):
+    """Returns the attrbute indicated by the given pathname or raises
+    an exception if it doesn't exist.
+    """
+    for name in pathname.split('.'):
+        obj = getattr(obj, name)
+    return obj

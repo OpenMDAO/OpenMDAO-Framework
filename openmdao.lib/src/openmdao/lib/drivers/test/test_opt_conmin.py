@@ -275,7 +275,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
 
-        self.top.driver.add_objective('comp.result')
+        self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter, ['comp.x[0]', 'comp.x[1]',
                                             'comp.x[2]', 'comp.x[3]'])
 
@@ -285,6 +285,9 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10.',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5.'])
 
+        self.top.driver.conmin_diff = True
+        self.top.driver.fdch = 1.0e-6
+        self.top.driver.fdchm = 1.0e-6
         self.top.run()
         baseerror = abs(self.top.comp.opt_objective - self.top.driver.eval_objective())
 

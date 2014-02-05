@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.log import logger
 
 try:
     from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
@@ -14,8 +15,7 @@ try:
     from scipy.sparse.linalg import gmres, LinearOperator
 
 except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
+    logger.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, zeros, \
                                     ones, unravel_index, vstack, hstack
 
@@ -61,6 +61,14 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+            if info > 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
+                      "after %d iterations for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, param, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient in '%s': gmres failed " \
+                      "for parameter '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), param, irhs))
 
             i = 0
             for item in outputs:
@@ -116,6 +124,15 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             dx, info = gmres(A, RHS,
                              tol=options.gmres_tolerance,
                              maxiter=options.gmres_maxiter)
+
+            if info > 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed to converge " \
+                      "after %d iterations for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), info, output, irhs))
+            elif info < 0:
+                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed " \
+                      "for output '%s' at index %d"
+                logger.error(msg % (wflow._parent.get_pathname(), output, irhs))
 
             i = 0
             for param in inputs:
@@ -251,7 +268,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
     if obj._provideJ_bounds is None:
-        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     ibounds, obounds = obj._provideJ_bounds
 
     for okey in result:
@@ -347,7 +364,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
     if obj._provideJ_bounds is None:
-        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys)
+        obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     obounds, ibounds = obj._provideJ_bounds
 
     used = set()
@@ -439,7 +456,7 @@ def applyMinvT(obj, inputs, shape_cache):
 
     return inputs
 
-def get_bounds(obj, input_keys, output_keys):
+def get_bounds(obj, input_keys, output_keys, J):
     """ Returns a pair of dictionaries that contain the stop and end index
     for each input and output in a pair of lists.
     """
@@ -466,6 +483,8 @@ def get_bounds(obj, input_keys, output_keys):
             ibounds[item] = (nvar, nvar+width, shape)
         nvar += width
 
+    num_input = nvar
+
     obounds = {}
     nvar = 0
     for key in output_keys:
@@ -474,6 +493,16 @@ def get_bounds(obj, input_keys, output_keys):
         shape = val.shape if hasattr(val, 'shape') else None
         obounds[key] = (nvar, nvar+width, shape)
         nvar += width
+
+    num_output = nvar
+
+    # Give the user an intelligible error if the size of J is wrong.
+    J_output, J_input = J.shape
+    if num_output != J_output or num_input != J_input:
+        msg = 'Jacobian is the wrong size. Expected ' + \
+               '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                            J_output, J_input)
+        obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 
@@ -613,7 +642,6 @@ class FiniteDifference(object):
         for j, src, in enumerate(self.inputs):
 
             # Users can cusomtize the FD per variable
-            fd_step = self.fd_step[j]
             if j in self.form_custom:
                 form = self.form_custom[j]
             else:
@@ -631,6 +659,7 @@ class FiniteDifference(object):
             for i in range(i1, i2):
 
                 # Relative stepsizing
+                fd_step = self.fd_step[j]
                 if step_type == 'relative':
                     current_val = self.get_value(src, i1, i2, i)
                     if current_val > self.relative_threshold:
@@ -773,6 +802,10 @@ class FiniteDifference(object):
         if isinstance(srcs, basestring):
             srcs = [srcs]
 
+        # For keeping track of arrays that share the same memory.
+        array_base_val = None
+        index_base_val = None
+
         for src in srcs:
             comp_name, _, var_name = src.partition('.')
             comp = self.scope.get(comp_name)
@@ -783,7 +816,11 @@ class FiniteDifference(object):
                 src, _, idx = src.partition('[')
                 if idx:
                     old_val = self.scope.get(src)
-                    exec('old_val[%s += val' % idx)
+                    if old_val is not array_base_val or \
+                       idx != index_base_val:
+                        exec('old_val[%s += val' % idx)
+                        array_base_val = old_val
+                        index_base_val = idx
 
                     # In-place array editing doesn't activate callback, so we
                     # must do it manually.
@@ -805,17 +842,28 @@ class FiniteDifference(object):
 
                 # Indexed array
                 if '[' in src:
-                    sliced_src = self.scope.get(src)
-                    sliced_shape = sliced_src.shape
-                    flattened_src = sliced_src.flatten()
-                    flattened_src[idx] += val
-                    sliced_src = flattened_src.reshape(sliced_shape)
-                    exec('self.scope.%s = sliced_src') % src
+                    base_src, _, base_idx = src.partition('[')
+                    base_val = self.scope.get(base_src)
+                    if base_val is not array_base_val or \
+                       base_idx != index_base_val:
+                        # Note: could speed this up with an eval
+                        # (until Bret looks into the expression speed)
+                        sliced_src = self.scope.get(src)
+                        sliced_shape = sliced_src.shape
+                        flattened_src = sliced_src.flatten()
+                        flattened_src[idx] += val
+                        sliced_src = flattened_src.reshape(sliced_shape)
+                        exec('self.scope.%s = sliced_src') % src
+                        array_base_val = base_val
+                        index_base_val = base_idx
 
                 else:
+
                     old_val = self.scope.get(src)
-                    unravelled = unravel_index(idx, old_val.shape)
-                    old_val[unravelled] += val
+                    if old_val is not array_base_val:
+                        unravelled = unravel_index(idx, old_val.shape)
+                        old_val[unravelled] += val
+                        array_base_val = old_val
 
                 # In-place array editing doesn't activate callback, so we must
                 # do it manually.

@@ -37,9 +37,10 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry
-from openmdao.main.index import process_index_entry, get_indexed_value, \
-                                INDEX, ATTR, SLICE
+                                     IContainer, IParametricGeometry, IComponent, \
+                                     IVariableTree
+from openmdao.main.index import get_indexed_value, deep_hasattr, \
+                                INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
@@ -162,7 +163,7 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename != 'Slot' and trait.required == True and \
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
            trait._illegal_default_ is True:
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
@@ -189,6 +190,9 @@ class Container(SafeHasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
 
+        # keep track of ExprEvaluators to save some overhead
+        self._exprcache = {}
+
         self._parent = None
         self._name = None
         self._cached_traits_ = None
@@ -211,8 +215,9 @@ class Container(SafeHasTraits):
             ttype = obj.trait_type
             if isinstance(ttype, VarTree):
                 variable_tree = getattr(self, name)
-                new_tree = variable_tree.copy()
-                setattr(self, name, new_tree)
+                if not obj.required:
+                    new_tree = variable_tree.copy()
+                    setattr(self, name, new_tree)
 
             if obj.required:
                 _check_bad_default(name, obj, self)
@@ -624,43 +629,46 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, name, index=None):
-        """The value will be copied if the variable has a 'copy' metadata
-        attribute that is not None. Possible values for 'copy' are
-        'shallow' and 'deep'.
+    def get_attr(self, path, index=None):
+        """Same as the 'get' method, except that the value will be copied 
+        if the variable has a 'copy' metadata attribute that is not None. 
+        Possible values for 'copy' are 'shallow' and 'deep'.
         Raises an exception if the variable cannot be found.
 
         """
-        scopename, _, restofpath = name.partition('.')
+        childname, _, restofpath = path.partition('.')
         if restofpath:
-            obj = getattr(self, scopename)
-            if is_instance(obj, Container):
-                return obj.get_attr(restofpath, index)
-            return get_indexed_value(obj, restofpath)
+            obj = getattr(self, childname, Missing)
+            if obj is Missing or not is_instance(obj, Container):
+                return self._get_failed(path, index)
+            return obj.get_attr(restofpath, index)
 
-        trait = self.get_trait(name)
-        if trait is None:
-            self.raise_exception("trait '%s' does not exist" %
-                                 name, AttributeError)
-
-        # trait itself is most likely a CTrait, which doesn't have
-        # access to member functions on the original trait, aside
-        # from validate and one or two others, so we need to get access
-        # to the original trait which is held in the 'trait_type' attribute.
-        ttype = trait.trait_type
-
-        val = getattr(self, name)
         if index is None:
-            # copy value if 'copy' found in metadata
-            if ttype.copy:
-                if isinstance(val, Container):
-                    val = val.copy()
-                else:
-                    val = _copydict[ttype.copy](val)
-        else: # index is not None
-            val = get_indexed_value(self, name, index)
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
 
-        return val
+            trait = self.get_trait(path)
+            if trait is None:
+                self.raise_exception("trait '%s' does not exist" %
+                                     path, AttributeError)
+            # copy value if 'copy' found in metadata
+            if trait.copy:
+                if isinstance(obj, Container):
+                    obj = obj.copy()
+                else:
+                    obj = _copydict[trait.copy](obj)
+        else: # index is not None
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
+            for idx in index:
+                if isinstance(idx, tuple):
+                    obj = _index_functs[idx[0]](obj, idx)
+                else:
+                    obj = obj[idx]
+
+        return obj
 
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
@@ -1097,21 +1105,31 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
-        else:
-            if ('[' in path or '(' in path) and index is None:
+
+        if index is None:
+            if ('[' in path or '(' in path):
                 # caller has put indexing in the string instead of
                 # using the indexing protocol
-                # TODO: document somewhere that passing indexing
-                #       information as part of the path string has
-                #       higher overhead than constructing the index
-                #       using the indexing protocol or using ExprEvaluators
-                #       that you keep around and evaluate repeatedly.
-                obj = ExprEvaluator(path, scope=self).evaluate()
+                expr = self._exprcache.get(path)
+                if expr is None:
+                    expr = ExprEvaluator(path, scope=self)
+                    self._exprcache[path] = expr
+                obj = expr.evaluate()
             else:
                 obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
-            return get_indexed_value(obj, '', index)
+            return obj
+        else: # has an index
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                return self._get_failed(path, index)
+            for idx in index:
+                if isinstance(idx, tuple):
+                    obj = _index_functs[idx[0]](obj, idx)
+                else:
+                    obj = obj[idx]
+            return obj
 
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
@@ -1170,7 +1188,8 @@ class Container(SafeHasTraits):
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
             if src is not None:
-                src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
+                #src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
+                src = 'parent.'+src
             obj.set(restofpath, value, index, src=src, force=force)
         else:
             try:
@@ -1199,9 +1218,8 @@ class Container(SafeHasTraits):
                     # _call_execute is set in the on-trait-changed
                     # callback, so it's a good test for whether the
                     # value changed.
-                    if hasattr(self, "_call_execute") and self._call_execute:
-                        if iotype == 'in':
-                            self._input_updated(path.split('.', 1)[0])
+                    if iotype == 'in' and getattr(self, "_call_execute", False):
+                        self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1213,11 +1231,17 @@ class Container(SafeHasTraits):
                 setattr(self, path, value)
 
     def _index_set(self, name, value, index):
-        obj = self.get_attr(name, index[:-1])
+        if len(index) == 1:
+            obj = getattr(self, name)
+        else:
+            obj = self.get(name, index[:-1])
         idx = index[-1]
 
         try:
-            old = process_index_entry(obj, idx)
+            if isinstance(idx, tuple):
+                old = _index_functs[idx[0]](obj, idx)
+            else:
+                old = obj[idx]
         except KeyError:
             old = _missing
 
@@ -1246,18 +1270,13 @@ class Container(SafeHasTraits):
             # need to find first item going up the parent tree that is a Component
             item = self
             path = name
+            full = name
             while item:
-                # This is the test we are using to detect if this is a Component
-                # If you use a more explicit way, like is_instance(item, Component)
-                # you run into problems with importing Component and having
-                # circular import issues
-                if hasattr(item, '_call_execute'):
-                    # This is a Component so do Component things
-                    item._call_execute = True
-                    if hasattr(item, path):
-                        item._input_updated(name.split('.', 1)[0], fullpath=path)
+                if has_interface(item, IComponent):
+                    item._input_updated(path, fullpath=full)
                     break
-                path = '.'.join((item.name, path))
+                path = item.name
+                full = '.'.join((path, full))
                 item = item.parent
 
     def _input_check(self, name, old):
@@ -1711,28 +1730,6 @@ def get_default_name(obj, scope):
     while '%s%d' % (classname, ver) in sdict:
         ver += 1
     return '%s%d' % (classname, ver)
-
-
-def deep_hasattr(obj, pathname):
-    """Returns True if the attrbute indicated by the given pathname
-    exists; False otherwise.
-    """
-    try:
-        parts = pathname.split('.')
-        for name in parts[:-1]:
-            obj = getattr(obj, name)
-    except Exception:
-        return False
-    return hasattr(obj, parts[-1])
-
-
-def deep_getattr(obj, pathname):
-    """Returns the attrbute indicated by the given pathname or raises
-    an exception if it doesn't exist.
-    """
-    for name in pathname.split('.'):
-        obj = getattr(obj, name)
-    return obj
 
 
 def find_trait_and_value(obj, pathname):

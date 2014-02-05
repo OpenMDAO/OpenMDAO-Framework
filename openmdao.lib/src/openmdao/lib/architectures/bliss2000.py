@@ -7,11 +7,10 @@ for Concurrent and Distributed Processing, AIAA journal, vol. 41, no. 10, pp. 19
 """
 
 
-from openmdao.main.api import Driver, Architecture, SequentialWorkflow, \
-                              Component, Assembly
-from openmdao.lib.drivers.api import CONMINdriver, BroydenSolver, \
+from openmdao.main.api import Driver, Architecture, Component, Assembly
+from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver, \
                                      IterateUntil, FixedPointIterator, \
-                                     NeighborhoodDOEdriver, SLSQPdriver
+                                     NeighborhoodDOEdriver, CONMINdriver as SLSQPdriver
 from openmdao.lib.surrogatemodels.api import ResponseSurface
 from openmdao.lib.doegenerators.api import CentralComposite, \
                                            OptLatinHypercube, LatinHypercube
@@ -93,7 +92,7 @@ class SubSystemOpt(Assembly):
             self.weights = self.objective_comp.weights
             self.var_names = self.objective_comp.var_names
         
-            self.add('driver',CONMINdriver())
+            self.add('driver',SLSQPdriver())
             self.driver.add_objective("objective_comp.f_wy")
             self.driver.fdch = .00001
             #self.driver.fdchm = .0001
@@ -114,7 +113,7 @@ class SubSystemOpt(Assembly):
 
                 self.connect("%s.output"%broadcast_name,target) #connect broadcast output to input of component
                 self.connect("%s.output"%broadcast_name,var_name) #connect broadcast output to variable in assembly
-                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high) #optimizer varries broadcast input
+                self.driver.add_parameter("%s.input"%broadcast_name,low=p.low,high=p.high, start=p.start) #optimizer varries broadcast input
             
             for c in self.constraints: 
                 self.driver.add_constraint(str(c))
@@ -148,7 +147,7 @@ class SubSystemOpt(Assembly):
 class BLISS2000(Architecture):
     
     def __init__(self, *args, **kwargs):
-        super(BLISS2000, self).__init__(*args, **kwargs)
+        super(BLISS2000, self).__init__()
         
         # the following variables determine the behavior of check_config
         self.param_types = ['continuous']
@@ -168,17 +167,26 @@ class BLISS2000(Architecture):
         global_dvs_by_comp = self.parent.get_global_des_vars_by_comp()
         
         locals=self.parent.get_local_des_vars()
-        
+
+        #set initial values 
+        for comp,param in global_dvs: 
+            param.initialize(self.parent)
+
+        for comp,local_params in local_dvs_by_comp.iteritems(): 
+            for param in local_params: 
+                param.initialize(self.parent)
         
         objective = self.parent.get_objectives().items()[0]
         comp_constraints = self.parent.get_constraints_by_comp()
         coupling = self.parent.list_coupling_vars()
         couple_deps = self.parent.get_coupling_deps_by_comp()
         couple_indeps = self.parent.get_coupling_indeps_by_comp()
+
+        for key,couple in coupling.iteritems(): 
+            couple.indep.set(couple.start)   
         
         driver=self.parent.add("driver",FixedPointIterator())
                
-        driver.workflow = SequentialWorkflow()           
         driver.max_iteration=15 #should be enough to converge
         driver.tolerance = .005
         meta_models = {}
@@ -188,7 +196,7 @@ class BLISS2000(Architecture):
         for comp in des_vars: 
             mm_name = "meta_model_%s"%comp
             meta_model = self.parent.add(mm_name,MetaModel()) #metamodel now replaces old component with same name 
-            driver.add_event("%s.reset_training_data"%mm_name)
+            #driver.add_event("%s.reset_training_data"%mm_name)
 
             meta_models[comp] = meta_model
             meta_model.default_surrogate = ResponseSurface()
@@ -217,7 +225,7 @@ class BLISS2000(Architecture):
                 dis_doe.add_parameter(mapped_name,low=-1e99,high=1e99) #change to -1e99/1e99 
                 
             for dv in global_dvs_by_comp[comp]:
-                dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high,start=dv.start)
+                dis_doe.add_parameter(system_var_map[dv.target],low=dv.low, high=dv.high)
             if local_dvs_by_comp.get(comp): #add weights if they are there
                 for w in meta_model.model.weights: 
                     dis_doe.add_parameter("meta_model_%s.%s"%(comp,w),low=-3,high=3)
@@ -226,7 +234,7 @@ class BLISS2000(Architecture):
             dis_doe.alpha= .1
             dis_doe.beta = .01
 
-            dis_doe.add_event("meta_model_%s.train_next"%comp)
+            dis_doe.add_event("%s.train_next"%meta_model.name)
             dis_doe.force_execute = True
             driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
                 
@@ -286,24 +294,34 @@ class BLISS2000(Architecture):
             s=system_var_map[l[0]].replace(".","_")
             
             s2='%s_store'%s
-            self.parent.add(s2,Float(0.0))
+            self.parent.add(s2,Float(0.0,iotype="in"))
             driver.add_parameter(s2 , low=l[1].low, high=l[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[l[1].target],s2))
             
             
         for i,g in enumerate(global_dvs):
             s2='global%d_store'%i
-            self.parent.add(s2,Float(0.0)) 
+            self.parent.add(s2,Float(0.0,iotype="in")) 
             driver.add_parameter(s2 , low=g[1].low, high=g[1].high)
             driver.add_constraint('%s = %s'%(system_var_map[g[1].target],s2))       
             
+
+        #driver.workflow.add(['DOE_Trainer_dis2','DOE_Trainer_dis1'])
             
 if __name__=="__main__": 
     
     from openmdao.lib.optproblems.api import UnitScalableProblem
+    from openmdao.lib.optproblems.api import SellarProblem
     
-    p = UnitScalableProblem()
+    p = SellarProblem()
     
     p.architecture = BLISS2000()
-    
+
+    p.check_config()
+
+    #print [param for param in p.DOE_Trainer_dis2.get_parameters()]
+    #exit()
     p.run()
+
+    for k,v in p.check_solution().iteritems(): 
+        print "    ",k,": ",v

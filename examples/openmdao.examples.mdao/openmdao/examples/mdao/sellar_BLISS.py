@@ -21,7 +21,7 @@ class SellarBLISS(Assembly):
     Disciplines coupled with FixedPointIterator.
     """
 
-    z_store = Array([0,0],dtype=Float, iotype='in')
+    z_store = Array([0.,0.],dtype=Float, iotype='in')
     x1_store = Float(0.0, iotype='in')
     
     def configure(self):

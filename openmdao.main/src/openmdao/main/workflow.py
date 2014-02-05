@@ -92,7 +92,7 @@ class Workflow(object):
         self._exec_count += 1
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
-                
+        
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order, case_id=case_id)

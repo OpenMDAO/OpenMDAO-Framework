@@ -114,7 +114,7 @@ if __name__ == "__main__": # pragma: no cover
     prz('Old Design')
 
     import sys
-    if len(sys.argv) > 1 and '-prof' in sys.argv:
+    if '-prof' in sys.argv:
         import cProfile
         import pstats
         sys.argv.remove('-prof') #unittest doesn't like -prof
