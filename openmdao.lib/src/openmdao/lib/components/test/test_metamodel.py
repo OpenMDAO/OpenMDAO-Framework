@@ -355,7 +355,7 @@ class MetaModelTestCase(unittest.TestCase):
         return asm
 
     def test_constant_inputs(self):
-        
+
         avals = [1.1]*10
         bvals = [2.2]*10
         asm = self._trained_asm(avals, bvals)
@@ -370,7 +370,7 @@ class MetaModelTestCase(unittest.TestCase):
             self.assertEqual("metamodel: ERROR: all training inputs are constant.", str(err))
         else:
             self.fail("Exception expected")
-        
+
         asm = self._trained_asm(avals+[1.2], bvals+[2.2])
         asm.metamodel.a = 1.
         asm.metamodel.b = 2.2
@@ -578,6 +578,46 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(s.mm.x, 30)
 
         s.run()
+
+    def test_assy_promotion(self):
+
+        class Trig(Component):
+
+            x = Float(0,iotype="in",units="rad")
+
+            f_x_sin = Float(0.0,iotype="out")
+            f_x_cos = Float(0.0,iotype="out")
+
+            def execute(self):
+                self.f_x_sin = .5*sin(self.x)
+                self.f_x_cos = .5*cos(self.x)
+
+
+        class TrigAsmb(Assembly):
+
+            x = Float(0,iotype="in",units="rad")
+
+            def configure(self):
+
+                self.add('trig1', Trig())
+                self.add('trig2', Trig())
+
+                self.connect('x', 'trig1.x')
+                self.connect('trig1.f_x_sin', 'trig2.x')
+
+                self.create_passthrough('trig2.f_x_sin')
+                self.create_passthrough('trig2.f_x_cos')
+
+                self.driver.workflow.add(['trig1', 'trig2'])
+
+        top = set_as_top(Assembly())
+        top.add("trig_meta_model", MetaModel())
+        top.trig_meta_model.model = TrigAsmb()
+        top.trig_meta_model.surrogates['f_x_sin'] = FloatKrigingSurrogate()
+        top.trig_meta_model.surrogates['f_x_cos'] = FloatKrigingSurrogate()
+
+        # Will error if vars don't promote correctly
+        top.run()
 
 ########################################
 #    Test Metamodel with VariableTree
