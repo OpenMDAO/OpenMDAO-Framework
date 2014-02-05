@@ -627,21 +627,25 @@ class ExprEvaluator(object):
         else:
             return self._examiner.refs
 
-    def _is_complex_stepable(self, grad_code):
+    def _is_complex_stepable(self, grad_code, var_dict, var):
 
         try:
-            #diff_method = self._complex_step
-            result = self._complex_step(grad_code, 1.0e-6)
+            save = var_dict[var]
+            is_stepable = True
+            result = self._complex_step(grad_code, var_dict, var, 1.0e-6)
         except TypeError:
-            return False
+            is_stepable = False
         else:
             if not isinstance(result, ndarray):
                 result = array([result])
 
             if not issubdtype(result.dtype, complex) :
-                return False
+                is_stepable = False
 
-            return True
+            is_stepable = False
+        finally:
+            var_dict[var] = save
+            return is_stepable
 
 
     def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
@@ -674,12 +678,12 @@ class ExprEvaluator(object):
 
         return grad
 
-    def _complex_step(self, grad_code, var_dict, target_var, stepsize, index):
+    def _complex_step(self, grad_code, var_dict, target_var, stepsize, index=None):
         """
         """
         if index:
             var_dict[target_var][index] += stepsize * 1j
-
+           
         else:
             var_dict[target_var] += stepsize * 1j
 
@@ -688,7 +692,7 @@ class ExprEvaluator(object):
         if(isinstance(yp, ndarray)):
             yp = yp.flatten()
 
-        grad = imag(yp)/stepsize
+        grad = yp/stepsize
 
         return grad
 
@@ -758,7 +762,7 @@ class ExprEvaluator(object):
 
             val = var_dict[var]
 
-            if self._is_complex_stepable(grad_code):
+            if self._is_complex_stepable(grad_code, var_dict, var):
                 diff_method = self._complex_step
             else:
                 diff_method = self._finite_difference
@@ -774,11 +778,16 @@ class ExprEvaluator(object):
 
                 for i, index in enumerate(ndindex(*val.shape)):
                     gradient[var][:, i] = diff_method(grad_code, var_dict, var, stepsize, index)
+                    if diff_method == self._complex_step:
+                        gradient[var][:,i] = imag(gradient[var][:,i])
 
             else:
                 gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
                 if isinstance(gradient[var], ndarray):
                     gradient[var] = gradient[var].reshape((gradient[var].size, 1))
+                    
+                if diff_method == self._complex_step:
+                    gradient[var] = imag(gradient[var])
 
         return gradient
 
