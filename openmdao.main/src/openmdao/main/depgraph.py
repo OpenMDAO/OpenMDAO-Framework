@@ -1676,12 +1676,11 @@ def _explode_vartrees(graph, scope):
     # if full vartrees are connected, create subvar nodes for all of their
     # internal variables
     visited = set()
-    var_map = {}
     for src, dest in graph.list_connections():
         srcnames = []
         destnames = []
-        if '@' not in src and '[' not in src:
-            visited.add(src)
+        if '@' not in src and '[' not in src and src not in visited:
+            visited.add((src,dest))
             if '~' in src:
                 obj = scope.get(from_PA_var(src))
             else:
@@ -1689,9 +1688,8 @@ def _explode_vartrees(graph, scope):
             if has_interface(obj, IVariableTree):
                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                 srcnames = ['.'.join([src, n]) for n in srcnames]
-            var_map[src] = srcnames
-        if '@' not in dest and '[' not in dest:
-            visited.add(dest)
+        if '@' not in dest and '[' not in dest and dest not in visited:
+            visited.add((src,dest))
             if '~' in dest:
                 obj = scope.get(from_PA_var(dest))
             else:
@@ -1699,7 +1697,6 @@ def _explode_vartrees(graph, scope):
             if has_interface(obj, IVariableTree):
                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                 destnames = ['.'.join([dest, n]) for n in destnames]
-            var_map[src] = destnames
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
                                             dest, destnames, scope)
