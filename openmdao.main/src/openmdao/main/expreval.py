@@ -13,8 +13,6 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
-from openmdao.main.sym import SymGrad, SymbolicDerivativeError
-
 from openmdao.main.printexpr import transform_expression
 
 def _import_functs(mod, dct, names=None):
@@ -476,6 +474,7 @@ class ExprEvaluator(object):
         self.text = text
         self.getter = getter
         self.var_names = set()
+        self.cached_grad_eq = None
 
     @property
     def text(self):
@@ -628,34 +627,12 @@ class ExprEvaluator(object):
         else:
             return self._examiner.refs
 
-    def _is_complex_stepable(self, grad_code, var_dict, var):
-
-        try:
-            save = var_dict[var]
-            is_stepable = True
-            result = self._complex_step(grad_code, var_dict, var, 1.0e-6)
-        except TypeError:
-            is_stepable = False
-        else:
-            if not isinstance(result, ndarray):
-                result = array([result])
-
-            if not issubdtype(result.dtype, complex) :
-                is_stepable = False
-
-            is_stepable = False
-        finally:
-            var_dict[var] = save
-            return is_stepable
-
-
     def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
+        """ Perform central difference
         """
-        """
-        if index:
-            #grad = np.zeros(index)
-            var_dict[target_var][index] += 0.5*stepsize
 
+        if index:
+            var_dict[target_var][index] += 0.5*stepsize
         else:
             var_dict[target_var] += 0.5*stepsize
 
@@ -666,7 +643,6 @@ class ExprEvaluator(object):
 
         if index:
             var_dict[target_var][index] -= stepsize
-
         else:
             var_dict[target_var] -= stepsize
 
@@ -680,11 +656,11 @@ class ExprEvaluator(object):
         return grad
 
     def _complex_step(self, grad_code, var_dict, target_var, stepsize, index=None):
+        """ Perform complex step
         """
-        """
+
         if index:
             var_dict[target_var][index] += stepsize * 1j
-           
         else:
             var_dict[target_var] += stepsize * 1j
 
@@ -692,10 +668,17 @@ class ExprEvaluator(object):
 
         if(isinstance(yp, ndarray)):
             yp = yp.flatten()
+            if not issubdtype(yp.dtype, complex):
+                return None
 
-        grad = yp/stepsize
+            return imag(yp/stepsize)
 
-        return grad
+        elif not isinstance(yp, complex):
+            return None
+        else:
+            return imag(yp/stepsize)[0]
+
+        return imag(yp/stepsize)
 
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect
@@ -716,10 +699,36 @@ class ExprEvaluator(object):
         elif isinstance(wrt, str):
             wrt = [wrt]
 
-        gradient = {}
-        if self.cached_grad_eq is None:
-            self.cached_grad_eq = {}
+        var_dict = {}
+        new_names = {}
+        for name in inputs:
+            if '[' in name:
+                new_expr = ExprEvaluator(name, scope)
+                replace_val = new_expr.evaluate()
+            else:
+                replace_val = scope.get(name)
 
+            if isinstance(replace_val, ndarray):
+                replace_val = replace_val.astype(numpy.complex)
+
+            elif isinstance(replace_val, int):
+                replace_val = float(replace_val)
+
+            var_dict[name] = replace_val
+            new_name = "var_dict['%s']" % name
+            new_names[name] = new_name
+
+        # First time through, cache our gradient code.
+        if self.cached_grad_eq is None:
+
+            grad_text = transform_expression(self.text, new_names)
+
+            grad_root = ast.parse(grad_text, mode='eval')
+            self.cached_grad_eq = compile(grad_root, '<string>', 'eval')
+
+        grad_code = self.cached_grad_eq
+
+        gradient = {}
         for var in wrt:
 
             # A "fake" boundary connection in an assembly has a special
@@ -735,47 +744,7 @@ class ExprEvaluator(object):
                 gradient[var] = 0.0
                 continue
 
-            var_dict = {}
-            #grad_text = self.text
-            new_names = {}
-            for name in inputs:
-                if '[' in name:
-                    new_expr = ExprEvaluator(name, scope)
-                    replace_val = new_expr.evaluate()
-                else:
-                    replace_val = scope.get(name)
-
-                if isinstance(replace_val, ndarray):
-                    if issubdtype(replace_val.dtype, numpy.int):
-                        replace_val = replace_val.astype(numpy.float)
-                
-                elif isinstance(replace_val, int):
-                    replace_val = float(replace_val)
-
-                if name == var:
-                    var_dict[name] = replace_val
-                    new_name = "var_dict['%s']" % name
-                    #grad_text = grad_text.replace(name, new_name)
-                else:
-                    # If we don't need derivative of a var,
-                    # replace with its value
-                    #grad_text = grad_text.replace(name, str(replace_val))
-                    #if isinstance(replace_val, ndarray)
-                    new_name = repr(replace_val)
-                new_names[name] = new_name
-            grad_text = transform_expression(self.text, new_names)
-
-            grad_root = ast.parse(grad_text, mode='eval')
-            grad_code = compile(grad_root, '<string>', 'eval')
-            
             val = var_dict[var]
-
-            if self._is_complex_stepable(grad_code, var_dict, var):
-                diff_method = self._complex_step
-            else:
-                diff_method = self._finite_difference
-
-
             if isinstance(val, ndarray):
                 yp = eval(grad_code, _expr_dict, locals())
 
@@ -785,17 +754,35 @@ class ExprEvaluator(object):
                     gradient[var] = zeros((1, val.size))
 
                 for i, index in enumerate(ndindex(*val.shape)):
-                    gradient[var][:, i] = diff_method(grad_code, var_dict, var, stepsize, index)
-                    if diff_method == self._complex_step:
-                        gradient[var][:,i] = imag(gradient[var][:,i])
+                    try:
+                        base = var_dict[var][index]
+                        grad = self._complex_step(grad_code, var_dict,
+                                                  var, stepsize, index)
+                    except:
+                        grad = None
+
+                    if grad is None:
+                        var_dict[var][index] = base
+                        grad = self._finite_difference(grad_code,var_dict, var,
+                                                       stepsize, index)
+                    gradient[var][:, i] = grad
+                    var_dict[var][index] = base
 
             else:
-                gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
+                try:
+                    base = var_dict[var]
+                    grad = self._complex_step(grad_code, var_dict, var, stepsize)
+                except:
+                    grad = None
+
+                if grad is None:
+                    var_dict[var] = base
+                    grad = self._finite_difference(grad_code,var_dict, var,
+                                                   stepsize)
+                gradient[var] = grad
+                var_dict[var] = base
                 if isinstance(gradient[var], ndarray):
                     gradient[var] = gradient[var].reshape((gradient[var].size, 1))
-                    
-                if diff_method == self._complex_step:
-                    gradient[var] = imag(gradient[var])
 
         return gradient
 

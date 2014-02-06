@@ -625,16 +625,15 @@ class ExprEvalTestCase(unittest.TestCase):
 
         exp = ExprEvaluator(expr, top.driver)
         grad = exp.evaluate_gradient(scope=top)
-        
+
         assert_rel_error(self, grad['comp1.in1'], 2.0, 0.00001)
         assert_rel_error(self, grad['comp1.in11'], 3.0, 0.00001)
 
         expr = "asin(comp1.in1)"
         exp = ExprEvaluator(expr, top.driver)
-        #import pdb; pdb.set_trace()
         grad = exp.evaluate_gradient(scope=top)
-        
-        assert_rel_error(self, grad['comp1.in1'], 1.0, 0.00001)        
+
+        assert_rel_error(self, grad['comp1.in1'], 1.0, 0.00001)
 
 
     def test_scope_transform(self):
