@@ -245,6 +245,12 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         top.driver.add_objective('comp.y')
 
         top.run()
+        
+        # check for invalidation problems
+        top.comp.ins.x1 = 123.4
+        top.comp.run()
+        self.assertEqual(top.comp.ins.x1, top.comp.comp1.ins.x1)
+        
         #print top.comp.driver.workflow.calc_gradient(['ins.x1'], ['y'], mode='fd')
         inputs = ['comp.ins.x1',]
         outputs = ['comp.y']

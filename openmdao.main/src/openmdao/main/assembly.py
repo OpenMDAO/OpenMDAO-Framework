@@ -388,10 +388,7 @@ class Assembly(Component):
             # Variable trees need to point to a new parent.
             # Also, let's not deepcopy the outside universe
             if isinstance(val, Container):
-                old_parent = val.parent
-                val.parent = None
-                val_copy = _copydict[ttype.copy](val)
-                val.parent = old_parent
+                val_copy = val.copy()
                 val_copy.parent = self
                 val = val_copy
             else:
