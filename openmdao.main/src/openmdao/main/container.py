@@ -37,8 +37,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, IComponent, \
-                                     IVariableTree
+                                     IContainer, IParametricGeometry, IComponent
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
@@ -630,8 +629,8 @@ class Container(SafeHasTraits):
 
     @rbac(('owner', 'user'))
     def get_attr(self, path, index=None):
-        """Same as the 'get' method, except that the value will be copied 
-        if the variable has a 'copy' metadata attribute that is not None. 
+        """Same as the 'get' method, except that the value will be copied
+        if the variable has a 'copy' metadata attribute that is not None.
         Possible values for 'copy' are 'shallow' and 'deep'.
         Raises an exception if the variable cannot be found.
 
