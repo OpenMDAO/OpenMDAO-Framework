@@ -64,6 +64,7 @@ else:
 
 
 from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
+import numpy
 
 
 _Missing = object()
@@ -744,6 +745,13 @@ class ExprEvaluator(object):
                 else:
                     replace_val = scope.get(name)
 
+                if isinstance(replace_val, ndarray):
+                    if issubdtype(replace_val.dtype, numpy.int):
+                        replace_val = replace_val.astype(numpy.float)
+                
+                elif isinstance(replace_val, int):
+                    replace_val = float(replace_val)
+
                 if name == var:
                     var_dict[name] = replace_val
                     new_name = "var_dict['%s']" % name
@@ -759,7 +767,7 @@ class ExprEvaluator(object):
 
             grad_root = ast.parse(grad_text, mode='eval')
             grad_code = compile(grad_root, '<string>', 'eval')
-
+            
             val = var_dict[var]
 
             if self._is_complex_stepable(grad_code, var_dict, var):
