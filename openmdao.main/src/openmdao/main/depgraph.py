@@ -1676,27 +1676,30 @@ def _explode_vartrees(graph, scope):
     # if full vartrees are connected, create subvar nodes for all of their
     # internal variables
     visited = set()
-    for src, dest in graph.list_connections():
+    for edge in graph.list_connections():
+        src, dest = edge
         srcnames = []
         destnames = []
-        if '@' not in src and '[' not in src and src not in visited:
-            visited.add((src,dest))
-            if '~' in src:
-                obj = scope.get(from_PA_var(src))
-            else:
-                obj = scope.get(src)
-            if has_interface(obj, IVariableTree):
-                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                srcnames = ['.'.join([src, n]) for n in srcnames]
-        if '@' not in dest and '[' not in dest and dest not in visited:
-            visited.add((src,dest))
-            if '~' in dest:
-                obj = scope.get(from_PA_var(dest))
-            else:
-                obj = scope.get(dest)
-            if has_interface(obj, IVariableTree):
-                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                destnames = ['.'.join([dest, n]) for n in destnames]
+        if edge not in visited: 
+            visited.add(edge)
+            if '@' not in src and '[' not in src:
+                
+                if '~' in src:
+                    obj = scope.get(from_PA_var(src))
+                else:
+                    obj = scope.get(src)
+                if has_interface(obj, IVariableTree):
+                    srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                    srcnames = ['.'.join([src, n]) for n in srcnames]
+            if '@' not in dest and '[' not in dest:
+                
+                if '~' in dest:
+                    obj = scope.get(from_PA_var(dest))
+                else:
+                    obj = scope.get(dest)
+                if has_interface(obj, IVariableTree):
+                    destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                    destnames = ['.'.join([dest, n]) for n in destnames]
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
                                             dest, destnames, scope)
