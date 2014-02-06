@@ -592,7 +592,7 @@ class MetaModelBase(Component):
                             self._check_type(name, 'inputs')
                             self._surrogate_input_names.append(name)
                     else:
-                        subnames = [subvar[0] for subvar in flatteners[VariableTree](name, self.model.get(name))]
+                        subnames = [n for n,v in flatteners[VariableTree](name, self.model.get(name))]
                         for subname in subnames:
                             if self._eligible(subname) and \
                                name not in self._mm_class_traitnames:
@@ -617,7 +617,7 @@ class MetaModelBase(Component):
                             self._check_type(name, 'outputs')
                             self._surrogate_output_names.append(name)
                     else:
-                        subnames = [subvar[0] for subvar in flatteners[VariableTree](name, self.model.get(name))]
+                        subnames = [n for n,v in flatteners[VariableTree](name, self.model.get(name))]
                         for subname in subnames:
                             if self._eligible(subname) and \
                                name not in self._mm_class_traitnames:

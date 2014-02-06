@@ -245,6 +245,7 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         top.driver.add_objective('comp.y')
 
         top.run()
+        #print top.comp.driver.workflow.calc_gradient(['ins.x1'], ['y'], mode='fd')
         inputs = ['comp.ins.x1',]
         outputs = ['comp.y']
         J_fd = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')

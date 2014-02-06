@@ -15,7 +15,8 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
+                                     IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -32,16 +33,18 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node
+from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
+from openmdao.main.case import flatteners
+
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+_missing = object()
 
 __has_top__ = False
 __toplock__ = threading.RLock()
-
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
@@ -922,14 +925,98 @@ class Assembly(Component):
         return result
 
 
+    #def _calc_deriv_vars(self, required_inputs, required_outputs):
+        ## Sub-assembly sourced
+        #input_keys = []
+        #output_keys = []
+
+        ## Parent-assembly sourced
+        #J_input_keys = []
+        #J_output_keys = []
+        ##_provideJ_bounds = None
+
+        #vt_flattener = flatteners[VariableTree]
+
+        #depgraph = self._depgraph
+
+        #visited = set()
+        #for src in required_inputs:
+            #varname = depgraph.base_var(src)
+            ##varname, _, tail = src.partition('[')
+            ##if varname not in depgraph:
+            ##    continue
+            ## get downstream destinations for our base var if they aren't our own subvars
+            #target = [n for n in depgraph.successors_iter(varname)
+                              #if not n.startswith('parent.') and not varname==depgraph.base_var(n)]
+            #if len(target): # base var has connections
+                #if varname in visited:
+                    #continue
+                #visited.add(varname)
+                ## obj = getattr(self, varname, _missing)
+                ## # if basevar is a vartree, get all leaf nodes
+                ## if has_interface(obj, IVariableTree):
+                ##     exploded = sorted([n for n,v in vt_flattener(varname, obj)])
+                ##     J_input_keys.extend(exploded)
+                ##targs = [n for n in depgraph.successors_iter(varname)]
+
+            #elif len(target) == 0 and varname != src:
+                #target = [n for n in depgraph.successors_iter(src)
+                                  #if not n.startswith('parent.')]
+            #if len(target) == 0:
+                #continue
+
+            ## If subvar, only ask the assembly to calculate the
+            ## elements we need.
+            #if varname != src:  # src is a subvar
+                #tail = src[len(varname):]
+                ##if '[' in src and '[' not in target[0]:
+                ##varname, _, tail = src.partition('[')
+                ##target = ['%s[%s' % (targ, tail) for targ in target]
+                #target = ['%s%s' % (targ, tail) for targ in target]
+
+            #input_keys.append(tuple(target))
+            #J_input_keys.append(src)
+
+        #for target in required_outputs:
+            #varname = depgraph.base_var(target)
+            #src = depgraph.predecessors(varname)
+            #if len(src) == 0:
+                #src = depgraph.get_sources(target)
+                #if len(src) == 0:
+                    #continue
+
+            #src = src[0]
+
+            ## If subvar, only ask the assembly to calculate the
+            ## elements we need.
+            #if varname != src:  # src is a subvar
+                #tail = target[len(varname):]
+            ##if '[' in target and '[' not in src:
+                ##varname, _, tail = target.partition('[')
+                ##src = '%s[%s' % (src, tail)
+                #src = '%s%s' % (src, tail)
+
+            #output_keys.append(src)
+            #J_output_keys.append(target)
+
+        #return unique(input_keys), unique(output_keys), unique(J_input_keys), unique(J_output_keys)
+
+
+    #def provideJ(self, required_inputs, required_outputs):
+        #'''An assembly calculates its Jacobian by calling the calc_gradient
+        #method on its base driver. Note, derivatives are only calculated for
+        #floats and iterable items containing floats.'''
+
+        #self._provideJ_bounds = None
+        #input_keys, output_keys, self.J_input_keys, self.J_output_keys = \
+                #self._calc_deriv_vars(required_inputs, required_outputs)
+
+        #return self.driver.calc_gradient(input_keys, output_keys)
+
     def provideJ(self, required_inputs, required_outputs, check_only=False):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
-
-        #self.J_input_keys = required_inputs[:]
-        #self.J_output_keys = required_outputs[:]
-        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
 
         # Sub-assembly sourced
         input_keys = []
@@ -940,29 +1027,38 @@ class Assembly(Component):
         self.J_output_keys = []
         self._provideJ_bounds = None
 
+        depgraph = self._depgraph
+
         for src in required_inputs:
-            varname, _, tail = src.partition('[')
-            target = [n for n in self._depgraph.successors(varname)
+            #varname, _, tail = src.partition('[')
+            varname = depgraph.base_var(src)
+            target = [n for n in depgraph.successors(varname)
                               if not n.startswith('parent.')]
             if len(target) == 0:
-                target = [n for n in self._depgraph.successors(src)
+                target = [n for n in depgraph.successors(src)
                                   if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 
             # If array slice, only ask the assembly to calculate the
             # elements we need.
-            if '[' in src and '[' not in target[0]:
-                target = ['%s[%s' % (targ, tail) for targ in target]
+            #if '[' in src and '[' not in target[0]:
+            #    target = ['%s[%s' % (targ, tail) for targ in target]
+            # If subvar, only ask the assembly to calculate the
+            # elements we need.
+            if src != varname:
+                tail = src[len(varname):]
+                target = ['%s%s' % (targ, tail) for targ in target]
 
             input_keys.append(tuple(target))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            varname, _, tail = target.partition('[')
-            src = self._depgraph.predecessors(varname)
+            #varname, _, tail = target.partition('[')
+            varname = depgraph.base_var(target)
+            src = depgraph.predecessors(varname)
             if len(src) == 0:
-                src = self._depgraph.get_sources(target)
+                src = depgraph.get_sources(target)
                 if len(src) == 0:
                     continue
 
@@ -970,16 +1066,22 @@ class Assembly(Component):
 
             # If array slice, only ask the assembly to calculate the
             # elements we need.
-            if '[' in target and '[' not in src:
-                src = '%s[%s' % (src, tail)
+            #if '[' in target and '[' not in src:
+                #src = '%s[%s' % (src, tail)
+            # If subvar, only ask the assembly to calculate the
+            # elements we need.
+            if target != varname:
+                tail = target[len(varname):]
+                src = '%s%s' % (src, tail)
 
             output_keys.append(src)
             self.J_output_keys.append(target)
-        
+
         if check_only:
             return None
-        
+
         return self.driver.calc_gradient(input_keys, output_keys)
+
 
     def list_deriv_vars(self):
         return self.J_input_keys, self.J_output_keys

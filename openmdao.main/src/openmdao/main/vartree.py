@@ -309,3 +309,4 @@ def _flatten_vartree(name, vt):
     return ret
 
 flatteners[VariableTree] = _flatten_vartree
+
