@@ -284,7 +284,7 @@ class Comp1(Component):
 
 class SubAsmb(Assembly):
 
-    x = Array([1,1], iotype="in")
+    x = Array([1.0,1.0], iotype="in")
     y = Float(2, iotype="in")
 
     z = Float(iotype="out")
