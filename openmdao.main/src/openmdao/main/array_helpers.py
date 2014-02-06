@@ -36,8 +36,9 @@ def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
 
     # Floats
-    if isinstance(val, float):
+    if isinstance(val, (float,int)):
         return 1
+
 
     # Numpy arrays
     elif isinstance(val, ndarray): # FIXME: should check dtype
