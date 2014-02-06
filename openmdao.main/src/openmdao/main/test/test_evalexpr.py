@@ -31,6 +31,8 @@ class A(Component):
     a2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='in')
     b1d = Array(array([1.0, 1.0, 2.0, 3.0]), iotype='out')
     b2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
+    c1d = Array(array([0.0, 1.0, 2.0, 3.0]), iotype='in')
+    c2d = Array(array([[0.0, 1.0], [2.0, 3.0]]), iotype='in')
 
     def some_funct(self, a, b, op='add'):
         if op == 'add':
@@ -576,6 +578,7 @@ class ExprEvalTestCase(unittest.TestCase):
         grad = exp.evaluate_gradient(scope=top)
         assert_rel_error(self, grad['comp2.a'], 1.0, 0.0001)
 
+
     def test_eval_gradient_array(self):
         top = set_as_top(Assembly())
         top.add('comp1', A())
@@ -587,6 +590,33 @@ class ExprEvalTestCase(unittest.TestCase):
         assert_rel_error(self, grad['comp1.b2d[0][1]'], 12.0, 0.00001)
         assert_rel_error(self, grad['comp1.b2d[1][1]'], 4.0, 0.00001)
 
+        exp = ExprEvaluator('comp1.c2d**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp1.c2d'][0,0], 0.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c2d'][1,1], 2.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c2d'][2,2], 4.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c2d'][3,3], 6.0, 0.00001)
+
+        exp = ExprEvaluator('comp1.c1d**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        assert_rel_error(self, grad['comp1.c1d'][0,0], 0.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c1d'][1,1], 2.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c1d'][2,2], 4.0, 0.00001)
+        assert_rel_error(self, grad['comp1.c1d'][3,3], 6.0, 0.00001)
+
+        exp = ExprEvaluator('comp1.a2d + comp1.c2d**2', top.driver)
+        grad = exp.evaluate_gradient(scope=top)
+        a2d_grad, c2d_grad = grad['comp1.a2d'], grad['comp1.c2d']
+        assert_rel_error(self, a2d_grad[0,0], 1.0, 0.00001)
+        assert_rel_error(self, a2d_grad[1,1], 1.0, 0.00001)
+        assert_rel_error(self, a2d_grad[2,2], 1.0, 0.00001)
+        assert_rel_error(self, a2d_grad[3,3], 1.0, 0.00001)
+
+        assert_rel_error(self, c2d_grad[0,0], 0.0, 0.00001)
+        assert_rel_error(self, c2d_grad[1,1], 2.0, 0.00001)
+        assert_rel_error(self, c2d_grad[2,2], 4.0, 0.00001)
+        assert_rel_error(self, c2d_grad[3,3], 6.0, 0.00001)
+
     def test_eval_gradient_lots_of_vars(self):
         top = set_as_top(Assembly())
         top.add('comp1', B())
@@ -595,8 +625,17 @@ class ExprEvalTestCase(unittest.TestCase):
 
         exp = ExprEvaluator(expr, top.driver)
         grad = exp.evaluate_gradient(scope=top)
+        
         assert_rel_error(self, grad['comp1.in1'], 2.0, 0.00001)
         assert_rel_error(self, grad['comp1.in11'], 3.0, 0.00001)
+
+        expr = "asin(comp1.in1)"
+        exp = ExprEvaluator(expr, top.driver)
+        #import pdb; pdb.set_trace()
+        grad = exp.evaluate_gradient(scope=top)
+        
+        assert_rel_error(self, grad['comp1.in1'], 1.0, 0.00001)        
+
 
     def test_scope_transform(self):
         exp = ExprEvaluator('myvar+abs(comp.x)*a.a1d[2]', self.top)

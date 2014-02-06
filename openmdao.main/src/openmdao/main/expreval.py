@@ -15,6 +15,8 @@ from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
 from openmdao.main.sym import SymGrad, SymbolicDerivativeError
 
+from openmdao.main.printexpr import transform_expression
+
 def _import_functs(mod, dct, names=None):
     if names is None:
         names = dir(mod)
@@ -28,13 +30,26 @@ _expr_dict = {
     }
 # add stuff from math lib directly to our locals dict so users won't have to
 # put 'math.' in front of all of their calls to standard math functions
-_import_functs(math, _expr_dict)
+
 
 # make numpy functions available if possible
 try:
     import numpy
+    names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
+    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
+    'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
+    _import_functs(numpy, _expr_dict, names=names)
+
+    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
+
+
+    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
+    'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
+    _import_functs(math, _expr_dict, names=math_names)
+
 except ImportError:
-    pass
+    _import_functs(math, _expr_dict)
 else:
     _expr_dict['numpy'] = numpy
     #_import_functs(numpy, _expr_dict, names=[])
@@ -48,7 +63,8 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity
+from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
+import numpy
 
 
 _Missing = object()
@@ -612,6 +628,75 @@ class ExprEvaluator(object):
         else:
             return self._examiner.refs
 
+    def _is_complex_stepable(self, grad_code, var_dict, var):
+
+        try:
+            save = var_dict[var]
+            is_stepable = True
+            result = self._complex_step(grad_code, var_dict, var, 1.0e-6)
+        except TypeError:
+            is_stepable = False
+        else:
+            if not isinstance(result, ndarray):
+                result = array([result])
+
+            if not issubdtype(result.dtype, complex) :
+                is_stepable = False
+
+            is_stepable = False
+        finally:
+            var_dict[var] = save
+            return is_stepable
+
+
+    def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
+        """
+        """
+        if index:
+            #grad = np.zeros(index)
+            var_dict[target_var][index] += 0.5*stepsize
+
+        else:
+            var_dict[target_var] += 0.5*stepsize
+
+        yp = eval(grad_code, _expr_dict, locals())
+
+        if(isinstance(yp, ndarray)):
+            yp = yp.flatten()
+
+        if index:
+            var_dict[target_var][index] -= stepsize
+
+        else:
+            var_dict[target_var] -= stepsize
+
+        ym = eval(grad_code, _expr_dict, locals())
+
+        if isinstance(ym, ndarray):
+            ym = ym.flatten()
+
+        grad = (yp - ym) / stepsize
+
+        return grad
+
+    def _complex_step(self, grad_code, var_dict, target_var, stepsize, index=None):
+        """
+        """
+        if index:
+            var_dict[target_var][index] += stepsize * 1j
+           
+        else:
+            var_dict[target_var] += stepsize * 1j
+
+        yp = eval(grad_code, _expr_dict, locals())
+
+        if(isinstance(yp, ndarray)):
+            yp = yp.flatten()
+
+        grad = yp/stepsize
+
+        return grad
+
     def evaluate_gradient(self, stepsize=1.0e-6, wrt=None, scope=None):
         """Return a dict containing the gradient of the expression with respect
         to each of the referenced varpaths. The gradient is calculated by 1st
@@ -650,112 +735,67 @@ class ExprEvaluator(object):
                 gradient[var] = 0.0
                 continue
 
-            # First time, try to differentiate symbolically
-            if (var not in self.cached_grad_eq) or self._code is None:
-
-                #Take symbolic gradient of all inputs using sympy
-                try:
-                    for varname, expression in zip(inputs,
-                                                   SymGrad(self.text, inputs)):
-                        self.cached_grad_eq[varname] = expression
-
-                except (SymbolicDerivativeError, NameError):
-                    self.cached_grad_eq[var] = False
-
-            # If we have a cached gradient expression:
-            if self.cached_grad_eq[var]:
-
-                # This is not the way I wanted to do it, but I didn't want
-                # to mess with everything that's is in self._parse
-                grad_text = self.cached_grad_eq[var]
-                for name in inputs:
-                    if '[' in name:
-                        new_expr = ExprEvaluator(name, scope)
-                        replace_val = new_expr.evaluate()
-                    else:
-                        replace_val = scope.get(name)
-                    grad_text = grad_text.replace(name, str(replace_val))
-
-                grad_root = ast.parse(grad_text, mode='eval')
-                grad_code = compile(grad_root, '<string>', 'eval')
-                try:
-                    gradient[var] = eval(grad_code, _expr_dict, locals())
-
-                # Some functions are not defined (like re and imag).
-                # Resort to finite difference for those cases.
-                except Exception:
-                    self.cached_grad_eq[var] = False
+            var_dict = {}
+            #grad_text = self.text
+            new_names = {}
+            for name in inputs:
+                if '[' in name:
+                    new_expr = ExprEvaluator(name, scope)
+                    replace_val = new_expr.evaluate()
                 else:
-                    # sympy doesn't 'sympify' matrices, so SymGrad() thinks
-                    # everything is a scalar. Here we expand that scalar to
-                    # an appropriate shape identity matrix.
-                    # This may be assuming too much here...
-                    wrt_val = scope.get(var)
-                    if isinstance(wrt_val, ndarray):
-                        gradient[var] = gradient[var] * identity(wrt_val.size)
+                    replace_val = scope.get(name)
 
-            # Otherwise resort to finite difference (1st order central)
-            if self.cached_grad_eq[var] == False:
-                # Always need to assemble list of constant inputs, for
-                # replacement in the gradient expression text
-                var_dict = {}
-                grad_text = self.text
-                for name in inputs:
-                    if '[' in name:
-                        new_expr = ExprEvaluator(name, scope)
-                        replace_val = new_expr.evaluate()
-                    else:
-                        replace_val = scope.get(name)
+                if isinstance(replace_val, ndarray):
+                    if issubdtype(replace_val.dtype, numpy.int):
+                        replace_val = replace_val.astype(numpy.float)
+                
+                elif isinstance(replace_val, int):
+                    replace_val = float(replace_val)
 
-                    if name == var:
-                        var_dict[name] = replace_val
-                        new_name = "var_dict['%s']" % name
-                        grad_text = grad_text.replace(name, new_name)
-                    else:
-                        # If we don't need derivative of a var,
-                        # replace with its value
-                        grad_text = grad_text.replace(name, str(replace_val))
-
-                grad_root = ast.parse(grad_text, mode='eval')
-                grad_code = compile(grad_root, '<string>', 'eval')
-
-                # Finite difference (Central difference)
-                val = var_dict[var]
-
-                if isinstance(val, ndarray):
-                    yp = eval(grad_code, _expr_dict, locals())
-
-                    if isinstance(yp, ndarray):
-                        gradient[var] = zeros((yp.size, val.size))
-                    else:
-                        gradient[var] = zeros((1, val.size))
-
-                    for i, index in enumerate(ndindex(*val.shape)):
-                        save = val[index]
-                        val[index] += 0.5*stepsize
-                        yp = eval(grad_code, _expr_dict, locals())
-                        if isinstance(yp, ndarray):
-                            # Need copy in case ym is same array.
-                            yp = yp.flatten()
-                        val[index] -= stepsize
-                        ym = eval(grad_code, _expr_dict, locals())
-                        if isinstance(ym, ndarray):
-                            ym = ym.flat
-                        gradient[var][:, i] = (yp - ym) / stepsize
-                        val[index] = save
+                if name == var:
+                    var_dict[name] = replace_val
+                    new_name = "var_dict['%s']" % name
+                    #grad_text = grad_text.replace(name, new_name)
                 else:
-                    var_dict[var] += 0.5*stepsize
-                    yp = eval(grad_code, _expr_dict, locals())
-                    if isinstance(yp, ndarray):
-                        # Need copy in case ym is same array.
-                        yp = yp.flatten()
-                    var_dict[var] -= stepsize
-                    ym = eval(grad_code, _expr_dict, locals())
-                    if isinstance(ym, ndarray):
-                        ym = ym.flat
-                    gradient[var] = (yp - ym) / stepsize
-                    if isinstance(yp, ndarray):
-                        gradient[var] = gradient[var].reshape((yp.size, 1))
+                    # If we don't need derivative of a var,
+                    # replace with its value
+                    #grad_text = grad_text.replace(name, str(replace_val))
+                    #if isinstance(replace_val, ndarray)
+                    new_name = repr(replace_val)
+                new_names[name] = new_name
+            grad_text = transform_expression(self.text, new_names)
+
+            grad_root = ast.parse(grad_text, mode='eval')
+            grad_code = compile(grad_root, '<string>', 'eval')
+            
+            val = var_dict[var]
+
+            if self._is_complex_stepable(grad_code, var_dict, var):
+                diff_method = self._complex_step
+            else:
+                diff_method = self._finite_difference
+
+
+            if isinstance(val, ndarray):
+                yp = eval(grad_code, _expr_dict, locals())
+
+                if isinstance(yp, ndarray):
+                    gradient[var] = zeros((yp.size, val.size))
+                else:
+                    gradient[var] = zeros((1, val.size))
+
+                for i, index in enumerate(ndindex(*val.shape)):
+                    gradient[var][:, i] = diff_method(grad_code, var_dict, var, stepsize, index)
+                    if diff_method == self._complex_step:
+                        gradient[var][:,i] = imag(gradient[var][:,i])
+
+            else:
+                gradient[var] = diff_method(grad_code, var_dict, var, stepsize)
+                if isinstance(gradient[var], ndarray):
+                    gradient[var] = gradient[var].reshape((gradient[var].size, 1))
+                    
+                if diff_method == self._complex_step:
+                    gradient[var] = imag(gradient[var])
 
         return gradient
 
