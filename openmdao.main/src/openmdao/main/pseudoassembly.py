@@ -169,9 +169,10 @@ class PseudoAssembly(object):
                         # required, and pass them in. Cache this once.
                         if name not in self.ffd_cache:
                             dgraph = self.wflow.scope._depgraph
-                            inputs = flatten_list_of_iters(self.inputs)
-                            inputs = [inp.split('[')[0] for inp in inputs]
-                            outputs = [outp.split('[')[0] for outp in self.outputs]
+                            inputs = [dgraph.base_var(inp) \
+                                       for inp in flatten_list_of_iters(self.inputs)]
+                            outputs = [dgraph.base_var(outp) \
+                                       for outp in self.outputs]
                             from openmdao.main.depgraph import _get_inner_edges
                             edges = _get_inner_edges(dgraph, inputs, outputs)
 
