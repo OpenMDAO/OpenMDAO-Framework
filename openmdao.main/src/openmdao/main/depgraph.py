@@ -9,7 +9,7 @@ from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IImplicitComponent, ISolver, \
                                      IAssembly, IComponent
 from openmdao.main.expreval import ConnectedExprEvaluator
-from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
@@ -339,6 +339,10 @@ class DependencyGraph(nx.DiGraph):
             if added_outs or added_states or added_resids:
                 self.node[cname]['valid'] = False
 
+            self._update_graph_metadata(child, cname,
+                                        [s.split('.',1)[1] for s in added_ins],
+                                        [s.split('.',1)[1] for s in added_outs])
+
         if removing:
             rem_ins = old_ins - new_ins
             rem_outs = old_outs - new_outs
@@ -387,6 +391,24 @@ class DependencyGraph(nx.DiGraph):
 
             self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])
+
+        self._update_graph_metadata(obj, cname, obj.list_inputs(), obj.list_outputs())
+
+    def _update_graph_metadata(self, obj, cname, inputs, outputs):
+        metasrch = ['data_shape', 'deriv_ignore']
+        for vname in chain(inputs, outputs):
+            data = self.node['.'.join((cname, vname))]
+            if not hasattr(obj, 'get_metadata'):
+                continue
+
+            meta = obj.get_metadata(vname)
+            for mname in metasrch:
+                if mname in meta:
+                    data[mname] = meta[mname]
+
+            val = getattr(obj, vname)
+            if not is_differentiable_val(val):
+                data['differentiable'] = False
 
     def add_boundary_var(self, name, **kwargs):
         """Add a boundary variable, i.e., one not associated
@@ -1400,6 +1422,9 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
                     excludes=ancestor_using-set([drv.name]))
     return pa
 
+def _remove_ignored_derivs(graph):
+    to_remove = [n for n,data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
+    graph.remove_nodes_from(to_remove)
 
 def _check_for_missing_derivs(scope, comps):
     ''' we have the edges that are actually needed for the derivatives, so
@@ -1455,7 +1480,7 @@ def _check_for_missing_derivs(scope, comps):
         missing = []
         for name in vnames:
             if name not in dins and name not in douts:
-                nname = name.split('[', 1)[0] #.split('.', 1)[0]
+                nname = name.split('[', 1)[0]
                 if nname not in dins and nname not in douts and is_differentiable_var(nname.split('.',1)[0], comp):
                     missing.append(nname)
         if missing:
@@ -1516,6 +1541,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     rep_drivers, xtra_ins, xtra_outs = \
                    get_subdriver_graph(graph, inputs, outputs, wflow, full_fd)
 
+    _remove_ignored_derivs(graph)
+
     _explode_vartrees(graph, scope)
 
     edges = _get_inner_edges(graph,
@@ -1546,6 +1573,20 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     subgraph = graph.full_subgraph(full)
 
     to_remove = [n for n in graph.nodes_iter() if n not in subgraph]
+
+    # # now remove any unconnected inputs and outputs
+    # for node, data in subgraph.nodes_iter(data=True):
+    #     if node.startswith('@'):
+    #         continue
+    #     iotype = data.get('iotype')
+    #     if iotype == 'in' and graph.in_degree(node) == 0:
+    #         if graph.out_degree(node) <= 1:
+    #             to_remove.append(node)
+    #             print 'removing',node
+    #     elif iotype == 'out' and graph.out_degree(node) == 0:
+    #         if graph.in_degree(node) <= 1:
+    #             to_remove.append(node)
+    #             print 'removing',node
 
     graph.remove_nodes_from(to_remove)
 

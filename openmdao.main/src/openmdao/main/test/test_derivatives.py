@@ -15,7 +15,7 @@ except ImportError as err:
 
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
-from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.datatypes.api import Array, Float, VarTree, Int
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
@@ -75,6 +75,24 @@ class MyComp(Component):
         output_keys = ('xx1', 'xx2', 'xx3', 'xx4', 'vvt.a1', 'vvt.vt1.d1')
 
         return input_keys, output_keys
+
+class IntComp(Component):
+    x = Float(0.0, iotype='in')
+    x_ignore = Float(0.0, iotype='in', deriv_ignore=True)
+    int_in = Int(0, iotype='in', deriv_ignore=True)
+    int_out = Int(0, iotype='out', deriv_ignore=True)
+    y = Float(0.0, iotype='out')
+    y_ignore = Float(0.0, iotype='out', deriv_ignore=True)
+
+    def execute(self):
+        self.y = 2.0*self.x
+        self.int_out = self.int_in
+
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
+
+    def provideJ(self):
+        return array([[2.0]])
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -510,6 +528,26 @@ class Testcase_derivatives(unittest.TestCase):
     def setUp(self):
         pcompmod._count = 0 # keep pseudocomp names consistent
 
+    def test_int_ignore(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', IntComp())
+        top.add('comp2', IntComp())
+        top.driver.workflow.add(['comp1', 'comp2'])
+        top.connect('comp1.int_out', 'comp2.int_in')
+        top.connect('comp1.y', 'comp2.x')
+        top.connect('comp1.y_ignore', 'comp2.x_ignore')
+        top.comp1.x = 1.0
+        top.run()
+        self.assertEqual(top.comp2.y, 4.0)
+        
+        J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
+        assert_rel_error(self, J[0, 0], 4.0, 0.0001)
+        
+        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()), 
+                         set(['@in0','@out0','comp1','comp2','comp1.x','comp1.y','comp2.x','comp2.y']))
+
+
     def test_error_logging1(self):
 
         top = set_as_top(Assembly())
@@ -528,6 +566,7 @@ class Testcase_derivatives(unittest.TestCase):
         orig_gmres = openmdao.main.derivatives.gmres
         orig_logger = openmdao.main.derivatives.logger
 
+        # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
                      maxiter=None, xtype=None, M=None, callback=None, restrt=None):
             dx, info = orig_gmres(A, b, x0, tol, restart, maxiter,
@@ -538,13 +577,13 @@ class Testcase_derivatives(unittest.TestCase):
         openmdao.main.derivatives.logger = mocklogger = Mock()
 
         try:
-            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+            top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='forward')
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in 'driver': gmres failed to converge after 13 iterations for parameter 'comp.y' at index 1")
 
-            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+            top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='adjoint')
 
             mocklogger.error.assert_called_with(
@@ -573,6 +612,7 @@ class Testcase_derivatives(unittest.TestCase):
         orig_gmres = openmdao.main.derivatives.gmres
         orig_logger = openmdao.main.derivatives.logger
 
+        # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
                      maxiter=None, xtype=None, M=None, callback=None, restrt=None):
             dx, info = orig_gmres(A, b, x0, tol, restart, maxiter,
@@ -583,12 +623,12 @@ class Testcase_derivatives(unittest.TestCase):
         openmdao.main.derivatives.logger = mocklogger = Mock()
 
         try:
-            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+            top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in 'driver': gmres failed for parameter 'comp.y' at index 1")
 
-            J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+            top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                                   mode='adjoint')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient_adjoint in 'driver': gmres failed for output 'comp.f_xy' at index 2")
@@ -596,8 +636,6 @@ class Testcase_derivatives(unittest.TestCase):
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
             openmdao.main.derivatives.logger = orig_logger
-
-
 
     def test_first_derivative(self):
 
