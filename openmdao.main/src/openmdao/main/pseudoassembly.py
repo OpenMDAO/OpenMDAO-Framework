@@ -61,6 +61,7 @@ class PseudoAssembly(object):
 
         self.fd = None
         self.J = None
+        self.ffd_cache = {}
 
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
@@ -164,33 +165,39 @@ class PseudoAssembly(object):
                     # to calculate the Jacobians
                     if has_interface(comp, IAssembly):
 
-                        # TODO: We need to cache this stuff
-                        dgraph = self.wflow.scope._depgraph
-                        inputs = flatten_list_of_iters(self.inputs)
-                        outputs = self.outputs
-                        from openmdao.main.depgraph import _get_inner_edges
-                        edges = _get_inner_edges(dgraph, inputs, outputs)
+                        # Need to know which assy bdry variables are
+                        # required, and pass them in. Cache this once.
+                        if name not in self.ffd_cache:
+                            dgraph = self.wflow.scope._depgraph
+                            inputs = flatten_list_of_iters(self.inputs)
+                            outputs = self.outputs
+                            from openmdao.main.depgraph import _get_inner_edges
+                            edges = _get_inner_edges(dgraph, inputs, outputs)
 
-                        req_inputs = []
-                        req_outputs = []
-                        for inp in inputs:
-                            comp_str, _, var_str = inp.partition('.')
-                            if comp_str == name:
-                                req_inputs.append(var_str)
+                            req_inputs = []
+                            req_outputs = []
+                            for inp in inputs:
+                                comp_str, _, var_str = inp.partition('.')
+                                if comp_str == name:
+                                    req_inputs.append(var_str)
 
-                        for inp in outputs:
-                            comp_str, _, var_str = inp.partition('.')
-                            if comp_str == name:
-                                req_outputs.append(var_str)
+                            for inp in outputs:
+                                comp_str, _, var_str = inp.partition('.')
+                                if comp_str == name:
+                                    req_outputs.append(var_str)
 
-                        for edge in edges:
-                            src, target = edge
-                            comp_str, _, var_str = src.partition('.')
-                            if comp_str == name:
-                                req_outputs.append(var_str)
-                            comp_str, _, var_str = target.partition('.')
-                            if comp_str == name:
-                                req_inputs.append(var_str)
+                            for edge in edges:
+                                src, target = edge
+                                comp_str, _, var_str = src.partition('.')
+                                if comp_str == name:
+                                    req_outputs.append(var_str)
+                                comp_str, _, var_str = target.partition('.')
+                                if comp_str == name:
+                                    req_inputs.append(var_str)
+
+                            self.ffd_cache[name] = (req_inputs, req_outputs)
+
+                        req_inputs, req_outputs = self.ffd_cache[name]
 
                         comp.calc_derivatives(first, second, savebase=True,
                                               required_inputs=req_inputs,
