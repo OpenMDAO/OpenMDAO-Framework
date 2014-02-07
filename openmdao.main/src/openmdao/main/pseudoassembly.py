@@ -66,7 +66,7 @@ class PseudoAssembly(object):
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
         else: # use fake finite difference on comps having derivatives
-            self.ffd_order = 1
+            self.ffd_order = 1 #TODO: Fix this!!!
 
         if fd:
             self.itercomps = [c.name for c in wflow]

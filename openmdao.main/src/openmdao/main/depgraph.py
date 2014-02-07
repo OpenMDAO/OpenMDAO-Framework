@@ -1758,6 +1758,7 @@ def _explode_vartrees(graph, scope):
                     obj = scope.get(from_PA_var(dest))
                 else:
                     obj = scope.get(dest)
+
                 if has_interface(obj, IVariableTree):
                     destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                     destnames = ['.'.join([dest, n]) for n in destnames]

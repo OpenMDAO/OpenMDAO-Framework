@@ -945,7 +945,7 @@ class Assembly(Component):
             #varname, _, tail = src.partition('[')
             varname = depgraph.base_var(src)
             target = [n for n in depgraph.successors(varname)
-                              if not n.startswith('parent.')]
+                              if not n.startswith('parent.') and depgraph.base_var(n) != varname] 
             if len(target) == 0:
                 target = [n for n in depgraph.successors(src)
                                   if not n.startswith('parent.')]

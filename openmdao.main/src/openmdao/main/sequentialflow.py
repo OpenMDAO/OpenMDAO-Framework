@@ -797,6 +797,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
+                    #print "non-diff!!!: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:

@@ -487,6 +487,7 @@ class Component(Container):
                 for i, in_name in enumerate(input_keys):
                     y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
 
+
                 self.set(out_name, y, force=True)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
