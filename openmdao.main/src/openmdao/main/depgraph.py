@@ -1641,8 +1641,12 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 new_target = sub.replace(src, dest, 1)
                 if new_target not in graph:
                     graph.add_subvar(new_target)
-                graph.add_edge(newsrc, new_target,
-                               attr_dict=graph.edge[src][dest])
+                
+                if dest in graph.edge[src]:
+                    graph.add_edge(newsrc, new_target,
+                                                  attr_dict=graph.edge[src][dest])                    
+                else: 
+                    graph.add_edge(newsrc, new_target)
 
             to_remove.add((src, dest))
 
