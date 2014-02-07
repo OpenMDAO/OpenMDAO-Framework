@@ -11,6 +11,8 @@ from openmdao.main.interfaces import IDriver, IVariableTree, \
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
+from openmdao.main.case import flatteners
+from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters
 
@@ -38,6 +40,12 @@ def _sub_or_super(s1, s2):
     if s1.startswith(s2 + '['):
         return True
     return False
+
+def unique(seq):
+    """Return a list of unique values, preserving order"""
+    seen = set()
+    sadd = seen.add
+    return [ x for x in seq if x not in seen and not sadd(x)]
 
 
 # Explanation of node/edge metadata dict entries
@@ -274,9 +282,9 @@ class DependencyGraph(nx.DiGraph):
             self._loops = None
             self._saved_loops = None
             self._saved_comp_graph = None
-            self._chvars = {} 
-            self._bndryins = {} 
-            self._bndryouts = {} 
+            self._chvars = {}
+            self._bndryins = {}
+            self._bndryouts = {}
             self._extrnsrcs = None
             self._extrndsts = None
             self._srcs = {}
@@ -615,15 +623,15 @@ class DependencyGraph(nx.DiGraph):
         if conns is None:
             conns = [(u,v) for u,v in self.edges_iter()
                               if is_connection(self, u, v)]
-    
+
             if show_passthrough is False:
                 conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
-    
+
             if show_external is False:
                 conns = [(u,v) for u,v in conns
                               if not (u.startswith('parent.')
                                    or v.startswith('parent.'))]
-    
+
             self._conns[(show_passthrough, show_external)] = conns
         return conns[:]
 
@@ -673,7 +681,7 @@ class DependencyGraph(nx.DiGraph):
         nodes associated with the starting node.
         """
         ret = self._chvars.get((node, direction))
-        if ret is None:        
+        if ret is None:
             bunch = set()
             ndot = node+'.'
             nbrack = node+'['
@@ -814,7 +822,7 @@ class DependencyGraph(nx.DiGraph):
         ret = self._bndryins.get(connected)
         if ret is not None:
             return ret
-        
+
         ins = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -835,7 +843,7 @@ class DependencyGraph(nx.DiGraph):
         ret = self._bndryouts.get(connected)
         if ret is not None:
             return ret
-        
+
         outs = []
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
@@ -874,7 +882,7 @@ class DependencyGraph(nx.DiGraph):
         if connected:
             if invalid:
                 data = self.node
-                return [n for n in self.pred[cname] 
+                return [n for n in self.pred[cname]
                            if data[n]['valid'] is False and self.in_degree(n)]
             else:
                 return [n for n in self.pred[cname]
@@ -1085,7 +1093,7 @@ class DependencyGraph(nx.DiGraph):
         except Exception as err:
             raise err.__class__("cannot set '%s' from '%s': %s" %
                                  (dexpr.text, sexpr.text, str(err)))
-        
+
         for node in valid_set:
             self.node[node]['valid'] = True
 
@@ -1189,7 +1197,7 @@ class DependencyGraph(nx.DiGraph):
         return comps
 
     def add_node(self, n, attr_dict=None, **attr):
-        super(DependencyGraph, self).add_node(n, 
+        super(DependencyGraph, self).add_node(n,
                                               attr_dict=attr_dict,
                                               **attr)
         self.config_changed()
@@ -1207,7 +1215,7 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
     def add_edge(self, u, v, attr_dict=None, **attr):
-        super(DependencyGraph, self).add_edge(u, v, 
+        super(DependencyGraph, self).add_edge(u, v,
                                       attr_dict=attr_dict, **attr)
         self.config_changed()
 
@@ -1398,6 +1406,7 @@ def _check_for_missing_derivs(scope, comps):
     check all of the corresponding components now to see if they are
     supplying the needed derivatives.'''
     remove = []
+    vt_flattener = flatteners[VariableTree]
     for cname, vnames in comps.items():
         vnames = set(vnames) # vnames may have dups
         comps[cname] = vnames
@@ -1408,7 +1417,7 @@ def _check_for_missing_derivs(scope, comps):
         if not has_interface(comp, IComponent): # filter out vartrees
             continue
         if has_interface(comp, IAssembly):
-            
+
             # Assemblies need to call into provideJ so that we can determine
             # what derivatives are available. Note that boundary variables
             # that are unconnected on the interior need a missing_deriv_policy
@@ -1417,6 +1426,16 @@ def _check_for_missing_derivs(scope, comps):
             douts = comp.list_outputs()
             comp.provideJ(dins, douts, check_only=True)
             dins, douts = comp.list_deriv_vars()
+            # if inputs are vartrees and we have full vt connections inside, add
+            # leaf nodes to our list
+            for i,din in enumerate(dins[:]):
+                obj = getattr(comp, din)
+                if has_interface(obj, IVariableTree):
+                    dins.extend([n for n,v in vt_flattener(din, obj)])
+            for i,dout in enumerate(douts[:]):
+                obj = getattr(comp, dout)
+                if has_interface(obj, IVariableTree):
+                    douts.extend([n for n,v in vt_flattener(dout, obj)])
         else:
             dins, douts = comp.list_deriv_vars()
             # correct for the one item tuple missing comma problem
@@ -1433,9 +1452,6 @@ def _check_for_missing_derivs(scope, comps):
                 raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
             else:
                 continue  # we'll finite difference this comp
-        ## handle vartrees
-        #dins = list(dins) + [n.split('.', 1)[0] for n in dins if '.' in n]
-        #douts = list(douts) + [n.split('.', 1)[0] for n in douts if '.' in n]
         missing = []
         for name in vnames:
             if name not in dins and name not in douts:
@@ -1676,29 +1692,32 @@ def _explode_vartrees(graph, scope):
     # if full vartrees are connected, create subvar nodes for all of their
     # internal variables
     visited = set()
-    for src, dest in graph.list_connections():
+    for edge in graph.list_connections():
         srcnames = []
         destnames = []
-        if '@' not in src and '[' not in src and src not in visited:
-            visited.add(src)
-            if '~' in src:
-                obj = scope.get(from_PA_var(src))
-            else:
-                obj = scope.get(src)
-            if has_interface(obj, IVariableTree):
-                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                srcnames = ['.'.join([src, n]) for n in srcnames]
-        if '@' not in dest and '[' not in dest and dest not in visited:
-            visited.add(dest)
-            if '~' in dest:
-                obj = scope.get(from_PA_var(dest))
-            else:
-                obj = scope.get(dest)
-            if has_interface(obj, IVariableTree):
-                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                destnames = ['.'.join([dest, n]) for n in destnames]
-        if '@' not in src and '@' not in dest and (srcnames or destnames):
-            _replace_full_vtree_conn(graph, src, srcnames,
+        src, dest = edge
+        if edge not in visited:
+            visited.add(edge)
+            if '@' not in src and '[' not in src:
+                visited.add(src)
+                if '~' in src:
+                    obj = scope.get(from_PA_var(src))
+                else:
+                    obj = scope.get(src)
+                if has_interface(obj, IVariableTree):
+                    srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                    srcnames = ['.'.join([src, n]) for n in srcnames]
+            if '@' not in dest and '[' not in dest:
+                visited.add(dest)
+                if '~' in dest:
+                    obj = scope.get(from_PA_var(dest))
+                else:
+                    obj = scope.get(dest)
+                if has_interface(obj, IVariableTree):
+                    destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                    destnames = ['.'.join([dest, n]) for n in destnames]
+            if '@' not in src and '@' not in dest and (srcnames or destnames):
+                _replace_full_vtree_conn(graph, src, srcnames,
                                             dest, destnames, scope)
 
     return graph

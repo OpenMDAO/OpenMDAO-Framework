@@ -76,27 +76,6 @@ def flattened_value(name, val):
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
 
-
-def flattened_names(name, val, names=None):
-    """ Return list of names for values in `val`. """
-    if names is None:
-        names = []
-    if isinstance(val, float):
-        names.append(name)
-    elif isinstance(val, ndarray):
-        for i in range(len(val)):
-            value = val[i]
-            flattened_names('%s[%s]' % (name, i), value, names)
-    elif isinstance(val, VariableTree):
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            flattened_names('.'.join((name, key)), value, names)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-    return names
-
-
 def flatten_slice(index, shape, name='flat_index', offset=0):
     """ Return a string index that flattens an arbitrary slice denoted by
     'index' into an matrix of shape 'shape'.
