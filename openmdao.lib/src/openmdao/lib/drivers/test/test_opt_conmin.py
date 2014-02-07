@@ -6,9 +6,12 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
+from openmdao.main.api import Assembly, Component, VariableTree, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array, Str, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
@@ -346,6 +349,44 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.driver.list_param_targets(), [])
         self.assertEqual(self.top.driver.list_constraints(), [])
         self.assertEqual(self.top.driver.get_objectives(), {})
+
+    def test_initial_run(self):
+        # Test the fix that put run_iteration at the top
+        #   of the start_iteration method
+        class MyComp(Component):
+
+            x = Float(0.0, iotype='in', low=-10, high=10)
+            xx = Float(0.0, iotype='in', low=-10, high=10)
+            f_x = Float(iotype='out')
+            y = Float(iotype='out')
+
+            def execute(self):
+                if self.xx != 1.0:
+                    self.raise_exception("Lazy", RuntimeError)
+                self.f_x = 2.0*self.x
+                self.y = self.x
+
+        @add_delegate(HasParameters)
+        class SpecialDriver(Driver):
+
+            implements(IHasParameters)
+
+            def execute(self):
+                self.set_parameters([1.0])
+
+        top = set_as_top(Assembly())
+        top.add('comp', MyComp())
+        top.add('driver', CONMINdriver())
+        top.add('subdriver', SpecialDriver())
+        top.driver.workflow.add('subdriver')
+        top.subdriver.workflow.add('comp')
+
+        top.subdriver.add_parameter('comp.xx')
+        top.driver.add_parameter('comp.x')
+        top.driver.add_constraint('comp.y > 1.0')
+        top.driver.add_objective('comp.f_x')
+
+        top.run()
 
 
 class TestContainer(VariableTree):

@@ -95,6 +95,9 @@ class COBYLAdriver(Driver):
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
 
+        # Inital run to make sure the workflow executes
+        super(COBYLAdriver, self).run_iteration()
+
         self.nparam = self.total_parameters()
         self.ncon = self.total_ineq_constraints()
         self.ncon += 2*self.nparam

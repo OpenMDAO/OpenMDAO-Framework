@@ -93,13 +93,17 @@ class BroydenSolver(Driver):
 
     def execute(self):
         """Solver execution."""
-        # get the initial values of the independents
-        self.xin = self.eval_parameters(self.parent)
 
+        # Initial run to make sure the workflow executes
+        print "Inital run to make sure the workflow executes"
         # perform an initial run for self-consistency
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
+
+        # get the initial values of the independents
+        self.xin = self.eval_parameters(self.parent)
+
 
         # get initial dependents
         self.F = numpy.array(self.eval_eq_constraints())

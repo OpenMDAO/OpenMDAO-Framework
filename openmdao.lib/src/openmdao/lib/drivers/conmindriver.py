@@ -285,6 +285,9 @@ class CONMINdriver(Driver):
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
 
+        # Inital run to make sure the workflow executes
+        super(CONMINdriver, self).run_iteration()
+
         self._config_conmin()
         self.cnmn1.igoto = 0
         self.iter_count = 0

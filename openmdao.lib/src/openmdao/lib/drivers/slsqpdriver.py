@@ -103,6 +103,9 @@ class SLSQPdriver(Driver):
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
 
+        # Inital run to make sure the workflow executes
+        super(SLSQPdriver, self).run_iteration()
+
         self.inputs = self.list_param_group_targets()
         self.obj = self.list_objective_targets()
         self.con = self.list_constraint_targets()
