@@ -710,8 +710,7 @@ class ExprEvaluator(object):
 
             if isinstance(replace_val, ndarray):
                 replace_val = replace_val.astype(numpy.complex)
-
-            elif isinstance(replace_val, int):
+            else:
                 replace_val = float(replace_val)
 
             var_dict[name] = replace_val
