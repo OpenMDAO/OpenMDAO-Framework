@@ -163,6 +163,8 @@ class PseudoAssembly(object):
                     # Assemblies need some required inputs and outputs
                     # to calculate the Jacobians
                     if has_interface(comp, IAssembly):
+
+                        # TODO: We need to cache this stuff
                         dgraph = self.wflow.scope._depgraph
                         inputs = flatten_list_of_iters(self.inputs)
                         outputs = self.outputs

@@ -285,7 +285,7 @@ class ND_Receive(Component):
         self.y = self.x * float(self.n)
 
     def provideJ(self):
-        return np.array( [[1.0]] )
+        return np.array( [[float(self.n)]] )
 
 
 
@@ -306,7 +306,16 @@ class TestcaseNonDiff(unittest.TestCase):
         outputs = ['comp2.y']
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
-        self.assertAlmostEqual(J[0, 0], 0.5)
+        self.assertAlmostEqual(J[0, 0], 2.5)
+        meta = model.driver.workflow._derivative_graph.node['~0']
+        self.assertTrue('comp1' in meta['pa_object'].comps)
+        self.assertTrue('comp2' in meta['pa_object'].comps)
+
+        model.run()
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+
+        self.assertAlmostEqual(J[0, 0], 2.5)
         meta = model.driver.workflow._derivative_graph.node['~0']
         self.assertTrue('comp1' in meta['pa_object'].comps)
         self.assertTrue('comp2' in meta['pa_object'].comps)
@@ -330,7 +339,7 @@ class TestcaseNonDiff(unittest.TestCase):
         outputs = ['sub.y']
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
-        self.assertAlmostEqual(J[0, 0], 0.5)
+        self.assertAlmostEqual(J[0, 0], 2.5)
         meta = model.driver.workflow._derivative_graph.node['~0']
         self.assertTrue('comp1' in meta['pa_object'].comps)
         self.assertTrue('sub' in meta['pa_object'].comps)
