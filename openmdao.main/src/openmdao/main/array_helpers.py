@@ -36,8 +36,9 @@ def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
 
     # Floats
-    if isinstance(val, float):
+    if isinstance(val, (float,int)):
         return 1
+
 
     # Numpy arrays
     elif isinstance(val, ndarray): # FIXME: should check dtype
@@ -62,7 +63,7 @@ def flattened_size(name, val, scope=None):
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
-    if isinstance(val, float):
+    if isinstance(val, (float,int)):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
@@ -75,27 +76,6 @@ def flattened_value(name, val):
     else:
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
-
-
-def flattened_names(name, val, names=None):
-    """ Return list of names for values in `val`. """
-    if names is None:
-        names = []
-    if isinstance(val, float):
-        names.append(name)
-    elif isinstance(val, ndarray):
-        for i in range(len(val)):
-            value = val[i]
-            flattened_names('%s[%s]' % (name, i), value, names)
-    elif isinstance(val, VariableTree):
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            flattened_names('.'.join((name, key)), value, names)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
-    return names
-
 
 def flatten_slice(index, shape, name='flat_index', offset=0):
     """ Return a string index that flattens an arbitrary slice denoted by

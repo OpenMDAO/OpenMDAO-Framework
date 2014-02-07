@@ -8,7 +8,7 @@ from math import isnan
 from StringIO import StringIO
 
 from openmdao.main.array_helpers import flattened_size, \
-                                        flattened_names, flatten_slice
+                                        flatten_slice
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
                                       applyJ, applyJT, applyMinvT, applyMinv
 
@@ -657,10 +657,14 @@ class SequentialWorkflow(Workflow):
                 inputs = None
                 outputs = None
 
+            
             # If inputs aren't specified, use the parameters
+            parent_deriv_vars = self._parent.parent.list_deriv_vars()
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
-                    inputs = self._parent.list_param_group_targets()
+                    inputs = self._parent.list_param_group_targets() 
+                elif parent_deriv_vars: 
+                    inputs = parent_deriv_vars[0]
                 else:
                     msg = "No inputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
@@ -682,8 +686,11 @@ class SequentialWorkflow(Workflow):
                 outputs = list(set(tmp_outputs).union(outputs))
 
             if len(outputs) == 0:
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
+                if parent_deriv_vars:
+                    outputs = parent_deriv_vars[0]
+                else: 
+                    msg = "No outputs given for derivatives."
+                    self.scope.raise_exception(msg, RuntimeError)
 
             graph = self.scope._depgraph
 
@@ -1177,7 +1184,7 @@ class SequentialWorkflow(Workflow):
 
         for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
-            out_names = flattened_names(oref, out_val)
+            out_names = _flattened_names(oref, out_val)
             out_width = max(out_width, max([len(out) for out in out_names]))
 
         inp_width = 0
@@ -1185,7 +1192,7 @@ class SequentialWorkflow(Workflow):
             if isinstance(input_tup, str):
                 input_tup = [input_tup]
             inp_val = self.scope.get(input_tup[0])
-            inp_names = flattened_names(str(iref), inp_val)
+            inp_names = _flattened_names(str(iref), inp_val)
             inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
 
         label_width = out_width + inp_width + 4
@@ -1205,7 +1212,7 @@ class SequentialWorkflow(Workflow):
 
         for output, oref in zip(outputs, output_refs):
             out_val = self.scope.get(output)
-            for out_name in flattened_names(oref, out_val):
+            for out_name in _flattened_names(oref, out_val):
                 i += 1
                 j = -1
                 for input_tup, iref in zip(inputs, input_refs):
@@ -1213,7 +1220,7 @@ class SequentialWorkflow(Workflow):
                         input_tup = (input_tup,)
 
                     inp_val = self.scope.get(input_tup[0])
-                    for inp_name in flattened_names(iref, inp_val):
+                    for inp_name in _flattened_names(iref, inp_val):
                         j += 1
                         calc = J[i, j]
                         finite = Jbase[i, j]
@@ -1250,4 +1257,26 @@ class SequentialWorkflow(Workflow):
 
         # return arrays and suspects to make it easier to check from a test
         return Jbase.flatten(), J.flatten(), io_pairs, suspects
+
+def _flattened_names(name, val, names=None):
+    """ Return list of names for values in `val`.
+    Note that this expands arrays into an entry for each index!.
+    """
+    if names is None:
+        names = []
+    if isinstance(val, float):
+        names.append(name)
+    elif isinstance(val, ndarray):
+        for i in range(len(val)):
+            value = val[i]
+            _flattened_names('%s[%s]' % (name, i), value, names)
+    elif isinstance(val, VariableTree):
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            _flattened_names('.'.join((name, key)), value, names)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+    return names
+
 
