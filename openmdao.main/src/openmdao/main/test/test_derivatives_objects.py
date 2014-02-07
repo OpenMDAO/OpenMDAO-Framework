@@ -10,7 +10,7 @@ import numpy as np
 from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Str
+from openmdao.main.datatypes.api import Float, Str, Int
 from openmdao.main.interfaces import IParametricGeometry, implements, \
                                      IStaticGeometry
 from openmdao.main.variable import Variable
@@ -64,7 +64,7 @@ class Comp_Send(Component):
         dzdp2 = 3.0
 
         self.J = np.array([[dxdp1, dxdp2], [dydp1, dydp2], [dzdp1, dzdp2]])
-        
+
     def list_deriv_vars(self):
         return ('p1', 'p2'), ('data', 'dummy')
 
@@ -125,7 +125,7 @@ class Comp_Receive_ApplyDeriv(Comp_Receive):
         self.J = np.array([[-1.0, 0.0, 0.0],
                            [0.0, 2.0, 0.0],
                            [0.0, 0.0, 3.0]])
-        
+
     def list_deriv_vars(self):
         return ('data',), ('q1','q2','q3')
 
@@ -250,60 +250,91 @@ class Testcase_geom_deriv(unittest.TestCase):
         self.assertTrue(hasattr(top.geo, 'provideJ'))
 
 
-#class ND_Send(Component):
-    #'''Passes a data object as output.'''
+class ND_Send(Component):
+    '''Passes a data object as output.'''
 
-    #p1 = Float(5.0, iotype='in')
-
-    #data = Str("Try to differentiate this!", iotype='out')
-
-    #def list_deriv_vars(self):
-        #return (), ()
-
-    #def execute(self):
-        #''' Load computation result into self.data.'''
-        #self.data = str(self.p1)
-
-    #def provideJ(self):
-        #return None
+    x = Float(5.0, iotype='in')
+    y = Float(iotype='out')
+    n = Int(iotype='out')
 
 
-#class ND_Receive(Component):
-    #'''Takes a data object as input.'''
-    
-    #data = Str("Try to differentiate this!", iotype='in')
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
 
-    #p1 = Float(0.0, iotype='out')
+    def execute(self):
+        ''' Load computation result into self.data.'''
+        self.n = int(self.x)
+        self.y = self.x/2.0
 
-    #def list_deriv_vars(self):
-        #return (), ()
+    def provideJ(self):
+        return np.array( [[0.5]] )
 
-    #def execute(self):
-        #''' Load computation result into self.data.'''
-        #self.p1 = 2.0*float(self.data)
+class ND_Receive(Component):
+    '''Receives as inpu.'''
 
-    #def provideJ(self):
-        #return None
+    x = Float(5.0, iotype='in')
+    n = Int(1, iotype='in')
+    y = Float(iotype='out')
 
-#class TestcaseNonDiff(unittest.TestCase):
-    #""" Test how OpenMDAO handles differentiation. """
 
-    #def test_non_diff(self):
-        ## Test grouping comps with non-differentiable connections.
-        #model = set_as_top(Assembly())
-        #model.add('comp1', ND_Send())
-        #model.add('comp2', ND_Receive())
-        #model.connect('comp1.data', 'comp2.data')
-        #model.driver.workflow.add(['comp1', 'comp2'])
-        #model.run()
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
 
-        #inputs = ['comp1.p1']
-        #outputs = ['comp2.p1']
-        #J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-        #self.assertAlmostEqual(J[0, 0], 2.0)
+    def execute(self):
+        ''' Load computation result into self.data.'''
+        self.y = self.x * float(self.n)
 
-        #edges = model.driver.workflow._edges
-        #self.assertTrue('c1.data' not in edges)
+    def provideJ(self):
+        return np.array( [[1.0]] )
+
+
+
+class TestcaseNonDiff(unittest.TestCase):
+    """ Test how OpenMDAO handles differentiation. """
+
+    def test_non_diff(self):
+        # Test grouping comps with non-differentiable connections.
+        model = set_as_top(Assembly())
+        model.add('comp1', ND_Send())
+        model.add('comp2', ND_Receive())
+        model.connect('comp1.y', 'comp2.x')
+        model.connect('comp1.n', 'comp2.n')
+        model.driver.workflow.add(['comp1', 'comp2'])
+        model.run()
+
+        inputs = ['comp1.x']
+        outputs = ['comp2.y']
+        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+
+        self.assertAlmostEqual(J[0, 0], 0.5)
+        meta = model.driver.workflow._derivative_graph.node['~0']
+        self.assertTrue('comp1' in meta['pa_object'].comps)
+        self.assertTrue('comp2' in meta['pa_object'].comps)
+
+        # What about subassys?
+
+        model = set_as_top(Assembly())
+        model.add('sub', Assembly())
+        model.add('comp1', ND_Send())
+        model.sub.add('comp2', ND_Receive())
+        model.sub.create_passthrough('comp2.x')
+        model.sub.create_passthrough('comp2.y')
+        model.sub.create_passthrough('comp2.n')
+        model.connect('comp1.y', 'sub.x')
+        model.connect('comp1.n', 'sub.n')
+        model.driver.workflow.add(['comp1', 'sub'])
+        model.sub.driver.workflow.add(['comp2'])
+        model.run()
+
+        inputs = ['comp1.x']
+        outputs = ['sub.y']
+        J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+
+        self.assertAlmostEqual(J[0, 0], 0.5)
+        meta = model.driver.workflow._derivative_graph.node['~0']
+        self.assertTrue('comp1' in meta['pa_object'].comps)
+        self.assertTrue('sub' in meta['pa_object'].comps)
+
 
 if __name__ == '__main__':
     import nose
