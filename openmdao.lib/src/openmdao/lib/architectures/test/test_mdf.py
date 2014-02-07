@@ -1,14 +1,9 @@
 import unittest
 
-import warnings
-
 from openmdao.lib.optproblems.api import SellarProblemWithDeriv
 
 from openmdao.lib.architectures.mdf import MDF
 
-import numpy as np
-
-warnings.simplefilter('raise', np.ComplexWarning)
 
 class TestMDF(unittest.TestCase): 
     
