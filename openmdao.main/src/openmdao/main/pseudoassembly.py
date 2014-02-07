@@ -170,7 +170,8 @@ class PseudoAssembly(object):
                         if name not in self.ffd_cache:
                             dgraph = self.wflow.scope._depgraph
                             inputs = flatten_list_of_iters(self.inputs)
-                            outputs = self.outputs
+                            inputs = [inp.split('[')[0] for inp in inputs]
+                            outputs = [outp.split('[')[0] for outp in self.outputs]
                             from openmdao.main.depgraph import _get_inner_edges
                             edges = _get_inner_edges(dgraph, inputs, outputs)
 
@@ -179,21 +180,21 @@ class PseudoAssembly(object):
                             for inp in inputs:
                                 comp_str, _, var_str = inp.partition('.')
                                 if comp_str == name:
-                                    req_inputs.append(dgraph.base_var(var_str))
+                                    req_inputs.append(var_str)
 
                             for inp in outputs:
                                 comp_str, _, var_str = inp.partition('.')
                                 if comp_str == name:
-                                    req_outputs.append(dgraph.base_var(var_str))
+                                    req_outputs.append(var_str)
 
                             for edge in edges:
                                 src, target = edge
                                 comp_str, _, var_str = src.partition('.')
                                 if comp_str == name:
-                                    req_outputs.append(dgraph.base_var(var_str))
+                                    req_outputs.append(var_str)
                                 comp_str, _, var_str = target.partition('.')
                                 if comp_str == name:
-                                    req_inputs.append(dgraph.base_var(var_str))
+                                    req_inputs.append(var_str)
 
                             self.ffd_cache[name] = (req_inputs, req_outputs)
 
