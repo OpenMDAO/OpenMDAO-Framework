@@ -168,6 +168,7 @@ class SimpleDriver(Driver):
     implements(IHasParameters)  
 
 
+
 class AssemblyWithCompVarTree(Assembly): 
 
     x1 = Float(iotype="in")
