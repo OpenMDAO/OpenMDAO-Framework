@@ -540,11 +540,11 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp1.x = 1.0
         top.run()
         self.assertEqual(top.comp2.y, 4.0)
-        
+
         J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
-        
-        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()), 
+
+        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()),
                          set(['@in0','@out0','comp1','comp2','comp1.x','comp1.y','comp2.x','comp2.y']))
 
 
@@ -971,6 +971,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('nest.junk', 'last.x')
         top.run()
 
+        top.nest.missing_deriv_policy = 'error'
         try:
             J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
                                                   outputs=['nest.f_xy', 'last.f_xy'],
