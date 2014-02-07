@@ -179,21 +179,21 @@ class PseudoAssembly(object):
                             for inp in inputs:
                                 comp_str, _, var_str = inp.partition('.')
                                 if comp_str == name:
-                                    req_inputs.append(var_str)
+                                    req_inputs.append(dgraph.base_var(var_str))
 
                             for inp in outputs:
                                 comp_str, _, var_str = inp.partition('.')
                                 if comp_str == name:
-                                    req_outputs.append(var_str)
+                                    req_outputs.append(dgraph.base_var(var_str))
 
                             for edge in edges:
                                 src, target = edge
                                 comp_str, _, var_str = src.partition('.')
                                 if comp_str == name:
-                                    req_outputs.append(var_str)
+                                    req_outputs.append(dgraph.base_var(var_str))
                                 comp_str, _, var_str = target.partition('.')
                                 if comp_str == name:
-                                    req_inputs.append(var_str)
+                                    req_inputs.append(dgraph.base_var(var_str))
 
                             self.ffd_cache[name] = (req_inputs, req_outputs)
 
