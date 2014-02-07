@@ -131,6 +131,10 @@ class Assembly(Component):
         # we're the top Assembly only if we're the first instantiated
         set_as_top(self, first_only=True)
 
+        # Assemblies automatically figure out their own derivatives, so
+        # any boundary vars that are unconnected should be zero.
+        self.missing_deriv_policy = 'assume_zero'
+
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
         """
