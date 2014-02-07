@@ -128,32 +128,32 @@ class Component(Container):
     implements(IComponent)
 
     directory = Str('', desc='If non-blank, the directory to execute in.',
-                    framework_var=True, iotype='in')
+                    framework_var=True, iotype='in', deriv_ignore=True)
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
-                               ' by this component.')
-    force_execute = Bool(False, iotype='in', framework_var=True,
+                               ' by this component.', deriv_ignore=True)
+    force_execute = Bool(False, iotype='in', framework_var=True, deriv_ignore=True,
                          desc="If True, always execute even if all IO traits"
                               " are valid.")
-    force_fd = Bool(False, iotype='in', framework_var=True,
+    force_fd = Bool(False, iotype='in', framework_var=True, deriv_ignore=True,
                     desc="If True, always finite difference this component.")
 
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
 
-    exec_count = Int(0, iotype='out', framework_var=True,
+    exec_count = Int(0, iotype='out', framework_var=True, deriv_ignore=True,
                      desc='Number of times this Component has been executed.')
 
-    derivative_exec_count = Int(0, iotype='out', framework_var=True,
+    derivative_exec_count = Int(0, iotype='out', framework_var=True, deriv_ignore=True,
                      desc="Number of times this Component's derivative "
                           "function has been executed.")
 
-    itername = Str('', iotype='out', desc='Iteration coordinates.',
+    itername = Str('', iotype='out', desc='Iteration coordinates.', deriv_ignore=True,
                    framework_var=True)
 
     # TODO: add 'fd' option to missing_deriv_policy
     missing_deriv_policy = Enum(['error', 'assume_zero'], iotype='in',
-                                framework_var=True,
+                                framework_var=True, deriv_ignore=True,
                                 desc='Determines behavior when some '
                                      'analytical derivatives are provided '
                                      'but some are missing')

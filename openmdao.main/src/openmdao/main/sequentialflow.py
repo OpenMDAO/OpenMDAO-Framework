@@ -8,9 +8,9 @@ from math import isnan
 from StringIO import StringIO
 
 from openmdao.main.array_helpers import flattened_size, \
-                                        flatten_slice
+                                        flatten_slice, is_differentiable_val
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, applyMinvT, applyMinv
+                                      applyJ, applyJT, applyMinvT
 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
@@ -773,25 +773,24 @@ class SequentialWorkflow(Workflow):
 
             # If a connection is non-differentiable, so are its src and
             # target components.
-            conns = dgraph.list_connections()
+            for edge in dgraph.list_connections():
+                src, target = edge
+                data = dgraph.node[src]
 
-            for edge in conns:
-                src = edge[0]
-                target = edge[1]
-
-                if '@' in src or '@' in target or '.' not in src:
+                # boundary vars or fake inputs/outputs
+                if src.startswith('@') or target.startswith('@') or '.' not in src:
                     continue
 
+                # pseudoassemblies
                 if src.startswith('~') or target.startswith('~'):
                     continue
 
-                # Default differentiable connections
-                val = self.scope.get(src)
-                if isinstance(val, (float, ndarray, VariableTree)):
+                # Custom differentiable connections or ignored connections
+                if data.get('data_shape'):
                     continue
 
-                # Custom differentiable connections
-                if self.scope.get_metadata(src).get('data_shape'):
+                # differentiable connections
+                if is_differentiable_val(self.scope.get(src)):
                     continue
 
                 #Nothing else is differentiable
