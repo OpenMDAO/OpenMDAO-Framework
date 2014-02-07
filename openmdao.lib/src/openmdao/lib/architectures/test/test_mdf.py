@@ -1,8 +1,14 @@
 import unittest
 
+import warnings
+
 from openmdao.lib.optproblems.api import SellarProblemWithDeriv
 
 from openmdao.lib.architectures.mdf import MDF
+
+import numpy as np
+
+warnings.simplefilter('raise', np.ComplexWarning)
 
 class TestMDF(unittest.TestCase): 
     
@@ -10,6 +16,8 @@ class TestMDF(unittest.TestCase):
         prob = SellarProblemWithDeriv()
         prob.architecture = MDF()
 
+        
+        
         prob.run()
 
         solver_params = prob.solver.get_parameters()
