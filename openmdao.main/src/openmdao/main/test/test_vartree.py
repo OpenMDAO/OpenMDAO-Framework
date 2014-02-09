@@ -195,7 +195,8 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv1'} in attrs['Inputs'])
+                         'desc': 'vv1', 
+                         'assumed_default': False} in attrs['Inputs'])
         self.assertTrue({'name': 'v2',
                          'id': '.v2',
                          'indent': 0,
@@ -205,7 +206,8 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv2'} in attrs['Inputs'])
+                         'desc': 'vv2', 
+                         'assumed_default': False} in attrs['Inputs'])
         # The number shall be 11 becuase of recursion, and also including
         # file variables
         self.assertEqual(len(attrs['Inputs']), 11)
@@ -220,7 +222,8 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv1'} in attrs['Outputs'])
+                         'desc': 'vv1', 
+                         'assumed_default': False} in attrs['Outputs'])
         self.assertTrue({'name': 'v2',
                          'id': '.v2',
                          'indent': 0,
@@ -230,7 +233,8 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv2'} in attrs['Outputs'])
+                         'desc': 'vv2', 
+                         'assumed_default': False} in attrs['Outputs'])
         self.assertEqual(len(attrs['Outputs']), 11)
 
         # Now connect

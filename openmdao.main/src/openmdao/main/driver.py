@@ -4,6 +4,7 @@
 __all__ = ["Driver"]
 
 import fnmatch
+from uuid import uuid1
 
 from zope.interface import implementedBy
 
@@ -89,6 +90,9 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
+        
+        self.parent_case_id = None
+        self.case_id = None
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -301,6 +305,10 @@ class Driver(Component):
             all iteration coordinates. (Default is '')
         """
 
+        if not case_id: 
+            print "Root case:"
+            self.case_id = str(uuid1())
+
         # (Re)configure parameters.
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
@@ -394,7 +402,7 @@ class Driver(Component):
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         
-        wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
+        wf.run(ffd_order=self.ffd_order, case_id=self.case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
@@ -496,7 +504,9 @@ class Driver(Component):
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
-        case = Case(case_input, case_output, parent_uuid=self._case_id)
+        case = Case(case_input, case_output, case_uuid=self.case_id , parent_uuid=self.parent_case_id)
+
+
 
 
 
