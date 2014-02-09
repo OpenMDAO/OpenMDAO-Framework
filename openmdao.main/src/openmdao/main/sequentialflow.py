@@ -663,7 +663,7 @@ class SequentialWorkflow(Workflow):
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
                     inputs = self._parent.list_param_group_targets() 
-                elif parent_deriv_vars: 
+                elif parent_deriv_vars[0]: 
                     inputs = parent_deriv_vars[0]
                 else:
                     msg = "No inputs given for derivatives."
@@ -686,8 +686,8 @@ class SequentialWorkflow(Workflow):
                 outputs = list(set(tmp_outputs).union(outputs))
 
             if len(outputs) == 0:
-                if parent_deriv_vars:
-                    outputs = parent_deriv_vars[0]
+                if parent_deriv_vars[1]:
+                    outputs = parent_deriv_vars[1]
                 else: 
                     msg = "No outputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
