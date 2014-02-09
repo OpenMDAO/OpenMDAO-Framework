@@ -4,7 +4,7 @@ provide derivatives, and thus must be finite differenced.'''
 import networkx as nx
 
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
 def to_PA_var(name, pa_name):
@@ -61,11 +61,12 @@ class PseudoAssembly(object):
 
         self.fd = None
         self.J = None
+        self.ffd_cache = {}
 
         if fd: # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
         else: # use fake finite difference on comps having derivatives
-            self.ffd_order = 1
+            self.ffd_order = 1 #TODO: Fix this!!!
 
         if fd:
             self.itercomps = [c.name for c in wflow]
@@ -152,12 +153,61 @@ class PseudoAssembly(object):
             # Don't do this for full-model finite difference.
             if first and self.ffd_order > 0:
                 for name in self.comps:
+
+                    # TODO: I think the cache is blown away each time before
+                    # this is called
+                    if name in self.wflow._J_cache:
+                        continue
+
                     comp = self.wflow.scope.get(name)
+
+                    # Assemblies need some required inputs and outputs
+                    # to calculate the Jacobians
+                    if has_interface(comp, IAssembly):
+
+                        # Need to know which assy bdry variables are
+                        # required, and pass them in. Cache this once.
+                        if name not in self.ffd_cache:
+                            dgraph = self.wflow.scope._depgraph
+                            inputs = [dgraph.base_var(inp) \
+                                       for inp in flatten_list_of_iters(self.inputs)]
+                            outputs = [dgraph.base_var(outp) \
+                                       for outp in self.outputs]
+                            from openmdao.main.depgraph import _get_inner_edges
+                            edges = _get_inner_edges(dgraph, inputs, outputs)
+
+                            req_inputs = []
+                            req_outputs = []
+                            for inp in inputs:
+                                comp_str, _, var_str = inp.partition('.')
+                                if comp_str == name:
+                                    req_inputs.append(var_str)
+
+                            for inp in outputs:
+                                comp_str, _, var_str = inp.partition('.')
+                                if comp_str == name:
+                                    req_outputs.append(var_str)
+
+                            for edge in edges:
+                                src, target = edge
+                                comp_str, _, var_str = src.partition('.')
+                                if comp_str == name:
+                                    req_outputs.append(var_str)
+                                comp_str, _, var_str = target.partition('.')
+                                if comp_str == name:
+                                    req_inputs.append(var_str)
+
+                            self.ffd_cache[name] = (req_inputs, req_outputs)
+
+                        req_inputs, req_outputs = self.ffd_cache[name]
+
+                        comp.calc_derivatives(first, second, savebase=True,
+                                              required_inputs=req_inputs,
+                                              required_outputs=req_outputs)
 
                     # Comp list contains full graph, so don't double up on
                     # the subdrivers.
-                    if not has_interface(comp, IDriver) and \
-                       name not in self.wflow._J_cache:
+                    elif not has_interface(comp, IDriver):
                         comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()

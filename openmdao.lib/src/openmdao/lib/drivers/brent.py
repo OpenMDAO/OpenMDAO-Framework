@@ -83,5 +83,7 @@ class Brent(Driver):
                                  "but instead it has %d" % len(constraints))
         self._param = params[0]
 
+        pass
+
 
 

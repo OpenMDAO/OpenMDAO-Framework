@@ -33,10 +33,12 @@ class VariableTree(Container):
                                 ' please wrap %s.%s in a VarTree'
                                 % (self.__class__.__name__, name))
 
-        # register callbacks for our class traits
-        for name, trait in self.class_traits().items():
-            if not name.startswith('_'):
-                self.on_trait_change(self._trait_modified, name)
+        self.install_callbacks()
+
+        ## register callbacks for our class traits
+        #for name, trait in self.class_traits().items():
+            #if not name.startswith('_'):
+                #self.on_trait_change(self._trait_modified, name)
 
     @property
     def iotype(self):
@@ -309,3 +311,4 @@ def _flatten_vartree(name, vt):
     return ret
 
 flatteners[VariableTree] = _flatten_vartree
+

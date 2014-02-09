@@ -15,7 +15,8 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
+                                     IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -32,16 +33,18 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node
+from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
+from openmdao.main.case import flatteners
+
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+_missing = object()
 
 __has_top__ = False
 __toplock__ = threading.RLock()
-
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
@@ -127,6 +130,10 @@ class Assembly(Component):
 
         # we're the top Assembly only if we're the first instantiated
         set_as_top(self, first_only=True)
+
+        # Assemblies automatically figure out their own derivatives, so
+        # any boundary vars that are unconnected should be zero.
+        self.missing_deriv_policy = 'assume_zero'
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -385,10 +392,7 @@ class Assembly(Component):
             # Variable trees need to point to a new parent.
             # Also, let's not deepcopy the outside universe
             if isinstance(val, Container):
-                old_parent = val.parent
-                val.parent = None
-                val_copy = _copydict[ttype.copy](val)
-                val.parent = old_parent
+                val_copy = val.copy()
                 val_copy.parent = self
                 val = val_copy
             else:
@@ -921,15 +925,10 @@ class Assembly(Component):
         driver.gradient_options.fd_step_type = base_fd_step_type
         return result
 
-
     def provideJ(self, required_inputs, required_outputs, check_only=False):
         '''An assembly calculates its Jacobian by calling the calc_gradient
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
-
-        #self.J_input_keys = required_inputs[:]
-        #self.J_output_keys = required_outputs[:]
-        #self.J = self.driver.calc_gradient(required_inputs, required_outputs)
 
         # Sub-assembly sourced
         input_keys = []
@@ -940,29 +939,38 @@ class Assembly(Component):
         self.J_output_keys = []
         self._provideJ_bounds = None
 
+        depgraph = self._depgraph
+
         for src in required_inputs:
-            varname, _, tail = src.partition('[')
-            target = [n for n in self._depgraph.successors(varname)
-                              if not n.startswith('parent.')]
+            #varname, _, tail = src.partition('[')
+            varname = depgraph.base_var(src)
+            target = [n for n in depgraph.successors(varname)
+                              if not n.startswith('parent.') and depgraph.base_var(n) != varname] 
             if len(target) == 0:
-                target = [n for n in self._depgraph.successors(src)
+                target = [n for n in depgraph.successors(src)
                                   if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 
             # If array slice, only ask the assembly to calculate the
             # elements we need.
-            if '[' in src and '[' not in target[0]:
-                target = ['%s[%s' % (targ, tail) for targ in target]
+            #if '[' in src and '[' not in target[0]:
+            #    target = ['%s[%s' % (targ, tail) for targ in target]
+            # If subvar, only ask the assembly to calculate the
+            # elements we need.
+            if src != varname:
+                tail = src[len(varname):]
+                target = ['%s%s' % (targ, tail) for targ in target]
 
             input_keys.append(tuple(target))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            varname, _, tail = target.partition('[')
-            src = self._depgraph.predecessors(varname)
+            #varname, _, tail = target.partition('[')
+            varname = depgraph.base_var(target)
+            src = depgraph.predecessors(varname)
             if len(src) == 0:
-                src = self._depgraph.get_sources(target)
+                src = depgraph.get_sources(target)
                 if len(src) == 0:
                     continue
 
@@ -970,16 +978,22 @@ class Assembly(Component):
 
             # If array slice, only ask the assembly to calculate the
             # elements we need.
-            if '[' in target and '[' not in src:
-                src = '%s[%s' % (src, tail)
+            #if '[' in target and '[' not in src:
+                #src = '%s[%s' % (src, tail)
+            # If subvar, only ask the assembly to calculate the
+            # elements we need.
+            if target != varname:
+                tail = target[len(varname):]
+                src = '%s%s' % (src, tail)
 
             output_keys.append(src)
             self.J_output_keys.append(target)
-        
+
         if check_only:
             return None
-        
+
         return self.driver.calc_gradient(input_keys, output_keys)
+
 
     def list_deriv_vars(self):
         return self.J_input_keys, self.J_output_keys

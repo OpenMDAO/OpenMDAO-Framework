@@ -281,6 +281,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
+    
     if obj._provideJ_bounds is None:
         obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     ibounds, obounds = obj._provideJ_bounds
