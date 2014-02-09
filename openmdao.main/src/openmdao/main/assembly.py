@@ -370,6 +370,7 @@ class Assembly(Component):
 
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
+        metadata['default_value'] = trait.trait_type.default_value
         # PassthroughTrait to a trait with get/set methods causes a core dump
         # in Traits (at least through 3.6) while pickling.
         if "validation_trait" in metadata:
