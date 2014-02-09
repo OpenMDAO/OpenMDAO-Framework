@@ -73,7 +73,7 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-    gradient_options = VarTree(GradientOptions(), iotype='in')
+    gradient_options = VarTree(GradientOptions(), iotype='in', framework_var = True)
 
     def __init__(self):
         self._iter = None
