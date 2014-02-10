@@ -1709,16 +1709,23 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     # or outputs need to be added back so that bounds data can be kept
     # for them
 
-    for inp in flatten_list_of_iters(inputs):
-        for drv in rep_drivers:
-            if to_PA_var(inp, '~%s' % drv) in graph:
-                inp = to_PA_var(inp, '~%s' % drv)
-                break
-        if inp not in graph:
-            if '@fake' not in graph:
-                graph.add_node('@fake')
-            graph.add_node(inp)
-            graph.add_edge('@fake', inp)
+    for inp_tuple in inputs:
+        if isinstance(inp_tuple, basestring):
+            inp_tuple = (inp_tuple,)
+
+        for inp in inp_tuple:
+            for drv in rep_drivers:
+                if to_PA_var(inp, '~%s' % drv) in graph:
+                    inp = to_PA_var(inp, '~%s' % drv)
+                    break
+            if inp not in graph:
+                if '@fake' not in graph:
+                    graph.add_node('@fake')
+                graph.add_node(inp)
+                if len(inp_tuple) > 1:
+                    graph.add_edge('@fake', inp)
+                else:
+                    graph.add_edge('@fake', inp, conn=True)
 
     for out in flatten_list_of_iters(outputs):
         for drv in rep_drivers:
@@ -1729,7 +1736,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(out)
-            graph.add_edge(out, '@fake')
+            graph.add_edge(out, '@fake', conn=True)
 
     return graph
 

@@ -51,9 +51,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                 if 'bounds' in wflow._derivative_graph.node[bcast_param]:
                     param = bcast_param
                     break
-            else:
-               continue
-
+                else:
+                    continue
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
@@ -154,6 +153,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 logger.error(msg % (wflow._parent.get_pathname(), output, irhs))
 
             i = 0
+
             for param in inputs:
 
                 # You can ask for derivatives of broadcast inputs in cases
@@ -164,8 +164,8 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                         if 'bounds' in wflow._derivative_graph.node[bcast_param]:
                             param = bcast_param
                             break
-                    else:
-                       continue
+                        else:
+                            continue
 
                 try:
                     k1, k2 = wflow.get_bounds(param)
