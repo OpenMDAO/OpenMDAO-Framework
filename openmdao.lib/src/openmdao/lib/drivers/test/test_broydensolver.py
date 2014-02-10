@@ -5,7 +5,10 @@ Test the broyden solver component.
 import unittest
 import numpy
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error, assert_raises
@@ -180,76 +183,78 @@ class TestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test. """
+        self.prob = None
         pass
 
     def tearDown(self):
         """ Called after each test. """
+        self.prob = None
         pass
 
     def test_Broyden2(self):
 
-        prob = SellarBroyden()
-        set_as_top(prob)
+        self.prob = SellarBroyden()
+        set_as_top(self.prob)
 
-        prob.dis1.z1_in = 5.0
-        prob.dis1.z2_in = 2.0
-        prob.dis1.x1 = 1.0
-        prob.dis2.z1_in = 5.0
-        prob.dis2.z2_in = 2.0
-        prob.driver.algorithm = "broyden2"
+        self.prob.dis1.z1_in = 5.0
+        self.prob.dis1.z2_in = 2.0
+        self.prob.dis1.x1 = 1.0
+        self.prob.dis2.z1_in = 5.0
+        self.prob.dis2.z2_in = 2.0
+        self.prob.driver.algorithm = "broyden2"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, prob.dis1.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis2.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis1.y2, 0.904988, 0.0001)
-        assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y2, 0.904988, 0.0001)
 
     def test_Broyden3(self):
 
-        prob = SellarBroyden()
-        set_as_top(prob)
+        self.prob = SellarBroyden()
+        set_as_top(self.prob)
 
-        prob.dis1.z1_in = 5.0
-        prob.dis1.z2_in = 2.0
-        prob.dis1.x1 = 1.0
-        prob.dis2.z1_in = 5.0
-        prob.dis2.z2_in = 2.0
-        prob.driver.algorithm = "broyden3"
+        self.prob.dis1.z1_in = 5.0
+        self.prob.dis1.z2_in = 2.0
+        self.prob.dis1.x1 = 1.0
+        self.prob.dis2.z1_in = 5.0
+        self.prob.dis2.z2_in = 2.0
+        self.prob.driver.algorithm = "broyden3"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, prob.dis1.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis2.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis1.y2, 0.904988, 0.0001)
-        assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y2, 0.904988, 0.0001)
 
     def test_ExcitingMixing(self):
 
-        prob = SellarBroyden()
-        set_as_top(prob)
+        self.prob = SellarBroyden()
+        set_as_top(self.prob)
 
-        prob.dis1.z1_in = 5.0
-        prob.dis1.z2_in = 2.0
-        prob.dis1.x1 = 1.0
-        prob.dis2.z1_in = 5.0
-        prob.dis2.z2_in = 2.0
-        prob.driver.algorithm = "excitingmixing"
+        self.prob.dis1.z1_in = 5.0
+        self.prob.dis1.z2_in = 2.0
+        self.prob.dis1.x1 = 1.0
+        self.prob.dis2.z1_in = 5.0
+        self.prob.dis2.z2_in = 2.0
+        self.prob.driver.algorithm = "excitingmixing"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, prob.dis1.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis2.y1, 0.819002, 0.0001)
-        assert_rel_error(self, prob.dis1.y2, 0.904988, 0.0001)
-        assert_rel_error(self, prob.dis2.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y1, 0.819002, 0.0001)
+        assert_rel_error(self, self.prob.dis1.y2, 0.904988, 0.0001)
+        assert_rel_error(self, self.prob.dis2.y2, 0.904988, 0.0001)
 
     def test_MIMO_Broyden2(self):
         # Testing Broyden on a 2 input 2 output case
 
-        prob = MIMOBroyden()
-        set_as_top(prob)
+        self.prob = MIMOBroyden()
+        set_as_top(self.prob)
 
-        driver = prob.driver
+        driver = self.prob.driver
         driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
@@ -262,46 +267,46 @@ class TestCase(unittest.TestCase):
         driver.add_constraint('dis1.f4 = 0.0')
         driver.add_constraint('dis1.f5 = 0.0')
 
-        prob.dis1.x = [1., 1., 1., 1., 1.]
+        self.prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "broyden2"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, 1.0 - prob.dis1.x[0], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[1], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[2], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[3], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[4], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[0], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[1], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[2], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[3], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[4], 1.0, 0.0001)
 
     def test_MIMO_Broyden2_array(self):
         # Testing Broyden with an ArrayParameter.
 
-        prob = MIMOBroyden()
-        set_as_top(prob)
+        self.prob = MIMOBroyden()
+        set_as_top(self.prob)
 
-        driver = prob.driver
+        driver = self.prob.driver
         driver.add_parameter('dis1.x', low=-9.e99, high=9.e99)
         driver.add_constraint('dis1.ff = 0.0')
 
-        prob.dis1.x = [1., 1., 1., 1., 1.]
-        prob.dis1.trace = True
+        self.prob.dis1.x = [1., 1., 1., 1., 1.]
+        self.prob.dis1.trace = True
         driver.algorithm = "broyden2"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, 1.0 - prob.dis1.x[0], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[1], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[2], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[3], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[4], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[0], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[1], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[2], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[3], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[4], 1.0, 0.0001)
 
     def test_MIMO_Broyden3(self):
         # Testing Broyden on a 2 input 2 output case
 
-        prob = MIMOBroyden()
-        set_as_top(prob)
+        self.prob = MIMOBroyden()
+        set_as_top(self.prob)
 
-        driver = prob.driver
+        driver = self.prob.driver
         driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
@@ -314,24 +319,24 @@ class TestCase(unittest.TestCase):
         driver.add_constraint('dis1.f4 = 0.0')
         driver.add_constraint('dis1.f5 = 0.0')
 
-        prob.dis1.x = [1., 1., 1., 1., 1.]
+        self.prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "broyden3"
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, 1.0 - prob.dis1.x[0], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[1], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[2], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[3], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[4], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[0], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[1], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[2], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[3], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[4], 1.0, 0.0001)
 
     def test_MIMO_ExcitingMixing(self):
         # Testing Broyden on a 2 input 2 output case
 
-        prob = MIMOBroyden()
-        set_as_top(prob)
+        self.prob = MIMOBroyden()
+        set_as_top(self.prob)
 
-        driver = prob.driver
+        driver = self.prob.driver
         driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
         driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
@@ -344,45 +349,87 @@ class TestCase(unittest.TestCase):
         driver.add_constraint('dis1.f4 = 0.0')
         driver.add_constraint('dis1.f5 = 0.0')
 
-        prob.dis1.x = [1., 1., 1., 1., 1.]
+        self.prob.dis1.x = [1., 1., 1., 1., 1.]
         driver.algorithm = "excitingmixing"
         driver.alpha = 0.1
 
-        prob.run()
+        self.prob.run()
 
-        assert_rel_error(self, 1.0 - prob.dis1.x[0], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[1], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[2], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[3], 1.0, 0.0001)
-        assert_rel_error(self, 1.0 - prob.dis1.x[4], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[0], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[1], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[2], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[3], 1.0, 0.0001)
+        assert_rel_error(self, 1.0 - self.prob.dis1.x[4], 1.0, 0.0001)
 
     def test_no_change_in_value(self):
 
-        prob = DumbAssembly()
-        set_as_top(prob)
+        self.prob = DumbAssembly()
+        set_as_top(self.prob)
 
-        prob.driver.algorithm = "broyden2"
+        self.prob.driver.algorithm = "broyden2"
         msg = "Broyden iteration has stopped converging. Change in " \
               "input has produced no change in output. This could " \
               "indicate a problem with your component connections. " \
               "It could also mean that this solver method is " \
               "inadequate for your problem."
-        assert_raises(self, 'prob.run()', globals(), locals(),
+        assert_raises(self, 'self.prob.run()', globals(), locals(),
                       RuntimeError, msg)
 
-        prob.driver.algorithm = "broyden3"
+        self.prob.driver.algorithm = "broyden3"
         msg = "Broyden iteration has stopped converging. Change in " \
               "input has produced no change in output. This could " \
               "indicate a problem with your component connections. " \
               "It could also mean that this solver method is " \
               "inadequate for your problem."
-        assert_raises(self, 'prob.run()', globals(), locals(),
+        assert_raises(self, 'self.prob.run()', globals(), locals(),
                       RuntimeError, msg)
 
+
+    def test_AAAinitial_run(self):
+        # The reason for putting the AAA in the name is so it runs
+        #   first. We should have to do that. There is some kind
+        #   of testing bug that is forcing us to do that
+        
+        # Test the fix that peforms an initial run
+        #   at the top of the execute method
+        class MyComp(Component):
+
+            x = Float(0.0, iotype='in', low=-100000, high=100000)
+            xx = Float(0.0, iotype='in', low=-100000, high=100000)
+            f_x = Float(iotype='out')
+            y = Float(iotype='out')
+
+            def execute(self):
+                if self.xx != 1.0:
+                    self.raise_exception("Lazy", RuntimeError)
+                self.f_x = 2.0*self.x
+                self.y = self.x
+
+        @add_delegate(HasParameters)
+        class SpecialDriver(Driver):
+
+            implements(IHasParameters)
+
+            def execute(self):
+                self.set_parameters([1.0])
+
+        self.prob = set_as_top(Assembly())
+        self.prob.add('comp', MyComp())
+        self.prob.add('driver', BroydenSolver())
+        self.prob.add('subdriver', SpecialDriver())
+        self.prob.driver.workflow.add('subdriver')
+        self.prob.subdriver.workflow.add('comp')
+
+        self.prob.subdriver.add_parameter('comp.xx')
+        self.prob.driver.add_parameter('comp.x')
+        self.prob.driver.add_constraint('comp.y = comp.x')
+        print "initial run test"
+        self.prob.run()
 
 if __name__ == '__main__':
     import nose
     import sys
+
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()

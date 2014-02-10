@@ -7,7 +7,10 @@ import unittest
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
+from openmdao.main.api import Component, Assembly, set_as_top, Driver
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -99,6 +102,43 @@ class SensitivityDriverTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
 
+    def test_initial_run(self):
+        # Test the fix that moved the run_iteration call to the top
+        #   of the execute method
+        class MyComp(Component):
+
+            x = Float(0.0, iotype='in', low=-10, high=10)
+            xx = Float(0.0, iotype='in', low=-10, high=10)
+            f_x = Float(iotype='out')
+            y = Float(iotype='out')
+
+            def execute(self):
+                if self.xx != 1.0:
+                    self.raise_exception("Lazy", RuntimeError)
+                self.f_x = 2.0*self.x
+                self.y = self.x
+
+        @add_delegate(HasParameters)
+        class SpecialDriver(Driver):
+
+            implements(IHasParameters)
+
+            def execute(self):
+                self.set_parameters([1.0])
+
+        top = set_as_top(Assembly())
+        top.add('comp', MyComp())
+        top.add('driver', SensitivityDriver())
+        top.add('subdriver', SpecialDriver())
+        top.driver.workflow.add('subdriver')
+        top.subdriver.workflow.add('comp')
+
+        top.subdriver.add_parameter('comp.xx')
+        top.driver.add_parameter('comp.x')
+        top.driver.add_constraint('comp.y > 1.0')
+        top.driver.add_objective('comp.f_x')
+
+        top.run()
 
 class ArrayComp(Component):
     """ Evaluates the equation y=x^2"""

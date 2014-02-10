@@ -379,6 +379,9 @@ class NEWSUMTdriver(Driver):
     def start_iteration(self):
         """Perform the optimization."""
 
+        # Inital run to make sure the workflow executes
+        super(NEWSUMTdriver, self).run_iteration()
+
         # set newsumt array sizes and more...
         self._config_newsumt()
 

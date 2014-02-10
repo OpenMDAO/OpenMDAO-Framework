@@ -12,7 +12,7 @@ import random
 from openmdao.main.datatypes.api import Float, Array, Enum, Int, Str
 from pyevolve import Selectors
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.lib.drivers.genetic import Genetic
 from openmdao.main.eggchecker import check_save_load
 
@@ -31,9 +31,9 @@ class SphereFunction(Component):
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
         self.total = self.x**2+self.y**2+self.z**2
-        
 
-class Asmb(Assembly): 
+
+class Asmb(Assembly):
     def configure(self):
         self.add('sphere',SphereFunction())
         self.driver.workflow.add('sphere')
@@ -55,11 +55,11 @@ class SphereFunctionArray(Component):
         self.total = self.x[0]**2+self.x[1]**2+self.x[2]**2
 
 class TestCase(unittest.TestCase):
-    """ test case for the genetic driver"""         
+    """ test case for the genetic driver"""
 
     def setUp(self):
         random.seed(10)
-        
+
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
         # below, so reset them here
@@ -67,14 +67,14 @@ class TestCase(unittest.TestCase):
         Selectors.GRankSelector.cacheCount = None
         Selectors.GRouletteWheel.cachePopID = None
         Selectors.GRouletteWheel.cacheWheel = None
-        
+
         self.top = set_as_top(Assembly())
         self.top.add('driver', Genetic())
         self.top.driver.seed = 123
 
     def tearDown(self):
         self.top = None
-               
+
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add('comp')
@@ -92,12 +92,12 @@ class TestCase(unittest.TestCase):
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
                                .020, places = 2)
-        x,y,z = [x for x in self.top.driver.best_individual] 
+        x,y,z = [x for x in self.top.driver.best_individual]
         self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
 
-    
+
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
         self.top.driver.workflow.add('comp')
@@ -115,7 +115,7 @@ class TestCase(unittest.TestCase):
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
                                .02,places = 1)
-        x,y,z = [x for x in self.top.driver.best_individual] 
+        x,y,z = [x for x in self.top.driver.best_individual]
         self.assertAlmostEqual(x, 0.135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
@@ -125,16 +125,16 @@ class TestCase(unittest.TestCase):
         self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
 
-        try:        
+        try:
             self.top.driver.add_parameter('comp.x[0]')
-        except ValueError,err: 
+        except ValueError,err:
             self.assertEqual(str(err),"driver: Trying to add parameter 'comp.x[0]', "
                              "but no lower limit was found and no 'low' argument was "
                              "given. One or the other must be specified.")
-        else: 
+        else:
             self.fail('TypeError expected')
-            
-    def test_optimizeSphereAssemblyPassthrough(self): 
+
+    def test_optimizeSphereAssemblyPassthrough(self):
         self.top.add('comp', Asmb())
         self.top.driver.workflow.add('comp')
         self.top.driver.add_objective("comp.total")
@@ -152,7 +152,7 @@ class TestCase(unittest.TestCase):
 
         self.assertAlmostEqual(self.top.driver.best_individual.score,
                                .02,places = 1)
-        x,y,z = [x for x in self.top.driver.best_individual] 
+        x,y,z = [x for x in self.top.driver.best_individual]
         self.assertAlmostEqual(x, .135, places = 2)
         self.assertEqual(y, 0)
         self.assertEqual(z, 0)
@@ -172,10 +172,10 @@ class TestCase(unittest.TestCase):
         self.top.driver.opt_type = "minimize"
 
         self.top.run()
-        
+
         self.assertAlmostEqual(self.top.driver.best_individual.score,0.22,places = 2)
-        x,y,z = [x for x in self.top.driver.best_individual] 
- 
+        x,y,z = [x for x in self.top.driver.best_individual]
+
 
 
     def test_list_remove_clear_params(self):
@@ -190,13 +190,13 @@ class TestCase(unittest.TestCase):
 
         self.top.driver.remove_parameter('comp.x')
         params = self.top.driver.list_param_targets()
-        self.assertEqual(params,['comp.y'])  
+        self.assertEqual(params,['comp.y'])
 
-        try: 
+        try:
             self.top.driver.remove_parameter('xyz')
-        except AttributeError,err: 
+        except AttributeError,err:
             self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz' that is not in this driver.")
-        else: 
+        else:
             self.fail('RuntimeError Expected')
 
 
@@ -206,18 +206,18 @@ class TestCase(unittest.TestCase):
         self.assertEqual(params,[])
 
         self.top.driver.add_parameter('comp.y')
-        try: 
+        try:
             self.top.driver.add_parameter('comp.y')
-        except ValueError,err: 
+        except ValueError,err:
             self.assertEqual(str(err),"driver: 'comp.y' is already a Parameter target")
-        else: 
+        else:
             self.fail('RuntimeError expected')
 
-    def test_0_low_high(self): 
+    def test_0_low_high(self):
 
-        
+
         class SomeComp(Component):
-            """Arbitrary component with a few variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do
             any calculations"""
 
             w = Float(0.0,low=-10,high=0.0,iotype="in")
@@ -226,7 +226,7 @@ class TestCase(unittest.TestCase):
             y = Int(10,low=10,high=100,iotype="in")
             z = Enum([-10,-5,0,7],iotype="in")
 
-        
+
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
@@ -241,15 +241,15 @@ class TestCase(unittest.TestCase):
                 self.optimizer.add_parameter('comp.y')
                 self.optimizer.add_parameter('comp.z')
         s = Simulation()
-    
-    def test_improper_parameter_type(self): 
-        
+
+    def test_improper_parameter_type(self):
+
         class SomeComp(Component):
-            """Arbitrary component with a few variables, but which does not really do 
+            """Arbitrary component with a few variables, but which does not really do
             any calculations"""
             z = Str("test",iotype="in")
 
-        
+
         class Simulation(Assembly):
             """Top Level Assembly used for simulation"""
 
@@ -259,17 +259,59 @@ class TestCase(unittest.TestCase):
                 self.add('driver',Genetic())
                 self.add('comp',SomeComp())
                 self.driver.workflow.add('comp')
-                
+
                 self.driver.add_parameter('comp.z')
-        
-        try:         
+
+        try:
             s = set_as_top(Simulation()    )
         except ValueError,err:
             self.assertEqual(str(err),
                 "driver: The value of parameter 'comp.z' must be a real or integral type, but its type is 'str'.")
-        else: 
+        else:
             self.fail("ValueError expected")
 
-            
+    def test_initial_run(self):
+
+        from openmdao.main.interfaces import IHasParameters, implements
+        from openmdao.main.hasparameters import HasParameters
+        from openmdao.util.decorators import add_delegate
+
+        class MyComp(Component):
+
+            x = Float(0.0, iotype='in', low=-10, high=10)
+            xx = Float(0.0, iotype='in', low=-10, high=10)
+            f_x = Float(iotype='out')
+            y = Float(iotype='out')
+
+            def execute(self):
+                if self.xx != 1.0:
+                    self.raise_exception("Lazy", RuntimeError)
+                self.f_x = 2.0*self.x
+                self.y = self.x
+
+                print self.x, self.xx, self.f_x, self.y
+
+        @add_delegate(HasParameters)
+        class SpecialDriver(Driver):
+
+            implements(IHasParameters)
+
+            def execute(self):
+                self.set_parameters([1.0])
+
+        top = set_as_top(Assembly())
+        top.add('comp', MyComp())
+        top.add('driver', Genetic())
+        top.add('subdriver', SpecialDriver())
+        top.driver.workflow.add('subdriver')
+        top.subdriver.workflow.add('comp')
+
+        top.subdriver.add_parameter('comp.xx')
+        top.driver.add_parameter('comp.x')
+        top.driver.add_objective('comp.f_x')
+
+        top.run()
+
+
 if __name__ == "__main__":
     unittest.main()
