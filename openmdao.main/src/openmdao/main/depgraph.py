@@ -1682,11 +1682,11 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 new_target = sub.replace(src, dest, 1)
                 if new_target not in graph:
                     graph.add_subvar(new_target)
-                
+
                 if dest in graph.edge[src]:
                     graph.add_edge(newsrc, new_target,
-                                                  attr_dict=graph.edge[src][dest])                    
-                else: 
+                                                  attr_dict=graph.edge[src][dest])
+                else:
                     graph.add_edge(newsrc, new_target)
 
             to_remove.add((src, dest))
@@ -1718,7 +1718,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(inp)
-            graph.add_edge('@fake', inp, conn=True)
+            graph.add_edge('@fake', inp)
 
     for out in flatten_list_of_iters(outputs):
         for drv in rep_drivers:
@@ -1729,7 +1729,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             if '@fake' not in graph:
                 graph.add_node('@fake')
             graph.add_node(out)
-            graph.add_edge(out, '@fake', conn=True)
+            graph.add_edge(out, '@fake')
 
     return graph
 
@@ -1741,10 +1741,10 @@ def _explode_vartrees(graph, scope):
         src, dest = edge
         srcnames = []
         destnames = []
-        if edge not in visited: 
+        if edge not in visited:
             visited.add(edge)
             if '@' not in src and '[' not in src:
-                
+
                 if '~' in src:
                     obj = scope.get(from_PA_var(src))
                 else:
@@ -1753,7 +1753,7 @@ def _explode_vartrees(graph, scope):
                     srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
                     srcnames = ['.'.join([src, n]) for n in srcnames]
             if '@' not in dest and '[' not in dest:
-                
+
                 if '~' in dest:
                     obj = scope.get(from_PA_var(dest))
                 else:
