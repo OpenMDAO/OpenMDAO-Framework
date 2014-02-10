@@ -199,7 +199,7 @@ def _test_slot_subclass(browser):
         ['', 'force_execute',  'False', '', 'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'assume_zero', '', 
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
