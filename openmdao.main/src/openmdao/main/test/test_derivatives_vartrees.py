@@ -290,9 +290,9 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
 
-        #J_true = array([[24,8],[1,1]])
+        J_true = array([[6,4],[1,1]])
 
-        #assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
 
@@ -322,9 +322,9 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         top.driver.workflow.config_changed()
         J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
 
-        #J_true = array([[24,8],[1,1]])
+        J_true = array([[24,8],[1,1]])
 
-        #assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
+        assert_rel_error(self, linalg.norm(J_true - J_fd), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_forward), 0, .00001)
         assert_rel_error(self, linalg.norm(J_fd - J_reverse), 0, .00001)
 
@@ -359,8 +359,8 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
 
         top.run()
 
-        #J = top.driver.workflow.calc_gradient(['sub.ins.x'], ['sub.outs.z'])
-        #assert_rel_error(self, J[0, 0], 2.0, .00001)
+        J = top.driver.workflow.calc_gradient(['sub.ins.x'], ['sub.outs.z'])
+        assert_rel_error(self, J[0, 0], 2.0, .00001)
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(['sub.ins.z'], ['sub.zzz.z'])
