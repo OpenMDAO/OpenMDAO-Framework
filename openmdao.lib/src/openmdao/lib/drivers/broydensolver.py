@@ -94,8 +94,6 @@ class BroydenSolver(Driver):
     def execute(self):
         """Solver execution."""
 
-        # Initial run to make sure the workflow executes
-        print "Inital run to make sure the workflow executes"
         # perform an initial run for self-consistency
         self.pre_iteration()
         self.run_iteration()
