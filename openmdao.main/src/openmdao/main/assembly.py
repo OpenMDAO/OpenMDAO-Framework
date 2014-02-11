@@ -15,8 +15,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
-                                     IVariableTree
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -33,8 +32,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
-from openmdao.main.case import flatteners
+from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
@@ -942,20 +940,16 @@ class Assembly(Component):
         depgraph = self._depgraph
 
         for src in required_inputs:
-            #varname, _, tail = src.partition('[')
             varname = depgraph.base_var(src)
             target = [n for n in depgraph.successors(varname)
-                              if not n.startswith('parent.') and depgraph.base_var(n) != varname] 
+                              if not n.startswith('parent.') and 
+                                 depgraph.base_var(n) != varname] 
             if len(target) == 0:
                 target = [n for n in depgraph.successors(src)
                                   if not n.startswith('parent.')]
                 if len(target) == 0:
                     continue
 
-            # If array slice, only ask the assembly to calculate the
-            # elements we need.
-            #if '[' in src and '[' not in target[0]:
-            #    target = ['%s[%s' % (targ, tail) for targ in target]
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
@@ -966,7 +960,6 @@ class Assembly(Component):
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            #varname, _, tail = target.partition('[')
             varname = depgraph.base_var(target)
             src = depgraph.predecessors(varname)
             if len(src) == 0:
@@ -976,10 +969,6 @@ class Assembly(Component):
 
             src = src[0]
 
-            # If array slice, only ask the assembly to calculate the
-            # elements we need.
-            #if '[' in target and '[' not in src:
-                #src = '%s[%s' % (src, tail)
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if target != varname:

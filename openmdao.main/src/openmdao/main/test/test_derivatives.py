@@ -522,6 +522,23 @@ class GComp_noD(Component):
 
         self.y1 = 5.0*self.x1 + 7.0*self.x2 - 3.0*self.x3
 
+class ABCDComp(Component):
+
+    a = Float(1.0, iotype='in')
+    b = Int(1, iotype='in')
+    c = Float(2.0, iotype='out')
+    d = Float(0.0, iotype='out')
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+    def provideJ(self):
+        return array([[1., 1.]]).transpose()
+
+    def list_deriv_vars(self):
+        return (('a',),('c','d'))
+
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
 
@@ -892,6 +909,67 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
+
+    def test_input_as_output2(self):
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.add('c1', ABCDComp())
+        sub.add('c2', ABCDComp())
+        sub.add('c3', ABCDComp())
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c3.b')
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        top.run()
+        J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
+        
+    def test_input_as_output3(self):
+        # add another layer of assembly nesting
+        top = set_as_top(Assembly())
+        second = top.add('second', Assembly())
+        sub = second.add('sub1', Assembly())
+        sub.add('c1', ABCDComp())
+        sub.add('c2', ABCDComp())
+        sub.add('c3', ABCDComp())
+        
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c3.b')
+        
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        
+        sub = second.add('sub2', Assembly())
+        sub.add('c1', ABCDComp())
+        sub.add('c2', ABCDComp())
+        sub.add('c3', ABCDComp())
+        
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c3.b')
+        
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        
+        second.create_passthrough('sub1.a')
+        second.create_passthrough('sub2.c')
+        second.create_passthrough('sub2.d')
+        
+        second.connect('sub1.b', 'sub2.b')
+        
+        top.run()
+        
+        J = top.driver.workflow.calc_gradient(('second.a',),('second.c','second.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
 
     def test_input_as_output_nondiff_array(self):
 

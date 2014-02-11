@@ -1426,6 +1426,9 @@ def _remove_ignored_derivs(graph):
     to_remove = [n for n,data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
     graph.remove_nodes_from(to_remove)
 
+def _is_false(item):
+    return not item
+
 def _check_for_missing_derivs(scope, comps):
     ''' we have the edges that are actually needed for the derivatives, so
     check all of the corresponding components now to see if they are
@@ -1447,8 +1450,8 @@ def _check_for_missing_derivs(scope, comps):
             # what derivatives are available. Note that boundary variables
             # that are unconnected on the interior need a missing_deriv_policy
             # of 'assume_zero' to calculate them as zero.
-            dins = comp.list_inputs()
-            douts = comp.list_outputs()
+            dins = [k for k, v in comp.items(iotype='in', deriv_ignore=_is_false)] #comp.list_inputs()
+            douts = [k for k, v in comp.items(iotype='out', deriv_ignore=_is_false)]#comp.list_outputs()
             comp.provideJ(dins, douts, check_only=True)
             dins, douts = comp.list_deriv_vars()
             # if inputs are vartrees and we have full vt connections inside, add
