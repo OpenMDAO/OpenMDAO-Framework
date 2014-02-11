@@ -43,7 +43,7 @@ class GradientOptions(VariableTree):
                         desc='Set to absolute or relative stepsizes',
                         framework_var=True)
 
-    force_fd = Bool(True, desc="Set to True to force finite difference " +
+    force_fd = Bool(False, desc="Set to True to force finite difference " +
                                 "of this driver's entire workflow in a" +
                                 "single block.",
                            framework_var=True)
