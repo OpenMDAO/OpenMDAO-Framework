@@ -1870,7 +1870,6 @@ class Component(Container):
                         for vt_output in vt_outputs:
                             vt_outputs['id'] = '~{0}'.format(vt_output['id'])
                         
-                    #inputs += vt_inputs
                     outputs += vt_outputs
 
         attrs['Inputs'] = inputs
