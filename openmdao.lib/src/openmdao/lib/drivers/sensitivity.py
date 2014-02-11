@@ -56,10 +56,10 @@ class SensitivityDriver(Driver):
     def execute(self):
         """Calculate the gradient of the workflow."""
 
-        self._check()
-
-        # Run our iteration once, since we can't guarantee it has been.
+        # Inital run to make sure the workflow executes
         self.run_iteration()
+
+        self._check()
 
         inputs = self.list_param_group_targets()
         obj = self.list_objective_targets()

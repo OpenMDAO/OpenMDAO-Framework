@@ -941,22 +941,24 @@ class Assembly(Component):
 
         for src in required_inputs:
             varname = depgraph.base_var(src)
-            target = [n for n in depgraph.successors(varname)
-                              if not n.startswith('parent.') and 
-                                 depgraph.base_var(n) != varname] 
-            if len(target) == 0:
-                target = [n for n in depgraph.successors(src)
-                                  if not n.startswith('parent.')]
-                if len(target) == 0:
-                    continue
+            target1 = [n for n in depgraph.successors(varname)
+                              if not n.startswith('parent.') and depgraph.base_var(n) != varname]
+            target2 = []
+            if src in depgraph.node:
+                target2 = [n for n in depgraph.successors(src)
+                           if not n.startswith('parent.') and \
+                           depgraph.base_var(n) != varname and \
+                           n not in target1]
+            if len(target1) == 0 and len(target1) == 0:
+                continue
 
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
                 tail = src[len(varname):]
-                target = ['%s%s' % (targ, tail) for targ in target]
+                target1 = ['%s%s' % (targ, tail) for targ in target1]
 
-            input_keys.append(tuple(target))
+            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
@@ -980,7 +982,6 @@ class Assembly(Component):
 
         if check_only:
             return None
-
         return self.driver.calc_gradient(input_keys, output_keys)
 
 

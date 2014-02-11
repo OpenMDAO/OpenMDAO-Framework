@@ -43,8 +43,16 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     for param in inputs:
 
         if isinstance(param, tuple):
-            param = param[0]
 
+            # You can ask for derivatives of broadcast inputs in cases
+            # where some of the inputs aren't in the relevance graph.
+            # Find the one that is.
+            for bcast_param in param:
+                if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                    param = bcast_param
+                    break
+                else:
+                    continue
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
@@ -145,10 +153,19 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 logger.error(msg % (wflow._parent.get_pathname(), output, irhs))
 
             i = 0
+
             for param in inputs:
 
+                # You can ask for derivatives of broadcast inputs in cases
+                # where some of the inputs aren't in the relevance graph.
+                # Find the one that is.
                 if isinstance(param, tuple):
-                    param = param[0]
+                    for bcast_param in param:
+                        if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                            param = bcast_param
+                            break
+                        else:
+                            continue
 
                 try:
                     k1, k2 = wflow.get_bounds(param)
@@ -281,7 +298,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
     # need to find the start and end index of each input and output.
-    
+
     if obj._provideJ_bounds is None:
         obj._provideJ_bounds = get_bounds(obj, input_keys, output_keys, J)
     ibounds, obounds = obj._provideJ_bounds

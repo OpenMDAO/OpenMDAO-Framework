@@ -1131,6 +1131,38 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         else:
             self.fail("RuntimeError expected")
 
+    def test_broadcast_graph(self):
+
+        top = set_as_top(Assembly())
+        equation = ['y = 2.0*x + 3.0*z']
+        top.add('comp1', ExecComp(equation))
+        top.add('comp2', ExecComp(equation))
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+
     def test_5in_1out(self):
 
         self.top = set_as_top(Assembly())
