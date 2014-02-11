@@ -437,10 +437,16 @@ def _test_properties(browser):
     (header, inputs, outputs) = workspace_page.get_properties('top')
     eq(header, 'Run_Once: top.driver')
     eq(inputs.value, [
-        [' gradient_options', ''],  # vartree, has leading space after the [+]
         ['directory',         ''],
         ['force_execute',     'True'],
         ['force_fd',          'False'],
+        [' gradient_options', ''],  # vartree, has leading space after the [+]
+        ['fd_form', 'forward'],
+        ['fd_step', '0.000001'],
+        ['fd_step_type', 'absolute'],
+        ['force_fd', 'False'],
+        ['gmres_maxiter', '100'],
+        ['gmres_tolerance', '1e-9'],
         ['printvars',         '[]'],
     ])
     eq(outputs.value, [
