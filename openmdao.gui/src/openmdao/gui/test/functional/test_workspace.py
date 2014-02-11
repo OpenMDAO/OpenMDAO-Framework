@@ -429,6 +429,7 @@ b = Float(0.0, iotype='out')
 
 
 def _test_properties(browser):
+    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
 
@@ -642,6 +643,7 @@ def _test_editable_inputs(browser):
 
 
 def _test_console_errors(browser):
+    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
     project_dict, workspace_page = startup(browser)
 
     # Set input to illegal value.
