@@ -344,7 +344,6 @@ class TestcaseNonDiff(unittest.TestCase):
         self.assertTrue('comp1' in meta['pa_object'].comps)
         self.assertTrue('sub' in meta['pa_object'].comps)
 
-
 if __name__ == '__main__':
     import nose
     import sys
