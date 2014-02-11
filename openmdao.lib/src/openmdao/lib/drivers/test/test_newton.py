@@ -12,7 +12,11 @@ from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline2_WithDerivatives, \
                                             Discipline1, Discipline2
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
+from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.datatypes.api import Float
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
@@ -298,6 +302,42 @@ class MDA_SolverTestCase(unittest.TestCase):
 
         assert_rel_error(self, a.comp.x, 2.06720359226, .0001)
         assert_rel_error(self, a.comp.f, 0, .0001)
+
+    def test_initial_run(self):
+
+        class MyComp(Component):
+
+            x = Float(0.0, iotype='in', low=-100000, high=100000)
+            xx = Float(0.0, iotype='in', low=-100000, high=100000)
+            f_x = Float(iotype='out')
+            y = Float(iotype='out')
+
+            def execute(self):
+                if self.xx != 1.0:
+                    self.raise_exception("Lazy", RuntimeError)
+                self.f_x = 2.0*self.x
+                self.y = self.x
+
+        @add_delegate(HasParameters)
+        class SpecialDriver(Driver):
+
+            implements(IHasParameters)
+
+            def execute(self):
+                self.set_parameters([1.0])
+
+        top = set_as_top(Assembly())
+        top.add('comp', MyComp())
+        top.add('driver', NewtonSolver())
+        top.add('subdriver', SpecialDriver())
+        top.driver.workflow.add('subdriver')
+        top.subdriver.workflow.add('comp')
+
+        top.subdriver.add_parameter('comp.xx')
+        top.driver.add_parameter('comp.x')
+        top.driver.add_constraint('comp.y = 1.0')
+
+        top.run()
 
 if __name__ == "__main__":
     unittest.main()
