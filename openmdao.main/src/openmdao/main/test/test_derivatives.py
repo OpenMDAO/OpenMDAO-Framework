@@ -922,6 +922,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.create_passthrough('c1.b')
         sub.create_passthrough('c2.c')
         sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
+        top.driver.workflow.add('sub')
         top.run()
         J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
         self.assertEqual(J.shape, (2,1))
@@ -944,6 +946,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.create_passthrough('c1.b')
         sub.create_passthrough('c2.c')
         sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
         
         sub = second.add('sub2', Assembly())
         sub.add('c1', ABCDComp())
@@ -957,15 +960,20 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.create_passthrough('c1.b')
         sub.create_passthrough('c2.c')
         sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
         
         second.create_passthrough('sub1.a')
         second.create_passthrough('sub2.c')
         second.create_passthrough('sub2.d')
         
         second.connect('sub1.b', 'sub2.b')
+        second.connect('a', 'sub2.a')
+        second.driver.workflow.add(['sub1','sub2'])
         
+        top.driver.workflow.add('second')
         top.run()
         
+        J = top.driver.workflow.calc_gradient(('second.a',),('second.c','second.d'))
         J = top.driver.workflow.calc_gradient(('second.a',),('second.c','second.d'))
         self.assertEqual(J.shape, (2,1))
         self.assertEqual(J[0,0], 1.)
