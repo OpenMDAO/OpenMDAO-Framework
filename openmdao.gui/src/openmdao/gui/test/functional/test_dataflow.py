@@ -470,177 +470,180 @@ def _test_driverflows(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_replace(browser):
-    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
-    # Replaces various connected components.
-    project_dict, workspace_page = startup(browser)
+#Variable trees that are framework variables are broken in the GUI. 
+#Uncomment test once fixed.
 
-    filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                               'files/rosen_suzuki.py')
-    workspace_page.add_file(filename)
-
-    workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
-
-    # Show dataflow for Simulation.
-    workspace_page.show_dataflow('top')
-    workspace_page.hide_left()
-
-    # Verify preproc is a PreProc.
-    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
-    editor = preproc.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Replace preproc with a ScalingPreProc.
-    workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
-    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
-    editor = preproc.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'scaler', '1', '', ''],
-        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Verify postproc is a PostProc.
-    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
-    editor = postproc.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'result_in', '0', '', ''],
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Replace postproc with a ScalingPostProc.
-    workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
-    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
-    editor = postproc.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'result_in', '0', '', ''],
-        ['', 'scaler', '1', '', ''],
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Verify driver is a CONMINdriver.
-    driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page(base_type='Driver')
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    eq(inputs.value[0],
-       ['', 'conmin_diff', 'False', '',
-        'Set to True to let CONMINcalculate the gradient.'])
-    editor.close()
-
-    # Replace driver with an SLSQPdriver.
-    workspace_page.replace_driver('top', 'SLSQPdriver')
-    driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page(base_type='Driver')
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    eq(inputs.value[0],
-       ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
-    editor.close()
-
-    # Verify comp is a OptRosenSuzukiComponent.
-    comp = workspace_page.get_dataflow_figure('comp', 'top')
-    editor = comp.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'x', '[]', '', ''],
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Replace comp with an Assembly.
-    workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
-    expected = "but are missing in the replacement object"
-    time.sleep(0.5)
-    # messages go to log now, so don't show up in history
-    #assert workspace_page.history.find(expected) >= 0
-
-    comp = workspace_page.get_dataflow_figure('comp', 'top')
-    editor = comp.editor_page()
-    editor.move(-400, 0)
-    inputs = editor.get_inputs()
-    expected = [
-        ['', 'directory', '', '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
-    ]
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    editor.close()
-
-    # Verify new figure.
-    comp = workspace_page.get_dataflow_figure('comp', 'top')
-    background = comp('top_right').value_of_css_property('background')
-    assert background.find('circle-plus.png') >= 0
-
-    # Clean up.
-    closeout(project_dict, workspace_page)
+#def _test_replace(browser):
+#    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
+#    # Replaces various connected components.
+#    project_dict, workspace_page = startup(browser)
+#
+#    filename = pkg_resources.resource_filename('openmdao.gui.test.functional',
+#                                               'files/rosen_suzuki.py')
+#    workspace_page.add_file(filename)
+#
+#    workspace_page.add_library_item_to_dataflow('rosen_suzuki.Simulation', 'top')
+#
+#    # Show dataflow for Simulation.
+#    workspace_page.show_dataflow('top')
+#    workspace_page.hide_left()
+#
+#    # Verify preproc is a PreProc.
+#    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
+#    editor = preproc.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Replace preproc with a ScalingPreProc.
+#    workspace_page.replace('preproc', 'rosen_suzuki.ScalingPreProc')
+#    preproc = workspace_page.get_dataflow_figure('preproc', 'top')
+#    editor = preproc.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'scaler', '1', '', ''],
+#        ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Verify postproc is a PostProc.
+#    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
+#    editor = postproc.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'result_in', '0', '', ''],
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Replace postproc with a ScalingPostProc.
+#    workspace_page.replace('postproc', 'rosen_suzuki.ScalingPostProc')
+#    postproc = workspace_page.get_dataflow_figure('postproc', 'top')
+#    editor = postproc.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'result_in', '0', '', ''],
+#        ['', 'scaler', '1', '', ''],
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Verify driver is a CONMINdriver.
+#    driver = workspace_page.get_dataflow_figure('driver', 'top')
+#    editor = driver.editor_page(base_type='Driver')
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    eq(inputs.value[0],
+#       ['', 'conmin_diff', 'False', '',
+#        'Set to True to let CONMINcalculate the gradient.'])
+#    editor.close()
+#
+#    # Replace driver with an SLSQPdriver.
+#    workspace_page.replace_driver('top', 'SLSQPdriver')
+#    driver = workspace_page.get_dataflow_figure('driver', 'top')
+#    editor = driver.editor_page(base_type='Driver')
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    eq(inputs.value[0],
+#       ['', 'accuracy', '0.000001', '', 'Convergence accuracy'])
+#    editor.close()
+#
+#    # Verify comp is a OptRosenSuzukiComponent.
+#    comp = workspace_page.get_dataflow_figure('comp', 'top')
+#    editor = comp.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'x', '[]', '', ''],
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Replace comp with an Assembly.
+#    workspace_page.replace('comp', 'openmdao.main.assembly.Assembly')
+#    expected = "but are missing in the replacement object"
+#    time.sleep(0.5)
+#    # messages go to log now, so don't show up in history
+#    #assert workspace_page.history.find(expected) >= 0
+#
+#    comp = workspace_page.get_dataflow_figure('comp', 'top')
+#    editor = comp.editor_page()
+#    editor.move(-400, 0)
+#    inputs = editor.get_inputs()
+#    expected = [
+#        ['', 'directory', '', '',
+#         'If non-blank, the directory to execute in.'],
+#        ['', 'force_execute', 'False', '',
+#         'If True, always execute even if all IO traits are valid.'],
+#        ['', 'force_fd', 'False', '',
+#         'If True, always finite difference this component.'],
+#        ['', 'missing_deriv_policy', 'error', '', 
+#         'Determines behavior when some analytical derivatives are provided but some are missing']
+#    ]
+#    for i, row in enumerate(inputs.value):
+#        eq(row, expected[i])
+#    editor.close()
+#
+#    # Verify new figure.
+#    comp = workspace_page.get_dataflow_figure('comp', 'top')
+#    background = comp('top_right').value_of_css_property('background')
+#    assert background.find('circle-plus.png') >= 0
+#
+#    # Clean up.
+#    closeout(project_dict, workspace_page)
 
 
 def _test_ordering(browser):
@@ -881,122 +884,125 @@ def _test_io_filter_with_vartree(browser):
     closeout(project_dict, workspace_page)
 
 
-def _test_column_sorting(browser):
-    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
+#Variable trees that are framework variables are broken in the GUI. 
+#Uncomment test once fixed.
 
-    Version = ComponentPage.Version
-    SortOrder = ComponentPage.SortOrder
-
-    def test_sorting(expected, grid, sort_order):
-        names = None
-        variables = None
-
-        if (grid == "inputs"):
-            editor.show_inputs()
-            editor.sort_inputs_column("Name", sort_order)
-            
-            variables = editor.get_inputs()
-
-        else:
-            editor.show_outputs()
-            editor.sort_outputs_column("Name", sort_order)
-            variables = editor.get_outputs()
-
-        names = [variable.name.value for variable in variables]
-
-        for index, name in enumerate(names):
-            eq(name, expected[index])
-
-    project_dict, workspace_page = startup(browser)
-    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.replace_driver('top', 'SLSQPdriver')
-    driver = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = driver.editor_page(version=Version.NEW)
-    editor.move(-100, 0)
-
-    test_sorting(
-        ["accuracy", "iout", "iprint", "maxiter", 
-         "output_filename", "directory", "force_execute", "force_fd", 
-         " gradient_options", "printvars"], "inputs",
-        SortOrder.ASCENDING
-    )
-
-    test_sorting(
-        ["printvars", " gradient_options", "force_fd", "force_execute", 
-         "directory", "output_filename", "maxiter", "iprint", "iout", 
-         "accuracy"], "inputs",
-        SortOrder.DESCENDING
-    )
-
-    test_sorting(
-        ["error_code", "derivative_exec_count", "exec_count", "itername"],
-        "outputs",
-        SortOrder.ASCENDING
-    )
-
-    test_sorting(
-        ["itername", "exec_count", "derivative_exec_count", "error_code"],
-        "outputs",
-        SortOrder.DESCENDING
-    )
-
-    editor.close()
-
-    top = workspace_page.get_dataflow_figure('top')
-    top.remove()
-
-    workspace_page.reload_project()
-    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
-                                                'files/model_vartree.py')
-    workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "apples", offset=(120, 90))
-    #workspace_page.show_dataflow("vartree")
-
-    comp = workspace_page.get_dataflow_figure('p1', "apples")
-    editor = comp.editor_page(version=Version.NEW)
-
-    editor.get_input(" cont_in").name.click()
-    editor.get_input(" vt2").name.click()
-    editor.get_input(" vt3").name.click()
-
-
-    #Testing sort for inputs
-    editor.get_input("missing_deriv_policy") 
-    test_sorting(
-        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
-         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
-        "inputs",
-        SortOrder.ASCENDING
-    )
-
-    test_sorting(
-        ["missing_deriv_policy", "force_fd", "force_execute", "directory", 
-         " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
-        "inputs",
-        SortOrder.DESCENDING
-    )
-
-    #Testing sort for outputs
-    editor.get_output(" cont_out").name.click()
-    editor.get_output(" vt2").name.click()
-    editor.get_output(" vt3").name.click()
-
-    test_sorting(
-        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
-         "derivative_exec_count", "exec_count", "itername"],
-        "outputs",
-        SortOrder.ASCENDING
-    )
-
-    test_sorting(
-        ["itername", "exec_count", "derivative_exec_count", " cont_out", 
-         " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
-        "outputs",
-        SortOrder.DESCENDING
-    )
-
-    editor.close()
-    closeout(project_dict, workspace_page)
+#def _test_column_sorting(browser):
+#    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
+#
+#    Version = ComponentPage.Version
+#    SortOrder = ComponentPage.SortOrder
+#
+#    def test_sorting(expected, grid, sort_order):
+#        names = None
+#        variables = None
+#
+#        if (grid == "inputs"):
+#            editor.show_inputs()
+#            editor.sort_inputs_column("Name", sort_order)
+#            
+#            variables = editor.get_inputs()
+#
+#        else:
+#            editor.show_outputs()
+#            editor.sort_outputs_column("Name", sort_order)
+#            variables = editor.get_outputs()
+#
+#        names = [variable.name.value for variable in variables]
+#
+#        for index, name in enumerate(names):
+#            eq(name, expected[index])
+#
+#    project_dict, workspace_page = startup(browser)
+#    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+#    workspace_page.replace_driver('top', 'SLSQPdriver')
+#    driver = workspace_page.get_dataflow_figure('driver', 'top')
+#    editor = driver.editor_page(version=Version.NEW)
+#    editor.move(-100, 0)
+#
+#    test_sorting(
+#        ["accuracy", "iout", "iprint", "maxiter", 
+#         "output_filename", "directory", "force_execute", "force_fd", 
+#         " gradient_options", "printvars"], "inputs",
+#        SortOrder.ASCENDING
+#    )
+#
+#    test_sorting(
+#        ["printvars", " gradient_options", "force_fd", "force_execute", 
+#         "directory", "output_filename", "maxiter", "iprint", "iout", 
+#         "accuracy"], "inputs",
+#        SortOrder.DESCENDING
+#    )
+#
+#    test_sorting(
+#        ["error_code", "derivative_exec_count", "exec_count", "itername"],
+#        "outputs",
+#        SortOrder.ASCENDING
+#    )
+#
+#    test_sorting(
+#        ["itername", "exec_count", "derivative_exec_count", "error_code"],
+#        "outputs",
+#        SortOrder.DESCENDING
+#    )
+#
+#    editor.close()
+#
+#    top = workspace_page.get_dataflow_figure('top')
+#    top.remove()
+#
+#    workspace_page.reload_project()
+#    file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
+#                                                'files/model_vartree.py')
+#    workspace_page.add_file(file_path)
+#    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "apples", offset=(120, 90))
+#    #workspace_page.show_dataflow("vartree")
+#
+#    comp = workspace_page.get_dataflow_figure('p1', "apples")
+#    editor = comp.editor_page(version=Version.NEW)
+#
+#    editor.get_input(" cont_in").name.click()
+#    editor.get_input(" vt2").name.click()
+#    editor.get_input(" vt3").name.click()
+#
+#
+#    #Testing sort for inputs
+#    editor.get_input("missing_deriv_policy") 
+#    test_sorting(
+#        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+#         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
+#        "inputs",
+#        SortOrder.ASCENDING
+#    )
+#
+#    test_sorting(
+#        ["missing_deriv_policy", "force_fd", "force_execute", "directory", 
+#         " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+#        "inputs",
+#        SortOrder.DESCENDING
+#    )
+#
+#    #Testing sort for outputs
+#    editor.get_output(" cont_out").name.click()
+#    editor.get_output(" vt2").name.click()
+#    editor.get_output(" vt3").name.click()
+#
+#    test_sorting(
+#        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+#         "derivative_exec_count", "exec_count", "itername"],
+#        "outputs",
+#        SortOrder.ASCENDING
+#    )
+#
+#    test_sorting(
+#        ["itername", "exec_count", "derivative_exec_count", " cont_out", 
+#         " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
+#        "outputs",
+#        SortOrder.DESCENDING
+#    )
+#
+#    editor.close()
+#    closeout(project_dict, workspace_page)
 
 
 def _test_taborder(browser):
