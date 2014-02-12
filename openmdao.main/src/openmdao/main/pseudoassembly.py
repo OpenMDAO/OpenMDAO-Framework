@@ -70,14 +70,14 @@ class PseudoAssembly(object):
             # it to support arrays and vartrees.
             self.ffd_order = 0 
 
-        if fd:
-            self.itercomps = [c.name for c in wflow]
-        elif drv_name is not None:
+        #if fd:
+        #    self.itercomps = [c.name for c in wflow]
+        if drv_name is not None:
             self.itercomps = [drv_name]
         else:
             self.itercomps = list(self.comps)
             
-        #print "Created PseudoAssembly:", self.comps
+        print "Created PseudoAssembly:", self.comps
 
     def _pre_init(self, pa_name, group, dgraph, fd, boundary_params):
         """Return a tuple of the form (pa_inputs, pa_outputs, renames)

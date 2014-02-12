@@ -333,6 +333,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
             Jsub = reduce_jacobian(J, i1, i2, idx, ish,
                                       o1, o2, odx, osh)
+            #print ikey, okey, Jsub
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
@@ -429,6 +430,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
             Jsub = reduce_jacobian(J, o1, o2, odx, osh,
                                       i1, i2, idx, ish).T
+            #print ikey, okey, Jsub
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
