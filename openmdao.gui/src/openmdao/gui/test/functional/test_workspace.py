@@ -427,40 +427,29 @@ b = Float(0.0, iotype='out')
     # Clean up.
     closeout(project_dict, workspace_page)
 
+def _test_properties(browser):
+    # Checks right-hand side properties display.
+    project_dict, workspace_page = startup(browser)
 
-#Variable trees that are framework variables are broken in the GUI. 
-#Uncomment test once fixed.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
-#def _test_properties(browser):
-#    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
-#    # Checks right-hand side properties display.
-#    project_dict, workspace_page = startup(browser)
-#
-#    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-#
-#    (header, inputs, outputs) = workspace_page.get_properties('top')
-#    eq(header, 'Run_Once: top.driver')
-#    eq(inputs.value, [
-#        ['directory',         ''],
-#        ['force_execute',     'True'],
-#        ['force_fd',          'False'],
-#        [' gradient_options', ''],  # vartree, has leading space after the [+]
-#        ['fd_form', 'forward'],
-#        ['fd_step', '0.000001'],
-#        ['fd_step_type', 'absolute'],
-#        ['force_fd', 'False'],
-#        ['gmres_maxiter', '100'],
-#        ['gmres_tolerance', '1e-9'],
-#        ['printvars',         '[]'],
-#    ])
-#    eq(outputs.value, [
-#        ['derivative_exec_count', '0'],
-#        ['exec_count',            '0'],
-#        ['itername',              '']
-#    ])
-#
-#    # Clean up.
-#    closeout(project_dict, workspace_page)
+    (header, inputs, outputs) = workspace_page.get_properties('top')
+    eq(header, 'Run_Once: top.driver')
+    eq(inputs.value, [
+        ['directory',         ''],
+        ['force_execute',     'True'],
+        ['force_fd',          'False'],
+        [' gradient_options', ''],  # vartree, has leading space after the [+]
+        ['printvars',         '[]'],
+    ])
+    eq(outputs.value, [
+        ['derivative_exec_count', '0'],
+        ['exec_count',            '0'],
+        ['itername',              '']
+    ])
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_implicit_component(browser):
@@ -645,75 +634,72 @@ def _test_editable_inputs(browser):
     closeout(project_dict, workspace_page)
 
 
-#Variable trees that are framework variables are broken in the GUI. 
-#Uncomment test once fixed.
-#def _test_console_errors(browser):
-#    raise SkipTest("Variable trees that are framework variables are broken in the GUI. Unskip test once fixed.")
-#    project_dict, workspace_page = startup(browser)
-#
-#    # Set input to illegal value.
-#    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-#    top = workspace_page.get_dataflow_figure('driver', 'top')
-#    editor = top.editor_page(double_click=False, base_type='Driver')
-#    editor.move(-100, -40)  # Make viewable on small screen.
-#    inputs = editor.get_inputs()
-#    inputs.rows[4].cells[2].click()
-#    inputs[4][2] = '42'  # printvars
-#    expected = "TraitError: The 'printvars' trait of a "     \
-#               "Run_Once instance must be a list of items "  \
-#               "which are a legal value, but a value of 42 " \
-#               "<type 'int'> was specified."
-#    time.sleep(0.5)
-#    assert workspace_page.history.endswith(expected)
-#    editor.close()
-#
-#    # Attempt to save file with syntax error.
-#    workspace_window = browser.current_window_handle
-#    editor_page = workspace_page.open_editor()
-#    editor_page.new_file('bug.py', """
-#from openmdao.main.api import Component
-#class Bug(Component):
-#def execute(self)
-#    pass
-#""", check=False)
-#
-#    # We expect 2 notifiers: save successful and file error.
-#    # These will likely overlap in a manner that 'Ok' is found but
-#    # later is hidden by the second notifier.
-#    try:
-#        message = NotifierPage.wait(editor_page, base_id='file-error')
-#    except WebDriverException as exc:
-#        err = str(exc)
-#        if 'Element is not clickable' in err:
-#            NotifierPage.wait(editor_page)
-#            message = NotifierPage.wait(editor_page)
-#    else:
-#        NotifierPage.wait(editor_page)
-#    eq(message, 'Error in file bug.py: invalid syntax (bug.py, line 6)')
-#
-#    browser.close()
-#    browser.switch_to_window(workspace_window)
-#
-#    # Load file with instantiation error.
-#    workspace_window = browser.current_window_handle
-#    if broken_chrome():
-#        raise SkipTest('Test broken for chrome/selenium combination')
-#    editor_page = workspace_page.open_editor()
-#    editor_page.new_file('bug2.py', """
-#from openmdao.main.api import Component
-#class Bug2(Component):
-#def __init__(self):
-#raise RuntimeError("__init__ failed")
-#""")
-#    browser.close()
-#    browser.switch_to_window(workspace_window)
-#
-#    workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
-#    expected = "NameError: unable to create object of type 'bug2.Bug2': __init__ failed"
-#    assert workspace_page.history.endswith(expected)
-#
-#    # Clean up.
-#    closeout(project_dict, workspace_page)
+def _test_console_errors(browser):
+    project_dict, workspace_page = startup(browser)
+
+    # Set input to illegal value.
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    top = workspace_page.get_dataflow_figure('driver', 'top')
+    editor = top.editor_page(double_click=False, base_type='Driver')
+    editor.move(-100, -40)  # Make viewable on small screen.
+    inputs = editor.get_inputs()
+    inputs.rows[4].cells[2].click()
+    inputs[4][2] = '42'  # printvars
+    expected = "TraitError: The 'printvars' trait of a "     \
+               "Run_Once instance must be a list of items "  \
+               "which are a legal value, but a value of 42 " \
+               "<type 'int'> was specified."
+    time.sleep(0.5)
+    assert workspace_page.history.endswith(expected)
+    editor.close()
+
+    # Attempt to save file with syntax error.
+    workspace_window = browser.current_window_handle
+    editor_page = workspace_page.open_editor()
+    editor_page.new_file('bug.py', """
+from openmdao.main.api import Component
+class Bug(Component):
+def execute(self)
+    pass
+""", check=False)
+
+    # We expect 2 notifiers: save successful and file error.
+    # These will likely overlap in a manner that 'Ok' is found but
+    # later is hidden by the second notifier.
+    try:
+        message = NotifierPage.wait(editor_page, base_id='file-error')
+    except WebDriverException as exc:
+        err = str(exc)
+        if 'Element is not clickable' in err:
+            NotifierPage.wait(editor_page)
+            message = NotifierPage.wait(editor_page)
+    else:
+        NotifierPage.wait(editor_page)
+    eq(message, 'Error in file bug.py: invalid syntax (bug.py, line 6)')
+
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    # Load file with instantiation error.
+    workspace_window = browser.current_window_handle
+    if broken_chrome():
+        raise SkipTest('Test broken for chrome/selenium combination')
+    editor_page = workspace_page.open_editor()
+    editor_page.new_file('bug2.py', """
+from openmdao.main.api import Component
+class Bug2(Component):
+def __init__(self):
+raise RuntimeError("__init__ failed")
+""")
+    browser.close()
+    browser.switch_to_window(workspace_window)
+
+    workspace_page.add_library_item_to_dataflow('bug2.Bug2', 'bug', check=False)
+    expected = "NameError: unable to create object of type 'bug2.Bug2': __init__ failed"
+    assert workspace_page.history.endswith(expected)
+
+    # Clean up.
+    closeout(project_dict, workspace_page)
 
 
 def _test_driver_config(browser):
