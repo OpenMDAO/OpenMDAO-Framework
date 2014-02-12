@@ -1858,9 +1858,19 @@ class Component(Container):
                                                    parent=name,
                                                    valid=io_attr['valid'])
                 if name in inputs_list:
-                    inputs += vt_attrs.get('Inputs', [])
+                    vt_inputs = vt_attrs.get('Inputs', [])
+                    if "~" in io_attr['id']:
+                        for vt_input in vt_inputs:
+                            vt_input['id'] = '~{0}'.format(vt_input['id'])
+                        
+                    inputs += vt_inputs
                 else:
-                    outputs += vt_attrs.get('Outputs', [])
+                    vt_outputs = vt_attrs.get('Outputs', [])
+                    if "~" in io_attr['id']:
+                        for vt_output in vt_outputs:
+                            vt_outputs['id'] = '~{0}'.format(vt_output['id'])
+                        
+                    outputs += vt_outputs
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
