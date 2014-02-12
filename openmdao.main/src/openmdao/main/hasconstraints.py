@@ -56,17 +56,46 @@ class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
+        #get unresolved variables for left hand side of expression
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        if not self.lhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid left-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.lhs.get_unresolved()
+
+        #need to raise a ValueError if any exist
+        if unresolved_vars:
+
+            #do some formatting for the error message
+            #wrap the variables in single quotes
+            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+            #convert the list to a string
+            #if there is more than one variable,
+            #seperate the variables with commas
+            if len(unresolved_vars) == 1:
+                unresolved_vars = ''.join(unresolved_vars)
+            else:
+                unresolved_vars = ', '.join(unresolved_vars)
+
+            #throw the error
+            raise ValueError("Constraint '{0}' has invalid variables {1} on left-hand-side".
+                             format(' '.join([lhs, comparator, rhs]), unresolved_vars))
 
         self.comparator = comparator
 
+        #now get the unresolved variables, if any, for right hand side
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        if not self.rhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid right-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.rhs.get_unresolved()
+
+        #if any exist, do same formatting/error throwing as above
+        #except do it for the right hand side of expression
+        if unresolved_vars:
+            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
+            if len(unresolved_vars) == 1:
+                unresolved_vars = ''.join(unresolved_vars)
+            else:
+                unresolved_vars = ', '.join(unresolved_vars)
+
+            raise ValueError("Constraint '{0}' has invalid variables {1} on right-hand-side".
+                             format(' '.join([lhs, comparator, rhs]), unresolved_vars))
 
         self.pcomp_name = None
         self._size = None
@@ -101,7 +130,7 @@ class Constraint(object):
                 pass
             else:
                 scope.remove(pcomp.name)
-            finally:  
+            finally:
                 self.pcomp_name = None
 
     def _combined_expr(self):
@@ -263,9 +292,9 @@ class _HasConstraintsBase(object):
             Value returned by :meth:`get_references`.
 
         Note: this is called from the replace() method, where
-        the replacing object may be missing variables that were 
+        the replacing object may be missing variables that were
         found in the target object, so no restore_references
-        call should raise an exception when restoring a reference 
+        call should raise an exception when restoring a reference
         fails.
         """
         for name, constraint in refs.items():
@@ -275,7 +304,7 @@ class _HasConstraintsBase(object):
                 self.add_constraint(str(constraint), name,
                                     constraint.lhs.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore constraint '%s': %s" 
+                self._parent._logger.warning("Couldn't restore constraint '%s': %s"
                                               % (name, str(err)))
 
     def clear_constraints(self):
