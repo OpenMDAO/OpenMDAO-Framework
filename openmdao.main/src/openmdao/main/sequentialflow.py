@@ -405,9 +405,12 @@ class SequentialWorkflow(Workflow):
         try:
             meta = dgraph.node[node]
 
-        # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
-            dgraph.add_subvar(node)
+            base = dgraph.base_var(node)
+            if base not in dgraph:
+                dgraph.add_node(base, var=True)
+            if node != base:
+                dgraph.add_subvar(node)
             meta = dgraph.node[node]
 
         if 'bounds' not in meta:

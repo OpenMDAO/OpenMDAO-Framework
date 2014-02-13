@@ -708,7 +708,8 @@ class Assembly(Component):
 
     def _input_updated(self, name, fullpath=None):
         outs = self.invalidate_deps([name])
-        if outs and self.parent:
+        if self.parent:
+            outs.add(name)
             self.parent.child_invalidated(self.name, outs)
 
     @rbac(('owner', 'user'))
@@ -953,15 +954,13 @@ class Assembly(Component):
             if len(target1) == 0 and len(target2) == 0:
                 continue
 
-            targs = target1 + target2
-
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
                 tail = src[len(varname):]
-                targs = ['%s%s' % (targ, tail) for targ in targs]
+                target1 = ['%s%s' % (targ, tail) for targ in target1]
 
-            input_keys.append(tuple(targs))
+            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
