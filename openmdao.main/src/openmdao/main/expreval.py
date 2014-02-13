@@ -516,7 +516,22 @@ class ExprEvaluator(object):
 
     @classmethod
     def _invalid_expression_error(cls, unresolved_vars, expr=None, msg=None):
+        """
+        Creates and returns an invalid expression error that can be raised.
+        Also adds the unresolved variables as an attribute to the error.
+        This is so the message can be more specifically tailored by catching
+        the error, creating your own message, and passing the necessary
+        arguments to generate a new error.
 
+        An example of this can be seen in Constraint.__init__.
+
+        unresolved_vars: list of unresolved variables
+        expr: Expression string
+        msg: Message with {0} and {1} placeholders to be formatted.
+             {0} will be replaced by expr and {1} will be replaced
+             by the unresolved variables
+
+        """
         if not msg:
             msg = "Expression '{0}' has invalid variables {1}"
 

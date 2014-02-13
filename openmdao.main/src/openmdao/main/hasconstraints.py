@@ -63,16 +63,16 @@ class Constraint(object):
             expression = ' '.join([lhs, comparator, rhs])
             unresolved_vars = error.unresolved_vars
 
-            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expressions, msg=msg)
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
         try:
             self.rhs = ExprEvaluator(rhs, scope=scope)
         except ValueError as error:
             msg = "Right hand side of expression '{0}' has invalid variables {1}"
-            expressions = ' '.join([lhs, comparator, rhs])
+            expression = ' '.join([lhs, comparator, rhs])
             unresolved_vars = error.unresolved_vars
 
-            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expressions, msg=msg)
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
         self.pcomp_name = None
         self._size = None
