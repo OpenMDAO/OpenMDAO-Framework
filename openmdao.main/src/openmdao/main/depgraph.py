@@ -1587,21 +1587,22 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     comps = partition_names_by_comp([u for u,v in conns])
     partition_names_by_comp([v for u,v in conns], compmap=comps)
 
-    remove = _check_for_missing_derivs(scope, comps)
+    if full_fd == False:
+        remove = _check_for_missing_derivs(scope, comps)
 
-    if remove:
-        remove = set(remove)
+        if remove:
+            remove = set(remove)
 
-        # remove edges associated with missing derivs
-        for u,v in graph.list_connections():
-            if u in remove or v in remove:
-                graph.remove_edge(u, v)
-        edges = _get_inner_edges(graph, inames, onames)
-        relevant = set([u for u,v in edges])
-        relevant.update([v for u,v in edges])
-        conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
-        comps = partition_names_by_comp([u for u,v in conns])
-        partition_names_by_comp([v for u,v in conns], compmap=comps)
+            # remove edges associated with missing derivs
+            for u,v in graph.list_connections():
+                if u in remove or v in remove:
+                    graph.remove_edge(u, v)
+            edges = _get_inner_edges(graph, inames, onames)
+            relevant = set([u for u,v in edges])
+            relevant.update([v for u,v in edges])
+            conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
+            comps = partition_names_by_comp([u for u,v in conns])
+            partition_names_by_comp([v for u,v in conns], compmap=comps)
 
     #full = set([k for k in comps.keys() if k])
     

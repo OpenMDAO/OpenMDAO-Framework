@@ -2591,6 +2591,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         derivs = self.top.check_gradient(name='dis2')
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
+        self.top.driver.run_iteration()
+        self.top.driver.workflow.config_changed()
+        J = self.top.driver.workflow.calc_gradient(inputs=['dis2.miss_in'],
+                                                   mode='fd')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+    
+
     def test_fd_param_group_arrays_sharing_memory(self):
 
         class CompSource(Component):
