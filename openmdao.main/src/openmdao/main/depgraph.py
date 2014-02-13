@@ -1442,6 +1442,11 @@ def _check_for_missing_derivs(scope, comps):
             # skip boundary vars and pseudoassemblies
             continue
         comp = getattr(scope, cname)
+        
+        # Skip comp if we are forcing it to fd
+        if hasattr(comp, 'force_fd') and comp.force_fd == True:
+            continue
+        
         if not has_interface(comp, IComponent): # filter out vartrees
             continue
         if has_interface(comp, IAssembly):
@@ -1555,18 +1560,19 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     comps = partition_names_by_comp([e[0] for e in edges])
     partition_names_by_comp([e[1] for e in edges], compmap=comps)
 
-    remove = _check_for_missing_derivs(scope, comps)
+    if full_fd == False:
+        remove = _check_for_missing_derivs(scope, comps)
 
-    if remove:
-        remove = set(remove)
-
-        # remove edges associated with missing derivs
-        for u,v in graph.list_connections():
-            if u in remove or v in remove:
-                graph.remove_edge(u, v)
-        edges = _get_inner_edges(graph,
-                                 ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
-                                 ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
+        if remove:
+            remove = set(remove)
+    
+            # remove edges associated with missing derivs
+            for u,v in graph.list_connections():
+                if u in remove or v in remove:
+                    graph.remove_edge(u, v)
+            edges = _get_inner_edges(graph,
+                                     ['@in%d' % i for i in range(len(inputs))]+list(xtra_ins),
+                                     ['@out%d' % i for i in range(len(outputs))]+list(xtra_outs))
 
     full = [k for k in comps.keys() if k]
     if None in comps:

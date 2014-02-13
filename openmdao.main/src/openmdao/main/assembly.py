@@ -707,7 +707,8 @@ class Assembly(Component):
 
     def _input_updated(self, name, fullpath=None):
         outs = self.invalidate_deps([name])
-        if outs and self.parent:
+        if self.parent:
+            outs.add(name)
             self.parent.child_invalidated(self.name, outs)
 
     @rbac(('owner', 'user'))

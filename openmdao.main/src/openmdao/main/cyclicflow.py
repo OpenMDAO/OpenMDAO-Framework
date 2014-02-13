@@ -87,7 +87,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     edge_set = set(depgraph.get_directional_interior_edges(strong[-1],
                                                                             strong[0]))
 
-                    self._severed_edges = self._severed_edges.union(edge_set)
+                    self._severed_edges.update(edge_set)
 
         return self._topsort
 
