@@ -7,6 +7,7 @@ __all__ = ['Assembly', 'set_as_top']
 import cStringIO
 import threading
 import re
+import sys
 
 from zope.interface import implementedBy
 
@@ -949,16 +950,18 @@ class Assembly(Component):
                            if not n.startswith('parent.') and \
                            depgraph.base_var(n) != varname and \
                            n not in target1]
-            if len(target1) == 0 and len(target1) == 0:
+            if len(target1) == 0 and len(target2) == 0:
                 continue
+
+            targs = target1 + target2
 
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
                 tail = src[len(varname):]
-                target1 = ['%s%s' % (targ, tail) for targ in target1]
+                targs = ['%s%s' % (targ, tail) for targ in targs]
 
-            input_keys.append(tuple(target1 + target2))
+            input_keys.append(tuple(targs))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
@@ -1313,34 +1316,39 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj, full=False):
+def dump_iteration_tree(obj, f=sys.stdout, full=False, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
 
     If full is True, show pseudocomponents as well.
+    If derivs is True, include derivative input/output information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
+        tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
+            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            if derivs:
+                try:
+                    dgraph = obj.workflow.derivative_graph()
+                except Exception as err:
+                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                else:
+                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n" %(' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n" %(' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
-                    _dump_iteration_tree(comp, f, tablevel + 3)
+                    _dump_iteration_tree(comp, f, tablevel + tabsize)
                 else:
-                    f.write(' ' * (tablevel + 3))
-                    f.write(comp.get_pathname())
-                    f.write('\n')
+                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.get_pathname()))
         elif is_instance(obj, Assembly):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
-            _dump_iteration_tree(obj.driver, f, tablevel + 3)
-    f = cStringIO.StringIO()
+            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
+
     _dump_iteration_tree(obj, f, 0)
-    return f.getvalue()

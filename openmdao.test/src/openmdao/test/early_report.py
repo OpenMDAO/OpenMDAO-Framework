@@ -158,6 +158,8 @@ class EarlyTestInfo(Plugin):
         self._show_test(self._tests[id(test)])
 
     def finalize(self, result):
+        self.report(self.stream)
+
         self.stream.writeln("\n\nRan %d test%s\n" %
                          (result.testsRun, result.testsRun != 1 and "s" or ""))
 
@@ -171,8 +173,9 @@ class EarlyTestInfo(Plugin):
 
         if skips:
             self.stream.write('  skipped=%d ' % len(skips))
+
+        self.stream.write("\n\n")
                         
-        self.report(self.stream)
 
     def setOutputStream(self, stream):
         outfile = open(self._report_path, 'w')
