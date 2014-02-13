@@ -9,11 +9,16 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import ISolver
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod
 
 from openmdao.lib.drivers.brent import Brent
 
 
 class TestBrentDriver(unittest.TestCase):
+    
+    def setUp(self):
+        pcompmod._count = 0 # keep pseudocomp names consistent for each test
+                            # to avoid weird stuff like hash order changes
 
     def test_brent_converge(self): 
 
@@ -62,7 +67,7 @@ class TestBrentDriver(unittest.TestCase):
 
             def execute(self):
                 if self.xx != 1.0:
-                    self.raise_exception("Lazy", RuntimeError)
+                    self.raise_exception("xx should be 1.0, but it's %s" % self.xx, RuntimeError)
                 self.f_x = 2.0*self.x
                 self.y = self.x
 
