@@ -480,20 +480,7 @@ class ExprEvaluator(object):
         unresolved_vars = self.get_unresolved()
         if unresolved_vars:
 
-            #do some formatting for the error message
-            #wrap the variables in single quotes
-            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
-
-            #if there is more than one variable,
-            #seperate the variables with commas
-            if len(unresolved_vars) == 1:
-                unresolved_vars = ''.join(unresolved_vars)
-            else:
-                unresolved_vars = ', '.join(unresolved_vars)
-
-            #throw the error
-            raise ValueError("Expression '{0}' has invalid variables {1}".
-                             format(text, unresolved_vars))
+            raise self._invalid_expression_error(unresolved_vars, self.text)
 
     @property
     def text(self):
@@ -526,6 +513,26 @@ class ExprEvaluator(object):
                 self._scope = weakref.ref(value)
             else:
                 self._scope = None
+
+    def _invalid_expression_error(self, unresolved_vars, expr, msg=None):
+
+        if not msg:
+            msg = "Expression '{0}' has invalid variables {1}"
+
+
+        #do some formatting for the error message
+        #wrap the variables in single quotes
+        unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+        #if there is more than one variable,
+        #seperate the variables with commas
+        if len(unresolved_vars) == 1:
+            unresolved_vars = ''.join(unresolved_vars)
+        else:
+            unresolved_vars = ', '.join(unresolved_vars)
+
+        #throw the error
+        return ValueError(msg.format(expr, unresolved_vars))
 
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
