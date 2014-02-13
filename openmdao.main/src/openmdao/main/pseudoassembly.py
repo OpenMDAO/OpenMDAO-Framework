@@ -77,7 +77,7 @@ class PseudoAssembly(object):
         else:
             self.itercomps = list(self.comps)
             
-        print "Created PseudoAssembly:", self.comps
+        #print "Created PseudoAssembly:", self.comps
 
     def _pre_init(self, pa_name, group, dgraph, fd, boundary_params):
         """Return a tuple of the form (pa_inputs, pa_outputs, renames)

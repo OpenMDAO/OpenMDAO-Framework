@@ -514,7 +514,7 @@ class SequentialWorkflow(Workflow):
 
             applyJ(comp, inputs, outputs, comp_residuals,
                    self._shape_cache.get(compname), self._J_cache.get(compname))
-            print inputs, outputs
+            #print inputs, outputs
 
             for varname, i1, i2 in out_bounds:
                 if isinstance(i1, list):
@@ -532,7 +532,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
 
-        print arg, result
+        #print arg, result
         return result
 
     def matvecREV(self, arg):
@@ -1038,7 +1038,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-        print 'edges:', self._edges
+        #print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 
