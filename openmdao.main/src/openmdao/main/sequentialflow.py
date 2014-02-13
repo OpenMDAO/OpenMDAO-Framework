@@ -1085,7 +1085,7 @@ class SequentialWorkflow(Workflow):
                     J[:, i:i+width] = J[:, i:i+width]*scaler
 
             i = i + width
-        #print J
+        print J
         return J
 
 
