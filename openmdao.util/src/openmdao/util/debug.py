@@ -85,4 +85,4 @@ def print_funct_call(funct, *args, **kwargs):
         s.write("%s=%s" % (tup[0], quote_if_str(tup[1])))
     s.write(')')
     return s.getvalue()
-    
+
