@@ -2183,6 +2183,47 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = self.top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], -8.0, .001)
 
+    def test_three_way(self):
+        self.top = set_as_top(Assembly())
+        
+        exp1 = ['y1 = 50.0*x1',
+                'y2 = 1.0*x1']
+        deriv1 = ['dy1_dx1 = 50.0',
+                  'dy2_dx1 = 1.0']
+
+        exp2 = ['y1 = 1.2*x1']
+        deriv2 = ['dy1_dx1 = 1.2']
+
+        exp3 = ['y1 = 100.0*x1*x2 + 30*x1 + 0.3*x2']
+        deriv3 = ['dy1_dx1 = 100.0*x2 + 30',
+                  'dy1_dx2 = 100.0*x1 + 0.3']
+        
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+        
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp3.y1'],
+                                                   mode='forward')
+
+        self.top.driver.workflow.config_changed()
+        Jfd = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                     outputs=['comp3.y1'],
+                                                     mode='fd')
+        
+        diff = Jfd-J
+        assert_rel_error(self, diff.max(), 0.0, 0.1)
+
+
     def test_nondifferentiable_blocks(self):
 
         self.top = set_as_top(Assembly())
