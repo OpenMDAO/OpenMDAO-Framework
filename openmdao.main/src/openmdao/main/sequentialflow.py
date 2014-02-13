@@ -797,7 +797,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
-                    #print "non-diff!!!: ", src, target
+                    #print "non-differentiable connection: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:
@@ -1038,7 +1038,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-
+        #print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 
