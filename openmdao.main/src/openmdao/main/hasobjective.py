@@ -6,7 +6,16 @@ from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
-        super(Objective, self).__init__(*args, **kwargs)
+        try:
+            super(Objective, self).__init__(*args, **kwargs)
+        except ValueError as error:
+            msg = "Objective expression '{0}' has invalid vairables {1}"
+            unresolved_variables = error.unresolved_vars
+            expr = args[0]
+
+            raise ConnectedExprEvaluator._invalid_expression_error(unresolved_variables, expr, msg)
+
+
         self.pcomp_name = None
 
     def activate(self):

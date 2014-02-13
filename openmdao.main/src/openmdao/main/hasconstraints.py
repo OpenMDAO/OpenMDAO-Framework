@@ -59,7 +59,7 @@ class Constraint(object):
         try:
             self.lhs = ExprEvaluator(lhs, scope=scope)
         except ValueError as error:
-            msg = "Left hand side of expression '{0}' has invalid variables {1}"
+            msg = "Left hand side of constraint expression '{0}' has invalid variables {1}"
             expression = ' '.join([lhs, comparator, rhs])
             unresolved_vars = error.unresolved_vars
 
@@ -68,7 +68,7 @@ class Constraint(object):
         try:
             self.rhs = ExprEvaluator(rhs, scope=scope)
         except ValueError as error:
-            msg = "Right hand side of expression '{0}' has invalid variables {1}"
+            msg = "Right hand side of constraint expression '{0}' has invalid variables {1}"
             expression = ' '.join([lhs, comparator, rhs])
             unresolved_vars = error.unresolved_vars
 

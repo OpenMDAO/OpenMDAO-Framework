@@ -480,7 +480,7 @@ class ExprEvaluator(object):
         unresolved_vars = self.get_unresolved()
         if unresolved_vars:
 
-            raise self._invalid_expression_error(unresolved_vars)
+            raise self._invalid_expression_error(unresolved_vars, expr=text)
 
     @property
     def text(self):
