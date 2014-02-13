@@ -56,8 +56,23 @@ class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
-        self.lhs = ExprEvaluator(lhs, scope=scope)
-        self.rhs = ExprEvaluator(rhs, scope=scope)
+        try:
+            self.lhs = ExprEvaluator(lhs, scope=scope)
+        except ValueError as error:
+            msg = "Left hand side of expression '{0}' has invalid variables {1}"
+            expressions = (lhs, comparator, rhs)
+            unresolved_vars = error.unresolved_vars
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expressions, msg=msg)
+
+        try:
+            self.rhs = ExprEvaluator(rhs, scope=scope)
+        except ValueError as error:
+            msg = "Right hand side of expression '{0}' has invalid variables {1}"
+            expressions = (lhs, comparator, rhs)
+            unresolved_vars = error.unresolved_vars
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expressions, msg=msg)
 
         self.pcomp_name = None
         self._size = None

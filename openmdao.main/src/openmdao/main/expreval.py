@@ -514,27 +514,34 @@ class ExprEvaluator(object):
             else:
                 self._scope = None
 
-    def _invalid_expression_error(self, unresolved_vars, expr=None, msg=None):
+    @classmethod
+    def _invalid_expression_error(cls, unresolved_vars, expr=None, msg=None):
 
         if not msg:
             msg = "Expression '{0}' has invalid variables {1}"
 
         if not expr:
-            expr = self.text
+            expr = cls.text
+
+        if isinstance(expr, tuple) or isinstance(expr, list):
+            expr = ' '.join(expr)
 
         #do some formatting for the error message
         #wrap the variables in single quotes
-        unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
+        formatted_vars = ["'{0}'".format(var) for var in unresolved_vars]
 
         #if there is more than one variable,
         #seperate the variables with commas
-        if len(unresolved_vars) == 1:
-            unresolved_vars = ''.join(unresolved_vars)
+        if len(formatted_vars) == 1:
+            formatted_vars = ''.join(formatted_vars)
         else:
-            unresolved_vars = ', '.join(unresolved_vars)
+            formatted_vars = ', '.join(formatted_vars)
 
         #throw the error
-        return ValueError(msg.format(expr, unresolved_vars))
+        error = ValueError(msg.format(expr, formatted_vars))
+        error.unresolved_vars = unresolved_vars
+
+        return error
 
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
