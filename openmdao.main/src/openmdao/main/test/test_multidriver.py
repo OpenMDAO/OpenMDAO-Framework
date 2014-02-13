@@ -2,6 +2,7 @@
 
 import unittest
 from math import sqrt  # so expr can find it
+from StringIO import StringIO
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.slsqpdriver import SLSQPdriver
@@ -302,7 +303,9 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(nested.comp3.y, -7.33333, places=4)
 
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
+        stream = StringIO()
+        dump_iteration_tree(self.top, f=stream, tabsize=3)
+        s = stream.getvalue()
         
         # Comp2 and Comp3 are ambiguous in the sort
         s = s.replace('comp2', 'comp2or3')
@@ -363,7 +366,9 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
         
         # test dumping of iteration tree
-        s = dump_iteration_tree(top)
+        stream = StringIO()
+        dump_iteration_tree(top, f=stream, tabsize=3)
+        s = stream.getvalue()
         s = s.replace('comp2', 'comp2or3')
         s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 
@@ -424,7 +429,9 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
         
         # test dumping of iteration tree
-        s = dump_iteration_tree(self.top)
+        stream = StringIO()
+        dump_iteration_tree(self.top, f=stream, tabsize=3)
+        s = stream.getvalue()
         s = s.replace('comp2', 'comp2or3')
         s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s, 

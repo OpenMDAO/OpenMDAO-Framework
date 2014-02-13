@@ -157,6 +157,8 @@ def plot_graph(graph, scope=None, parent=None,
         # open URL in web browser
         wb = webbrowser.get()
         wb.open('file://'+os.path.join(tmpdir, d3page))
+    except Exception as err:
+        print str(err)
     finally:
         os.chdir(startdir)
         print "\nwaiting to remove temp directory '%s'... " % tmpdir
