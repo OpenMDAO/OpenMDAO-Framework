@@ -517,7 +517,7 @@ class SequentialWorkflow(Workflow):
 
             applyJ(comp, inputs, outputs, comp_residuals,
                    self._shape_cache.get(compname), self._J_cache.get(compname))
-            #print inputs, outputs
+            print inputs, outputs
 
             for varname, i1, i2 in out_bounds:
                 if isinstance(i1, list):
@@ -535,7 +535,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
 
-        #print arg, result
+        print arg, result
         return result
 
     def matvecREV(self, arg):
@@ -601,7 +601,7 @@ class SequentialWorkflow(Workflow):
 
             applyJT(comp, inputs, outputs, comp_residuals,
                     self._shape_cache, self._J_cache.get(compname))
-            #print inputs, outputs
+            print inputs, outputs
 
             for varname, i1, i2 in out_bounds:
                 if isinstance(i1, list):
@@ -618,7 +618,11 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(target)
                 result[i1:i2] += arg[i1:i2]
 
-        #print arg, result
+            if '@fake' in target:
+                i1, i2 = self.get_bounds(src)
+                result[i1:i2] += arg[i1:i2]
+
+        print arg, result
         return result
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
