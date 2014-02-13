@@ -5,7 +5,7 @@ import unittest
 from traits.api import Event
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.container import _get_entry_group
-
+from openmdao.main.driver import GradientOptions
 
 class EventComp(Component):
     doit = Event()
@@ -19,6 +19,9 @@ class EventComp(Component):
 
     def execute(self):
         pass
+
+class A(Component):
+    a = GradientOptions()
 
 class DriverTestCase(unittest.TestCase):
 
@@ -48,6 +51,19 @@ class DriverTestCase(unittest.TestCase):
     def test_default_value_force(self):
         #driver default value should be True
         self.assertTrue(self.asm.driver.force_execute)
+
+    def test_gradient_options(self):
+        options = GradientOptions()
+        
+        assert(options.get_metadata("fd_form")["framework_var"])
+        assert(options.get_metadata("fd_step")["framework_var"])
+        assert(options.get_metadata("fd_step_type")["framework_var"])
+        assert(options.get_metadata("force_fd")["framework_var"])
+        assert(options.get_metadata("gmres_tolerance")["framework_var"])
+        assert(options.get_metadata("gmres_maxiter")["framework_var"])
+
+        assert(Driver().get_metadata("gradient_options")["framework_var"])        
+        
         
 if __name__ == "__main__":
     unittest.main()

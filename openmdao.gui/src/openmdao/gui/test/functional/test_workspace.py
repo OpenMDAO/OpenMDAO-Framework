@@ -427,7 +427,6 @@ b = Float(0.0, iotype='out')
     # Clean up.
     closeout(project_dict, workspace_page)
 
-
 def _test_properties(browser):
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
@@ -437,10 +436,10 @@ def _test_properties(browser):
     (header, inputs, outputs) = workspace_page.get_properties('top')
     eq(header, 'Run_Once: top.driver')
     eq(inputs.value, [
-        [' gradient_options', ''],  # vartree, has leading space after the [+]
         ['directory',         ''],
         ['force_execute',     'True'],
         ['force_fd',          'False'],
+        [' gradient_options', ''],  # vartree, has leading space after the [+]
         ['printvars',         '[]'],
     ])
     eq(outputs.value, [

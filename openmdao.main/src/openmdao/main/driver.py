@@ -36,21 +36,25 @@ class GradientOptions(VariableTree):
 
     # Finite Difference
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
-                   desc='Finite difference mode (forward, backward, central')
-    fd_step = Float(1.0e-6, desc='Deafault finite difference stepsize')
+                   desc='Finite difference mode (forward, backward, central',
+                   framework_var=True)
+    fd_step = Float(1.0e-6, desc='Deafault finite difference stepsize', framework_var=True)
     fd_step_type = Enum('absolute', ['absolute', 'relative'],
-                        desc='Set to absolute or relative stepsizes')
+                        desc='Set to absolute or relative stepsizes',
+                        framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference " +
                                 "of this driver's entire workflow in a" +
-                                "single block.")
+                                "single block.",
+                           framework_var=True)
+
     # KTM - story up for this one.
     #fd_blocks = List([], desc='User can specify nondifferentiable blocks ' + \
     #                          'by adding sets of component names.')
 
     # Analytic solution with GMRES
-    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES')
-    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES')
+    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES', framework_var=True)
+    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES', framework_var=True)
 
 
 @add_delegate(HasEvents)
@@ -72,7 +76,7 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-    gradient_options = VarTree(GradientOptions(), iotype='in')
+    gradient_options = VarTree(GradientOptions(), iotype='in', framework_var=True)
 
     def __init__(self):
         self._iter = None

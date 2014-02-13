@@ -451,16 +451,25 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         return value ;
     }
 
+    function getParentId(item){
+        parentId = item.parent;
+        if(item.id.indexOf('~') === 0){
+            parentId = '~' + parentId;
+        }
+        
+        return parentId;
+    }
+
     function expansionFilter(item, args) {
         var idx, parent;
-        if (item.parent !== null) {
-            idx = dataView.getIdxById(item.parent);
+        if ((item.parent !== undefined) && (item.parent !== null)) {
+            idx = dataView.getIdxById(getParentId(item));
             parent = dataView.getItemByIdx(idx);
             while (parent) {
                 if (_collapsed[parent.id]) {
                     return false;
                 }
-                idx = dataView.getIdxById(parent.parent);
+                idx = dataView.getIdxById(getParentId(parent));
                 parent = dataView.getItemByIdx(idx);
             }
         }
@@ -506,7 +515,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
             b = rowb.id,
             na = a.split('.'),
             nb = b.split('.'),
-            min_dots = Math.min(a.length, b.length);
+            min_dots = Math.min(na.length, nb.length);
 
         for (var idx=0; idx<min_dots; idx++) {
             var cmp = openmdao.Util.alphanumeric_compare(na[idx], nb[idx]);
@@ -575,7 +584,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
                 if (value.hasOwnProperty("parent")) {
                     if (!_collapsed.hasOwnProperty(value.id)) {
                         _collapsed[value.id] = true;
-                        _collapsed[value.parent] = true;
+                        _collapsed[getParentId(value)] = true;
                     }
                 }
 

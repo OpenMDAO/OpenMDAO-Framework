@@ -5,6 +5,7 @@ Tests of dataflow functions.
 import pkg_resources
 import time
 
+from nose import SkipTest
 from nose.tools import eq_ as eq
 from nose.tools import with_setup
 
@@ -911,16 +912,34 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", " gradient_options", "iout", "iprint", "maxiter", 
+        ["accuracy", "iout", "iprint", "maxiter", 
          "output_filename", "directory", "force_execute", "force_fd", 
-         "printvars"], "inputs",
+         " gradient_options", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["printvars", "force_fd", "force_execute", 
+        ["printvars", " gradient_options", "force_fd", "force_execute", 
          "directory", "output_filename", "maxiter", "iprint", "iout", 
-         " gradient_options", "accuracy"], "inputs",
+         "accuracy"], "inputs",
+        SortOrder.DESCENDING
+    )
+
+    editor.get_input(" gradient_options").name.click()
+    
+    test_sorting(
+        ["accuracy", "iout", "iprint", "maxiter", 
+         "output_filename", "directory", "force_execute", "force_fd", 
+         " gradient_options", "fd_form", "fd_step", "fd_step_type", 
+         "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
+        SortOrder.ASCENDING
+    )
+
+    test_sorting(
+         ["printvars", " gradient_options", "gmres_tolerance", "gmres_maxiter",
+         "force_fd", "fd_step_type", "fd_step", "fd_form", 
+         "force_fd", "force_execute", "directory",
+         "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
 
