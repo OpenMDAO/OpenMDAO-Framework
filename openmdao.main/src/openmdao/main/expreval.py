@@ -523,9 +523,6 @@ class ExprEvaluator(object):
         if not expr:
             expr = cls.text
 
-        if isinstance(expr, tuple) or isinstance(expr, list):
-            expr = ' '.join(expr)
-
         #do some formatting for the error message
         #wrap the variables in single quotes
         formatted_vars = ["'{0}'".format(var) for var in unresolved_vars]
