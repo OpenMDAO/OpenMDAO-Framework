@@ -56,46 +56,8 @@ class Constraint(object):
     """ Object that stores info for a single constraint. """
 
     def __init__(self, lhs, comparator, rhs, scope):
-        #get unresolved variables for left hand side of expression
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        unresolved_vars = self.lhs.get_unresolved()
-
-        #need to raise a ValueError if any exist
-        if unresolved_vars:
-
-            #do some formatting for the error message
-            #wrap the variables in single quotes
-            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
-
-            #convert the list to a string
-            #if there is more than one variable,
-            #seperate the variables with commas
-            if len(unresolved_vars) == 1:
-                unresolved_vars = ''.join(unresolved_vars)
-            else:
-                unresolved_vars = ', '.join(unresolved_vars)
-
-            #throw the error
-            raise ValueError("Constraint '{0}' has invalid variables {1} on left-hand-side".
-                             format(' '.join([lhs, comparator, rhs]), unresolved_vars))
-
-        self.comparator = comparator
-
-        #now get the unresolved variables, if any, for right hand side
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        unresolved_vars = self.rhs.get_unresolved()
-
-        #if any exist, do same formatting/error throwing as above
-        #except do it for the right hand side of expression
-        if unresolved_vars:
-            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
-            if len(unresolved_vars) == 1:
-                unresolved_vars = ''.join(unresolved_vars)
-            else:
-                unresolved_vars = ', '.join(unresolved_vars)
-
-            raise ValueError("Constraint '{0}' has invalid variables {1} on right-hand-side".
-                             format(' '.join([lhs, comparator, rhs]), unresolved_vars))
 
         self.pcomp_name = None
         self._size = None

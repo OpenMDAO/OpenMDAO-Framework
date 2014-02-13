@@ -476,6 +476,25 @@ class ExprEvaluator(object):
         self.var_names = set()
         self.cached_grad_eq = None
 
+        #need to raise a ValueError if any exist
+        unresolved_vars = self.get_unresolved()
+        if unresolved_vars:
+
+            #do some formatting for the error message
+            #wrap the variables in single quotes
+            unresolved_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+            #if there is more than one variable,
+            #seperate the variables with commas
+            if len(unresolved_vars) == 1:
+                unresolved_vars = ''.join(unresolved_vars)
+            else:
+                unresolved_vars = ', '.join(unresolved_vars)
+
+            #throw the error
+            raise ValueError("Expression '{0}' has invalid variables {1}".
+                             format(text, unresolved_vars))
+
     @property
     def text(self):
         """The expression string."""
