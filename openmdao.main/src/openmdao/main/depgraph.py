@@ -1441,7 +1441,7 @@ def _check_for_missing_derivs(scope, comps):
         comp = getattr(scope, cname)
         
         # Skip comp if we are forcing it to fd
-        if comp.force_fd == True:
+        if hasattr(comp, 'force_fd') and comp.force_fd == True:
             continue
         
         if not has_interface(comp, IComponent): # filter out vartrees
