@@ -480,7 +480,7 @@ class ExprEvaluator(object):
         unresolved_vars = self.get_unresolved()
         if unresolved_vars:
 
-            raise self._invalid_expression_error(unresolved_vars, self.text)
+            raise self._invalid_expression_error(unresolved_vars)
 
     @property
     def text(self):
@@ -514,11 +514,13 @@ class ExprEvaluator(object):
             else:
                 self._scope = None
 
-    def _invalid_expression_error(self, unresolved_vars, expr, msg=None):
+    def _invalid_expression_error(self, unresolved_vars, expr=None, msg=None):
 
         if not msg:
             msg = "Expression '{0}' has invalid variables {1}"
 
+        if not expr:
+            expr = self.text
 
         #do some formatting for the error message
         #wrap the variables in single quotes
