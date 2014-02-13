@@ -1812,3 +1812,68 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
         graph.connect(scope, s, d, check=False,
                       invalidate=False)
 
+
+
+def get_missing_derivs(obj, recurse=True):
+    """Return a list of missing derivatives found in the given object.
+    
+    """
+    if not has_interface(obj, IComponent):
+        raise RuntimeError("Given object is not a Component")
+
+    vt_flattener = flatteners[VariableTree]
+
+    def _get_missing_derivs(comp, missing, finite_diffs, recurse):
+        cins = comp.list_inputs()
+        couts = comp.list_outputs()
+        if has_interface(comp, IAssembly):
+            # Assemblies need to call into provideJ so that we can determine
+            # what derivatives are available.
+            comp.provideJ(cins, couts, check_only=True)
+            dins, douts = comp.list_deriv_vars()
+            # if inputs are vartrees and we have full vt connections inside, add
+            # leaf nodes to our list
+            for i,din in enumerate(dins[:]):
+                obj = getattr(comp, din)
+                if has_interface(obj, IVariableTree):
+                    dins.extend([n for n,v in vt_flattener(din, obj)])
+            for i,dout in enumerate(douts[:]):
+                obj = getattr(comp, dout)
+                if has_interface(obj, IVariableTree):
+                    douts.extend([n for n,v in vt_flattener(dout, obj)])
+
+            if recurse:
+                for cname in comp.list_containers():
+                    ccomp = getattr(comp, cname)
+                    if has_interface(ccomp, IComponent):
+                        _get_missing_derivs(ccomp, missing, finite_diffs, recurse)
+
+        else:
+            dins, douts = comp.list_deriv_vars()
+            # correct for the one item tuple missing comma problem
+            if isinstance(dins, basestring):
+                dins = (dins,)
+            if isinstance(douts, basestring):
+                douts = (douts,)
+            for name in chain(dins, douts):
+                if not comp.contains(name):
+                    raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
+                                        (comp.get_pathname(), name))
+        if (len(dins) == 0 or len(douts) == 0) and comp.parent:
+            if hasattr(comp, 'provideJ'):
+                raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
+            else:
+                finite_diffs.append(comp.get_pathname())
+                return
+
+        for name in chain(cins, couts):
+            if name not in dins and name not in douts and is_differentiable_var(name, comp):
+                missing.append('.'.join([comp.get_pathname(), name]))
+
+    missing = []
+    finite_diffs = []
+
+    _get_missing_derivs(obj, missing, finite_diffs, recurse)
+
+    return missing, finite_diffs
+
