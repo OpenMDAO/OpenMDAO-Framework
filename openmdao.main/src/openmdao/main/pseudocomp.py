@@ -97,8 +97,10 @@ class PseudoComponent(object):
 
         if destexpr.text:
             self._outdests = [destexpr.text]
+            self._orig_expr = "%s = %s" % (srcexpr.text, destexpr.text)
         else:
             self._outdests = []
+            self._orig_expr = srcexpr.text
 
         varmap = {}
         rvarmap = {}
