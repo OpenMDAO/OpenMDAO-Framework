@@ -17,7 +17,8 @@ def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name)
     if 'data_shape' in meta and meta['data_shape']:
         return True
-    if is_differentiable_val(getattr(scope, name)):
+
+    if is_differentiable_val(scope.get(name)):
         return True
     return False
 

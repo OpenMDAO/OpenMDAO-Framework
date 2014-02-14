@@ -1315,7 +1315,7 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj, f=sys.stdout, full=False, tabsize=4, derivs=False):
+def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
@@ -1327,7 +1327,7 @@ def dump_iteration_tree(obj, f=sys.stdout, full=False, tabsize=4, derivs=False):
     def _dump_iteration_tree(obj, f, tablevel):
         tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            f.write("%s%s\n" % (tab, obj.name))
             if derivs:
                 try:
                     dgraph = obj.workflow.derivative_graph()
@@ -1344,10 +1344,13 @@ def dump_iteration_tree(obj, f=sys.stdout, full=False, tabsize=4, derivs=False):
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
                     _dump_iteration_tree(comp, f, tablevel + tabsize)
+                elif is_instance(comp, PseudoComponent):
+                    f.write("%s%s  (%s)\n" %
+                        (' ' * (tablevel+tabsize), comp.name, comp._orig_expr))
                 else:
-                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.get_pathname()))
+                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.name))
         elif is_instance(obj, Assembly):
-            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            f.write("%s%s\n" % (tab, obj.name))
             _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
 
     _dump_iteration_tree(obj, f, 0)
