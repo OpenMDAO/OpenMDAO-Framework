@@ -1824,8 +1824,22 @@ def get_missing_derivs(obj, recurse=True):
     vt_flattener = flatteners[VariableTree]
 
     def _get_missing_derivs(comp, missing, finite_diffs, recurse):
+
         cins = comp.list_inputs()
         couts = comp.list_outputs()
+        
+        for i,cin in enumerate(cins[:]):
+            obj = comp.get(cin)
+            meta = comp.get_metadata(cin, 'framework_var')            
+            if has_interface(obj, IVariableTree):
+                cins.extend([n for n,v in vt_flattener(cin, obj)])        
+                
+        for i,cout in enumerate(couts[:]):
+                    obj = comp.get(cout)
+                    if has_interface(obj, IVariableTree) :
+                        couts.extend([n for n,v in vt_flattener(cout, obj)])                
+        
+        
         if has_interface(comp, IAssembly):
             # Assemblies need to call into provideJ so that we can determine
             # what derivatives are available.
