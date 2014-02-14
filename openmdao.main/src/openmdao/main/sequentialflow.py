@@ -535,7 +535,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
 
-        #print arg, result
+        print arg, result
         return result
 
     def matvecREV(self, arg):
@@ -625,7 +625,7 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(src)
                 result[i1:i2] += arg[i1:i2]
 
-        #print arg, result
+        print arg, result
         return result
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
