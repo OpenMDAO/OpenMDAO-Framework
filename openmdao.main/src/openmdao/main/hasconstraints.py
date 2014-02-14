@@ -57,24 +57,25 @@ class Constraint(object):
 
     def __init__(self, lhs, comparator, rhs, scope):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        unresolved_vars = self.lhs.get_unresolved_vars()
+        unresolved_vars = self.lhs.get_unresolved()
 
         if unresolved_vars:
-            msg = "Left hand side of constraint expression '{0}' has invalid variables {1}"
+            msg = "Left hand side of constraint '{0}' has invalid variables {1}"
             expression = ' '.join([lhs, comparator, rhs])
 
             raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
 
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        unresolved_vars = self.rhs.get_unresolved_vars()
+        unresolved_vars = self.rhs.get_unresolved()
 
         if unresolved_vars:
-            msg = "Right hand side of constraint expression '{0}' has invalid variables {1}"
+            msg = "Right hand side of constraint '{0}' has invalid variables {1}"
             expression = ' '.join([lhs, comparator, rhs])
 
             raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
+        self.comparator = comparator
         self.pcomp_name = None
         self._size = None
 
