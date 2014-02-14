@@ -176,7 +176,7 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
             if trait.iotype:  # input or output
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
 
         # Components with input CaseIterators will be forced to execute whenever
         # run() is called on them, even if they don't have any invalid inputs
@@ -709,7 +709,7 @@ class Component(Container):
                     # since we just removed this container and it was
                     # being used as an io variable, we need to put
                     # it back in the dep graph
-                    self._depgraph.add_boundary_var(name, iotype=io)
+                    self._depgraph.add_boundary_var(self, name, iotype=io)
             elif has_interface(obj, IComponent):
                 self._depgraph.add_component(name, obj)
 
@@ -762,7 +762,7 @@ class Component(Container):
 
         if trait.iotype:
             if name not in self._depgraph:
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
                     self.parent._depgraph.child_config_changed(self, removing=False)
 
@@ -1862,14 +1862,14 @@ class Component(Container):
                     if "~" in io_attr['id']:
                         for vt_input in vt_inputs:
                             vt_input['id'] = '~{0}'.format(vt_input['id'])
-                        
+
                     inputs += vt_inputs
                 else:
                     vt_outputs = vt_attrs.get('Outputs', [])
                     if "~" in io_attr['id']:
                         for vt_output in vt_outputs:
                             vt_outputs['id'] = '~{0}'.format(vt_output['id'])
-                        
+
                     outputs += vt_outputs
 
         attrs['Inputs'] = inputs
