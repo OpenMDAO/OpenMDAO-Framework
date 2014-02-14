@@ -100,7 +100,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             j += 1
 
-    print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
@@ -540,8 +540,8 @@ def get_bounds(obj, input_keys, output_keys, J):
     J_output, J_input = J.shape
     if num_output != J_output or num_input != J_input:
         msg = 'Jacobian is the wrong size. Expected ' + \
-               '(%dx%d) but got (%dx%d)' % (num_output, num_input,
-                                            J_output, J_input)
+            '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                         J_output, J_input)
         obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
