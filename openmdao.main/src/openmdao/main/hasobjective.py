@@ -95,7 +95,8 @@ class HasObjectives(object):
         unresolved_vars = expreval.get_unresolved()
         if unresolved_vars:
             msg = "Can't add objective '{0}' because of invalid variables {1}"
-            ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
+            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
+            self._parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
