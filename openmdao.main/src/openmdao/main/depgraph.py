@@ -1412,13 +1412,13 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         startgraph = graph.subgraph(graph.nodes_iter())
         for drv in fd_drivers:
 
-            # The parameters of other drivers can propagate to our expressions
-            # via input-input connections
-            sub_params = drv.list_param_targets()
-
             pa_list.append(_create_driver_PA(drv, startgraph,
                                              graph, inputs, outputs,
                                              wflow, using))
+
+            # The parameters of other drivers can propagate to our expressions
+            # via input-input connections. These are relevant, so save them.
+            sub_params = drv.list_param_targets()
             pa_name = pa_list[-1].name
             xtra_inputs.update([to_PA_var(v, pa_name) for v in sub_params])
 
