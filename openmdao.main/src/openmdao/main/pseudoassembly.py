@@ -68,7 +68,7 @@ class PseudoAssembly(object):
         else: # use fake finite difference on comps having derivatives
             # TODO: Fake Finite Difference has been disabled until we upgrade
             # it to support arrays and vartrees.
-            self.ffd_order = 0 
+            self.ffd_order = 0
 
         if fd:
             self.itercomps = [c.name for c in wflow]
@@ -76,7 +76,7 @@ class PseudoAssembly(object):
             self.itercomps = [drv_name]
         else:
             self.itercomps = list(self.comps)
-            
+
         #print "Created PseudoAssembly:", self.comps
 
     def _pre_init(self, pa_name, group, dgraph, fd, boundary_params):

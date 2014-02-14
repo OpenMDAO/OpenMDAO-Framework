@@ -405,9 +405,12 @@ class SequentialWorkflow(Workflow):
         try:
             meta = dgraph.node[node]
 
-        # Array indexed parameter nodes are not in the graph, so add them.
         except KeyError:
-            dgraph.add_subvar(node)
+            base = dgraph.base_var(node)
+            if base not in dgraph:
+                dgraph.add_node(base, var=True)
+            if node != base:
+                dgraph.add_subvar(node)
             meta = dgraph.node[node]
 
         if 'bounds' not in meta:
@@ -532,7 +535,7 @@ class SequentialWorkflow(Workflow):
                     i1, i2 = self.get_bounds(target)
                     result[i1:i2] = arg[i1:i2]
 
-        #print arg, result
+        print arg, result
         return result
 
     def matvecREV(self, arg):
@@ -613,6 +616,13 @@ class SequentialWorkflow(Workflow):
                     target = target[0]
 
                 i1, i2 = self.get_bounds(target)
+                result[i1:i2] += arg[i1:i2]
+
+            # A fake output needs to make it into the result vector to prevent
+            # the solution from blowing up. Its derivative will be zero
+            # regardless.
+            if '@fake' in target:
+                i1, i2 = self.get_bounds(src)
                 result[i1:i2] += arg[i1:i2]
 
         #print arg, result
@@ -697,7 +707,7 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            mod_for_derivs(dgraph, inputs, outputs, self, fd)
+            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd)
 
             if group_nondif:
                 self._derivative_graph = dgraph

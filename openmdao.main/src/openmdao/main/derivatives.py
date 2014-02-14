@@ -36,6 +36,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
+
+    dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
 
     # Forward mode, solve linear system for each parameter
@@ -48,11 +50,12 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             # where some of the inputs aren't in the relevance graph.
             # Find the one that is.
             for bcast_param in param:
-                if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                     param = bcast_param
                     break
-                else:
-                    continue
+            #else:
+                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                   #(param, wflow._parent.get_pathname()))
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
@@ -97,7 +100,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             j += 1
 
-    #print inputs, '\n', outputs, '\n', J
+    print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
@@ -114,6 +117,9 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
+
+    dgraph = wflow._derivative_graph
+    options = wflow._parent.gradient_options
 
     # Adjoint mode, solve linear system for each output
     j = 0
@@ -132,7 +138,6 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         else:
             out_range = range(i1, i2)
 
-        options = wflow._parent.gradient_options
         for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
@@ -161,11 +166,12 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 # Find the one that is.
                 if isinstance(param, tuple):
                     for bcast_param in param:
-                        if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                        if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                             param = bcast_param
                             break
-                        else:
-                            continue
+                    #else:
+                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                           #(param, wflow._parent.get_pathname()))
 
                 try:
                     k1, k2 = wflow.get_bounds(param)

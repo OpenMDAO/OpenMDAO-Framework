@@ -522,6 +522,41 @@ class GComp_noD(Component):
 
         self.y1 = 5.0*self.x1 + 7.0*self.x2 - 3.0*self.x3
 
+class ABCDComp(Component):
+
+    a = Float(1.0, iotype='in')
+    b = Float(1.0, iotype='in')
+    c = Float(2.0, iotype='out')
+    d = Float(0.0, iotype='out')
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+    def provideJ(self):
+        return array([[1., 1.]]).transpose()
+
+    def list_deriv_vars(self):
+        return (('a',),('c','d'))
+
+class ABCDintComp(Component):
+
+    a = Float(1.0, iotype='in')
+    b = Int(1, iotype='in')
+    c = Float(2.0, iotype='out')
+    d = Float(0.0, iotype='out')
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+    def provideJ(self):
+        return array([[1., 1.]]).transpose()
+
+    def list_deriv_vars(self):
+        return (('a',),('c','d'))
+
+
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
 
@@ -892,6 +927,48 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='adjoint')
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
+
+    def test_input_as_output2(self):
+        # irrelevant float edge was causing a key error
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.add('c1', ABCDComp())
+        sub.add('c2', ABCDComp())
+        sub.add('c3', ABCDComp())
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c2.b')
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
+        top.driver.workflow.add('sub')
+        top.run()
+        J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
+
+    def test_input_as_output3(self):
+        # irrelevant int edge was causing unnecessary finite differencing
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.add('c1', ABCDintComp())
+        sub.add('c2', ABCDintComp())
+        sub.add('c3', ABCDintComp())
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c2.b')
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
+        top.driver.workflow.add('sub')
+        top.run()
+        J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
 
     def test_input_as_output_nondiff_array(self):
 
@@ -2099,7 +2176,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
     def test_three_way(self):
         self.top = set_as_top(Assembly())
-        
+
         exp1 = ['y1 = 50.0*x1',
                 'y2 = 1.0*x1']
         deriv1 = ['dy1_dx1 = 50.0',
@@ -2111,17 +2188,17 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         exp3 = ['y1 = 100.0*x1*x2 + 30*x1 + 0.3*x2']
         deriv3 = ['dy1_dx1 = 100.0*x2 + 30',
                   'dy1_dx2 = 100.0*x1 + 0.3']
-        
+
         self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
         self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
         self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
-        
+
         self.top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
 
         self.top.connect('comp1.y1', 'comp2.x1')
         self.top.connect('comp1.y2', 'comp3.x1')
         self.top.connect('comp2.y1', 'comp3.x2')
-        
+
         self.top.comp1.x1 = 2.0
         self.top.run()
 
@@ -2133,7 +2210,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         Jfd = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                      outputs=['comp3.y1'],
                                                      mode='fd')
-        
+
         diff = Jfd-J
         assert_rel_error(self, diff.max(), 0.0, 0.1)
 
@@ -2520,7 +2597,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                                    mode='fd')
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[1, 0], 0.0, .001)
-    
+
 
     def test_fd_param_group_arrays_sharing_memory(self):
 
@@ -3058,6 +3135,8 @@ class Testcase_preconditioning(unittest.TestCase):
         top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
+
+
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
         assert_rel_error(self, J[0, 1], -7.0, 0.0001)
         assert_rel_error(self, J[0, 2], 0.0, 0.0001)

@@ -7,6 +7,7 @@ __all__ = ['Assembly', 'set_as_top']
 import cStringIO
 import threading
 import re
+import sys
 
 from zope.interface import implementedBy
 
@@ -15,8 +16,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
-                                     IVariableTree
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -33,8 +33,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
-from openmdao.main.case import flatteners
+from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
@@ -952,8 +951,9 @@ class Assembly(Component):
                            if not n.startswith('parent.') and \
                            depgraph.base_var(n) != varname and \
                            n not in target1]
-            if len(target1) == 0 and len(target1) == 0:
+            if len(target1) == 0 and len(target2) == 0:
                 continue
+
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
@@ -964,7 +964,6 @@ class Assembly(Component):
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            #varname, _, tail = target.partition('[')
             varname = depgraph.base_var(target)
             src = depgraph.predecessors(varname)
             if len(src) == 0:
@@ -1316,34 +1315,39 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj, full=False):
+def dump_iteration_tree(obj, f=sys.stdout, full=False, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
 
     If full is True, show pseudocomponents as well.
+    If derivs is True, include derivative input/output information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
+        tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
+            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            if derivs:
+                try:
+                    dgraph = obj.workflow.derivative_graph()
+                except Exception as err:
+                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                else:
+                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n" %(' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n" %(' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
-                    _dump_iteration_tree(comp, f, tablevel + 3)
+                    _dump_iteration_tree(comp, f, tablevel + tabsize)
                 else:
-                    f.write(' ' * (tablevel + 3))
-                    f.write(comp.get_pathname())
-                    f.write('\n')
+                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.get_pathname()))
         elif is_instance(obj, Assembly):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
-            _dump_iteration_tree(obj.driver, f, tablevel + 3)
-    f = cStringIO.StringIO()
+            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
+
     _dump_iteration_tree(obj, f, 0)
-    return f.getvalue()
