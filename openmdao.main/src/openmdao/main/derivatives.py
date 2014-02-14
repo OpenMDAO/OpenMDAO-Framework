@@ -53,13 +53,25 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                 if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                     param = bcast_param
                     break
-            #else:
+            else:
+                param = param[0]
                 #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
                                    #(param, wflow._parent.get_pathname()))
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
+            
+            # If you end up here, it is usually because you have a
+            # tuple of broadcast inputs containing only non-relevant
+            # variables. Derivative is zero, so take one and increment
+            # by its width.
+            
+            # TODO - We need to cache these when we remove
+            # boundcaching from the graph
+            val = wflow.scope.get(param)
+            j += flattened_size(param, val, wflow.scope)   
             continue
+
 
         if isinstance(i1, list):
             in_range = i1
@@ -169,13 +181,24 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                         if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                             param = bcast_param
                             break
-                    #else:
+                    else:
+                        param = param[0]
                         #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
                                            #(param, wflow._parent.get_pathname()))
 
                 try:
                     k1, k2 = wflow.get_bounds(param)
                 except KeyError:
+                    
+                    # If you end up here, it is usually because you have a
+                    # tuple of broadcast inputs containing only non-relevant
+                    # variables. Derivative is zero, so take one and increment
+                    # by its width.
+                    
+                    # TODO - We need to cache these when we remove
+                    # boundcaching from the graph
+                    val = wflow.scope.get(param)
+                    i += flattened_size(param, val, wflow.scope)   
                     continue
 
                 if isinstance(k1, list):
