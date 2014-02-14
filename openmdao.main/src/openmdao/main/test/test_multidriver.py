@@ -311,9 +311,9 @@ class MultiDriverTestCase(unittest.TestCase):
         s = s.replace('comp2', 'comp2or3')
         s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s,
-            '\n   driver\n      nested\n         nested.driver\n            '
-            'nested.comp1\n            nested.comp2or3\n            nested.comp2or3\n'
-            '            nested.comp4\n')
+            '\n   driver\n      nested\n         driver\n            '
+            'comp1\n            comp2or3\n            comp2or3\n'
+            '            comp4\n')
 
     def test_2_nested_drivers_same_assembly(self):
         print "*** test_2_nested_drivers_same_assembly ***"

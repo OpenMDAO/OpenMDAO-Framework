@@ -1327,7 +1327,7 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     def _dump_iteration_tree(obj, f, tablevel):
         tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            f.write("%s%s\n" % (tab, obj.name))
             if derivs:
                 try:
                     dgraph = obj.workflow.derivative_graph()
@@ -1350,7 +1350,7 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                 else:
                     f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.name))
         elif is_instance(obj, Assembly):
-            f.write("%s%s\n" % (tab, obj.get_pathname()))
+            f.write("%s%s\n" % (tab, obj.name))
             _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
 
     _dump_iteration_tree(obj, f, 0)
