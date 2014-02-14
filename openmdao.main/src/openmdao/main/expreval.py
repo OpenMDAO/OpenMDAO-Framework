@@ -716,7 +716,8 @@ class ExprEvaluator(object):
             var_dict[name] = replace_val
             new_name = "var_dict['%s']" % name
             new_names[name] = new_name
-
+        for k,v in var_dict.iteritems():
+            print k, v
         # First time through, cache our gradient code.
         if self.cached_grad_eq is None:
 

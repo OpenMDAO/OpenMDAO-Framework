@@ -135,7 +135,6 @@ class PseudoAssembly(object):
         for name in self.itercomps:
             comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
-            print 'fd commands', comp.name
             comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,

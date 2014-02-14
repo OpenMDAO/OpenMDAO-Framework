@@ -54,7 +54,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                     param = bcast_param
                     break
             #else:
-                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" % 
+                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
                                    #(param, wflow._parent.get_pathname()))
         try:
             i1, i2 = wflow.get_bounds(param)
@@ -100,7 +100,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             j += 1
 
-    #print inputs, '\n', outputs, '\n', J
+    print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
@@ -120,7 +120,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
-    
+
     # Adjoint mode, solve linear system for each output
     j = 0
     for output in outputs:
@@ -170,7 +170,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                             param = bcast_param
                             break
                     #else:
-                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" % 
+                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
                                            #(param, wflow._parent.get_pathname()))
 
                 try:
