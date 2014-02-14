@@ -88,7 +88,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('_pseudo_0.out0', 'comp2.a'),
                               ('comp1.c', '_pseudo_0.in0')]))
 
-        self.assertEqual(top._pseudo_0._expr_conn, ('comp1.c*12.0', 'comp2.a'))
+        self.assertEqual(top._pseudo_0._orig_expr, 'comp1.c*12.0 = comp2.a')
         top.comp1.a = 12.
         top.comp1.b = 24.
         top.run()
