@@ -1892,8 +1892,20 @@ def get_missing_derivs(obj, recurse=True):
                 return
 
         for name in chain(cins, couts):
+            obj = comp.get(name)
+            if has_interface(obj, IVariableTree): #can never be a whole vartree, only the children
+                continue
+
+            base_name, _, index = name.partition("[")
+            if index:
+                if base_name in dins or base_name in douts :
+                    continue
+
+            
             if name not in dins and name not in douts and is_differentiable_var(name, comp):
                 missing.append('.'.join([comp.get_pathname(), name]))
+            
+
 
     missing = []
     finite_diffs = []
