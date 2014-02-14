@@ -476,12 +476,6 @@ class ExprEvaluator(object):
         self.var_names = set()
         self.cached_grad_eq = None
 
-        #need to raise a ValueError if any exist
-        unresolved_vars = self.get_unresolved()
-        if unresolved_vars:
-
-            raise self._invalid_expression_error(unresolved_vars, expr=text)
-
     @property
     def text(self):
         """The expression string."""
@@ -550,10 +544,7 @@ class ExprEvaluator(object):
             formatted_vars = ', '.join(formatted_vars)
 
         #throw the error
-        error = ValueError(msg.format(expr, formatted_vars))
-        error.unresolved_vars = unresolved_vars
-
-        return error
+        return ValueError(msg.format(expr, formatted_vars))
 
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
