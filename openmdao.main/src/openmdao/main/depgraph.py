@@ -1834,11 +1834,11 @@ def get_missing_derivs(obj, recurse=True):
             # if inputs are vartrees and we have full vt connections inside, add
             # leaf nodes to our list
             for i,din in enumerate(dins[:]):
-                obj = getattr(comp, din)
+                obj = comp.get(din)
                 if has_interface(obj, IVariableTree):
                     dins.extend([n for n,v in vt_flattener(din, obj)])
             for i,dout in enumerate(douts[:]):
-                obj = getattr(comp, dout)
+                obj = comp.get(dout)
                 if has_interface(obj, IVariableTree):
                     douts.extend([n for n,v in vt_flattener(dout, obj)])
 
@@ -1850,6 +1850,7 @@ def get_missing_derivs(obj, recurse=True):
 
         else:
             dins, douts = comp.list_deriv_vars()
+
             # correct for the one item tuple missing comma problem
             if isinstance(dins, basestring):
                 dins = (dins,)
@@ -1859,6 +1860,16 @@ def get_missing_derivs(obj, recurse=True):
                 if not comp.contains(name):
                     raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
                                         (comp.get_pathname(), name))
+
+            for i,din in enumerate(dins[:]):
+                obj = comp.get(din)
+                if has_interface(obj, IVariableTree):
+                    dins.extend([n for n,v in vt_flattener(din, obj)])
+            for i,dout in enumerate(douts[:]):
+                obj = comp.get(dout)
+                if has_interface(obj, IVariableTree):
+                    douts.extend([n for n,v in vt_flattener(dout, obj)])
+
         if (len(dins) == 0 or len(douts) == 0) and comp.parent:
             if hasattr(comp, 'provideJ'):
                 raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
