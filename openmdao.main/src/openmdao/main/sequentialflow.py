@@ -625,7 +625,7 @@ class SequentialWorkflow(Workflow):
                 i1, i2 = self.get_bounds(src)
                 result[i1:i2] += arg[i1:i2]
 
-        print arg, result
+        #print arg, result
         return result
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
@@ -1085,7 +1085,7 @@ class SequentialWorkflow(Workflow):
                     J[:, i:i+width] = J[:, i:i+width]*scaler
 
             i = i + width
-        print J
+        #print J
         return J
 
 

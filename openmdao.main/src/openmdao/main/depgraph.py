@@ -1389,6 +1389,7 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     xtra_outputs = set()
     for comp in wflow:
         if has_interface(comp, IDriver):
+            # Solvers are absorbed into the top graph
             if has_interface(comp, ISolver):
                 dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
                                                     group_nondif=False)
@@ -1398,6 +1399,8 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
                     graph.add_edge(u, v, attr_dict=data)
                 for param in comp.list_param_targets():
                     graph.node[param]['solver_state'] = True
+
+            # However, we finite-difference all other drivers.
             else:
                 fd_drivers.append(comp)
 
@@ -1408,9 +1411,16 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         # only create a copy of the graph if we have non-solver subdrivers
         startgraph = graph.subgraph(graph.nodes_iter())
         for drv in fd_drivers:
+
+            # The parameters of other drivers can propagate to our expressions
+            # via input-input connections
+            sub_params = drv.list_param_targets()
+
             pa_list.append(_create_driver_PA(drv, startgraph,
                                              graph, inputs, outputs,
                                              wflow, using))
+            pa_name = pa_list[-1].name
+            xtra_inputs.update([to_PA_var(v, pa_name) for v in sub_params])
 
         for pa in pa_list:
             pa.clean_graph(startgraph, graph, using)
