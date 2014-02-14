@@ -100,7 +100,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             j += 1
 
-    print inputs, '\n', outputs, '\n', J
+    #print inputs, '\n', outputs, '\n', J
     return J
 
 def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
