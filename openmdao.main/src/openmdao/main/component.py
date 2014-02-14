@@ -599,7 +599,7 @@ class Component(Container):
             (Default is ''.) If applied to the top-level assembly, this will be
             prepended to all iteration coordinates.
         """
-
+        print "run", self.name
         if self.directory:
             self.push_dir()
 
@@ -1862,14 +1862,14 @@ class Component(Container):
                     if "~" in io_attr['id']:
                         for vt_input in vt_inputs:
                             vt_input['id'] = '~{0}'.format(vt_input['id'])
-                        
+
                     inputs += vt_inputs
                 else:
                     vt_outputs = vt_attrs.get('Outputs', [])
                     if "~" in io_attr['id']:
                         for vt_output in vt_outputs:
                             vt_outputs['id'] = '~{0}'.format(vt_output['id'])
-                        
+
                     outputs += vt_outputs
 
         attrs['Inputs'] = inputs
