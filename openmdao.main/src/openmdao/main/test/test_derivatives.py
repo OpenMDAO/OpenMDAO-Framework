@@ -1102,6 +1102,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 0.0, .001)
 
         top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.junk', 'nest.f_xy', ],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
                                               outputs=['nest.f_xy', 'nest.junk'],
                                               mode='adjoint')
