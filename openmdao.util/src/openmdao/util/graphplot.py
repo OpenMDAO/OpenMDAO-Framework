@@ -161,7 +161,7 @@ def plot_graph(graph, scope=None, parent=None,
         print str(err)
     finally:
         os.chdir(startdir)
-        print "\remember to remove temp directory '%s'" % tmpdir
+        print "remember to remove temp directory '%s'" % tmpdir
         # time.sleep(5) # sleep to give browser time
                        # to read files before we remove them
         # shutil.rmtree(tmpdir)

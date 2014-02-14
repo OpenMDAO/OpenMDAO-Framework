@@ -1036,7 +1036,8 @@ class Container(SafeHasTraits):
                 else:
                     self._get_metadata_failed(traitpath, metaname)
 
-        t = self.get_trait(traitpath)
+        varname, _, index = traitpath.partition('[')
+        t = self.get_trait(varname)        
         if not t:
             return self._get_metadata_failed(traitpath, metaname)
         t = t.trait_type
