@@ -412,8 +412,8 @@ class DependencyGraph(nx.DiGraph):
                 if mname in meta:
                     data[mname] = meta[mname]
 
-            val = getattr(obj, vname)
-            if not is_differentiable_val(val):
+            val = getattr(obj, vname, _missing)
+            if val is not _missing and not is_differentiable_val(val):
                 data['differentiable'] = False
 
     def add_boundary_var(self, obj, name, **kwargs):
@@ -1438,7 +1438,7 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
     for cname in needed:
         if cname in graph and cname not in ancestor_using:
             graph.node[cname] = graph.node[cname].copy() # don't pollute other graphs with nondiff markers
-            graph.node[cname]['non-differentiable'] = True
+            graph.node[cname]['differentiable'] = False
 
     # get any boundary vars referenced by parameters of the subdriver or
     # any of its subdrivers
@@ -1859,7 +1859,7 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
 
 def get_missing_derivs(obj, recurse=True):
     """Return a list of missing derivatives found in the given object.
-    
+
     """
     if not has_interface(obj, IComponent):
         raise RuntimeError("Given object is not a Component")
@@ -1870,19 +1870,19 @@ def get_missing_derivs(obj, recurse=True):
 
         cins = comp.list_inputs()
         couts = comp.list_outputs()
-        
+
         for i,cin in enumerate(cins[:]):
             obj = comp.get(cin)
-            meta = comp.get_metadata(cin, 'framework_var')            
+            meta = comp.get_metadata(cin, 'framework_var')
             if has_interface(obj, IVariableTree):
-                cins.extend([n for n,v in vt_flattener(cin, obj)])        
-                
+                cins.extend([n for n,v in vt_flattener(cin, obj)])
+
         for i,cout in enumerate(couts[:]):
                     obj = comp.get(cout)
                     if has_interface(obj, IVariableTree) :
-                        couts.extend([n for n,v in vt_flattener(cout, obj)])                
-        
-        
+                        couts.extend([n for n,v in vt_flattener(cout, obj)])
+
+
         if has_interface(comp, IAssembly):
             # Assemblies need to call into provideJ so that we can determine
             # what derivatives are available.
@@ -1944,10 +1944,10 @@ def get_missing_derivs(obj, recurse=True):
                 if base_name in dins or base_name in douts :
                     continue
 
-            
+
             if name not in dins and name not in douts and is_differentiable_var(name, comp):
                 missing.append('.'.join([comp.get_pathname(), name]))
-            
+
 
 
     missing = []

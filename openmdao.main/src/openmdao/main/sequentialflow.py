@@ -778,7 +778,7 @@ class SequentialWorkflow(Workflow):
                     nondiff.add(name)
                 elif comp.force_fd is True:
                     nondiff.add(name)
-                elif dgraph.node[name].get('non-differentiable'):
+                elif not dgraph.node[name].get('differentiable', True):
                     nondiff.add(name)
 
             # If a connection is non-differentiable, so are its src and
