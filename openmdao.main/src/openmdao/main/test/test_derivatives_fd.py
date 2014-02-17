@@ -9,6 +9,7 @@ import numpy as np
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.testutil import assert_rel_error
 
 class MyComp(Component):
@@ -162,6 +163,57 @@ class TestFiniteDifference(unittest.TestCase):
                                                 outputs=['comp.y'])
         self.assertEqual(model.comp.exec_count - old_count, 2)
         self.assertEqual(model.comp.derivative_exec_count, 1)
+
+    def test_smarter_nondifferentiable_blocks(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp1', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
+                                                 ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
+        top.add('comp2', ExecComp(['y=2.0*x + 3.0*x2', 'y2=4.0*x + 5.0*x2']))
+        top.add('comp3', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
+                                                 ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
+        top.add('comp4', ExecComp(['y=2.0*x + 3.0*x2']))
+        top.add('comp5', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
+                                                 ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
+        top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+
+        top.connect('comp1.y', 'comp2.x')
+        top.connect('comp2.y', 'comp3.x')
+        top.connect('comp2.y2', 'comp4.x')
+        top.connect('comp3.y', 'comp4.x2')
+        top.connect('comp4.y', 'comp5.x')
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp5.y'],
+                                              mode='forward')
+
+        pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
+        self.assertTrue('comp1' not in pa1.comps)
+        self.assertTrue('comp2' in pa1.comps)
+        self.assertTrue('comp3' in pa1.comps)
+        self.assertTrue('comp4' in pa1.comps)
+        self.assertTrue('comp5' not in pa1.comps)
+        self.assertTrue(pa1.comps == pa1.itercomps)
+
+        top.replace('comp4', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
+                    ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
+
+        top.run()
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp5.y'],
+                                              mode='forward')
+
+        pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
+        self.assertTrue('comp1' not in pa1.comps)
+        self.assertTrue('comp2' in pa1.comps)
+        self.assertTrue('comp3' not in pa1.comps)
+        self.assertTrue('comp4' not in pa1.comps)
+        self.assertTrue('comp5' not in pa1.comps)
+        self.assertTrue(pa1.comps == pa1.itercomps)
 
 if __name__ == '__main__':
     import nose
