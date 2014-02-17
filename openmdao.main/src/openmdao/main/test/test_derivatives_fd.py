@@ -190,12 +190,30 @@ class TestFiniteDifference(unittest.TestCase):
                                               mode='forward')
 
         pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
+        self.assertTrue('comp1' not in pa1.comps)
         self.assertTrue('comp2' in pa1.comps)
         self.assertTrue('comp3' in pa1.comps)
         self.assertTrue('comp4' in pa1.comps)
-        self.assertTrue('comp2' in pa1.itercomps)
-        self.assertTrue('comp3' in pa1.itercomps)
-        self.assertTrue('comp4' in pa1.itercomps)
+        self.assertTrue('comp5' not in pa1.comps)
+        self.assertTrue(pa1.comps == pa1.itercomps)
+
+        top.replace('comp4', ExecCompWithDerivatives(['y=2.0*x + 3.0*x2'],
+                    ['dy_dx = 2.0', 'dy_dx2 = 3.0']))
+
+        top.run()
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp5.y'],
+                                              mode='forward')
+
+        pa1 = top.driver.workflow._derivative_graph.node['~0']['pa_object']
+        self.assertTrue('comp1' not in pa1.comps)
+        self.assertTrue('comp2' in pa1.comps)
+        self.assertTrue('comp3' not in pa1.comps)
+        self.assertTrue('comp4' not in pa1.comps)
+        self.assertTrue('comp5' not in pa1.comps)
+        self.assertTrue(pa1.comps == pa1.itercomps)
 
 if __name__ == '__main__':
     import nose
