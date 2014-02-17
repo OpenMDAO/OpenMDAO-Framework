@@ -2,6 +2,11 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     var constraints,
         constraintsDiv = jQuery("<div id='"+name+"_constraints' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Constraint</button>").button(),
@@ -22,6 +27,7 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
         button = '<div class="ui-icon-trash"></div>';
         return button;
     }
+
     elm.append(constraintsDiv);
 
     var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
@@ -44,7 +50,8 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
             cmd = pathname+'.'+args.item.name+'='+args.item.value;
             project.issueCommand(cmd);
         });
-   }
+    }
+
     constraints.onClick.subscribe(function (e) {
         var cell = constraints.getCellFromEvent(e);
         if (cell.cell === 0) {
@@ -119,6 +126,11 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
 
     addButton.click(function() { promptForConstraint(addConstraint); });
     clrButton.click(function() { clearConstraints(); });
+
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
 
     /** load the table with the given properties */
     this.loadData = function(properties) {

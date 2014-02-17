@@ -4,7 +4,6 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import cStringIO
 import threading
 import re
 import sys
@@ -37,6 +36,7 @@ from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
+from openmdao.util.graph import graph_to_svg
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -44,6 +44,7 @@ _missing = object()
 
 __has_top__ = False
 __toplock__ = threading.RLock()
+
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
@@ -251,7 +252,7 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
-        exprconns = [(u,v) for u,v in self._exprmapper.list_connections()
+        exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
@@ -275,7 +276,7 @@ class Assembly(Component):
                                  "the replacement object: %s" % missing)
 
         # remove expr connections
-        for u,v in exprconns:
+        for u, v in exprconns:
             self.disconnect(u, v)
 
         # remove any existing connections to replacement object
@@ -683,7 +684,7 @@ class Assembly(Component):
             loops = graph.get_loops()
 
             for cname, vnames in partition_names_by_comp(invalids).items():
-                if cname is None or not is_comp_node(graph, cname): # boundary var
+                if cname is None or not is_comp_node(graph, cname):  # boundary var
                     if self.parent:
                         self.parent.update_inputs(self.name)
 
@@ -897,7 +898,7 @@ class Assembly(Component):
                 self.raise_exception("Can't find any inputs for generating gradient.")
         if not outputs:
             if has_interface(obj, IDriver):
-                pass # workflow.check_gradient can pull outputs from driver
+                pass  # workflow.check_gradient can pull outputs from driver
             elif has_interface(obj, IAssembly):
                 outputs = ['.'.join([obj.name, out])
                            for out in obj.list_outputs()
@@ -909,7 +910,6 @@ class Assembly(Component):
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
-
 
         if not inputs or not outputs:
             msg = 'Component %s has no analytic derivatives.' % obj.name
@@ -948,8 +948,8 @@ class Assembly(Component):
             target2 = []
             if src in depgraph.node:
                 target2 = [n for n in depgraph.successors(src)
-                           if not n.startswith('parent.') and \
-                           depgraph.base_var(n) != varname and \
+                           if not n.startswith('parent.') and
+                           depgraph.base_var(n) != varname and
                            n not in target1]
             if len(target1) == 0 and len(target2) == 0:
                 continue
@@ -985,7 +985,6 @@ class Assembly(Component):
         if check_only:
             return None
         return self.driver.calc_gradient(input_keys, output_keys)
-
 
     def list_deriv_vars(self):
         return self.J_input_keys, self.J_output_keys
@@ -1314,6 +1313,11 @@ class Assembly(Component):
 
         return conns
 
+    def _repr_svg_(self):
+        """ Returns an SVG representation of this Assembly's dependency graph
+        """
+        return graph_to_svg(self._depgraph.component_graph())
+
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
@@ -1336,8 +1340,8 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                 else:
                     inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
                     outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
-                    f.write("%s*deriv inputs: %s\n" %(' '*(tablevel+tabsize+2), inputs))
-                    f.write("%s*deriv outputs: %s\n" %(' '*(tablevel+tabsize+2), outputs))
+                    f.write("%s*deriv inputs: %s\n" % (' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n" % (' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:

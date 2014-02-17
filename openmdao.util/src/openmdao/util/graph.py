@@ -1,9 +1,26 @@
-import sys
 import pprint
 from ordereddict import OrderedDict
-   
+
 _missing = object()
-     
+
+import networkx as nx
+import matplotlib.pyplot as plt
+from io import BytesIO
+
+
+def graph_to_svg(g):
+    """ return the SVG of a matplotlib figure generated from a graph
+        ref: http://pig-in-the-python.blogspot.com/2012/09/
+    """
+    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(111)
+    nx.draw_shell(g, ax=ax)
+    output = BytesIO()
+    fig.savefig(output, format='svg')
+    plt.close(fig)
+    return output.getvalue()
+
+
 def edges_to_dict(edges, dct=None):
     """Take an iterator of edges and return an ordered dict
     of sources mapped to lists of destinations.
@@ -14,56 +31,61 @@ def edges_to_dict(edges, dct=None):
         dct.setdefault(u, []).append(v)
     return dct
 
+
 def nodes_matching_all(graph, **kwargs):
-    """Return an iterator over nodes matching all kwargs names and values. 
+    """Return an iterator over nodes matching all kwargs names and values.
     For example, nodes_matching_all(G, valid=True, boundary=True) would
     return a list of all nodes that are marked as valid that
     are also boundary nodes.
     """
-    for n,data in graph.node.iteritems():
-        for arg,val in kwargs.items():
+    for n, data in graph.node.iteritems():
+        for arg, val in kwargs.items():
             if data.get(arg, _missing) != val:
                 break
         else:
             yield n
 
+
 def nodes_matching_some(graph, **kwargs):
-    """Return an iterator over nodes matching at least one of 
+    """Return an iterator over nodes matching at least one of
     the kwargs names and values. For
     example, nodes_matching_some(G, valid=True, boundary=True) would
     return a list of all nodes that either are marked as valid or nodes
     that are boundary nodes, or nodes that are both.
     """
-    for n,data in graph.node.iteritems():
-        for arg,val in kwargs.items():
+    for n, data in graph.node.iteritems():
+        for arg, val in kwargs.items():
             if data.get(arg, _missing) == val:
                 yield n
                 break
 
+
 def edges_matching_all(graph, **kwargs):
-    """Return an iterator over edges matching all kwargs names and 
+    """Return an iterator over edges matching all kwargs names and
     values. For example, edges_matching_all(G, foo=True, bar=True) would
     return a list of all edges that are marked with True
     values of both foo and bar.
     """
-    for u,v,d in graph.edges(data=True):
-        for arg,val in kwargs.items():
+    for u, v, d in graph.edges(data=True):
+        for arg, val in kwargs.items():
             if d.get(arg, _missing) != val:
                 break
         else:
-            yield (u,v)
+            yield (u, v)
+
 
 def edges_matching_some(graph, **kwargs):
-    """Return an iterator over edges matching some kwargs names 
-    and values. For example, edges_matching_some(G, foo=True, bar=True) 
+    """Return an iterator over edges matching some kwargs names
+    and values. For example, edges_matching_some(G, foo=True, bar=True)
     would return a list of all edges that are marked with True
     values of either foo or bar or both.
     """
-    for u,v,d in graph.edges(data=True):
-        for arg,val in kwargs.items():
+    for u, v, d in graph.edges(data=True):
+        for arg, val in kwargs.items():
             if d.get(arg, _missing) == val:
-                yield (u,v)
+                yield (u, v)
                 break
+
 
 def get_valids(graph, val, prefix=None):
     """Returns all nodes with validity matching the
@@ -74,6 +96,7 @@ def get_valids(graph, val, prefix=None):
                     if n.startswith(prefix)]
     return sorted(nodes_matching_all(graph, valid=val))
 
+
 def dump_valid(graph, filter=None, stream=None):
     dct = {}
     for node in graph.nodes_iter():
@@ -82,10 +105,10 @@ def dump_valid(graph, filter=None, stream=None):
         dct[node] = graph.node[node]['valid']
     pprint.pprint(dct, stream=stream)
 
-            
+
 def flatten_list_of_iters(lst):
     """Returns a list of simple values, flattening
-    any sub-lists or sub-tuples, or if the input is a 
+    any sub-lists or sub-tuples, or if the input is a
     string it just returns that string.  NOTE: this only
     goes down one level.
     """

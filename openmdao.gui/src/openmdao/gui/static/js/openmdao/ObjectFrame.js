@@ -35,7 +35,8 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             'Events',
             'Dataflow',
             'Workflow',
-            'Slots'
+            'Slots',
+            'Drawing'
         ],
         _panes = {},
         _updates = [];  // queue for updates
@@ -113,12 +114,17 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         }
         else if (name === 'Triggers') {
             _panes[name] = new openmdao.TriggersPane(contentPane, project,
-                                                    pathname, name);
+                                                     pathname, name);
             _panes[name].loadData(val);
         }
         else if (name === 'Events') {
             _panes[name] = new openmdao.EventsPane(contentPane, project,
-                                                  pathname, name);
+                                                   pathname, name);
+            _panes[name].loadData(val);
+        }
+        else if (name === 'Drawing') {
+            _panes[name] = new openmdao.DrawingPane(contentPane, project,
+                                                    pathname, name);
             _panes[name].loadData(val);
         }
         else {

@@ -25,12 +25,14 @@ _metasrch = ['data_shape', 'deriv_ignore', 'framework_var']
 
 _missing = object()
 
+
 def _is_expr(node):
     """Returns True if node is an expression that is not a simple
     variable reference, or a reference to a single array entry or
     vartree attribute.
     """
     return len(_exprchars.intersection(node)) > 0
+
 
 def _sub_or_super(s1, s2):
     """Returns True if s1 is a subvar or supervar of s2."""
@@ -44,11 +46,12 @@ def _sub_or_super(s1, s2):
         return True
     return False
 
+
 def unique(seq):
     """Return a list of unique values, preserving order"""
     seen = set()
     sadd = seen.add
-    return [ x for x in seq if x not in seen and not sadd(x)]
+    return [x for x in seq if x not in seen and not sadd(x)]
 
 
 # Explanation of node/edge metadata dict entries
