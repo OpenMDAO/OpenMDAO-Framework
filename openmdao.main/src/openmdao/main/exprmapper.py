@@ -227,19 +227,21 @@ class ExprMapper(object):
         if srcmeta:
             srcunit = srcmeta[0][1]
             if srcunit:
-                srcunit = PhysicalQuantity(1., srcunit).get_unit_name()
+                srcunit = PhysicalQuantity(1., srcunit).unit
         else:
             srcunit = None
 
         if destmeta:
             destunit = destmeta[0][1]
             if destunit:
-                destunit = PhysicalQuantity(1., destunit).get_unit_name()
+                destunit = PhysicalQuantity(1., destunit).unit
         else:
             destunit = None
 
-        if destunit and srcunit and destunit != srcunit:
-            return 'units'
+        if destunit and srcunit:
+            if destunit.powers != srcunit.powers or destunit.factor != srcunit.factor or \
+               destunit.offset != srcunit.offset:
+                return 'units'
 
         return None
 
