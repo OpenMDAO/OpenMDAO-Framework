@@ -827,8 +827,8 @@ class SequentialWorkflow(Workflow):
                     for targ in inodes:
                         if src != targ:
                             isles = find_all_connecting(dgraph, src, targ)
-                            inodes = inodes.union(set([comp for comp in isles \
-                                                       if '.' not in comp]))
+                            inodes = inodes.union([comp for comp in isles \
+                                                       if '.' not in comp])
 
                 nondiff_groups.append(inodes)
 
