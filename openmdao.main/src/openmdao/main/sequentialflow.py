@@ -817,20 +817,16 @@ class SequentialWorkflow(Workflow):
             # Groups any connected non-differentiable blocks. Each block is a
             # set of component names.
             sub = cgraph.subgraph(nondiff)
-            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-            for item in nd_graphs:
-                inodes = item.nodes()
+            for inodes in nx.connected_components(sub.to_undirected()):
 
                 # Pull in any differentiable islands
-                inodes = set(inodes)
+                nodeset = set(inodes)
                 for src in inodes:
                     for targ in inodes:
                         if src != targ:
-                            isles = find_all_connecting(dgraph, src, targ)
-                            inodes = inodes.union([comp for comp in isles \
-                                                       if '.' not in comp])
+                            nodeset.update(find_all_connecting(cgraph, src, targ))
 
-                nondiff_groups.append(inodes)
+                nondiff_groups.append(nodeset)
 
         for j, group in enumerate(nondiff_groups):
             pa_name = '~%d' % j

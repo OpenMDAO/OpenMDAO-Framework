@@ -1288,23 +1288,28 @@ def find_all_connecting(graph, start, end):
     """
     if start == end:
         return set()
+
+    Gsucc = graph.succ
+    Gpred = graph.pred
+
     fwdset = set()
     backset = set()
-    tmpset = set([end])
-    while tmpset:
-        node = tmpset.pop()
+
+    tmplst = [end]
+    while tmplst:
+        node = tmplst.pop()
         if node in backset:
             continue
         backset.add(node)
-        tmpset.update(graph.pred[node].keys())
+        tmplst.extend(Gpred[node].keys())
 
-    tmpset = set([start])
-    while tmpset:
-        node = tmpset.pop()
+    tmplst = [start]
+    while tmplst:
+        node = tmplst.pop()
         if node in fwdset:
             continue
         fwdset.add(node)
-        tmpset.update(graph.succ[node].keys())
+        tmplst.extend(Gsucc[node].keys())
 
     return fwdset.intersection(backset)
 
