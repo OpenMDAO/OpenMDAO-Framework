@@ -50,6 +50,16 @@ class SimpleNoUnits(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
+class MuComp(Component):
+    mu = Float(1.81206e-5, iotype='in', units='kg/(m*s)')
+    out = Float(iotype='out')
+
+    def execute(self):
+      self.out = self.mu
+
+class MuAsm(Assembly):
+    mu = Float(1.81206e-5, iotype='in', units='kg/m/s')
+
 
 def _simple_model(units=True):
     if units:
@@ -67,7 +77,13 @@ class PseudoCompTestCase(unittest.TestCase):
 
     def setUp(self):
         pcompmod._count = 0  # make sure pseudocomp names are consistent
-        self.fakes = ['@bin','@bout','@xin','@xout']
+
+    def test_unnecessary_pcomp(self):
+        top = set_as_top(MuAsm())
+        top.add('comp', MuComp())
+        nodes = set(top._depgraph.nodes())
+        top.connect("mu", "comp.mu") # connect two vars with same units but diff unit strings
+        self.assertEqual(set(), set(top._depgraph.nodes())-nodes)
 
     def test_basic_nounits(self):
         top = _simple_model(units=False)
