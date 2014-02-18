@@ -4,30 +4,30 @@ import unittest
 from openmdao.main.api import VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, VarTree
 
-class TstContainer(VariableTree):
-    dummy1 = Float(1.0) 
+class TstVtree(VariableTree):
+    floatval = Float(1.0) 
 
-class TstAssembly1(Assembly):
-    dummy_data = VarTree(TstContainer(), iotype='in')
-    dummy_data_out = VarTree(TstContainer(), iotype='out')
+class VTAssembly(Assembly):
+    vtree_in = VarTree(TstVtree(), iotype='in')
+    vtree_out = VarTree(TstVtree(), iotype='out')
 
-class TstAssembly2(Assembly):
+class AsmWithSub(Assembly):
     
-    dummy_var1 = Float(1.0, iotype='in')
+    floatvar = Float(1.0, iotype='in')
 
     def configure(self):
-        self.add('assemb1', TstAssembly1())
-        self.connect('dummy_var1', 'assemb1.dummy_data.dummy1')
-        self.driver.workflow.add('assemb1')
+        self.add('subasm', VTAssembly())
+        self.connect('floatvar', 'subasm.vtree_in.floatval')
+        self.driver.workflow.add('subasm')
 
 class VarTreeConnectTestCase(unittest.TestCase):
 
     def test_vartree_connect(self):
-        blah = set_as_top(TstAssembly2())
-        blah.dummy_var1 = 5.0
-        self.assertEqual(blah.assemb1.dummy_data.dummy1, 1.0)
-        blah.run()
-        self.assertEqual(blah.assemb1.dummy_data.dummy1, 5.0)
+        top = set_as_top(AsmWithSub())
+        top.floatvar = 5.0
+        self.assertEqual(top.subasm.vtree_in.floatval, 1.0)
+        top.run()
+        self.assertEqual(top.subasm.vtree_in.floatval, 5.0)
     
         
 if __name__ == "__main__":

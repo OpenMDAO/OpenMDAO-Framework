@@ -120,6 +120,7 @@ class CyclicWorkflow(SequentialWorkflow):
         # pseudo-assy
         comps = dgraph.edge_dict_to_comp_list(self.edge_list())
         pa_keys = [name for name in comps if '~' in name]
+        palist = [dgraph.node[pa_key]['pa_object'] for pa_key in pa_keys]
 
         if len(pa_keys) == 0:
             self._mapped_severed_edges = self._severed_edges
@@ -128,19 +129,16 @@ class CyclicWorkflow(SequentialWorkflow):
             for src, target in self._severed_edges:
 
                 compname, _, varname = src.partition('.')
-                for pa_key in pa_keys:
-                    pseudo = dgraph.node[pa_key]['pa_object']
+                for pseudo in palist:
                     if src in pseudo.outputs:
                         src = to_PA_var(src, pseudo.name)
                         break
 
                 compname, _, varname = target.partition('.')
-                for pa_key in pa_keys:
-                    pseudo = dgraph.node[pa_key]['pa_object']
+                for pseudo in palist:
                     flat_inputs = set()
                     for item in pseudo.inputs:
-                        subset = set(item)
-                        flat_inputs = flat_inputs.union(subset)
+                        flat_inputs.update(item)
 
                     if target in flat_inputs:
                         target = to_PA_var(target, pseudo.name)
