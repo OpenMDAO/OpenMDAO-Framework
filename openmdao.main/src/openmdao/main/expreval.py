@@ -858,8 +858,23 @@ class ExprEvaluator(object):
         corresponding to each variable referenced by this expression.
         """
         scope = self._get_updated_scope(scope)
-        return [(name, scope.get_metadata(name, metaname))
-                  for name in self.get_referenced_varpaths(copy=False)]
+
+        invalid_variables = []
+        metadata = []
+
+        for name in self.get_referenced_varpaths(copy=False):
+            try:
+                metadata.append((name, scope.get_metadata(name, metaname)))
+            except AttributeError as error:
+                invalid_variables.append(name)
+
+        if invalid_variables:
+            msg = "Couldn't find metadata for the traits: {traits}"
+            traits = ', '.join("'{0}'".format(var) for var in invalid_variables)
+            msg = msg.format(traits=traits)
+
+            raise AttributeError(msg)
+
 
     def get_referenced_varpaths(self, copy=True):
         """Return a set of pathnames relative to *scope.parent* and based on
