@@ -4,7 +4,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
 from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Dict, Bool
-from openmdao.main.graph import list_deriv_vars
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 _ttdict = {
