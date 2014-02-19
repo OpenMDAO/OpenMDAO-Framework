@@ -109,6 +109,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       [openmdao.optproblems]
       openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
       openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
+      openmdao.lib.optproblems.polyscale.PolyScalableProblem = openmdao.lib.optprobelems.polyscale:PolyScalableProblem
 
       [openmdao.caserecorder]
       openmdao.lib.casehandlers.dumpcase.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcase:DumpCaseRecorder
