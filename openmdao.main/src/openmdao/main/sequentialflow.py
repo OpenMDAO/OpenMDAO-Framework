@@ -534,6 +534,9 @@ class SequentialWorkflow(Workflow):
 
                 for target in targets:
                     i1, i2 = self.get_bounds(target)
+                    #if isinstance(i1, list):
+                    #    result[i1] = arg[i1]
+                    #else:
                     result[i1:i2] = arg[i1:i2]
 
         #print arg, result
