@@ -12,7 +12,7 @@ def graph_to_svg(g):
     """ return the SVG of a matplotlib figure generated from a graph
         ref: http://pig-in-the-python.blogspot.com/2012/09/
     """
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(8, 8))
     ax = fig.add_subplot(111)
     nx.draw_shell(g, ax=ax)
     output = BytesIO()

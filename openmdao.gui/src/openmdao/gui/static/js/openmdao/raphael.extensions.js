@@ -111,7 +111,7 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     }
 
     // if the variable is part of an array or variable tree then offset it
-    if (attr.name.indexOf('.') > 0 || attr.name.indexOf('[') > 0) {
+    if (attr.type !== 'expr' && (attr.name.indexOf('.') > 0 || attr.name.indexOf('[') > 0)) {
         offset = 20;
         angleObj = paper.path('M '+ (x+5) +' '+ y + ' l 0 15 l 15 0')
             .attr({'stroke':'#666666', 'stroke-width': 1});

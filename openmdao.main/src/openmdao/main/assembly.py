@@ -1192,8 +1192,6 @@ class Assembly(Component):
                             'connected': (vname in connected)
                         })
 
-        conns['sources'] = sorted(sources, key=lambda d: d['name'])
-
         # inputs
         dests = []
         if dst_name:
@@ -1294,21 +1292,84 @@ class Assembly(Component):
                             'connected': (vname in connected)
                         })
 
-        conns['destinations'] = sorted(dests, key=lambda d: d['name'])
-
         # connections
+        conntuples = self._depgraph.list_connections(show_passthrough=True)
+
+        print 'conntuples', conntuples
+
+        source_names = [source['name'] for source in sources]
+        dest_names = [dest['name'] for dest in dests]
+
+        print 'source_names', source_names
+        print 'dest_names', dest_names
+
+        # replace PsuedoComponents with the expression for 'multi_var_expr' PsuedoComponents
+        new_conntuples = []
+        for u, v in conntuples:
+            if not src_name and u.startswith('_pseudo_'):
+                if dst_name and v.split('.')[0] == dst_name:
+                    pcomp = getattr(self, u.split('.', 1)[0])
+                    if pcomp._pseudo_type == 'multi_var_expr':
+                        print 'pcomp:', pcomp, ' _orig_src:', pcomp._orig_src, ' _orig_dest:', pcomp._orig_dest
+                        if pcomp._orig_src not in [source['name'] for source in sources]:
+                            sources.append({
+                                'name': pcomp._orig_src,
+                                'type': 'expr',
+                                'valid': True,
+                                'units': '',
+                                'connected': True
+                            })
+                            new_conntuples.append((pcomp._orig_src, v))
+            if not dst_name and v.startswith('_pseudo_'):
+                if src_name and u.split('.')[0] == src_name:
+                    pcomp = getattr(self, v.split('.', 1)[0])
+                    if pcomp._pseudo_type == 'multi_var_expr':
+                        print 'pcomp:', pcomp, ' _orig_dest:', pcomp._orig_dest, ' _orig_src:', pcomp._orig_src
+                        if pcomp._orig_src not in [dest['name'] for dest in dests]:
+                            dests.append({
+                                'name': pcomp._orig_src,
+                                'type': 'expr',
+                                'valid': True,
+                                'units': '',
+                                'connected': True
+                            })
+                            new_conntuples.append((u, pcomp._orig_src))
+            else:
+                new_conntuples.append((u, v))
+
+        conntuples = new_conntuples
+        print 'conntuples', conntuples
+
+        source_names = [source['name'] for source in sources]
+        dest_names = [dest['name'] for dest in dests]
+
+        print 'source_names', source_names
+        print 'dest_names', dest_names
+
         connections = []
-        conntuples = self.list_connections(show_passthrough=True,
-                                           visible_only=True)
-        comp_names = self.list_components()
+
         for src_var, dst_var in conntuples:
             src_root = src_var.split('.')[0]
             dst_root = dst_var.split('.')[0]
-            if (((src_name and src_root == src_name) or
-                 (not src_name and src_root not in comp_names)) and
-                ((dst_name and dst_root == dst_name) or
-                 (not dst_name and dst_root not in comp_names))):
-                connections.append([src_var, dst_var])
+
+            print 'checking', src_var, dst_var
+            if not src_name:
+                if src_var in source_names:  # src_var is an assembly var or expression
+                    if dst_name and dst_root == dst_name:
+                        print 'src_var', src_var, 'in source_names'
+                        print 'dst_root', dst_root, 'in', dst_name
+                        connections.append([src_var, dst_var])
+            elif src_root == src_name:
+                if not dst_name:
+                    if dst_var in dest_names:  # dst_var is an assembly var or expression
+                        print 'dst_var', dst_var, 'in dest_names'
+                        connections.append([src_var, dst_var])
+                elif dst_root == dst_name:
+                    print 'dst_root', dst_root, '==', dst_name
+                    connections.append([src_var, dst_var])
+
+        conns['sources'] = sorted(sources, key=lambda d: d['name'])
+        conns['destinations'] = sorted(dests, key=lambda d: d['name'])
         conns['connections'] = connections
 
         return conns

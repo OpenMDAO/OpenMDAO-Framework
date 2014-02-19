@@ -279,6 +279,8 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         figures = {};
         r.clear();
 
+        debug.info('data.sources'+data.sources);
+
         jQuery.each(data.sources, function(idx,srcvar) {
             var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
                 parent_name, parent_fig,
@@ -286,7 +288,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
             if (showAllVariables || var_list.contains(src_name)) {
                 // if part of an array or variable tree then check if it's expanded
                 dot_brkt = srcvar.name.search(/\.|\[/);
-                if (dot_brkt > 0) {
+                if (dot_brkt > 0 && srcvar.type !== 'expr') {
                     parent_name = srcvar.name.substring(0, dot_brkt);
                     if (self.src_comp) {
                         parent_name = self.src_comp + '.' + parent_name;
@@ -306,6 +308,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                 }
                 else {
                     figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
+                    debug.info('figure for '+src_name, figures[src_name]);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             }
@@ -320,7 +323,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
             if (showAllVariables || var_list.contains(dst_name)) {
                 // if part of an array or variable tree then check if it's expanded
                 dot_brkt = dstvar.name.search(/\.|\[/);
-                if (dot_brkt > 0) {
+                if (dot_brkt > 0 && dstvar.type !== 'expr') {
                     parent_name = dstvar.name.substring(0, dot_brkt);
                     if (self.dst_comp) {
                         parent_name = self.dst_comp + '.' + parent_name;
