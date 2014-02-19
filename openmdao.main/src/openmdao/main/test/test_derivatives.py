@@ -2119,6 +2119,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 6.0, .000001)
         assert_rel_error(self, J[2, 1], 9.0, .000001)
 
+    def test_nested_array_full_and_partial_passthrough(self):
+
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ArrayComp2D())
+        top.nest.add('comp2', ArrayComp2D())
+
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+        top.nest.create_passthrough('comp1.x', 'x')
+        top.nest.create_passthrough('comp1.y', 'y1')
+        top.nest.create_passthrough('comp2.y', 'y2')
+        top.nest.connect('x[-1, -1]', 'comp2.x[-1, -1]')
+
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest'])
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='fd')
+        print J
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='forward')
+        print J
+
     def test_large_dataflow(self):
 
         self.top = set_as_top(Assembly())
