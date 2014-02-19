@@ -875,6 +875,8 @@ class ExprEvaluator(object):
 
             raise AttributeError(msg)
 
+        return metadata
+
 
     def get_referenced_varpaths(self, copy=True):
         """Return a set of pathnames relative to *scope.parent* and based on
