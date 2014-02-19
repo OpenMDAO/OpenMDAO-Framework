@@ -99,3 +99,15 @@ def flatten_list_of_iters(lst):
             else:
                 ret.extend(entry)
         return ret
+
+def list_deriv_vars(comp):
+    """A wrapper around the call to list_deriv_vars on the given
+    Component that checks the return value to make sure it's a 
+    tuple.
+    """
+    tup = comp.list_deriv_vars()
+    if not isinstance(tup, tuple) or len(tup) != 2:
+        raise ValueError(comp.get_pathname()+
+                         ": The return value of list_deriv_vars() was not a tuple "
+                         "of the form (invars, outvars). Value returned was %s" % tup)
+    return tup

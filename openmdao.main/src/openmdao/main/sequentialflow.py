@@ -23,7 +23,7 @@ from openmdao.main.depgraph import find_related_pseudos, \
                                     find_all_connecting
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict
+from openmdao.util.graph import edges_to_dict, list_deriv_vars
 
 try:
     from numpy import ndarray, zeros
@@ -670,7 +670,7 @@ class SequentialWorkflow(Workflow):
 
 
             # If inputs aren't specified, use the parameters
-            parent_deriv_vars = self._parent.parent.list_deriv_vars()
+            parent_deriv_vars = list_deriv_vars(self._parent.parent)
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
                     inputs = self._parent.list_param_group_targets()

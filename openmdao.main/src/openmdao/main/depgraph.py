@@ -14,7 +14,7 @@ from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
-from openmdao.util.graph import flatten_list_of_iters
+from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -1494,7 +1494,7 @@ def _check_for_missing_derivs(scope, comps):
             dins = [k for k, v in comp.items(iotype='in', deriv_ignore=_is_false)] #comp.list_inputs()
             douts = [k for k, v in comp.items(iotype='out', deriv_ignore=_is_false)]#comp.list_outputs()
             comp.provideJ(dins, douts, check_only=True)
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
             # if inputs are vartrees and we have full vt connections inside, add
             # leaf nodes to our list
             for i,din in enumerate(dins[:]):
@@ -1506,7 +1506,7 @@ def _check_for_missing_derivs(scope, comps):
                 if has_interface(obj, IVariableTree):
                     douts.extend([n for n,v in vt_flattener(dout, obj)])
         else:
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
             # correct for the one item tuple missing comma problem
             if isinstance(dins, basestring):
                 dins = (dins,)
@@ -1892,7 +1892,7 @@ def get_missing_derivs(obj, recurse=True):
             # Assemblies need to call into provideJ so that we can determine
             # what derivatives are available.
             comp.provideJ(cins, couts, check_only=True)
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
             # if inputs are vartrees and we have full vt connections inside, add
             # leaf nodes to our list
             for i,din in enumerate(dins[:]):
@@ -1911,7 +1911,7 @@ def get_missing_derivs(obj, recurse=True):
                         _get_missing_derivs(ccomp, missing, finite_diffs, recurse)
 
         else:
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
 
             # correct for the one item tuple missing comma problem
             if isinstance(dins, basestring):
