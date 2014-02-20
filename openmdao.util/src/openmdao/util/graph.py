@@ -105,14 +105,14 @@ def list_deriv_vars(comp):
     Component that checks the return value to make sure it's a 
     tuple.
     """
-    tup = comp.list_deriv_vars()
+    tup = orig_tup = comp.list_deriv_vars()
     if isinstance(tup, list):
         tup = tuple(tup)
 
     if not isinstance(tup, tuple) or len(tup) != 2:
         raise ValueError(comp.get_pathname()+
                          ": The return value of list_deriv_vars() was not a tuple "
-                         "of the form (invars, outvars). Value returned was %s" % tup)
+                         "of the form (invars, outvars). Value returned was %s" % orig_tup)
 
     tup0 = tup[0]
     tup1 = tup[1]
