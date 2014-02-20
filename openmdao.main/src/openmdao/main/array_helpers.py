@@ -100,6 +100,7 @@ def flatten_slice(index, shape, name='flat_index', offset=0):
     # index arrays so that we can ravel them to find the set of indices
     # that we need to grab from J.
     idx = index.replace(' ', '').replace('][', ',').strip(']').strip('[')
+    idx = idx.strip('(').strip(')')
     if '-' in idx or ':' in idx:
 
         idx_list = idx.split(',')

@@ -984,7 +984,7 @@ class Assembly(Component):
 
         if check_only:
             return None
-        return self.driver.calc_gradient(input_keys, output_keys)
+        return self.driver.calc_gradient(self.J_input_keys, output_keys)
 
 
     def list_deriv_vars(self):

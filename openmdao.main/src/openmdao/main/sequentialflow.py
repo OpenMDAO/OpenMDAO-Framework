@@ -296,13 +296,14 @@ class SequentialWorkflow(Workflow):
                 else:
                     shape = 1
 
+                src_noidx = src.split('[', 1)[0]
+
                 # Special poke for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
-                    bound = (nEdge, nEdge+width)
-                    self.set_bounds(measure_src, bound)
-
-                src_noidx = src.split('[', 1)[0]
+                    if src_noidx not in basevars:
+                        bound = (nEdge, nEdge+width)
+                        self.set_bounds(measure_src, bound)
 
                 # Poke our source data
 
@@ -534,10 +535,10 @@ class SequentialWorkflow(Workflow):
 
                 for target in targets:
                     i1, i2 = self.get_bounds(target)
-                    #if isinstance(i1, list):
-                    #    result[i1] = arg[i1]
-                    #else:
-                    result[i1:i2] = arg[i1:i2]
+                    if isinstance(i1, list):
+                        result[i1] = arg[i1]
+                    else:
+                        result[i1:i2] = arg[i1:i2]
 
         #print arg, result
         return result
