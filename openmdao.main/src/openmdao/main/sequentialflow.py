@@ -474,6 +474,9 @@ class SequentialWorkflow(Workflow):
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
 
+            if not comp_inputs or not comp_outputs:
+                continue
+            
             inputs = {}
             outputs = {}
             out_bounds = []
@@ -560,6 +563,9 @@ class SequentialWorkflow(Workflow):
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
+            
+            if not comp_outputs or not comp_inputs:
+                continue
 
             inputs = {}
             outputs = {}
