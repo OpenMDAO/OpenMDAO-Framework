@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 try:
@@ -315,7 +316,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
+    input_keys, output_keys = list_deriv_vars(obj)
     # correct for the one item tuple missing comma problem
     if isinstance(input_keys, basestring):
         input_keys = (input_keys,)
@@ -413,7 +414,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
+    input_keys, output_keys = list_deriv_vars(obj)
     # correct for the one item tuple missing comma problem
     if isinstance(input_keys, basestring):
         input_keys = (input_keys,)

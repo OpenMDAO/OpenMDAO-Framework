@@ -25,6 +25,7 @@ import openmdao.main.pseudocomp as pcompmod
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+from openmdao.util.graph import list_deriv_vars
 
 class Tree2(VariableTree):
 
@@ -93,6 +94,19 @@ class IntComp(Component):
 
     def provideJ(self):
         return array([[2.0]])
+
+class BadListDerivsComp(Component):
+    x = Float(iotype='in')
+    y = Float(iotype='out')
+
+    def execute(self):
+        self.y = self.x * 2.0
+
+    def list_deriv_vars(self):
+        return ['x','y']
+
+    def provideJ(self):
+        return array([[2.0]])        
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -563,6 +577,18 @@ class Testcase_derivatives(unittest.TestCase):
     def setUp(self):
         pcompmod._count = 0 # keep pseudocomp names consistent
 
+    def test_bad_list_deriv_vars(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', BadListDerivsComp())
+        top.driver.workflow.add(['comp1'])
+        top.comp1.x = 1.0
+        top.run()
+        self.assertEqual(top.comp1.y, 2.0)
+        try:
+            J = top.driver.calc_gradient(['comp1.x'], ['comp1.y'])
+        except Exception as err:
+            self.assertEqual(str(err), "comp1: The return value of list_deriv_vars() was not a tuple of the form (invars, outvars). Value returned was ['x', 'y']")
+
     def test_int_ignore(self):
 
         top = set_as_top(Assembly())
@@ -1029,7 +1055,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
         # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys = top.nest.list_deriv_vars()
+        inkeys, outkeys = list_deriv_vars(top.nest)
         J = top.nest.provideJ(inkeys, outkeys)
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
@@ -2118,6 +2144,34 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], 53.0, .000001)
         assert_rel_error(self, J[1, 1], 6.0, .000001)
         assert_rel_error(self, J[2, 1], 9.0, .000001)
+
+    def test_nested_array_full_and_partial_passthrough(self):
+
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ArrayComp2D())
+        top.nest.add('comp2', ArrayComp2D())
+
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+        top.nest.create_passthrough('comp1.x', 'x')
+        top.nest.create_passthrough('comp1.y', 'y1')
+        top.nest.create_passthrough('comp2.y', 'y2')
+        top.nest.connect('x[-1, -1]', 'comp2.x[-1, -1]')
+
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest'])
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='fd')
+        print J
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='forward')
+        print J
 
     def test_large_dataflow(self):
 

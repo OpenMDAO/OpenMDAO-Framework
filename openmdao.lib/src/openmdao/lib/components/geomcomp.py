@@ -4,6 +4,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
 from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Dict, Bool
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 _ttdict = {
@@ -322,7 +323,7 @@ class GeomComponent(Component):
 
     def list_deriv_vars(self):
         if self.parametric_geometry is not None:
-            ins, outs = self.parametric_geometry.list_deriv_vars()
+            ins, outs = list_deriv_vars(self.parametric_geometry)
             if isinstance(ins, basestring):
                 ins = (ins,)
             if isinstance(outs, basestring):
