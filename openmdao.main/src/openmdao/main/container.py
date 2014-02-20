@@ -1634,14 +1634,9 @@ class Container(SafeHasTraits):
             msg = '%s: %s' % (msg, exc_value)
         else:
             msg = '%s' % exc_value
-
-        path = self.get_pathname()
-
-        if path:
-            prefix = '%s: ' % path
-            if not msg.startswith(prefix):
-                msg = prefix + msg
-
+        prefix = '%s: ' % self.get_pathname()
+        if not msg.startswith(prefix):
+            msg = prefix + msg
         new_exc = exc_type(msg)
         raise type(new_exc), new_exc, exc_traceback
 

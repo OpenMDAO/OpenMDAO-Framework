@@ -869,7 +869,7 @@ class ExprEvaluator(object):
                 invalid_variables.append(name)
 
         if invalid_variables:
-            msg = "Couldn't find metadata for the traits: {traits}"
+            msg = "Couldn't find metadata for traits {traits}"
             traits = ', '.join("'{0}'".format(var) for var in invalid_variables)
             msg = msg.format(traits=traits)
 
