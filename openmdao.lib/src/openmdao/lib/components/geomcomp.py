@@ -324,10 +324,6 @@ class GeomComponent(Component):
     def list_deriv_vars(self):
         if self.parametric_geometry is not None:
             ins, outs = list_deriv_vars(self.parametric_geometry)
-            if isinstance(ins, basestring):
-                ins = (ins,)
-            if isinstance(outs, basestring):
-                outs = (outs,)
             if ins or outs and 'geom_out' not in outs:
                 return list(ins), list(outs)+['geom_out']
         else:

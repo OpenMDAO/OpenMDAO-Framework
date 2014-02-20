@@ -473,11 +473,6 @@ class Component(Container):
         """
 
         input_keys, output_keys = list_deriv_vars(self)
-        # correct for the one item tuple missing comma problem
-        if isinstance(input_keys, basestring):
-            input_keys = (input_keys,)
-        if isinstance(output_keys, basestring):
-            output_keys = (output_keys,)
         J = self.provideJ()
 
         if ffd_order == 1:
@@ -546,11 +541,6 @@ class Component(Container):
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
         ffd_inputs, ffd_outputs = list_deriv_vars(self)
-        # correct for the one item tuple missing comma problem
-        if isinstance(ffd_inputs, basestring):
-            ffd_inputs = (ffd_inputs,)
-        if isinstance(ffd_outputs, basestring):
-            ffd_outputs = (ffd_outputs,)
         if savebase and J is not None:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
