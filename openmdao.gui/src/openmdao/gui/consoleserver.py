@@ -374,6 +374,18 @@ class ConsoleServer(cmd.Cmd):
                 self._error(err, sys.exc_info())
         return json.dumps(conns, default=json_default)
 
+    def get_connectivity(self, pathname):
+        ''' Get the connectivity data for For the assembly with the given pathname
+        '''
+        connectivity = {}
+        asm, root = self.get_object(pathname)
+        if asm:
+            try:
+                connectivity = asm.get_connectivity()
+            except Exception as err:
+                self._error(err, sys.exc_info())
+        return json.dumps(connectivity, default=json_default)
+
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
             namespace if no pathname is specified; consists of the list of
