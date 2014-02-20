@@ -954,13 +954,6 @@ class Assembly(Component):
             if len(target1) == 0 and len(target2) == 0:
                 continue
 
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if src != varname:
-                tail = src[len(varname):]
-                target1 = ['%s%s' % (targ, tail) for targ in target1]
-
-            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
