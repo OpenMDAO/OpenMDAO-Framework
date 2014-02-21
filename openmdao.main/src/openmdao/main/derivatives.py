@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.pseudoassembly import from_PA_var
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
@@ -72,6 +73,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
             # TODO - We need to cache these when we remove
             # boundcaching from the graph
+            param = from_PA_var(param)
             val = wflow.scope.get(param)
             j += flattened_size(param, val, wflow.scope)
             continue
@@ -215,6 +217,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
                     # TODO - We need to cache these when we remove
                     # boundcaching from the graph
+                    param = from_PA_var(param)
                     val = wflow.scope.get(param)
                     i += flattened_size(param, val, wflow.scope)
                     continue

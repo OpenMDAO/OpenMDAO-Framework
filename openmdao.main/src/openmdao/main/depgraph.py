@@ -1564,6 +1564,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
         for varname in flatten_list_of_iters(varnames):
             base = graph.base_var(varname)
             relevant.add(base) # keep basevars around
+            #if '.' in base:
+            #    relevant.add(base.split('.',1)[0]) # keep associated comp around
             subvars = graph._all_child_vars(base)
             # does base have any full basevar connections?
             fulls = set(graph.successors(base)) - set(subvars)
@@ -1574,8 +1576,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             graph.add_edge(iname, varname, conn=True) 
 
             if varname in subvars:
-                # it's already there so we're done
-                pass
+                # make sure this subvar is connected to its base in the direction we need
+                graph.add_edge(varname, base)
             elif fulls:
                 # we have a full basevar connection, so we can get a subvar deriv
                 # varname is a subvar, so need to connect to basevar

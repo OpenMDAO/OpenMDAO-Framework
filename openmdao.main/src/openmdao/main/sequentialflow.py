@@ -1044,6 +1044,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     num_in += i2-i1
             except KeyError:
+                item = from_PA_var(item)
                 val = self.scope.get(item)
                 num_in += flattened_size(item, val, self.scope)
 
@@ -1056,6 +1057,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     num_out += i2-i1
             except KeyError:
+                item = from_PA_var(item)
                 val = self.scope.get(item)
                 num_out += flattened_size(item, val, self.scope)
 
