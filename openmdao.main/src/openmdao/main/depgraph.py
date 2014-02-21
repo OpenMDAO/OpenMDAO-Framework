@@ -14,7 +14,7 @@ from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
-from openmdao.util.graph import flatten_list_of_iters
+from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -1291,23 +1291,28 @@ def find_all_connecting(graph, start, end):
     """
     if start == end:
         return set()
+
+    Gsucc = graph.succ
+    Gpred = graph.pred
+
     fwdset = set()
     backset = set()
-    tmpset = set([end])
-    while tmpset:
-        node = tmpset.pop()
+
+    tmplst = [end]
+    while tmplst:
+        node = tmplst.pop()
         if node in backset:
             continue
         backset.add(node)
-        tmpset.update(graph.pred[node].keys())
+        tmplst.extend(Gpred[node].keys())
 
-    tmpset = set([start])
-    while tmpset:
-        node = tmpset.pop()
+    tmplst = [start]
+    while tmplst:
+        node = tmplst.pop()
         if node in fwdset:
             continue
         fwdset.add(node)
-        tmpset.update(graph.succ[node].keys())
+        tmplst.extend(Gsucc[node].keys())
 
     return fwdset.intersection(backset)
 
@@ -1492,7 +1497,7 @@ def _check_for_missing_derivs(scope, comps):
             dins = [k for k, v in comp.items(iotype='in', deriv_ignore=_is_false)] #comp.list_inputs()
             douts = [k for k, v in comp.items(iotype='out', deriv_ignore=_is_false)]#comp.list_outputs()
             comp.provideJ(dins, douts, check_only=True)
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
             # if inputs are vartrees and we have full vt connections inside, add
             # leaf nodes to our list
             for i,din in enumerate(dins[:]):
@@ -1504,12 +1509,7 @@ def _check_for_missing_derivs(scope, comps):
                 if has_interface(obj, IVariableTree):
                     douts.extend([n for n,v in vt_flattener(dout, obj)])
         else:
-            dins, douts = comp.list_deriv_vars()
-            # correct for the one item tuple missing comma problem
-            if isinstance(dins, basestring):
-                dins = (dins,)
-            if isinstance(douts, basestring):
-                douts = (douts,)
+            dins, douts = list_deriv_vars(comp)
             for name in chain(dins, douts):
                 if not comp.contains(name):
                     raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
@@ -1618,24 +1618,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             comps = partition_names_by_comp([u for u,v in conns])
             partition_names_by_comp([v for u,v in conns], compmap=comps)
 
-    #full = set([k for k in comps.keys() if k])
-
-    #if None in comps:
-        #full.update([v.split('[')[0] for v in comps[None]])
-
-    #relevant = set(full)
-    #relevant.update(inames)
-    #relevant.update(onames)
-    #relevant.add('@fake')
-
     graph = graph.subgraph(relevant)
-    #subgraph = graph.full_subgraph(full)
-
-    #print "old - new subgraph:", set(sg.nodes()) - set(subgraph.nodes())
-    #print "new - old subgraph:",set(subgraph.nodes()) -  set(sg.nodes())
-
-    #to_remove = [n for n in graph.nodes_iter() if n not in subgraph]
-    #graph.remove_nodes_from(to_remove)
 
     # if we have destinations connected to subvars of a basevar
     # that's a destination of a parameter, then we have to
@@ -1769,7 +1752,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 if '@fake' not in graph:
                     graph.add_node('@fake')
                 graph.add_node(inp, attr_dict=scope._depgraph.node.get(inp,{}).copy())
-                #relevant.add(inp)
+
                 if len(inp_tuple) > 1:
                     graph.add_edge('@fake', inp)
                 else:
@@ -1785,45 +1768,38 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 graph.add_node('@fake')
             graph.add_node(out, attr_dict=scope._depgraph.node[out].copy())
             graph.add_edge(out, '@fake', conn=True)
-            #relevant.add(out)
-
-    #edges = _get_inner_edges(graph, inames, onames)
-    #for u,v in edges:
-        #relevant.update((u,v, graph.base_var(u), graph.base_var(v)))
-
-    #graph = graph.subgraph(relevant)
 
     return graph
 
 def _explode_vartrees(graph, scope):
     # if full vartrees are connected, create subvar nodes for all of their
     # internal variables
-    visited = set()
     for edge in graph.list_connections():
         src, dest = edge
         srcnames = []
         destnames = []
-        if edge not in visited:
-            visited.add(edge)
-            if '@' not in src and '[' not in src:
 
-                if '~' in src:
-                    obj = scope.get(from_PA_var(src))
-                else:
-                    obj = scope.get(src)
-                if has_interface(obj, IVariableTree):
-                    srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                    srcnames = ['.'.join([src, n]) for n in srcnames]
-            if '@' not in dest and '[' not in dest:
+        if '@' not in src and '[' not in src:
 
-                if '~' in dest:
-                    obj = scope.get(from_PA_var(dest))
-                else:
-                    obj = scope.get(dest)
+            if '~' in src:
+                obj = scope.get(from_PA_var(src))
+            else:
+                obj = scope.get(src)
+            if has_interface(obj, IVariableTree):
+                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                srcnames = ['.'.join([src, n]) for n in srcnames]
 
-                if has_interface(obj, IVariableTree):
-                    destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                    destnames = ['.'.join([dest, n]) for n in destnames]
+        if '@' not in dest and '[' not in dest:
+
+            if '~' in dest:
+                obj = scope.get(from_PA_var(dest))
+            else:
+                obj = scope.get(dest)
+
+            if has_interface(obj, IVariableTree):
+                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+                destnames = ['.'.join([dest, n]) for n in destnames]
+
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
                                             dest, destnames, scope)
@@ -1890,7 +1866,7 @@ def get_missing_derivs(obj, recurse=True):
             # Assemblies need to call into provideJ so that we can determine
             # what derivatives are available.
             comp.provideJ(cins, couts, check_only=True)
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
             # if inputs are vartrees and we have full vt connections inside, add
             # leaf nodes to our list
             for i,din in enumerate(dins[:]):
@@ -1909,13 +1885,8 @@ def get_missing_derivs(obj, recurse=True):
                         _get_missing_derivs(ccomp, missing, finite_diffs, recurse)
 
         else:
-            dins, douts = comp.list_deriv_vars()
+            dins, douts = list_deriv_vars(comp)
 
-            # correct for the one item tuple missing comma problem
-            if isinstance(dins, basestring):
-                dins = (dins,)
-            if isinstance(douts, basestring):
-                douts = (douts,)
             for name in chain(dins, douts):
                 if not comp.contains(name):
                     raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %

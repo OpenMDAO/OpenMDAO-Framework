@@ -34,6 +34,7 @@ from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 from openmdao.util.graph import graph_to_svg
@@ -892,7 +893,7 @@ class Assembly(Component):
                 inputs = sorted(inputs)
             elif has_interface(obj, IComponent):
                 inputs = ['.'.join([obj.name, inp])
-                          for inp in obj.list_deriv_vars()[0]]
+                          for inp in list_deriv_vars(obj)[0]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any inputs for generating gradient.")
@@ -906,7 +907,7 @@ class Assembly(Component):
                 outputs = sorted(outputs)
             elif has_interface(obj, IComponent):
                 outputs = ['.'.join([obj.name, outp])
-                          for outp in obj.list_deriv_vars()[1]]
+                          for outp in list_deriv_vars(obj)[1]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")

@@ -42,8 +42,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-
-from openmdao.main.numpy_fallback import ndarray
+from openmdao.util.graph import list_deriv_vars
 
 import openmdao.util.log as tracing
 
@@ -473,12 +472,7 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        input_keys, output_keys = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(input_keys, basestring):
-            input_keys = (input_keys,)
-        if isinstance(output_keys, basestring):
-            output_keys = (output_keys,)
+        input_keys, output_keys = list_deriv_vars(self)
         J = self.provideJ()
 
         if ffd_order == 1:
@@ -545,12 +539,7 @@ class Component(Container):
 
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
-        ffd_inputs, ffd_outputs = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(ffd_inputs, basestring):
-            ffd_inputs = (ffd_inputs,)
-        if isinstance(ffd_outputs, basestring):
-            ffd_outputs = (ffd_outputs,)
+        ffd_inputs, ffd_outputs = list_deriv_vars(self)
         if savebase and J is not None:
             self._ffd_inputs = {}
             self._ffd_outputs = {}

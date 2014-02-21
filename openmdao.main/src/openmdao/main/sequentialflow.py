@@ -19,10 +19,11 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
 from openmdao.main.depgraph import find_related_pseudos, \
                                     mod_for_derivs, \
-                                    is_subvar_node, is_boundary_node
+                                    is_subvar_node, is_boundary_node, \
+                                    find_all_connecting
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict
+from openmdao.util.graph import edges_to_dict, list_deriv_vars
 
 try:
     from numpy import ndarray, zeros
@@ -533,6 +534,9 @@ class SequentialWorkflow(Workflow):
 
                 for target in targets:
                     i1, i2 = self.get_bounds(target)
+                    #if isinstance(i1, list):
+                    #    result[i1] = arg[i1]
+                    #else:
                     result[i1:i2] = arg[i1:i2]
 
         #print arg, result
@@ -669,7 +673,7 @@ class SequentialWorkflow(Workflow):
 
 
             # If inputs aren't specified, use the parameters
-            parent_deriv_vars = self._parent.parent.list_deriv_vars()
+            parent_deriv_vars = list_deriv_vars(self._parent.parent)
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
                     inputs = self._parent.list_param_group_targets()
@@ -816,10 +820,16 @@ class SequentialWorkflow(Workflow):
             # Groups any connected non-differentiable blocks. Each block is a
             # set of component names.
             sub = cgraph.subgraph(nondiff)
-            nd_graphs = nx.connected_component_subgraphs(sub.to_undirected())
-            for item in nd_graphs:
-                inodes = item.nodes()
-                nondiff_groups.append(inodes)
+            for inodes in nx.connected_components(sub.to_undirected()):
+
+                # Pull in any differentiable islands
+                nodeset = set(inodes)
+                for src in inodes:
+                    for targ in inodes:
+                        if src != targ:
+                            nodeset.update(find_all_connecting(cgraph, src, targ))
+
+                nondiff_groups.append(nodeset)
 
         for j, group in enumerate(nondiff_groups):
             pa_name = '~%d' % j
