@@ -850,14 +850,6 @@ class Assembly(Component):
         driver = self.driver
         obj = None
 
-        base_fd_form = driver.gradient_options.fd_form
-        base_fd_step = driver.gradient_options.fd_step
-        base_fd_step_type = driver.gradient_options.fd_step_type
-
-        driver.gradient_options.fd_form = fd_form
-        driver.gradient_options.fd_step = fd_step
-        driver.gradient_options.fd_step_type = fd_step_type
-
         # tuples cause problems.
         if inputs:
             inputs = list(inputs)
@@ -911,18 +903,29 @@ class Assembly(Component):
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
 
-        if not inputs or not outputs:
+        if not has_interface(obj, IDriver) and (not inputs or not outputs):
             msg = 'Component %s has no analytic derivatives.' % obj.name
             self.raise_exception(msg)
 
-        result = driver.workflow.check_gradient(inputs=inputs,
-                                                outputs=outputs,
-                                                stream=stream,
-                                                mode=mode)
 
-        driver.gradient_options.fd_form = base_fd_form
-        driver.gradient_options.fd_step = base_fd_step
-        driver.gradient_options.fd_step_type = base_fd_step_type
+        base_fd_form = driver.gradient_options.fd_form
+        base_fd_step = driver.gradient_options.fd_step
+        base_fd_step_type = driver.gradient_options.fd_step_type
+
+        driver.gradient_options.fd_form = fd_form
+        driver.gradient_options.fd_step = fd_step
+        driver.gradient_options.fd_step_type = fd_step_type
+
+        try:
+            result = driver.workflow.check_gradient(inputs=inputs,
+                                                    outputs=outputs,
+                                                    stream=stream,
+                                                    mode=mode)
+        finally:
+            driver.gradient_options.fd_form = base_fd_form
+            driver.gradient_options.fd_step = base_fd_step
+            driver.gradient_options.fd_step_type = base_fd_step_type
+
         return result
 
     def provideJ(self, required_inputs, required_outputs, check_only=False):
