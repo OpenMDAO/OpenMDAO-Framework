@@ -35,7 +35,7 @@ def _to_id(name):
     dots with hyphens."""
     return name.replace('.', '-')
 
-def _clean_graph(graph, excludes=(), scope=None, parent=None):
+def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
     """Return a cleaned version of the graph. Note that this
     should not be used for really large graphs because it 
     copies the entire graph.
@@ -54,36 +54,10 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None):
             name += '._depgraph'
         graph.graph['title'] = name
 
-    if not excludes:
-        from openmdao.main.component import Component
-        from openmdao.main.driver import Driver
-        excluded_vars = set()
-
-        if scope:
-            try:
-                cgraph = graph.component_graph()
-            except AttributeError:
-                pass
-            else:
-                for cname in cgraph.nodes():
-                    try:
-                        comp = getattr(scope, cname)
-                    except AttributeError:
-                        pass
-                    else:
-                        if isinstance(comp, Component):
-                            graph.remove_nodes_from(['.'.join([cname,n]) 
-                                    for n,v in comp.items(framework_var=True)])
-
-        else: # just exclude some framework vars from Driver and Component
-            c = Component()
-            d = Driver()
-            excluded_vars = set([n for n,v in 
-                                           c.items(framework_var=True)])
-            excluded_vars.update([n for n,v in 
-                                           d.items(framework_var=True)])
-    else:
+    if excludes:
         excluded_vars = set(excludes)
+    else:
+        excluded_vars = set()
 
     conns = graph.list_connections()
 
@@ -95,7 +69,15 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None):
         cmpname, _, nodvar = node.partition('.')
         if node in excluded_vars or nodvar in excluded_vars:
             nodes_to_remove.append(node)
-        else: # update node metadata
+        elif 'framework_var' in data:
+            nodes_to_remove.append(node)
+        else: 
+            if minimal and '@' not in node and '~' not in node and not 'comp' in data:
+                degree = graph.in_degree(node) + graph.out_degree(node)
+                if degree < 2:
+                    nodes_to_remove.append(node)
+                    continue
+            # update node metadata
             newdata = data
             for meta in _excluded_node_data:
                 if meta in newdata:
@@ -135,7 +117,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None):
     # javascript side
     for node, data in graph.nodes_iter(data=True):
         parts = node.split('.', 1)
-        if len(parts) == 1:
+        if len(parts) == 1 or node.startswith('parent.'):
             data['short'] = node
         else:
             data['short'] = parts[1]
@@ -147,7 +129,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None):
     return graph
 
 def plot_graph(graph, scope=None, parent=None, 
-               excludes=(), d3page='fixedforce.html'):
+               excludes=(), d3page='fixedforce.html', minimal=False):
     """Open up a display of the graph in a browser window."""
 
     tmpdir = tempfile.mkdtemp()
@@ -156,7 +138,7 @@ def plot_graph(graph, scope=None, parent=None,
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
     graph = _clean_graph(graph, excludes=excludes, 
-                         scope=scope, parent=parent)
+                         scope=scope, parent=parent, minimal=minimal)
     data = node_link_data(graph)
     tmp = data.get('graph', [])
     data['graph'] = [dict(tmp)]
@@ -175,13 +157,15 @@ def plot_graph(graph, scope=None, parent=None,
         # open URL in web browser
         wb = webbrowser.get()
         wb.open('file://'+os.path.join(tmpdir, d3page))
+    except Exception as err:
+        print str(err)
     finally:
         os.chdir(startdir)
-        print "\nwaiting to remove temp directory '%s'... " % tmpdir
-        time.sleep(5) # sleep to give browser time
+        print "remember to remove temp directory '%s'" % tmpdir
+        # time.sleep(5) # sleep to give browser time
                        # to read files before we remove them
-        shutil.rmtree(tmpdir)
-        print "temp directory removed"
+        # shutil.rmtree(tmpdir)
+        # print "temp directory removed"
 
 def plot_graphs(obj, recurse=False):
     """Return a list of tuples of the form (scope, parent, graph)"""

@@ -4,9 +4,9 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import cStringIO
 import threading
 import re
+import sys
 
 from zope.interface import implementedBy
 
@@ -15,8 +15,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
-                                     IVariableTree
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -33,9 +32,9 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
-from openmdao.main.case import flatteners
+from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -709,7 +708,8 @@ class Assembly(Component):
 
     def _input_updated(self, name, fullpath=None):
         outs = self.invalidate_deps([name])
-        if outs and self.parent:
+        if self.parent:
+            outs.add(name)
             self.parent.child_invalidated(self.name, outs)
 
     @rbac(('owner', 'user'))
@@ -891,7 +891,7 @@ class Assembly(Component):
                 inputs = sorted(inputs)
             elif has_interface(obj, IComponent):
                 inputs = ['.'.join([obj.name, inp])
-                          for inp in obj.list_deriv_vars()[0]]
+                          for inp in list_deriv_vars(obj)[0]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any inputs for generating gradient.")
@@ -905,7 +905,7 @@ class Assembly(Component):
                 outputs = sorted(outputs)
             elif has_interface(obj, IComponent):
                 outputs = ['.'.join([obj.name, outp])
-                          for outp in obj.list_deriv_vars()[1]]
+                          for outp in list_deriv_vars(obj)[1]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
@@ -951,8 +951,9 @@ class Assembly(Component):
                            if not n.startswith('parent.') and \
                            depgraph.base_var(n) != varname and \
                            n not in target1]
-            if len(target1) == 0 and len(target1) == 0:
+            if len(target1) == 0 and len(target2) == 0:
                 continue
+
             # If subvar, only ask the assembly to calculate the
             # elements we need.
             if src != varname:
@@ -963,7 +964,6 @@ class Assembly(Component):
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            #varname, _, tail = target.partition('[')
             varname = depgraph.base_var(target)
             src = depgraph.predecessors(varname)
             if len(src) == 0:
@@ -1315,34 +1315,42 @@ class Assembly(Component):
         return conns
 
 
-def dump_iteration_tree(obj, full=False):
+def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
 
     If full is True, show pseudocomponents as well.
+    If derivs is True, include derivative input/output information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
+        tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
+            f.write("%s%s\n" % (tab, obj.name))
+            if derivs:
+                try:
+                    dgraph = obj.workflow.derivative_graph()
+                except Exception as err:
+                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                else:
+                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n" %(' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n" %(' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
-                    _dump_iteration_tree(comp, f, tablevel + 3)
+                    _dump_iteration_tree(comp, f, tablevel + tabsize)
+                elif is_instance(comp, PseudoComponent):
+                    f.write("%s%s  (%s)\n" %
+                        (' ' * (tablevel+tabsize), comp.name, comp._orig_expr))
                 else:
-                    f.write(' ' * (tablevel + 3))
-                    f.write(comp.get_pathname())
-                    f.write('\n')
+                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.name))
         elif is_instance(obj, Assembly):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
-            _dump_iteration_tree(obj.driver, f, tablevel + 3)
-    f = cStringIO.StringIO()
+            f.write("%s%s\n" % (tab, obj.name))
+            _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
+
     _dump_iteration_tree(obj, f, 0)
-    return f.getvalue()

@@ -337,7 +337,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(self.asm._depgraph.list_connections(),
                          [])
         self.asm.driver.add_constraint('comp1.c-comp2.a>5.')
-        self.assertEqual(self.asm._pseudo_0._expr_conn, ('5.0-(comp1.c-comp2.a)', 'out0'))
+        self.assertEqual(self.asm._pseudo_0._orig_expr, '5.-(comp1.c-comp2.a)')
         self.assertEqual(set(self.asm._depgraph.list_connections()),
                          set([('comp2.a', '_pseudo_0.in1'), ('comp1.c', '_pseudo_0.in0')]))
         self.assertEqual(set(self.asm._exprmapper.list_connections()),
@@ -352,17 +352,18 @@ class HasConstraintsTestCase(unittest.TestCase):
                          set([('comp1.c', '_pseudo_1.in0')]))
         self.assertEqual(set(self.asm._exprmapper.list_connections()),
                          set([('comp1.c', '_pseudo_1.in0')]))
-        self.assertEqual(self.asm._pseudo_1._expr_conn, ('-comp1.c', 'out0'))
+
+        self.assertEqual(self.asm._pseudo_1._orig_expr, '-(comp1.c)')
 
         self.asm.driver.add_constraint('comp1.c-comp2.a<5.')
-        self.assertEqual(self.asm._pseudo_2._expr_conn, ('comp1.c-comp2.a-5.0', 'out0'))
+        self.assertEqual(self.asm._pseudo_2._orig_expr, 'comp1.c-comp2.a-(5.)')
 
         self.asm.driver.add_constraint('comp1.c < 0.')
-        self.assertEqual(self.asm._pseudo_3._expr_conn, ('comp1.c', 'out0'))
+        self.assertEqual(self.asm._pseudo_3._orig_expr, 'comp1.c')
 
         # unit conversions don't show up in constraints or objectives
         self.asm.driver.add_constraint('comp3.c-comp4.a>5.')
-        self.assertEqual(self.asm._pseudo_4._expr_conn, ('5.0-(comp3.c-comp4.a)', 'out0'))
+        self.assertEqual(self.asm._pseudo_4._orig_expr, '5.-(comp3.c-comp4.a)')
 
         self.asm.driver.clear_constraints()
 

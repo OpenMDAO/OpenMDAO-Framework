@@ -87,7 +87,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     edge_set = set(depgraph.get_directional_interior_edges(strong[-1],
                                                                             strong[0]))
 
-                    self._severed_edges = self._severed_edges.union(edge_set)
+                    self._severed_edges.update(edge_set)
 
         return self._topsort
 
@@ -113,34 +113,30 @@ class CyclicWorkflow(SequentialWorkflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
-
         dgraph = self.derivative_graph()
 
         # We need to map any of our edges if they are in a
         # pseudo-assy
-        comps = dgraph.edge_dict_to_comp_list(self.edge_list())
-        pa_keys = [name for name in comps if '~' in name]
+        pa_keys = set([s.split('.',1)[0] for s in self.edge_list() if '~' in s])
 
         if len(pa_keys) == 0:
             self._mapped_severed_edges = self._severed_edges
         else:
+            palist = [dgraph.node[pa_key]['pa_object'] for pa_key in pa_keys]
             self._mapped_severed_edges = []
             for src, target in self._severed_edges:
 
                 compname, _, varname = src.partition('.')
-                for pa_key in pa_keys:
-                    pseudo = dgraph.node[pa_key]['pa_object']
+                for pseudo in palist:
                     if src in pseudo.outputs:
                         src = to_PA_var(src, pseudo.name)
                         break
 
                 compname, _, varname = target.partition('.')
-                for pa_key in pa_keys:
-                    pseudo = dgraph.node[pa_key]['pa_object']
+                for pseudo in palist:
                     flat_inputs = set()
                     for item in pseudo.inputs:
-                        subset = set(item)
-                        flat_inputs = flat_inputs.union(subset)
+                        flat_inputs.update(item)
 
                     if target in flat_inputs:
                         target = to_PA_var(target, pseudo.name)

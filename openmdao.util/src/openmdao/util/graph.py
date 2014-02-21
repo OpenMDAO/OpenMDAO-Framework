@@ -99,3 +99,28 @@ def flatten_list_of_iters(lst):
             else:
                 ret.extend(entry)
         return ret
+
+def list_deriv_vars(comp):
+    """A wrapper around the call to list_deriv_vars on the given
+    Component that checks the return value to make sure it's a 
+    tuple.
+    """
+    tup = orig_tup = comp.list_deriv_vars()
+    if isinstance(tup, list):
+        tup = tuple(tup)
+
+    if not isinstance(tup, tuple) or len(tup) != 2:
+        raise ValueError(comp.get_pathname()+
+                         ": The return value of list_deriv_vars() was not a tuple "
+                         "of the form (invars, outvars). Value returned was %s" % orig_tup)
+
+    tup0 = tup[0]
+    tup1 = tup[1]
+
+    # catch the one item tuple missing comma problem
+    if isinstance(tup0, basestring):
+        tup0 = (tup0,)
+    if isinstance(tup1, basestring):
+        tup1 = (tup1,)
+
+    return (tup0, tup1)
