@@ -91,9 +91,9 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
                     tt_dct[key] = val
                 elif scope is not None and key == 'pseudo':
                     if val == 'objective':
-                        newdata['objective'] = getattr(scope, node)._orig_src
+                        newdata['objective'] = getattr(scope, node)._orig_expr
                     elif val == 'constraint':
-                        newdata['constraint'] = getattr(scope, node)._orig_src
+                        newdata['constraint'] = getattr(scope, node)._orig_expr
             newdata['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
