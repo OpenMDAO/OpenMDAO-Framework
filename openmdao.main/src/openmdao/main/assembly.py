@@ -931,7 +931,6 @@ class Assembly(Component):
         floats and iterable items containing floats.'''
 
         # Sub-assembly sourced
-        input_keys = []
         output_keys = []
 
         # Parent-assembly sourced
@@ -954,13 +953,6 @@ class Assembly(Component):
             if len(target1) == 0 and len(target2) == 0:
                 continue
 
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if src != varname:
-                tail = src[len(varname):]
-                target1 = ['%s%s' % (targ, tail) for targ in target1]
-
-            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
@@ -984,7 +976,8 @@ class Assembly(Component):
 
         if check_only:
             return None
-        return self.driver.calc_gradient(input_keys, output_keys)
+
+        return self.driver.calc_gradient(self.J_input_keys, output_keys)
 
 
     def list_deriv_vars(self):

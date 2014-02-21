@@ -36,7 +36,10 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+    
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
@@ -129,7 +132,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+    
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
@@ -550,13 +556,14 @@ def get_bounds(obj, input_keys, output_keys, J):
 
     num_output = nvar
 
-    # Give the user an intelligible error if the size of J is wrong.
-    J_output, J_input = J.shape
-    if num_output != J_output or num_input != J_input:
-        msg = 'Jacobian is the wrong size. Expected ' + \
-            '(%dx%d) but got (%dx%d)' % (num_output, num_input,
-                                         J_output, J_input)
-        obj.raise_exception(msg, RuntimeError)
+    if num_input and num_output:
+        # Give the user an intelligible error if the size of J is wrong.
+        J_output, J_input = J.shape
+        if num_output != J_output or num_input != J_input:
+            msg = 'Jacobian is the wrong size. Expected ' + \
+                '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                             J_output, J_input)
+            obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 

@@ -296,13 +296,14 @@ class SequentialWorkflow(Workflow):
                 else:
                     shape = 1
 
+                src_noidx = src.split('[', 1)[0]
+
                 # Special poke for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
-                    bound = (nEdge, nEdge+width)
-                    self.set_bounds(measure_src, bound)
-
-                src_noidx = src.split('[', 1)[0]
+                    if src_noidx not in basevars:
+                        bound = (nEdge, nEdge+width)
+                        self.set_bounds(measure_src, bound)
 
                 # Poke our source data
 
@@ -401,23 +402,39 @@ class SequentialWorkflow(Workflow):
         """ Set a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        dgraph = self._derivative_graph
+        
+        i1, i2 = bounds
+        
+        # Handle index slices
+        if isinstance(i1, str):
+            if ':' in i1:
+                i3 = i2 + 1
+            else:
+                i2 = i2.tolist()
+                i3 = 0
+            bounds = (i2, i3)
+        else:
+            bounds = (i1, i2)
+            
+        self._bounds_cache[node] = bounds
+        
+        #dgraph = self._derivative_graph
 
-        try:
-            meta = dgraph.node[node]
+        #try:
+            #meta = dgraph.node[node]
 
-        except KeyError:
-            base = dgraph.base_var(node)
-            if base not in dgraph:
-                dgraph.add_node(base, var=True)
-            if node != base:
-                dgraph.add_subvar(node)
-            meta = dgraph.node[node]
+        #except KeyError:
+            #base = dgraph.base_var(node)
+            #if base not in dgraph:
+                #dgraph.add_node(base, var=True)
+            #if node != base:
+                #dgraph.add_subvar(node)
+            #meta = dgraph.node[node]
 
-        if 'bounds' not in meta:
-            meta['bounds'] = {}
+        #if 'bounds' not in meta:
+            #meta['bounds'] = {}
 
-        meta['bounds'][self._parent.name] = bounds
+        #meta['bounds'][self._parent.name] = bounds
 
     def _update(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """
@@ -473,6 +490,9 @@ class SequentialWorkflow(Workflow):
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
 
+            if not comp_inputs or not comp_outputs:
+                continue
+            
             inputs = {}
             outputs = {}
             out_bounds = []
@@ -534,10 +554,10 @@ class SequentialWorkflow(Workflow):
 
                 for target in targets:
                     i1, i2 = self.get_bounds(target)
-                    #if isinstance(i1, list):
-                    #    result[i1] = arg[i1]
-                    #else:
-                    result[i1:i2] = arg[i1:i2]
+                    if isinstance(i1, list):
+                        result[i1] = arg[i1]
+                    else:
+                        result[i1:i2] = arg[i1:i2]
 
         #print arg, result
         return result
@@ -559,6 +579,9 @@ class SequentialWorkflow(Workflow):
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
+            
+            if not comp_outputs or not comp_inputs:
+                continue
 
             inputs = {}
             outputs = {}
@@ -947,6 +970,7 @@ class SequentialWorkflow(Workflow):
 
             if self._stop:
                 raise RunStopped('Stop requested')
+        return comps
 
     def calc_gradient(self, inputs=None, outputs=None, upscope=False, mode='auto'):
         """Returns the gradient of the passed outputs with respect to

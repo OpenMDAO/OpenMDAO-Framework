@@ -117,6 +117,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
     # javascript side
     for node, data in graph.nodes_iter(data=True):
         parts = node.split('.', 1)
+        data['full'] = node
         if len(parts) == 1 or node.startswith('parent.'):
             data['short'] = node
         else:
