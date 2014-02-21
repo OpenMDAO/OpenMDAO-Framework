@@ -302,16 +302,16 @@
     };
 
     this.loadValue = function (item) {
-      defaultValue = item[args.column.field];
+      defaultValue = !!item[args.column.field];
       if (defaultValue) {
-        $select.attr("checked", "checked");
+        $select.prop('checked', true);
       } else {
-        $select.removeAttr("checked");
+        $select.prop('checked', false);
       }
     };
 
     this.serializeValue = function () {
-      return $select.attr("checked");
+      return $select.prop('checked');
     };
 
     this.applyValue = function (item, state) {
@@ -319,7 +319,7 @@
     };
 
     this.isValueChanged = function () {
-      return ($select.attr("checked") != defaultValue);
+      return (this.serializeValue() !== defaultValue);
     };
 
     this.validate = function () {
@@ -445,10 +445,10 @@
         scope.cancel();
       } else if (e.which == $.ui.keyCode.TAB && e.shiftKey) {
         e.preventDefault();
-        grid.navigatePrev();
+        args.grid.navigatePrev();
       } else if (e.which == $.ui.keyCode.TAB) {
         e.preventDefault();
-        grid.navigateNext();
+        args.grid.navigateNext();
       }
     };
 

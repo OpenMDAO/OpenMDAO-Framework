@@ -427,6 +427,17 @@ openmdao.Project=function(listeners_ready) {
         return jqXHR.promise();
     };
 
+    /** get connections within an assembly */
+    this.getConnectivity = function(pathname) {
+        // src and dst names are optional
+        // (no src or dst means the src or dst is the assembly itself)
+        var jqXHR = jQuery.ajax({
+                        type: 'GET',
+                        url:  'object/'+pathname+'/connectivity',
+                        dataType: 'json'
+                    });
+        return jqXHR.promise();
+    };
 
     /** create or replace object with pathname with a new object of the specified type */
     this.putObject = function(pathname, typepath, args) {

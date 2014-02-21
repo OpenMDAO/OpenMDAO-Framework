@@ -19,7 +19,11 @@
     <!-- jQuery -->
     <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
-    <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"            ></script>
+
+    <!-- joint.js (has it's own copy of jQuery, so we have to include it first) -->
+    <link rel="stylesheet" href="/static/css/joint.css">
+    <script src="/static/js/joint.js"></script>
+
     <script type="text/javascript" src="/static/js/jquery-ui-1.9.1.min.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery.cookie.js"               ></script>
     <script type="text/javascript" src="/static/js/jquery.hotkeys.js"              ></script>
@@ -38,7 +42,6 @@
     <script type="text/javascript" src="/static/js/mootools.js"                    ></script>
     <script type="text/javascript" src="/static/js/moocanvas.js"                   ></script>
     <script type="text/javascript" src="/static/js/draw2d.js"                      ></script>
-    <script type="text/javascript" src="/static/js/snap.svg.js"                    ></script>
 
     <!-- SlickGrid -->
     <link rel="stylesheet" href="/static/js/slickgrid/slick.grid.css" type="text/css" media="screen" charset="utf-8">
@@ -84,6 +87,7 @@
     <script type="text/javascript" src="/static/js/openmdao/ConsoleFrame.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/ObjectFrame.js"        ></script>
     <script type="text/javascript" src="/static/js/openmdao/ConnectionsFrame.js"   ></script>
+    <script type="text/javascript" src="/static/js/openmdao/ConnectivityFrame.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/PassthroughsFrame.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/PlotFrame.js"          ></script>
 
@@ -113,7 +117,6 @@
     <script type="text/javascript" src="/static/js/openmdao/CustomEditors.js"      ></script>
 
     <script type="text/javascript" src="/static/js/openmdao/LogFrame.js"           ></script>
-
 
     {% block head %}
     {% if 'head_script' in globals() %} <script> {% raw head_script %} </script> {% end %}
