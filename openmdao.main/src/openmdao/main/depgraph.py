@@ -1172,7 +1172,7 @@ class DependencyGraph(nx.DiGraph):
                     numfakes += 1
                 elif not target.startswith('@'):
                     comp, _, var = target.partition('.')
-                    if var:
+                    if var: # TODO: this adds VarTrees as well as comps. Should it?
                         if comp not in comps:
                             comps[comp] = {'inputs': [],
                                            'outputs': [],
@@ -1191,7 +1191,7 @@ class DependencyGraph(nx.DiGraph):
 
             if not src.startswith('@'):
                 comp, _, var = src.partition('.')
-                if var:
+                if var: # TODO: this adds VarTrees as well as comps. Should it?
                     if comp not in comps:
                         comps[comp] = {'inputs': [],
                                        'outputs': [],
@@ -1543,7 +1543,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     onames = []
 
     scope = wflow.scope
-    depgraph = scope._depgraph
 
     # We want our top level graph metadata to be stored in the copy, but not in the
     # parent, so make our own copy of the metadata dict.
@@ -1581,15 +1580,21 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             elif fulls:
                 # we have a full basevar connection, so we can get a subvar deriv
                 # varname is a subvar, so need to connect to basevar
+                tail = varname[len(base):]
                 if '.' in base: # this is a component var
                     if varname != base:
                         graph.add_edge(varname, base)
                     for dest in fulls:
+                        sub = dest+tail
                         if not is_comp_node(graph, dest):
-                            graph.add_edge(iname, dest)
+                            dbase = graph.base_var(dest)
+                            if sub not in graph:
+                                graph.add_node(sub, basevar=dbase, iotype='in', valid=True)
+                                graph.add_edge(sub, dbase)
+                            graph.add_edge(iname, sub)
                 else: # it's a boundary var
                     graph.add_edge(base, varname)
-                    tail = varname[len(base):]
+                    #tail = varname[len(base):]
                     for dest in fulls:
                         sub = dest+tail
                         dbase = graph.base_var(dest)

@@ -221,10 +221,7 @@ class SequentialWorkflow(Workflow):
         number of edges.
         """
         dgraph = self.derivative_graph()
-        if 'mapped_inputs' in dgraph.graph:
-            inputs = dgraph.graph['mapped_inputs']
-        else:
-            inputs = dgraph.graph['inputs']
+        inputs = dgraph.graph['mapped_inputs']
 
         basevars = set()
         edges = self.edge_list()
@@ -962,7 +959,7 @@ class SequentialWorkflow(Workflow):
             J = self._J_cache.get(compname)
             if compname not in self._shape_cache:
                 self._shape_cache[compname] = {}
-            if J is None:
+            if J is None and hasattr(comp, 'calc_derivatives'):
                 J = comp.calc_derivatives(first, second, savebase,
                                           data['inputs'], data['outputs'])
                 if J is not None:
