@@ -20,10 +20,7 @@
     <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
 
-    <!-- joint.js (has it's own copy of jQuery, so we have to include it first) -->
-    <link rel="stylesheet" href="/static/css/joint.css">
-    <script src="/static/js/joint.js"></script>
-
+    <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"            ></script>
     <script type="text/javascript" src="/static/js/jquery-ui-1.9.1.min.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery.cookie.js"               ></script>
     <script type="text/javascript" src="/static/js/jquery.hotkeys.js"              ></script>
@@ -34,10 +31,14 @@
     <script type="text/javascript" src="/static/js/jquery.dataTables.min.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/jquery.extensions.js"  ></script>
 
-    <!--  ben alman's debug script -->
+    <!-- ben alman's debug script -->
     <script type="text/javascript" src="/static/js/ba-debug.min.js"                ></script>
 
-    <!--  draw2d stuff for workflow/dataflow  -->
+    <!-- dagre-d3 for graph layout and rendering -->
+    <script src="http://d3js.org/d3.v3.min.js"                                     ></script>
+    <script src="/static/js/dagre-d3.js"                                           ></script>
+
+    <!-- draw2d stuff for workflow/dataflow  -->
     <script type="text/javascript" src="/static/js/wz_jsgraphics.js"               ></script>
     <script type="text/javascript" src="/static/js/mootools.js"                    ></script>
     <script type="text/javascript" src="/static/js/moocanvas.js"                   ></script>

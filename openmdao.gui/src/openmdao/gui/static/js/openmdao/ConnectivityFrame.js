@@ -31,43 +31,158 @@ openmdao.ConnectivityFrame = function(project, pathname) {
 
     // initialize private variables
     var self = this,
-        figures = {},
-        expand_nodes = {},    // expanded state for expandable nodes (arrays and vartrees)
-        connection_data = {},   // cache of most recently fetched connection data
-        showAllVariables = true;  // show all vars vs only connected vars
+        connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
+        connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
+            .appendTo(self.elm)
+            .attr('unselectable', 'on')
+            .css('user-select', 'none')
+            .on('selectstart', false),
+        connectionsSVG = jQuery('<svg width=1000 height=1000>')
+            .appendTo(connectionsDiv),
+        line, line_start, line_end;
 
     self.elm.css({'position':'relative', 'height':'100%',
                   'overflow':'hidden', 'max-height': 0.8*jQuery(window).height()});
 
     self.pathname = null;
 
-
     /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
-        var graph = new joint.dia.Graph();
+        // Create a new directed graph
+        var g = new dagreD3.Digraph();
 
-        var paper = new joint.dia.Paper({
-            el: jQuery(self.id),
-            width: 600,
-            height: 200,
-            model: graph
+        jQuery.each(data.sources, function(name, source) {
+            g.addNode(name, {
+                label: name,
+                type: source.type,
+                units: source.units,
+                connected: (source.connected && source.connected.length > 0),
+                source: true,
+                target: (source.type == 'expr' ? true : false)
+            });
         });
 
-        var rect = new joint.shapes.basic.Rect({
-            position: { x: 100, y: 30 },
-            size: { width: 100, height: 30 },
-            attrs: { rect: { fill: 'blue' }, text: { text: 'my box', fill: 'white' } }
+        jQuery.each(data.targets, function(name, target) {
+            if (! g.hasNode(name)) {
+                g.addNode(name, {
+                    label: name,
+                    type: target.type,
+                    units: target.units,
+                    connected: (target.connected),
+                    source: (target.type == 'expr' ? true : false),
+                    target: true
+                });
+            }
         });
 
-        var rect2 = rect.clone();
-        rect2.translate(300);
-
-        var link = new joint.dia.Link({
-            source: { id: rect.id },
-            target: { id: rect2.id }
+        jQuery.each(data.sources, function(name, source) {
+            if (source.connected) {
+                for (var i=0; i<source.connected.length; i++) {
+                    g.addEdge(null, name, source.connected[i]);
+                }
+            }
         });
 
-        graph.addCells([rect, rect2, link]);
+        var svg = d3.select(connectionsSVG[0])
+                    .on("mouseup", mouseup);
+
+        function mouseover(d) {
+            var node = d3.select(this);
+            node.attr('fill', 'steelblue');
+            if (line_start) {
+                line_end = node;
+            }
+        }
+
+        function mouseout(d) {
+            var node = d3.select(this);
+            node.attr('fill', 'white');
+            line_end = undefined;
+        }
+
+        function mousedown(d) {
+            var node = d3.select(this);
+            var m = d3.mouse(connectionsSVG[0]);
+            line_start = node;
+            line = svg.append('line')
+                .attr('x1', m[0])
+                .attr('y1', m[1])
+                .attr('x2', m[0])
+                .attr('y2', m[1])
+                .attr('stroke', '#333');
+            svg.on('mousemove', mousemove);
+        }
+
+        function mousemove(d) {
+            var m = d3.mouse(connectionsSVG[0]);
+            line.attr('x2', m[0])
+                .attr('y2', m[1]);
+        }
+
+        function mouseup(d) {
+            var m = d3.mouse(connectionsSVG[0]);
+            svg.on('mousemove', null);
+            svg.select('line').remove();
+            if (line_start && line_end) {
+                connect(line_start, line_end);
+                line_start = undefined;
+                line_end = undefined;
+            }
+            else {
+                line_start = undefined;
+            }
+        }
+
+        var layout = dagreD3.layout()
+                      .nodeSep(20)
+                      .rankDir('LR');
+
+        var renderer = new dagreD3.Renderer();
+
+        var oldDrawNodes = renderer.drawNodes();
+        renderer.drawNodes(function(graph, root) {
+            var svgNodes = oldDrawNodes(graph, root);
+            svgNodes.each(function(u) {
+                var node = d3.select(this);
+                node.classed({
+                    'connected' : graph.node(u).connected,
+                    'source'    : graph.node(u).source,
+                    'target'    : graph.node(u).target
+                });
+            });
+            return svgNodes;
+        });
+
+        layout = renderer.layout(layout).run(g, svg);
+
+        svg.selectAll('.node')
+            .attr('fill', '#fff')
+            .attr('stroke', '#333')
+            .attr('stroke-width', '1px')
+            .on('mouseover', mouseover)
+            .on('mouseout', mouseout)
+            .on('mousedown', mousedown);
+
+        svg.selectAll('.edgePath')
+            .attr('fill', 'none')
+            .attr('stroke', '#333')
+            .attr('stroke-width', '1.5px');
+
+        svg.selectAll('.target .connected')
+            .attr('fill', 'gray');
+
+        svg.attr('width', layout.graph().width + 40)
+           .attr('height', layout.graph().height + 40);
+
+    }
+
+    function connect(source, target) {
+        debug.info('connecting', source, target);
+        var cmd = self.pathname + '.connect("'
+                + source.data()[0] + '","'
+                + target.data()[0] + '")';
+        debug.info('cmd', cmd);
+        project.issueCommand(cmd);
     }
 
     /** handle message containing the assembly connection data (dataflow) */
