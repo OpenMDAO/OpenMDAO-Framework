@@ -53,6 +53,7 @@ class VarTree(Variable):
         their parent here.  This keeps side effects out of validate(). """
         if value.parent is not obj:
             value.parent = obj
+            value.name = name
         value._iotype = self.iotype
 
     def get_attribute(self, name, value, trait, meta):

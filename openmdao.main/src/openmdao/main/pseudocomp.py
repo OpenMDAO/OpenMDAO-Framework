@@ -95,11 +95,6 @@ class PseudoComponent(object):
         self._orig_dest = destexpr.text
         self.Jsize = None
 
-        if destexpr.text:
-            self._outdests = [destexpr.text]
-        else:
-            self._outdests = []
-
         varmap = {}
         rvarmap = {}
         for i,ref in enumerate(srcexpr.refs()):
@@ -133,6 +128,7 @@ class PseudoComponent(object):
             xformed_src = srcexpr.text
 
         out_units = self._meta['out0'].get('units')
+        pq = None
         if out_units is not None:
             # evaluate the src expression using UnitsOnlyPQ objects
 
@@ -163,17 +159,30 @@ class PseudoComponent(object):
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
 
         # this is just the equation string (for debugging)
-        if destexpr and destexpr.text:
-            out = destexpr.text
+        if self._orig_dest:
+            self._outdests = [self._orig_dest]
+            if pq is None:
+                sunit = dunit = ''
+            else:
+                sunit = "'%s'" % pq.get_unit_name()
+                dunit = "'%s'" % out_units
+            self._orig_expr = "%s %s -> %s %s" % (self._orig_src, sunit,
+                                                  self._orig_dest, dunit)
         else:
-            out = 'out0'
-        if translate:
-            src = transform_expression(self._srcexpr.text,
-                                       _invert_dict(self._inmap))
-        else:
-            src = self._srcexpr.text
+            self._outdests = []
+            self._orig_expr = self._orig_src
 
-        self._expr_conn = (src, out)  # the actual expression connection
+        #if destexpr and destexpr.text:
+            #out = destexpr.text
+        #else:
+            #out = 'out0'
+        #if translate:
+            #src = transform_expression(self._srcexpr.text,
+                                       #_invert_dict(self._inmap))
+        #else:
+            #src = self._srcexpr.text
+
+        #self._expr_conn = (src, out)  # the actual expression connection
 
         self.missing_deriv_policy = 'error'
 
@@ -199,7 +208,7 @@ class PseudoComponent(object):
         if is_hidden:
             if self._outdests:
                 if show_expressions:
-                    return [self._expr_conn]
+                    return [(self._orig_src, self._orig_dest)]
                 else:
                     return [(src, self._outdests[0])
                                for src in self._inmap.keys() if src]

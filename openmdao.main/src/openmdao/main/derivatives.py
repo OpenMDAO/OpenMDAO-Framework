@@ -7,6 +7,7 @@ from openmdao.main.array_helpers import flatten_slice, flattened_size, \
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 try:
@@ -36,6 +37,8 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
+
+    dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
 
     # Forward mode, solve linear system for each parameter
@@ -48,15 +51,28 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             # where some of the inputs aren't in the relevance graph.
             # Find the one that is.
             for bcast_param in param:
-                if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                     param = bcast_param
                     break
-                else:
-                    continue
+            else:
+                param = param[0]
+                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                   #(param, wflow._parent.get_pathname()))
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
+            
+            # If you end up here, it is usually because you have a
+            # tuple of broadcast inputs containing only non-relevant
+            # variables. Derivative is zero, so take one and increment
+            # by its width.
+            
+            # TODO - We need to cache these when we remove
+            # boundcaching from the graph
+            val = wflow.scope.get(param)
+            j += flattened_size(param, val, wflow.scope)   
             continue
+
 
         if isinstance(i1, list):
             in_range = i1
@@ -115,6 +131,9 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     # point. (i.e., linearizes)
     wflow.calc_derivatives(first=True)
 
+    dgraph = wflow._derivative_graph
+    options = wflow._parent.gradient_options
+
     # Adjoint mode, solve linear system for each output
     j = 0
     for output in outputs:
@@ -132,7 +151,6 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         else:
             out_range = range(i1, i2)
 
-        options = wflow._parent.gradient_options
         for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
@@ -161,15 +179,27 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 # Find the one that is.
                 if isinstance(param, tuple):
                     for bcast_param in param:
-                        if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                        if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                             param = bcast_param
                             break
-                        else:
-                            continue
+                    else:
+                        param = param[0]
+                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                           #(param, wflow._parent.get_pathname()))
 
                 try:
                     k1, k2 = wflow.get_bounds(param)
                 except KeyError:
+                    
+                    # If you end up here, it is usually because you have a
+                    # tuple of broadcast inputs containing only non-relevant
+                    # variables. Derivative is zero, so take one and increment
+                    # by its width.
+                    
+                    # TODO - We need to cache these when we remove
+                    # boundcaching from the graph
+                    val = wflow.scope.get(param)
+                    i += flattened_size(param, val, wflow.scope)   
                     continue
 
                 if isinstance(k1, list):
@@ -286,12 +316,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the one item tuple missing comma problem
-    if isinstance(input_keys, basestring):
-        input_keys = (input_keys,)
-    if isinstance(output_keys, basestring):
-        output_keys = (output_keys,)
+    input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -333,6 +358,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
             Jsub = reduce_jacobian(J, i1, i2, idx, ish,
                                       o1, o2, odx, osh)
+            #print ikey, okey, Jsub
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
@@ -383,12 +409,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the one item tuple missing comma problem
-    if isinstance(input_keys, basestring):
-        input_keys = (input_keys,)
-    if isinstance(output_keys, basestring):
-        output_keys = (output_keys,)
+    input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -429,6 +450,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
             Jsub = reduce_jacobian(J, o1, o2, odx, osh,
                                       i1, i2, idx, ish).T
+            #print ikey, okey, Jsub
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
@@ -532,8 +554,8 @@ def get_bounds(obj, input_keys, output_keys, J):
     J_output, J_input = J.shape
     if num_output != J_output or num_input != J_input:
         msg = 'Jacobian is the wrong size. Expected ' + \
-               '(%dx%d) but got (%dx%d)' % (num_output, num_input,
-                                            J_output, J_input)
+            '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                         J_output, J_input)
         obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds

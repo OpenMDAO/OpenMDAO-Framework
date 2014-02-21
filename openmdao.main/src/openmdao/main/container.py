@@ -164,6 +164,7 @@ class SafeHasTraits(HasTraits):
 def _check_bad_default(name, trait, obj=None):
     if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
            not trait.assumed_default and trait._illegal_default_ is True:
+
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
             raise RuntimeError(msg)
@@ -178,6 +179,8 @@ class Container(SafeHasTraits):
     implements(IContainer)
 
     def __init__(self):
+        self._parent = None  # Define these now for easier debugging during
+        self._name = None    # deepcopy operations of superclass.
         super(Container, self).__init__()
 
         self._call_cpath_updated = True
@@ -192,8 +195,6 @@ class Container(SafeHasTraits):
         # keep track of ExprEvaluators to save some overhead
         self._exprcache = {}
 
-        self._parent = None
-        self._name = None
         self._cached_traits_ = None
         self._repair_trait_info = None
 
@@ -231,7 +232,7 @@ class Container(SafeHasTraits):
         """This is called when the parent attribute is changed."""
         if self._parent is not value:
             self._parent = value
-            self._logger.rename(self.get_pathname().replace('.', ','))
+            self._fix_loggers(self, recurse=True)
             self._branch_moved()
 
     def _branch_moved(self):
@@ -246,6 +247,7 @@ class Container(SafeHasTraits):
         if self._name is None:
             if self.parent:
                 self._name = find_name(self.parent, self)
+                self._fix_loggers(self, recurse=True)
             elif self._call_cpath_updated is False:
                 self._name = ''
             else:
@@ -257,8 +259,17 @@ class Container(SafeHasTraits):
         """Sets the name of this Container."""
         if not is_legal_name(name):
             raise NameError("name '%s' contains illegal characters" % name)
-        self._name = name
-        self._logger.rename(self._name)
+        if self._name != name:
+            self._name = name
+            self._fix_loggers(self, recurse=True)
+
+    def _fix_loggers(self, container, recurse):
+        """Fix loggers starting from `container`."""
+        container._logger.rename(container.get_pathname().replace('.', ','))
+        if recurse:
+            for name in container.list_containers():
+                obj = getattr(container, name)
+                self._fix_loggers(obj, recurse)
 
     @rbac(('owner', 'user'))
     def get_pathname(self, rel_to_scope=None):
@@ -450,7 +461,8 @@ class Container(SafeHasTraits):
                 else:
                     result.add_trait(name, _clone_trait(trait))
                 if name in self.__dict__:  # Not true with VarTree
-                    result.__dict__[name] = self.__dict__[name]
+                    result.__dict__[name] = copy.deepcopy(self.__dict__[name])
+
         return result
 
     def __getstate__(self):
@@ -546,8 +558,7 @@ class Container(SafeHasTraits):
         This retries failed operations recorded in __setstate__().
         """
         if self._repair_trait_info is None:
-            self._logger.warning('Potentially invalid load: _repair_trait_info'
-                                 ' is None. Was __setstate__ overridden?')
+            # We've already repaired this object.
             return
 
         for name, trait in self._repair_trait_info['property']:
@@ -845,7 +856,7 @@ class Container(SafeHasTraits):
 
         This version calls cpath_updated() on all of its child Containers.
         """
-        self._logger.rename(self.get_pathname().replace('.', ','))
+        self._fix_loggers(self, recurse=False)
         self._call_cpath_updated = False
         for cont in self.list_containers():
             cont = getattr(self, cont)
@@ -1036,7 +1047,8 @@ class Container(SafeHasTraits):
                 else:
                     self._get_metadata_failed(traitpath, metaname)
 
-        t = self.get_trait(traitpath)
+        varname, _, _ = traitpath.partition('[')
+        t = self.get_trait(varname)
         if not t:
             return self._get_metadata_failed(traitpath, metaname)
         t = t.trait_type
@@ -1106,7 +1118,7 @@ class Container(SafeHasTraits):
             return obj.get(restofpath, index)
 
         if index is None:
-            if ('[' in path or '(' in path):
+            if '[' in path or '(' in path:
                 # caller has put indexing in the string instead of
                 # using the indexing protocol
                 expr = self._exprcache.get(path)
@@ -1282,17 +1294,21 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
-        if self._depgraph.pred.get(name):
-            # bypass the callback here and set it back to the old value
-            self._trait_change_notify(False)
-            try:
-                setattr(self, name, old)
-            finally:
-                self._trait_change_notify(True)
-            self.raise_exception(
-                "'%s' is already connected to source '%s' and "
-                "cannot be directly set" %
-                (name, self._depgraph.get_sources(name)[0]), RuntimeError)
+        preds = self._depgraph.pred.get(name)
+        if preds:
+            namedot = name+'.'
+            preds = [n for n in preds if not n.startswith(namedot)]
+            if preds:
+                # bypass the callback here and set it back to the old value
+                self._trait_change_notify(False)
+                try:
+                    setattr(self, name, old)
+                finally:
+                    self._trait_change_notify(True)
+                self.raise_exception(
+                    "'%s' is already connected to source '%s' and "
+                    "cannot be directly set" %
+                    (name, preds[0]), RuntimeError)
 
     def _input_nocheck(self, name, old):
         """This method is substituted for `_input_check` to avoid source
@@ -1547,8 +1563,8 @@ class Container(SafeHasTraits):
                         t_iotype = getattr(obj, 'iotype', None)
                     else:  # Variable
                         t_iotype = self.get_iotype(cname)
-                    if (iotype == 'in' and t_iotype not in ('in','state')) or \
-                       (iotype=='out' and t_iotype not in ('out','in','state','residual')):
+                    if (iotype == 'in' and t_iotype not in ('in', 'state')) or \
+                       (iotype == 'out' and t_iotype not in ('out', 'in', 'state', 'residual')):
                         self.raise_exception('%s must be an %s variable' %
                                              (pathname, _iodict[iotype]),
                                              RuntimeError)
