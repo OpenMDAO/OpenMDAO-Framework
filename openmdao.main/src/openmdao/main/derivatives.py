@@ -37,7 +37,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     comps = wflow.calc_derivatives(first=True)
-    
+
     if not comps:
         return J
 
@@ -64,16 +64,16 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         try:
             i1, i2 = wflow.get_bounds(param)
         except KeyError:
-            
+
             # If you end up here, it is usually because you have a
             # tuple of broadcast inputs containing only non-relevant
             # variables. Derivative is zero, so take one and increment
             # by its width.
-            
+
             # TODO - We need to cache these when we remove
             # boundcaching from the graph
             val = wflow.scope.get(param)
-            j += flattened_size(param, val, wflow.scope)   
+            j += flattened_size(param, val, wflow.scope)
             continue
 
 
@@ -105,6 +105,11 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                 try:
                     k1, k2 = wflow.get_bounds(item)
                 except KeyError:
+
+                    # TODO - We need to cache these when we remove
+                    # boundcaching from the graph
+                    val = wflow.scope.get(item)
+                    i += flattened_size(item, val, wflow.scope)
                     continue
 
                 if isinstance(k1, list):
@@ -133,7 +138,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
     comps = wflow.calc_derivatives(first=True)
-    
+
     if not comps:
         return J
 
@@ -150,7 +155,13 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         try:
             i1, i2 = wflow.get_bounds(output)
         except KeyError:
+
+            # TODO - We need to cache these when we remove
+            # boundcaching from the graph
+            val = wflow.scope.get(output)
+            j += flattened_size(output, val, wflow.scope)
             continue
+
 
         if isinstance(i1, list):
             out_range = i1
@@ -196,16 +207,16 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 try:
                     k1, k2 = wflow.get_bounds(param)
                 except KeyError:
-                    
+
                     # If you end up here, it is usually because you have a
                     # tuple of broadcast inputs containing only non-relevant
                     # variables. Derivative is zero, so take one and increment
                     # by its width.
-                    
+
                     # TODO - We need to cache these when we remove
                     # boundcaching from the graph
                     val = wflow.scope.get(param)
-                    i += flattened_size(param, val, wflow.scope)   
+                    i += flattened_size(param, val, wflow.scope)
                     continue
 
                 if isinstance(k1, list):

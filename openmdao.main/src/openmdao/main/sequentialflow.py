@@ -402,9 +402,9 @@ class SequentialWorkflow(Workflow):
         """ Set a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        
+
         i1, i2 = bounds
-        
+
         # Handle index slices
         if isinstance(i1, str):
             if ':' in i1:
@@ -415,9 +415,9 @@ class SequentialWorkflow(Workflow):
             bounds = (i2, i3)
         else:
             bounds = (i1, i2)
-            
+
         self._bounds_cache[node] = bounds
-        
+
         #dgraph = self._derivative_graph
 
         #try:
@@ -492,7 +492,7 @@ class SequentialWorkflow(Workflow):
 
             if not comp_inputs or not comp_outputs:
                 continue
-            
+
             inputs = {}
             outputs = {}
             out_bounds = []
@@ -579,7 +579,7 @@ class SequentialWorkflow(Workflow):
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
-            
+
             if not comp_outputs or not comp_inputs:
                 continue
 

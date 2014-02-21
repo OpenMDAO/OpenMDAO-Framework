@@ -106,7 +106,7 @@ class BadListDerivsComp(Component):
         return ['x','y']
 
     def provideJ(self):
-        return array([[2.0]])        
+        return array([[2.0]])
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -1139,6 +1139,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.junk', 'nest.f_xy', ],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
                                               outputs=['nest.f_xy', ],
                                               mode='adjoint')
 
@@ -2161,7 +2171,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['nest'])
         top.run()
-        
+
         Jbase = top.nest.comp1.provideJ()
 
         J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
