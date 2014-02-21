@@ -36,7 +36,10 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+    
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
@@ -129,7 +132,10 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+    
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options

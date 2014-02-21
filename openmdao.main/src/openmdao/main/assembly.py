@@ -931,7 +931,6 @@ class Assembly(Component):
         floats and iterable items containing floats.'''
 
         # Sub-assembly sourced
-        input_keys = []
         output_keys = []
 
         # Parent-assembly sourced
@@ -977,6 +976,7 @@ class Assembly(Component):
 
         if check_only:
             return None
+
         return self.driver.calc_gradient(self.J_input_keys, output_keys)
 
 
