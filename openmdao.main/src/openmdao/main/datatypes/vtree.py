@@ -56,12 +56,6 @@ class VarTree(Variable):
             value.name = name
         value._iotype = self.iotype
 
-    def _fix_loggers(self, parent):
-        for name in parent.list_containers():
-            obj = getattr(parent, name)
-            obj.name = name
-            self._fix_loggers(obj)
-
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. Slots also return an
