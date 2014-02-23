@@ -18,6 +18,8 @@ class Enum(Variable):
     def __init__(self, default_value=None, values=(), iotype=None, 
                         aliases=(), desc=None, **metadata):
 
+        assumed_default = False
+
         # Allow some variant constructors (no default, no index)
         if not values:
             if default_value is None:
@@ -29,6 +31,7 @@ class Enum(Variable):
         else:
             if default_value is None:
                 default_value = values[0]
+                assumed_default = True
 
         # We need tuples or a list for the index
         if not isinstance(values, (tuple, list)):
@@ -71,7 +74,7 @@ class Enum(Variable):
         if aliases:
             metadata['aliases'] = aliases
 
-        super(Enum, self).__init__(default_value=default_value,
+        super(Enum, self).__init__(default_value=default_value, assumed_default=assumed_default,
                                          **metadata)
 
     def get_attribute(self, name, value, trait, meta):
