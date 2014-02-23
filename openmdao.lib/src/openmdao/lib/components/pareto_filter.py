@@ -61,8 +61,6 @@ class ParetoFilterBase(Component):
         for point1, case in zip(y_list, iter(case_set)):
             dominated = False
             for point2 in y_temp:
-                print "pp", point1, point2
-                exit()
                 if self._is_dominated(point1, point2):
                     self.dominated_set.record(case)
                     y_temp.remove(point1)
