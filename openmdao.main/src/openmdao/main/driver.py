@@ -39,9 +39,11 @@ class GradientOptions(VariableTree):
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
                    desc='Finite difference mode (forward, backward, central',
                    framework_var=True)
-    fd_step = Float(1.0e-6, desc='Deafault finite difference stepsize', framework_var=True)
-    fd_step_type = Enum('absolute', ['absolute', 'relative'],
-                        desc='Set to absolute or relative stepsizes',
+    fd_step = Float(1.0e-6, desc='Default finite difference stepsize', framework_var=True)
+    fd_step_type = Enum('absolute',
+                        ['absolute', 'relative', 'bounds_scaled'],
+                        desc='Set to absolute, relative, '
+                        'or scaled to the bounds ( high-low) step sizes',
                         framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference " +
