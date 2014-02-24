@@ -168,18 +168,26 @@ def plot_graph(graph, scope=None, parent=None,
         # shutil.rmtree(tmpdir)
         # print "temp directory removed"
 
-def plot_graphs(obj, recurse=False):
+def plot_graphs(obj, recurse=False, d3page='fixedforce.html', minimal=False):
     """Return a list of tuples of the form (scope, parent, graph)"""
     from openmdao.main.assembly import Assembly
     from openmdao.main.driver import Driver
 
     if isinstance(obj, Assembly):
-        plot_graph(obj._depgraph, scope=obj, parent=obj)
+        try:
+            plot_graph(obj._depgraph, scope=obj, parent=obj,
+                        d3page=d3page, minimal=minimal)
+        except Exception as err:
+            print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         if recurse:
             plot_graphs(obj.driver, recurse)
     elif isinstance(obj, Driver):
-        plot_graph(obj.workflow.derivative_graph(), 
-                   scope=obj.parent, parent=obj)
+        try:
+            plot_graph(obj.workflow.derivative_graph(), 
+                        scope=obj.parent, parent=obj,
+                        d3page=d3page, minimal=minimal)
+        except Exception as err:
+            print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
         if recurse:
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
