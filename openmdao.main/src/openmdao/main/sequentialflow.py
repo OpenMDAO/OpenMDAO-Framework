@@ -375,25 +375,26 @@ class SequentialWorkflow(Workflow):
         """ Return a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        bounds = self._bounds_cache.get(node)
-        if bounds is None:
-            dgraph = self._derivative_graph
-            i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
+        return self._bounds_cache[node]
+        # bounds = self._bounds_cache.get(node)
+        # if bounds is None:
+        #     dgraph = self._derivative_graph
+        #     i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
 
-            # Handle index slices
-            if isinstance(i1, str):
-                if ':' in i1:
-                    i3 = i2 + 1
-                else:
-                    i2 = i2.tolist()
-                    i3 = 0
-                bounds = (i2, i3)
-            else:
-                bounds = (i1, i2)
+        #     # Handle index slices
+        #     if isinstance(i1, str):
+        #         if ':' in i1:
+        #             i3 = i2 + 1
+        #         else:
+        #             i2 = i2.tolist()
+        #             i3 = 0
+        #         bounds = (i2, i3)
+        #     else:
+        #         bounds = (i1, i2)
 
-            self._bounds_cache[node] = bounds
+        #     self._bounds_cache[node] = bounds
 
-        return bounds
+        # return bounds
 
     def set_bounds(self, node, bounds):
         """ Set a tuple containing the start and end indices into the
@@ -414,24 +415,6 @@ class SequentialWorkflow(Workflow):
             bounds = (i1, i2)
 
         self._bounds_cache[node] = bounds
-
-        #dgraph = self._derivative_graph
-
-        #try:
-            #meta = dgraph.node[node]
-
-        #except KeyError:
-            #base = dgraph.base_var(node)
-            #if base not in dgraph:
-                #dgraph.add_node(base, var=True)
-            #if node != base:
-                #dgraph.add_subvar(node)
-            #meta = dgraph.node[node]
-
-        #if 'bounds' not in meta:
-            #meta['bounds'] = {}
-
-        #meta['bounds'][self._parent.name] = bounds
 
     def _update(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """

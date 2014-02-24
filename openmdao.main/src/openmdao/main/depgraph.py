@@ -1563,8 +1563,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
         for varname in flatten_list_of_iters(varnames):
             base = graph.base_var(varname)
             relevant.add(base) # keep basevars around
-            #if '.' in base:
-            #    relevant.add(base.split('.',1)[0]) # keep associated comp around
             subvars = graph._all_child_vars(base)
             # does base have any full basevar connections?
             fulls = set(graph.successors(base)) - set(subvars)
@@ -1594,7 +1592,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                             graph.add_edge(iname, sub)
                 else: # it's a boundary var
                     graph.add_edge(base, varname)
-                    #tail = varname[len(base):]
                     for dest in fulls:
                         sub = dest+tail
                         dbase = graph.base_var(dest)
@@ -1602,8 +1599,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                             graph.add_node(sub, basevar=dbase, iotype='in', valid=True)
                             graph.add_edge(sub, dbase)
                         graph.add_edge(varname, sub, conn=True)
-            # graph.connect(None, iname, varname,
-            #               check=False, invalidate=False)
+
             indct[varname] = iname
 
     # add nodes for desired outputs
@@ -1769,40 +1765,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
-
-    # disconnected boundary vars that are explicitly specified as inputs
-    # or outputs need to be added back so that bounds data can be kept
-    # for them
-
-    # for inp_tuple in inputs:
-    #     if isinstance(inp_tuple, basestring):
-    #         inp_tuple = (inp_tuple,)
-
-    #     for inp in inp_tuple:
-    #         for drv in rep_drivers:
-    #             if to_PA_var(inp, '~%s' % drv) in graph:
-    #                 inp = to_PA_var(inp, '~%s' % drv)
-    #                 break
-    #         if inp not in graph:
-    #             if '@fake' not in graph:
-    #                 graph.add_node('@fake')
-    #             graph.add_node(inp, attr_dict=depgraph.node.get(inp,{}).copy())
-
-    #             if len(inp_tuple) > 1:
-    #                 graph.add_edge('@fake', inp)
-    #             else:
-    #                 graph.add_edge('@fake', inp, conn=True)
-
-    # for out in flatten_list_of_iters(outputs):
-    #     for drv in rep_drivers:
-    #         if to_PA_var(out, '~%s' % drv) in graph:
-    #             out = to_PA_var(out, '~%s' % drv)
-    #             break
-    #     if out not in graph:
-    #         if '@fake' not in graph:
-    #             graph.add_node('@fake')
-    #         graph.add_node(out, attr_dict=depgraph.node.get(out,{}).copy())
-    #         graph.add_edge(out, '@fake', conn=True)
 
     return graph
 
