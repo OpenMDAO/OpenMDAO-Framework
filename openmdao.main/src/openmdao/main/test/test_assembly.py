@@ -481,7 +481,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units', 'comp2.s')
         except Exception, err:
             self.assertEqual(str(err),
-                    ": Can't connect 'comp1.rout.units' to 'comp2.s': comp1: Couldn't find metadata for trait rout.units")
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': Couldn't find metadata for traits 'comp1.rout.units'")
         else:
             self.fail('Exception expected')
 

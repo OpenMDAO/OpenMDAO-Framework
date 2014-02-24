@@ -490,6 +490,44 @@ class ExprEvaluator(object):
             else:
                 self._scope = None
 
+    @classmethod
+    def _invalid_expression_error(cls, unresolved_vars, expr=None, msg=None):
+        """
+        Creates and returns an invalid expression error that can be raised.
+        Also adds the unresolved variables as an attribute to the error.
+        This is so the message can be more specifically tailored by catching
+        the error, creating your own message, and passing the necessary
+        arguments to generate a new error.
+
+        An example of this can be seen in Constraint.__init__.
+
+        unresolved_vars: list of unresolved variables
+        expr: Expression string
+        msg: Message with {0} and {1} placeholders to be formatted.
+             {0} will be replaced by expr and {1} will be replaced
+             by the unresolved variables
+
+        """
+        if not msg:
+            msg = "Expression '{0}' has invalid variables {1}"
+
+        if not expr:
+            expr = cls.text
+
+        #do some formatting for the error message
+        #wrap the variables in single quotes
+        formatted_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+        #if there is more than one variable,
+        #seperate the variables with commas
+        if len(formatted_vars) == 1:
+            formatted_vars = ''.join(formatted_vars)
+        else:
+            formatted_vars = ', '.join(formatted_vars)
+
+        #throw the error
+        return ValueError(msg.format(expr, formatted_vars))
+
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
         be on the left-hand side of an assignment.  No check is
@@ -802,8 +840,25 @@ class ExprEvaluator(object):
         corresponding to each variable referenced by this expression.
         """
         scope = self._get_updated_scope(scope)
-        return [(name, scope.get_metadata(name, metaname))
-                  for name in self.get_referenced_varpaths(copy=False)]
+
+        invalid_variables = []
+        metadata = []
+
+        for name in self.get_referenced_varpaths(copy=False):
+            try:
+                metadata.append((name, scope.get_metadata(name, metaname)))
+            except AttributeError as error:
+                invalid_variables.append(name)
+
+        if invalid_variables:
+            msg = "Couldn't find metadata for traits {traits}"
+            traits = ', '.join("'{0}'".format(var) for var in invalid_variables)
+            msg = msg.format(traits=traits)
+
+            raise AttributeError(msg)
+
+        return metadata
+
 
     def get_referenced_varpaths(self, copy=True):
         """Return a set of pathnames relative to *scope.parent* and based on
