@@ -1,21 +1,16 @@
 /**
  *  ConnectivityFrame: a frame for viewing/editing connections in an assembly
  *
- *  Source and destination components are selected via input boxes at the top
- *  of the frame. Source (output) and destination (input) variables are
- *  rendered as SVG figures with curves between them representing connections.
- *  Source and destination variables can be selected via input boxes at the
- *  bottom of the frame and connected by clicking on the 'connect' button.
- *  Alternatively, dragging from one variable figure to another will connect
- *  them if they are eligible to be connected. Input variables can be
- *  disconnected by right clicking on them and choosing 'Disconnect' from the
- *  context menu.
+ *  (Experimental version using dagre-d3.js)
+ *
+ *  Source (output) and destination (input) variables are rendered as SVG
+ *  figures with curves between them representing connections. Dragging from
+ *  one variable figure to another will connect them if they are eligible to
+ *  be connected.
  *
  *  Arguments:
  *      project:  object that provides access to the openmdao project
  *      pathname: the pathname of the assembly
- *      src_comp: (optional) the source component to select initially
- *      dst_comp: (optional) the destination component to select initially
  **/
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
@@ -31,56 +26,48 @@ openmdao.ConnectivityFrame = function(project, pathname) {
 
     // initialize private variables
     var self = this,
-        connectionsCSS = 'background:grey; position:relative; top:0px; width:100%; overflow-x:hidden; overflow-y:auto;',
+        connectionsCSS = 'background:grey; position:relative; top:0px; width:100%;',
         connectionsDiv = jQuery('<div id="'+id+'-connections" style="'+connectionsCSS+'">')
-            .appendTo(self.elm)
-            .attr('unselectable', 'on')
-            .css('user-select', 'none')
-            .on('selectstart', false),
-        connectionsSVG = jQuery('<svg width=1000 height=1000>')
+            .appendTo(self.elm),
+        connectionsSVG = jQuery('<svg width=1024 height=720>')
             .appendTo(connectionsDiv),
         line, line_start, line_end;
 
     self.elm.css({'position':'relative', 'height':'100%',
-                  'overflow':'hidden', 'max-height': 0.8*jQuery(window).height()});
+                  'overflow':'auto', 'max-height': 0.8*jQuery(window).height()});
 
     self.pathname = null;
+
+    // prevent selection
+    connectionsSVG.attr('unselectable', 'on')
+                  .css('user-select', 'none')
+                  .on('selectstart', false);
 
     /** populate connections and variable selectors with source and dest variables */
     function loadConnectionData(data) {
         // Create a new directed graph
         var g = new dagreD3.Digraph();
 
-        jQuery.each(data.sources, function(name, source) {
+        var connected = [];
+        jQuery.each(data.edges, function(idx, connection) {
+            connected.push(connection[0]);
+            connected.push(connection[1]);
+        });
+
+        jQuery.each(data.nodes, function(name, attr) {
             g.addNode(name, {
-                label: name,
-                type: source.type,
-                units: source.units,
-                connected: (source.connected && source.connected.length > 0),
-                source: true,
-                target: (source.type == 'expr' ? true : false)
+                'label': name,
+                'type': attr.type,
+                'units': attr.units,
+                'input': attr.input,
+                'output': attr.output,
+                'expr': (attr.type === 'expr'),
+                'connected': jQuery.inArray(name, connected) >= 0
             });
         });
 
-        jQuery.each(data.targets, function(name, target) {
-            if (! g.hasNode(name)) {
-                g.addNode(name, {
-                    label: name,
-                    type: target.type,
-                    units: target.units,
-                    connected: (target.connected),
-                    source: (target.type == 'expr' ? true : false),
-                    target: true
-                });
-            }
-        });
-
-        jQuery.each(data.sources, function(name, source) {
-            if (source.connected) {
-                for (var i=0; i<source.connected.length; i++) {
-                    g.addEdge(null, name, source.connected[i]);
-                }
-            }
+        jQuery.each(data.edges, function(idx, connection) {
+            g.addEdge(null, connection[0], connection[1]);
         });
 
         var svg = d3.select(connectionsSVG[0])
@@ -133,10 +120,6 @@ openmdao.ConnectivityFrame = function(project, pathname) {
             }
         }
 
-        var layout = dagreD3.layout()
-                      .nodeSep(20)
-                      .rankDir('LR');
-
         var renderer = new dagreD3.Renderer();
 
         var oldDrawNodes = renderer.drawNodes();
@@ -145,13 +128,18 @@ openmdao.ConnectivityFrame = function(project, pathname) {
             svgNodes.each(function(u) {
                 var node = d3.select(this);
                 node.classed({
-                    'connected' : graph.node(u).connected,
-                    'source'    : graph.node(u).source,
-                    'target'    : graph.node(u).target
+                    'input'    : graph.node(u).input,
+                    'output'   : graph.node(u).output,
+                    'expr'     : graph.node(u).expr,
+                    'connected': graph.node(u).connected
                 });
             });
             return svgNodes;
         });
+
+        var layout = dagreD3.layout()
+                      .nodeSep(20)
+                      .rankDir('LR');
 
         layout = renderer.layout(layout).run(g, svg);
 
@@ -168,12 +156,13 @@ openmdao.ConnectivityFrame = function(project, pathname) {
             .attr('stroke', '#333')
             .attr('stroke-width', '1.5px');
 
-        svg.selectAll('.target .connected')
-            .attr('fill', 'gray');
+        svg.selectAll('.output').style('stroke', 'blue');
+        svg.selectAll('.input').style('stroke', 'green');
+        svg.selectAll('.input.connected').style('stroke', 'red');
+        svg.selectAll('.expr').style('fill', 'gray');
 
         svg.attr('width', layout.graph().width + 40)
            .attr('height', layout.graph().height + 40);
-
     }
 
     function connect(source, target) {

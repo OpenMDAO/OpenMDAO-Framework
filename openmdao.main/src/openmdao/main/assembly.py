@@ -1360,59 +1360,18 @@ class Assembly(Component):
         return conns
 
     def get_connectivity(self):
-        ''' Get a list of all the available sources and targets that can be
-            connected in this assembly, and their current connection status.
+        ''' Get a list of all the inputs and outputs that can be
+            connected in this assembly, and the connections between them.
             This includes expressions represented by PseudoComponents.
         '''
 
-        # create nested dictionary of connectivity data
+        # connectivity data
         connectivity = {
-            'sources': {},
-            'targets': {}
+            'nodes': {},
+            'edges': []
         }
 
-        # create a table of sources and targets, including expressions
-        # if source or target is an expression, add it to connectivity data
-        sources = []
-        targets = []
-        for (source, target) in self.list_connections():
-            if source.startswith('_pseudo_'):
-                pname = source.split('.', 1)[0]
-                pcomp = getattr(self, pname)
-                if pcomp._pseudo_type == 'multi_var_expr':
-                    if pcomp._orig_src not in sources:
-                        sources.append(pcomp._orig_src)
-                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
-                        if not units:
-                            units = ''
-                        connected = [tgt for (src, tgt) in pcomp.list_connections()
-                                            if not tgt.startswith(pname)]
-                        connectivity['sources'][pcomp._orig_src] = {
-                            'type': 'expr',
-                            'units': units,
-                            'connected': connected
-                        }
-            else:
-                sources.append(source)
-            if target.startswith('_pseudo_'):
-                pname = target.split('.', 1)[0]
-                pcomp = getattr(self, pname)
-                if pcomp._pseudo_type == 'multi_var_expr':
-                    if pcomp._orig_src not in targets:
-                        targets.append(pcomp._orig_src)
-                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
-                        if not units:
-                            units = ''
-                        connected = [src for (src, tgt) in pcomp.list_connections()
-                                            if not src.startswith(pname)]
-                        connectivity['targets'][pcomp._orig_src] = {
-                            'type': 'expr',
-                            'units': units,
-                            'connected': connected[0]  # a target can only have one source
-                        }
-            else:
-                targets.append(target)
-
+        # populate input and output nodes
         for cname in self.list_containers():
             cont = self.get(cname)
             if isinstance(cont, Component):
@@ -1426,15 +1385,11 @@ class Assembly(Component):
                             units = meta['units']
                         else:
                             units = ''
-                        if full_name in sources:
-                            connected = [targets[i]
-                                for i, x in enumerate(sources) if x == full_name]
-                        else:
-                            connected = None
-                        connectivity['sources'][full_name] = {
+                        connectivity['nodes'][full_name] = {
                             'type': vtype,
                             'units': units,
-                            'connected': connected
+                            'input': False,
+                            'output': True
                         }
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
@@ -1445,29 +1400,21 @@ class Assembly(Component):
                                 units = meta['units']
                             else:
                                 units = ''
-                            if full_name in sources:
-                                connected = [targets[i]
-                                    for i, x in enumerate(sources) if x == full_name]
-                            else:
-                                connected = None
-                            connectivity['sources'][full_name] = {
+                            connectivity['nodes'][full_name] = {
                                 'type':  type(child_var).__name__,
                                 'units': units,
-                                'connected': connected
+                                'input': False,
+                                'output': True
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
                             full_name = cname + '.' + vname + '[' + str(idx) + ']'
                             units = ''
-                            if full_name in sources:
-                                connected = [targets[i]
-                                    for i, x in enumerate(sources) if x == full_name]
-                            else:
-                                connected = None
-                            connectivity['sources'][full_name] = {
+                            connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
                                 'units': units,
-                                'connected': connected
+                                'input': False,
+                                'output': True
                             }
 
                 for vname in cont.list_inputs():
@@ -1480,14 +1427,11 @@ class Assembly(Component):
                             units = meta['units']
                         else:
                             units = ''
-                        if full_name in targets:
-                            connected = sources[targets.index(full_name)]
-                        else:
-                            connected = None
-                        connectivity['targets'][full_name] = {
+                        connectivity['nodes'][full_name] = {
                             'type': vtype,
                             'units': units,
-                            'connected': connected
+                            'input': True,
+                            'output': False
                         }
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
@@ -1498,28 +1442,58 @@ class Assembly(Component):
                                 units = meta['units']
                             else:
                                 units = ''
-                            if full_name in targets:
-                                connected = sources[targets.index(full_name)]
-                            else:
-                                connected = None
-                            connectivity['targets'][full_name] = {
+                            connectivity['nodes'][full_name] = {
                                 'type':  type(child_var).__name__,
                                 'units': units,
-                                'connected': connected
+                                'input': True,
+                                'output': False
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
                             full_name = cname + '.' + vname + '[' + str(idx) + ']'
                             units = ''
-                            if full_name in targets:
-                                connected = sources[targets.index(full_name)]
-                            else:
-                                connected = None
-                            connectivity['targets'][full_name] = {
+                            connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
                                 'units': units,
-                                'connected': connected
+                                'input': True,
+                                'output': False
                             }
+
+        # populate expression nodes and edges
+        for (source, target) in self.list_connections():
+            if source.startswith('_pseudo_'):
+                pname = source.split('.', 1)[0]
+                pcomp = getattr(self, pname)
+                if pcomp._pseudo_type == 'multi_var_expr':
+                    source = pcomp._orig_src
+                    if source not in connectivity['nodes'].keys():
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        if not units:
+                            units = ''
+                        connectivity['nodes'][source] = {
+                            'type': 'expr',
+                            'units': units,
+                            'input': False,
+                            'ouput': False
+                        }
+
+            if target.startswith('_pseudo_'):
+                pname = target.split('.', 1)[0]
+                pcomp = getattr(self, pname)
+                if pcomp._pseudo_type == 'multi_var_expr':
+                    target = pcomp._orig_src
+                    if target not in connectivity['nodes'].keys():
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        if not units:
+                            units = ''
+                        connectivity['nodes'][target] = {
+                            'type': 'expr',
+                            'units': units,
+                            'input': False,
+                            'ouput': False
+                        }
+
+            connectivity['edges'].append([source, target])
 
         return connectivity
 
