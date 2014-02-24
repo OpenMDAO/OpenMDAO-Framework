@@ -57,11 +57,9 @@ openmdao.ConnectivityFrame = function(project, pathname) {
         jQuery.each(data.nodes, function(name, attr) {
             g.addNode(name, {
                 'label': name,
-                'type': attr.type,
+                'type':  attr.type,
                 'units': attr.units,
-                'input': attr.input,
-                'output': attr.output,
-                'expr': (attr.type === 'expr'),
+                'io':    attr.io,
                 'connected': jQuery.inArray(name, connected) >= 0
             });
         });
@@ -128,9 +126,9 @@ openmdao.ConnectivityFrame = function(project, pathname) {
             svgNodes.each(function(u) {
                 var node = d3.select(this);
                 node.classed({
-                    'input'    : graph.node(u).input,
-                    'output'   : graph.node(u).output,
-                    'expr'     : graph.node(u).expr,
+                    'input'    : graph.node(u).io === 'input',
+                    'output'   : graph.node(u).io === 'output',
+                    'expr'     : graph.node(u).io === 'expr',
                     'connected': graph.node(u).connected
                 });
             });

@@ -1388,8 +1388,7 @@ class Assembly(Component):
                         connectivity['nodes'][full_name] = {
                             'type': vtype,
                             'units': units,
-                            'input': False,
-                            'output': True
+                            'io':   'output'
                         }
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
@@ -1403,8 +1402,7 @@ class Assembly(Component):
                             connectivity['nodes'][full_name] = {
                                 'type':  type(child_var).__name__,
                                 'units': units,
-                                'input': False,
-                                'output': True
+                                'io':   'output'
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
@@ -1413,8 +1411,7 @@ class Assembly(Component):
                             connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
                                 'units': units,
-                                'input': False,
-                                'output': True
+                                'io':   'output'
                             }
 
                 for vname in cont.list_inputs():
@@ -1430,8 +1427,7 @@ class Assembly(Component):
                         connectivity['nodes'][full_name] = {
                             'type': vtype,
                             'units': units,
-                            'input': True,
-                            'output': False
+                            'io':   'input'
                         }
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
@@ -1445,8 +1441,7 @@ class Assembly(Component):
                             connectivity['nodes'][full_name] = {
                                 'type':  type(child_var).__name__,
                                 'units': units,
-                                'input': True,
-                                'output': False
+                                'io':   'input'
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
@@ -1455,8 +1450,7 @@ class Assembly(Component):
                             connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
                                 'units': units,
-                                'input': True,
-                                'output': False
+                                'io':   'input'
                             }
 
         # populate expression nodes and edges
@@ -1473,8 +1467,7 @@ class Assembly(Component):
                         connectivity['nodes'][source] = {
                             'type': 'expr',
                             'units': units,
-                            'input': False,
-                            'ouput': False
+                            'io': 'expr',
                         }
 
             if target.startswith('_pseudo_'):
@@ -1489,8 +1482,7 @@ class Assembly(Component):
                         connectivity['nodes'][target] = {
                             'type': 'expr',
                             'units': units,
-                            'input': False,
-                            'ouput': False
+                            'io': 'expr'
                         }
 
             connectivity['edges'].append([source, target])
