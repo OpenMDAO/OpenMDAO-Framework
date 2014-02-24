@@ -92,9 +92,11 @@ class HasObjectives(object):
 
         scope = self._get_scope(scope)
         expreval = Objective(expr, scope)
-        if not expreval.check_resolve():
-            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr,
-                                         ValueError)
+        unresolved_vars = expreval.get_unresolved()
+        if unresolved_vars:
+            msg = "Can't add objective '{0}' because of invalid variables {1}"
+            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
+            self._parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
