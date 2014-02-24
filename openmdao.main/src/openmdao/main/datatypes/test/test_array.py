@@ -158,7 +158,8 @@ class ArrayTestCase(unittest.TestCase):
                          'units': 'ft',
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)
+                         'indent': 0, 
+                         'assumed_default': False} in input_attrs)
         self.assertTrue({'name': 'arr3',
                          'id': 'arr3',
                          'dim': '1',
@@ -173,7 +174,8 @@ class ArrayTestCase(unittest.TestCase):
                          'array': True,
                          'type': 'ndarray',
                          'desc': 'stuff',
-                         'indent': 0} in input_attrs)
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)
         self.assertTrue({'name': 'arr99',
                          'id': 'arr99',
                          'dim': '2, 4',
@@ -186,7 +188,8 @@ class ArrayTestCase(unittest.TestCase):
                          'valid': True,
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)        
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)        
         self.assertTrue({'name': 'arr98',
                          'id': 'arr98',
                          'dim': '2, 4',
@@ -199,7 +202,8 @@ class ArrayTestCase(unittest.TestCase):
                          'valid': True,
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)        
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)        
         
         output_attrs = attrs['Outputs']
         
@@ -216,7 +220,8 @@ class ArrayTestCase(unittest.TestCase):
                          'units': 'inch',
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in output_attrs)
+                         'indent': 0, 
+                         'assumed_default': False} in output_attrs)
         
 if __name__ == "__main__":
     unittest.main()

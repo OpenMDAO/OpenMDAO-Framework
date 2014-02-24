@@ -491,7 +491,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         meta = self.asm.comp1.get_metadata('rout')
         self.assertEqual(set(meta.keys()),
-                         set(['vartypename', 'units', 'high', 'iotype', 'type', 'low']))
+                         set(['assumed_default','vartypename', 'units', 'high', 'iotype', 'type', 'low']))
         self.assertEqual(meta['vartypename'], 'Float')
         self.assertEqual(self.asm.comp1.get_metadata('slistout', 'vartypename'), 'List')
 

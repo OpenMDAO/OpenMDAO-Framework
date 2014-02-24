@@ -103,8 +103,11 @@ class Float(Variable):
         metadata['high'] = high
         if not _default_set and metadata.get('required') == True:
             super(Float, self).__init__(**metadata)
+        if not _default_set :
+            super(Float, self).__init__(default_value=default_value, assumed_default=True, 
+                                        **metadata)
         else:
-            super(Float, self).__init__(default_value=default_value,
+            super(Float, self).__init__(default_value=default_value, assumed_default=False,
                                         **metadata)
 
     def validate(self, obj, name, value):

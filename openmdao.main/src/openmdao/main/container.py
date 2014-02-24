@@ -162,8 +162,9 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True \
-       and trait._illegal_default_ is True:
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
+           not trait.assumed_default and trait._illegal_default_ is True:
+
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
             raise RuntimeError(msg)
