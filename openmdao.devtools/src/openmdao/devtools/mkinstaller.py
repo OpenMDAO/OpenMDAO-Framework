@@ -1,5 +1,5 @@
 """
-Generates either a ``go-openmdao.py`` script for installation
+Generates either a ``go-openmdao-<version>.py`` script for installation
 of an openmdao release or ``a go-openmdao-dev.py`` script for creating a
 virtualenv with "develop" versions of all of the openmdao packages. Both
 scripts bootstrap a virtualenv environment.
@@ -530,7 +530,7 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %%s" %% str(err)
         sys.exit(-1)
-        
+
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)
