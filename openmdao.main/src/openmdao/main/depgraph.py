@@ -1160,17 +1160,11 @@ class DependencyGraph(nx.DiGraph):
         basevars = set()
         for src, targets in edges.iteritems():
 
-            if src == '@fake':
-                continue
-
             if not isinstance(targets, list):
                 targets = [targets]
 
-            numfakes = 0
             for target in targets:
-                if target.startswith('@fake'):
-                    numfakes += 1
-                elif not target.startswith('@'):
+                if not target.startswith('@'):
                     comp, _, var = target.partition('.')
                     if var: # TODO: this adds VarTrees as well as comps. Should it?
                         if comp not in comps:
@@ -1185,9 +1179,6 @@ class DependencyGraph(nx.DiGraph):
 
                             if target == basevar:
                                 basevars.add(target)
-
-            if len(targets) == numfakes:
-                continue
 
             if not src.startswith('@'):
                 comp, _, var = src.partition('.')

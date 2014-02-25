@@ -500,7 +500,6 @@ class Assembly(Component):
                    self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
-        # TODO: change this to use 'param' metadata stored in depgraph
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
