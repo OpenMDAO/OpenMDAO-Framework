@@ -287,7 +287,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """Sets all dependent variables to the values in the input array
         `val`. This includes both parameters and severed targets.
         """
-
+        bounds = self._bounds_cache
         nparam = self._parent.total_parameters()
         if nparam > 0:
             self._parent.set_parameters(val[:nparam].flatten())
@@ -298,7 +298,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 if isinstance(targets, str):
                     targets = [targets]
 
-                i1, i2 = self.get_bounds(src)
+                i1, i2 = bounds[src]
                 if isinstance(i1, list):
                     width = len(i1)
                 else:

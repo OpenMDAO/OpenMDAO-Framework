@@ -501,7 +501,6 @@ class Assembly(Component):
                    self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
-        # TODO: change this to use 'param' metadata stored in depgraph
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
@@ -788,7 +787,7 @@ class Assembly(Component):
         return [getattr(self, c).exec_count for c in compnames]
 
     def check_gradient(self, name=None, inputs=None, outputs=None,
-                       stream=None, mode='auto',
+                       stream=sys.stdout, mode='auto',
                        fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
 
@@ -851,14 +850,6 @@ class Assembly(Component):
         driver = self.driver
         obj = None
 
-        base_fd_form = driver.gradient_options.fd_form
-        base_fd_step = driver.gradient_options.fd_step
-        base_fd_step_type = driver.gradient_options.fd_step_type
-
-        driver.gradient_options.fd_form = fd_form
-        driver.gradient_options.fd_step = fd_step
-        driver.gradient_options.fd_step_type = fd_step_type
-
         # tuples cause problems.
         if inputs:
             inputs = list(inputs)
@@ -912,18 +903,29 @@ class Assembly(Component):
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
 
-        if not inputs or not outputs:
+        if not has_interface(obj, IDriver) and (not inputs or not outputs):
             msg = 'Component %s has no analytic derivatives.' % obj.name
             self.raise_exception(msg)
 
-        result = driver.workflow.check_gradient(inputs=inputs,
-                                                outputs=outputs,
-                                                stream=stream,
-                                                mode=mode)
 
-        driver.gradient_options.fd_form = base_fd_form
-        driver.gradient_options.fd_step = base_fd_step
-        driver.gradient_options.fd_step_type = base_fd_step_type
+        base_fd_form = driver.gradient_options.fd_form
+        base_fd_step = driver.gradient_options.fd_step
+        base_fd_step_type = driver.gradient_options.fd_step_type
+
+        driver.gradient_options.fd_form = fd_form
+        driver.gradient_options.fd_step = fd_step
+        driver.gradient_options.fd_step_type = fd_step_type
+
+        try:
+            result = driver.workflow.check_gradient(inputs=inputs,
+                                                    outputs=outputs,
+                                                    stream=stream,
+                                                    mode=mode)
+        finally:
+            driver.gradient_options.fd_form = base_fd_form
+            driver.gradient_options.fd_step = base_fd_step
+            driver.gradient_options.fd_step_type = base_fd_step_type
+
         return result
 
     def provideJ(self, required_inputs, required_outputs, check_only=False):
@@ -932,7 +934,6 @@ class Assembly(Component):
         floats and iterable items containing floats.'''
 
         # Sub-assembly sourced
-        input_keys = []
         output_keys = []
 
         # Parent-assembly sourced
@@ -955,13 +956,6 @@ class Assembly(Component):
             if len(target1) == 0 and len(target2) == 0:
                 continue
 
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if src != varname:
-                tail = src[len(varname):]
-                target1 = ['%s%s' % (targ, tail) for targ in target1]
-
-            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
@@ -985,7 +979,8 @@ class Assembly(Component):
 
         if check_only:
             return None
-        return self.driver.calc_gradient(input_keys, output_keys)
+
+        return self.driver.calc_gradient(self.J_input_keys, output_keys)
 
 
     def list_deriv_vars(self):

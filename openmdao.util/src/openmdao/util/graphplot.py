@@ -91,9 +91,9 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
                     tt_dct[key] = val
                 elif scope is not None and key == 'pseudo':
                     if val == 'objective':
-                        newdata['objective'] = getattr(scope, node)._orig_src
+                        newdata['objective'] = getattr(scope, node)._orig_expr
                     elif val == 'constraint':
-                        newdata['constraint'] = getattr(scope, node)._orig_src
+                        newdata['constraint'] = getattr(scope, node)._orig_expr
             newdata['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
@@ -117,6 +117,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
     # javascript side
     for node, data in graph.nodes_iter(data=True):
         parts = node.split('.', 1)
+        data['full'] = node
         if len(parts) == 1 or node.startswith('parent.'):
             data['short'] = node
         else:
@@ -167,18 +168,26 @@ def plot_graph(graph, scope=None, parent=None,
         # shutil.rmtree(tmpdir)
         # print "temp directory removed"
 
-def plot_graphs(obj, recurse=False):
+def plot_graphs(obj, recurse=False, d3page='fixedforce.html', minimal=False):
     """Return a list of tuples of the form (scope, parent, graph)"""
     from openmdao.main.assembly import Assembly
     from openmdao.main.driver import Driver
 
     if isinstance(obj, Assembly):
-        plot_graph(obj._depgraph, scope=obj, parent=obj)
+        try:
+            plot_graph(obj._depgraph, scope=obj, parent=obj,
+                        d3page=d3page, minimal=minimal)
+        except Exception as err:
+            print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         if recurse:
             plot_graphs(obj.driver, recurse)
     elif isinstance(obj, Driver):
-        plot_graph(obj.workflow.derivative_graph(), 
-                   scope=obj.parent, parent=obj)
+        try:
+            plot_graph(obj.workflow.derivative_graph(), 
+                        scope=obj.parent, parent=obj,
+                        d3page=d3page, minimal=minimal)
+        except Exception as err:
+            print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
         if recurse:
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
