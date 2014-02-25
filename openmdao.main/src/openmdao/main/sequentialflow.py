@@ -32,6 +32,8 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray, zeros
 
+_missing = object()
+
 __all__ = ['SequentialWorkflow']
 
 class SequentialWorkflow(Workflow):
@@ -53,6 +55,7 @@ class SequentialWorkflow(Workflow):
         self._J_cache = {}
         self._bounds_cache = {}
         self._shape_cache = {}
+        self._width_cache = {}
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
@@ -94,6 +97,7 @@ class SequentialWorkflow(Workflow):
         self._J_cache = {}
         self._bounds_cache = {}
         self._shape_cache = {}
+        self._width_cache = {}
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -221,10 +225,7 @@ class SequentialWorkflow(Workflow):
         number of edges.
         """
         dgraph = self.derivative_graph()
-        if 'mapped_inputs' in dgraph.graph:
-            inputs = dgraph.graph['mapped_inputs']
-        else:
-            inputs = dgraph.graph['inputs']
+        inputs = dgraph.graph['mapped_inputs']
 
         basevars = set()
         edges = self.edge_list()
@@ -279,13 +280,6 @@ class SequentialWorkflow(Workflow):
                         measure_src = inp
                     else:
                         measure_src = targets[0]
-                elif src == '@fake':
-                    for t in targets:
-                        if not t.startswith('@'):
-                            measure_src = t
-                            break
-                    else:
-                        raise RuntimeError("malformed graph!")
 
                 # Find our width, etc.
                 unmap_src = from_PA_var(measure_src)
@@ -296,13 +290,14 @@ class SequentialWorkflow(Workflow):
                 else:
                     shape = 1
 
+                src_noidx = src.split('[', 1)[0]
+
                 # Special poke for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
-                    bound = (nEdge, nEdge+width)
-                    self.set_bounds(measure_src, bound)
-
-                src_noidx = src.split('[', 1)[0]
+                    if src_noidx not in basevars:
+                        bound = (nEdge, nEdge+width)
+                        self.set_bounds(measure_src, bound)
 
                 # Poke our source data
 
@@ -377,47 +372,37 @@ class SequentialWorkflow(Workflow):
         """ Return a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        bounds = self._bounds_cache.get(node)
-        if bounds is None:
-            dgraph = self._derivative_graph
-            i1, i2 = dgraph.node[node]['bounds'][self._parent.name]
-
-            # Handle index slices
-            if isinstance(i1, str):
-                if ':' in i1:
-                    i3 = i2 + 1
-                else:
-                    i2 = i2.tolist()
-                    i3 = 0
-                bounds = (i2, i3)
-            else:
-                bounds = (i1, i2)
-
-            self._bounds_cache[node] = bounds
-
-        return bounds
+        return self._bounds_cache[node]
 
     def set_bounds(self, node, bounds):
         """ Set a tuple containing the start and end indices into the
         residual vector that correspond to a given variable name in this
         workflow."""
-        dgraph = self._derivative_graph
 
-        try:
-            meta = dgraph.node[node]
+        i1, i2 = bounds
 
-        except KeyError:
-            base = dgraph.base_var(node)
-            if base not in dgraph:
-                dgraph.add_node(base, var=True)
-            if node != base:
-                dgraph.add_subvar(node)
-            meta = dgraph.node[node]
+        # Handle index slices
+        if isinstance(i1, str):
+            if ':' in i1:
+                i3 = i2 + 1
+            else:
+                i2 = i2.tolist()
+                i3 = 0
+            bounds = (i2, i3)
+        else:
+            bounds = (i1, i2)
 
-        if 'bounds' not in meta:
-            meta['bounds'] = {}
+        self._bounds_cache[node] = bounds
 
-        meta['bounds'][self._parent.name] = bounds
+    def get_width(self, attr):
+        """Return the flattened width of the value of the given attribute."""
+        width = self._width_cache.get(attr, _missing)
+        if width is _missing:
+            param = from_PA_var(attr)
+            self._width_cache[attr] = width = flattened_size(param, 
+                                                             self.scope.get(param), 
+                                                             self.scope)
+        return width
 
     def _update(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """
@@ -460,9 +445,6 @@ class SequentialWorkflow(Workflow):
         workflow's full Jacobian with an incoming vector arg.'''
 
         comps = self._comp_edge_list()
-
-        if '@fake' in comps:
-            del comps['@fake']
         result = zeros(len(arg))
 
         # We can call applyJ on each component one-at-a-time, and poke the
@@ -472,6 +454,9 @@ class SequentialWorkflow(Workflow):
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
+
+            if not comp_inputs or not comp_outputs:
+                continue
 
             inputs = {}
             outputs = {}
@@ -528,16 +513,16 @@ class SequentialWorkflow(Workflow):
 
         # Each parameter adds an equation
         for src, targets in self._edges.iteritems():
-            if '@in' in src or '@fake' in src:
+            if src.startswith('@in'):
                 if not isinstance(targets, list):
                     targets = [targets]
 
                 for target in targets:
                     i1, i2 = self.get_bounds(target)
-                    #if isinstance(i1, list):
-                    #    result[i1] = arg[i1]
-                    #else:
-                    result[i1:i2] = arg[i1:i2]
+                    if isinstance(i1, list):
+                        result[i1] = arg[i1]
+                    else:
+                        result[i1:i2] = arg[i1:i2]
 
         #print arg, result
         return result
@@ -553,12 +538,12 @@ class SequentialWorkflow(Workflow):
         # We can call applyJ on each component one-at-a-time, and poke the
         # results into the result vector.
         for compname, data in comps.iteritems():
-            if compname == '@fake':
-                continue
-
             comp_inputs = data['inputs']
             comp_outputs = data['outputs']
             comp_residuals = data['residuals']
+
+            if not comp_outputs or not comp_inputs:
+                continue
 
             inputs = {}
             outputs = {}
@@ -615,18 +600,11 @@ class SequentialWorkflow(Workflow):
 
         # Each parameter adds an equation
         for src, target in self._edges.iteritems():
-            if '@in' in src or '@fake' in src:
+            if src.startswith('@in'):
                 if isinstance(target, list):
                     target = target[0]
 
                 i1, i2 = self.get_bounds(target)
-                result[i1:i2] += arg[i1:i2]
-
-            # A fake output needs to make it into the result vector to prevent
-            # the solution from blowing up. Its derivative will be zero
-            # regardless.
-            if '@fake' in target:
-                i1, i2 = self.get_bounds(src)
                 result[i1:i2] += arg[i1:i2]
 
         #print arg, result
@@ -939,7 +917,7 @@ class SequentialWorkflow(Workflow):
             J = self._J_cache.get(compname)
             if compname not in self._shape_cache:
                 self._shape_cache[compname] = {}
-            if J is None:
+            if J is None and hasattr(comp, 'calc_derivatives'):
                 J = comp.calc_derivatives(first, second, savebase,
                                           data['inputs'], data['outputs'])
                 if J is not None:
@@ -947,6 +925,7 @@ class SequentialWorkflow(Workflow):
 
             if self._stop:
                 raise RunStopped('Stop requested')
+        return comps
 
     def calc_gradient(self, inputs=None, outputs=None, upscope=False, mode='auto'):
         """Returns the gradient of the passed outputs with respect to
@@ -993,17 +972,14 @@ class SequentialWorkflow(Workflow):
 
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
 
-        if 'mapped_inputs' in dgraph.graph:
-            inputs = dgraph.graph['mapped_inputs']
-            outputs = dgraph.graph['mapped_outputs']
-        else:
-            inputs = dgraph.graph['inputs']
-            outputs = dgraph.graph['outputs']
+        inputs = dgraph.graph['mapped_inputs']
+        outputs = dgraph.graph['mapped_outputs']
 
         n_edge = self.initialize_residual()
 
         # cache Jacobians for comps that return them from provideJ
 
+        bounds = self._bounds_cache
 
         # Size our Jacobian
         num_in = 0
@@ -1014,26 +990,24 @@ class SequentialWorkflow(Workflow):
                 item = item[0]
 
             try:
-                i1, i2 = self.get_bounds(item)
+                i1, i2 = bounds[item]
                 if isinstance(i1, list):
                     num_in += len(i1)
                 else:
                     num_in += i2-i1
             except KeyError:
-                val = self.scope.get(item)
-                num_in += flattened_size(item, val, self.scope)
+                num_in += self.get_width(item)
 
         num_out = 0
         for item in outputs:
             try:
-                i1, i2 = self.get_bounds(item)
+                i1, i2 = bounds[item]
                 if isinstance(i1, list):
                     num_out += len(i1)
                 else:
                     num_out += i2-i1
             except KeyError:
-                val = self.scope.get(item)
-                num_out += flattened_size(item, val, self.scope)
+                num_out += self.get_width(item)
 
         shape = (num_out, num_in)
 
@@ -1080,7 +1054,7 @@ class SequentialWorkflow(Workflow):
                 pname = from_PA_var(name)
 
             try:
-                i1, i2 = self.get_bounds(name)
+                i1, i2 = bounds[name]
             except KeyError:
                 continue
 
@@ -1094,7 +1068,7 @@ class SequentialWorkflow(Workflow):
                 if scaler != 1.0:
                     J[:, i:i+width] = J[:, i:i+width]*scaler
 
-            i = i + width
+            i += width
         #print J
         return J
 

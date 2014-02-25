@@ -37,10 +37,14 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
+    bounds = wflow._bounds_cache
 
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -60,20 +64,15 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
                 #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
                                    #(param, wflow._parent.get_pathname()))
         try:
-            i1, i2 = wflow.get_bounds(param)
+            i1, i2 = bounds[param]
         except KeyError:
-            
+
             # If you end up here, it is usually because you have a
             # tuple of broadcast inputs containing only non-relevant
             # variables. Derivative is zero, so take one and increment
             # by its width.
-            
-            # TODO - We need to cache these when we remove
-            # boundcaching from the graph
-            val = wflow.scope.get(param)
-            j += flattened_size(param, val, wflow.scope)   
+            j += wflow.get_width(param)
             continue
-
 
         if isinstance(i1, list):
             in_range = i1
@@ -101,8 +100,9 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             i = 0
             for item in outputs:
                 try:
-                    k1, k2 = wflow.get_bounds(item)
+                    k1, k2 = bounds[item]
                 except KeyError:
+                    i += wflow.get_width(item)
                     continue
 
                 if isinstance(k1, list):
@@ -130,10 +130,14 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+
+    if not comps:
+        return J
 
     dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
+    bounds = wflow._bounds_cache
 
     # Adjoint mode, solve linear system for each output
     j = 0
@@ -143,9 +147,11 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             output = output[0]
 
         try:
-            i1, i2 = wflow.get_bounds(output)
+            i1, i2 = bounds[output]
         except KeyError:
+            j += wflow.get_width(output)
             continue
+
 
         if isinstance(i1, list):
             out_range = i1
@@ -189,18 +195,13 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                                            #(param, wflow._parent.get_pathname()))
 
                 try:
-                    k1, k2 = wflow.get_bounds(param)
+                    k1, k2 = bounds[param]
                 except KeyError:
-                    
                     # If you end up here, it is usually because you have a
                     # tuple of broadcast inputs containing only non-relevant
                     # variables. Derivative is zero, so take one and increment
                     # by its width.
-                    
-                    # TODO - We need to cache these when we remove
-                    # boundcaching from the graph
-                    val = wflow.scope.get(param)
-                    i += flattened_size(param, val, wflow.scope)   
+                    i += wflow.get_width(param)
                     continue
 
                 if isinstance(k1, list):
@@ -518,10 +519,7 @@ def get_bounds(obj, input_keys, output_keys, J):
 
     ibounds = {}
     nvar = 0
-    if hasattr(obj, 'parent'):
-        scope = obj.parent
-    else:
-        scope = None  # Pseudoassys
+    scope = getattr(obj, 'parent', None)
 
     for key in input_keys:
 
@@ -533,7 +531,7 @@ def get_bounds(obj, input_keys, output_keys, J):
 
         width = flattened_size('.'.join((obj.name, key[0])), val,
                                scope=scope)
-        shape = val.shape if hasattr(val, 'shape') else None
+        shape = getattr(val, 'shape', None)
         for item in key:
             ibounds[item] = (nvar, nvar+width, shape)
         nvar += width
@@ -545,19 +543,20 @@ def get_bounds(obj, input_keys, output_keys, J):
     for key in output_keys:
         val = obj.get(key)
         width = flattened_size('.'.join((obj.name, key)), val)
-        shape = val.shape if hasattr(val, 'shape') else None
+        shape = getattr(val, 'shape', None)
         obounds[key] = (nvar, nvar+width, shape)
         nvar += width
 
     num_output = nvar
 
-    # Give the user an intelligible error if the size of J is wrong.
-    J_output, J_input = J.shape
-    if num_output != J_output or num_input != J_input:
-        msg = 'Jacobian is the wrong size. Expected ' + \
-            '(%dx%d) but got (%dx%d)' % (num_output, num_input,
-                                         J_output, J_input)
-        obj.raise_exception(msg, RuntimeError)
+    if num_input and num_output:
+        # Give the user an intelligible error if the size of J is wrong.
+        J_output, J_input = J.shape
+        if num_output != J_output or num_input != J_input:
+            msg = 'Jacobian is the wrong size. Expected ' + \
+                '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                             J_output, J_input)
+            obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 
