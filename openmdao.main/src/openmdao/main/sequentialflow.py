@@ -972,17 +972,14 @@ class SequentialWorkflow(Workflow):
 
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
 
-        if 'mapped_inputs' in dgraph.graph:
-            inputs = dgraph.graph['mapped_inputs']
-            outputs = dgraph.graph['mapped_outputs']
-        else:
-            inputs = dgraph.graph['inputs']
-            outputs = dgraph.graph['outputs']
+        inputs = dgraph.graph['mapped_inputs']
+        outputs = dgraph.graph['mapped_outputs']
 
         n_edge = self.initialize_residual()
 
         # cache Jacobians for comps that return them from provideJ
 
+        bounds = self._bounds_cache
 
         # Size our Jacobian
         num_in = 0
@@ -993,28 +990,24 @@ class SequentialWorkflow(Workflow):
                 item = item[0]
 
             try:
-                i1, i2 = self.get_bounds(item)
+                i1, i2 = bounds[item]
                 if isinstance(i1, list):
                     num_in += len(i1)
                 else:
                     num_in += i2-i1
             except KeyError:
-                item = from_PA_var(item)
-                val = self.scope.get(item)
-                num_in += flattened_size(item, val, self.scope)
+                num_in += self.get_width(item)
 
         num_out = 0
         for item in outputs:
             try:
-                i1, i2 = self.get_bounds(item)
+                i1, i2 = bounds[item]
                 if isinstance(i1, list):
                     num_out += len(i1)
                 else:
                     num_out += i2-i1
             except KeyError:
-                item = from_PA_var(item)
-                val = self.scope.get(item)
-                num_out += flattened_size(item, val, self.scope)
+                num_out += self.get_width(item)
 
         shape = (num_out, num_in)
 
@@ -1061,7 +1054,7 @@ class SequentialWorkflow(Workflow):
                 pname = from_PA_var(name)
 
             try:
-                i1, i2 = self.get_bounds(name)
+                i1, i2 = bounds[name]
             except KeyError:
                 continue
 
@@ -1075,7 +1068,7 @@ class SequentialWorkflow(Workflow):
                 if scaler != 1.0:
                     J[:, i:i+width] = J[:, i:i+width]*scaler
 
-            i = i + width
+            i += width
         #print J
         return J
 
