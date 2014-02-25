@@ -34,10 +34,12 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         // component selectors
         componentsHTML = '<div style="width:100%;background:grey"><table>'
                        +        '<tr><td>Source Component:</td>'
-                       +            '<td>Target Component:</td>'
+                       +        '    <td>   Expression    </td>'
+                       +        '    <td>Target Component:</td>'
                        +        '</tr>'
                        +        '<tr><td><select id="src_cmp_list" /></td>'
-                       +            '<td><select id="dst_cmp_list" /></td>'
+                      +        '    <td></td>'
+                       +        '    <td><select id="dst_cmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
@@ -56,9 +58,11 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
         variablesHTML = '<div style="'+variablesCSS+'"><table>'
                       +        '<tr><td>Source Variable:</td>'
+                      +        '    <td>'
                       +        '    <td>Target Variable:</td>'
                       +        '</tr>'
                       +        '<tr><td><select id="src_var_list" /></td>'
+                      +        '    <td><button id="new_expr" class="button">New Expression</button></td>'
                       +        '    <td><select id="dst_var_list" /></td>'
                       +        '    <td><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
@@ -85,6 +89,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                                 dst_var_selector.val('');
                             }
                         }),
+        allKey = '-- All --',
         assemblyKey = '-- Assembly --',
         assemblyCSS = {'font-style':'italic', 'opacity':'0.5'},
         normalCSS   = {'font-style':'normal', 'opacity':'1.0'},
@@ -94,8 +99,11 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         busyCSS = 'position:absolute;left:150px;top:25px;color:black;background-color:DarkGray;border:1px solid black;',
         busyDiv = jQuery('<div class="busy" style="'+busyCSS+'">&nbsp;&nbsp;Updating... Please wait&nbsp;&nbsp;</div>')
             .appendTo(connectionsDiv).hide(),
-        figures = {},
-        expand_nodes = {},    // expanded state for expandable nodes (arrays and vartrees)
+        src_figures = {},
+        dst_figures = {},
+        xpr_figures = {},
+        expanded_src = {},    // expanded state for expandable source nodes
+        expanded_dst = {},    // expanded state for expandable dest nodes
         connection_data = {},   // cache of most recently fetched connection data
         showAllVariables = true;  // show all vars vs only connected vars
 
@@ -227,6 +235,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
             component_list = jQuery.map(data.Dataflow.components,
                                    function(comp,idx){ return comp.name; });
             component_list.push(assemblyKey);
+            component_list.push(allKey);
 
             // update the output & input selectors with component list
             src_cmp_selector.html('');
@@ -266,49 +275,98 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         var i = 0,
             x = 15,
             y = 10,
-            var_list = jQuery.map(data.connections, function(n) {
+            var_list = jQuery.map(data.edges, function(n) {
                 return n;
             }),
-            src_list  = jQuery.map(data.sources, function(n) {
-                return self.src_comp ? self.src_comp+'.'+n.name : n.name;
-            }),
-            dst_list   = jQuery.map(data.destinations, function(n) {
-                return self.dst_comp ? self.dst_comp+'.'+n.name : n.name;
-            });
+            src_list = [],
+            dst_list = [],
+            xpr_list = [];
 
-        figures = {};
+        jQuery.each(data.nodes, function(name, attr) {
+            if (attr.type === 'expr') {
+                xpr_list.push(name);
+            }
+            else if (attr.io === 'output') {
+                if (!self.src_comp) {
+                    src_list.push(name);
+                }
+                else if (openmdao.Util.getPath(name) === self.src_comp) {
+                    src_list.push(name);
+                }
+            }
+            else if (attr.io === 'input') {
+                if (!self.dst_comp) {
+                    dst_list.push(name);
+                }
+                else if (openmdao.Util.getPath(name) === self.dst_comp) {
+                    dst_list.push(name);
+                }
+            }
+            else {
+                debug.warn('Unexpected connection data:', name, attr);
+            }
+        });
+
+        src_list.sort();
+        dst_list.sort();
+        xpr_list.sort();
+
+        src_figures = {};
+        dst_figures = {};
+        xpr_figures = {};
         r.clear();
 
-        debug.info('data.sources'+data.sources);
+        debug.info('var_list',var_list);
+        debug.info('src_list',src_list);
+        debug.info('dst_list',dst_list);
+        debug.info('xpr_list',xpr_list);
 
-        jQuery.each(data.sources, function(idx,srcvar) {
-            var src_name = self.src_comp ? self.src_comp+'.'+srcvar.name : srcvar.name,
+        debug.info("===================== processing src_list =====================");
+        jQuery.each(src_list, function(idx, src_name) {
+            var attr = data.nodes[src_name],
                 parent_name, parent_fig,
                 dot_brkt = -1;
             if (showAllVariables || var_list.contains(src_name)) {
+                // add some attribute for rendering the figure
+                attr.name = openmdao.Util.getName(src_name);
+                attr.input = false;
                 // if part of an array or variable tree then check if it's expanded
-                dot_brkt = srcvar.name.search(/\.|\[/);
-                if (dot_brkt > 0 && srcvar.type !== 'expr') {
-                    parent_name = srcvar.name.substring(0, dot_brkt);
-                    if (self.src_comp) {
-                        parent_name = self.src_comp + '.' + parent_name;
+                dot_brkt = src_name.search(/\.|\[/);
+                if (dot_brkt > 0) {
+                    parent_name = src_name.substring(0, dot_brkt);
+                    if (self.src_comp && self.src_comp === parent_name) {
+                        src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
+                        y = y + 40;  // add height of fig (30 px) plus 10 px of space
                     }
-                    parent_fig = figures[parent_name];
-                    if (parent_fig) {
-                        if (expand_nodes[parent_name]) {
-                            figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
+                    else {
+                        parent_fig = src_figures[parent_name];
+                        if (!self.src_comp && !parent_fig) {
+                            // no component selected, add a parent fig for the component
+                            parent_fig = r.variableNode(r, x, y, parent_name, {
+                                name:  parent_name,
+                                type:  'Component',
+                                units: '',
+                                input: false
+                            });
+                            src_figures[parent_name] = parent_fig;
                             y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                            parent_fig.expanded();
                         }
-                        else {
-                            expand_nodes[parent_name] = false;  // default to collapsed
-                            parent_fig.collapsed();
+                        if (parent_fig) {
+                            attr.parent = parent_fig;
+                            if (expanded_src[parent_name]) {
+                                src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
+                                y = y + 40;  // add height of fig (30 px) plus 10 px of space
+                                parent_fig.expanded();
+                            }
+                            else {
+                                expanded_src[parent_name] = false;  // default to collapsed
+                                parent_fig.collapsed();
+                            }
                         }
                     }
                 }
                 else {
-                    figures[src_name] = r.variableNode(r, x, y, src_name, srcvar, false);
-                    debug.info('figure for '+src_name, figures[src_name]);
+                    src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             }
@@ -316,33 +374,55 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         var end_outputs = y;
 
         x = (componentsDiv.width() - connect_button.width())/2;
+        var left = dst_var_selector.position().left;
+        debug.info('dst_var_selector.position().left', dst_var_selector.position().left);
         y = 10;
-        jQuery.each(data.destinations, function(idx,dstvar) {
-            var dst_name = self.dst_comp ? self.dst_comp+'.'+dstvar.name : dstvar.name,
+        debug.info("===================== processing dst_list =====================");
+        jQuery.each(dst_list, function(idx, dst_name) {
+            debug.info('dst_name', dst_name);
+            var attr = data.nodes[dst_name],
                 dot_brkt = -1;
             if (showAllVariables || var_list.contains(dst_name)) {
+                // add some attribute for rendering the figure
+                attr.name = openmdao.Util.getName(dst_name);
+                attr.input = true;
                 // if part of an array or variable tree then check if it's expanded
-                dot_brkt = dstvar.name.search(/\.|\[/);
-                if (dot_brkt > 0 && dstvar.type !== 'expr') {
-                    parent_name = dstvar.name.substring(0, dot_brkt);
-                    if (self.dst_comp) {
-                        parent_name = self.dst_comp + '.' + parent_name;
+                dot_brkt = dst_name.search(/\.|\[/);
+                if (dot_brkt > 0) {
+                    parent_name = dst_name.substring(0, dot_brkt);
+                    if (self.dst_comp && self.dst_comp === parent_name) {
+                        dst_figures[dst_name] = r.variableNode(r, x, y, dst_name, attr);
+                        y = y + 40;  // add height of fig (30 px) plus 10 px of space
                     }
-                    parent_fig = figures[parent_name];
-                    if (parent_fig) {
-                        if (expand_nodes[parent_name]) {
-                            figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
+                    else {
+                        parent_fig = dst_figures[parent_name];
+                        if (!parent_fig) {
+                            // no component selected, add a parent fig for the component
+                            parent_fig = r.variableNode(r, x, y, parent_name, {
+                                name:  parent_name,
+                                type:  'Component',
+                                units: '',
+                                input: true
+                            });
+                            dst_figures[parent_name] = parent_fig;
                             y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                            parent_fig.expanded();
                         }
-                        else {
-                            expand_nodes[parent_name] = false;  // default to collapsed
-                            parent_fig.collapsed();
+                        if (parent_fig) {
+                            attr.parent = parent_fig;
+                            if (expanded_dst[parent_name]) {
+                                dst_figures[dst_name] = r.variableNode(r, x, y, dst_name, attr);
+                                y = y + 40;  // add height of fig (30 px) plus 10 px of space
+                                parent_fig.expanded();
+                            }
+                            else {
+                                expanded_dst[parent_name] = false;  // default to collapsed
+                                parent_fig.collapsed();
+                            }
                         }
                     }
                 }
                 else {
-                    figures[dst_name] = r.variableNode(r, x, y, dst_name, dstvar, true);
+                    dst_figures[dst_name] = r.variableNode(r, x, y, dst_name, attr);
                     y = y + 40;  // add height of fig (30 px) plus 10 px of space
                 }
             }
@@ -355,11 +435,17 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         connectionsDiv.show();
         variablesDiv.show();
 
-        jQuery.each(data.connections,function(idx,conn) {
-            var src_fig = figures[conn[0]],
-                dst_fig = figures[conn[1]],
+        debug.info("===================== processing edges =====================");
+        debug.info('src_figures', src_figures);
+        debug.info('dst_figures', dst_figures);
+        debug.info('xpr_figures', xpr_figures);
+        jQuery.each(data.edges,function(idx, conn) {
+            var src_fig = src_figures[conn[0]],
+                dst_fig = dst_figures[conn[1]],
                 parent_name,
                 dot_brkt;
+
+            debug.info('connecting', conn[0], conn[1]);
 
             // if src or dst fig is not found then check for collapsed parent and link to that
             if (!src_fig) {
@@ -367,10 +453,8 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                 dot_brkt = parent_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
-                    if (self.src_comp) {
-                        parent_name = self.src_comp + '.' + parent_name;
-                    }
-                    src_fig = figures[parent_name];
+                    src_fig = src_figures[parent_name];
+                    debug.info('parent src_fig', src_fig);
                 }
             }
             if (!dst_fig) {
@@ -378,10 +462,8 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                 dot_brkt = parent_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
-                    if (self.dst_comp) {
-                        parent_name = self.dst_comp + '.' + parent_name;
-                    }
-                    dst_fig = figures[parent_name];
+                    dst_fig = dst_figures[parent_name];
+                    debug.info('parent dst_fig', dst_fig);
                 }
             }
 
@@ -452,11 +534,19 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
             y = e.clientY - offset.top,
             source = r.getElementByPoint(e.clientX, e.clientY);
         if (source) {
-            var name = source.data('name');
-            if (expand_nodes.hasOwnProperty(name)) {
-                expand_nodes[name] = !expand_nodes[name];
+            var name = source.data('name'),
+                input = source.data('input');
+            if (input) {
+                if (expanded_dst.hasOwnProperty(name)) {
+                    expanded_dst[name] = !expanded_dst[name];
+                    loadConnectionData(connection_data);
+                }
+            }
+            else if (expanded_src.hasOwnProperty(name)) {
+                expanded_src[name] = !expanded_src[name];
                 loadConnectionData(connection_data);
             }
+
         }
     });
 
@@ -539,9 +629,9 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
     function showConnections() {
         if (self.src_comp !== null && self.dst_comp !== null) {
             busyDiv.show();
-            project.getConnections(self.pathname, self.src_comp, self.dst_comp)
+            project.getConnectivity(self.pathname)
                 .done(function(data) {
-                    if (!data || !data.sources || !data.destinations) {
+                    if (!data) {
                         // don't have what we need, probably something got deleted
                         debug.warn('ConnectionFrame.showConnections(): Invalid data', data);
                         self.close();

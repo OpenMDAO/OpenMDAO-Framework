@@ -91,7 +91,7 @@ Raphael.fn.connection = function (obj1, obj2, line, bg) {
 // │ openmdao variable node                                             │ \\
 // └────────────────────────────────────────────────────────────────────┘ \\
 
-Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
+Raphael.fn.variableNode = function(paper, x, y, name, attr) {
     var typeStr = attr.type.split('.'),
         border = '#0b93d5',  // default border color: blue
         offset = 0,
@@ -106,12 +106,12 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     }
 
     // gray border if it's an input and already connected
-    if (input && attr.connected) {
+    if (attr.input && attr.connected) {
         border = '#666666';
     }
 
     // if the variable is part of an array or variable tree then offset it
-    if (attr.type !== 'expr' && (attr.name.indexOf('.') > 0 || attr.name.indexOf('[') > 0)) {
+    if (attr.parent) {
         offset = 20;
         angleObj = paper.path('M '+ (x+5) +' '+ y + ' l 0 15 l 15 0')
             .attr({'stroke':'#666666', 'stroke-width': 1});
@@ -139,8 +139,8 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr, input) {
     }
 
     // associate some useful data with the variable node
-    setObj.data('input', input);
     setObj.data('name', name);
+    setObj.data('input', attr.input);
     setObj.data('connected', attr.connected);
 
     // show the expand/collapse widget in collapsed mode

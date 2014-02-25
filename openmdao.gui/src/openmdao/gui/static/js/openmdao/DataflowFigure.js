@@ -392,7 +392,7 @@ openmdao.DataflowFigure.prototype.setWorkflow=function(wkflw){
                     var path = openmdao.Util.getPath(pathname),
                         src  = name,
                         dst  = request.source.getParent().name;
-                    var f = new openmdao.ConnectivityFrame(project,path,src,dst);
+                    var f = new openmdao.ConnectionsFrame(project,path,src,dst);
                 }
                 return null;
             }
@@ -865,7 +865,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
                 if (type === 'data') {
                     menu.appendMenuItem(new draw2d.MenuItem("Edit Connections",null,
                         function(){
-                            var f = new openmdao.ConnectivityFrame(self.project,
+                            var f = new openmdao.ConnectionsFrame(self.project,
                                                  self.pathname,src_name,dst_name);
                         })
                     );
@@ -889,7 +889,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             if ((src_name.length > 0) && (dst_name.length > 0)) {
                 if (type === 'data') {
                     con.onDoubleClick = function() {
-                        var f = new openmdao.ConnectivityFrame(self.project, self.pathname,
+                        var f = new openmdao.ConnectionsFrame(self.project, self.pathname,
                                                               src_name, dst_name);
                     };
                 }
