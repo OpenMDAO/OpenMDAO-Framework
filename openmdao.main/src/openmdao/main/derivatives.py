@@ -1,6 +1,7 @@
 """ Some functions and objects that provide the backbone to OpenMDAO's
 differentiation capability.
 """
+from sys import float_info
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
@@ -637,6 +638,8 @@ class FiniteDifference(object):
         in_size = 0
         for j, srcs in enumerate(self.inputs):
 
+            low = high = None
+
             # Support for parameter groups
             if isinstance(srcs, basestring):
                 srcs = [srcs]
@@ -647,23 +650,61 @@ class FiniteDifference(object):
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
 
+            if 'low' in meta:
+                low = meta[ 'low' ]
+            if 'high' in meta:
+                high = meta[ 'high' ]
+
             if srcs[0] in driver_targets:
                 if srcs[0] in driver_params:
                     param = driver_params[srcs[0]]
                     if param.fd_step is not None:
                         self.fd_step[j] = param.fd_step
+                    if param.low is not None:
+                        low = param.low
+                    if param.high is not None:
+                        high = param.high
                 else:
                     # have to check through all the param groups
                     for param_group in driver_params:
+                        is_fd_step_not_set = is_low_not_set = is_high_not_set = True
                         if not isinstance(param_group, str) and \
                            srcs[0] in param_group:
                             param = driver_params[param_group]
-                            if param.fd_step is not None:
+                            if is_fd_step_not_set and param.fd_step is not None:
                                 self.fd_step[j] = param.fd_step
-                                break
+                                is_fd_step_not_set = False
+                            if is_low_not_set and param.low is not None:
+                                low = param.low
+                                is_low_not_set = False
+                            if is_high_not_set and param.high is not None:
+                                high = param.high
+                                is_high_not_set = False
 
             if 'fd_step_type' in meta:
                 self.step_type_custom[j] = meta['fd_step_type']
+                step_type = self.step_type_custom[j]
+            else:
+                step_type = self.step_type
+
+            # Bounds scaled
+            if step_type == 'bounds_scaled':
+                if low is None and high is None :
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required low and "
+                                       "high values are not set" % srcs[0] )
+                if low == - float_info.max:
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required "
+                                       "low value is not set" % srcs[0] )
+                if high == float_info.max:
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required "
+                                       "high value is not set" % srcs[0] )
+                self.fd_step[j] = ( high - low ) * self.fd_step[j]
 
             if 'fd_form' in meta:
                 self.form_custom[j] = meta['fd_form']
@@ -694,7 +735,7 @@ class FiniteDifference(object):
 
         for j, src, in enumerate(self.inputs):
 
-            # Users can cusomtize the FD per variable
+            # Users can customize the FD per variable
             if j in self.form_custom:
                 form = self.form_custom[j]
             else:

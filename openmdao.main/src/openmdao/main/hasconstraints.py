@@ -57,17 +57,25 @@ class Constraint(object):
 
     def __init__(self, lhs, comparator, rhs, scope):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        if not self.lhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid left-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.lhs.get_unresolved()
 
-        self.comparator = comparator
+        if unresolved_vars:
+            msg = "Left hand side of constraint '{0}' has invalid variables {1}"
+            expression = ' '.join([lhs, comparator, rhs])
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
+
 
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        if not self.rhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid right-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.rhs.get_unresolved()
 
+        if unresolved_vars:
+            msg = "Right hand side of constraint '{0}' has invalid variables {1}"
+            expression = ' '.join([lhs, comparator, rhs])
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
+
+        self.comparator = comparator
         self.pcomp_name = None
         self._size = None
 
@@ -101,7 +109,7 @@ class Constraint(object):
                 pass
             else:
                 scope.remove(pcomp.name)
-            finally:  
+            finally:
                 self.pcomp_name = None
 
     def _combined_expr(self):
@@ -263,9 +271,9 @@ class _HasConstraintsBase(object):
             Value returned by :meth:`get_references`.
 
         Note: this is called from the replace() method, where
-        the replacing object may be missing variables that were 
+        the replacing object may be missing variables that were
         found in the target object, so no restore_references
-        call should raise an exception when restoring a reference 
+        call should raise an exception when restoring a reference
         fails.
         """
         for name, constraint in refs.items():
@@ -275,7 +283,7 @@ class _HasConstraintsBase(object):
                 self.add_constraint(str(constraint), name,
                                     constraint.lhs.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore constraint '%s': %s" 
+                self._parent._logger.warning("Couldn't restore constraint '%s': %s"
                                               % (name, str(err)))
 
     def clear_constraints(self):
