@@ -33,13 +33,13 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
     var self = this,
         // component selectors
         componentsHTML = '<div style="width:100%;background:grey"><table>'
-                       +        '<tr><td>Source Component:</td>'
-                       +        '    <td>   Expression    </td>'
-                       +        '    <td>Target Component:</td>'
+                       +        '<tr><td style="width:200px">Source Component:</td>'
+                       +        '    <td style="width:200px"></td>'
+                       +        '    <td style="width:200px">Target Component:</td>'
                        +        '</tr>'
-                       +        '<tr><td><select id="src_cmp_list" /></td>'
-                      +        '    <td></td>'
-                       +        '    <td><select id="dst_cmp_list" /></td>'
+                       +        '<tr><td style="width:200px"><select id="src_cmp_list" /></td>'
+                       +        '    <td style="width:200px"></td>'
+                       +        '    <td style="width:200px"><select id="dst_cmp_list" /></td>'
                        +        '</tr>'
                        + '</table></div>',
         componentsDiv = jQuery(componentsHTML)
@@ -57,14 +57,14 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         // variable selectors and connect button
         variablesCSS = 'background:grey; position:relative; bottom:5px; width:100%;',
         variablesHTML = '<div style="'+variablesCSS+'"><table>'
-                      +        '<tr><td>Source Variable:</td>'
-                      +        '    <td>'
-                      +        '    <td>Target Variable:</td>'
+                      +        '<tr><td style="width:200px">Source Variable:</td>'
+                      +        '    <td style="width:200px">'
+                      +        '    <td style="width:200px">Target Variable:</td>'
                       +        '</tr>'
-                      +        '<tr><td><select id="src_var_list" /></td>'
-                      +        '    <td><button id="new_expr" class="button">New Expression</button></td>'
-                      +        '    <td><select id="dst_var_list" /></td>'
-                      +        '    <td><button id="connect" class="button">Connect</button></td>'
+                      +        '<tr><td style="width:200px"><select id="src_var_list" /></td>'
+                      +        '    <td style="width:200px; text-align:center"><button id="expression" class="button">Enter Source Expression</button></td>'
+                      +        '    <td style="width:200px"><select id="dst_var_list" /></td>'
+                      +        '    <td style="width:100px"><button id="connect" class="button">Connect</button></td>'
                       +        '</tr>'
                       + '</table></div>',
         variablesDiv = jQuery(variablesHTML)
@@ -73,6 +73,15 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         dst_var_selector = variablesDiv.find('#dst_var_list').combobox(),
         src_var_input = src_var_selector.siblings('.ui-autocomplete-input').attr('id','src_var_input'),
         dst_var_input = dst_var_selector.siblings('.ui-autocomplete-input').attr('id','dst_var_input'),
+        expression_button = variablesDiv.find('#expression')
+                        .click(function() {
+                            openmdao.Util.promptForValue('Enter an expression',
+                                function(expr) {
+                                    if (expr) {
+                                        src_var_input.val(expr);
+                                    }
+                                });
+                        }),
         connect_button = variablesDiv.find('#connect')
                         .click(function() {
                             var src = src_var_input.val(),
@@ -102,10 +111,10 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         src_figures = {},
         dst_figures = {},
         xpr_figures = {},
-        expanded_src = {},    // expanded state for expandable source nodes
-        expanded_dst = {},    // expanded state for expandable dest nodes
-        connection_data = {},   // cache of most recently fetched connection data
-        showAllVariables = true;  // show all vars vs only connected vars
+        expanded_src = {},          // expanded state for expandable source nodes
+        expanded_dst = {},          // expanded state for expandable dest nodes
+        connection_data = {},       // cache of most recently fetched connection data
+        showAllVariables = true;    // show all vars vs only connected vars
 
     self.elm.css({'position':'relative', 'height':'100%',
                   'overflow':'hidden', 'max-height': 0.8*jQuery(window).height()});
@@ -118,6 +127,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         connectionsDiv.height(self.elm.innerHeight()
                             - componentsDiv.outerHeight()
                             - variablesDiv.outerHeight());
+        r.setSize(connectionsDiv.width(), connectionsDiv.height());
     }
 
     // resize contents when told to do so (e.g. by BaseFrame when dialog is resized)
@@ -275,7 +285,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         var i = 0,
             x = 15,
             y = 10,
-            var_list = jQuery.map(data.edges, function(n) {
+            connected_vars = jQuery.map(data.edges, function(n) {
                 return n;
             }),
             src_list = [],
@@ -316,21 +326,17 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         xpr_figures = {};
         r.clear();
 
-        debug.info('var_list',var_list);
-        debug.info('src_list',src_list);
-        debug.info('dst_list',dst_list);
-        debug.info('xpr_list',xpr_list);
-
-        debug.info("===================== processing src_list =====================");
         jQuery.each(src_list, function(idx, src_name) {
             var attr = data.nodes[src_name],
+                connected = connected_vars.contains(src_name),
                 parent_name, parent_fig,
                 dot_brkt = -1;
-            if (showAllVariables || var_list.contains(src_name)) {
+            if (showAllVariables || connected) {
                 // add some attribute for rendering the figure
                 attr.name = openmdao.Util.getName(src_name);
                 attr.input = false;
-                // if part of an array or variable tree then check if it's expanded
+                attr.connected = connected;
+                // some of this logic may be redundant (all names should be qualified, etc.)
                 dot_brkt = src_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = src_name.substring(0, dot_brkt);
@@ -373,20 +379,33 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         });
         var end_outputs = y;
 
-        x = (componentsDiv.width() - connect_button.width())/2;
-        var left = dst_var_selector.position().left;
-        debug.info('dst_var_selector.position().left', dst_var_selector.position().left);
+
+        x = 202 + 15;  // second column
         y = 10;
-        debug.info("===================== processing dst_list =====================");
+
+        jQuery.each(xpr_list, function(idx, xpr) {
+            var attr = data.nodes[xpr];
+            // add some attribute for rendering the figure
+            attr.name = xpr;
+            attr.input = true;
+            attr.connected = true;
+            xpr_figures[xpr] = r.variableNode(r, x, y, xpr, attr);
+            y = y + 40;  // add height of fig (30 px) plus 10 px of space
+        });
+
+
+        x = 202*2 + 15;  // third column
+        y = 10;
         jQuery.each(dst_list, function(idx, dst_name) {
-            debug.info('dst_name', dst_name);
             var attr = data.nodes[dst_name],
+                connected = connected_vars.contains(dst_name),
                 dot_brkt = -1;
-            if (showAllVariables || var_list.contains(dst_name)) {
+            if (showAllVariables || connected) {
                 // add some attribute for rendering the figure
                 attr.name = openmdao.Util.getName(dst_name);
                 attr.input = true;
-                // if part of an array or variable tree then check if it's expanded
+                attr.connected = connected;
+                // some of this logic may be redundant (all names should be qualified, etc.)
                 dot_brkt = dst_name.search(/\.|\[/);
                 if (dot_brkt > 0) {
                     parent_name = dst_name.substring(0, dot_brkt);
@@ -435,17 +454,19 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
         connectionsDiv.show();
         variablesDiv.show();
 
-        debug.info("===================== processing edges =====================");
-        debug.info('src_figures', src_figures);
-        debug.info('dst_figures', dst_figures);
-        debug.info('xpr_figures', xpr_figures);
         jQuery.each(data.edges,function(idx, conn) {
             var src_fig = src_figures[conn[0]],
                 dst_fig = dst_figures[conn[1]],
                 parent_name,
                 dot_brkt;
 
-            debug.info('connecting', conn[0], conn[1]);
+            if (/[\+\-\*\/]/.test(conn[0])) {
+                src_fig = xpr_figures[conn[0]];
+            }
+
+            if (/[\+\-\*\/]/.test(conn[1])) {
+                dst_fig = xpr_figures[conn[1]];
+            }
 
             // if src or dst fig is not found then check for collapsed parent and link to that
             if (!src_fig) {
@@ -454,7 +475,6 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
                     src_fig = src_figures[parent_name];
-                    debug.info('parent src_fig', src_fig);
                 }
             }
             if (!dst_fig) {
@@ -463,7 +483,6 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, dst_comp) {
                 if (dot_brkt > 0) {
                     parent_name = parent_name.substring(0, dot_brkt);
                     dst_fig = dst_figures[parent_name];
-                    debug.info('parent dst_fig', dst_fig);
                 }
             }
 
