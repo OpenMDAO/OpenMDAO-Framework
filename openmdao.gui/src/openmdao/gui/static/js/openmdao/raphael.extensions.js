@@ -112,7 +112,7 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr) {
 
     // if the variable is part of an array or variable tree then offset it
     if (attr.parent) {
-        offset = 20;
+        offset = attr.parent.offset() + 20;
         angleObj = paper.path('M '+ (x+5) +' '+ y + ' l 0 15 l 15 0')
             .attr({'stroke':'#666666', 'stroke-width': 1});
     }
@@ -142,6 +142,11 @@ Raphael.fn.variableNode = function(paper, x, y, name, attr) {
     setObj.data('name', name);
     setObj.data('input', attr.input);
     setObj.data('connected', attr.connected);
+
+    // get the offset of this figure
+    setObj.offset = function() {
+        return offset;
+    };
 
     // show the expand/collapse widget in collapsed mode
     setObj.collapsed = function() {

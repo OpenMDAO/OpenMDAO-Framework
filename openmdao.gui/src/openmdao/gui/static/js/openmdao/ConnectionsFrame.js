@@ -110,8 +110,8 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         src_figures = {},
         tgt_figures = {},
         xpr_figures = {},
-        expanded_src = {},          // expanded state for expandable source nodes
-        expanded_tgt = {},          // expanded state for expandable target nodes
+        src_expanded = {},          // expanded state for expandable source nodes
+        tgt_expanded = {},          // expanded state for expandable target nodes
         connection_data = {},       // cache of most recently fetched connection data
         showAllVariables = true;    // show all vars vs only connected vars
 
@@ -327,60 +327,93 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         xpr_figures = {};
         r.clear();
 
-        // create figures for source nodes
+        /** create variable figures for the variable nodes in var_list
+            this is a bit of a mess...  a rewrite is on the agenda
+        */
+        function addFigures(var_list) {
+            if (var_list === src_list) {
+                comp = self.src_comp;
+                expanded = src_expanded;
+                figures = src_figures;
+                input = false;
+            }
+            else {
+                comp = self.tgt_comp;
+                expanded = tgt_expanded;
+                figures = tgt_figures;
+                input = true;
+            }
 
-        jQuery.each(src_list, function(idx, src_name) {
-            var attr = data.nodes[src_name],
-                connected = connected_vars.contains(src_name),
-                parent_name, parent_fig,
-                dot_brkt = -1;
-            if (showAllVariables || connected) {
-                // add some attribute for rendering the figure
-                attr.name = openmdao.Util.getName(src_name);
-                attr.input = false;
-                attr.connected = connected;
-                // some of this logic may be redundant (all names should be qualified, etc.)
-                dot_brkt = src_name.search(/\.|\[/);
-                if (dot_brkt > 0) {
-                    parent_name = src_name.substring(0, dot_brkt);
-                    if (self.src_comp && self.src_comp === parent_name) {
-                        src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
-                        y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                    }
-                    else {
-                        parent_fig = src_figures[parent_name];
-                        if (!self.src_comp && !parent_fig) {
+            jQuery.each(var_list, function(idx, var_name) {
+                var attr = data.nodes[var_name],
+                    connected = connected_vars.contains(var_name),
+                    parent_name, parent_fig,
+                    first_dot = -1;
+                if (showAllVariables || connected) {
+                    // add some attribute for rendering the figure
+                    attr.name = openmdao.Util.getName(var_name);
+                    attr.input = input;
+                    attr.connected = connected;
+                    first_dot = var_name.indexOf('.');
+                    if (first_dot > 0) {
+                        parent_name = var_name.substring(0, first_dot);
+                        parent_fig = figures[parent_name];
+                        if (!comp && !parent_fig) {
                             // no component selected, add a parent fig for the component
                             parent_fig = r.variableNode(r, x, y, parent_name, {
                                 name:  parent_name,
-                                type:  'Component',
+                                type: 'Component',
                                 units: '',
-                                input: false
+                                input: input
                             });
-                            src_figures[parent_name] = parent_fig;
+                            figures[parent_name] = parent_fig;
                             y = y + 40;  // add height of fig (30 px) plus 10 px of space
                         }
+
+                        // might be a variable tree or array, parent will already have a figure
+                        var last_dot = var_name.lastIndexOf('.');
+                        if (last_dot !== first_dot) {
+                            parent_name = var_name.substring(first_dot+1, last_dot);
+                            parent_fig = figures[parent_name];
+                        }
+                        else {
+                            // or an array
+                            var brkt = var_name.indexOf('[');
+                            if (brkt > 0) {
+                                parent_name = var_name.substring(0, brkt);
+                                parent_fig = figures[parent_name];
+                            }
+                        }
+
                         if (parent_fig) {
                             attr.parent = parent_fig;
-                            if (expanded_src[parent_name]) {
-                                src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
+                            if (expanded[parent_name]) {
+                                figures[var_name] = r.variableNode(r, x, y, var_name, attr);
                                 y = y + 40;  // add height of fig (30 px) plus 10 px of space
                                 parent_fig.expanded();
                             }
                             else {
-                                expanded_src[parent_name] = false;  // default to collapsed
+                                expanded[parent_name] = false;  // default to collapsed
                                 parent_fig.collapsed();
                             }
                         }
+                        else if (comp) {
+                            figures[var_name] = r.variableNode(r, x, y, var_name, attr);
+                            y = y + 40;  // add height of fig (30 px) plus 10 px of space
+                        }
+                    }
+                    else {
+                        debug.warn('ConnectionsFrame: Unqualified variable name', var_name);
+                        figures[var_name] = r.variableNode(r, x, y, var_name, attr);
+                        y = y + 40;  // add height of fig (30 px) plus 10 px of space
                     }
                 }
-                else {
-                    src_figures[src_name] = r.variableNode(r, x, y, src_name, attr);
-                    y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                }
-            }
-        });
-        var end_outputs = y;
+            });
+        }
+
+        // create figures for source nodes
+        addFigures(src_list);
+        var end_sources = y;
 
         // create figures for expression nodes
 
@@ -402,61 +435,13 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         x = 222*2 + 15;  // third column
         y = 10;
 
-        jQuery.each(tgt_list, function(idx, tgt_name) {
-            var attr = data.nodes[tgt_name],
-                connected = connected_vars.contains(tgt_name),
-                dot_brkt = -1;
-            if (showAllVariables || connected) {
-                // add some attribute for rendering the figure
-                attr.name = openmdao.Util.getName(tgt_name);
-                attr.input = true;
-                attr.connected = connected;
-                // some of this logic may be redundant (all names should be qualified, etc.)
-                dot_brkt = tgt_name.search(/\.|\[/);
-                if (dot_brkt > 0) {
-                    parent_name = tgt_name.substring(0, dot_brkt);
-                    if (self.tgt_comp && self.tgt_comp === parent_name) {
-                        tgt_figures[tgt_name] = r.variableNode(r, x, y, tgt_name, attr);
-                        y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                    }
-                    else {
-                        parent_fig = tgt_figures[parent_name];
-                        if (!parent_fig) {
-                            // no component selected, add a parent fig for the component
-                            parent_fig = r.variableNode(r, x, y, parent_name, {
-                                name:  parent_name,
-                                type:  'Component',
-                                units: '',
-                                input: true
-                            });
-                            tgt_figures[parent_name] = parent_fig;
-                            y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                        }
-                        if (parent_fig) {
-                            attr.parent = parent_fig;
-                            if (expanded_tgt[parent_name]) {
-                                tgt_figures[tgt_name] = r.variableNode(r, x, y, tgt_name, attr);
-                                y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                                parent_fig.expanded();
-                            }
-                            else {
-                                expanded_tgt[parent_name] = false;  // default to collapsed
-                                parent_fig.collapsed();
-                            }
-                        }
-                    }
-                }
-                else {
-                    tgt_figures[tgt_name] = r.variableNode(r, x, y, tgt_name, attr);
-                    y = y + 40;  // add height of fig (30 px) plus 10 px of space
-                }
-            }
-        });
-        var end_inputs = y;
+        addFigures(tgt_list);
+
+        var end_targets = y;
 
         // update display now that figures have been created
 
-        var height = Math.max(end_inputs, end_outputs, 25);
+        var height = Math.max(end_targets, end_sources, 25);
         r.setSize(connectionsDiv.width(), height);
 
         connectionsDiv.show();
@@ -567,13 +552,13 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             var name = source.data('name'),
                 input = source.data('input');
             if (input) {
-                if (expanded_tgt.hasOwnProperty(name)) {
-                    expanded_tgt[name] = !expanded_tgt[name];
+                if (tgt_expanded.hasOwnProperty(name)) {
+                    tgt_expanded[name] = !tgt_expanded[name];
                     loadConnectionData(connection_data);
                 }
             }
-            else if (expanded_src.hasOwnProperty(name)) {
-                expanded_src[name] = !expanded_src[name];
+            else if (src_expanded.hasOwnProperty(name)) {
+                src_expanded[name] = !src_expanded[name];
                 loadConnectionData(connection_data);
             }
 
