@@ -133,7 +133,7 @@ which components are run and in what order.
             self.add('par', Paraboloid())
     
             # Add to driver's workflow
-            self.driver.workflow.add('paraboloid')
+            self.driver.workflow.add('par')
     
     if __name__ == "__main__":
         a = BasicModel()
