@@ -114,7 +114,7 @@ submodel, drivers and workflows give us a flexible way to define an iteration sc
 Building a Basic Model
 ----------------------
 
-So a model is built from an assembly which contains components, drivers, and workflows. 
+A model is built from an assembly which contains components, drivers, and workflows. 
 Each assembly has its own iteration hierarchy, with `driver` at the root, that determines
 which components are run and in what order. 
 
@@ -122,18 +122,28 @@ which components are run and in what order.
 
     from openmdao.main.api import Assembly
     from openmdao.examples.simple.paraboloid import Paraboloid
-
+    
     class BasicModel(Assembly):
         """A basic OpenMDAO Model"""
     
         def configure(self):
             """ Creates a new Assembly containing a Paraboloid component"""
-        
+    
             # Create Paraboloid component instances
-            self.add('paraboloid', Paraboloid())
+            self.add('par', Paraboloid())
     
             # Add to driver's workflow
             self.driver.workflow.add('paraboloid')
+    
+    if __name__ == "__main__":
+        a = BasicModel()
+        x = 2.3
+        y = 7.2
+        a.par.x = x
+        a.par.y = y
+        a.run()
+        f = a.par.f_xy
+        print "Paraboloid with x = %f and y = %f has value %f" % ( x,y,f )
         
 
 We can see here that you use the ``configure`` method to add 
@@ -163,21 +173,36 @@ we use `connections` for that. Lets take a look at how connections work.
 
     from openmdao.main.api import Assembly
     from openmdao.examples.simple.paraboloid import Paraboloid
-
+    
     class ConnectingComponents(Assembly):
         """ Top level assembly """
     
         def configure(self):
             """ Creates a new Assembly containing a chain of Paraboloid components"""
-        
+    
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
             self.add("par3",Paraboloid())
-            
+    
             self.driver.workflow.add(['par1','par2','par3'])
-        
+    
             self.connect("par1.f_xy","par2.x")
             self.connect("par2.f_xy","par3.y")
+    
+    if __name__ == "__main__":
+        a = ConnectingComponents()
+    
+        a.par1.x = 2.3
+        a.par1.y = 7.2
+        #a.par2.x = 3.4 # cannot do this because already connected to source par1.f_xy
+        a.par2.y = 9.8
+        a.par3.x = 1.5
+        #a.par3.y = 5.2 # cannot do this because already connected to source par2.f_xy
+    
+        a.run()
+    
+        print "Paraboloid 3 has output of %f" % a.par3.f_xy
+            
 
 The `connect` method takes two arguments, the first of which must be a component
 output, and the second of which must be a component input or a sequence of
@@ -187,30 +212,46 @@ inputs. When you connect one output to multiple inputs, we call that ``broadcast
 
 In the above code, we created a chain of three paraboloid components. However, we could have
 configured them slightly differently so that the output of the first paraboloid gets broadcast
-to the inputs for the next to. 
+to the inputs for the next two. 
 
 .. testcode:: broadcast_components
 
     from openmdao.main.api import Assembly
     from openmdao.examples.simple.paraboloid import Paraboloid
-
-    class ConnectingComponents(Assembly):
+    
+    class ConnectingComponentsUsingBroadcast(Assembly):
+    
         """ Top level assembly """
     
         def configure(self):
             """ Creates a new Assembly containing a chain of Paraboloid components"""
-        
+    
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
             self.add("par3",Paraboloid())
-            
+    
             self.driver.workflow.add(['par1','par2','par3'])
-        
-            self.connect("par1.f_xy","par2.x")
-            self.connect("par1.f_xy","par3.y")
+    
+            self.connect("par1.f_xy",["par2.x","par3.y"])
+            # equivalent to
+            #self.connect("par1.f_xy","par2.x")
+            #self.connect("par1.f_xy","par3.y")
+    
+    
+    if __name__ == "__main__":
+        a = ConnectingComponentsUsingBroadcast()
+    
+        a.par1.x = 2.3
+        a.par1.y = 7.2
+        #a.par2.x = 3.4 # cannot do this because already connected to source par1.f_xy
+        a.par2.y = 9.8
+        a.par3.x = 1.5
+        #a.par3.y = 5.2 # cannot do this because already connected to source par1.f_xy
+    
+        a.run()
+    
+        print "Paraboloid 3 has output of %f" % a.par3.f_xy
             
-            #shortcut syntax
-            #self.connect("par1.f_xy",["par2.x","par3.y"])
             
 You can broadcast the output two ways. The above code shows them both. The first way 
 is just to issue two separate connections. Notice that both connection calls have ``par1.f_xy``
@@ -239,24 +280,44 @@ linked at that level.
 
     from openmdao.main.api import Assembly, set_as_top
     from openmdao.examples.simple.paraboloid import Paraboloid
-
-    class ConnectingComponents(Assembly):
+    
+    class ConnectingComponentsUsingPassthroughs(Assembly):
         """ Top level assembly """
     
         def configure(self):
             """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-        
+    
             self.add("par1",Paraboloid())
             self.add("par2",Paraboloid())
-        
+    
             self.connect("par1.f_xy","par2.x")
-            
+    
             self.driver.workflow.add(['par1','par2'])
-        
-            self.create_passthrough('par1.x')
-            self.create_passthrough('par1.y')
-            self.create_passthrough('par2.y')
-            self.create_passthrough('par2.f_xy')
+    
+            self.create_passthrough('par1.x', 'par1_x')
+            self.create_passthrough('par1.y', 'par1_y')
+            self.create_passthrough('par2.y', 'par2_y')
+            self.create_passthrough('par2.f_xy', 'par2_f_xy')
+    
+    
+    
+    if __name__ == "__main__":
+        a = ConnectingComponentsUsingPassthroughs()
+    
+        #set using assembly passthrough names
+        a.par1_x = 8.2
+        a.par1_y = 5.3
+        #a.par2.x = 1.2 # cannot do because already connected to par1.f_xy
+        #self.par2.y = 7.0  #cannot do this because it is passed thru to assembly level
+        a.par2_y = 9.9
+    
+        a.run()
+    
+        #getting var value with assembly passthrough name
+        print "passthrough value and direct value should be same", a.par2_y, a.par2.y
+    
+        #use passthrough to get output of par2
+        print "output of par2 = ", a.par2_f_xy
 
 The ``create_passthrough`` function creates a variable in the assembly. This new variable has
 the same name, iotype, default value, units, description, and range characteristics as the
