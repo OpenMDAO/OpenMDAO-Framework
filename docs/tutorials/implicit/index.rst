@@ -153,7 +153,7 @@ and run the model. We will let the implicit component solve its own residuals.
 
 The implicit component completes its iteration until the state values satisfy
 the residual equations. We can also configure an OpenMDAO solver to solve for
-the states. Here, we set up a new assembly with the Brent solver as the top
+the states. Here, we set up a new assembly with the Broyden solver as the top
 driver. Then we assign the states as the solver's parameters and constrain
 the residuals to be equal to zero. Also, we don't want the implicit
 component's internal solver to solve this in competition with the BroydenSolver
