@@ -1453,6 +1453,47 @@ class Assembly(Component):
                                 'io':   'input'
                             }
 
+        # add assembly vars, which can be input or output (due to passthroughs)
+        var_names =  self.list_outputs() + self.list_inputs()
+        for vname in var_names:
+            var = self.get(vname)
+            vtype = type(var).__name__
+            if not '.' in vname:  # vartree vars handled separately
+                full_name = vname
+                meta = self.get_metadata(vname)
+                if meta and 'units' in meta:
+                    units = meta['units']
+                else:
+                    units = ''
+                connectivity['nodes'][full_name] = {
+                    'type': vtype,
+                    'units': units,
+                    'io':   'io'
+                }
+            if isinstance(var, VariableTree):
+                for child_name in var.list_vars():
+                    child_var = var.get(child_name)
+                    full_name = vname + '.' + child_name
+                    meta = var.get_metadata(child_name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    else:
+                        units = ''
+                    connectivity['nodes'][full_name] = {
+                        'type':  type(child_var).__name__,
+                        'units': units,
+                        'io':   'io'
+                    }
+            elif vtype == 'ndarray':
+                for idx in range(0, len(var)):
+                    full_name = vname + '[' + str(idx) + ']'
+                    units = ''
+                    connectivity['nodes'][full_name] = {
+                        'type':  type(var[0]).__name__,
+                        'units': units,
+                        'io':   'io'
+                    }
+
         # populate expression nodes and edges
         for (source, target) in self.list_connections():
             if source.startswith('_pseudo_'):

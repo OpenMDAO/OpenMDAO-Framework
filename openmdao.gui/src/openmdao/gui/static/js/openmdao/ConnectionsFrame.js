@@ -297,19 +297,19 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             if (attr.type === 'expr') {
                 xpr_list.push(name);
             }
-            else if (attr.io === 'output') {
+            else if (attr.io === 'output' || attr.io === 'io') {
                 if (!self.src_comp) {
                     src_list.push(name);
                 }
-                else if (openmdao.Util.getPath(name) === self.src_comp) {
+                else if (name.substring(0, name.indexOf('.')) === self.src_comp) {
                     src_list.push(name);
                 }
             }
-            else if (attr.io === 'input') {
+            else if (attr.io === 'input' || attr.io === 'io') {
                 if (!self.tgt_comp) {
                     tgt_list.push(name);
                 }
-                else if (openmdao.Util.getPath(name) === self.tgt_comp) {
+                else if (name.substring(0, name.indexOf('.')) === self.tgt_comp) {
                     tgt_list.push(name);
                 }
             }
@@ -327,9 +327,29 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         xpr_figures = {};
         r.clear();
 
-        /** create variable figures for the variable nodes in var_list
-            this is a bit of a mess...  a rewrite is on the agenda
-        */
+        function get_parent_name(var_name) {
+            // might be a variable tree or array
+            var first_dot = var_name.indexOf('.'),
+                last_dot  = var_name.lastIndexOf('.'),
+                parent_name;
+
+            if (last_dot !== first_dot) {
+                parent_name = var_name.substring(first_dot+1, last_dot);
+            }
+            else {
+                var brkt = var_name.indexOf('[');
+                if (brkt > 0) {
+                    parent_name = var_name.substring(0, brkt);
+                }
+                else {
+                    parent_name = var_name.substring(0, first_dot);
+                }
+            }
+
+            return parent_name;
+        }
+
+        /** create variable figures for the variable nodes in var_list */
         function addFigures(var_list) {
             if (var_list === src_list) {
                 comp = self.src_comp;
@@ -403,7 +423,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                         }
                     }
                     else {
-                        debug.warn('ConnectionsFrame: Unqualified variable name', var_name);
+                        // assembly variable
                         figures[var_name] = r.variableNode(r, x, y, var_name, attr);
                         y = y + 40;  // add height of fig (30 px) plus 10 px of space
                     }
@@ -451,9 +471,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
 
         jQuery.each(data.edges,function(idx, conn) {
             var src_fig = src_figures[conn[0]],
-                tgt_fig = tgt_figures[conn[1]],
-                parent_name,
-                dot_brkt;
+                tgt_fig = tgt_figures[conn[1]];
 
             if (/[\+\-\*\/]/.test(conn[0])) {
                 src_fig = xpr_figures[conn[0]];
@@ -463,30 +481,38 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 tgt_fig = xpr_figures[conn[1]];
             }
 
-            // if src or tgt fig is not found then check for collapsed parent and link to that
-            if (!src_fig) {
-                parent_name = self.src_comp ? conn[0].substr(self.src_comp.length+1) : conn[0];
-                dot_brkt = parent_name.search(/\.|\[/);
-                if (dot_brkt > 0) {
-                    parent_name = parent_name.substring(0, dot_brkt);
+            if ((src_fig || !self.src_comp || (conn[0].substring(0, conn[0].indexOf('.')) === self.src_comp)) &&
+                (tgt_fig || !self.tgt_comp || (conn[1].substring(0, conn[1].indexOf('.')) === self.tgt_comp))) {
+
+                // if src or tgt fig is not found then check for collapsed parent and link to that
+                // (possibley two levels up)
+                if (!src_fig) {
+                    parent_name = get_parent_name(conn[0]);
                     src_fig = src_figures[parent_name];
                 }
-            }
-            if (!tgt_fig) {
-                parent_name = self.tgt_comp ? conn[1].substr(self.tgt_comp.length+1) : conn[1];
-                dot_brkt = parent_name.search(/\.|\[/);
-                if (dot_brkt > 0) {
-                    parent_name = parent_name.substring(0, dot_brkt);
+                if (!src_fig) {
+                    parent_name = get_parent_name(parent_name);
+                    src_fig = src_figures[parent_name];
+                    if (!tgt_fig) { debug.info('src figure not found for '+parent_name, src_figures, conn[0]); }
+                }
+
+                if (!tgt_fig) {
+                    parent_name = get_parent_name(conn[1]);
                     tgt_fig = tgt_figures[parent_name];
                 }
-            }
+                if (!tgt_fig) {
+                    parent_name = get_parent_name(parent_name);
+                    tgt_fig = tgt_figures[parent_name];
+                    if (!tgt_fig) { debug.info('tgt figure not found for '+parent_name, tgt_figures, conn[1]); }
+                }
 
-            if (src_fig && tgt_fig) {
-                r.connection(src_fig, tgt_fig, "#000", "#fff")
-                    .line.node.className.baseVal += ' variable-connection';
-            }
-            else {
-                debug.error('Cannot draw connection between '+conn[0]+' and '+conn[1]);
+                if (src_fig && tgt_fig) {
+                    r.connection(src_fig, tgt_fig, "#000", "#fff")
+                        .line.node.className.baseVal += ' variable-connection';
+                }
+                else {
+                    debug.error('Cannot draw connection between '+conn[0]+' and '+conn[1]);
+                }
             }
         });
 
