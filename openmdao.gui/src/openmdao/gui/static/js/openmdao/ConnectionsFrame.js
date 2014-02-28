@@ -286,6 +286,8 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             connected_vars = jQuery.map(data.edges, function(n) {
                 return n;
             }),
+            src_to_tgt = {},
+            tgt_to_src = {},
             src_list = [],
             tgt_list = [],
             xpr_list = [];
@@ -316,6 +318,20 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             }
         });
 
+        // build dictionaries to map src to tgt and tgt to src
+
+        jQuery.each(data.edges, function(idx, conn) {
+            // sources can have multiple targets
+            if (src_to_tgt.hasOwnProperty(conn[0])) {
+                src_to_tgt[conn[0]].push(conn[1]);
+            }
+            else {
+                src_to_tgt[conn[0]] = [conn[1]];
+            }
+            // but targets can have only one source
+            tgt_to_src[conn[1]] =  [conn[0]];
+        });
+
         src_list.sort();
         tgt_list.sort();
         xpr_list.sort();
@@ -343,7 +359,6 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                     parent_name = var_name.substring(0, first_dot);
                 }
             }
-
             return parent_name;
         }
 
@@ -351,23 +366,46 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         function addFigures(var_list) {
             if (var_list === src_list) {
                 comp = self.src_comp;
+                other_comp = self.tgt_comp;
                 expanded = src_expanded;
                 figures = src_figures;
+                connection_map = src_to_tgt;
                 input = false;
             }
             else {
                 comp = self.tgt_comp;
+                other_comp = self.src_comp;
                 expanded = tgt_expanded;
                 figures = tgt_figures;
+                connection_map = tgt_to_src;
                 input = true;
             }
 
             jQuery.each(var_list, function(idx, var_name) {
                 var attr = data.nodes[var_name],
                     connected = connected_vars.contains(var_name),
+                    connection_visible = showAllVariables,
                     parent_name, parent_fig,
                     first_dot = -1;
-                if (showAllVariables || connected) {
+
+                // if showing connected only, need to determine if the other
+                // end of the connection is visible
+                if (!showAllVariables && connected_vars.contains(var_name)) {
+                    connection_visible = false;
+                    if (connection_map.hasOwnProperty(var_name)) {
+                        jQuery.each(connection_map[var_name], function(idx, conn_name) {
+                            var conn_parent = conn_name.substring(0, conn_name.indexOf('.'));
+                            if (!other_comp) {
+                                connection_visible = true;
+                            }
+                            else if (other_comp && other_comp === conn_parent) {
+                                connection_visible = true;
+                            }
+                        });
+                    }
+                }
+
+                if (showAllVariables || connection_visible) {
                     // add some attribute for rendering the figure
                     attr.name = openmdao.Util.getName(var_name);
                     attr.input = input;

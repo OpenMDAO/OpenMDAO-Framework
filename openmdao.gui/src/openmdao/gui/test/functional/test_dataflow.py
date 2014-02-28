@@ -203,7 +203,7 @@ def _test_connections(browser):
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
-    eq(conn_page.count_variable_connections(), 28)
+    eq(conn_page.count_variable_connections(), 34)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
@@ -305,10 +305,10 @@ def _test_connections(browser):
     conn_page = vehicle.connections_page()
     conn_page.move(-50, -100)
 
-    eq(conn_page.count_variable_connections(), 0)
+    eq(conn_page.count_variable_connections(), 18)
 
     # test invalid variable
-    conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    conn_page.connect_vars('chassis.accel', 'acceleration')
     message = NotifierPage.wait(workspace_page)
     eq(message, "Invalid source variable")
 
