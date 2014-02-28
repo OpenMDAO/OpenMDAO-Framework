@@ -348,7 +348,7 @@ def _test_connect_nested(browser):
     conn_page.set_target_component('perf')
     eq(conn_page.source_component, 'BE0')
     eq(conn_page.target_component, 'perf')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
 
     # check that array is not expanded
@@ -369,27 +369,27 @@ def _test_connect_nested(browser):
     delta_Cts = conn_page.find_variable_name('delta_Ct[0]')
     eq(len(delta_Cts), 1)
     conn_page.connect_vars('BE0.delta_Ct', 'perf.delta_Ct[0]')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # switch source component, destination array should still be expanded
     conn_page.set_source_component('BE1')
     eq(conn_page.source_component, 'BE1')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     delta_Cts = conn_page.find_variable_name('delta_Ct[1]')
     eq(len(delta_Cts), 1)
     conn_page.connect_vars('BE1.delta_Ct', 'perf.delta_Ct[1]')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # check connecting var tree to var tree
     conn_page.set_source_component('-- Assembly --')
     eq(conn_page.source_component, '-- Assembly --')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     conn_page.connect_vars('free_stream', 'perf.free_stream')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # collapse delta_Ct array and confirm that it worked
@@ -403,18 +403,18 @@ def _test_connect_nested(browser):
     # check connecting var tree variable to variable
     conn_page.set_target_component('BE0')
     eq(conn_page.target_component, 'BE0')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     free_streams = conn_page.find_variable_name('free_stream')
     eq(len(free_streams), 1)
     chain = ActionChains(browser)
     chain.double_click(free_streams[0]).perform()
-    free_stream_V = conn_page.find_variable_name('free_stream.V')
+    free_stream_V = conn_page.find_variable_name('V')
     eq(len(free_stream_V), 1)
-    free_stream_rho = conn_page.find_variable_name('free_stream.rho')
-    eq(len(free_stream_rho), 1)
+    rho = conn_page.find_variable_name('rho')
+    eq(len(rho), 2)
     conn_page.connect_vars('free_stream.rho', 'BE0.rho')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # Clean up.
