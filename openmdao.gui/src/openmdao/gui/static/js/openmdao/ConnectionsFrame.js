@@ -280,7 +280,6 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
 
     /** populate connections and variable selectors with source and target variables */
     function loadConnectionData(data) {
-        debug.info('loadConnectionData', data);
         var i = 0,
             x = 15,
             y = 10,
@@ -297,24 +296,23 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             if (attr.type === 'expr') {
                 xpr_list.push(name);
             }
-            else if (attr.io === 'output' || attr.io === 'io') {
-                if (!self.src_comp) {
-                    src_list.push(name);
-                }
-                else if (name.substring(0, name.indexOf('.')) === self.src_comp) {
-                    src_list.push(name);
-                }
-            }
-            else if (attr.io === 'input' || attr.io === 'io') {
-                if (!self.tgt_comp) {
-                    tgt_list.push(name);
-                }
-                else if (name.substring(0, name.indexOf('.')) === self.tgt_comp) {
-                    tgt_list.push(name);
-                }
-            }
             else {
-                debug.warn('Unexpected connection data:', name, attr);
+                if (attr.io === 'output' || attr.io === 'io') {
+                    if (!self.src_comp) {
+                        src_list.push(name);
+                    }
+                    else if (name.substring(0, name.indexOf('.')) === self.src_comp) {
+                        src_list.push(name);
+                    }
+                }
+                if (attr.io === 'input' || attr.io === 'io') {
+                    if (!self.tgt_comp) {
+                        tgt_list.push(name);
+                    }
+                    else if (name.substring(0, name.indexOf('.')) === self.tgt_comp) {
+                        tgt_list.push(name);
+                    }
+                }
             }
         });
 
@@ -493,7 +491,9 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 if (!src_fig) {
                     parent_name = get_parent_name(parent_name);
                     src_fig = src_figures[parent_name];
-                    if (!tgt_fig) { debug.info('src figure not found for '+parent_name, src_figures, conn[0]); }
+                    if (!src_fig) {
+                        debug.warn('src figure not found for '+parent_name, src_figures, conn[0]);
+                    }
                 }
 
                 if (!tgt_fig) {
@@ -503,7 +503,9 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 if (!tgt_fig) {
                     parent_name = get_parent_name(parent_name);
                     tgt_fig = tgt_figures[parent_name];
-                    if (!tgt_fig) { debug.info('tgt figure not found for '+parent_name, tgt_figures, conn[1]); }
+                    if (!tgt_fig) {
+                        debug.warn('tgt figure not found for '+parent_name, tgt_figures, conn[1]);
+                    }
                 }
 
                 if (src_fig && tgt_fig) {
@@ -511,7 +513,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                         .line.node.className.baseVal += ' variable-connection';
                 }
                 else {
-                    debug.error('Cannot draw connection between '+conn[0]+' and '+conn[1]);
+                    debug.error('Cannot draw connection between',conn[0],'and',conn[1]);
                 }
             }
         });

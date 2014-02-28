@@ -1499,7 +1499,7 @@ class Assembly(Component):
             if source.startswith('_pseudo_'):
                 pname = source.split('.', 1)[0]
                 pcomp = getattr(self, pname)
-                if pcomp._pseudo_type == 'multi_var_expr':
+                if pcomp._pseudo_type in ['multi_var_expr']:
                     source = pcomp._orig_src
                     if source not in connectivity['nodes'].keys():
                         units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
@@ -1508,13 +1508,13 @@ class Assembly(Component):
                         connectivity['nodes'][source] = {
                             'type': 'expr',
                             'units': units,
-                            'io': 'expr',
+                            'io':   'io',
                         }
 
             if target.startswith('_pseudo_'):
                 pname = target.split('.', 1)[0]
                 pcomp = getattr(self, pname)
-                if pcomp._pseudo_type == 'multi_var_expr':
+                if pcomp._pseudo_type in ['multi_var_expr']:
                     target = pcomp._orig_src
                     if target not in connectivity['nodes'].keys():
                         units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
@@ -1523,10 +1523,12 @@ class Assembly(Component):
                         connectivity['nodes'][target] = {
                             'type': 'expr',
                             'units': units,
-                            'io': 'expr'
+                            'io': 'io'
                         }
 
-            connectivity['edges'].append([source, target])
+            if (not source.startswith('_pseudo_') and not target.startswith('_pseudo_')):
+                # ignore other types of PseudoComponents (unit conversion, objectives, etc)
+                connectivity['edges'].append([source, target])
 
         return connectivity
 

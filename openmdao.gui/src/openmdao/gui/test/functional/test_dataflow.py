@@ -203,7 +203,7 @@ def _test_connections(browser):
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
-    eq(conn_page.count_variable_connections(), 0)
+    eq(conn_page.count_variable_connections(), 28)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
@@ -497,7 +497,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -519,7 +519,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -539,7 +539,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -561,7 +561,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -601,7 +601,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -626,7 +626,7 @@ def _test_replace(browser):
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
+        ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
     for i, row in enumerate(inputs.value):
@@ -891,7 +891,7 @@ def _test_column_sorting(browser):
         if (grid == "inputs"):
             editor.show_inputs()
             editor.sort_inputs_column("Name", sort_order)
-            
+
             variables = editor.get_inputs()
 
         else:
@@ -912,32 +912,32 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", "iout", "iprint", "maxiter", 
-         "output_filename", "directory", "force_execute", "force_fd", 
+        ["accuracy", "iout", "iprint", "maxiter",
+         "output_filename", "directory", "force_execute", "force_fd",
          " gradient_options", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["printvars", " gradient_options", "force_fd", "force_execute", 
-         "directory", "output_filename", "maxiter", "iprint", "iout", 
+        ["printvars", " gradient_options", "force_fd", "force_execute",
+         "directory", "output_filename", "maxiter", "iprint", "iout",
          "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
 
     editor.get_input(" gradient_options").name.click()
-    
+
     test_sorting(
-        ["accuracy", "iout", "iprint", "maxiter", 
-         "output_filename", "directory", "force_execute", "force_fd", 
-         " gradient_options", "fd_form", "fd_step", "fd_step_type", 
+        ["accuracy", "iout", "iprint", "maxiter",
+         "output_filename", "directory", "force_execute", "force_fd",
+         " gradient_options", "fd_form", "fd_step", "fd_step_type",
          "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
          ["printvars", " gradient_options", "gmres_tolerance", "gmres_maxiter",
-         "force_fd", "fd_step_type", "fd_step", "fd_form", 
+         "force_fd", "fd_step_type", "fd_step", "fd_form",
          "force_fd", "force_execute", "directory",
          "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING
@@ -974,18 +974,17 @@ def _test_column_sorting(browser):
     editor.get_input(" vt2").name.click()
     editor.get_input(" vt3").name.click()
 
-
     #Testing sort for inputs
-    editor.get_input("missing_deriv_policy") 
+    editor.get_input("missing_deriv_policy")
     test_sorting(
-        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
          "directory", "force_execute", "force_fd", "missing_deriv_policy"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["missing_deriv_policy", "force_fd", "force_execute", "directory", 
+        ["missing_deriv_policy", "force_fd", "force_execute", "directory",
          " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
@@ -997,14 +996,14 @@ def _test_column_sorting(browser):
     editor.get_output(" vt3").name.click()
 
     test_sorting(
-        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
          "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["itername", "exec_count", "derivative_exec_count", " cont_out", 
+        ["itername", "exec_count", "derivative_exec_count", " cont_out",
          " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "outputs",
         SortOrder.DESCENDING
