@@ -360,22 +360,8 @@ class ConsoleServer(cmd.Cmd):
         return json.dumps(self._get_components(self.proj._project_globals),
                           default=json_default)
 
-    def get_connections(self, pathname, src_name, dst_name):
-        ''' For the assembly with the given pathname, get a list of the outputs
-            from the component *src_name* (sources), the inputs to the component
-            *dst_name* (destinations), and the connections between them.
-        '''
-        conns = {}
-        asm, root = self.get_object(pathname)
-        if asm:
-            try:
-                conns = asm.get_connections(src_name, dst_name)
-            except Exception as err:
-                self._error(err, sys.exc_info())
-        return json.dumps(conns, default=json_default)
-
     def get_connectivity(self, pathname):
-        ''' Get the connectivity data for For the assembly with the given pathname
+        ''' Get the connectivity data for the assembly with the given pathname
         '''
         connectivity = {}
         asm, root = self.get_object(pathname)

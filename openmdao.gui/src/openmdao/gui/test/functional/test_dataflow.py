@@ -105,6 +105,7 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
+    time.sleep(0.5)
     conn_page.move(-100, -100)
     eq(conn_page.dialog_title, 'Connections: top')
     eq(conn_page.source_component, 'comp1')

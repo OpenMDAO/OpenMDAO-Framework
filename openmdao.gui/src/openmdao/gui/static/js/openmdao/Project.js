@@ -407,26 +407,6 @@ openmdao.Project=function(listeners_ready) {
         return jqXHR.promise();
     };
 
-    /** get connections between two components in an assembly */
-    this.getConnections = function(pathname, src_name, dst_name) {
-        // src and dst names are optional
-        // (no src or dst means the src or dst is the assembly itself)
-        var args = {};
-        if (src_name) {
-            args.source = src_name;
-        }
-        if (dst_name) {
-            args.target = dst_name;
-        }
-        var jqXHR = jQuery.ajax({
-                        type: 'GET',
-                        url:  'object/'+pathname+'/connections',
-                        dataType: 'json',
-                        data: args
-                    });
-        return jqXHR.promise();
-    };
-
     /** get connections within an assembly */
     this.getConnectivity = function(pathname) {
         // src and dst names are optional

@@ -145,6 +145,8 @@ def _test_drop_on_component_editor(browser):
     # sort through these to find the correct 'top'
     names = []
     for div in editor_top.get_drop_targets()[:-1]:
+        time.sleep(1)
+        print 'drop target:', div
         chain = workspace_page.drag_element_to(assembly, div, False)
         time.sleep(1)
         workspace_page.check_highlighting(editor_top('content_area').element,
