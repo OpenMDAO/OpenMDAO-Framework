@@ -1,6 +1,5 @@
 import os
 import sys
-import time
 import shutil
 import json
 import tempfile
@@ -30,14 +29,16 @@ _excluded_tooltip_data = set([
     'pseudo',
 ])
 
+
 def _to_id(name):
     """Convert a given name to a valid html id, replacing
     dots with hyphens."""
     return name.replace('.', '-')
 
+
 def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
     """Return a cleaned version of the graph. Note that this
-    should not be used for really large graphs because it 
+    should not be used for really large graphs because it
     copies the entire graph.
     """
     # make a subgraph, creating new edge/node meta dicts later if
@@ -61,8 +62,8 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
 
     conns = graph.list_connections()
 
-    conn_nodes = set([u.split('[',1)[0] for u,v in conns])
-    conn_nodes.update([v.split('[',1)[0] for u,v in conns])
+    conn_nodes = set([u.split('[', 1)[0] for u, v in conns])
+    conn_nodes.update([v.split('[', 1)[0] for u, v in conns])
 
     nodes_to_remove = []
     for node, data in graph.nodes_iter(data=True):
@@ -71,7 +72,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
             nodes_to_remove.append(node)
         elif 'framework_var' in data:
             nodes_to_remove.append(node)
-        else: 
+        else:
             if minimal and '@' not in node and '~' not in node and not 'comp' in data:
                 degree = graph.in_degree(node) + graph.out_degree(node)
                 if degree < 2:
@@ -82,11 +83,11 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
             for meta in _excluded_node_data:
                 if meta in newdata:
                     if newdata is data:
-                        newdata = dict(data) # make a copy of metadata since we're changing it
+                        newdata = dict(data)  # make a copy of metadata since we're changing it
                         graph.node[node] = newdata
                     del newdata[meta]
             tt_dct = {}
-            for key,val in newdata.items():
+            for key, val in newdata.items():
                 if key not in _excluded_tooltip_data:
                     tt_dct[key] = val
                 elif scope is not None and key == 'pseudo':
@@ -98,7 +99,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
 
     graph.remove_nodes_from(nodes_to_remove)
 
-    for u,v,data in graph.edges_iter(data=True):
+    for u, v, data in graph.edges_iter(data=True):
         newdata = data
         for meta in _excluded_link_data:
             if meta in newdata:
@@ -108,7 +109,7 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
                 del newdata[meta]
 
     try:
-        for i,comp in enumerate(graph.component_graph()):
+        for i, comp in enumerate(graph.component_graph()):
             graph.node[comp]['color_idx'] = i
     except AttributeError:
         pass
@@ -129,7 +130,8 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
 
     return graph
 
-def plot_graph(graph, scope=None, parent=None, 
+
+def plot_graph(graph, scope=None, parent=None,
                excludes=(), d3page='fixedforce.html', minimal=False):
     """Open up a display of the graph in a browser window."""
 
@@ -138,7 +140,7 @@ def plot_graph(graph, scope=None, parent=None,
     shutil.copy(os.path.join(fdir, 'd3.js'), tmpdir)
     shutil.copy(os.path.join(fdir, d3page), tmpdir)
 
-    graph = _clean_graph(graph, excludes=excludes, 
+    graph = _clean_graph(graph, excludes=excludes,
                          scope=scope, parent=parent, minimal=minimal)
     data = node_link_data(graph)
     tmp = data.get('graph', [])
@@ -168,6 +170,7 @@ def plot_graph(graph, scope=None, parent=None,
         # shutil.rmtree(tmpdir)
         # print "temp directory removed"
 
+
 def plot_graphs(obj, recurse=False, d3page='fixedforce.html', minimal=False):
     """Return a list of tuples of the form (scope, parent, graph)"""
     from openmdao.main.assembly import Assembly
@@ -183,7 +186,7 @@ def plot_graphs(obj, recurse=False, d3page='fixedforce.html', minimal=False):
             plot_graphs(obj.driver, recurse)
     elif isinstance(obj, Driver):
         try:
-            plot_graph(obj.workflow.derivative_graph(), 
+            plot_graph(obj.workflow.derivative_graph(),
                         scope=obj.parent, parent=obj,
                         d3page=d3page, minimal=minimal)
         except Exception as err:
@@ -192,6 +195,7 @@ def plot_graphs(obj, recurse=False, d3page='fixedforce.html', minimal=False):
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
                     plot_graphs(comp, recurse)
+
 
 def main():
     from argparse import ArgumentParser
@@ -209,11 +213,11 @@ def main():
                         help='if set, recurse down and plot all dependency and derivative graphs')
 
     options = parser.parse_args()
-    
+
     if options.module is None:
         parser.print_help()
         sys.exit(-1)
-               
+
     __import__(options.module)
 
     mod = sys.modules[options.module]
@@ -238,9 +242,6 @@ def main():
 
     plot_graphs(obj, recurse=options.recurse)
 
+
 if __name__ == '__main__':
     main()
-
-
-
-
