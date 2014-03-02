@@ -8,6 +8,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from basepageobject import TMO
 from dialog import DialogPage
 from elements import ButtonElement, InputElement
+from util import ValuePrompt
 
 
 class ConnectionsPage(DialogPage):
@@ -19,7 +20,8 @@ class ConnectionsPage(DialogPage):
     source_variable = InputElement((By.ID, 'src_var_input'))
     target_variable = InputElement((By.ID, 'tgt_var_input'))
 
-    connect_button = ButtonElement((By.ID, 'connect'))
+    expression_button = ButtonElement((By.ID, 'expression'))
+    connect_button    = ButtonElement((By.ID, 'connect'))
 
     # Context menu.
     show_all_button       = ButtonElement((By.XPATH, "./div/ul/li[text()='Show All Variables']"))
@@ -32,6 +34,12 @@ class ConnectionsPage(DialogPage):
     def set_target_component(self, comp_name):
         """ Set the target component. """
         self.target_component = comp_name + '\n'
+
+    def set_source_expression(self, expr):
+        """ Set the source to expression. """
+        self('expression_button').click()
+        dialog = ValuePrompt(self.browser, self.port)
+        dialog.set_value(expr)
 
     def connect(self):
         """ Connect the selected variables. """

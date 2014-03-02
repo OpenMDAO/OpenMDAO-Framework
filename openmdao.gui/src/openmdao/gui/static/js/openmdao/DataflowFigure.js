@@ -546,10 +546,6 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
                 var f = new openmdao.ConnectionsFrame(self.project, pathname);
             }));
 
-            menu.appendMenuItem(new draw2d.MenuItem("Edit Data Connectivity", null, function() {
-                var f = new openmdao.ConnectivityFrame(self.project, pathname);
-            }));
-
             if (this.drawDataFlows) {
                 txt = 'Hide Data Connections';
             }

@@ -114,6 +114,16 @@ def _test_connect(browser):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
         time.sleep(0.5)  # Wait for display update.
+
+    conn_page.set_source_expression('comp1.f_out+comp1.i_out')
+    conn_page.target_variable = 'comp2.x_in'
+    conn_page.connect()
+
+    time.sleep(0.5)  # Wait for display update.
+
+    eq(conn_page.count_variable_figures(), 20)
+    eq(conn_page.count_variable_connections(), 8)  # 3 connections for the expr
+
     conn_page.close()
 
     # Set inputs (re-fetch required after updating).
@@ -167,6 +177,7 @@ def _test_connect(browser):
         ['', 'f_out', '2.781828', '', ''],
         ['', 'i_out', '42', '', ''],
         ['', 's_out', 'xyzzy', '', ''],
+        ['', 'x_out', '44.781828', '', ''],
         ['', 'derivative_exec_count', '0', '',
          "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count', '1', '',
