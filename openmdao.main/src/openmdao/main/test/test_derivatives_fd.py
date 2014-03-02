@@ -14,10 +14,22 @@ from openmdao.util.testutil import assert_rel_error
 
 class MyComp(Component):
 
-    x1 = Float(1.0, iotype='in')
+    x1 = Float(1.0, iotype='in') # default is 1.0e-06
     x2 = Float(1.0, iotype='in', fd_step = .1)
     x3 = Float(1.0, iotype='in', fd_step = .1, fd_form='central')
     x4 = Float(0.001, iotype='in', fd_step = .1, fd_step_type='relative')
+    x5 = Float(1.0, iotype='in', fd_step = .01,
+               low=0.0, high=10.0,
+               fd_step_type='bounds_scaled')
+    # Same as x5 but fd_step and low/high bounds scaled equally
+    #   We will test this by setting the
+    #     gradient_options.fd_step_type to 'bounds_scaled'
+    x6 = Float(1.0, iotype='in', fd_step = 0.001,
+               low=0.0, high=100.0
+               ) 
+    # So we can test the check on needing low and high when using bounds_scaled
+    x7 = Float(1.0, iotype='in', fd_step = 0.01,
+               fd_step_type='bounds_scaled')
 
     y = Float(3.3, iotype='out')
 
@@ -25,7 +37,9 @@ class MyComp(Component):
         ''' Simple eq '''
 
         self.y = 2.0*self.x1*self.x1 + 2.0*self.x2*self.x2 + \
-                 2.0*self.x3*self.x3 + 2.0*self.x4*self.x4
+                 2.0*self.x3*self.x3 + 2.0*self.x4*self.x4 + \
+                 2.0*self.x5*self.x5 + 2.0*self.x6*self.x6 + \
+                 2.0*self.x7*self.x7
 
 class MyCompDerivs(Component):
 
@@ -103,7 +117,7 @@ class TestFiniteDifference(unittest.TestCase):
         # Central gets this right even with a bad step
         assert_rel_error(self, J[0, 1], 4.0, 0.0001)
 
-    def test_fd_step_type(self):
+    def test_fd_step_type_relative(self):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp())
@@ -123,6 +137,51 @@ class TestFiniteDifference(unittest.TestCase):
                                                 outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 0], 4.0e12, 0.0001)
+
+    def test_fd_step_type_bounds_scaled(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp())
+        model.driver.workflow.add(['comp'])
+
+        model.run()
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x5'],
+                                                outputs=['comp.y'])
+        assert_rel_error(self, J[0, 0], 4.2, 0.0001)
+
+
+        model.driver.gradient_options.fd_step_type = 'bounds_scaled'
+        model.run()
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x6'],
+                                                outputs=['comp.y'])
+        assert_rel_error(self, J[0, 0], 4.2, 0.0001)
+
+
+        model.run()
+        model.driver.workflow.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=['comp.x7'],
+                                                    outputs=['comp.y'])
+        except RuntimeError as err:
+            self.assertEqual(str(err),
+               "For variable 'comp.x7', a finite "
+               "difference step type of bounds_scaled "
+               "is used but required low and high "
+               "values are not set" ) 
+        else:
+            self.fail("Exception expected because low "
+                      "and high not set for comp.x7")
+
+        # test add_parameter's fdstep
+        model.add('driver', SimpleDriver())
+        model.driver.workflow.add(['comp'])
+        model.driver.gradient_options.fd_step_type = 'bounds_scaled'
+        model.driver.add_parameter('comp.x2', low=0.0, high=1000.0,
+                                   fd_step=.0001)
+        J = model.driver.workflow.calc_gradient(outputs=['comp.y'])
+        assert_rel_error(self, J[0, 0], 4.2, 0.0001)
 
     def test_force_fd(self):
 

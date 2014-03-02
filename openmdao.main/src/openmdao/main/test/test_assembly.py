@@ -481,7 +481,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units', 'comp2.s')
         except Exception, err:
             self.assertEqual(str(err),
-                    ": Can't connect 'comp1.rout.units' to 'comp2.s': comp1: Couldn't find metadata for trait rout.units")
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': Couldn't find metadata for traits 'comp1.rout.units'")
         else:
             self.fail('Exception expected')
 
@@ -491,7 +491,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         meta = self.asm.comp1.get_metadata('rout')
         self.assertEqual(set(meta.keys()),
-                         set(['vartypename', 'units', 'high', 'iotype', 'type', 'low']))
+                         set(['assumed_default','vartypename', 'units', 'high', 'iotype', 'type', 'low']))
         self.assertEqual(meta['vartypename'], 'Float')
         self.assertEqual(self.asm.comp1.get_metadata('slistout', 'vartypename'), 'List')
 

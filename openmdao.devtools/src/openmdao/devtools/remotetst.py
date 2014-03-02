@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import fnmatch
 
 import paramiko.util
 
@@ -104,7 +105,7 @@ def test_branch(parser, options, args=None):
         parser.print_help()
         print "nothing to do - no hosts specified"
         sys.exit(0)
-    
+
     if options.fname is None:  # assume we're testing the current repo
         print 'creating tar file of current branch: ',
         options.fname = os.path.join(os.getcwd(),
@@ -182,7 +183,7 @@ def test_release(parser, options):
 
     if options.fname is None:
         print '\nyou must supply a release directory'
-        print ' or the pathname or URL of a go-openmdao.py file'
+        print ' or the pathname or URL of a go-openmdao-<version>.py file'
         sys.exit(-1)
 
     options.filters = ['test_release==true']
@@ -232,7 +233,18 @@ def test_release(parser, options):
         if os.path.isdir(fname):
             if not _is_release_dir(fname):
                 fname = release_dir
-            fname = os.path.join(fname, 'downloads', 'latest', 'go-openmdao.py')
+            # find go file and get version number
+            godir = os.path.join(fname, 'downloads', 'latest')
+            gfiles = os.listdir(godir)
+            gfiles = fnmatch.filter(gfiles, 'go-openmdao-*.py')
+            try:
+                gfiles.remove('go-openmdao-dev.py')
+            except:
+                pass
+            if len(gfiles) != 1:
+                print "Need 1 go-openmdao-<version>.py file to run, but found %s" % gfiles
+                sys.exit(-1)
+            fname = os.path.join(fname, 'downloads', 'latest', gfiles[0])
         cmd = [sys.executable, loctst, '-f', fname, '-d', tdir]
         if options.testargs:
             cmd.append('--testargs="%s"' % options.testargs)

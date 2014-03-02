@@ -180,7 +180,8 @@ class FloatTestCase(unittest.TestCase):
                          'connected': '',
                          'low': 0.0,
                          'units': 'ft',
-                         'desc': 'Stuff'} in input_attrs)
+                         'desc': 'Stuff', 
+                         'assumed_default': False} in input_attrs)
 
 if __name__ == "__main__":
     unittest.main()

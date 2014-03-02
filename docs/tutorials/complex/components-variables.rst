@@ -13,9 +13,12 @@ needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
+.. note::  In some cases the examples are written from the Linux perspective. 
+   Windows users need to replace the ``/`` with a ``\``.
+
 ::
 
-  openmdao-0.8.1\lib\site-packages\openmdao.examples.enginedesign-0.8.1-py2.7-win-32.egg\openmdao\examples\enginedesign
+  openmdao-0.8.1/lib/site-packages/openmdao.examples.enginedesign-0.8.1-py2.7-win-32.egg/openmdao/examples/enginedesign
   
 
 If you are a developer and have a branch from the source repository, the files you need will be

@@ -106,7 +106,7 @@ class BadListDerivsComp(Component):
         return ['x','y']
 
     def provideJ(self):
-        return array([[2.0]])        
+        return array([[2.0]])
 
 
 class Testcase_provideJ(unittest.TestCase):
@@ -1139,6 +1139,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.junk', 'nest.f_xy', ],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
                                               outputs=['nest.f_xy', ],
                                               mode='adjoint')
 
@@ -1219,7 +1229,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
                                               outputs=['comp2.y'],
                                               mode='adjoint')
-        print J
+        #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
@@ -1227,7 +1237,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
                                               outputs=['comp2.y'],
                                               mode='forward')
-        print J
+        #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
@@ -1235,7 +1245,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
                                               outputs=['comp2.y'],
                                               mode='fd')
-        print J
+        #print J
         assert_rel_error(self, J[0, 0], 0.0, .001)
         assert_rel_error(self, J[0, 1], 5.0, .001)
 
@@ -2162,16 +2172,39 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.workflow.add(['nest'])
         top.run()
 
+        Jbase = top.nest.comp1.provideJ()
+
         J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
                                               outputs=['nest.y1', 'nest.y2'],
                                               mode='fd')
-        print J
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
                                               outputs=['nest.y1', 'nest.y2'],
                                               mode='forward')
-        print J
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='adjoint')
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
 
     def test_large_dataflow(self):
 

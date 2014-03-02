@@ -26,9 +26,12 @@ class Bool(Variable):
         if desc is not None:
             metadata['desc'] = desc
 
+        assumed_default = (default_value is None)
+
+
         self._validator = Enthought_Bool(value=default_value, **metadata)
 
-        super(Bool, self).__init__(default_value=default_value, **metadata)
+        super(Bool, self).__init__(default_value=default_value, assumed_default=assumed_default, **metadata)
 
     def validate(self, obj, name, value):
         """ Use the Enthought trait's validate.

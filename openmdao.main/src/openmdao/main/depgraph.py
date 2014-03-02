@@ -1163,19 +1163,13 @@ class DependencyGraph(nx.DiGraph):
         basevars = set()
         for src, targets in edges.iteritems():
 
-            if src == '@fake':
-                continue
-
             if not isinstance(targets, list):
                 targets = [targets]
 
-            numfakes = 0
             for target in targets:
-                if target.startswith('@fake'):
-                    numfakes += 1
-                elif not target.startswith('@'):
+                if not target.startswith('@'):
                     comp, _, var = target.partition('.')
-                    if var:
+                    if var: # TODO: this adds VarTrees as well as comps. Should it?
                         if comp not in comps:
                             comps[comp] = {'inputs': [],
                                            'outputs': [],
@@ -1189,12 +1183,9 @@ class DependencyGraph(nx.DiGraph):
                             if target == basevar:
                                 basevars.add(target)
 
-            if len(targets) == numfakes:
-                continue
-
             if not src.startswith('@'):
                 comp, _, var = src.partition('.')
-                if var:
+                if var: # TODO: this adds VarTrees as well as comps. Should it?
                     if comp not in comps:
                         comps[comp] = {'inputs': [],
                                        'outputs': [],
@@ -1556,17 +1547,53 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     graph.graph['outputs'] = list(outputs)
     graph.graph['mapped_outputs'] = list(outputs)
 
+    relevant = set()
+    
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
         inames.append(iname)
         graph.add_node(iname, var=True, iotype='in', valid=True)
         for varname in flatten_list_of_iters(varnames):
-            if varname not in graph:  # must be a subvar
-                graph.add_node(varname, basevar=graph.base_var(varname),
+            base = graph.base_var(varname)
+            relevant.add(base) # keep basevars around
+            subvars = graph._all_child_vars(base)
+            # does base have any full basevar connections?
+            fulls = set(graph.successors(base)) - set(subvars)
+            if varname not in graph: # should only happen for a subvar
+                graph.add_node(varname, basevar=base,
                                iotype='in', valid=True)
-            graph.connect(None, iname, varname,
-                          check=False, invalidate=False)
+
+            graph.add_edge(iname, varname, conn=True) 
+
+            if varname in subvars:
+                # make sure this subvar is connected to its base in the direction we need
+                graph.add_edge(varname, base)
+            elif fulls:
+                # we have a full basevar connection, so we can get a subvar deriv
+                # varname is a subvar, so need to connect to basevar
+                tail = varname[len(base):]
+                if '.' in base: # this is a component var
+                    if varname != base:
+                        graph.add_edge(varname, base)
+                    for dest in fulls:
+                        sub = dest+tail
+                        if not is_comp_node(graph, dest):
+                            dbase = graph.base_var(dest)
+                            if sub not in graph:
+                                graph.add_node(sub, basevar=dbase, iotype='in', valid=True)
+                                graph.add_edge(sub, dbase)
+                            graph.add_edge(iname, sub)
+                else: # it's a boundary var
+                    graph.add_edge(base, varname)
+                    for dest in fulls:
+                        sub = dest+tail
+                        dbase = graph.base_var(dest)
+                        if sub not in graph:
+                            graph.add_node(sub, basevar=dbase, iotype='in', valid=True)
+                            graph.add_edge(sub, dbase)
+                        graph.add_edge(varname, sub, conn=True)
+
             indct[varname] = iname
 
     # add nodes for desired outputs
@@ -1595,7 +1622,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
 
     edict = graph.edge
     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
-    relevant = set([u for u,v in edges])
+    relevant.update([u for u,v in edges])
     relevant.update([v for u,v in edges])
     comps = partition_names_by_comp([u for u,v in conns])
     partition_names_by_comp([v for u,v in conns], compmap=comps)
@@ -1636,8 +1663,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
 
     to_remove = set()
     for src, dest in conns:
-        # if src == '@fake' or dest == '@fake':
-        #     continue
         if src.startswith('@in'):
             # move edges from input boundary nodes if they're
             # connected to an @in node
@@ -1734,40 +1759,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
-
-    # disconnected boundary vars that are explicitly specified as inputs
-    # or outputs need to be added back so that bounds data can be kept
-    # for them
-
-    for inp_tuple in inputs:
-        if isinstance(inp_tuple, basestring):
-            inp_tuple = (inp_tuple,)
-
-        for inp in inp_tuple:
-            for drv in rep_drivers:
-                if to_PA_var(inp, '~%s' % drv) in graph:
-                    inp = to_PA_var(inp, '~%s' % drv)
-                    break
-            if inp not in graph:
-                if '@fake' not in graph:
-                    graph.add_node('@fake')
-                graph.add_node(inp, attr_dict=scope._depgraph.node.get(inp,{}).copy())
-
-                if len(inp_tuple) > 1:
-                    graph.add_edge('@fake', inp)
-                else:
-                    graph.add_edge('@fake', inp, conn=True)
-
-    for out in flatten_list_of_iters(outputs):
-        for drv in rep_drivers:
-            if to_PA_var(out, '~%s' % drv) in graph:
-                out = to_PA_var(out, '~%s' % drv)
-                break
-        if out not in graph:
-            if '@fake' not in graph:
-                graph.add_node('@fake')
-            graph.add_node(out, attr_dict=scope._depgraph.node[out].copy())
-            graph.add_edge(out, '@fake', conn=True)
 
     return graph
 

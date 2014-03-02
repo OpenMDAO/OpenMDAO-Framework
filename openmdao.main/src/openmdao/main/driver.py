@@ -4,6 +4,7 @@
 __all__ = ["Driver"]
 
 import fnmatch
+from uuid import uuid1
 
 from zope.interface import implementedBy
 
@@ -38,9 +39,11 @@ class GradientOptions(VariableTree):
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
                    desc='Finite difference mode (forward, backward, central',
                    framework_var=True)
-    fd_step = Float(1.0e-6, desc='Deafault finite difference stepsize', framework_var=True)
-    fd_step_type = Enum('absolute', ['absolute', 'relative'],
-                        desc='Set to absolute or relative stepsizes',
+    fd_step = Float(1.0e-6, desc='Default finite difference stepsize', framework_var=True)
+    fd_step_type = Enum('absolute',
+                        ['absolute', 'relative', 'bounds_scaled'],
+                        desc='Set to absolute, relative, '
+                        'or scaled to the bounds ( high-low) step sizes',
                         framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference " +
@@ -76,7 +79,9 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
+
     gradient_options = VarTree(GradientOptions(), iotype='in', framework_var=True)
+
 
     def __init__(self):
         self._iter = None
@@ -93,6 +98,7 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
+        
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -305,6 +311,7 @@ class Driver(Component):
             all iteration coordinates. (Default is '')
         """
 
+        
         # (Re)configure parameters.
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
@@ -500,7 +507,10 @@ class Driver(Component):
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
+        #case = Case(case_input, case_output, case_uuid=self.case_id , parent_uuid=self.parent_case_id)
         case = Case(case_input, case_output, parent_uuid=self._case_id)
+
+
 
 
 
