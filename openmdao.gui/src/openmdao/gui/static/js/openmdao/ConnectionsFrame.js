@@ -341,25 +341,25 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
         xpr_figures = {};
         r.clear();
 
-        function get_parent_name(var_name) {
-            // might be a variable tree or array
+        /** get variable tree or array name (or parent name) */
+        function get_root_name(var_name) {
             var first_dot = var_name.indexOf('.'),
                 last_dot  = var_name.lastIndexOf('.'),
-                parent_name;
+                root_name;
 
             if (last_dot !== first_dot) {
-                parent_name = var_name.substring(first_dot+1, last_dot);
+                root_name = var_name.substring(first_dot+1, last_dot);
             }
             else {
                 var brkt = var_name.indexOf('[');
                 if (brkt > 0) {
-                    parent_name = var_name.substring(0, brkt);
+                    root_name = var_name.substring(0, brkt);
                 }
                 else {
-                    parent_name = var_name.substring(0, first_dot);
+                    root_name = var_name.substring(0, first_dot);
                 }
             }
-            return parent_name;
+            return root_name;
         }
 
         /** create variable figures for the variable nodes in var_list */
@@ -386,7 +386,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                     connected = connected_vars.contains(var_name),
                     connection_visible = showAllVariables,
                     parent_name, parent_fig,
-                    first_dot = -1;
+                    first_dot, last_dot, brkt;
 
                 // if showing connected only, need to determine if the other
                 // end of the connection is visible
@@ -427,14 +427,14 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                         }
 
                         // might be a variable tree or array, parent will already have a figure
-                        var last_dot = var_name.lastIndexOf('.');
+                        last_dot = var_name.lastIndexOf('.');
                         if (last_dot !== first_dot) {
-                            parent_name = var_name.substring(first_dot+1, last_dot);
+                            parent_name = var_name.substring(0, last_dot);
                             parent_fig = figures[parent_name];
                         }
                         else {
                             // or an array
-                            var brkt = var_name.indexOf('[');
+                            brkt = var_name.indexOf('[');
                             if (brkt > 0) {
                                 parent_name = var_name.substring(0, brkt);
                                 parent_fig = figures[parent_name];
@@ -523,11 +523,11 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 // if src or tgt fig is not found then check for collapsed parent and link to that
                 // (possibley two levels up)
                 if (!src_fig) {
-                    parent_name = get_parent_name(conn[0]);
+                    parent_name = get_root_name(conn[0]);
                     src_fig = src_figures[parent_name];
                 }
                 if (!src_fig) {
-                    parent_name = get_parent_name(parent_name);
+                    parent_name = get_root_name(parent_name);
                     src_fig = src_figures[parent_name];
                     if (!src_fig) {
                         debug.warn('src figure not found for '+parent_name, src_figures, conn[0]);
@@ -535,11 +535,11 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 }
 
                 if (!tgt_fig) {
-                    parent_name = get_parent_name(conn[1]);
+                    parent_name = get_root_name(conn[1]);
                     tgt_fig = tgt_figures[parent_name];
                 }
                 if (!tgt_fig) {
-                    parent_name = get_parent_name(parent_name);
+                    parent_name = get_root_name(parent_name);
                     tgt_fig = tgt_figures[parent_name];
                     if (!tgt_fig) {
                         debug.warn('tgt figure not found for '+parent_name, tgt_figures, conn[1]);
