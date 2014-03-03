@@ -21,6 +21,11 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(expected),len(cases))
         self.assertEqual(len(expected[0]),len(cases[0]))   
         
+        # See if we can get cases again
+        cases = [case for case in uni]
+        self.assertEqual(len(expected),len(cases))
+        self.assertEqual(len(expected[0]),len(cases[0]))
+       
     def test_low_sample_count(self): 
         uni = Uniform()
         uni.num_paramters = 1
