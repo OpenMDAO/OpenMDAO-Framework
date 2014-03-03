@@ -40,7 +40,7 @@ class DumbClass(object):
     
     def __init__(self, depgraph, name, inputs=('a','b'), outputs=('c','d'), states=(), resids=()):
         self.name = name
-        self.dep = depgraph
+        self._depgraph = depgraph
 
         self._inputs = inputs[:]
         self._outputs = outputs[:]
@@ -54,7 +54,7 @@ class DumbClass(object):
         return getattr(self, name, None)
     
     def run(self, *args, **kwargs):
-        self.dep.child_run_finished(self.name)
+        self._depgraph.child_run_finished(self.name)
         
     def get_invalidation_type(self):
         return 'full'

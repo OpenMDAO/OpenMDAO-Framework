@@ -244,7 +244,7 @@ logging level for that component:
     opt_problem.paraboloid.log_level = logging.INFO
     
 If you would like to have the log messages printed on the console, you can
-include this in your main routine:
+include this in your top level script:
 
 :: 
 

@@ -19,14 +19,14 @@ openmdao.PropertiesFrame = function(id, project) {
         inputsDiv = jQuery("<div id='inputs'>"),
         outputsDiv = jQuery("<div id='outputs'>");
 
-    this.elm.append(nameHeader);
-    this.elm.append('<p>');
-    this.elm.append(inputsHeader);
-    this.elm.append(inputsDiv);
-    this.elm.append('<p>');
-    this.elm.append(outputsHeader);
-    this.elm.append(outputsDiv);
-    this.elm.width(200);
+    self.elm.append(nameHeader);
+    self.elm.append('<p>');
+    self.elm.append(inputsHeader);
+    self.elm.append(inputsDiv);
+    self.elm.append('<p>');
+    self.elm.append(outputsHeader);
+    self.elm.append(outputsDiv);
+    self.elm.width(200);
 
     inputs = new openmdao.PropertiesPane(inputsDiv,project,self.pathname,'Inputs',true);
     inputsHeader.click(function () {
@@ -74,6 +74,11 @@ openmdao.PropertiesFrame = function(id, project) {
     /***********************************************************************
      *  privileged
      ***********************************************************************/
+
+    /** resize contents */
+    this.resize_contents = function() {
+        self.elm.find('.slickgrid').trigger('resizeCanvas');
+    };
 
     /** get the specified object from project, load properties into table */
     this.editObject = function(path) {

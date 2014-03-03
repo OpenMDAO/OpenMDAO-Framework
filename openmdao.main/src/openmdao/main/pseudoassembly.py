@@ -7,10 +7,12 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
+
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
     assert(not name.startswith('~'))
     return pa_name + '.' + name.replace('.', '|')
+
 
 def from_PA_var(name):
     ''' Converts a pseudoassembly input name back to the real input.'''
@@ -23,6 +25,7 @@ def from_PA_var(name):
             name = comp.lstrip('~')
 
     return name
+
 
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
@@ -63,9 +66,9 @@ class PseudoAssembly(object):
         self.J = None
         self.ffd_cache = {}
 
-        if fd: # for full-model fd, turn off fake finite difference
+        if fd:  # for full-model fd, turn off fake finite difference
             self.ffd_order = 0
-        else: # use fake finite difference on comps having derivatives
+        else:  # use fake finite difference on comps having derivatives
             # TODO: Fake Finite Difference has been disabled until we upgrade
             # it to support arrays and vartrees.
             self.ffd_order = 0
@@ -94,7 +97,7 @@ class PseudoAssembly(object):
         solver_states = []
         if fd is False:
             for comp in group:
-                solver_states.extend([node for node in dgraph.predecessors(comp) \
+                solver_states.extend([node for node in dgraph.predecessors(comp)
                                       if 'solver_state' in dgraph.node[node]])
 
         pa_inputs = edges_to_dict(in_edges).values()
@@ -173,9 +176,9 @@ class PseudoAssembly(object):
                         # required, and pass them in. Cache this once.
                         if name not in self.ffd_cache:
                             dgraph = self.wflow.scope._depgraph
-                            inputs = [dgraph.base_var(inp) \
+                            inputs = [dgraph.base_var(inp)
                                        for inp in flatten_list_of_iters(self.inputs)]
-                            outputs = [dgraph.base_var(outp) \
+                            outputs = [dgraph.base_var(outp)
                                        for outp in self.outputs]
                             from openmdao.main.depgraph import _get_inner_edges
                             edges = _get_inner_edges(dgraph, inputs, outputs)
@@ -303,4 +306,3 @@ class PseudoAssembly(object):
             compname, _, varname = varpath.partition('.')
             if varname and (compname in self.comps):
                 map_outputs[i] = to_PA_var(varpath, self.name)
-
