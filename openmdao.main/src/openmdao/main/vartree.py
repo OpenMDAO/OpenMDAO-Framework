@@ -106,6 +106,11 @@ class VariableTree(Container):
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
+        # _alltraits() is missing some traits after a deepcopy, so use the
+        # union of _alltraits() and everything in self.__dict__
+        #allset = set(self._alltraits().keys())
+        #allset.update(self.__dict__.keys())
+        #for name in allset:
         for name in self._alltraits():
             if name not in ('trait_added', 'trait_modified') \
                and not name.startswith('_') and hasattr(self, name):
