@@ -108,10 +108,9 @@ class VariableTree(Container):
         self.on_trait_change(self._iotype_modified, '_iotype')
         # _alltraits() is missing some traits after a deepcopy, so use the
         # union of _alltraits() and everything in self.__dict__
-        #allset = set(self._alltraits().keys())
-        #allset.update(self.__dict__.keys())
-        #for name in allset:
-        for name in self._alltraits():
+        allset = set(self._alltraits().keys())
+        allset.update(self.__dict__.keys())
+        for name in allset:
             if name not in ('trait_added', 'trait_modified') \
                and not name.startswith('_') and hasattr(self, name):
                 self.on_trait_change(self._trait_modified, name)
