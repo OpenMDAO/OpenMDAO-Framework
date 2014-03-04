@@ -3,16 +3,19 @@ import unittest
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float
 
+
 class C1Base(Component):
 
     fin = Float(iotype='in')
 
     fpass = Float(iotype='out')
 
+
 class C1(C1Base):
 
     def execute(self):
         self.fpass = 2*self.fin
+
 
 class C2(Component):
 
@@ -22,6 +25,7 @@ class C2(Component):
 
     def execute(self):
         self.fout = 2*self.fpass_2
+
 
 class A(Assembly):
 
@@ -33,6 +37,7 @@ class A(Assembly):
         self.connect('c1.fpass * 2.0', 'c2.fpass_2')
 
         self.driver.workflow.add(['c1', 'c2'])
+
 
 class MyTestCase(unittest.TestCase):
     def test_expr_conn_with_replace(self):

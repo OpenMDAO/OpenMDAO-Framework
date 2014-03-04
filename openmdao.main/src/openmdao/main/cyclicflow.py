@@ -22,6 +22,7 @@ from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
 
+
 # SequentialWorkflow gives us the add and remove methods.
 class CyclicWorkflow(SequentialWorkflow):
     """A CyclicWorkflow consists of a collection of Components that contains
@@ -117,7 +118,7 @@ class CyclicWorkflow(SequentialWorkflow):
 
         # We need to map any of our edges if they are in a
         # pseudo-assy
-        pa_keys = set([s.split('.',1)[0] for s in self.edge_list() if '~' in s])
+        pa_keys = set([s.split('.', 1)[0] for s in self.edge_list() if '~' in s])
 
         if len(pa_keys) == 0:
             self._mapped_severed_edges = self._severed_edges
@@ -146,7 +147,6 @@ class CyclicWorkflow(SequentialWorkflow):
 
         return super(CyclicWorkflow, self).initialize_residual()
 
-
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
                          group_nondif=True):
         """Returns the local graph that we use for derivatives. For cyclic flows,
@@ -155,10 +155,10 @@ class CyclicWorkflow(SequentialWorkflow):
 
         if self._derivative_graph is None or group_nondif is False:
 
-            if inputs == None:
+            if inputs is None:
                 inputs = []
 
-            if outputs == None:
+            if outputs is None:
                 outputs = []
 
             # Solver can specify parameters
@@ -167,7 +167,7 @@ class CyclicWorkflow(SequentialWorkflow):
 
             # Solver can specify equality constraints
             if hasattr(self._parent, 'get_eq_constraints'):
-                outputs = ["%s.out0" % item.pcomp_name for item in \
+                outputs = ["%s.out0" % item.pcomp_name for item in
                                self._parent.get_constraints().values()]
 
             # Cyclic flows need to be severed before derivatives are calculated.
@@ -232,7 +232,7 @@ class CyclicWorkflow(SequentialWorkflow):
         deps = self._parent.eval_eq_constraints(self.scope)
 
         # Reorder for fixed point
-        if fixed_point == True:
+        if fixed_point is True:
             newdeps = zeros(len(deps))
             eqcons = self._parent.get_eq_constraints()
             old_j = 0
@@ -287,7 +287,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """Sets all dependent variables to the values in the input array
         `val`. This includes both parameters and severed targets.
         """
-
+        bounds = self._bounds_cache
         nparam = self._parent.total_parameters()
         if nparam > 0:
             self._parent.set_parameters(val[:nparam].flatten())
@@ -298,7 +298,7 @@ class CyclicWorkflow(SequentialWorkflow):
                 if isinstance(targets, str):
                     targets = [targets]
 
-                i1, i2 = self.get_bounds(src)
+                i1, i2 = bounds[src]
                 if isinstance(i1, list):
                     width = len(i1)
                 else:
@@ -335,7 +335,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     self.scope.set(target, new_val, force=True)
 
                     # Prevent OpenMDAO from stomping on our poked input.
-                    self.scope.set_valid([target.split('[',1)[0]], True)
+                    self.scope.set_valid([target.split('[', 1)[0]], True)
 
     def _vtree_set(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """
@@ -363,4 +363,3 @@ class CyclicWorkflow(SequentialWorkflow):
                 self.scope.raise_exception(msg, RuntimeError)
 
         return i1
-

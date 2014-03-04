@@ -227,4 +227,3 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
-

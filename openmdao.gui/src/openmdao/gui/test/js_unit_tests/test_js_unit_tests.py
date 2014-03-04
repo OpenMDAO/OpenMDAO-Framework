@@ -13,7 +13,6 @@ if sys.platform.startswith("linux"):
 
     import glob
     import os
-    import glob
     import tempfile
     from distutils.spawn import find_executable
 
