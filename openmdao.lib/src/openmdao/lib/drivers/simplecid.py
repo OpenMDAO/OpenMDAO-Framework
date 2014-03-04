@@ -9,21 +9,21 @@ testdict = {}
 
 class SimpleCaseIterDriver(Driver):
     """
-    A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
-    and optionally records the results in a :class:`CaseRecorder`. This is
-    intended for test cases or very simple models only. For a more full-featured Driver 
-    with similar functionality, see :class:`CaseIteratorDriver`.
+    A Driver that sequentially runs a set of cases provided by an
+    :class:`ICaseIterator` and optionally records the results in a
+    :class:`CaseRecorder`. This is intended for test cases or very simple
+    models only. For a more full-featured Driver with similar functionality,
+    see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `recorders` socket is used to record results. This is inherited from the :class:`Driver` class.
-    
+
     For each case coming from the `iterator`, the workflow will
     be executed once.
     """
 
     # pylint: disable-msg=E1101
     iterator = Slot(ICaseIterator, desc='Source of Cases.', required=True)
-    
+
     def __init__(self):
         super(SimpleCaseIterDriver, self).__init__()
         self._iter = None  # Set to None when iterator is empty.
@@ -31,23 +31,35 @@ class SimpleCaseIterDriver(Driver):
 
     def _iterator_modified(self, obj, name, value):
         self._call_execute = True
-    
+
     def _pre_execute(self, force=False):
         super(SimpleCaseIterDriver, self)._pre_execute(force)
-        
+
     def execute(self):
-        """ Run each case in `iterator` and record results in `recorder`. """
+        """ Run each case in `iterator`. """
         for case in self.iterator:
             self._run_case(case)
-            for recorder in self.recorders:
-                recorder.record(case)
 
     def _run_case(self, case):
         msg = None
         case.parent_uuid = self._case_id
+
+        # Additional user-requested variables
+        # These must be added here so that the outputs are in the cases
+        # before they are in the server list.
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        inputs, outputs = top.get_case_variables()
+        for var, val in inputs:
+            case.add_input(var, val)
+        for var, val in outputs:
+            case.add_output(var, val)
+        case.add_output('%s.workflow.itername' % self.name, self.itername)
+
         case.apply_inputs(self.parent)
         try:
-            self.workflow.run(case_id=case.uuid)
+            self.workflow.run(case_id=case.uuid, record_case=False)
         except Exception as err:
             msg = str(err)
         try:
@@ -57,4 +69,10 @@ class SimpleCaseIterDriver(Driver):
                 case.msg = str(err)
             else:
                 case.msg = msg + ":" + str(err)
+
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        for recorder in top.recorders:
+            recorder.record(case)
 

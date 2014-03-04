@@ -64,7 +64,6 @@ class SLSQPdriver(Driver):
     error_code = Int(0, iotype='out',
                      desc='Error code returned from SLSQP.')
 
-
     def __init__(self):
 
         super(SLSQPdriver, self).__init__()
@@ -143,7 +142,7 @@ class SLSQPdriver(Driver):
         slsqpb = (n+1)*(n/2) + 2*m + 3*n + 3*(n+1) + 1
         lw = lsq + lsi + lsei + slsqpb + n + m
         w = zeros([lw], 'd')
-        ljw = max(mineq,(n+1)-meq)
+        ljw = max(mineq, (n+1)-meq)
         jw = zeros([ljw], 'i')
 
         try:
@@ -193,9 +192,6 @@ class SLSQPdriver(Driver):
         if self.iprint > 0:
             pyflush(self.iout)
 
-        # Write out some relevant information to the recorder
-        self.record_case()
-
         return f, g
 
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -206,11 +202,10 @@ class SLSQPdriver(Driver):
 
         J = self.workflow.calc_gradient(self.inputs, self.obj + self.con)
         #print "gradient", J
-        nobj = len(self.obj)
-        df[0:self.nparam] = J[0:nobj, :].ravel()
+        df[0:self.nparam] = J[0, :].ravel()
 
         if self.ncon > 0:
-            dg[0:self.ncon, 0:self.nparam] = -J[nobj:nobj+self.ncon, :]
+            dg[0:self.ncon, 0:self.nparam] = -J[1:1+self.ncon, :]
 
         return df, dg
 

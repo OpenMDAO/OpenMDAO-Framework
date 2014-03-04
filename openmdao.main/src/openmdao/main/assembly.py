@@ -4,9 +4,10 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import threading
+import fnmatch
 import re
 import sys
+import threading
 
 from zope.interface import implementedBy
 
@@ -21,8 +22,8 @@ from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import Slot
-from openmdao.main.driver import Driver, Run_Once
+from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -30,6 +31,7 @@ from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
@@ -112,6 +114,13 @@ class Assembly(Component):
                     desc="The top level Driver that manages execution of "
                     "this Assembly.")
 
+    recorders = List(Slot(ICaseRecorder, required=False),
+                     desc='Case recorders for iteration data.')
+
+    # Extra variables for adding to CaseRecorders
+    printvars = List(Str, iotype='in', framework_var=True,
+                     desc='List of extra variables to output in the recorders.')
+
     def __init__(self):
 
         super(Assembly, self).__init__()
@@ -125,7 +134,7 @@ class Assembly(Component):
         self._invalidation_type = 'partial'
 
         # default Driver executes its workflow once
-        self.add('driver', Run_Once())
+        self.add('driver', Driver())
 
         # we're the top Assembly only if we're the first instantiated
         set_as_top(self, first_only=True)
@@ -251,7 +260,7 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
-        exprconns = [(u,v) for u,v in self._exprmapper.list_connections()
+        exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
@@ -275,7 +284,7 @@ class Assembly(Component):
                                  "the replacement object: %s" % missing)
 
         # remove expr connections
-        for u,v in exprconns:
+        for u, v in exprconns:
             self.disconnect(u, v)
 
         # remove any existing connections to replacement object
@@ -615,9 +624,71 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
+        if self.parent is None:
+            for recorder in self.recorders:
+                recorder.startup()
+
         self.driver.run(ffd_order=self.ffd_order,
                         case_id=self._case_id)
+
         self._depgraph.update_boundary_outputs(self)
+
+    def get_case_variables(self):
+        """Collect variables to be recorded by workflows."""
+        inputs = []
+        outputs = []
+        for printvar in self.printvars:
+            if '*' in printvar:
+                printvars = self._get_all_varpaths(printvar)
+            else:
+                printvars = [printvar]
+
+            for var in printvars:
+                iotype = self.get_metadata(var, 'iotype')
+                if iotype == 'in':
+                    val = ExprEvaluator(var, scope=self).evaluate()
+                    inputs.append((var, val))
+                elif iotype == 'out':
+                    val = ExprEvaluator(var, scope=self).evaluate()
+                    outputs.append((var, val))
+                else:
+                    msg = "%s is not an input or output" % var
+                    self.raise_exception(msg, ValueError)
+        return (inputs, outputs)
+
+    def _get_all_varpaths(self, pattern):
+        """Return a list of all varpaths that match the specified pattern."""
+        prefix = self.get_pathname()
+        if prefix:
+            prefix += '.'
+
+        # Start with our settings.
+        all_vars = []
+        for var in self.list_vars():
+            all_vars.append('%s%s' % (prefix, var))
+
+        # Now all components.
+        for name in self.list_containers():
+            obj = getattr(self, name)
+            if isinstance(obj, Component) and \
+               not isinstance(obj, PseudoComponent):
+
+                for var in obj.list_vars():
+                    all_vars.append('%s%s.%s' % (prefix, name, var))
+
+                # Recurse into assemblies
+                if isinstance(obj, Assembly):
+                    assy_vars = obj._get_all_varpaths(pattern)
+                    all_vars = all_vars + assy_vars
+
+        # Match pattern in our var names
+        matched_vars = []
+        if pattern == '*':
+            matched_vars = all_vars
+        else:
+            matched_vars = fnmatch.filter(all_vars, pattern)
+
+        return matched_vars
 
     def step(self):
         """Execute a single child component and return."""
@@ -945,13 +1016,14 @@ class Assembly(Component):
         for src in required_inputs:
             varname = depgraph.base_var(src)
             target1 = [n for n in depgraph.successors(varname)
-                              if not n.startswith('parent.') and depgraph.base_var(n) != varname]
+                               if not n.startswith('parent.')
+                                  and depgraph.base_var(n) != varname]
             target2 = []
             if src in depgraph.node:
                 target2 = [n for n in depgraph.successors(src)
-                           if not n.startswith('parent.') and \
-                           depgraph.base_var(n) != varname and \
-                           n not in target1]
+                                   if not n.startswith('parent.')
+                                      and depgraph.base_var(n) != varname
+                                      and n not in target1]
             if len(target1) == 0 and len(target2) == 0:
                 continue
 
@@ -1319,7 +1391,7 @@ class Assembly(Component):
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
-    shows which are being iterated over by which
+    shows which components are being iterated over by which
     drivers.
 
     If full is True, show pseudocomponents as well.

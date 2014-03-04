@@ -215,7 +215,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if sys.platform != 'win32' and virtual_display:
+    if sys.platform != 'win32' and sys.platform != 'darwin' and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True

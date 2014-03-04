@@ -34,8 +34,6 @@ class OptimizationConstrained(Assembly):
 
 if __name__ == "__main__": # pragma: no cover
 
-    import time
-
     opt_problem = OptimizationConstrained()
 
     #-----------------------------
@@ -43,13 +41,13 @@ if __name__ == "__main__": # pragma: no cover
     #-----------------------------
     import os
     if os.path.exists('converge.db'):
-        os.remove('converge.db')   
-        
+        os.remove('converge.db')
+
     from openmdao.lib.casehandlers.api import CSVCaseRecorder, DBCaseRecorder
 
-    opt_problem.driver.recorders = [CSVCaseRecorder(filename='converge.csv'),
-                                    DBCaseRecorder(dbfile='converge.db', append=False)]
-    opt_problem.driver.printvars = ['*']
+    opt_problem.recorders = [CSVCaseRecorder(filename='converge.csv'),
+                             DBCaseRecorder(dbfile='converge.db', append=False)]
+    opt_problem.printvars = ['*']
 
     #-----------------------------
     # Run problem
@@ -61,7 +59,7 @@ if __name__ == "__main__": # pragma: no cover
     # Print out history of our objective for inspection
     #----------------------------------------------------
 
-    for case in opt_problem.driver.recorders[0].get_iterator():
+    for case in opt_problem.recorders[0].get_iterator():
         print case
 
     print "\n"

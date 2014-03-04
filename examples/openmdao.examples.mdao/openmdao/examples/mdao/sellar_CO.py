@@ -42,27 +42,27 @@ class SellarCO(Assembly):
                                   'coupling_var_targets[0] + '
                                   'math.exp(-coupling_var_targets[1])')
 
-        self.driver.add_parameter('global_des_var_targets[0]', low = -10.0, high = 10.0)
-        self.driver.add_parameter('global_des_var_targets[1]', low = 0.0,   high = 10.0)
-        self.driver.add_parameter('local_des_var_targets[0]', low = 0.0,   high = 10.0)
-        self.driver.add_parameter('coupling_var_targets[0]', low = 3.16,  high = 10.0)
-        self.driver.add_parameter('coupling_var_targets[1]', low = -10.0, high = 24.0)
+        self.driver.add_parameter('global_des_var_targets[0]', low=-10.0, high=10.0)
+        self.driver.add_parameter('global_des_var_targets[1]', low=0.0, high=10.0)
+        self.driver.add_parameter('local_des_var_targets[0]', low=0.0, high=10.0)
+        self.driver.add_parameter('coupling_var_targets[0]', low=3.16, high=10.0)
+        self.driver.add_parameter('coupling_var_targets[1]', low=-10.0, high=24.0)
 
-        con1 = '(global_des_var_targets[0] - dis1.z1)**2 + ' + \
-               '(global_des_var_targets[1] - dis1.z2)**2 + ' + \
-               '(local_des_var_targets[0] - dis1.x1)**2 + ' + \
-               '(coupling_var_targets[0] - dis1.y1)**2 + ' + \
+        con1 = '(global_des_var_targets[0] - dis1.z1)**2 + ' \
+               '(global_des_var_targets[1] - dis1.z2)**2 + ' \
+               '(local_des_var_targets[0] - dis1.x1)**2 + ' \
+               '(coupling_var_targets[0] - dis1.y1)**2 + ' \
                '(coupling_var_targets[1] - dis1.y2)**2 <= 0'
 
-        con2 = '(global_des_var_targets[0] - dis2.z1)**2 + ' + \
-               '(global_des_var_targets[1] - dis2.z2)**2 + ' + \
-               '(coupling_var_targets[0] - dis2.y1)**2 + ' + \
+        con2 = '(global_des_var_targets[0] - dis2.z1)**2 + ' \
+               '(global_des_var_targets[1] - dis2.z2)**2 + ' \
+               '(coupling_var_targets[0] - dis2.y1)**2 + ' \
                '(coupling_var_targets[1] - dis2.y2)**2 <= 0'
 
         self.driver.add_constraint(con1)
         self.driver.add_constraint(con2)
 
-        self.driver.printvars = ['dis1.y1', 'dis2.y2']
+        self.printvars = ['dis1.y1', 'dis2.y2']
         self.driver.iprint = 0
 
 
@@ -73,22 +73,22 @@ class SellarCO(Assembly):
                                      '(coupling_var_targets[0] - dis1.y1)**2 + '
                                      '(coupling_var_targets[1] - dis1.y2)**2')
 
-        self.localopt1.add_parameter('dis1.x1', low = 0.0,   high = 10.0)
-        self.localopt1.add_parameter('dis1.z1', low = -10.0, high = 10.0)
-        self.localopt1.add_parameter('dis1.z2', low = 0.0,   high = 10.0)
-        self.localopt1.add_parameter('dis1.y2', low = -1e99,  high = 1e99)
+        self.localopt1.add_parameter('dis1.x1', low=0.0, high=10.0)
+        self.localopt1.add_parameter('dis1.z1', low=-10.0, high=10.0)
+        self.localopt1.add_parameter('dis1.z2', low=0.0, high=10.0)
+        self.localopt1.add_parameter('dis1.y2', low=-1e99, high=1e99)
         self.localopt1.add_constraint('dis1.y1 > 3.16')
         self.localopt1.iprint = 0
 
 
         #Parameters - Local Optimization 2
-        self.localopt2.add_objective('(global_des_var_targets[0] - dis2.z1)**2 + ' + \
-                                     '(global_des_var_targets[1] - dis2.z2)**2 + ' + \
-                                     '(coupling_var_targets[0] - dis2.y1)**2 + ' + \
+        self.localopt2.add_objective('(global_des_var_targets[0] - dis2.z1)**2 + ' \
+                                     '(global_des_var_targets[1] - dis2.z2)**2 + ' \
+                                     '(coupling_var_targets[0] - dis2.y1)**2 + ' \
                                      '(coupling_var_targets[1] - dis2.y2)**2')
-        self.localopt2.add_parameter('dis2.z1', low = -10.0, high = 10.0)
-        self.localopt2.add_parameter('dis2.z2', low = 0.0,   high = 10.0)
-        self.localopt2.add_parameter('dis2.y1', low = -1e99,  high = 1e99)
+        self.localopt2.add_parameter('dis2.z1', low=-10.0, high=10.0)
+        self.localopt2.add_parameter('dis2.z2', low=0.0, high=10.0)
+        self.localopt2.add_parameter('dis2.y1', low=-1e99, high=1e99)
         self.localopt2.add_constraint('dis2.y2 < 24.0')
         self.localopt2.iprint = 0
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
     prob.dis1.y2 = 1.0
     prob.dis2.y1 = 1.0
 
-    prob.global_des_var_targets  = [5.0, 2.0]
+    prob.global_des_var_targets = [5.0, 2.0]
     prob.local_des_var_targets = [1.0,]
     prob.coupling_var_targets = [1.0, 1.0]
 
@@ -122,11 +122,11 @@ if __name__ == "__main__":
     #prob.driver.workflow.check_gradient()
 
     print "\n"
-    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1, \
-                                             prob.dis1.z2, \
+    print "Minimum found at (%f, %f, %f)" % (prob.dis1.z1,
+                                             prob.dis1.z2,
                                              prob.dis1.x1)
-    print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0], \
-                                             prob.global_des_var_targets[1], \
+    print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0],
+                                             prob.global_des_var_targets[1],
                                              prob.local_des_var_targets[0])
     print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])

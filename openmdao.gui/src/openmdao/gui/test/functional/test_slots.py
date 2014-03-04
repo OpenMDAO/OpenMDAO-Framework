@@ -115,8 +115,16 @@ def _test_list_slot(browser):
     eq(True, generator_slot.filled,
         "FullFactorial did not drop into generator slot")
 
+    editor.close()
+
+    # open the object editor dialog for the assembly
+    assembly = workspace_page.get_dataflow_figure('top', '')
+    editor = assembly.editor_page(False)
+    editor.move(-200, 200)
+    editor.show_slots()
+
     # get the recorders slot figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top')
 
     # check that slot is not filled
     eq(False, recorders_slot.filled,
@@ -126,12 +134,12 @@ def _test_list_slot(browser):
     workspace_page('workflow_tab').click()
 
     # drop a DumpCaseRecorder onto the recorders slot
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top')
     workspace_page.fill_slot_from_library(recorders_slot, 'DumpCaseRecorder')
 
     # refresh and check that there is now a DumpCaseRecorder in the first slot
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top')
     eq(True, recorders_slot.filled,
         "DumpCaseRecorder did not drop into recorders slot")
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
@@ -139,7 +147,7 @@ def _test_list_slot(browser):
         "Filled slot element should show the correct type (DumpCaseRecorder)")
 
     # check that there is still an unfilled slot in the list
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top')
     eq(False, recorders_slot.filled,
         "recorders slot is not showing an unfilled slot")
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
@@ -149,12 +157,12 @@ def _test_list_slot(browser):
     # drop another CaseRecorder onto the recorders slot
     workspace_page.fill_slot_from_library(recorders_slot, 'CSVCaseRecorder')
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders[1]', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[1]', prefix='top')
     eq(True, recorders_slot.filled,
         "CSVCaseRecorder did not drop into recorders slot")
 
     # check that there is still an unfilled slot in the list
-    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders', prefix='top')
     eq(False, recorders_slot.filled,
         "recorders slot is not showing an unfilled slot")
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
@@ -162,12 +170,12 @@ def _test_list_slot(browser):
         "Unfilled slot element should show the correct klass (ICaseRecorder)")
 
     # remove the DumpCaseRecorder from the first slot in the list
-    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top')
     recorders_slot.remove()
 
     # check that the CSVCaseRecorder is now in the first filled slot
     time.sleep(1.0)  # give it a second to update the figure
-    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top.driver')
+    recorders_slot = find_slot_figure(workspace_page, 'recorders[0]', prefix='top')
     eq(True, recorders_slot.filled,
         "CSVCaseRecorder did not drop into recorders slot")
     klass = recorders_slot.root.find_elements_by_css_selector('text#klass')
@@ -195,12 +203,17 @@ def _test_slot_subclass(browser):
     inputs = editor.get_inputs()
     expected = [
         ['', 'input',              '0', '', ''],
-        ['', 'directory',           '', '', 'If non-blank, the directory to execute in.'],
-        ['', 'force_execute',  'False', '', 'If True, always execute even if all IO traits are valid.'],
+        ['', 'directory',           '', '',
+         'If non-blank, the directory to execute in.'],
+        ['', 'force_execute',  'False', '',
+         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'assume_zero', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing'],
+        ['', 'printvars',         '[]', '',
+         'List of extra variables to output in the recorders.']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -213,8 +226,10 @@ def _test_slot_subclass(browser):
     outputs = editor.get_outputs()
     expected = [
         ['', 'output',                '80', '', ''],
-        ['', 'derivative_exec_count',  '0', '', "Number of times this Component's derivative function has been executed."],
-        ['', 'exec_count',             '1', '', 'Number of times this Component has been executed.'],
+        ['', 'derivative_exec_count',  '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count',             '1', '',
+         'Number of times this Component has been executed.'],
         ['', 'itername',                '', '', 'Iteration coordinates.'],
     ]
     for i, row in enumerate(outputs.value):
@@ -231,8 +246,10 @@ def _test_slot_subclass(browser):
     outputs = editor.get_outputs()
     expected = [
         ['', 'output',                 '160', '', ''],
-        ['', 'derivative_exec_count',    '0', '', "Number of times this Component's derivative function has been executed."],
-        ['', 'exec_count',               '2', '', 'Number of times this Component has been executed.'],
+        ['', 'derivative_exec_count',    '0', '',
+         "Number of times this Component's derivative function has been executed."],
+        ['', 'exec_count',               '2', '',
+         'Number of times this Component has been executed.'],
         ['', 'itername',                  '', '', 'Iteration coordinates.'],
     ]
     for i, row in enumerate(outputs.value):

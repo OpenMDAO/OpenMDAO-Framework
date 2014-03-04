@@ -660,14 +660,14 @@ class Component(Container):
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
-                if obj_has_interface(obj, IDriver):
+                if obj_has_interface(obj, IAssembly):
                     for recorder in obj.recorders:
                         recorder.close()
                 elif obj_has_interface(obj, ICaseRecorder):
                     obj.close()
                 if isinstance(obj, Container):
                     _recursive_close(obj, visited)
-        visited = set((id(self),))
+        visited = set()
         _recursive_close(self, visited)
 
     def add(self, name, obj):

@@ -5,7 +5,7 @@ can be passed as inputs to a CaseIteratorDriver.
 
 from openmdao.main.api import Assembly, Component
 from openmdao.main.case import Case
-from openmdao.main.datatypes.slot import Slot 
+from openmdao.main.datatypes.slot import Slot
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator
 from openmdao.main.datatypes.api import Int
@@ -20,7 +20,7 @@ class PGrafObject(object):
 
 class PGrafComponent(Component):
 
-    num = Int(iotype = 'in')
+    num = Int(iotype='in')
     obj = Slot(PGrafObject)
     result = Int(iotype='out')
 
@@ -52,7 +52,7 @@ class PGrafAssembly(Assembly):
                               outputs=['runner.result']))
 
         self.driver.iterator = ListCaseIterator(cases)
-        self.driver.recorders = [ListCaseRecorder()]
+        self.recorders = [ListCaseRecorder()]
 
 
 if __name__ == '__main__':
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     top.run()
 
     results = 0
-    for case in top.driver.recorders[0].cases:
+    for case in top.recorders[0].cases:
         print case
         assert case.get_output('runner.result') == case.get_input('runner.num') ** 2
         results += 1

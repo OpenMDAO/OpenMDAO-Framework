@@ -246,7 +246,7 @@ def _test_menu(browser):
     workspace_page('project_menu').click()
 
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    workspace_page.replace_driver('top', 'Run_Once')
+    workspace_page.replace_driver('top', 'SLSQPdriver')
 
     workspace_page('project_menu').click()
     time.sleep(0.5)
@@ -434,13 +434,12 @@ def _test_properties(browser):
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
 
     (header, inputs, outputs) = workspace_page.get_properties('top')
-    eq(header, 'Run_Once: top.driver')
+    eq(header, 'Driver: top.driver')
     eq(inputs.value, [
         ['directory',         ''],
         ['force_execute',     'True'],
         ['force_fd',          'False'],
         [' gradient_options', ''],  # vartree, has leading space after the [+]
-        ['printvars',         '[]'],
     ])
     eq(outputs.value, [
         ['derivative_exec_count', '0'],
@@ -547,7 +546,7 @@ def _test_editable_inputs(browser):
     raise SkipTest
 
     def test_color(actual, expected, alpha=False):
-        if (alpha):
+        if alpha:
             eq(actual, expected)
         else:
             eq(actual[0:3], expected[0:3])
@@ -639,14 +638,14 @@ def _test_console_errors(browser):
 
     # Set input to illegal value.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
-    top = workspace_page.get_dataflow_figure('driver', 'top')
-    editor = top.editor_page(double_click=False, base_type='Driver')
+    top = workspace_page.get_dataflow_figure('top', '')
+    editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
     inputs.rows[4].cells[2].click()
     inputs[4][2] = '42'  # printvars
-    expected = "TraitError: The 'printvars' trait of a "     \
-               "Run_Once instance must be a list of items "  \
+    expected = "TraitError: The 'printvars' trait of an "     \
+               "Assembly instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."
     time.sleep(0.5)

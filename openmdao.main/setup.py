@@ -37,11 +37,11 @@ setup(name='openmdao.main',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'openmdao.main.test': ['src/doubler.py', 
-                                 'load_test/_macros/default', 
-                                 'load_test/_settings.cfg', 
+          'openmdao.main.test': ['src/doubler.py',
+                                 'load_test/_macros/default',
+                                 'load_test/_settings.cfg',
                                  'load_test/simple.py'],
-          'openmdao.main': ['src/openmdao/main/docs/*'] 
+          'openmdao.main': ['src/openmdao/main/docs/*']
       },
       test_suite='nose.collector',
       zip_safe=False,
@@ -77,9 +77,6 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       openmdao.main.implicitcomp.ImplicitComponent = openmdao.main.implicitcomp:ImplicitComponent
 
-      [openmdao.driver]
-      openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
-      
       [openmdao.variable]
       openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
       openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool

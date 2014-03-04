@@ -21,8 +21,8 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.eggchecker import check_save_load
 from openmdao.main.exceptions import RunStopped
 
-from openmdao.main.datatypes.api import Float, Bool, Array, Instance, Int, Slot, Str, \
-                                        List, VarTree
+from openmdao.main.datatypes.api import Float, Bool, Array, Instance, Int, \
+                                        Str, List, VarTree
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver, ConnectableCaseIteratorDriver
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
                                           SequenceCaseFilter
@@ -120,7 +120,6 @@ class Verifier(Component):
         """ Verify evaluated cases. """
         for case in self.cases:
             i = int(case.label)  # Correlation key.
-            self._logger.critical('verifying case %d', i)
             assert case.msg is None
             assert case['driven.rosen_suzuki'] == rosen_suzuki(case['driven.x'])
             assert case['driven.sum_y'] == sum(case['driven.y'])
@@ -160,7 +159,7 @@ class TestCase(unittest.TestCase):
                       ('driven.y', numpy_random.normal(size=10)),
                       ('driven.raise_error', raise_error),
                       ('driven.stop_exec', False)]
-            outputs = ['driven.rosen_suzuki','driven.sum_y']
+            outputs = ['driven.rosen_suzuki', 'driven.sum_y']
             self.cases.append(Case(inputs, outputs, label=str(i)))
 
     def tearDown(self):
@@ -194,8 +193,8 @@ class TestCase(unittest.TestCase):
         self.cases = [Case(inputs, outputs, label='1')]
         self.model.driver.sequential = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        self.model.driver.recorders = [ListCaseRecorder()]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [ListCaseRecorder()]
+        self.model.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
         self.model.run()
 
@@ -208,8 +207,8 @@ class TestCase(unittest.TestCase):
         stop_case['driven.stop_exec'] = True
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [results]
+        self.model.printvars = ['driven.extra']
         self.model.driver.sequential = True
 
         try:
@@ -269,8 +268,8 @@ class TestCase(unittest.TestCase):
             self.model.driven.sleep = 0.2
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [results]
+        self.model.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
 
         if retry:
@@ -293,7 +292,7 @@ class TestCase(unittest.TestCase):
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
-        for case in self.model.driver.recorders[0].cases:
+        for case in self.model.recorders[0].cases:
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
@@ -330,8 +329,8 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = ListCaseRecorder()
-        self.model.driver.printvars = ['driven.extra']
-        self.model.driver.recorders = [results]
+        self.model.printvars = ['driven.extra']
+        self.model.recorders = [results]
 
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
@@ -355,8 +354,8 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [results]
+        self.model.printvars = ['driven.extra']
 
         self.model.run()
 
@@ -381,8 +380,8 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [results]
+        self.model.printvars = ['driven.extra']
         self.model.driver.error_policy = 'RETRY'
 
         self.model.run()
@@ -400,8 +399,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorders = [ListCaseRecorder()]
-        self.model.driver.printvars = ['driven.extra']
+        self.model.recorders = [ListCaseRecorder()]
+        self.model.printvars = ['driven.extra']
         try:
             self.model.run()
         except ValueError as exc:
@@ -443,7 +442,7 @@ class TestCase(unittest.TestCase):
 
         top.driver.workflow.add(('generator', 'cid', 'verifier'))
         top.cid.workflow.add('driven')
-        top.cid.printvars = ['driven.extra']
+        top.printvars = ['driven.extra']
 
         top.connect('generator.cases', 'cid.iterator')
         top.connect('cid.evaluated', 'verifier.cases')
@@ -455,13 +454,13 @@ class TestCase(unittest.TestCase):
         logging.debug('test_rerun')
 
         self.run_cases(sequential=True)
-        orig_cases = self.model.driver.recorders[0].cases
+        orig_cases = self.model.recorders[0].cases
         self.model.driver.iterator = ListCaseIterator(orig_cases)
         rerun_seq = (1, 3, 5, 7, 9)
         self.model.driver.filter = SequenceCaseFilter(rerun_seq)
         rerun = ListCaseRecorder()
-        self.model.driver.printvars = ['driven.extra']
-        self.model.driver.recorders[0] = rerun
+        self.model.printvars = ['driven.extra']
+        self.model.recorders[0] = rerun
         self.model.run()
 
         self.assertEqual(len(orig_cases), 10)
@@ -597,8 +596,8 @@ class A_l(Assembly):
         self.parallel_driver.iterator = \
             ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)])
         self.parallel_driver.workflow.add(['c1'])
-        self.parallel_driver.recorders.append(ListCaseRecorder())
-        self.parallel_driver.printvars=['c1.val']
+        self.recorders.append(ListCaseRecorder())
+        self.printvars = ['c1.val']
 
         self.connect('c0.l', 'c1.l')
 
@@ -635,8 +634,8 @@ class A_vt(Assembly):
         self.parallel_driver.iterator = \
             ListCaseIterator([Case(inputs=[('c1.i', l)]) for l in range(N)])
         self.parallel_driver.workflow.add(['c1'])
-        self.parallel_driver.recorders.append(ListCaseRecorder())
-        self.parallel_driver.printvars=['c1.val']
+        self.recorders.append(ListCaseRecorder())
+        self.printvars = ['c1.val']
 
         self.connect('c0.vt', 'c1.vt')
 
@@ -653,7 +652,8 @@ class Rethore(unittest.TestCase):
         a.parallel_driver.sequential = True
         a.execute()
         sequential = [[case['c1.i'], case['c1.val']]
-                      for case in a.parallel_driver.recorders[0].cases]
+                      for case in a.recorders[0].cases
+                               if 'c1.i' in case]  # Filter-out 'top' case.
 
         # Now run concurrent and verify.
         logging.debug('')
@@ -663,7 +663,8 @@ class Rethore(unittest.TestCase):
         a.parallel_driver.sequential = False
         a.execute()
         concurrent = [[case['c1.i'], case['c1.val']]
-                      for case in a.parallel_driver.recorders[0].cases]
+                      for case in a.recorders[0].cases
+                               if 'c1.i' in case]  # Filter-out 'top' case.
 
         concurrent = sorted(concurrent, key=lambda item: item[0])
         self.assertEqual(concurrent, sequential)
@@ -678,7 +679,8 @@ class Rethore(unittest.TestCase):
         a.parallel_driver.sequential = True
         a.execute()
         sequential = [[case['c1.i'], case['c1.val']]
-                      for case in a.parallel_driver.recorders[0].cases]
+                      for case in a.recorders[0].cases
+                               if 'c1.i' in case]  # Filter-out 'top' case.
 
         # Now run concurrent and verify.
         logging.debug('')
@@ -688,7 +690,8 @@ class Rethore(unittest.TestCase):
         a.parallel_driver.sequential = False
         a.execute()
         concurrent = [[case['c1.i'], case['c1.val']]
-                      for case in a.parallel_driver.recorders[0].cases]
+                      for case in a.recorders[0].cases
+                               if 'c1.i' in case]  # Filter-out 'top' case.
 
         concurrent = sorted(concurrent, key=lambda item: item[0])
         self.assertEqual(concurrent, sequential)

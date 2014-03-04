@@ -281,6 +281,8 @@ class CONMINdriver(Driver):
         self.g1 = zeros(0, 'd')
         self.g2 = zeros(0, 'd')
 
+        self._lower_bounds = zeros(0, 'd')
+        self._upper_bounds = zeros(0, 'd')
 
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
@@ -453,10 +455,7 @@ class CONMINdriver(Driver):
         # loop because some cycles do other things (e.g., numerical
         # gradient calculation)
         if (self.iter_count != self.cnmn1.iter) or self.cnmn1.igoto == 0:
-
             self.iter_count = self.cnmn1.iter
-
-            self.record_case()
 
 
     def _config_conmin(self):
@@ -568,10 +567,10 @@ class CONMINdriver(Driver):
             """
 
         for name, value in self.cnmn1.__dict__.items():
-            setattr( conmin.cnmn1, name, value )
+            setattr(conmin.cnmn1, name, value)
 
         for name, value in self.consav.__dict__.items():
-            setattr( conmin.consav, name, value  )
+            setattr(conmin.consav, name, value)
 
 
     def _save_common_blocks(self):

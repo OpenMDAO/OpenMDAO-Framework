@@ -3,20 +3,16 @@ Test for CaseRecorders.
 """
 
 import unittest
-import tempfile
 import StringIO
-import os
-import sys
 
-from openmdao.main.api import Component, Assembly, Case, set_as_top
+from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator
-from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
+from openmdao.lib.casehandlers.api import ListCaseIterator
+from openmdao.lib.casehandlers.api import DumpCaseRecorder
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
-from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.util.testutil import assert_raises
-    
+
+
 class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -26,7 +22,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         top.add('comp2', ExecComp(exprs=['z=x+1']))
         top.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
-        
+
         # now create some Cases
         outputs = ['comp1.z', 'comp2.z']
         cases = []
@@ -37,20 +33,19 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_bad_recorder(self):
         try:
-            self.top.driver.recorders = DumpCaseRecorder()
+            self.top.recorders = DumpCaseRecorder()
         except Exception as err:
-            self.assertTrue(str(err).startswith("The 'recorders' trait of a SimpleCaseIterDriver"))
+            self.assertTrue(str(err).startswith("The 'recorders' trait of an Assembly"))
             self.assertTrue(str(err).endswith(" was specified."))
         else:
             self.fail("Exception expected")
-        
-        
+
     def test_dumprecorder(self):
         sout1 = StringIO.StringIO()
         sout2 = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout1), 
-                                     DumpCaseRecorder(sout2)]
+        self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
         self.top.run()
+
         expected = [
             'Case: case8',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -61,8 +56,9 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             '   outputs:',
             '      comp1.z: 24.0',
             '      comp2.z: 25.0',
+            '      driver.workflow.itername: 9',
             ]
-        
+
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
             index = lines.index('Case: case8')
@@ -73,7 +69,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
                     self.assertTrue(lines[index+i].startswith('   timestamp:'))
                 else:
                     self.assertEqual(lines[index+i], expected[i])
-        
+
     def test_multiple_objectives(self):
         sout = StringIO.StringIO()
         self.top.add('driver', SensitivityDriver())
@@ -81,9 +77,10 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.add_parameter(['comp1.x'], low=-100, high=100)
         self.top.driver.add_objective('comp1.z')
         self.top.driver.add_objective('comp2.z')
-        
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
+
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -95,7 +92,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             '      Objective_1: 1.0',
             '      driver.workflow.itername: 1',
             ]
-        
+
         lines = sout.getvalue().split('\n')
 
         for i in range(len(expected)):
@@ -108,8 +105,8 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_close(self):
         sout1 = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout1)]
-        self.top.driver.recorders[0].close()
+        self.top.recorders = [DumpCaseRecorder(sout1)]
+        self.top.recorders[0].close()
         self.top.run()
         self.assertEqual(sout1.getvalue(), '')
 

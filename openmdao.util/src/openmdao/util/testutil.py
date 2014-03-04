@@ -96,9 +96,16 @@ def assert_rel_error(test_case, actual, desired, tolerance):
 def case_assert_rel_error(case1, case2, test_case, tolerance):
     """Perform assert_rel_error when comparing two Case objects."""
     for tup1, tup2 in zip(case1.items(flatten=True), case2.items(flatten=True)):
-        assert_rel_error(test_case, tup1[1], tup2[1], tolerance)
+        if tup1[0].endswith('itername') or tup2[0].endswith('itername'):
+            continue
+        if isinstance(tup1[1], float) and isinstance(tup2[1], float):
+            assert_rel_error(test_case, tup1[1], tup2[1], tolerance)
+        else:
+            test_case.fail("Case entry values (%s:%s, %s:%s) are not both floats"
+                           % (tup1[0], tup1[1], tup2[0], tup2[1]))
         if tup1[0] != tup2[0]:
-            test_case.fail("Case entry names ('%s', '%s') don't match" % (tup1[0], tup2[0]))
+            test_case.fail("Case entry names ('%s', '%s') don't match"
+                           % (tup1[0], tup2[0]))
     
     
 def find_python():

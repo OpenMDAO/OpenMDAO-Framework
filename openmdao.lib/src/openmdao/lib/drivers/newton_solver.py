@@ -12,7 +12,7 @@ import logging
 try:
     from scipy.optimize import fsolve
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+    logging.warn("In %s: %r", __file__, err)
 
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow
@@ -82,7 +82,6 @@ class NewtonSolver(Driver):
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
-        self.record_case()
 
         return self.workflow.get_dependents()
 

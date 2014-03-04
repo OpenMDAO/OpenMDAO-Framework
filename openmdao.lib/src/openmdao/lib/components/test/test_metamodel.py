@@ -21,6 +21,7 @@
 # Disable complaints about Comma not followed by a space Used when a comma (",") is not followed by a space
 # pylint: disable-msg=C0324
 
+from math import sin, cos
 import unittest
 
 from traits.api import HasTraits
@@ -28,12 +29,14 @@ from traits.api import HasTraits
 from openmdao.main.api import Component, Assembly, VariableTree, set_as_top, Case
 from openmdao.main.interfaces import implements, ICaseRecorder
 
-from openmdao.main.uncertain_distributions import NormalDistribution, UncertainDistribution
+from openmdao.main.uncertain_distributions import NormalDistribution, \
+                                                  UncertainDistribution
 
 from openmdao.main.datatypes.api import Float, VarTree
 from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.components.metamodel import ConnectableMetaModel, MetaModel
-from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, FloatKrigingSurrogate
+from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, \
+                                                           FloatKrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
 
 from openmdao.util.testutil import assert_rel_error
@@ -113,23 +116,23 @@ class MyMetaModel(MetaModel):
 
 
 class Dummy(Component):
-    x = Float(1.2,iotype="in")
-    y = Float(0,iotype="out")
+    x = Float(1.2, iotype="in")
+    y = Float(0, iotype="out")
 
     def execute(self):
         self.y = 2*self.x
 
 class DummyError(Component):
-    x = Float(1.2,iotype="in")
-    y = Float(0,iotype="out")
+    x = Float(1.2, iotype="in")
+    y = Float(0, iotype="out")
 
     def execute(self):
-        self.raise_exception("Test Error",RuntimeError)
+        self.raise_exception("Test Error", RuntimeError)
 
 class Sim(Assembly):
-    def configure(self):
 
-        self.add('mm',MetaModel())
+    def configure(self):
+        self.add('mm', MetaModel())
         self.mm.default_surrogate = KrigingSurrogate()
         self.mm.model = Dummy()
 
@@ -148,8 +151,8 @@ class MetaModelTestCase(unittest.TestCase):
             self.assertNotEqual(s['name'], 'd')
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['a','b']))
-        self.assertEquals(outputs-mmouts, set(['c','d']))
+        self.assertEquals(inputs-mmins, set(['a', 'b']))
+        self.assertEquals(outputs-mmouts, set(['c', 'd']))
         for i in range(3):
             metamodel.train_next = True
             metamodel.run()
@@ -158,14 +161,14 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertTrue(len(metamodel._training_data['d']) == 3)
         self.assertTrue(len(metamodel._training_input_history) == 3)
 
-        metamodel.includes = ['a','b','c','d']
+        metamodel.includes = ['a', 'b', 'c', 'd']
 
         self.assertTrue(len(metamodel._training_data['c']) == 3)
         self.assertTrue(len(metamodel._training_data['d']) == 3)
         self.assertTrue(len(metamodel._training_input_history) == 3)
 
         # removing an output should not clobber the rest of the training data
-        metamodel.includes = ['a','b','c']
+        metamodel.includes = ['a', 'b', 'c']
 
         self.assertTrue(len(metamodel._training_data['c']) == 3)
         self.assertTrue('d' not in metamodel._training_data)
@@ -173,10 +176,10 @@ class MetaModelTestCase(unittest.TestCase):
 
         # now put a different model in with the same inputs/outputs
         metamodel.model = SimpleMatch()
-        metamodel.includes = ['a','b','c','d']
+        metamodel.includes = ['a', 'b', 'c', 'd']
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['a','b']))
+        self.assertEquals(inputs-mmins, set(['a', 'b']))
         self.assertEquals(outputs-mmouts, set(['c', 'd']))
 
         self.assertTrue(len(metamodel._training_data['c']) == 0)
@@ -185,11 +188,11 @@ class MetaModelTestCase(unittest.TestCase):
 
         # now put a different model in
         metamodel.model = Simple2()
-        metamodel.includes = ['w','x','y','z']
+        metamodel.includes = ['w', 'x', 'y', 'z']
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['w','x']))
-        self.assertEquals(outputs-mmouts, set(['y','z']))
+        self.assertEquals(inputs-mmins, set(['w', 'x']))
+        self.assertEquals(outputs-mmouts, set(['y', 'z']))
 
     def test_default_surrogate_change(self):
         metamodel = MetaModel()
@@ -204,8 +207,8 @@ class MetaModelTestCase(unittest.TestCase):
             self.assertNotEqual(s['name'], 'd')
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['a','b']))
-        self.assertEquals(outputs-mmouts, set(['c','d']))
+        self.assertEquals(inputs-mmins, set(['a', 'b']))
+        self.assertEquals(outputs-mmouts, set(['c', 'd']))
         for i in range(3):
             metamodel.train_next = True
             metamodel.run()
@@ -214,14 +217,14 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertTrue(len(metamodel._training_data['d']) == 3)
         self.assertTrue(len(metamodel._training_input_history) == 3)
 
-        metamodel.includes = ['a','b','c','d']
+        metamodel.includes = ['a', 'b', 'c', 'd']
 
         self.assertTrue(len(metamodel._training_data['c']) == 3)
         self.assertTrue(len(metamodel._training_data['d']) == 3)
         self.assertTrue(len(metamodel._training_input_history) == 3)
 
         # removing an output should not clobber the rest of the training data
-        metamodel.includes = ['a','b','c']
+        metamodel.includes = ['a', 'b', 'c']
 
         self.assertTrue(len(metamodel._training_data['c']) == 3)
         self.assertTrue('d' not in metamodel._training_data)
@@ -229,10 +232,10 @@ class MetaModelTestCase(unittest.TestCase):
 
         # now put a different model in with the same inputs/outputs
         metamodel.model = SimpleMatch()
-        metamodel.includes = ['a','b','c','d']
+        metamodel.includes = ['a', 'b', 'c', 'd']
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['a','b']))
+        self.assertEquals(inputs-mmins, set(['a', 'b']))
         self.assertEquals(outputs-mmouts, set(['c', 'd']))
 
         self.assertTrue(len(metamodel._training_data['c']) == 0)
@@ -241,11 +244,11 @@ class MetaModelTestCase(unittest.TestCase):
 
         # now put a different model in
         metamodel.model = Simple2()
-        metamodel.includes = ['w','x','y','z']
+        metamodel.includes = ['w', 'x', 'y', 'z']
         inputs = set(metamodel.list_inputs())
         outputs = set(metamodel.list_outputs())
-        self.assertEquals(inputs-mmins, set(['w','x']))
-        self.assertEquals(outputs-mmouts, set(['y','z']))
+        self.assertEquals(inputs-mmins, set(['w', 'x']))
+        self.assertEquals(outputs-mmouts, set(['y', 'z']))
 
     def _get_assembly(self, default=True, meta=True):
         asm = set_as_top(Assembly())
@@ -262,12 +265,12 @@ class MetaModelTestCase(unittest.TestCase):
         else:
             asm.add('metamodel', Simple()) # put a real Simple comp in place of metamodel
 
-        asm.driver.workflow.add(['metamodel','comp1','comp2'])
+        asm.driver.workflow.add(['metamodel', 'comp1', 'comp2'])
 
-        asm.connect('comp1.c','metamodel.a')
-        asm.connect('comp1.d','metamodel.b')
-        asm.connect('metamodel.c','comp2.a')
-        asm.connect('metamodel.d','comp2.b')
+        asm.connect('comp1.c', 'metamodel.a')
+        asm.connect('comp1.d', 'metamodel.b')
+        asm.connect('metamodel.c', 'comp2.a')
+        asm.connect('metamodel.d', 'comp2.b')
         return asm
 
     def test_setup1(self):
@@ -284,16 +287,16 @@ class MetaModelTestCase(unittest.TestCase):
         meta_asm.metamodel.excludes = ['a']
         self.assertTrue('a' not in meta_asm.metamodel.list_inputs())
         self.assertTrue('b' in meta_asm.metamodel.list_inputs())
-        self.assertTrue(meta_asm.metamodel.surrogates.has_key( 'c'))
-        self.assertTrue(meta_asm.metamodel.surrogates.has_key( 'd'))
+        self.assertTrue(meta_asm.metamodel.surrogates.has_key('c'))
+        self.assertTrue(meta_asm.metamodel.surrogates.has_key('d'))
         meta_asm.metamodel.excludes = ['d']
-        self.assertTrue(meta_asm.metamodel.surrogates.has_key( 'c'))
-        self.assertTrue(not meta_asm.metamodel.surrogates.has_key( 'd'))
+        self.assertTrue(meta_asm.metamodel.surrogates.has_key('c'))
+        self.assertTrue(not meta_asm.metamodel.surrogates.has_key('d'))
 
 
     def test_comp_error(self):
         a = Assembly()
-        a.add('m',MetaModel())
+        a.add('m', MetaModel())
         a.m.default_surrogate = KrigingSurrogate()
         a.m.model = DummyError()
 
@@ -303,7 +306,7 @@ class MetaModelTestCase(unittest.TestCase):
         try:
             a.run()
         except RuntimeError as err:
-            self.assertEqual("m.model: Test Error",str(err))
+            self.assertEqual("m.model: Test Error", str(err))
         else:
             self.fail("RuntimeError expected")
 
@@ -311,13 +314,14 @@ class MetaModelTestCase(unittest.TestCase):
     def test_in_assembly(self):
         asm = self._get_assembly()
         self.assertEqual(set(asm.list_connections()),
-                         set([('metamodel.d', 'comp2.b'), ('metamodel.c', 'comp2.a'),
-                              ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
-
+                         set([('metamodel.d', 'comp2.b'),
+                              ('metamodel.c', 'comp2.a'),
+                              ('comp1.c', 'metamodel.a'),
+                              ('comp1.d', 'metamodel.b')]))
         # do some training
-        data = [1,2,3,4]
+        data = [1, 2, 3, 4]
 
-        for a,b in zip(data[:-1],data[1:]):
+        for a, b in zip(data[:-1], data[1:]):
             asm.comp1.a = a
             asm.comp1.b = b
             asm.metamodel.train_next = 1
@@ -346,7 +350,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add(['metamodel'])
 
-        for a,b in zip(avals, bvals):
+        for a, b in zip(avals, bvals):
             asm.metamodel.a = a
             asm.metamodel.b = b
             asm.metamodel.train_next = 1
@@ -367,7 +371,8 @@ class MetaModelTestCase(unittest.TestCase):
         try:
             asm.metamodel.run()
         except Exception as err:
-            self.assertEqual("metamodel: ERROR: all training inputs are constant.", str(err))
+            self.assertEqual("metamodel: ERROR: all training inputs are"
+                             " constant.", str(err))
         else:
             self.fail("Exception expected")
 
@@ -383,7 +388,9 @@ class MetaModelTestCase(unittest.TestCase):
             asm.metamodel.run()
         except Exception as err:
             self.assertEqual(str(err),
-                             "metamodel: ERROR: training input 'b' was a constant value of (2.2) but the value has changed to (4.8).")
+                             "metamodel: ERROR: training input 'b' was a"
+                             " constant value of (2.2) but the value has"
+                             " changed to (4.8).")
         else:
             self.fail("Exception expected")
 
@@ -402,16 +409,16 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel.b = 2.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
-        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
-        cases.append(Case(inputs=inputs,outputs=outputs))
+        inputs = [('meta2.a', metamodel.a), ('meta2.b', metamodel.b)]
+        outputs = [('meta2.c', metamodel.c.mu), ('meta2.d', metamodel.d.mu)]
+        cases.append(Case(inputs=inputs, outputs=outputs))
 
         metamodel.a = 3.
         metamodel.b = 5.
         metamodel.train_next = True
         metamodel.run()
-        inputs = [('meta2.a',metamodel.a),('meta2.b',metamodel.b)]
-        outputs = [('meta2.c',metamodel.c.mu),('meta2.d',metamodel.d.mu)]
+        inputs = [('meta2.a', metamodel.a), ('meta2.b', metamodel.b)]
+        outputs = [('meta2.c', metamodel.c.mu), ('meta2.d', metamodel.d.mu)]
         cases.append(Case(inputs=inputs,outputs=outputs))
 
         case_iter = ListCaseIterator(cases)
@@ -466,25 +473,29 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel = MetaModel()
         metamodel.name = 'meta'
         metamodel.model = Simple()
-        metamodel.surrogates[ 'd' ] = KrigingSurrogate()
+        metamodel.surrogates['d'] = KrigingSurrogate()
         try:
             metamodel.run()
-        except RuntimeError,err:
-            self.assertEqual("meta: No default surrogate model is defined and the following outputs do not have a surrogate model: ['c']. "
-            "Either specify default_surrogate, or specify a surrogate model for all "
-            "outputs.",str(err))
+        except RuntimeError as err:
+            self.assertEqual("meta: No default surrogate model is defined and"
+                             " the following outputs do not have a surrogate"
+                             " model: ['c']. Either specify default_surrogate,"
+                             " or specify a surrogate model for all outputs.",
+                             str(err))
         else:
             self.fail('ValueError expected')
 
         metamodel = MetaModel()
         metamodel.name = 'meta'
         metamodel.surrogates['d'] = KrigingSurrogate()
-        metamodel.includes = ['a','b','d']
+        metamodel.includes = ['a', 'b', 'd']
         try:
             metamodel.model = Simple()
-        except ValueError,err:
-            if 'meta: No surrogate was provided for "c". All outputs must have a surrogate' == str(err):
-                self.fail('should not get a value error for variable c. It is not included in the metamodel')
+        except ValueError as err:
+            if 'meta: No surrogate was provided for "c".' \
+               ' All outputs must have a surrogate' == str(err):
+                self.fail('should not get a value error for variable c.'
+                          ' It is not included in the metamodel')
 
     def test_multi_surrogate_models(self):
         metamodel = MetaModel()
@@ -507,8 +518,8 @@ class MetaModelTestCase(unittest.TestCase):
         simple.run()
         metamodel.run()
 
-        self.assertTrue(isinstance(metamodel.d,NormalDistribution))
-        self.assertTrue(isinstance(metamodel.c,float))
+        self.assertTrue(isinstance(metamodel.d, NormalDistribution))
+        self.assertTrue(isinstance(metamodel.c, float))
 
     def test_includes(self):
         metamodel = MyMetaModel()
@@ -583,10 +594,10 @@ class MetaModelTestCase(unittest.TestCase):
 
         class Trig(Component):
 
-            x = Float(0,iotype="in",units="rad")
+            x = Float(0, iotype="in", units="rad")
 
-            f_x_sin = Float(0.0,iotype="out")
-            f_x_cos = Float(0.0,iotype="out")
+            f_x_sin = Float(0.0, iotype="out")
+            f_x_cos = Float(0.0, iotype="out")
 
             def execute(self):
                 self.f_x_sin = .5*sin(self.x)
@@ -595,7 +606,7 @@ class MetaModelTestCase(unittest.TestCase):
 
         class TrigAsmb(Assembly):
 
-            x = Float(0,iotype="in",units="rad")
+            x = Float(0, iotype="in", units="rad")
 
             def configure(self):
 
@@ -612,6 +623,7 @@ class MetaModelTestCase(unittest.TestCase):
 
         top = set_as_top(Assembly())
         top.add("trig_meta_model", MetaModel())
+        top.trig_meta_model.excludes.append('printvars')
         top.trig_meta_model.model = TrigAsmb()
         top.trig_meta_model.surrogates['f_x_sin'] = FloatKrigingSurrogate()
         top.trig_meta_model.surrogates['f_x_cos'] = FloatKrigingSurrogate()
@@ -698,7 +710,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         x = asmb.mm.get(x_name)
         y = asmb.mm.get(y_name)
         self.assertEqual(x, 2)
-        if ( isinstance(y,UncertainDistribution) ):
+        if isinstance(y, UncertainDistribution):
             self.assertEqual(y.getvalue(), 4)
         else:
             self.assertEqual(y, 4)
@@ -709,7 +721,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         x = asmb.mm.get(x_name)
         y = asmb.mm.get(y_name)
         self.assertEqual(x, 4)
-        if ( isinstance(y,UncertainDistribution) ):
+        if isinstance(y, UncertainDistribution):
             self.assertEqual(y.getvalue(), 7)
         else:
             self.assertEqual(y, 7)
@@ -721,7 +733,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         x = asmb.mm.get(x_name)
         y = asmb.mm.get(y_name)
         self.assertEqual(x, self.k_x.predict((1, 2)))
-        if ( isinstance(y,UncertainDistribution) ):
+        if isinstance(y, UncertainDistribution):
             self.assertEqual(y.getvalue(), self.k_y.predict((1, 2)))
         else:
             self.assertEqual(y, self.k_y.predict((1, 2)))
@@ -732,7 +744,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         x = asmb.mm.get(x_name)
         y = asmb.mm.get(y_name)
         self.assertEqual(x, self.k_x.predict((1.5, 2.5)))
-        if ( isinstance(y,UncertainDistribution) ):
+        if isinstance(y, UncertainDistribution):
             self.assertEqual(y.getvalue(), self.k_y.predict((1.5, 2.5)))
         else:
             self.assertEqual(y, self.k_y.predict((1.5, 2.5)))
@@ -743,7 +755,7 @@ class TestMetaModelWithVtree(unittest.TestCase):
         x = asmb.mm.get(x_name)
         y = asmb.mm.get(y_name)
         self.assertEqual(x, self.k_x.predict((2, 3)))
-        if ( isinstance(y,UncertainDistribution) ):
+        if isinstance(y, UncertainDistribution):
             self.assertEqual(y.getvalue(), self.k_y.predict((2, 3)))
         else:
             self.assertEqual(y, self.k_y.predict((2, 3)))
@@ -813,7 +825,8 @@ class TestMetaModelWithVtree(unittest.TestCase):
             self.a.mm.includes = ['ins.a','outs.y']
         except Exception as err:
             self.assertEqual(str(err),
-                             'mm: Can only include top level variable trees, not leaves')
+                             'mm: Can only include top level variable trees,'
+                             ' not leaves')
         else:
             self.fail('Expected Exception')
 

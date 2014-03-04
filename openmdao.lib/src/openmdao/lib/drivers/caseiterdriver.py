@@ -447,6 +447,7 @@ class CaseIterDriverBase(Driver):
                 except Exception as exc:
                     msg = 'Exception getting case outputs: %s' % exc
                     self._logger.debug('    %s', msg)
+                    self._logger.debug('%s', case)
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
@@ -554,16 +555,15 @@ class CaseIterDriverBase(Driver):
         # Additional user-requested variables
         # These must be added here so that the outputs are in the cases
         # before they are in the server list.
-        for printvar in self.printvars:
-
-            if  '*' in printvar:
-                printvars = self._get_all_varpaths(printvar)
-            else:
-                printvars = [printvar]
-
-            for var in printvars:
-                val = ExprEvaluator(var, scope=self.parent).evaluate()
-                case.add_output(var, val)
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        inputs, outputs = top.get_case_variables()
+        for var, val in inputs:
+            case.add_input(var, val)
+        for var, val in outputs:
+            case.add_output(var, val)
+        case.add_output('%s.workflow.itername' % self.name, self.itername)
 
         try:
             for event in self.get_events(): 
@@ -597,8 +597,10 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append((case, seqno))
         else:
-            
-            for recorder in self.recorders:
+            top = self.parent
+            while top.parent:
+                top = top.parent
+            for recorder in top.recorders:
                 recorder.record(case)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
@@ -701,7 +703,8 @@ class CaseIterDriverBase(Driver):
         if server is None:
             try:
                 self.workflow._parent.update_parameters()
-                self.workflow.run(case_id=self._server_cases[server][0].uuid)
+                self.workflow.run(case_id=self._server_cases[server][0].uuid,
+                                  record_case=False)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -750,11 +753,14 @@ class CaseIteratorDriverBase(CaseIterDriverBase):
     def execute(self):
         """ Evaluate cases from `iterator` and place in `evaluated`. """
         self.evaluated = None
-        self.recorders.append(ListCaseRecorder())
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        top.recorders.append(ListCaseRecorder())
         try:
             super(CaseIteratorDriverBase, self).execute()
         finally:
-            self.evaluated = self.recorders.pop().get_iterator()
+            self.evaluated = top.recorders.pop().get_iterator()
 
 class ConnectableCaseIteratorDriver(CaseIteratorDriverBase):
     """

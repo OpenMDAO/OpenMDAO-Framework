@@ -146,7 +146,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if imode != 1:
             driver.constraint_vals = g
 
-    elif info == 3 :
+    elif info == 3:
         # evaluate the first and second order derivatives
         #     of the objective function
 
@@ -280,8 +280,8 @@ class NEWSUMTdriver(Driver):
                                 'difference stepsize. Parameters with '
                                 'specified values override this.')
 
-    ilin = Array(dtype=numpy_int, default_value=zeros(0,'i4'), iotype='in',
-        desc='Array designating whether each constraint is linear.')
+    ilin = Array(dtype=numpy_int, default_value=zeros(0, 'i4'), iotype='in',
+                 desc='Array designating whether each constraint is linear.')
 
     # Control parameters for NEWSUMT.
     # NEWSUMT has quite a few parameters to give the user control over aspects
@@ -415,8 +415,8 @@ class NEWSUMTdriver(Driver):
         self._load_common_blocks()
 
         try:
-            ( fmin, self._obj, self._objmin, self.design_vals,
-              self.__design_vals_tmp, self.isdone, self.resume) = \
+            (fmin, self._obj, self._objmin, self.design_vals,
+             self.__design_vals_tmp, self.isdone, self.resume) = \
               newsumtinterruptible.newsuminterruptible(user_function,
                    self._lower_bounds, self._upper_bounds,
                    self._ddobj, self._dg, self._dh, self._dobj,
@@ -426,9 +426,9 @@ class NEWSUMTdriver(Driver):
                    self._s, self._sn, self.design_vals, self.__design_vals_tmp,
                    self._iik, self.ilin, self._iside,
                    self.n1, self.n2, self.n3, self.n4,
-                   self.isdone, self.resume, analys_extra_args = (self,))
+                   self.isdone, self.resume, analys_extra_args=(self,))
 
-        except Exception, err:
+        except Exception as err:
             self._logger.error(str(err))
             raise
 
@@ -443,8 +443,6 @@ class NEWSUMTdriver(Driver):
         if not self.continue_iteration():
             self.set_parameters(self.design_vals)
             super(NEWSUMTdriver, self).run_iteration()
-
-        self.record_case()
 
     def _config_newsumt(self):
         """Set up arrays for the Fortran newsumt routine, and perform some
@@ -480,7 +478,7 @@ class NEWSUMTdriver(Driver):
             self.n2 = ncon
         else:
             self.n2 = 1
-        self.n3 = ( ndv * ( ndv + 1 )) / 2
+        self.n3 = (ndv * (ndv + 1)) / 2
         if ncon > 0:
             self.n4 = ndv * ncon
         else:
@@ -490,7 +488,7 @@ class NEWSUMTdriver(Driver):
         self.constraint_vals = zeros(ncon)
 
         # Linear constraint setting
-        if len(self.ilin) == 0 :
+        if len(self.ilin) == 0:
             if ncon > 0:
                 self.ilin = zeros(ncon, dtype=int)
             else:
@@ -528,20 +526,19 @@ class NEWSUMTdriver(Driver):
         self.contrl.tftn = 0.0
 
         # work arrays
-        self.__design_vals_tmp = zeros(self.n1,'d')
-        self._ddobj = zeros( self.n3 )
-        self._dg = zeros( self.n4 )
-        self._dh = zeros( self.n1 )
-        self._dobj = zeros( self.n1 )
-        self._g = zeros( self.n2 )
-        self._gb = zeros( self.n2 )
-        self._g1 = zeros( self.n2 )
-        self._g2 = zeros( self.n2 )
-        self._g3 = zeros( self.n2 )
-        self._s = zeros( self.n1 )
-        self._sn = zeros( self.n1 )
-        self._iik = zeros( self.n1, dtype=int )
-
+        self.__design_vals_tmp = zeros(self.n1, 'd')
+        self._ddobj = zeros(self.n3)
+        self._dg = zeros(self.n4)
+        self._dh = zeros(self.n1)
+        self._dobj = zeros(self.n1)
+        self._g = zeros(self.n2)
+        self._gb = zeros(self.n2)
+        self._g1 = zeros(self.n2)
+        self._g2 = zeros(self.n2)
+        self._g3 = zeros(self.n2)
+        self._s = zeros(self.n1)
+        self._sn = zeros(self.n1)
+        self._iik = zeros(self.n1, dtype=int)
 
     def _load_common_blocks(self):
         """ Reloads the common blocks using the intermediate info saved in the
@@ -549,11 +546,10 @@ class NEWSUMTdriver(Driver):
         """
 
         for name, value in self.contrl.__dict__.items():
-            setattr( newsumtinterruptible.contrl, name, value )
+            setattr(newsumtinterruptible.contrl, name, value)
 
         for name, value in self.countr.__dict__.items():
-            setattr( newsumtinterruptible.countr, name, value )
-
+            setattr(newsumtinterruptible.countr, name, value)
 
     def _save_common_blocks(self):
         """ Saves the common block data to the class to prevent trampling by

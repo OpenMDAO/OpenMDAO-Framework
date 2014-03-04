@@ -50,13 +50,13 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         # then runs the model again using the same cases, pulled out of the DB
         # by a DBCaseIterator.  Finally the cases are dumped to a string after
         # being run for the second time.
-        
-        self.top.driver.recorders = [DBCaseRecorder()]
+
+        self.top.recorders = [DBCaseRecorder()]
         self.top.run()
 
         # Gui pane stuff
 
-        attrs = self.top.driver.recorders[0].get_attributes()
+        attrs = self.top.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'dbfile',
                          'id': 'dbfile',
@@ -67,10 +67,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                        'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
 
         # now use the DB as source of Cases
-        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
+        self.top.driver.iterator = self.top.recorders[0].get_iterator()
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: case8',
@@ -148,7 +148,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         try:
             shutil.rmtree(dbdir, onerror=onerror)
         except OSError:
-            logging.error("problem removing directory %s" % dbdir)
+            logging.error("problem removing directory %s", dbdir)
 
     def test_db_to_dict(self):
         tmpdir = tempfile.mkdtemp()
@@ -187,7 +187,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         try:
             shutil.rmtree(tmpdir, onerror=onerror)
         except OSError:
-            logging.error("problem removing directory %s" % tmpdir)
+            logging.error("problem removing directory %s", tmpdir)
 
     def test_dbcaseiterator_get_attributes(self):
 
@@ -199,13 +199,15 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                          'type': 'str',
                          'connected': '',
                          'value': ':memory:',
-                         'desc': 'Name of the database file to be iterated. Default ' +
-                       'is ":memory:", which reads the database from memory.'} in attrs['Inputs'])
+                         'desc': 'Name of the database file to be iterated.'
+                                 ' Default is ":memory:", which reads the'
+                                 ' database from memory.'} in attrs['Inputs'])
         self.assertTrue({'name': 'selectors',
                          'type': 'NoneType',
                          'connected': '',
                          'value': 'None',
-                         'desc': 'String of additional SQL queries to apply to the case selection.'} in attrs['Inputs'])
+                         'desc': 'String of additional SQL queries to apply to'
+                                 ' the case selection.'} in attrs['Inputs'])
 
     def test_string(self):
         recorder = DBCaseRecorder()
@@ -242,7 +244,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             try:
                 shutil.rmtree(tmpdir, onerror=onerror)
             except OSError:
-                logging.error("problem removing directory %s" % tmpdir)
+                logging.error("problem removing directory %s", tmpdir)
 
 
 class NestedCaseTestCase(unittest.TestCase):
@@ -255,7 +257,7 @@ class NestedCaseTestCase(unittest.TestCase):
         try:
             shutil.rmtree(self.tdir, onerror=onerror)
         except OSError:
-            logging.error("problem removing directory %s" % self.tdir)
+            logging.error("problem removing directory %s", self.tdir)
 
     def _create_assembly(self, dbname, drivertype):
         asm = Assembly()
@@ -264,7 +266,7 @@ class NestedCaseTestCase(unittest.TestCase):
         asm.add('comp2', ExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
-        driver.recorders = [DBCaseRecorder(dbname, append=True)]
+        asm.recorders = [DBCaseRecorder(dbname, append=True)]
         return asm
 
     def _create_nested_assemblies(self, dbname, drivertype):
@@ -275,11 +277,9 @@ class NestedCaseTestCase(unittest.TestCase):
         top.asm.driver.workflow.add('asm')
 
         top.driver.iterator = ListCaseIterator(self._create_cases(1))
-        top.driver.recorders = [DBCaseRecorder(dbname, append=True)]
+        top.recorders = [DBCaseRecorder(dbname, append=True)]
         top.asm.driver.iterator = ListCaseIterator(self._create_cases(2))
-        top.asm.driver.recorders = [DBCaseRecorder(dbname, append=True)]
         top.asm.asm.driver.iterator = ListCaseIterator(self._create_cases(3))
-        top.asm.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
 
         return top
 
@@ -290,10 +290,8 @@ class NestedCaseTestCase(unittest.TestCase):
         # Case hierarchy is structured properly
         top = set_as_top(self._create_assembly(dbname, drivertype))
         driver2 = top.add('driver2', drivertype())
-        driver2.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver.workflow.add(['driver2'])
         driver3 = top.add('driver3', drivertype())
-        driver3.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver2.workflow.add(['driver3'])
         top.driver3.workflow.add(['comp1', 'comp2'])
 

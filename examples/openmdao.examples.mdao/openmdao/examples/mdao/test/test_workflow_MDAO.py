@@ -2,7 +2,6 @@
 Test run/step/stop aspects of a simple workflow.
 """
 
-import os
 import unittest
 
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
@@ -12,7 +11,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
-from openmdao.lib.drivers.api import CONMINdriver, SLSQPdriver
+from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.optproblems import sellar
 
@@ -30,7 +29,6 @@ class SellarDiscipline2a(Component):
 
     temp1 = Float(iotype='out', desc='Output of this Discipline')
 
-
     def execute(self):
         """Evaluates the equation
         y1 = [y1**(.5)] + z1 + z2"""
@@ -43,7 +41,6 @@ class SellarDiscipline2a(Component):
         self.temp1 = y1**(.5)
 
 
-
 class SellarDiscipline2b(Component):
     """Component containing Discipline 2b"""
 
@@ -53,7 +50,6 @@ class SellarDiscipline2b(Component):
 
     temp2 = Float(iotype='out', desc='Intermediate Variable')
 
-
     def execute(self):
         """Evaluates the equation
         y1 = y1**(.5) [+ z1] + z2"""
@@ -61,7 +57,6 @@ class SellarDiscipline2b(Component):
         z1 = self.z1
 
         self.temp2 = self.temp1 + z1
-
 
 
 class SellarDiscipline2c(Component):
@@ -86,10 +81,10 @@ class SellarDiscipline2c(Component):
 class SellarCO_Multi(Assembly):
     """Solution of the sellar analytical problem using CO.
 
-    Sellar, R. S., Batill, S. M., and Renaud, J. E., Response Surface Based, Concur-
-    rent Subspace Optimization for Multidisciplinary System Design," Proceedings
-    References 79 of the 34th AIAA Aerospace Sciences Meeting and Exhibit, Reno, NV,
-    January 1996.
+    Sellar, R. S., Batill, S. M., and Renaud, J. E., Response Surface Based,
+    Concurrent Subspace Optimization for Multidisciplinary System Design,"
+    Proceedings References 79 of the 34th AIAA Aerospace Sciences Meeting and
+    Exhibit, Reno, NV, January 1996.
     """
 
     z1 = Float(iotype='in')
@@ -119,25 +114,25 @@ class SellarCO_Multi(Assembly):
         self.add('dis2a', SellarDiscipline2a())
         self.add('dis2b', SellarDiscipline2b())
         self.add('dis2c', SellarDiscipline2c())
-        self.connect('dis2a.temp1','dis2b.temp1')
-        self.connect('dis2b.temp2','dis2c.temp2')
+        self.connect('dis2a.temp1', 'dis2b.temp1')
+        self.connect('dis2b.temp2', 'dis2c.temp2')
         self.localopt2.workflow.add(['dis2a', 'dis2b', 'dis2c'])
 
         #Parameters - Global Optimization
         # using group parameters to 'broadcast' same data
         self.driver.add_objective('x1**2 + z2 + y1 + math.exp(-y2)')
-        for param,low,high in zip(['z1', 'z2', 'x1', 'y1', 'y2'],
-                                  [-10.0, 0.0, 0.0, 3.16, -10.0],
-                                  [10.0, 10.0, 10.0, 10, 24.0]):
+        for param, low, high in zip(['z1', 'z2', 'x1', 'y1', 'y2'],
+                                    [-10.0, 0.0, 0.0, 3.16, -10.0],
+                                    [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)
 
         map(self.driver.add_constraint, [
             '(z1-dis1.z1)**2 + (z2-dis1.z2)**2 + (x1-dis1.x1)**2 + '
             '(y1-dis1.y1)**2 + (y2-dis1.y2)**2 < 0',
             '(z1-dis2b.z1)**2 + (z2-dis2c.z2)**2 + (y1-dis2a.y1)**2 + '
-            '(y2-dis2c.y2)**2 < 0' ])
+            '(y2-dis2c.y2)**2 < 0'])
 
-        self.driver.printvars = ['dis1.y1','dis2c.y2']
+        self.printvars = ['dis1.y1', 'dis2c.y2']
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
@@ -148,15 +143,17 @@ class SellarCO_Multi(Assembly):
         self.driver.ctlmin = 0.0008
 
         #Parameters - Local Optimization 1
-        self.localopt1.add_objective('(z1-dis1.z1)**2 + ' + \
-                                   '(z2-dis1.z2)**2 + ' + \
-                                   '(x1-dis1.x1)**2 + ' + \
-                                   '(y1-dis1.y1)**2 + ' + \
-                                   '(y2-dis1.y2)**2')
+        self.localopt1.add_objective('(z1-dis1.z1)**2 + ' \
+                                     '(z2-dis1.z2)**2 + ' \
+                                     '(x1-dis1.x1)**2 + ' \
+                                     '(y1-dis1.y1)**2 + ' \
+                                     '(y2-dis1.y2)**2')
+
         for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
                                     [-10.0, 0.0, 0.0, -10.0],
                                     [10.0, 10.0, 10.0, 24.0]):
             self.localopt1.add_parameter(param, low=low, high=high)
+
         self.localopt1.iprint = 0
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
@@ -165,14 +162,16 @@ class SellarCO_Multi(Assembly):
         self.localopt1.dabfun = .000001
 
         #Parameters - Local Optimization 2
-        self.localopt2.add_objective('(z1-dis2b.z1)**2 + ' + \
-                                   '(z2-dis2c.z2)**2 + ' + \
-                                   '(y1-dis2a.y1)**2 + ' + \
-                                   '(y2-dis2c.y2)**2')
+        self.localopt2.add_objective('(z1-dis2b.z1)**2 + ' \
+                                     '(z2-dis2c.z2)**2 + ' \
+                                     '(y1-dis2a.y1)**2 + ' \
+                                     '(y2-dis2c.y2)**2')
+
         for param, low, high in zip(['dis2b.z1', 'dis2c.z2', 'dis2a.y1'],
                                     [-10.0, 0.0, 3.16],
                                     [10.0, 10.0, 10]):
             self.localopt2.add_parameter(param, low=low, high=high)
+
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
         self.localopt2.fdch = .003
@@ -240,9 +239,9 @@ class TestCase(unittest.TestCase):
 
         # In the top workflow, the subdrivers should each become a PA.
         PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
-        self.assertEqual( PA1.itercomps, ['localopt1'])
+        self.assertEqual(PA1.itercomps, ['localopt1'])
         PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
-        self.assertEqual( PA2.itercomps, ['localopt2'])
+        self.assertEqual(PA2.itercomps, ['localopt2'])
 
         assert_rel_error(self, prob.global_des_var_targets[0], 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.global_des_var_targets[1], 1.0, 0.01)
@@ -275,9 +274,9 @@ class TestCase(unittest.TestCase):
 
         # In the top workflow, the subdrivers should each become a PA.
         PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
-        self.assertEqual( PA1.itercomps, ['localopt1'])
+        self.assertEqual(PA1.itercomps, ['localopt1'])
         PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
-        self.assertEqual( PA2.itercomps, ['localopt2'])
+        self.assertEqual(PA2.itercomps, ['localopt2'])
         assert_rel_error(self, prob.z1, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)

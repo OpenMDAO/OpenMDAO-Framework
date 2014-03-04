@@ -75,7 +75,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         child = assembly['children'][0]
         self.assertEqual(child['pathname'], 'prob.driver')
-        self.assertEqual(child['type'], 'Run_Once')
+        self.assertEqual(child['type'], 'Driver')
         self.assertEqual(child['interfaces'],
             ['IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
 
@@ -110,7 +110,6 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Objectives' in attributes)
         self.assertTrue('Parameters' in attributes)
         self.assertTrue('Constraints' in attributes)
-        self.assertTrue('Slots' in attributes)
         self.assertTrue('Workflow' in attributes)
 
         self.assertEqual(attributes['Workflow']['pathname'],

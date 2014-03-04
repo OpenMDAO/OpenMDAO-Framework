@@ -1,10 +1,9 @@
 """ Base class for all workflows. """
 
 # pylint: disable-msg=E0611,F0401
+from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
 
 __all__ = ['Workflow']
 
@@ -84,7 +83,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0, case_id='', case_label='', record_case=True):
         """ Run the Components in this Workflow. """
 
         self._stop = False
@@ -103,6 +102,58 @@ class Workflow(object):
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
+
+        if record_case:
+            self._record_case(label=case_label)
+
+    def _record_case(self, label=''):
+        """ Record case in all recorders. """
+        top = self._parent
+        while top.parent is not None:
+            top = top.parent
+        recorders = top.recorders
+        if not recorders:
+            return
+
+        inputs = []
+        outputs = []
+        driver = self._parent
+        scope = driver.parent
+
+        # Parameters
+        if hasattr(driver, 'get_parameters'):
+            for name, param in driver.get_parameters().iteritems():
+                if isinstance(name, tuple):
+                    name = name[0]
+                inputs.append((name, param.evaluate(scope)))
+
+        # Objectives
+        if hasattr(driver, 'eval_objective'):
+            outputs.append(('Objective', driver.eval_objective()))
+        elif hasattr(driver, 'eval_objectives'):
+            for j, obj in enumerate(driver.eval_objectives()):
+                outputs.append(('Objective_%d' % j, obj))
+
+        # Constraints
+        if hasattr(driver, 'get_ineq_constraints'):
+            for name, con in driver.get_ineq_constraints().iteritems():
+                val = con.evaluate(scope)
+                outputs.append(('Constraint ( %s )' % name, val))
+
+        if hasattr(driver, 'get_eq_constraints'):
+            for name, con in driver.get_eq_constraints().iteritems():
+                val = con.evaluate(scope)
+                outputs.append(('Constraint ( %s )' % name, val))
+
+        case_inputs, case_outputs = top.get_case_variables()
+        inputs.extend(case_inputs)
+        outputs.extend(case_outputs)
+        outputs.append(('%s.workflow.itername' % driver.get_pathname(),
+                        self.itername))
+        case = Case(inputs, outputs, label=label)
+
+        for recorder in recorders:
+            recorder.record(case)
 
     def _iterbase(self, case_id):
         """ Return base for 'iteration coordinates'. """

@@ -30,8 +30,8 @@ from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, \
      ICaseIterator, IUncertainVariable
 from openmdao.main.mp_support import has_interface
 
-from openmdao.main.datatypes.api import Instance, Slot, List, Str, Float, Int, Event, \
-     Dict, Bool
+from openmdao.main.datatypes.api import Instance, Slot, List, Str, Float, Int, \
+     Event, Dict, Bool
 
 from openmdao.util.typegroups import int_types, real_types
 
@@ -156,7 +156,8 @@ class MetaModelBase(Component):
                 except KeyError:
                     self.raise_exception('The output "%s" was not found '
                                          'in one of the cases provided for '
-                                         'warm_start_data' % var_name, ValueError)
+                                         'warm_start_data' % var_name,
+                                         ValueError)
                 else:  # save to training output history
                     self._training_data[output_name].append(val)
 
@@ -178,18 +179,37 @@ class MetaModelBase(Component):
             self.raise_exception("includes and excludes are mutually exclusive",
                                  RuntimeError)
 
-        # 3. the includes and excludes must match actual inputs and outputs of the model
-        input_names = self.surrogate_input_names()
-        output_names = self.surrogate_output_names()
+        # 3. the includes and excludes must match actual inputs and outputs
+        #    of the model
+        flattener = flatteners[VariableTree]
+        input_names = []
+        for name in self.model._alltraits(iotype='in').keys():
+            obj = self.model.get(name)
+            if isinstance(obj, VariableTree):
+                for subname, _ in flattener(name, obj):
+                    input_names.append(subname)
+            else:
+                input_names.append(name)
+        output_names = []
+        for name in self.model._alltraits(iotype='out').keys():
+            obj = self.model.get(name)
+            if isinstance(obj, VariableTree):
+                for subname, _ in flattener(name, obj):
+                    output_names.append(subname)
+            else:
+                output_names.append(name)
         input_and_output_names = input_names + output_names
+
         for include in self.includes:
             if include not in input_and_output_names:
                 self.raise_exception('The include "%s" is not one of the '
-                                     'model inputs or outputs ' % include, ValueError)
+                                     'model inputs or outputs ' % include,
+                                     ValueError)
         for exclude in self.excludes:
             if exclude not in input_and_output_names:
                 self.raise_exception('The exclude "%s" is not one of the '
-                                     'model inputs or outputs ' % exclude, ValueError)
+                                     'model inputs or outputs ' % exclude,
+                                     ValueError)
 
         # 4. Either there are no surrogates set and no default surrogate
         #    ( just do passthrough )
@@ -201,7 +221,8 @@ class MetaModelBase(Component):
             for name in self.surrogate_output_names():
                 if not self.surrogates[name]:
                     no_sur.append(name)
-            if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
+            if len(no_sur) > 0 and \
+               len(no_sur) != len(self._surrogate_output_names):
                 self.raise_exception("No default surrogate model is defined and"
                                      " the following outputs do not have a"
                                      " surrogate model: %s. Either specify"
@@ -209,11 +230,13 @@ class MetaModelBase(Component):
                                      " surrogate model for all outputs." %
                                      no_sur, RuntimeError)
 
-        # 5. All the explicitly set surrogates[] should match actual outputs of the model
+        # 5. All the explicitly set surrogates[] should match actual outputs
+        #    of the model
         for surrogate_name in self.surrogates.keys():
             if surrogate_name not in output_names:
-                self.raise_exception('The surrogate "%s" does not match one of the '
-                                     'model outputs ' % surrogate_name, ValueError)
+                self.raise_exception('The surrogate "%s" does not match one of'
+                                     ' the model outputs ' % surrogate_name,
+                                     ValueError)
 
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise,
@@ -258,8 +281,8 @@ class MetaModelBase(Component):
 
             if self._new_train_data:
                 if len(self._training_input_history) < 2:
-                    self.raise_exception("ERROR: need at least 2 training points!",
-                                         RuntimeError)
+                    self.raise_exception("ERROR: need at least 2 training"
+                                         " points!", RuntimeError)
 
                 # figure out if we have any constant training inputs
                 tcases = self._training_input_history
@@ -275,9 +298,11 @@ class MetaModelBase(Component):
                             break
 
                 if len(self._const_inputs) == len(in_hist):
-                    self.raise_exception("ERROR: all training inputs are constant.")
+                    self.raise_exception("ERROR: all training inputs are"
+                                         " constant.", RuntimeError)
                 elif len(self._const_inputs) > 0:
-                    # some inputs are constant, so we have to remove them from the training set
+                    # some inputs are constant, so we have to remove them
+                    # from the training set
                     training_input_history = []
                     for inputs in self._training_input_history:
                         training_input_history.append([val for i, val in enumerate(inputs)
@@ -330,25 +355,30 @@ class MetaModelBase(Component):
         super(MetaModelBase, self)._post_run()
 
     def invalidate_deps(self, compname=None, varnames=None, force=False):
-        if compname:  # we were called from our model, which expects to be in an Assembly
+        # we were called from our model, which expects to be in an Assembly
+        if compname:
             return
         super(MetaModelBase, self).invalidate_deps(varnames=varnames)
 
     def exec_counts(self, compnames):
-        # we force the run on our model, so it doesn't matter what we tell it the exec counts are
+        # we force the run on our model, so it doesn't matter what we tell it
+        # the exec counts are
         return [0 for n in compnames]
 
     def _model_changed(self, oldmodel, newmodel):
-        """called whenever the model variable is set or when includes/excludes change."""
+        """called whenever the model variable is set or when includes/excludes
+        change."""
         # TODO: check for pre-connected traits on the new model
-        # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
+        # TODO: disconnect traits corresponding to old modeli
+        #       (or leave them if the new model has the same ones?)
         # TODO: check for nested MMs?  Is this a problem?
-        # TODO: check for name collisions between MetaModel class traits and traits from model
+        # TODO: check for name collisions between MetaModel class traits
+        #       and traits from model
 
         if newmodel is not None and not has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the'
-                                 ' IComponent interface' % type(newmodel).__name__,
-                                 TypeError)
+                                 ' IComponent interface'
+                                 % type(newmodel).__name__, TypeError)
 
         self.reset_training_data = True
 
@@ -417,7 +447,8 @@ class MetaModelBase(Component):
             varname = new.changed.keys()[0]
             if self.surrogates[varname] is None:
                 if self.default_surrogate:
-                    self._default_surrogate_copies[varname] = deepcopy(self.default_surrogate)
+                    self._default_surrogate_copies[varname] = \
+                        deepcopy(self.default_surrogate)
                 if varname in self._surrogate_overrides:
                     self._surrogate_overrides.remove(varname)
             else:
@@ -469,7 +500,8 @@ class MetaModelBase(Component):
                 self._set_output(name, surrogate.get_uncertain_value(out))
 
             if self._train:
-                self._training_data[name].append(out)  # save to training output history
+                # save to training output history
+                self._training_data[name].append(out)
 
     def _add_input(self, name):
         """Adds the specified input variable."""
@@ -489,10 +521,12 @@ class MetaModelBase(Component):
             model_vartree_node = self.model.get(vartreename)
             metamodel_vartree_node.add_trait(subvarname,
                                              _clone_trait(model_vartree_node.trait(subvarname)))
-            metamodel_vartree_node.set(subvarname, model_vartree_node.get(subvarname))
+            metamodel_vartree_node.set(subvarname,
+                                       model_vartree_node.get(subvarname))
 
     def _add_output(self, name):
-        """Adds the specified output variable and its associated surrogate Slot."""
+        """Adds the specified output variable and its associated surrogate
+        Slot."""
 
         if "." not in name:  # non vartree variable
             self.surrogates[name] = None
@@ -562,8 +596,8 @@ class MetaModelBase(Component):
 
     def _remove_output(self, name):
         """Removes the specified output variable and its associated surrogate.
-        Assuming that there is only one level of vartrees and that users can only
-        exclude entire vartrees, not sub parts."""
+        Assuming that there is only one level of vartrees and that users can
+        only exclude entire vartrees, not sub parts."""
 
         if self.parent:
             self.parent.disconnect('.'.join([self.name, name]))
@@ -590,16 +624,17 @@ class MetaModelBase(Component):
 
         if self._surrogate_input_names is None:
             if self.model:
+                flattener = flatteners[VariableTree]
                 self._surrogate_input_names = []
                 for name in self.model._alltraits(iotype='in').keys():
-                    if not isinstance(self.model.get(name), VariableTree):
+                    obj = self.model.get(name)
+                    if not isinstance(obj, VariableTree):
                         if self._eligible(name) and \
                            name not in self._mm_class_traitnames:
                             self._check_type(name, 'inputs')
                             self._surrogate_input_names.append(name)
                     else:
-                        subnames = [n for n,v in flatteners[VariableTree](name, self.model.get(name))]
-                        for subname in subnames:
+                        for subname, _ in flattener(name, obj):
                             if self._eligible(subname) and \
                                name not in self._mm_class_traitnames:
                                 self._check_type(subname, 'inputs')
@@ -615,16 +650,17 @@ class MetaModelBase(Component):
 
         if self._surrogate_output_names is None:
             if self.model:
+                flattener = flatteners[VariableTree]
                 self._surrogate_output_names = []
                 for name in self.model._alltraits(iotype='out').keys():
-                    if not isinstance(self.model.get(name), VariableTree):
+                    obj = self.model.get(name)
+                    if not isinstance(obj, VariableTree):
                         if self._eligible(name) and \
                            name not in self._mm_class_traitnames:
                             self._check_type(name, 'outputs')
                             self._surrogate_output_names.append(name)
                     else:
-                        subnames = [n for n,v in flatteners[VariableTree](name, self.model.get(name))]
-                        for subname in subnames:
+                        for subname, _ in flattener(name, obj):
                             if self._eligible(subname) and \
                                name not in self._mm_class_traitnames:
                                 self._check_type(subname, 'outputs')
@@ -700,8 +736,9 @@ class MetaModelBase(Component):
             new_obj.on_trait_change(self._def_surrogate_trait_modified)
 
             # due to the way "add" works, container will always remove the old
-            #  before it adds the new one. So you actually get this method called
-            #  twice on a replace. You only do this update when the new one gets set
+            # before it adds the new one. So you actually get this method called
+            # twice on a replace. You only do this update when the new one gets
+            # set
 
             for name in self.surrogate_output_names():
                 if name not in self._surrogate_overrides:
@@ -716,7 +753,8 @@ class MetaModelBase(Component):
         # replace all of the default copies
 
         for name in self._default_surrogate_copies:
-            self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+            self._default_surrogate_copies[name] = \
+                deepcopy(self.default_surrogate)
 
     def _eligible(self, name):
         """Return True if the named trait is not excluded from the public

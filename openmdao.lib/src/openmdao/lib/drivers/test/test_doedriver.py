@@ -163,7 +163,7 @@ class TestCaseDOE(unittest.TestCase):
         logging.debug('test_nooutput')
 
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
 
@@ -183,7 +183,7 @@ class TestCaseDOE(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.recorders = [ListCaseRecorder()]
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
@@ -197,7 +197,7 @@ class TestCaseDOE(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        self.model.driver.recorders = []
+        self.model.recorders = []
         self.model.run()
 
     def test_output_error(self):
@@ -215,7 +215,7 @@ class TestCaseDOE(unittest.TestCase):
                 self.add('d', Dummy())
                 self.add('driver', DOEdriver())
                 self.driver.DOEgenerator = FullFactorial(2)
-                self.driver.recorders = [DumpCaseRecorder()]
+                self.recorders = [DumpCaseRecorder()]
                 self.driver.add_parameter('d.x', low=0, high=10)
                 self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
 
@@ -235,7 +235,7 @@ class TestCaseDOE(unittest.TestCase):
 
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
@@ -258,7 +258,7 @@ class TestCaseDOE(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
 
-        for case in self.model.driver.recorders[0].cases:
+        for case in self.model.recorders[0].cases:
             if forced_errors:
                 expected = 'driven \(UUID.[0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
@@ -274,14 +274,14 @@ class TestCaseDOE(unittest.TestCase):
         logging.debug('test_rerun')
 
         self.run_cases(sequential=True)
-        orig_cases = self.model.driver.recorders[0].cases
+        orig_cases = self.model.recorders[0].cases
 
         self.model.driver.DOEgenerator = CSVFile(self.model.driver.doe_filename)
         self.model.driver.record_doe = False
         rerun_seq = (1, 3, 5, 7, 9)
         self.model.driver.case_filter = SequenceCaseFilter(rerun_seq)
         rerun = ListCaseRecorder()
-        self.model.driver.recorders[0] = rerun
+        self.model.recorders[0] = rerun
         self.model.run()
 
         self.assertEqual(len(orig_cases), 10)
@@ -388,7 +388,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         logging.debug('test_nooutput')
 
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY'
         self.model.driver.case_outputs.append('driven.sum_z')
 
@@ -407,7 +407,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorders = [ListCaseRecorder()]
+        self.model.recorders = [ListCaseRecorder()]
         self.model.driver.DOEgenerator = None
         try:
             self.model.run()
@@ -421,7 +421,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        self.model.driver.recorders = []
+        self.model.recorders = []
         self.model.run()
 
     def test_output_error(self):
@@ -439,7 +439,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
                 self.add('d', Dummy())
                 self.add('driver', NeighborhoodDOEdriver())
                 self.driver.DOEgenerator = FullFactorial(2)
-                self.driver.recorders = [DumpCaseRecorder()]
+                self.recorders = [DumpCaseRecorder()]
                 self.driver.add_parameter('d.x', low=0, high=10)
                 self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
 
@@ -459,7 +459,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
 
         self.model.driver.sequential = sequential
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driver.add_event('driven.err_event')
@@ -482,7 +482,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
 
-        for case in self.model.driver.recorders[0].cases:
+        for case in self.model.recorders[0].cases:
             if forced_errors:
                 expected = 'driven \(UUID.[0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
@@ -533,7 +533,7 @@ class ArrayTest(unittest.TestCase):
         logging.debug('test_sequential')
 
         results = ListCaseRecorder()
-        self.model.driver.recorders = [results]
+        self.model.recorders = [results]
         self.model.run()
 
         for case in results.cases:
