@@ -19,6 +19,7 @@
     <!-- jQuery -->
     <link rel="stylesheet" href="/static/css/ui-openmdao/jquery-ui-1.8.21.custom.css">
     <link rel="stylesheet" href="/static/css/mdao-styles.css">
+
     <script type="text/javascript" src="/static/js/jquery-1.8.2.min.js"            ></script>
     <script type="text/javascript" src="/static/js/jquery-ui-1.9.1.min.js"         ></script>
     <script type="text/javascript" src="/static/js/jquery.cookie.js"               ></script>
@@ -30,10 +31,10 @@
     <script type="text/javascript" src="/static/js/jquery.dataTables.min.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/jquery.extensions.js"  ></script>
 
-    <!--  ben alman's debug script -->
+    <!-- ben alman's debug script -->
     <script type="text/javascript" src="/static/js/ba-debug.min.js"                ></script>
 
-    <!--  draw2d stuff for workflow/dataflow  -->
+    <!-- draw2d stuff for workflow/dataflow  -->
     <script type="text/javascript" src="/static/js/wz_jsgraphics.js"               ></script>
     <script type="text/javascript" src="/static/js/mootools.js"                    ></script>
     <script type="text/javascript" src="/static/js/moocanvas.js"                   ></script>
@@ -83,9 +84,9 @@
     <script type="text/javascript" src="/static/js/openmdao/ConsoleFrame.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/ObjectFrame.js"        ></script>
     <script type="text/javascript" src="/static/js/openmdao/ConnectionsFrame.js"   ></script>
+    <script type="text/javascript" src="/static/js/openmdao/ConnectivityFrame.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/PassthroughsFrame.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/PlotFrame.js"          ></script>
-    <script type="text/javascript" src="/static/js/openmdao/DrawingFrame.js"       ></script>
 
     <script type="text/javascript" src="/static/js/openmdao/ComponentTreePane.js"  ></script>
     <script type="text/javascript" src="/static/js/openmdao/WorkflowTreePane.js"   ></script>
@@ -99,6 +100,7 @@
     <script type="text/javascript" src="/static/js/openmdao/SlotsPane.js"          ></script>
     <script type="text/javascript" src="/static/js/openmdao/TriggersPane.js"       ></script>
     <script type="text/javascript" src="/static/js/openmdao/EventsPane.js"         ></script>
+    <script type="text/javascript" src="/static/js/openmdao/DrawingPane.js"        ></script>
 
     <script type="text/javascript" src="/static/js/openmdao/DataflowFigure.js"           ></script>
     <script type="text/javascript" src="/static/js/openmdao/WorkflowFigure.js"           ></script>
@@ -112,7 +114,6 @@
     <script type="text/javascript" src="/static/js/openmdao/CustomEditors.js"      ></script>
 
     <script type="text/javascript" src="/static/js/openmdao/LogFrame.js"           ></script>
-
 
     {% block head %}
     {% if 'head_script' in globals() %} <script> {% raw head_script %} </script> {% end %}

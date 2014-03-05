@@ -79,9 +79,7 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-
     gradient_options = VarTree(GradientOptions(), iotype='in', framework_var=True)
-
 
     def __init__(self):
         self._iter = None
@@ -98,7 +96,6 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
-        
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -311,7 +308,6 @@ class Driver(Component):
             all iteration coordinates. (Default is '')
         """
 
-        
         # (Re)configure parameters.
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
@@ -404,7 +400,7 @@ class Driver(Component):
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
-        
+
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
@@ -509,10 +505,6 @@ class Driver(Component):
 
         #case = Case(case_input, case_output, case_uuid=self.case_id , parent_uuid=self.parent_case_id)
         case = Case(case_input, case_output, parent_uuid=self._case_id)
-
-
-
-
 
         for recorder in self.recorders:
             recorder.record(case)

@@ -36,14 +36,15 @@ _missing = object()
 
 __all__ = ['SequentialWorkflow']
 
+
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
     def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        self._explicit_names = [] # names the user adds
-        self._names = None  # names the user adds plus names required
-                            # for params, objectives, and constraints
+        self._explicit_names = []  # names the user adds
+        self._names = None   # names the user adds plus names required
+                             # for params, objectives, and constraints
         super(SequentialWorkflow, self).__init__(parent, scope, members)
 
         # Bookkeeping
@@ -121,7 +122,7 @@ class SequentialWorkflow(Workflow):
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
 
-            if len(drivers) == len(comps): # all comps are drivers
+            if len(drivers) == len(comps):  # all comps are drivers
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
@@ -247,7 +248,7 @@ class SequentialWorkflow(Workflow):
                 targets = [targets]
 
             # Implicit source edges are tuples.
-            if is_implicit == True:
+            if is_implicit is True:
                 impli_edge = nEdge
                 for resid in src:
                     unmap_src = from_PA_var(resid)
@@ -333,7 +334,7 @@ class SequentialWorkflow(Workflow):
             for target in targets:
 
                 # Handle States in implicit comps
-                if is_implicit == True:
+                if is_implicit is True:
 
                     if isinstance(target, str):
                         target = [target]
@@ -399,8 +400,8 @@ class SequentialWorkflow(Workflow):
         width = self._width_cache.get(attr, _missing)
         if width is _missing:
             param = from_PA_var(attr)
-            self._width_cache[attr] = width = flattened_size(param, 
-                                                             self.scope.get(param), 
+            self._width_cache[attr] = width = flattened_size(param,
+                                                             self.scope.get(param),
                                                              self.scope)
         return width
 
@@ -649,7 +650,6 @@ class SequentialWorkflow(Workflow):
                 inputs = None
                 outputs = None
 
-
             # If inputs aren't specified, use the parameters
             parent_deriv_vars = list_deriv_vars(self._parent.parent)
             if inputs is None:
@@ -740,7 +740,7 @@ class SequentialWorkflow(Workflow):
             pa_excludes.update(pa._removed_comps)
 
         # Full model finite-difference, so all components go in the PA
-        if fd == True:
+        if fd is True:
             nondiff_groups = [comps]
 
         # Find the non-differentiable components
@@ -957,7 +957,7 @@ class SequentialWorkflow(Workflow):
         self._J_cache = {}
 
         # User may request full-model finite difference.
-        if self._parent.gradient_options.force_fd == True:
+        if self._parent.gradient_options.force_fd is True:
             mode = 'fd'
 
         # This function can be called from a parent driver's workflow for
@@ -1071,7 +1071,6 @@ class SequentialWorkflow(Workflow):
             i += width
         #print J
         return J
-
 
     def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -1252,6 +1251,7 @@ class SequentialWorkflow(Workflow):
         # return arrays and suspects to make it easier to check from a test
         return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
+
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.
@@ -1272,5 +1272,3 @@ def _flattened_names(name, val, names=None):
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
     return names
-
-

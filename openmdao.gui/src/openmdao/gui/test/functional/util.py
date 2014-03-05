@@ -25,7 +25,7 @@ from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
 from selenium import webdriver
-if sys.platform != 'win32':
+if sys.platform.startswith("linux"):  # headless testing on linux only
     from pyvirtualdisplay import Display
 
 from optparse import OptionParser
@@ -215,7 +215,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if sys.platform != 'win32' and virtual_display:
+    if sys.platform.startswith("linux") and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True
