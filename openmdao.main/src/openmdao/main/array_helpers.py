@@ -40,7 +40,6 @@ def flattened_size(name, val, scope=None):
     if isinstance(val, (float,int)):
         return 1
 
-
     # Numpy arrays
     elif isinstance(val, ndarray): # FIXME: should check dtype
         return val.size
@@ -52,7 +51,7 @@ def flattened_size(name, val, scope=None):
             size += flattened_size('.'.join((name, key)), getattr(val, key))
         return size
 
-    else:
+    elif scope is not None:
         dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
 
         # Custom data objects with data_shape in the metadata

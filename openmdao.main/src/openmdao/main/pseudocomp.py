@@ -2,7 +2,6 @@
 import ast
 from threading import RLock
 
-from openmdao.main.attrwrapper import UnitsAttrWrapper
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
@@ -77,7 +76,8 @@ class PseudoComponent(object):
     """
     implements(IComponent)
 
-    def __init__(self, parent, srcexpr, destexpr=None, translate=True, pseudo_type=None):
+    def __init__(self, parent, srcexpr, destexpr=None, 
+                 translate=True, pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
@@ -172,18 +172,6 @@ class PseudoComponent(object):
             self._outdests = []
             self._orig_expr = self._orig_src
 
-        #if destexpr and destexpr.text:
-            #out = destexpr.text
-        #else:
-            #out = 'out0'
-        #if translate:
-            #src = transform_expression(self._srcexpr.text,
-                                       #_invert_dict(self._inmap))
-        #else:
-            #src = self._srcexpr.text
-
-        #self._expr_conn = (src, out)  # the actual expression connection
-
         self.missing_deriv_policy = 'error'
 
     def check_configuration(self):
@@ -266,13 +254,14 @@ class PseudoComponent(object):
     def connect(self, src, dest):
         self._valid = False
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0, case_id='', notify_parent=True):
         self.update_inputs()
 
         src = self._srcexpr.evaluate()
         setattr(self, 'out0', src)
         self._valid = True
-        self._parent.child_run_finished(self.name)
+        if notify_parent:
+            self._parent.child_run_finished(self.name)
 
     def update_inputs(self, inputs=None):
         self._parent.update_inputs(self.name)
@@ -340,3 +329,24 @@ class PseudoComponent(object):
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
+
+    def calc_var_sizes(self, nameset=None):
+        """Returns a sorted vector of tuples of the form:
+        (full_var_pathname, flattened_size).
+        """
+        names = []
+
+        # make sure we have calculated values
+        if self.out0 is None:
+            self.run(notify_parent=False)
+
+        cname = self.get_pathname()
+        for name in self._inputs + ['out0']:
+            val = getattr(self, name)
+            try:
+                size = flattened_size(name, val, self)
+            except TypeError:
+                continue
+            names.append(('.'.join((cname, name)), size))
+        
+        return names

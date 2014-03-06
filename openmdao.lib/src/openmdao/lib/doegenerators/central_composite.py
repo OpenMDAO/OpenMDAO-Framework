@@ -4,7 +4,7 @@ into the DOEgenerator socket on a DOEdriver."""
 from itertools import product, permutations, chain
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import Int, Float, Enum
+from openmdao.main.datatypes.api import Int, Enum
 
 from openmdao.main.api import implements, Container
 from openmdao.main.interfaces import IDOEgenerator

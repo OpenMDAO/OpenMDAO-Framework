@@ -13,6 +13,13 @@ from zope.interface import implementedBy
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 
+try:
+    from mpi4py import MPI
+    from petsc4py import PETSc
+    from openmdao.main.mpiwrap import rank_map
+except ImportError:
+    MPI = None
+
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
                                      ICaseIterator, ICaseRecorder, IDOEgenerator
@@ -600,7 +607,7 @@ class Assembly(Component):
             if isinstance(cont, Driver):
                 cont.config_changed(update_parent=False)
 
-        # Detect and save any loops in the graph.
+        # Reset loops so they'll get recalculated later
         self._graph_loops = None
 
         self.J_input_keys = self.J_output_keys = None
@@ -1310,15 +1317,125 @@ class Assembly(Component):
 
         return conns
 
+    def get_comps(self):
+        conts = [getattr(self, n) for n in sorted(self.list_containers())]
+        return [c for c in conts if has_interface(c, IComponent)]
+
+    ## Distributed computing methods ##
+
+    def get_cpu_range(self):
+        """Return (min_cpus, max_cpus)."""
+        cpus = [c.get_cpu_range() for c in self.get_comps()]
+        mins = [c[0] for c in cpus]
+        maxs = [c[1] for c in cpus]
+
+        # a max of None means all available CPUs will be used
+        if None in maxs:
+            sum_maxs = None
+        else:
+            sum_maxs = sum(maxs)
+        return sum(mins), sum_maxs
+
+    def setup_communicators(self):
+        """Allocate communicators from here down to all of our
+        child Components.
+        """
+        comm = self.communicator
+        if comm == MPI.COMM_NULL:
+            return
+
+        size = comm.size
+        child_comps = self.get_comps()
+        
+        cpus = [c.get_cpu_range() for c in child_comps]
+        assigned_procs = [c[0] for c in cpus]
+        max_procs = [c[1] for c in cpus]
+
+        # if get_max_cpus() returns None, it means that comp can use
+        # as many cpus as we can give it
+        if None in max_procs:
+            max_usable = size
+        else:
+            max_usable = sum(max_procs)
+
+        assigned = sum(assigned_procs)
+        unassigned = size - assigned
+        if unassigned < 0:
+            raise RuntimeError("Allocated CPUs is short by %d" % -unassigned)
+
+        limit = min(size, max_usable)
+
+        # for now, just use simple round robin assignment of extra CPUs
+        # until everybody is at their max or we run out of available CPUs
+        while assigned < limit:
+            for i, comp in enumerate(child_comps):
+                if assigned_procs[i] == 0: # skip and deal with these later
+                    continue
+                if max_procs[i] is None or assigned_procs[i] != max_procs[i]:
+                    assigned_procs[i] += 1
+                    assigned += 1
+                    if assigned == limit:
+                        break
+
+        color = []
+        for i, assigned in enumerate(assigned_procs):
+            color.extend([i]*assigned)
+
+        if max_usable < size:
+            color.extend([MPI.UNDEFINED]*(size-max_usable))
+
+        sub_comm = comm.Split(color[self.communicator.rank])
+
+        if sub_comm == MPI.COMM_NULL:
+            print "null comm in rank %d" % self.communicator.rank
+        else:
+            print "comm size = %d in rank %d" % (sub_comm.size, self.communicator.rank)
+
+        if sub_comm != MPI.COMM_NULL:
+            rank_color = color[self.communicator.rank]
+            for i,c in enumerate(child_comps):
+                if i == rank_color:
+                    c.communicator = sub_comm
+                    if hasattr(c, 'setup_communicators'):
+                        c.setup_communicators()
+                elif assigned_procs[i] == 0:
+                    c.communicator = sub_comm
+
+    def calc_var_sizes(self, nameset=None):
+        """Returns a sorted vector of tuples of the form:
+        (full_var_pathname, flattened_size).  nameset is the set
+        of names that sizes are required for.
+        """
+        names = super(Assembly, self).calc_var_sizes(nameset)
+
+        # get a list of all vars referenced by parameters,
+        # objectives, and constraints
+        nset, destset = self.driver.get_expr_var_depends(recurse=True)
+        nset.update(destset)
+
+        # now add all vars that are connected
+        conns = self._depgraph.list_connections()
+        nset.update([u.split('[',1)[0] for u,v in conns])
+        nset.update([v.split('[',1)[0] for u,v in conns])
+        
+        for cname, vnames in partition_names_by_comp(nset).items():
+            if cname is None:
+                continue
+            comp = getattr(self, cname)
+            names.extend(comp.calc_var_sizes(set(vnames)))
+    
+        return names
+
+        
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
-    of an OpenMDAO object or hierarchy.  The tree
-    shows which are being iterated over by which
-    drivers.
+    of an OpenMDAO object.  The tree shows which are being 
+    iterated over by which drivers.
 
     If full is True, show pseudocomponents as well.
-    If derivs is True, include derivative input/output information.
+    If derivs is True, include derivative input/output 
+    information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
         tab = ' ' * tablevel

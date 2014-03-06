@@ -390,7 +390,7 @@ class DependencyGraph(nx.DiGraph):
             states = ['.'.join([cname, v]) for v in obj.list_states()]
             resids = ['.'.join([cname, v]) for v in obj.list_residuals()]
             self.add_nodes_from(states, var=True, iotype='state', valid=True)
-            self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
+            self.add_nodes_from(resids, var=True, iotype='residual', valid=False)
 
             self.add_edges_from([(cname, v) for v in chain(states, resids)])
             self.add_edges_from([(v, cname) for v in states])

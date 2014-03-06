@@ -14,6 +14,13 @@ import sys
 import weakref
 import re
 
+try:
+    from mpi4py import MPI
+    from petsc4py import PETSc
+    from openmdao.main.mpiwrap import is_active
+except ImportError:
+    MPI = None
+
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
@@ -43,6 +50,10 @@ from openmdao.main.vartree import VariableTree
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
+from openmdao.main.array_helpers import flattened_size
+from openmdao.util.typegroups import real_types, int_types
+
+from traits.trait_base import not_none, is_none
 
 import openmdao.util.log as tracing
 
@@ -118,6 +129,11 @@ _iodict = {'out': 'output', 'in': 'input'}
 # this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
+class MPI_options(object):
+    def __init__(self):
+        self.min_cpus = 1  # minimum CPUs allowed
+        self.max_cpus = 1  # max usable CPUs.  If None, all can be used
+        self.cpus = 0  # actual number of CPUs assigned
 
 class Component(Container):
     """This is the base class for all objects containing Traits that are
@@ -161,6 +177,11 @@ class Component(Container):
 
     def __init__(self):
         super(Component, self).__init__()
+
+        # MPI stuff
+        self.mpi_options = MPI_options()
+        self.communicator = MPI.COMM_NULL
+        self._total_var_size = 0
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
         self._invalidation_type = 'full'
@@ -633,7 +654,9 @@ class Component(Container):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
-                    self.execute()
+                    if is_active(self):
+                        print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
+                        self.execute()
 
                 self._post_execute()
             #else:
@@ -2103,3 +2126,58 @@ class Component(Container):
                                               stream=stream, mode=mode,
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
+
+
+    ### Methods for distributed computation (MPI) ###
+
+    def get_cpu_range(self):
+        """Return (min_cpus, max_cpus)."""
+        return self.mpi_options.min_cpus, self.mpi_options.max_cpus
+
+    def get_var_size(self, name):
+        """Returns the flattened size of the value of the 
+        named variable, if the flattened value can be expressed
+        as an array of floats.  Otherwise, None is returned.
+        """
+        val = getattr(self, name)
+        if isinstance(val, int_types):
+            return None
+        elif isinstance(val, real_types):
+            return 1
+        elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
+            return val.size
+        elif isinstance(val, VariableTree):
+            size = 0
+            for key in sorted(val.list_vars()):  # Force repeatable order.
+                size += flattened_size('.'.join((name, key)), getattr(val, key))
+            return size
+        
+        return None
+
+        # ins = []
+        # outs = []
+
+        # cname = self.get_pathname()
+        # for name, val in self.items(framework_var=is_none,
+        #                 iotype=lambda val: val in ('in','state')):
+        #     if name is not None and name not in nameset:
+        #         continue
+        #     try:
+        #         size = flattened_size(name, val, self)
+        #     except TypeError:
+        #         continue
+        #     ins.append(('.'.join((cname, name)), size))
+
+        # for name, val in self.items(framework_var=is_none,
+        #                 iotype=lambda val: val in ('out','residual')):
+        #     if name is not None and name not in nameset:
+        #         continue
+        #     try:
+        #         size = flattened_size(name, val, self)
+        #     except TypeError:
+        #         continue
+        #     outs.append(('.'.join((cname, name)), size))
+
+        # return ins, outs
+
+        
