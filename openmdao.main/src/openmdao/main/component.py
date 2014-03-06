@@ -205,6 +205,7 @@ class Component(Container):
         self.ffd_order = 0
         self._provideJ_bounds = None
         self._case_id = ''
+        self._case_uuid = ''
 
         self._publish_vars = {}  # dict of varname to subscriber count
 
@@ -568,7 +569,7 @@ class Component(Container):
         pass
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_id=''):
+    def run(self, force=False, ffd_order=0, case_id='', case_uuid=''):
         """Run this object. This should include fetching input variables
         (if necessary), executing, and updating output variables.
         Do not override this function.
@@ -597,6 +598,7 @@ class Component(Container):
         self._stop = False
         self.ffd_order = ffd_order
         self._case_id = case_id
+        self._case_uuid = case_uuid
 
         try:
             self._pre_execute(force)

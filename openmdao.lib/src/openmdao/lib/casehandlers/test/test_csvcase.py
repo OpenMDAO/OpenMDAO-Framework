@@ -376,6 +376,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             "      comp1.vt.vt2.x: -1.0",
             "      comp1.vt.vt2.y: -2.0",
             ]
+        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case: case1'):

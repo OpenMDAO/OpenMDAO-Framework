@@ -10,12 +10,12 @@ import sys
 import thread
 import threading
 import traceback
+from uuid import uuid1
 
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Instance, Int, Slot
 
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, ICaseFilter
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -86,12 +86,13 @@ class CaseIterDriverBase(Driver):
         self._server_cases = {}
         self._exceptions = {}
         self._load_failures = {}
- 
+
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
 
-        self.error_policy = 'ABORT' # var wasn't showing up in parent depgraph without this
+        # var wasn't showing up in parent depgraph without this
+        self.error_policy = 'ABORT'
 
     def execute(self):
         """
@@ -136,7 +137,8 @@ class CaseIterDriverBase(Driver):
                 self.raise_exception('Run stopped', RunStopped)
             else:
                 self._iter = None
-                self.raise_exception('Run aborted: %s' % traceback_str(self._abort_exc),
+                self.raise_exception('Run aborted: %s'
+                                     % traceback_str(self._abort_exc),
                                      RuntimeError)
         else:
             self._iter = None
@@ -196,7 +198,8 @@ class CaseIterDriverBase(Driver):
                             break
 
                 driver = self.parent.driver
-                self.parent.add('driver', Driver()) # this driver will execute the workflow once
+                # this driver will execute the workflow once
+                self.parent.add('driver', Driver())
                 self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
@@ -204,7 +207,8 @@ class CaseIterDriverBase(Driver):
                     egg_info = self.parent.save_to_egg(self.name, version,
                                                     need_requirements=need_reqs)
                 finally:
-                    self.parent.add('driver', driver) # need to do add here in order to update parent depgraph
+                    # need to do add here in order to update parent depgraph
+                    self.parent.add('driver', driver)
 
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
@@ -212,7 +216,7 @@ class CaseIterDriverBase(Driver):
 
         self._iter = self.get_case_iterator()
         self._seqno = 0
-        
+
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         raise NotImplementedError('get_case_iterator')
@@ -540,7 +544,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.debug('    run next case')
                 self._seqno += 1
                 in_use = self._run_case(case, self._seqno, server)
-                
+
         return in_use
 
     def _run_case(self, case, seqno, server, rerun=False):
@@ -550,7 +554,10 @@ class CaseIterDriverBase(Driver):
                 case.max_retries = self.max_retries
             case.retries = 0
         case.msg = None
-        case.parent_uuid = self._case_id
+
+        # We record the case and are responsible for unique case_ids.
+        case.uuid = str(uuid1())
+        case.parent_uuid = self._case_uuid
 
         # Additional user-requested variables
         # These must be added here so that the outputs are in the cases
@@ -566,8 +573,8 @@ class CaseIterDriverBase(Driver):
         case.add_output('%s.workflow.itername' % self.name, self.itername)
 
         try:
-            for event in self.get_events(): 
-                try: 
+            for event in self.get_events():
+                try:
                     self._model_set(server, event, None, True)
                 except Exception as exc:
                     msg = 'Exception setting %r: %s' % (event, exc)
@@ -703,8 +710,8 @@ class CaseIterDriverBase(Driver):
         if server is None:
             try:
                 self.workflow._parent.update_parameters()
-                self.workflow.run(case_id=self._server_cases[server][0].uuid,
-                                  record_case=False)
+                case = self._server_cases[server][0]
+                self.workflow.run(case_id=self._case_id, case_uuid=case.uuid)
             except Exception as exc:
                 self._exceptions[server] = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -716,7 +723,7 @@ class CaseIterDriverBase(Driver):
         case, seqno = self._server_cases[server]
         try:
             self._top_levels[server].set_itername(self.get_itername(), seqno)
-            self._top_levels[server].run(case_id=case.uuid)
+            self._top_levels[server].run(case_id=self._case_id, case_uuid=case.uuid)
         except Exception as exc:
             self._exceptions[server] = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r, PID %d on %s: %r',
@@ -727,6 +734,7 @@ class CaseIterDriverBase(Driver):
     def _model_status(self, server):
         """ Return execute status from model. """
         return self._exceptions[server]
+
 
 class CaseIteratorDriverBase(CaseIterDriverBase):
     """
@@ -762,6 +770,7 @@ class CaseIteratorDriverBase(CaseIterDriverBase):
         finally:
             self.evaluated = top.recorders.pop().get_iterator()
 
+
 class ConnectableCaseIteratorDriver(CaseIteratorDriverBase):
     """
     Same functionality as CaseIteratorDriver but without slots.
@@ -773,6 +782,7 @@ class ConnectableCaseIteratorDriver(CaseIteratorDriverBase):
     evaluated = Instance(ICaseIterator, iotype="out")
     filter = Instance(ICaseFilter, iotype="in")
 
+
 class CaseIteratorDriver(CaseIteratorDriverBase):
     """
     Run a set of cases provided by an :class:`ICaseIterator`. Concurrent
@@ -782,9 +792,9 @@ class CaseIteratorDriver(CaseIteratorDriverBase):
 
     iterator = Slot(ICaseIterator,
                       desc='Iterator supplying Cases to evaluate.')
-    
+
     evaluated = Slot(ICaseIterator,
                       desc='Iterator supplying evaluated Cases.')
-    
+
     filter = Slot(ICaseFilter,
                   desc='Filter used to select cases to evaluate.')

@@ -279,7 +279,7 @@ class Driver(Component):
             inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_id=''):
+    def run(self, force=False, ffd_order=0, case_id='', case_uuid=''):
         """Run this object. This should include fetching input variables if
         necessary, executing, and updating output variables. Do not override
         this function.
@@ -309,7 +309,7 @@ class Driver(Component):
 
         # Reset the workflow.
         self.workflow.reset()
-        super(Driver, self).run(force, ffd_order, case_id)
+        super(Driver, self).run(force, ffd_order, case_id, case_uuid)
         self._invalidated = False
 
     def update_parameters(self):

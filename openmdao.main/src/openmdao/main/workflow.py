@@ -1,5 +1,7 @@
 """ Base class for all workflows. """
 
+from uuid import uuid1
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
@@ -83,30 +85,40 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_id='', case_label='', record_case=True):
+    def run(self, ffd_order=0, case_id='', case_label='', case_uuid=None):
         """ Run the Components in this Workflow. """
 
         self._stop = False
         self._iterator = self.__iter__()
         self._exec_count += 1
         self._comp_count = 0
+
         iterbase = self._iterbase(case_id)
+
+        if case_uuid is None:
+            # We record the case and are responsible for unique case_ids.
+            record_case = True
+            case_uuid = str(uuid1())
+        else:
+            record_case = False
 
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.run(ffd_order=ffd_order, case_id=case_id,
+                         case_uuid=case_uuid)
             else:
                 self._comp_count += 1
                 comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-                comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.run(ffd_order=ffd_order, case_id=case_id,
+                         case_uuid=case_uuid)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
 
         if record_case:
-            self._record_case(label=case_label)
+            self._record_case(label=case_label, case_uuid=case_uuid)
 
-    def _record_case(self, label=''):
+    def _record_case(self, label, case_uuid):
         """ Record case in all recorders. """
         top = self._parent
         while top.parent is not None:
@@ -150,7 +162,8 @@ class Workflow(object):
         outputs.extend(case_outputs)
         outputs.append(('%s.workflow.itername' % driver.get_pathname(),
                         self.itername))
-        case = Case(inputs, outputs, label=label)
+        case = Case(inputs, outputs, label=label,
+                    case_uuid=case_uuid, parent_uuid=self._parent._case_uuid)
 
         for recorder in recorders:
             recorder.record(case)

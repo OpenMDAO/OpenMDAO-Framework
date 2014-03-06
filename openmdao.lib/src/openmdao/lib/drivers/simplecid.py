@@ -1,11 +1,15 @@
 """ A simple driver that runs cases from a CaseIterator and records them
 with a CaseRecorder. """
 
+from uuid import uuid1
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.datatypes.api import Slot
+
 testdict = {}
+
 
 class SimpleCaseIterDriver(Driver):
     """
@@ -42,14 +46,17 @@ class SimpleCaseIterDriver(Driver):
 
     def _run_case(self, case):
         msg = None
-        case.parent_uuid = self._case_id
+        top = self.parent
+        while top.parent:
+            top = top.parent
+
+        # We record the case and are responsible for unique case_ids.
+        case.uuid = str(uuid1())
+        case.parent_uuid = self._case_uuid
 
         # Additional user-requested variables
         # These must be added here so that the outputs are in the cases
         # before they are in the server list.
-        top = self.parent
-        while top.parent:
-            top = top.parent
         inputs, outputs = top.get_case_variables()
         for var, val in inputs:
             case.add_input(var, val)
@@ -59,7 +66,7 @@ class SimpleCaseIterDriver(Driver):
 
         case.apply_inputs(self.parent)
         try:
-            self.workflow.run(case_id=case.uuid, record_case=False)
+            self.workflow.run(case_id=self._case_id, case_uuid=case.uuid)
         except Exception as err:
             msg = str(err)
         try:
@@ -70,9 +77,6 @@ class SimpleCaseIterDriver(Driver):
             else:
                 case.msg = msg + ":" + str(err)
 
-        top = self.parent
-        while top.parent:
-            top = top.parent
         for recorder in top.recorders:
             recorder.record(case)
 

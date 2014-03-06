@@ -629,7 +629,7 @@ class Assembly(Component):
                 recorder.startup()
 
         self.driver.run(ffd_order=self.ffd_order,
-                        case_id=self._case_id)
+                        case_id=self._case_id, case_uuid=self._case_uuid)
 
         self._depgraph.update_boundary_outputs(self)
 
@@ -755,7 +755,8 @@ class Assembly(Component):
             loops = graph.get_loops()
 
             for cname, vnames in partition_names_by_comp(invalids).items():
-                if cname is None or not is_comp_node(graph, cname):  # boundary var
+                if cname is None or not is_comp_node(graph, cname):
+                    # boundary var
                     if self.parent:
                         self.parent.update_inputs(self.name)
 
@@ -1246,7 +1247,7 @@ class Assembly(Component):
                             }
 
         # add assembly vars, which can be input or output (due to passthroughs)
-        var_names =  self.list_outputs() + self.list_inputs()
+        var_names = self.list_outputs() + self.list_inputs()
         for vname in var_names:
             var = self.get(vname)
             vtype = type(var).__name__
@@ -1318,7 +1319,7 @@ class Assembly(Component):
                             'io': 'io'
                         }
 
-            if (not source.startswith('_pseudo_') and not target.startswith('_pseudo_')):
+            if not source.startswith('_pseudo_') and not target.startswith('_pseudo_'):
                 # ignore other types of PseudoComponents (unit conversion, objectives, etc)
                 connectivity['edges'].append([source, target])
 
@@ -1347,12 +1348,17 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                 try:
                     dgraph = obj.workflow.derivative_graph()
                 except Exception as err:
-                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                    f.write("%s*ERR in deriv graph: %s\n"
+                            % (' '*(tablevel+tabsize+2), str(err)))
                 else:
-                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
-                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
-                    f.write("%s*deriv inputs: %s\n" % (' '*(tablevel+tabsize+2), inputs))
-                    f.write("%s*deriv outputs: %s\n" % (' '*(tablevel+tabsize+2), outputs))
+                    inputs = dgraph.graph.get('mapped_inputs',
+                                              dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs',
+                                               dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n"
+                            % (' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n"
+                            % (' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:

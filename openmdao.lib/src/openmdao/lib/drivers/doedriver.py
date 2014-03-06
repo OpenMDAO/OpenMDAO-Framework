@@ -72,7 +72,7 @@ class DOEdriverBase(CaseIterDriverBase):
             if record_doe:
                 csv_writer.writerow(['%.16g' % val for val in row])
             vals = lower + delta*row
-            case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
+            case = self.set_parameters(vals, Case(parent_uuid=self._case_uuid))
             # now add events
             for varname in events:
                 case.add_input(varname, True)
@@ -83,6 +83,7 @@ class DOEdriverBase(CaseIterDriverBase):
         if record_doe:
             self._csv_file.close()
             self._csv_file = None
+
 
 class ConnectableDOEdriver(DOEdriverBase):
     DOEgenerator = Instance(IDOEgenerator, required=True, iotype="in",
@@ -112,7 +113,7 @@ class NeighborhoodDOEdriverBase(CaseIterDriverBase):
     case_outputs = List(Str, iotype='in',
                            desc='A list of outputs to be saved with each case.')
 
-    alpha = Float(.3, low=.01, high =1.0, iotype='in',
+    alpha = Float(.3, low=.01, high=1.0, iotype='in',
                   desc='Multiplicative factor for neighborhood DOE Driver.')
 
     beta = Float(.01, low=.001, high=1.0, iotype='in',
@@ -141,14 +142,13 @@ class NeighborhoodDOEdriverBase(CaseIterDriverBase):
 
             vals = new_low + (new_high-new_low)*row
 
-            case = self.set_parameters(vals, Case(parent_uuid=self._case_id))
+            case = self.set_parameters(vals, Case(parent_uuid=self._case_uuid))
             # now add events
             for varname in self.get_events():
-
                 case.add_input(varname, True)
             case.add_outputs(self.case_outputs)
-
             yield case
+
 
 class NeighborhoodDOEdriver(NeighborhoodDOEdriverBase):
     DOEgenerator = Slot(IDOEgenerator, required=True,

@@ -84,8 +84,9 @@ class Data_Dump_TestCase(unittest.TestCase):
 
         expected = """\
 Case: 
-   uuid: 9f9407fc-9f20-11e3-9b48-005056000100
+   uuid: 8db9ce52-a558-11e3-ba23-005056000100
    timestamp: 1393444821.630434
+   parent_uuid: 8db41386-a558-11e3-ba23-005056000100
    inputs:
       comp1.directory: 
       comp1.force_execute: False
@@ -198,8 +199,9 @@ Case:
       nested.exec_count: 1
       nested.itername: 1-1
 Case: 
-   uuid: 9f9cc202-9f20-11e3-9b48-005056000100
+   uuid: 8db41386-a558-11e3-ba23-005056000100
    timestamp: 1393444821.687524
+   parent_uuid: 8daf3a3c-a558-11e3-ba23-005056000100
    inputs:
       comp1.directory: 
       comp1.force_execute: False
@@ -312,7 +314,7 @@ Case:
       nested.exec_count: 1
       nested.itername: 1-1
 Case: 
-   uuid: 9fa4902c-9f20-11e3-9b48-005056000100
+   uuid: 8daf3a3c-a558-11e3-ba23-005056000100
    timestamp: 1393444821.738698
    inputs:
       comp1.directory: 
@@ -434,6 +436,8 @@ Case:
                 self.assertTrue(line.startswith('   uuid:'))
             elif template.startswith('   timestamp:'):
                 self.assertTrue(line.startswith('   timestamp:'))
+            elif template.startswith('   parent_uuid:'):
+                self.assertTrue(line.startswith('   parent_uuid:'))
             elif 'gradient_options' in template:
                 self.assertEqual(line.split('<')[0], template.split('<')[0])
             else:
@@ -453,8 +457,9 @@ Case:
 
         expected = """\
 Case: 
-   uuid: 4e5bcd76-9f24-11e3-9a3b-005056000100
+   uuid: 22ce64a8-a559-11e3-8a62-005056000100
    timestamp: 1393446403.352580
+   parent_uuid: 22cdf59a-a559-11e3-8a62-005056000100
    inputs:
       comp1.directory: 
       comp1.force_execute: False
@@ -486,8 +491,9 @@ Case:
       nested.doublenest.comp1.y1: 1.0
       nested.doublenest.driver.workflow.itername: 1-1.1-4.1
 Case: 
-   uuid: 4e5cb2a4-9f24-11e3-9a3b-005056000100
+   uuid: 22cdf59a-a559-11e3-8a62-005056000100
    timestamp: 1393446403.358414
+   parent_uuid: 22cdedc0-a559-11e3-8a62-005056000100
    inputs:
       comp1.directory: 
       comp1.force_execute: False
@@ -519,7 +525,7 @@ Case:
       nested.doublenest.comp1.y1: 1.0
       nested.driver.workflow.itername: 1-1.1
 Case: 
-   uuid: 4e5d8f94-9f24-11e3-9a3b-005056000100
+   uuid: 22cdedc0-a559-11e3-8a62-005056000100
    timestamp: 1393446403.364069
    inputs:
       comp1.directory: 
@@ -560,6 +566,8 @@ Case:
                 self.assertTrue(line.startswith('   uuid:'))
             elif template.startswith('   timestamp:'):
                 self.assertTrue(line.startswith('   timestamp:'))
+            elif template.startswith('   parent_uuid:'):
+                self.assertTrue(line.startswith('   parent_uuid:'))
             else:
                 self.assertEqual(line, template)
 

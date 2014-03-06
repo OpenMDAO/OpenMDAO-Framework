@@ -122,7 +122,6 @@ class DistributionCaseDriver(CaseIterDriverBase):
         """Iterator over the cases"""
 
         for row in self.distribution_generator:
-            case = self.set_parameters(row, Case(parent_uuid=self._case_id))
+            case = self.set_parameters(row, Case(parent_uuid=self._case_uuid))
             case.add_outputs(self.case_outputs)
-
             yield case

@@ -126,7 +126,7 @@ class PseudoAssembly(object):
         components."""
         self.itername = name
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0, case_id='', case_uuid=''):
         """Run all components contained in this assy. Used by finite
         difference."""
 

@@ -27,6 +27,8 @@ from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver, ConnectableC
 from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, \
                                           SequenceCaseFilter
 
+from openmdao.main.case import CaseTreeNode
+
 from openmdao.test.cluster import init_cluster
 
 from openmdao.util.testutil import assert_raises
@@ -135,6 +137,49 @@ class TracedComponent(Component):
     def execute(self):
         """ Record iteration coordinate. """
         self.itername = self.get_itername()
+
+
+class CIDriver(CaseIteratorDriver):
+
+    def __init__(self, max_iterations, comp_name):
+        super(CIDriver, self).__init__()
+        self.max_iterations = max_iterations
+        self.comp_name = comp_name
+        self.iterator = ListCaseIterator([])  # Just to pass config check.
+
+    def execute(self):
+        inp = self.comp_name+'.x'
+        out = self.comp_name+'.y'
+        cases = []
+        for i in range(self.max_iterations):
+            cases.append(Case(inputs=[(inp, i)], outputs=[out]))
+        self.iterator = ListCaseIterator(cases)
+        super(CIDriver, self).execute()
+
+
+class CaseComponent(Component):
+
+    x = Float(iotype='in')
+    y = Float(iotype='out')
+
+    def execute(self):
+        self.y = self.x
+
+
+class TreeModel(Assembly):
+
+    def configure(self):
+        self.recorders = [ListCaseRecorder()]
+
+        self.add('driver2', CIDriver(3, 'comp2'))
+        self.add('comp2', CaseComponent())
+        self.driver2.workflow.add('comp2')
+
+        self.add('driver1', CIDriver(2, 'comp1'))
+        self.add('comp1', CaseComponent())
+        self.driver1.workflow.add(['comp1', 'driver2'])
+
+        self.driver.workflow.add('driver1')
 
 
 class TestCase(unittest.TestCase):
@@ -284,7 +329,7 @@ class TestCase(unittest.TestCase):
                 if not sequential: # RemoteError has different format.
                     err = err[:-76]
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven (UUID.4-1): Forced error'
+                endmsg = 'driven (4-1): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)
                 self.assertEqual(err[-len(endmsg):], endmsg)
             else:
@@ -296,7 +341,7 @@ class TestCase(unittest.TestCase):
             i = int(case.label)  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                expected = 'driven \([0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
                 if self.model.driver.sequential:
                     if not re.match(expected, msg):
@@ -310,7 +355,7 @@ class TestCase(unittest.TestCase):
                     "      driven.raise_error: True",
                     "   exc: Traceback \(most recent call last\):",
                     "    self.raise_exception\('Forced error', RuntimeError\)",
-                    "RuntimeError: driven \(UUID.[0-9]+-1\): Forced error")
+                    "RuntimeError: driven \([0-9]+-1\): Forced error")
                 for line in expected:
                     if not re.search(line, case_str):
                         self.fail('expected %r in:\n%s' % (line, case_str))
@@ -389,7 +434,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         for case in results.cases:
             expected = "driver: Exception getting case outputs: " \
-                       "driven \(UUID.[0-9]+-1\): " \
+                       "driven \([0-9]+-1\): " \
                        "'DrivenComponent' object has no attribute 'sum_z'"
             msg = replace_uuid(case.msg)
             self.assertTrue(re.match(expected, msg))
@@ -504,13 +549,11 @@ class TestCase(unittest.TestCase):
             logging.debug('%s: %r %r', case.label,
                           case['comp1.itername'], case['comp2.itername'])
             i = int(case.label)
-            prefix1, dot, iter1 = case['comp1.itername'].partition('.')
-            prefix2, dot, iter2 = case['comp2.itername'].partition('.')
-            prefix = '1-1' if subassembly else case.uuid
-            self.assertEqual(prefix1, prefix)
-            self.assertEqual(iter1, expected[i][0])
-            self.assertEqual(prefix2, prefix)
-            self.assertEqual(iter2, expected[i][1])
+            prefix = '1-1.' if subassembly else ''
+            self.assertEqual(case['comp1.itername'],
+                             '%s%s' % (prefix, expected[i][0]))
+            self.assertEqual(case['comp2.itername'],
+                             '%s%s' % (prefix, expected[i][1]))
 
     def test_subassembly(self):
         logging.debug('')
@@ -537,7 +580,7 @@ class TestCase(unittest.TestCase):
         self.verify_itername(sub.driver.evaluated, subassembly=True)
 
         # Concurrent.
-        sub.driver.sequential = False
+#        sub.driver.sequential = False
         sub.driver.iterator = ListCaseIterator(cases)
         top.run()
         self.verify_itername(sub.driver.evaluated, subassembly=True)
@@ -556,13 +599,64 @@ class TestCase(unittest.TestCase):
             stdout.close()
             stdout = open('cid_slot.out', 'r')
             for line in stdout:
-                logging.debug('    %s' % line.rstrip())
+                logging.debug('    %s', line.rstrip())
             stdout.close()
             os.remove('cid_slot.out')
         finally:
             os.chdir(orig_dir)
 
         self.assertEqual(retcode, 0)
+
+    def test_casetree(self):
+        # Record tree of cases via CaseIteratorDriver.
+        top = set_as_top(TreeModel())
+        top.driver1.sequential = True
+        top.driver2.sequential = True
+        top.run()
+        expected = [
+            '1',
+            '1-1.1',
+            '1-1.1-2.1',
+            '1-1.1-2.2',
+            '1-1.1-2.3',
+            '1-1.2',
+            '1-1.2-2.1',
+            '1-1.2-2.2',
+            '1-1.2-2.3'
+        ]
+        self.verify_tree(top, expected)
+
+        # Nested CaseIteratorDrivers have some issues:
+        # 1. If the second level is concurrent, the first level's iterator
+        #    can't be pickled.
+        # 2. If the first level is concurrent, we don't see the second level's
+        #    recorded cases (they're remote).
+        top = set_as_top(TreeModel())
+        top.driver1.sequential = False
+        top.driver2.sequential = True
+        top.run()
+        expected = [
+            '1',
+            '1-1.1',
+            '1-1.2',
+        ]
+        self.verify_tree(top, expected)
+
+    def verify_tree(self, top, expected):
+        print
+        print 'Forest:'
+        roots = CaseTreeNode.sort(top.recorders[0].get_iterator())
+        for root in roots:
+            root.dump(1)
+
+        print
+        print 'Iternames:'
+        for root in roots:
+            for name in root.iternames():
+                print '   ', name
+
+        for i, name in enumerate(roots[0].iternames()):
+            self.assertEqual(name, expected[i])
 
 
 # Test bugs reported by Pierre-Elouan Rethore regarding problems using List.

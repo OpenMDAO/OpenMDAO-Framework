@@ -72,7 +72,7 @@ class MyModel(Assembly):
     """ Use DOEdriver with DrivenComponent. """
 
     def configure(self):
-	d = DOEdriver()
+        d = DOEdriver()
         self.add('driver', DOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
@@ -173,7 +173,7 @@ class TestCaseDOE(unittest.TestCase):
                          self.model.driver.DOEgenerator.num_samples)
         for case in results.cases:
             expected = "driver: Exception getting case outputs: " \
-                       "driven \(UUID.[0-9]+-1\): " \
+                       "driven \([0-9]+-1\): " \
                        "'DrivenComponent' object has no attribute 'sum_z'"
             msg = replace_uuid(case.msg)
             self.assertTrue(re.match(expected, msg))
@@ -226,7 +226,7 @@ class TestCaseDOE(unittest.TestCase):
         except Exception as err:
             err = replace_uuid(str(err))
             self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(err.endswith("d (UUID.1-1): 'Dummy' object has no attribute 'bad'"))
+            self.assertTrue(err.endswith("d (1-1): 'Dummy' object has no attribute 'bad'"))
         else:
             self.fail("Exception expected")
 
@@ -260,7 +260,7 @@ class TestCaseDOE(unittest.TestCase):
 
         for case in self.model.recorders[0].cases:
             if forced_errors:
-                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                expected = 'driven \([0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
                 self.assertTrue(re.match(expected, msg))
             else:
@@ -397,7 +397,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.assertEqual(len(results), 1 + self.model.driver.DOEgenerator.num_samples)
         for case in results.cases:
             expected = "driver: Exception getting case outputs: " \
-                       "driven \(UUID.[0-9]+-1\): " \
+                       "driven \([0-9]+-1\): " \
                        "'DrivenComponent' object has no attribute 'sum_z'"
             msg = replace_uuid(case.msg)
             self.assertTrue(re.match(expected, msg))
@@ -450,7 +450,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         except Exception as err:
             err = replace_uuid(str(err))
             self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(err.endswith("d (UUID.1-1): 'Dummy' object has no attribute 'bad'"))
+            self.assertTrue(err.endswith("d (1-1): 'Dummy' object has no attribute 'bad'"))
         else:
             self.fail("Exception expected")
 
@@ -484,7 +484,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
 
         for case in self.model.recorders[0].cases:
             if forced_errors:
-                expected = 'driven \(UUID.[0-9]+-1\): Forced error'
+                expected = 'driven \([0-9]+-1\): Forced error'
                 msg = replace_uuid(case.msg)
                 self.assertTrue(re.match(expected, msg))
             else:
