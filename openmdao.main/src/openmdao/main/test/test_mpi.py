@@ -15,18 +15,24 @@ from openmdao.util.graph import get_valids
 exec_order = []
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
-class DumbDriver(Driver):
-    def __init__(self):
-        self.oldval = 11
-        super(DumbDriver, self).__init__()
+class NTimes(Driver):
+    def __init__(self, n=1):
+        super(NTimes, self).__init__()
+        self.n = n 
+        self._count = 0
+
+    def run(self, force=False, ffd_order=0, case_id=''):
+        self._count = 0
+        super(NTimes, self).run(force=force, ffd_order=ffd_order,
+                                case_id=case_id)
         
-    def execute(self):
-        global exec_order
-        exec_order.append(self.name)
-        self.oldval += 1
-        
-        self.set_parameters([self.oldval]*len(self.get_parameters()))
-        super(DumbDriver, self).execute()
+    def run_iteration(self):
+        self._count += 1
+        print "count = ",self._count
+        super(NTimes, self).run_iteration()
+
+    def continue_iteration(self):
+        return self._count < self.n
 
 
 class Simple(Component):
@@ -82,7 +88,9 @@ def _nested_model():
     global exec_order
     exec_order = []
     top = set_as_top(Assembly())
+    top.add('driver', NTimes(3))
     top.add('sub', Assembly())
+    top.sub.add('driver', NTimes(2))
     top.add('comp7', Simple())
     top.add('comp8', Simple())
     sub = top.sub

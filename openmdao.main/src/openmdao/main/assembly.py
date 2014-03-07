@@ -13,12 +13,7 @@ from zope.interface import implementedBy
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 
-try:
-    from mpi4py import MPI
-    from petsc4py import PETSc
-    from openmdao.main.mpiwrap import rank_map
-except ImportError:
-    MPI = None
+from openmdao.main.mpiwrap import MPI, PETSc, rank_map
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
@@ -618,6 +613,10 @@ class Assembly(Component):
             obj = getattr(self, parts[0])
             if isinstance(obj, PseudoComponent):
                 obj.set(parts[1], value, index, src, force)
+
+    def _shadow_run(self):
+        self.driver.run(ffd_order=self.ffd_order,
+                        case_id=self._case_id)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
@@ -1387,11 +1386,10 @@ class Assembly(Component):
         sub_comm = comm.Split(color[self.communicator.rank])
 
         if sub_comm == MPI.COMM_NULL:
-            print "null comm in rank %d" % self.communicator.rank
+            pass #print "null comm in rank %d" % self.communicator.rank
         else:
-            print "comm size = %d in rank %d" % (sub_comm.size, self.communicator.rank)
+            #print "comm size = %d in rank %d" % (sub_comm.size, self.communicator.rank)
 
-        if sub_comm != MPI.COMM_NULL:
             rank_color = color[self.communicator.rank]
             for i,c in enumerate(child_comps):
                 if i == rank_color:
@@ -1400,6 +1398,12 @@ class Assembly(Component):
                         c.setup_communicators()
                 elif assigned_procs[i] == 0:
                     c.communicator = sub_comm
+
+        # now set up synchronization comms for all Drivers and Assemblies
+        # so that the iteration order matches in all processes
+        for comp in child_comps:
+            if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
+                comp.mpi.copy_comm = comm.Dup()
 
     def calc_var_sizes(self, nameset=None):
         """Returns a sorted vector of tuples of the form:

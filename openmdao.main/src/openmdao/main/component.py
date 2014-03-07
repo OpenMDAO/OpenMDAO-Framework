@@ -15,11 +15,12 @@ import weakref
 import re
 
 try:
-    from mpi4py import MPI
-    from petsc4py import PETSc
-    from openmdao.main.mpiwrap import is_active
-except ImportError:
-    MPI = None
+    from numpy import ndarray
+except ImportError as err:
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import ndarray
+
+from openmdao.main.mpiwrap import MPI, PETSc, rank_map, is_active, COMM_NULL
 
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
@@ -52,8 +53,6 @@ from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
 from openmdao.main.array_helpers import flattened_size
 from openmdao.util.typegroups import real_types, int_types
-
-from traits.trait_base import not_none, is_none
 
 import openmdao.util.log as tracing
 
@@ -129,11 +128,18 @@ _iodict = {'out': 'output', 'in': 'input'}
 # this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
-class MPI_options(object):
+class MPI_info(object):
     def __init__(self):
         self.min_cpus = 1  # minimum CPUs allowed
         self.max_cpus = 1  # max usable CPUs.  If None, all can be used
         self.cpus = 0  # actual number of CPUs assigned
+
+        # the processes used by this comp and its children
+        self.comm = COMM_NULL
+        self.rank = -1
+        # for Assemblies and Drivers, a communicator to synchronize
+        # with all of their copies in other processes.
+        self.copy_comm = COMM_NULL
 
 class Component(Container):
     """This is the base class for all objects containing Traits that are
@@ -179,7 +185,7 @@ class Component(Container):
         super(Component, self).__init__()
 
         # MPI stuff
-        self.mpi_options = MPI_options()
+        self.mpi = MPI_info()
         self.communicator = MPI.COMM_NULL
         self._total_var_size = 0
 
@@ -226,6 +232,7 @@ class Component(Container):
         self.ffd_order = 0
         self._provideJ_bounds = None
         self._case_id = ''
+        self._var_sizes = None
 
         self._publish_vars = {}  # dict of varname to subscriber count
 
@@ -589,6 +596,9 @@ class Component(Container):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
+    def _shadow_run(self):
+        pass
+
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
         """Run this object. This should include fetching input variables
@@ -609,6 +619,9 @@ class Component(Container):
             (Default is ''.) If applied to the top-level assembly, this will be
             prepended to all iteration coordinates.
         """
+
+        if not is_active(self):
+            return self._shadow_run()
 
         if self.directory:
             self.push_dir()
@@ -654,9 +667,8 @@ class Component(Container):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
-                    if is_active(self):
-                        print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
-                        self.execute()
+                    print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
+                    self.execute()
 
                 self._post_execute()
             #else:
@@ -835,6 +847,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
         self._provideJ_bounds = None
+        self._var_sizes = None
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):
@@ -2132,27 +2145,32 @@ class Component(Container):
 
     def get_cpu_range(self):
         """Return (min_cpus, max_cpus)."""
-        return self.mpi_options.min_cpus, self.mpi_options.max_cpus
+        return self.mpi.min_cpus, self.mpi.max_cpus
 
-    def get_var_size(self, name):
+    def get_float_var_sizes(self):
+        """Return a dict of names keyed to variable size for 
+        for all variables that can be expressed as a flattened
+        array of floats.
+        """
+        if self._var_sizes is None:
+            self._var_sizes = {}
+            for name in self.list_vars():
+                if self.trait(name).framework_var:
+                    continue  # skip framework vars
+                val = getattr(self, name)
+                try:
+                    size = flattened_size(name, val, scope=self)
+                except TypeError:
+                    continue
+                self._var_sizes[name] = size
+        return self._var_sizes
+
+    def get_float_var_size(self, name):
         """Returns the flattened size of the value of the 
         named variable, if the flattened value can be expressed
         as an array of floats.  Otherwise, None is returned.
         """
-        val = getattr(self, name)
-        if isinstance(val, int_types):
-            return None
-        elif isinstance(val, real_types):
-            return 1
-        elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
-            return val.size
-        elif isinstance(val, VariableTree):
-            size = 0
-            for key in sorted(val.list_vars()):  # Force repeatable order.
-                size += flattened_size('.'.join((name, key)), getattr(val, key))
-            return size
-        
-        return None
+        return self.get_float_var_sizes().get(name)
 
         # ins = []
         # outs = []

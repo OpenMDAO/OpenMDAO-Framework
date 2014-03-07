@@ -33,22 +33,42 @@ def is_differentiable_val(val):
         return all([is_differentiable_val(getattr(val,k)) for k in val.list_vars()])
     return False
 
+def group_flattened_indices(names, scope):
+    """Return a list of slices corresponding to each name's value, 
+    as well as the total flattened size of the vector
+    of flattened values. Names may be subvars.
+    """
+    pass
+
+def group_flattened_vec(names, vec=None):
+    """Will fill vec with the flattened representation
+    of the variables specified in names.  If vec is not
+    provided, a new vector will be allocated and returned.
+    """
+    pass
+
 def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
 
+    # have to check int_types before real_types because apparently
+    # int_types are considered also to be real types
+    if isinstance(val, int_types):
+        pass # fall through to exception
+
     # Floats
-    if isinstance(val, (float,int)):
+    elif isinstance(val, real_types):
         return 1
 
     # Numpy arrays
-    elif isinstance(val, ndarray): # FIXME: should check dtype
+    elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
         return val.size
 
     # Variable Trees
     elif isinstance(val, VariableTree):
         size = 0
         for key in sorted(val.list_vars()):  # Force repeatable order.
-            size += flattened_size('.'.join((name, key)), getattr(val, key))
+            size += flattened_size('.'.join((name, key)), 
+                                   getattr(val, key))
         return size
 
     elif scope is not None:
@@ -63,7 +83,11 @@ def flattened_size(name, val, scope=None):
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
-    if isinstance(val, (float,int)):
+    # have to check int_types before real_types because apparently
+    # int_types are considered also to be real types
+    if isinstance(val, int_types): 
+        pass  # fall through to exception
+    if isinstance(val, real_types):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
@@ -73,9 +97,9 @@ def flattened_value(name, val):
             value = getattr(val, key)
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
-    else:
-        raise TypeError('Variable %s is of type %s which is not convertable'
-                        ' to a 1D float array.' % (name, type(val)))
+
+    raise TypeError('Variable %s is of type %s which is not convertable'
+                    ' to a 1D float array.' % (name, type(val)))
 
 def flatten_slice(index, shape, name='flat_index', offset=0):
     """ Return a string index that flattens an arbitrary slice denoted by
