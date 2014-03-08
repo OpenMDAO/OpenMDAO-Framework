@@ -223,7 +223,7 @@ def _test_connections(browser):
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
-    eq(conn_page.count_variable_connections(), 34)
+    eq(conn_page.count_variable_connections(), 36)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
