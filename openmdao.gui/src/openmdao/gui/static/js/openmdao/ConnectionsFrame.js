@@ -521,7 +521,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                 (tgt_fig || !self.tgt_comp || (conn[1].substring(0, conn[1].indexOf('.')) === self.tgt_comp))) {
 
                 // if src or tgt fig is not found then check for collapsed parent and link to that
-                // (possibley two levels up)
+                // (possibly two levels up)
                 if (!src_fig) {
                     parent_name = get_root_name(conn[0]);
                     src_fig = src_figures[parent_name];

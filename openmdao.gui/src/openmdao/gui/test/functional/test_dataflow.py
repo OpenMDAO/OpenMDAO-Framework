@@ -110,7 +110,7 @@ def _test_connect(browser):
     eq(conn_page.dialog_title, 'Connections: top')
     eq(conn_page.source_component, 'comp1')
     eq(conn_page.target_component, 'comp2')
-    for prefix in ('b', 'e', 'f', 'i', 's'):
+    for prefix in ('b', 'e', 'f', 'i', 's', 'w'):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
         time.sleep(0.5)  # Wait for display update.
@@ -121,8 +121,8 @@ def _test_connect(browser):
 
     time.sleep(0.5)  # Wait for display update.
 
-    eq(conn_page.count_variable_figures(), 20)
-    eq(conn_page.count_variable_connections(), 8)  # 3 connections for the expr
+    eq(conn_page.count_variable_figures(), 22)
+    eq(conn_page.count_variable_connections(), 9)  # 3 connections for the expr
 
     conn_page.close()
 
@@ -170,6 +170,12 @@ def _test_connect(browser):
     editor = comp2.editor_page()
     editor.move(-100, 0)
     eq(editor.dialog_title, 'Connectable: top.comp2')
+
+    inputs = editor.get_inputs()
+    for i, row in enumerate(inputs.value):
+        if row[1] == 'w_in':
+            eq(row[2], '5000')
+
     outputs = editor.get_outputs()
     expected = [
         ['', 'b_out', 'True', '', ''],
@@ -177,6 +183,7 @@ def _test_connect(browser):
         ['', 'f_out', '2.781828', '', ''],
         ['', 'i_out', '42', '', ''],
         ['', 's_out', 'xyzzy', '', ''],
+        ['', 'w_out', '5', 'kg', ''],
         ['', 'x_out', '44.781828', '', ''],
         ['', 'derivative_exec_count', '0', '',
          "Number of times this Component's derivative function has been executed."],
@@ -186,6 +193,7 @@ def _test_connect(browser):
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
+
     editor.close()
 
     # Clean up.

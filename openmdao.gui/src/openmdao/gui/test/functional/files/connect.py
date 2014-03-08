@@ -15,6 +15,7 @@ class Connectable(Component):
     i_in = Int(iotype='in')
     s_in = Str(iotype='in')
     x_in = Float(iotype='in')
+    w_in = Float(iotype='in', units='g')
 
     b_out = Bool(iotype='out')
     e_out = Enum(values=(1, 2, 3), iotype='out')
@@ -22,6 +23,7 @@ class Connectable(Component):
     i_out = Int(iotype='out')
     s_out = Str(iotype='out')
     x_out = Float(iotype='out')
+    w_out = Float(5.0, iotype='out', units='kg')
 
     def execute(self):
         self.b_out = self.b_in
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     top.comp1.i_in = 42
     top.comp1.s_in = 'xyzzy'
 
-    for prefix in ('b', 'e', 'f', 'i', 's'):
+    for prefix in ('b', 'e', 'f', 'i', 's', 'w'):
         top.connect('comp1.'+prefix+'_out', 'comp2.'+prefix+'_in')
 
     top.connect('comp1.f_out+comp1.i_out', 'comp2.x_in')
@@ -82,3 +84,4 @@ if __name__ == '__main__':
     assert top.comp2.i_out == 42
     assert top.comp2.s_out == 'xyzzy'
     assert top.comp2.x_out == 44.781828
+    assert top.comp2.w_in == 1000*top.comp1.w_out
