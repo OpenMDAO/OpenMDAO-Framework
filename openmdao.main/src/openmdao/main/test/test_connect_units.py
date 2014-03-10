@@ -30,11 +30,11 @@ class Oneout(Component):
     ratio7 = Float(1, iotype='out',
                    desc='Float variable', units= 'lbf')       #   force in lbf
     ratio8 = Float(1, iotype='out',
-                   desc='Float variable', units= 'kg')        #   mass  in kg 
+                   desc='Float variable', units= 'kg')        #   mass  in kg
     ratio9 = Float(1, iotype='out',
-                   desc='Float variable')                     #   no units defined 
+                   desc='Float variable')                     #   no units defined
     ratio10 = Float(1, iotype='out',
-                   desc='Float variable', units= 'rad')       #   angle in rad 
+                   desc='Float variable', units= 'rad')       #   angle in rad
     arr_in = Array([1.,2.,3.], units='ft', iotype='in')
     arr_out = Array([4.,5.,6.], units='kg', iotype='out')
 
@@ -43,7 +43,7 @@ class Oneout(Component):
         super(Oneout, self).__init__()
 
     def execute(self):
-        """                                                                    
+        """
            execute
         """
         # priny '%s.execute()' % self.get_pathname()
@@ -58,9 +58,9 @@ class Oneinp(Component):
     ratio2 = Float(1.00, iotype='in',
                    desc='Float Variable',units='atm')   #  pressure in atm
     ratio3 = Float(1.00, iotype='in',
-                   desc='Float Variable',units='torr')  #  pressure in torr 
+                   desc='Float Variable',units='torr')  #  pressure in torr
     ratio4 = Float(1.00, iotype='in',
-                   desc='Float Variable',units='psi')    # pressure in psi 
+                   desc='Float Variable',units='psi')    # pressure in psi
     ratio5 = Float(1.00, iotype='in',
                    desc='Float Variable',units='bar')    # pressure in bar
     ratio6 = Float(1.00, iotype='in',
@@ -80,13 +80,13 @@ class Oneinp(Component):
     ratio13 = Float(1, iotype='in',
                    desc='Float variable', units= 'dyn')  #   force in dyn
     ratio14 = Float(1, iotype='in',
-                   desc='Float variable', units= 'lb')    #   mass in lb   
+                   desc='Float variable', units= 'lb')    #   mass in lb
     ratio15 = Float(2, iotype='in',
-                   desc='Float variable' )                 #  no units defined 
+                   desc='Float variable' )                 #  no units defined
     ratio16 = Float(2, iotype='in',
-                   desc='Float variable', units= 'dyn')   #   force in dyn  
+                   desc='Float variable', units= 'dyn')   #   force in dyn
     ratio17 = Float(1, iotype='in',
-                   desc='Float variable', units= 'deg')   #   angle in deg 
+                   desc='Float variable', units= 'deg')   #   angle in deg
     arr_in = Array([1.,2.,3.], units='ft', iotype='in')
     arr_out = Array([4.,5.,6.], units='kg', iotype='out')
 
@@ -96,7 +96,7 @@ class Oneinp(Component):
 
 
     def execute(self):
-        """                                                                    
+        """
            execute
         """
         # print '%s.execute(degK' % self.get_pathname()
@@ -116,18 +116,18 @@ class VariableTestCase(unittest.TestCase):
         #self.top.connect('oneout.ratio1','oneinp.ratio1')      # float to float
         self.top.connect('oneout.ratio1','oneinp.ratio2')       # Pa  to atm
         self.top.connect('oneout.ratio1','oneinp.ratio3')       # Pa  to torr
-        self.top.connect('oneout.ratio1','oneinp.ratio5')       # Pa  to bar  
+        self.top.connect('oneout.ratio1','oneinp.ratio5')       # Pa  to bar
         self.top.connect('oneout.ratio4','oneinp.ratio6')       # gas constant, R
-        self.top.connect('oneout.ratio2','oneinp.ratio7')       # Mile to meter  
-        self.top.connect('oneout.ratio2','oneinp.ratio8')       # Mile to millimeter  
-        self.top.connect('oneout.ratio3','oneinp.ratio9')       # temp F to R         
-        self.top.connect('oneout.ratio5','oneinp.ratio10')      # temp C to rK        
-        self.top.connect('oneout.ratio6','oneinp.ratio11')      # force  N to dyn     
-        self.top.connect('oneout.ratio7','oneinp.ratio12')      # force  lbf to N     
-        self.top.connect('oneout.ratio7','oneinp.ratio13')      # force  lbf to dyn     
-        self.top.connect('oneout.ratio8','oneinp.ratio14')      # mass kg  to lb        
+        self.top.connect('oneout.ratio2','oneinp.ratio7')       # Mile to meter
+        self.top.connect('oneout.ratio2','oneinp.ratio8')       # Mile to millimeter
+        self.top.connect('oneout.ratio3','oneinp.ratio9')       # temp F to R
+        self.top.connect('oneout.ratio5','oneinp.ratio10')      # temp C to rK
+        self.top.connect('oneout.ratio6','oneinp.ratio11')      # force  N to dyn
+        self.top.connect('oneout.ratio7','oneinp.ratio12')      # force  lbf to N
+        self.top.connect('oneout.ratio7','oneinp.ratio13')      # force  lbf to dyn
+        self.top.connect('oneout.ratio8','oneinp.ratio14')      # mass kg  to lb
         self.top.connect('oneout.ratio7','oneinp.ratio15')      # force  lbf to no units
-        self.top.connect('oneout.ratio9','oneinp.ratio16')      # no units to dyn       
+        self.top.connect('oneout.ratio9','oneinp.ratio16')      # no units to dyn
         self.top.connect('oneout.ratio10','oneinp.ratio17')     # rad to deg
 
 
@@ -180,7 +180,7 @@ class VariableTestCase(unittest.TestCase):
             self.assertEqual(str(err), msg)
         else:
             self.fail('Exception Expected')
-            
+
         try:
             self.top.connect('oneout.arr_out', 'oneinp.arr_in')
         except Exception as err:
@@ -190,7 +190,7 @@ class VariableTestCase(unittest.TestCase):
             self.assertEqual(str(err), msg)
         else:
             self.fail("Exception expected")
-            
+
         try:
             self.top.connect('oneout.arr_out[1]', 'oneinp.arr_in[0]')
         except Exception as err:
@@ -205,7 +205,7 @@ class VariableTestCase(unittest.TestCase):
 #   def test_unit3(self):
 #       self.top.oneout.ratio9 = 20
 #       try:
-#           self.top.connect('oneout.ratio9','oneinp.ratio16')      # no units to dyn     
+#           self.top.connect('oneout.ratio9','oneinp.ratio16')      # no units to dyn
 #           print  ' oneinp_ratio16(no units/ dyn   )= ',self.top.oneinp.ratio16
 #           #self.top.run( )
 #       # except Exception, err:
