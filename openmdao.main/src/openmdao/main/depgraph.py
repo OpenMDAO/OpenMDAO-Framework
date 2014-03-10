@@ -801,14 +801,20 @@ class DependencyGraph(nx.DiGraph):
         if not vnames:
             return []
 
+        # Pre-resolve some things.
+        ndata = self.node
+        in_degree = self.in_degree
+        get_sources = self.get_sources
+        successors_iter = self.successors_iter
+        _indegs = self._indegs
+
         outset = set()  # set of changed boundary outputs
 
-        ndata = self.node
-        stack = [(n, self.successors_iter(n), not is_comp_node(self, n))
-                        for n in vnames]
+        stack = [(n, successors_iter(n), not is_comp_node(self, n))
+                 for n in vnames]
 
         visited = set()
-        while(stack):
+        while stack:
             src, neighbors, checkvisited = stack.pop()
             if checkvisited and src in visited:
                 continue
@@ -818,14 +824,14 @@ class DependencyGraph(nx.DiGraph):
             oldvalid = sdata['valid']
             if oldvalid is True:
                 if src.startswith('parent.'):
-                    ndata[src]['valid'] = False
+                    sdata['valid'] = False
                 else:
-                    indeg = self._indegs.get(src)
+                    indeg = _indegs.get(src)
                     if indeg is None:
-                        indeg = self.in_degree(src)
-                        self._indegs[src] = indeg
+                        indeg = in_degree(src)
+                        _indegs[src] = indeg
                     if indeg:  # don't invalidate unconnected inputs
-                        ndata[src]['valid'] = False
+                        sdata['valid'] = False
                 if 'boundary' in sdata and sdata.get('iotype') == 'out':
                     outset.add(src)
 
@@ -835,15 +841,15 @@ class DependencyGraph(nx.DiGraph):
                 if 'comp' in ddata:
                     if ddata['valid'] or ddata.get('invalidation')=='partial':
                         if parsources is None:
-                            parsources = self.get_sources(src)
+                            parsources = get_sources(src)
                         outs = getattr(scope, node).invalidate_deps(['.'.join(('parent', n))
                                                                       for n in parsources])
                         if outs is None:
-                            stack.append((node, self.successors_iter(node), True))
+                            stack.append((node, successors_iter(node), True))
                         elif outs: # partial invalidation
                             stack.append((node, ['.'.join((node,n)) for n in outs], False))
                 else:
-                    stack.append((node, self.successors_iter(node), True))
+                    stack.append((node, successors_iter(node), True))
 
         return outset
 
