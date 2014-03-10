@@ -77,11 +77,26 @@ class Discipline(Component):
         if 'y_out' in result:
 
             if 'x' in arg:
-                result['y_out'] += self.Jx.dot(arg['x'])
+                result['y_out'] += -1*self.Jx.dot(arg['x'])
             if 'y_in' in arg:
                 result['y_out'] += self.Jy.dot(arg['y_in'])
             if 'z' in arg:
-                result['y_out'] += self.Jz.dot(arg['z'])
+                result['y_out'] += -1*self.Jz.dot(arg['z'])
+
+
+    def apply_derivT(self, arg, result):
+        """Multiply an input vector by the Jacobian."""
+
+        if 'y_out' in arg:
+
+            if 'x' in result:
+                result['x'] += -1*self.Jx.T.dot(arg['y_out'])
+            if 'y_in' in result:
+                result['y_in'] += self.Jy.T.dot(arg['y_out'])
+            if 'z' in result:
+                result['z'] += -1*self.Jz.T.dot(arg['y_out'])
+
+
 
 
 class UnitScalableProblem(OptProblem):
@@ -169,6 +184,8 @@ class UnitScalableProblem(OptProblem):
 
 
 if __name__ == '__main__':
+
+
     from openmdao.lib.architectures.api import MDF
 
     sp = UnitScalableProblem(3)
@@ -180,9 +197,10 @@ if __name__ == '__main__':
     error = sp.check_solution()
 
 
+    print "solution"
     for k, v in sp.solution.iteritems():
         print k, v
-    print
+    print "error"
     #print sp.d0.x0
     for k, v in error.iteritems():
         print k, v
