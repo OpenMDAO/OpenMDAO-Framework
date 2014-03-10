@@ -34,7 +34,7 @@ from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
-from openmdao.util.graph import list_deriv_vars  #, graph_to_svg
+from openmdao.util.graph import list_deriv_vars  # , graph_to_svg
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -1219,8 +1219,8 @@ class Assembly(Component):
             if source.startswith('_pseudo_'):
                 pname = source.split('.', 1)[0]
                 pcomp = getattr(self, pname)
-                if pcomp._pseudo_type in ['multi_var_expr']:
-                    source = pcomp._orig_src
+                if pcomp._pseudo_type in ['multi_var_expr', 'units']:
+                    source = pcomp._orig_src  # units source will be orig var
                     if source not in connectivity['nodes'].keys():
                         units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
                         if not units:
@@ -1247,7 +1247,7 @@ class Assembly(Component):
                         }
 
             if (not source.startswith('_pseudo_') and not target.startswith('_pseudo_')):
-                # ignore other types of PseudoComponents (unit conversion, objectives, etc)
+                # ignore other types of PseudoComponents (objectives, etc)
                 connectivity['edges'].append([source, target])
 
         return connectivity
