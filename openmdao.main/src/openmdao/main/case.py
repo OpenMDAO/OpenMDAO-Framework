@@ -12,7 +12,14 @@ from openmdao.main.variable import is_legal_name
 
 __all__ = ["Case"]
 
-_Missing = object()
+class MissingValue(object):
+    def __str__(self):
+        return "MissingValue"
+    def __repr__(self):
+        return "'MissingValue'"
+
+_Missing = MissingValue()
+#_Missing = object()
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -40,6 +47,7 @@ flatteners = { # dict of functions that know how to 'flatten' a given object ins
        list: _flatten_lst,
        tuple: _flatten_lst,
        array: _flatten_lst,
+       MissingValue: _simpleflatten,
     } 
 
 def flatten_obj(name, obj):
