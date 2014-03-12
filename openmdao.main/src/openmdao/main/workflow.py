@@ -5,6 +5,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver
+from openmdao.main.mpiwrap import MPI_info
 
 __all__ = ['Workflow']
 
@@ -44,6 +45,8 @@ class Workflow(object):
                 if not isinstance(member, basestring):
                     raise TypeError("Components must be added to a workflow by name.")
                 self.add(member)
+
+        self.mpi = MPI_info()
 
     @property
     def scope(self):
@@ -177,3 +180,12 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
+    ## MPI stuff ###
+
+    def setup_communicators(self):
+        """Allocate communicators from here down to all of our
+        child Components.
+        """
+        for comp in self:
+            comp.mpi.comm = self.mpi.comm
+            comp.setup_communicators()

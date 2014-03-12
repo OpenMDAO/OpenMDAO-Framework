@@ -13,7 +13,7 @@ from zope.interface import implementedBy
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 
-from openmdao.main.mpiwrap import MPI, PETSc, rank_map
+from openmdao.main.mpiwrap import MPI, PETSc
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
@@ -614,9 +614,9 @@ class Assembly(Component):
             if isinstance(obj, PseudoComponent):
                 obj.set(parts[1], value, index, src, force)
 
-    def _shadow_run(self):
-        self.driver.run(ffd_order=self.ffd_order,
-                        case_id=self._case_id)
+    # def _shadow_run(self):
+    #     self.driver.run(ffd_order=self.ffd_order,
+    #                     case_id=self._case_id)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
@@ -656,10 +656,8 @@ class Assembly(Component):
 
     @rbac(('owner', 'user'))
     def update_inputs(self, compname):
-        """Transfer input data to input expressions on the specified component.
-        The inputs iterator is assumed to contain strings that reference
-        component variables relative to the component, e.g., 'abc[3][1]' rather
-        than 'comp1.abc[3][1]'.
+        """Transfer input data to connected input variables on 
+        the specified component.
         """
         invalid_ins = self._depgraph.list_inputs(compname,
                                                  invalid=True)
@@ -1323,87 +1321,8 @@ class Assembly(Component):
     ## Distributed computing methods ##
 
     def get_cpu_range(self):
-        """Return (min_cpus, max_cpus)."""
-        cpus = [c.get_cpu_range() for c in self.get_comps()]
-        mins = [c[0] for c in cpus]
-        maxs = [c[1] for c in cpus]
-
-        # a max of None means all available CPUs will be used
-        if None in maxs:
-            sum_maxs = None
-        else:
-            sum_maxs = sum(maxs)
-        return sum(mins), sum_maxs
-
-    def setup_communicators(self):
-        """Allocate communicators from here down to all of our
-        child Components.
-        """
-        comm = self.communicator
-        if comm == MPI.COMM_NULL:
-            return
-
-        size = comm.size
-        child_comps = self.get_comps()
-        
-        cpus = [c.get_cpu_range() for c in child_comps]
-        assigned_procs = [c[0] for c in cpus]
-        max_procs = [c[1] for c in cpus]
-
-        # if get_max_cpus() returns None, it means that comp can use
-        # as many cpus as we can give it
-        if None in max_procs:
-            max_usable = size
-        else:
-            max_usable = sum(max_procs)
-
-        assigned = sum(assigned_procs)
-        unassigned = size - assigned
-        if unassigned < 0:
-            raise RuntimeError("Allocated CPUs is short by %d" % -unassigned)
-
-        limit = min(size, max_usable)
-
-        # for now, just use simple round robin assignment of extra CPUs
-        # until everybody is at their max or we run out of available CPUs
-        while assigned < limit:
-            for i, comp in enumerate(child_comps):
-                if assigned_procs[i] == 0: # skip and deal with these later
-                    continue
-                if max_procs[i] is None or assigned_procs[i] != max_procs[i]:
-                    assigned_procs[i] += 1
-                    assigned += 1
-                    if assigned == limit:
-                        break
-
-        color = []
-        for i, assigned in enumerate(assigned_procs):
-            color.extend([i]*assigned)
-
-        if max_usable < size:
-            color.extend([MPI.UNDEFINED]*(size-max_usable))
-
-        sub_comm = comm.Split(color[self.communicator.rank])
-
-        if sub_comm == MPI.COMM_NULL:
-            pass #print "null comm in rank %d" % self.communicator.rank
-        else:
-            #print "comm size = %d in rank %d" % (sub_comm.size, self.communicator.rank)
-
-            rank_color = color[self.communicator.rank]
-            for i,c in enumerate(child_comps):
-                if i == rank_color:
-                    c.communicator = sub_comm
-                    if hasattr(c, 'setup_communicators'):
-                        c.setup_communicators()
-                elif assigned_procs[i] == 0:
-                    c.communicator = sub_comm
-
-        # now set up synchronization comms for all Drivers and Assemblies
-        # so that the iteration order matches in all processes
-        for comp in child_comps:
-            if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
-                comp.mpi.copy_comm = comm.Dup()
+        """Return (requested_cpus, max_cpus)."""
+        return self.driver.get_cpu_range()
 
     def calc_var_sizes(self, nameset=None):
         """Returns a sorted vector of tuples of the form:
@@ -1430,6 +1349,9 @@ class Assembly(Component):
     
         return names
 
+    def setup_communicators(self):
+        self.driver.communicator = self.mpi.comm
+        self.driver.setup_communicators()
         
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

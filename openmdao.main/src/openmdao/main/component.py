@@ -20,7 +20,7 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray
 
-from openmdao.main.mpiwrap import MPI, PETSc, rank_map, is_active, COMM_NULL
+from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL, MPI_info
 
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
@@ -128,19 +128,6 @@ _iodict = {'out': 'output', 'in': 'input'}
 # this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
-class MPI_info(object):
-    def __init__(self):
-        self.min_cpus = 1  # minimum CPUs allowed
-        self.max_cpus = 1  # max usable CPUs.  If None, all can be used
-        self.cpus = 0  # actual number of CPUs assigned
-
-        # the processes used by this comp and its children
-        self.comm = COMM_NULL
-        self.rank = -1
-        # for Assemblies and Drivers, a communicator to synchronize
-        # with all of their copies in other processes.
-        self.copy_comm = COMM_NULL
-
 class Component(Container):
     """This is the base class for all objects containing Traits that are
     accessible to the OpenMDAO framework and are "runnable."
@@ -186,7 +173,6 @@ class Component(Container):
 
         # MPI stuff
         self.mpi = MPI_info()
-        self.communicator = MPI.COMM_NULL
         self._total_var_size = 0
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
@@ -596,8 +582,8 @@ class Component(Container):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
-    def _shadow_run(self):
-        pass
+    # def _shadow_run(self):
+    #     pass
 
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
@@ -620,8 +606,8 @@ class Component(Container):
             prepended to all iteration coordinates.
         """
 
-        if not is_active(self):
-            return self._shadow_run()
+        # if not is_active(self):
+        #     return self._shadow_run()
 
         if self.directory:
             self.push_dir()
@@ -2144,8 +2130,11 @@ class Component(Container):
     ### Methods for distributed computation (MPI) ###
 
     def get_cpu_range(self):
-        """Return (min_cpus, max_cpus)."""
-        return self.mpi.min_cpus, self.mpi.max_cpus
+        """Return (requested_cpus, max_cpus)."""
+        return self.mpi.requested_cpus, self.mpi.max_cpus
+
+    def setup_communicators(self):
+        pass
 
     def get_float_var_sizes(self):
         """Return a dict of names keyed to variable size for 
@@ -2172,30 +2161,5 @@ class Component(Container):
         """
         return self.get_float_var_sizes().get(name)
 
-        # ins = []
-        # outs = []
-
-        # cname = self.get_pathname()
-        # for name, val in self.items(framework_var=is_none,
-        #                 iotype=lambda val: val in ('in','state')):
-        #     if name is not None and name not in nameset:
-        #         continue
-        #     try:
-        #         size = flattened_size(name, val, self)
-        #     except TypeError:
-        #         continue
-        #     ins.append(('.'.join((cname, name)), size))
-
-        # for name, val in self.items(framework_var=is_none,
-        #                 iotype=lambda val: val in ('out','residual')):
-        #     if name is not None and name not in nameset:
-        #         continue
-        #     try:
-        #         size = flattened_size(name, val, self)
-        #     except TypeError:
-        #         continue
-        #     outs.append(('.'.join((cname, name)), size))
-
-        # return ins, outs
 
         

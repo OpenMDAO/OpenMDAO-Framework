@@ -29,7 +29,7 @@ from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.mpiwrap import MPI, PETSc, rank_map, is_active, COMM_NULL
+from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL
 
 from openmdao.util.decorators import add_delegate
 
@@ -312,8 +312,8 @@ class Driver(Component):
             If applied to the top-level assembly, this will be prepended to
             all iteration coordinates. (Default is '')
         """
-        if not is_active(self):
-            return self._shadow_run()
+        # if not is_active(self):
+        #     return self._shadow_run()
 
         # (Re)configure parameters.
         if hasattr(self, 'config_parameters'):
@@ -349,7 +349,7 @@ class Driver(Component):
             self.run_iteration()
             self.post_iteration()
 
-        self._bcast_iteration(None, None) # tell shadow copies we're done
+        #self._bcast_iteration(None, None) # tell shadow copies we're done
 
     def step(self):
         """Similar to the 'execute' function, but this one only
@@ -410,11 +410,11 @@ class Driver(Component):
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         
-        # have to tell shadow drivers that they should tell their
-        # workflows to run, otherwise (since they don't have real
-        # data, they don't know how many iterations to run)
-        self._bcast_iteration(ffd_order=self.ffd_order, 
-                             case_id=self._case_id)
+        # # have to tell shadow drivers that they should tell their
+        # # workflows to run, otherwise (since they don't have real
+        # # data, they don't know how many iterations to run)
+        # self._bcast_iteration(ffd_order=self.ffd_order, 
+        #                      case_id=self._case_id)
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
@@ -607,41 +607,60 @@ class Driver(Component):
 
     #### MPI related methods ####
 
-    if MPI is None:
-        def _bcast_iteration(self, ffd_order, case_id):
-            return (None,None)
-    else:
-        def _bcast_iteration(self, ffd_order, case_id):
-            comm = self.mpi.copy_comm
-            if comm == COMM_NULL:
-                return (None, None)
+    # if MPI is None:
+    #     def _bcast_iteration(self, ffd_order, case_id):
+    #         return (None,None)
+    # else:
+    #     def _bcast_iteration(self, ffd_order, case_id):
+    #         comm = self.mpi.copy_comm
+    #         if comm == COMM_NULL:
+    #             return (None, None)
 
-            if is_active(self):
-                # print "_bcast_iteration (send) from %s %d" % (self.get_pathname(),
-                #                                               comm.rank)
-                return comm.bcast((ffd_order, case_id), root=comm.rank)
-            else:
-                # TODO: must handle 'split' drivers
-                root = rank_map[self.get_pathname()][0]
-                ranks = MPI.Group.Translate_ranks(MPI.COMM_WORLD.Get_group(),
-                                                  [root], comm.group)
-                # print "_bcast_iteration (recv) from %s %d (root=%d)" % (self.get_pathname(),
-                #                                               comm.rank, ranks[0])
-                return comm.bcast((None,None), root=ranks[0])
+    #         if is_active(self):
+    #             # print "_bcast_iteration (send) from %s %d" % (self.get_pathname(),
+    #             #                                               comm.rank)
+    #             return comm.bcast((ffd_order, case_id), root=comm.rank)
+    #         else:
+    #             # TODO: must handle 'split' drivers
+    #             root = rank_map[self.get_pathname()][0]
+    #             ranks = MPI.Group.Translate_ranks(MPI.COMM_WORLD.Get_group(),
+    #                                               [root], comm.group)
+    #             # print "_bcast_iteration (recv) from %s %d (root=%d)" % (self.get_pathname(),
+    #             #                                               comm.rank, ranks[0])
+    #             return comm.bcast((None,None), root=ranks[0])
                 
-        def _shadow_run(self):
-            """Keep iterating our workflow until we receive (None,None)
-            from the broadcast.
-            """
-            while True:
-                ffd_order, case_id = self._bcast_iteration(None, None)
-                # print "driver %s %s _shadow_run(%s, %s)" % (self.get_pathname(),
-                #                                  rank_map[self.get_pathname()],
-                #                                  ffd_order, case_id)
-                if ffd_order is None:
-                    break
-                self.workflow.run(ffd_order=ffd_order, case_id=case_id)
+    #     def _shadow_run(self):
+    #         """Keep iterating our workflow until we receive (None,None)
+    #         from the broadcast.
+    #         """
+    #         while True:
+    #             ffd_order, case_id = self._bcast_iteration(None, None)
+    #             # print "driver %s %s _shadow_run(%s, %s)" % (self.get_pathname(),
+    #             #                                  rank_map[self.get_pathname()],
+    #             #                                  ffd_order, case_id)
+    #             if ffd_order is None:
+    #                 break
+    #             self.workflow.run(ffd_order=ffd_order, case_id=case_id)
 
+    def get_cpu_range(self):
+        """Return (requested_cpus, max_cpus)."""
+        cpus = [c.get_cpu_range() for c in self.workflow]
+        mins = [c[0] for c in cpus]
+        maxs = [c[1] for c in cpus]
+
+        # a max of None means all available CPUs will be used
+        if None in maxs:
+            sum_maxs = None
+        else:
+            sum_maxs = sum(maxs)
+        return sum(mins), sum_maxs
+
+    def setup_communicators(self):
+        """Allocate communicators from here down to all of our
+        child Components.
+        """
+        self.workflow.mpi.comm = self.mpi.comm
+        self.workflow.setup_communicators()
 
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow
