@@ -568,7 +568,7 @@ class ModelWithException(Assembly):
         self.driver.workflow.add('driven')
         self.driver.error_policy = 'RETRY'
         self.driver.DOEgenerator = FullFactorial(2)
-	self.driver.add_parameter('driven.x',low=-50,high=50)
+        self.driver.add_parameter('driven.x',low=-50,high=50)
         self.driver.case_outputs = ['driven.f_x',]
 
 
