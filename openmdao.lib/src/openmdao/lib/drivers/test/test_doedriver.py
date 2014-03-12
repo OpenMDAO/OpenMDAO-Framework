@@ -569,10 +569,7 @@ class ModelWithException(Assembly):
         self.driver.error_policy = 'RETRY'
         self.driver.DOEgenerator = FullFactorial(2)
 	self.driver.add_parameter('driven.x',low=-50,high=50)
-	#self.driver.add_parameter('driven.x',low=40,high=50)
         self.driver.case_outputs = ['driven.f_x',]
-        #self.driver.recorders = [CSVCaseRecorder(filename='bug.csv'),]
-
 
 
 class ModelWithExceptionTest(unittest.TestCase):
@@ -583,8 +580,6 @@ class ModelWithExceptionTest(unittest.TestCase):
 
     def tearDown(self):
         pass
-        #if os.path.exists('driver.csv'):
-        #    os.remove('driver.csv')
 
     def test_recording_with_exception(self):
         logging.debug('')
