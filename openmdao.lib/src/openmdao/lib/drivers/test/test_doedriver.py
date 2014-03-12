@@ -586,10 +586,10 @@ class ModelWithExceptionTest(unittest.TestCase):
         logging.debug('test_recording')
 
         results = ListCaseRecorder()
-	self.model.driver.recorders = [results,]
+        self.model.driver.recorders = [results,]
         self.model.run()
         self.assertEqual(results.cases[0].msg, "Cannot take square root of negative number")
-	self.assertEqual(type( results.cases[0].get_outputs()[0][1]), MissingValue)
+        self.assertEqual(type( results.cases[0].get_outputs()[0][1]), MissingValue)
 
 if __name__ == "__main__":
     sys.argv.append('--cover-package=openmdao.lib.drivers')
