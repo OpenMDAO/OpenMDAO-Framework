@@ -13,6 +13,7 @@ import unittest
 from openmdao.main.datatypes.api import Event
 
 from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.case import MissingValue
 from openmdao.main.datatypes.api import Float, Bool, Array
 from openmdao.lib.casehandlers.api import SequenceCaseFilter
 from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
@@ -541,6 +542,54 @@ class ArrayTest(unittest.TestCase):
                              rosen_suzuki(*[case['driven.x'][i] for i in range(4)]),
                              0.0001)
 
+class ComponentWhichRaisesException(Component):
+    """Just a component that can die so we can test how the DOEDriver
+        handles recording that situation"""
+
+    x = Float(0.0, iotype='in', desc='The variable x')
+
+    f_x = Float(0.0,iotype='out', desc='F(x)')
+
+
+    def execute(self):
+        """f(x) = math.sqrt(x)"""
+
+        if self.x < 0.0 :
+            raise RuntimeError("Cannot take square root of negative number")
+
+        self.f_x = math.sqrt( self.x )
+
+class ModelWithException(Assembly):
+    """ Use DOEdriver with Component which throws exceptio. """
+
+    def configure(self):
+        self.add('driver', DOEdriver())
+        self.add('driven', ComponentWhichRaisesException())
+        self.driver.workflow.add('driven')
+        self.driver.error_policy = 'RETRY'
+        self.driver.DOEgenerator = FullFactorial(2)
+        self.driver.add_parameter('driven.x',low=-50,high=50)
+        self.driver.case_outputs = ['driven.f_x',]
+
+
+class ModelWithExceptionTest(unittest.TestCase):
+    """ Test DOEdriver with Model that generates Exception. """
+
+    def setUp(self):
+        self.model = set_as_top(ModelWithException())
+
+    def tearDown(self):
+        pass
+
+    def test_recording_with_exception(self):
+        logging.debug('')
+        logging.debug('test_recording')
+
+        results = ListCaseRecorder()
+        self.model.driver.recorders = [results,]
+        self.model.run()
+        self.assertEqual(results.cases[0].msg, "Cannot take square root of negative number")
+        self.assertEqual(type( results.cases[0].get_outputs()[0][1]), MissingValue)
 
 if __name__ == "__main__":
     sys.argv.append('--cover-package=openmdao.lib.drivers')
