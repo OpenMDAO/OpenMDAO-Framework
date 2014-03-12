@@ -19,7 +19,6 @@ class MissingValue(object):
         return "'MissingValue'"
 
 _Missing = MissingValue()
-#_Missing = object()
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
