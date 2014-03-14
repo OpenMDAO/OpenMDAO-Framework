@@ -659,13 +659,13 @@ class Component(Container):
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
-                if obj_has_interface(obj, IDriver):
-                    for recorder in obj.recorders:
-                        recorder.close()
+                if isinstance(obj, Component):
+                    if obj_has_interface(obj, IDriver):
+                        for recorder in obj.recorders:
+                            recorder.close()
+                    _recursive_close(obj, visited)
                 elif obj_has_interface(obj, ICaseRecorder):
                     obj.close()
-                if isinstance(obj, Container):
-                    _recursive_close(obj, visited)
         visited = set((id(self),))
         _recursive_close(self, visited)
 
