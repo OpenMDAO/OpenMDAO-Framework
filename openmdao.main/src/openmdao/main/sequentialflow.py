@@ -297,9 +297,29 @@ class SequentialWorkflow(Workflow):
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
                     if src_noidx not in basevars:
+                        
                         bound = (nEdge, nEdge+width)
                         self.set_bounds(measure_src, bound)
-
+                        
+                        # Special case: '@in' slices without base '@in'
+                        if src_noidx != src:
+                            _, _, idx = src.partition('[')
+                            unmap_src = from_PA_var(measure_src)
+                            base = self.scope.get(unmap_src)
+                            exec("src_val = base[%s" % idx)
+                            if isinstance(src_val, ndarray):
+                                shape = src_val.shape
+                                istring, ix = flatten_slice(idx, shape, offset=nEdge,
+                                                            name='ix')
+                                bound = (istring, ix)
+                                if isinstance(istring, list):
+                                    width = len(istring)
+                                else:
+                                    width = 1
+                            else:
+                                width = 1
+                                bound = (nEdge, nEdge+width)
+                            
                 # Poke our source data
 
                 # Array slice of src that is already allocated
