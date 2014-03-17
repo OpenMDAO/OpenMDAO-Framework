@@ -316,6 +316,56 @@ class TestCase(unittest.TestCase):
         #                                     outputs=['_pseudo_2.out0', '_pseudo_2.out0'])[3], [])
 
 
+
+
+class TestCon(Component):
+    """ test con constraint """    
+    x1 = Float(default_value=0,
+              iotype='in', desc='test x')
+    g1 = Float(iotype='out', desc='test g')
+    def execute(self):
+        self.g1 = self.x1
+
+class SolverCO(Assembly):
+    """ sovlver using assmebly """
+
+    x = Float(default_value=0,
+              iotype='in', desc='test x')
+
+    def configure(self):
+        """config"""
+
+        self.add('driver', SLSQPdriver())
+        self.add('testdrv', SLSQPdriver())
+
+        self.driver.workflow.add(['testdrv'])
+        self.add('con', TestCon())
+        self.testdrv.workflow.add(['con'])
+
+        self.driver.add_parameter('x', low=-10, high=10)
+        self.driver.add_constraint(
+            '(con.x1-x)**2 < 1e-3')
+        self.driver.add_objective('x**2')
+
+        self.testdrv.add_parameter('con.x1',
+                                    low=-10, high=10)
+        self.testdrv.add_objective(
+            '(con.x1-x)**2')
+        self.testdrv.add_constraint('con.g1>=0')
+
+
+class TestSubOptInclusion(unittest.TestCase):
+
+    def setUp(self):
+        pcompmod._count = 0
+
+    def test_basic_CO(self):
+        # Our CO model failed if our submodels didn't have outputs in the graph. This
+        # test covers the fix.
+        
+        sim = set_as_top(SolverCO())
+        sim.run()
+        
 if __name__ == '__main__':
     import nose
     import sys
