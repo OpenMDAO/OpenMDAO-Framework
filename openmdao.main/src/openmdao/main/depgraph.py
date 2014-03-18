@@ -1430,7 +1430,6 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
 
             # Our parameter inputs are outputs to the outer drivers, so reverse the
             # connection direction here.
-            all_edges = graph.edges()
             for param in sub_param_inputs:
                 graph.add_edge(pa_name, param)
                 graph.node[param]['iotype'] = 'out'
