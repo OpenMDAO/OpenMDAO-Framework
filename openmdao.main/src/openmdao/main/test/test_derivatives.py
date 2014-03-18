@@ -3351,7 +3351,6 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
         self.assertEqual(len(edges), 3)
 
-        
 if __name__ == '__main__':
     import nose
     import sys
