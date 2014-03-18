@@ -361,7 +361,6 @@ class SolverCO(Assembly):
     def configure(self):
         self.add('driver', SLSQPdriver())
         self.driver.gradient_options.force_fd = True
-        self.driver.iprint = 3
         self.driver.add_parameter('x', low=array([-10, -10]), high=array([10, 10]))
         self.driver.add_objective('(x[0]-1)**2 + (x[1]-1)**2')
 
