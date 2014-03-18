@@ -25,21 +25,16 @@ class Uniform(Container):
     
         super(Uniform, self).__init__(*args, **kwargs)
         
-        self.num = 0
-        
         if num_samples is not None: 
             self.num_samples = num_samples
         
     def __iter__(self):
         """Return an iterator over our sets of input values"""
+        
         if self.num_samples < 2: 
-            raise ValueError("Uniform distributions must have at least 2 samples. num_samples is set to less than 2.")
-        return self
-                                           
-    def next(self):
-        if self.num < self.num_samples:
-            self.num = self.num+1
-            return random.uniform(0,1,self.num_parameters)
-        else:
-            raise StopIteration()
+            raise ValueError("Uniform distributions must have "
+                             "at least 2 samples. num_samples "
+                             "is set to less than 2.")
+
+        return (random.uniform(0,1,self.num_parameters) for i in range(self.num_samples))
             

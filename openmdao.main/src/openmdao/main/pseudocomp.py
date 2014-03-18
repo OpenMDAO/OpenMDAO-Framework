@@ -14,8 +14,10 @@ from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 _namelock = RLock()
 _count = 0
 
+
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
+
 
 def _get_new_name():
     global _count
@@ -24,11 +26,14 @@ def _get_new_name():
         _count += 1
     return name
 
+
 def _get_varname(name):
     return name.split('[', 1)[0]
 
+
 def do_nothing_xform(node):
     return node
+
 
 def scaler_adder_xform(node, scaler, adder):
     """Returns an ast for the form (node+adder)*scaler"""
@@ -36,9 +41,10 @@ def scaler_adder_xform(node, scaler, adder):
         newnode = ast.BinOp(node, ast.Add(), ast.Num(adder))
     else:
         newnode = node
-    if scaler != 1.0: # do the add and the mult
+    if scaler != 1.0:  # do the add and the mult
         newnode = ast.BinOp(newnode, ast.Mult(), ast.Num(scaler))
     return ast.copy_location(newnode, node)
+
 
 def unit_xform(node, in_units, out_units):
     """Transforms an ast into expr*scaler+adder where scaler
@@ -63,9 +69,10 @@ class DummyExpr(object):
     def get_metadata(self):
         return [('', {})]
 
+
 def _invert_dict(dct):
     out = {}
-    for k,v in dct.items():
+    for k, v in dct.items():
         out[v] = k
     return out
 
@@ -81,28 +88,23 @@ class PseudoComponent(object):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
-        self._inmap = {} # mapping of component vars to our inputs
+        self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
         self._valid = False
         self._parent = parent
         self._inputs = []
         self.force_fd = False
         self._provideJ_bounds = None
-        self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
-                                        # this is, e.g., 'units', 'constraint', 'objective',
-                                        # or 'multi_var_expr'
+        self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
+                                         # this is, e.g., 'units', 'constraint', 'objective',
+                                         # or 'multi_var_expr'
         self._orig_src = srcexpr.text
         self._orig_dest = destexpr.text
         self.Jsize = None
 
-        if destexpr.text:
-            self._outdests = [destexpr.text]
-        else:
-            self._outdests = []
-
         varmap = {}
         rvarmap = {}
-        for i,ref in enumerate(srcexpr.refs()):
+        for i, ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
             self._inmap[ref] = in_name
@@ -133,6 +135,7 @@ class PseudoComponent(object):
             xformed_src = srcexpr.text
 
         out_units = self._meta['out0'].get('units')
+        pq = None
         if out_units is not None:
             # evaluate the src expression using UnitsOnlyPQ objects
 
@@ -163,17 +166,30 @@ class PseudoComponent(object):
         self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
 
         # this is just the equation string (for debugging)
-        if destexpr and destexpr.text:
-            out = destexpr.text
+        if self._orig_dest:
+            self._outdests = [self._orig_dest]
+            if pq is None:
+                sunit = dunit = ''
+            else:
+                sunit = "'%s'" % pq.get_unit_name()
+                dunit = "'%s'" % out_units
+            self._orig_expr = "%s %s -> %s %s" % (self._orig_src, sunit,
+                                                  self._orig_dest, dunit)
         else:
-            out = 'out0'
-        if translate:
-            src = transform_expression(self._srcexpr.text,
-                                       _invert_dict(self._inmap))
-        else:
-            src = self._srcexpr.text
+            self._outdests = []
+            self._orig_expr = self._orig_src
 
-        self._expr_conn = (src, out)  # the actual expression connection
+        #if destexpr and destexpr.text:
+            #out = destexpr.text
+        #else:
+            #out = 'out0'
+        #if translate:
+            #src = transform_expression(self._srcexpr.text,
+                                       #_invert_dict(self._inmap))
+        #else:
+            #src = self._srcexpr.text
+
+        #self._expr_conn = (src, out)  # the actual expression connection
 
         self.missing_deriv_policy = 'error'
 
@@ -199,7 +215,7 @@ class PseudoComponent(object):
         if is_hidden:
             if self._outdests:
                 if show_expressions:
-                    return [self._expr_conn]
+                    return [(self._orig_src, self._orig_dest)]
                 else:
                     return [(src, self._outdests[0])
                                for src in self._inmap.keys() if src]
@@ -223,15 +239,15 @@ class PseudoComponent(object):
         """Return a list of connections between our pseudocomp and
         parent components of our sources/destinations.
         """
-        conns = [(src.split('.',1)[0], self.name)
+        conns = [(src.split('.', 1)[0], self.name)
                      for src, dest in self._inmap.items()]
         if self._outdests:
-            conns.extend([(self.name, dest.split('.',1)[0])
+            conns.extend([(self.name, dest.split('.', 1)[0])
                                     for dest in self._outdests])
         return conns
 
     def contains(self, name):
-        return name=='out0' or name in self._inputs
+        return name == 'out0' or name in self._inputs
 
     def make_connections(self, scope):
         """Connect all of the inputs and outputs of this comp to

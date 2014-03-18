@@ -1,12 +1,14 @@
 """ Some functions and objects that provide the backbone to OpenMDAO's
 differentiation capability.
 """
+from sys import float_info
 
 from openmdao.main.array_helpers import flatten_slice, flattened_size, \
                                         flattened_value
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 try:
@@ -35,8 +37,14 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+
+    if not comps:
+        return J
+
+    dgraph = wflow._derivative_graph
     options = wflow._parent.gradient_options
+    bounds = wflow._bounds_cache
 
     # Forward mode, solve linear system for each parameter
     j = 0
@@ -48,14 +56,22 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             # where some of the inputs aren't in the relevance graph.
             # Find the one that is.
             for bcast_param in param:
-                if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                     param = bcast_param
                     break
-                else:
-                    continue
+            else:
+                param = param[0]
+                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                   #(param, wflow._parent.get_pathname()))
         try:
-            i1, i2 = wflow.get_bounds(param)
+            i1, i2 = bounds[param]
         except KeyError:
+
+            # If you end up here, it is usually because you have a
+            # tuple of broadcast inputs containing only non-relevant
+            # variables. Derivative is zero, so take one and increment
+            # by its width.
+            j += wflow.get_width(param)
             continue
 
         if isinstance(i1, list):
@@ -84,8 +100,9 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             i = 0
             for item in outputs:
                 try:
-                    k1, k2 = wflow.get_bounds(item)
+                    k1, k2 = bounds[item]
                 except KeyError:
+                    i += wflow.get_width(item)
                     continue
 
                 if isinstance(k1, list):
@@ -113,7 +130,14 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
 
     # Each comp calculates its own derivatives at the current
     # point. (i.e., linearizes)
-    wflow.calc_derivatives(first=True)
+    comps = wflow.calc_derivatives(first=True)
+
+    if not comps:
+        return J
+
+    dgraph = wflow._derivative_graph
+    options = wflow._parent.gradient_options
+    bounds = wflow._bounds_cache
 
     # Adjoint mode, solve linear system for each output
     j = 0
@@ -123,16 +147,17 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             output = output[0]
 
         try:
-            i1, i2 = wflow.get_bounds(output)
+            i1, i2 = bounds[output]
         except KeyError:
+            j += wflow.get_width(output)
             continue
+
 
         if isinstance(i1, list):
             out_range = i1
         else:
             out_range = range(i1, i2)
 
-        options = wflow._parent.gradient_options
         for irhs in out_range:
 
             RHS = zeros((n_edge, 1))
@@ -161,15 +186,22 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                 # Find the one that is.
                 if isinstance(param, tuple):
                     for bcast_param in param:
-                        if 'bounds' in wflow._derivative_graph.node[bcast_param]:
+                        if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
                             param = bcast_param
                             break
-                        else:
-                            continue
+                    else:
+                        param = param[0]
+                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
+                                           #(param, wflow._parent.get_pathname()))
 
                 try:
-                    k1, k2 = wflow.get_bounds(param)
+                    k1, k2 = bounds[param]
                 except KeyError:
+                    # If you end up here, it is usually because you have a
+                    # tuple of broadcast inputs containing only non-relevant
+                    # variables. Derivative is zero, so take one and increment
+                    # by its width.
+                    i += wflow.get_width(param)
                     continue
 
                 if isinstance(k1, list):
@@ -286,12 +318,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the one item tuple missing comma problem
-    if isinstance(input_keys, basestring):
-        input_keys = (input_keys,)
-    if isinstance(output_keys, basestring):
-        output_keys = (output_keys,)
+    input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -384,12 +411,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
         return
 
-    input_keys, output_keys = obj.list_deriv_vars()
-    # correct for the one item tuple missing comma problem
-    if isinstance(input_keys, basestring):
-        input_keys = (input_keys,)
-    if isinstance(output_keys, basestring):
-        output_keys = (output_keys,)
+    input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -497,10 +519,7 @@ def get_bounds(obj, input_keys, output_keys, J):
 
     ibounds = {}
     nvar = 0
-    if hasattr(obj, 'parent'):
-        scope = obj.parent
-    else:
-        scope = None  # Pseudoassys
+    scope = getattr(obj, 'parent', None)
 
     for key in input_keys:
 
@@ -512,7 +531,7 @@ def get_bounds(obj, input_keys, output_keys, J):
 
         width = flattened_size('.'.join((obj.name, key[0])), val,
                                scope=scope)
-        shape = val.shape if hasattr(val, 'shape') else None
+        shape = getattr(val, 'shape', None)
         for item in key:
             ibounds[item] = (nvar, nvar+width, shape)
         nvar += width
@@ -524,19 +543,20 @@ def get_bounds(obj, input_keys, output_keys, J):
     for key in output_keys:
         val = obj.get(key)
         width = flattened_size('.'.join((obj.name, key)), val)
-        shape = val.shape if hasattr(val, 'shape') else None
+        shape = getattr(val, 'shape', None)
         obounds[key] = (nvar, nvar+width, shape)
         nvar += width
 
     num_output = nvar
 
-    # Give the user an intelligible error if the size of J is wrong.
-    J_output, J_input = J.shape
-    if num_output != J_output or num_input != J_input:
-        msg = 'Jacobian is the wrong size. Expected ' + \
-               '(%dx%d) but got (%dx%d)' % (num_output, num_input,
-                                            J_output, J_input)
-        obj.raise_exception(msg, RuntimeError)
+    if num_input and num_output:
+        # Give the user an intelligible error if the size of J is wrong.
+        J_output, J_input = J.shape
+        if num_output != J_output or num_input != J_input:
+            msg = 'Jacobian is the wrong size. Expected ' + \
+                '(%dx%d) but got (%dx%d)' % (num_output, num_input,
+                                             J_output, J_input)
+            obj.raise_exception(msg, RuntimeError)
 
     return ibounds, obounds
 
@@ -618,6 +638,8 @@ class FiniteDifference(object):
         in_size = 0
         for j, srcs in enumerate(self.inputs):
 
+            low = high = None
+
             # Support for parameter groups
             if isinstance(srcs, basestring):
                 srcs = [srcs]
@@ -628,23 +650,61 @@ class FiniteDifference(object):
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
 
+            if 'low' in meta:
+                low = meta[ 'low' ]
+            if 'high' in meta:
+                high = meta[ 'high' ]
+
             if srcs[0] in driver_targets:
                 if srcs[0] in driver_params:
                     param = driver_params[srcs[0]]
                     if param.fd_step is not None:
                         self.fd_step[j] = param.fd_step
+                    if param.low is not None:
+                        low = param.low
+                    if param.high is not None:
+                        high = param.high
                 else:
                     # have to check through all the param groups
                     for param_group in driver_params:
+                        is_fd_step_not_set = is_low_not_set = is_high_not_set = True
                         if not isinstance(param_group, str) and \
                            srcs[0] in param_group:
                             param = driver_params[param_group]
-                            if param.fd_step is not None:
+                            if is_fd_step_not_set and param.fd_step is not None:
                                 self.fd_step[j] = param.fd_step
-                                break
+                                is_fd_step_not_set = False
+                            if is_low_not_set and param.low is not None:
+                                low = param.low
+                                is_low_not_set = False
+                            if is_high_not_set and param.high is not None:
+                                high = param.high
+                                is_high_not_set = False
 
             if 'fd_step_type' in meta:
                 self.step_type_custom[j] = meta['fd_step_type']
+                step_type = self.step_type_custom[j]
+            else:
+                step_type = self.step_type
+
+            # Bounds scaled
+            if step_type == 'bounds_scaled':
+                if low is None and high is None :
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required low and "
+                                       "high values are not set" % srcs[0] )
+                if low == - float_info.max:
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required "
+                                       "low value is not set" % srcs[0] )
+                if high == float_info.max:
+                    raise RuntimeError("For variable '%s', a finite "
+                                       "difference step type of "
+                                       "bounds_scaled is used but required "
+                                       "high value is not set" % srcs[0] )
+                self.fd_step[j] = ( high - low ) * self.fd_step[j]
 
             if 'fd_form' in meta:
                 self.form_custom[j] = meta['fd_form']
@@ -675,7 +735,7 @@ class FiniteDifference(object):
 
         for j, src, in enumerate(self.inputs):
 
-            # Users can cusomtize the FD per variable
+            # Users can customize the FD per variable
             if j in self.form_custom:
                 form = self.form_custom[j]
             else:

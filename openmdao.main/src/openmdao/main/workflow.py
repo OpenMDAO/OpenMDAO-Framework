@@ -64,10 +64,10 @@ class Workflow(object):
     @property
     def itername(self):
         return self._iterbase('')
-    
+
     def check_config(self):
         """Perform any checks that we need prior to run. Specific workflows
-        should override this.""" 
+        should override this."""
         pass
 
     def set_initial_count(self, count):
@@ -92,7 +92,7 @@ class Workflow(object):
         self._exec_count += 1
         self._comp_count = 0
         iterbase = self._iterbase(case_id)
-        
+
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order, case_id=case_id)
@@ -148,7 +148,7 @@ class Workflow(object):
         raise NotImplementedError("This Workflow has no 'add' function")
 
     def config_changed(self):
-        """Notifies the Workflow that workflow configuration 
+        """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
         pass
@@ -176,4 +176,3 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
-

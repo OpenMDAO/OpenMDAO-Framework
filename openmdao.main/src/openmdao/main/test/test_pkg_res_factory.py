@@ -23,8 +23,8 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
         fact = PkgResourcesFactory(['openmdao.component'], None)
-        
-        comp = fact.create('openmdao.test.execcomp.ExecComp', 
+
+        comp = fact.create('openmdao.test.execcomp.ExecComp',
                            exprs=['x = a+1','y=b-2','z=x*2'])
         comp.a = 4
         comp.b = 2
@@ -32,7 +32,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         self.assertEqual(comp.x, 5)
         self.assertEqual(comp.y, 0)
         self.assertEqual(comp.z, 10)
-                
+
     def test_get_available_types(self):
         tups = get_available_types()
         types = set([x[0] for x in tups])
@@ -52,11 +52,14 @@ class PkgResFactoryTestCase(unittest.TestCase):
                         'openmdao.lib.components.expected_improvement.ExpectedImprovement',
                         'openmdao.test.execcomp.ExecComp',
                         'openmdao.main.assembly.Assembly',
-                        'openmdao.lib.drivers.iterate.FixedPointIterator',])
+                        'openmdao.lib.drivers.iterate.FixedPointIterator',
+                        'openmdao.lib.optproblems.sellar.SellarProblem',
+                        'openmdao.lib.optproblems.branin.BraninProblem',
+                        'openmdao.lib.optproblems.polyscale.PolyScalableProblem'])
         missing = expected - types
         if missing:
             self.fail("the following expected types were missing: %s" % missing)
-            
+
         for typ,meta in tups:
             if not isinstance(meta, dict):
                 self.fail("%s did not return a metadata dict from get_available_types" % typ)
@@ -64,7 +67,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
                 self.fail("the metadata for %s did not contain 'version'" % typ)
             if 'ifaces' not in meta:
                 self.fail("the metadata for %s did not contain 'ifaces'" % typ)
-        
+
         self.assertEqual(iface_dict['openmdao.lib.drivers.conmindriver.CONMINdriver'],
                          ['IHasObjective', 'IComponent', 'IHasParameters', 'IHasIneqConstraints', 'IContainer', 'IDriver', 'IOptimizer'])
 if __name__ == "__main__":

@@ -23,7 +23,9 @@ class Int(Variable):
 
         # Range trait didn't seem to handle "None" correctly when passed on
         # the  command line.
+        assumed_default = False
         if default_value is None:
+            assumed_default = True
             if low is None and high is None:
                 default_value = 0
             elif low is None:
@@ -70,7 +72,7 @@ class Int(Variable):
         metadata['exclude_low'] = exclude_low
         metadata['exclude_high'] = exclude_high
         
-        super(Int, self).__init__(default_value=default_value,
+        super(Int, self).__init__(default_value=default_value, assumed_default=assumed_default,
                                          **metadata)
 
     def validate(self, obj, name, value):

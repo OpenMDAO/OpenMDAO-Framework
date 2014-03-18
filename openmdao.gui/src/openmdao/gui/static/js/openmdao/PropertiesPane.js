@@ -2,6 +2,11 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     var self = this,
         props,
         dataView,
@@ -456,7 +461,7 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         if(item.id.indexOf('~') === 0){
             parentId = '~' + parentId;
         }
-        
+
         return parentId;
     }
 
@@ -528,9 +533,13 @@ openmdao.PropertiesPane = function(elm, project, pathname, name, editable, meta)
         return a.length - b.length;
     }
 
-    propsDiv.bind('resizeCanvas', function() {
+    propsDiv.on('resizeCanvas', function(e) {
         props.resizeCanvas();
     });
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
 
     this.refreshFilter = function(searchString) {
         searchString = searchString.toLowerCase();

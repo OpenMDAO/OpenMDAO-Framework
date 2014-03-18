@@ -85,7 +85,9 @@ class Array(TraitArray):
             default_value = _missing
 
         # Determine default_value if unspecified
+        assumed_default = False
         if default_value is None:
+            assumed_default = True
             if shape and None not in shape:
                 default_value = zeros(shape=shape)
             elif shape:
@@ -131,7 +133,7 @@ class Array(TraitArray):
                     raise ValueError("Shape of the default value does not "
                                      "match the shape attribute.")
 
-        super(Array, self).__init__(dtype=dtype, value=default_value,
+        super(Array, self).__init__(dtype=dtype, value=default_value, assumed_default=assumed_default, 
                                     **metadata)
 
     def validate(self, obj, name, value):

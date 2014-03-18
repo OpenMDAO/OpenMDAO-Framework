@@ -4,6 +4,7 @@
 __all__ = ["Driver"]
 
 import fnmatch
+from uuid import uuid1
 
 from zope.interface import implementedBy
 
@@ -38,9 +39,11 @@ class GradientOptions(VariableTree):
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
                    desc='Finite difference mode (forward, backward, central',
                    framework_var=True)
-    fd_step = Float(1.0e-6, desc='Deafault finite difference stepsize', framework_var=True)
-    fd_step_type = Enum('absolute', ['absolute', 'relative'],
-                        desc='Set to absolute or relative stepsizes',
+    fd_step = Float(1.0e-6, desc='Default finite difference stepsize', framework_var=True)
+    fd_step_type = Enum('absolute',
+                        ['absolute', 'relative', 'bounds_scaled'],
+                        desc='Set to absolute, relative, '
+                        'or scaled to the bounds ( high-low) step sizes',
                         framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference " +
@@ -397,7 +400,7 @@ class Driver(Component):
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
-        
+
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
@@ -500,9 +503,8 @@ class Driver(Component):
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
+        #case = Case(case_input, case_output, case_uuid=self.case_id , parent_uuid=self.parent_case_id)
         case = Case(case_input, case_output, parent_uuid=self._case_id)
-
-
 
         for recorder in self.recorders:
             recorder.record(case)

@@ -42,8 +42,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-
-from openmdao.main.numpy_fallback import ndarray
+from openmdao.util.graph import list_deriv_vars
 
 import openmdao.util.log as tracing
 
@@ -176,7 +175,7 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
             if trait.iotype:  # input or output
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
 
         # Components with input CaseIterators will be forced to execute whenever
         # run() is called on them, even if they don't have any invalid inputs
@@ -473,12 +472,7 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        input_keys, output_keys = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(input_keys, basestring):
-            input_keys = (input_keys,)
-        if isinstance(output_keys, basestring):
-            output_keys = (output_keys,)
+        input_keys, output_keys = list_deriv_vars(self)
         J = self.provideJ()
 
         if ffd_order == 1:
@@ -486,7 +480,6 @@ class Component(Container):
                 y = self._ffd_outputs[out_name]
                 for i, in_name in enumerate(input_keys):
                     y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
-
 
                 self.set(out_name, y, force=True)
 
@@ -546,12 +539,7 @@ class Component(Container):
 
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
-        ffd_inputs, ffd_outputs = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(ffd_inputs, basestring):
-            ffd_inputs = (ffd_inputs,)
-        if isinstance(ffd_outputs, basestring):
-            ffd_outputs = (ffd_outputs,)
+        ffd_inputs, ffd_outputs = list_deriv_vars(self)
         if savebase and J is not None:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
@@ -671,13 +659,13 @@ class Component(Container):
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
-                if obj_has_interface(obj, IDriver):
-                    for recorder in obj.recorders:
-                        recorder.close()
+                if isinstance(obj, Component):
+                    if obj_has_interface(obj, IDriver):
+                        for recorder in obj.recorders:
+                            recorder.close()
+                    _recursive_close(obj, visited)
                 elif obj_has_interface(obj, ICaseRecorder):
                     obj.close()
-                if isinstance(obj, Container):
-                    _recursive_close(obj, visited)
         visited = set((id(self),))
         _recursive_close(self, visited)
 
@@ -709,7 +697,7 @@ class Component(Container):
                     # since we just removed this container and it was
                     # being used as an io variable, we need to put
                     # it back in the dep graph
-                    self._depgraph.add_boundary_var(name, iotype=io)
+                    self._depgraph.add_boundary_var(self, name, iotype=io)
             elif has_interface(obj, IComponent):
                 self._depgraph.add_component(name, obj)
 
@@ -762,7 +750,7 @@ class Component(Container):
 
         if trait.iotype:
             if name not in self._depgraph:
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
+                self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
                 if self.parent and self.name in self.parent._depgraph:
                     self.parent._depgraph.child_config_changed(self, removing=False)
 
@@ -1862,14 +1850,14 @@ class Component(Container):
                     if "~" in io_attr['id']:
                         for vt_input in vt_inputs:
                             vt_input['id'] = '~{0}'.format(vt_input['id'])
-                        
+
                     inputs += vt_inputs
                 else:
                     vt_outputs = vt_attrs.get('Outputs', [])
                     if "~" in io_attr['id']:
                         for vt_output in vt_outputs:
                             vt_outputs['id'] = '~{0}'.format(vt_output['id'])
-                        
+
                     outputs += vt_outputs
 
         attrs['Inputs'] = inputs
@@ -2017,6 +2005,9 @@ class Component(Container):
 
         if len(slots) > 0:
             attrs['Slots'] = slots
+
+        if hasattr(self, '_repr_svg_'):
+            attrs['Drawing'] = self._repr_svg_()
 
         return attrs
 

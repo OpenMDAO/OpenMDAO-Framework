@@ -319,6 +319,7 @@ class ExprExaminer(ast.NodeVisitor):
     """"Examines various properties of an expression for later analysis."""
     def __init__(self, node, evaluator=None):
         super(ExprExaminer, self).__init__()
+        self._in_idx = False
         self.ref_ok = True
         self.const = True
         self.simplevar = True  # if true, it's just a simple variable name
@@ -333,6 +334,8 @@ class ExprExaminer(ast.NodeVisitor):
 
     def _maybe_add_ref(self, name):
         """Will add a ref if it's not a name from the locals dict."""
+        if name != 'None' and self._in_idx:
+            self.const_indices = False
         if not self.ref_ok:
             return
         if self._evaluator and in_expr_locals(self._evaluator.scope, name):
@@ -341,37 +344,17 @@ class ExprExaminer(ast.NodeVisitor):
 
     def visit_Index(self, node):
         self.simplevar = self.const = False
-        if not isinstance(node.value, ast.Num):
-            if not (isinstance(node.value, ast.Tuple) and \
-                    len(node.value.elts) == 0):
-                self.const_indices = False
         self.visit(node.value)
 
     def visit_Assign(self, node):
         self.assignable = False
         self.const = False
         self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def visit_Slice(self, node):
         self.simplevar = self.const = False
-        if node.lower is not None:
-            if not isinstance(node.lower, ast.Num):
-                self.const_indices = False
-            self.visit(node.lower)
-        if node.upper is not None:
-            if not isinstance(node.upper, ast.Num):
-                self.const_indices = False
-            self.visit(node.upper)
-        if node.step is not None:
-            if not isinstance(node.step, ast.Num):
-                # for the step parameter, if it's None, that really means 1,
-                # which is constant, unlike lower and upper which can vary
-                # depending upon the size of the containing array at any given
-                # time
-                if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
-                    self.const_indices = False
-            self.visit(node.step)
+        self.generic_visit(node)
 
     def visit_ExtSlice(self, node):
         self.simplevar = self.const = False
@@ -381,7 +364,7 @@ class ExprExaminer(ast.NodeVisitor):
     def visit_Name(self, node):
         self.const = False
         self._maybe_add_ref(node.id)
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def visit_Attribute(self, node):
         self.const = False
@@ -390,7 +373,7 @@ class ExprExaminer(ast.NodeVisitor):
             self._maybe_add_ref(long_name)
         else:
             self.simplevar = False
-            super(ExprExaminer, self).generic_visit(node)
+            self.generic_visit(node)
 
     def visit_Subscript(self, node):
         self.const = False
@@ -400,18 +383,21 @@ class ExprExaminer(ast.NodeVisitor):
         ok = self.ref_ok
         self.ref_ok = False
         self.visit(node.value)
+        old = self._in_idx
+        self._in_idx = True
         self.visit(node.slice)
+        self._in_idx = old
         self.ref_ok = ok
 
     def visit_Num(self, node):
         self.simplevar = False
         if self.const:
             self.assignable = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def _no_assign(self, node):
         self.assignable = self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     visit_Load       = ast.NodeVisitor.generic_visit
     visit_Store      = ast.NodeVisitor.generic_visit
@@ -449,10 +435,6 @@ class ExprExaminer(ast.NodeVisitor):
     visit_IsNot      = _no_assign
     visit_In         = _no_assign
     visit_NotIn      = _no_assign
-
-    def generic_visit(self, node):
-        self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
 
 
 class ExprEvaluator(object):
@@ -507,6 +489,44 @@ class ExprEvaluator(object):
                 self._scope = weakref.ref(value)
             else:
                 self._scope = None
+
+    @classmethod
+    def _invalid_expression_error(cls, unresolved_vars, expr=None, msg=None):
+        """
+        Creates and returns an invalid expression error that can be raised.
+        Also adds the unresolved variables as an attribute to the error.
+        This is so the message can be more specifically tailored by catching
+        the error, creating your own message, and passing the necessary
+        arguments to generate a new error.
+
+        An example of this can be seen in Constraint.__init__.
+
+        unresolved_vars: list of unresolved variables
+        expr: Expression string
+        msg: Message with {0} and {1} placeholders to be formatted.
+             {0} will be replaced by expr and {1} will be replaced
+             by the unresolved variables
+
+        """
+        if not msg:
+            msg = "Expression '{0}' has invalid variables {1}"
+
+        if not expr:
+            expr = cls.text
+
+        #do some formatting for the error message
+        #wrap the variables in single quotes
+        formatted_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+        #if there is more than one variable,
+        #seperate the variables with commas
+        if len(formatted_vars) == 1:
+            formatted_vars = ''.join(formatted_vars)
+        else:
+            formatted_vars = ', '.join(formatted_vars)
+
+        #throw the error
+        return ValueError(msg.format(expr, formatted_vars))
 
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
@@ -820,8 +840,25 @@ class ExprEvaluator(object):
         corresponding to each variable referenced by this expression.
         """
         scope = self._get_updated_scope(scope)
-        return [(name, scope.get_metadata(name, metaname))
-                  for name in self.get_referenced_varpaths(copy=False)]
+
+        invalid_variables = []
+        metadata = []
+
+        for name in self.get_referenced_varpaths(copy=False):
+            try:
+                metadata.append((name, scope.get_metadata(name, metaname)))
+            except AttributeError as error:
+                invalid_variables.append(name)
+
+        if invalid_variables:
+            msg = "Couldn't find metadata for traits {traits}"
+            traits = ', '.join("'{0}'".format(var) for var in invalid_variables)
+            msg = msg.format(traits=traits)
+
+            raise AttributeError(msg)
+
+        return metadata
+
 
     def get_referenced_varpaths(self, copy=True):
         """Return a set of pathnames relative to *scope.parent* and based on

@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
-import sys, os
+import sys
+import os
 
 here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.normpath(os.path.join(here,
@@ -14,7 +15,7 @@ setup(name='openmdao.gui',
       version=version,
       description="OpenMDAO graphical user interface",
       long_description="""OpenMDAO graphical user interface""",
-      classifiers=[], # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
+      classifiers=[],  # Get strings from http://pypi.python.org/pypi?%3Aaction=list_classifiers
       keywords='OpenMDAO GUI',
       author='',
       author_email='',
@@ -27,7 +28,7 @@ setup(name='openmdao.gui',
       # directories.  Otherwise you'll get errors like the following:
       # Setup script exited with error: can't copy
       # 'src/openmdao/gui/test/js_unit_tests/src': doesn't exist or
-      # not a regular file     
+      # not a regular file
       package_data={'openmdao.gui': ['static/ace-min/*',
                                      'static/css/*.css',
                                      'static/css/jstree/classic/*',
@@ -41,11 +42,8 @@ setup(name='openmdao.gui',
                                      'static/favicon.ico',
                                      'static/images/*.cur',
                                      'static/images/*.png',
-                                     'static/images/alphabet/*',
                                      'static/js/*.js',
-                                     'static/js/3Dresources/*.js',
-                                     'static/js/3Dresources/o3djs/*',
-                                     'static/js/3Dresources/o3d-webgl/*',
+                                     'static/js/*.css',
                                      'static/js/openmdao/*',
                                      'static/js/slickgrid/*.css',
                                      'static/js/slickgrid/*.js',
@@ -69,7 +67,7 @@ setup(name='openmdao.gui',
           'watchdog',
           'pyV3D',
       ],
-      extras_require = {
+      extras_require={
           'jsTest': [
               'path.py==2.2.2',
               'lazr.testing==0.1.2a',
@@ -81,7 +79,7 @@ setup(name='openmdao.gui',
               'selenium==2.35.0',
               'PyVirtualDisplay==0.1',
           ]
-      },   
+      },
       entry_points="""
       # -*- Entry points: -*-
       """,

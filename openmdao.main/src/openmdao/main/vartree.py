@@ -1,5 +1,7 @@
 """ VariableTree class definition
 """
+import weakref
+
 from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
@@ -22,7 +24,9 @@ class VariableTree(Container):
     implements(IVariableTree)
 
     def __init__(self, iotype=''):
+        self._parent_ref = None
         super(VariableTree, self).__init__()
+
         self._iotype = iotype
         self.on_trait_change(self._iotype_modified, '_iotype')
 
@@ -39,6 +43,29 @@ class VariableTree(Container):
         #for name, trait in self.class_traits().items():
             #if not name.startswith('_'):
                 #self.on_trait_change(self._trait_modified, name)
+
+    @property
+    def _parent(self):
+        """ Return dereferened weakref to parent. """
+        return None if self._parent_ref is None else self._parent_ref()
+
+    @_parent.setter
+    def _parent(self, value):
+        """ Set weakref to parent. """
+        self._parent_ref = None if value is None else weakref.ref(value)
+
+    def __getstate__(self):
+        """ Return state after dereferencing weakref to parent. """
+        state = super(VariableTree, self).__getstate__()
+        if self._parent_ref is not None:
+            state['_parent_ref'] = self._parent_ref()
+        return state
+
+    def __setstate__(self, state):
+        """ Set state and set weakref to parent. """
+        super(VariableTree, self).__setstate__(state)
+        if self._parent_ref is not None:
+            self._parent_ref = weakref.ref(self._parent_ref)
 
     @property
     def iotype(self):
@@ -79,8 +106,13 @@ class VariableTree(Container):
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
-        for name, trait in self._alltraits().items():
-            if name not in ('trait_added', 'trait_modified') and not name.startswith('_') and hasattr(self, name):
+        # _alltraits() is missing some traits after a deepcopy, so use the
+        # union of _alltraits() and everything in self.__dict__
+        allset = set(self._alltraits().keys())
+        allset.update(self.__dict__.keys())
+        for name in allset:
+            if name not in ('trait_added', 'trait_modified') \
+               and not name.startswith('_') and hasattr(self, name):
                 self.on_trait_change(self._trait_modified, name)
                 obj = getattr(self, name)
                 if isinstance(obj, VariableTree) and obj is not self.parent:
@@ -115,7 +147,7 @@ class VariableTree(Container):
         return None
 
     def _iotype_modified(self, obj, name, old, new):
-        for k, v in self.__dict__.items():
+        for v in self.__dict__.values():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
 
@@ -178,7 +210,7 @@ class VariableTree(Container):
                 newdict = metadata
 
             if matches_io:
-                for name, trait in self._alltraits(**newdict).items():
+                for name in self._alltraits(**newdict):
                     if name.startswith('_'):
                         continue
                     obj = getattr(self, name)

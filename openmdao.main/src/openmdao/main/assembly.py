@@ -4,9 +4,9 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import cStringIO
 import threading
 import re
+import sys
 
 from zope.interface import implementedBy
 
@@ -15,8 +15,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
-                                     IVariableTree
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -33,9 +32,9 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_basevar_node, unique
-from openmdao.main.case import flatteners
+from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
+from openmdao.util.graph import list_deriv_vars  # , graph_to_svg
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -45,6 +44,7 @@ _missing = object()
 
 __has_top__ = False
 __toplock__ = threading.RLock()
+
 
 def set_as_top(cont, first_only=False):
     """Specifies that the given Container is the top of a Container hierarchy.
@@ -252,7 +252,7 @@ class Assembly(Component):
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
-        exprconns = [(u,v) for u,v in self._exprmapper.list_connections()
+        exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
         conns = self.find_referring_connections(target_name)
         wflows = self.find_in_workflows(target_name)
@@ -276,7 +276,7 @@ class Assembly(Component):
                                  "the replacement object: %s" % missing)
 
         # remove expr connections
-        for u,v in exprconns:
+        for u, v in exprconns:
             self.disconnect(u, v)
 
         # remove any existing connections to replacement object
@@ -370,6 +370,7 @@ class Assembly(Component):
 
         metadata = self.get_metadata(pathname)
         metadata['target'] = pathname
+        metadata['default_value'] = trait.trait_type.default_value
         # PassthroughTrait to a trait with get/set methods causes a core dump
         # in Traits (at least through 3.6) while pickling.
         if "validation_trait" in metadata:
@@ -501,7 +502,6 @@ class Assembly(Component):
                    self._exprmapper.check_connect(src, dest, self)
 
         # Check if dest is declared as a parameter in any driver in the assembly
-        # TODO: change this to use 'param' metadata stored in depgraph
         for item in self.list_containers():
             comp = self.get(item)
             if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
@@ -684,7 +684,7 @@ class Assembly(Component):
             loops = graph.get_loops()
 
             for cname, vnames in partition_names_by_comp(invalids).items():
-                if cname is None or not is_comp_node(graph, cname): # boundary var
+                if cname is None or not is_comp_node(graph, cname):  # boundary var
                     if self.parent:
                         self.parent.update_inputs(self.name)
 
@@ -709,7 +709,8 @@ class Assembly(Component):
 
     def _input_updated(self, name, fullpath=None):
         outs = self.invalidate_deps([name])
-        if outs and self.parent:
+        if self.parent:
+            outs.add(name)
             self.parent.child_invalidated(self.name, outs)
 
     @rbac(('owner', 'user'))
@@ -787,7 +788,7 @@ class Assembly(Component):
         return [getattr(self, c).exec_count for c in compnames]
 
     def check_gradient(self, name=None, inputs=None, outputs=None,
-                       stream=None, mode='auto',
+                       stream=sys.stdout, mode='auto',
                        fd_form='forward', fd_step=1.0e-6,
                        fd_step_type='absolute'):
 
@@ -850,14 +851,6 @@ class Assembly(Component):
         driver = self.driver
         obj = None
 
-        base_fd_form = driver.gradient_options.fd_form
-        base_fd_step = driver.gradient_options.fd_step
-        base_fd_step_type = driver.gradient_options.fd_step_type
-
-        driver.gradient_options.fd_form = fd_form
-        driver.gradient_options.fd_step = fd_step
-        driver.gradient_options.fd_step_type = fd_step_type
-
         # tuples cause problems.
         if inputs:
             inputs = list(inputs)
@@ -891,13 +884,13 @@ class Assembly(Component):
                 inputs = sorted(inputs)
             elif has_interface(obj, IComponent):
                 inputs = ['.'.join([obj.name, inp])
-                          for inp in obj.list_deriv_vars()[0]]
+                          for inp in list_deriv_vars(obj)[0]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any inputs for generating gradient.")
         if not outputs:
             if has_interface(obj, IDriver):
-                pass # workflow.check_gradient can pull outputs from driver
+                pass  # workflow.check_gradient can pull outputs from driver
             elif has_interface(obj, IAssembly):
                 outputs = ['.'.join([obj.name, out])
                            for out in obj.list_outputs()
@@ -905,24 +898,33 @@ class Assembly(Component):
                 outputs = sorted(outputs)
             elif has_interface(obj, IComponent):
                 outputs = ['.'.join([obj.name, outp])
-                          for outp in obj.list_deriv_vars()[1]]
+                          for outp in list_deriv_vars(obj)[1]]
                 inputs = sorted(inputs)
             else:
                 self.raise_exception("Can't find any outputs for generating gradient.")
 
-
-        if not inputs or not outputs:
+        if not has_interface(obj, IDriver) and (not inputs or not outputs):
             msg = 'Component %s has no analytic derivatives.' % obj.name
             self.raise_exception(msg)
 
-        result = driver.workflow.check_gradient(inputs=inputs,
-                                                outputs=outputs,
-                                                stream=stream,
-                                                mode=mode)
+        base_fd_form = driver.gradient_options.fd_form
+        base_fd_step = driver.gradient_options.fd_step
+        base_fd_step_type = driver.gradient_options.fd_step_type
 
-        driver.gradient_options.fd_form = base_fd_form
-        driver.gradient_options.fd_step = base_fd_step
-        driver.gradient_options.fd_step_type = base_fd_step_type
+        driver.gradient_options.fd_form = fd_form
+        driver.gradient_options.fd_step = fd_step
+        driver.gradient_options.fd_step_type = fd_step_type
+
+        try:
+            result = driver.workflow.check_gradient(inputs=inputs,
+                                                    outputs=outputs,
+                                                    stream=stream,
+                                                    mode=mode)
+        finally:
+            driver.gradient_options.fd_form = base_fd_form
+            driver.gradient_options.fd_step = base_fd_step
+            driver.gradient_options.fd_step_type = base_fd_step_type
+
         return result
 
     def provideJ(self, required_inputs, required_outputs, check_only=False):
@@ -931,7 +933,6 @@ class Assembly(Component):
         floats and iterable items containing floats.'''
 
         # Sub-assembly sourced
-        input_keys = []
         output_keys = []
 
         # Parent-assembly sourced
@@ -948,22 +949,15 @@ class Assembly(Component):
             target2 = []
             if src in depgraph.node:
                 target2 = [n for n in depgraph.successors(src)
-                           if not n.startswith('parent.') and \
-                           depgraph.base_var(n) != varname and \
+                           if not n.startswith('parent.') and
+                           depgraph.base_var(n) != varname and
                            n not in target1]
-            if len(target1) == 0 and len(target1) == 0:
+            if len(target1) == 0 and len(target2) == 0:
                 continue
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if src != varname:
-                tail = src[len(varname):]
-                target1 = ['%s%s' % (targ, tail) for targ in target1]
 
-            input_keys.append(tuple(target1 + target2))
             self.J_input_keys.append(src)
 
         for target in required_outputs:
-            #varname, _, tail = target.partition('[')
             varname = depgraph.base_var(target)
             src = depgraph.predecessors(varname)
             if len(src) == 0:
@@ -984,8 +978,8 @@ class Assembly(Component):
 
         if check_only:
             return None
-        return self.driver.calc_gradient(input_keys, output_keys)
 
+        return self.driver.calc_gradient(self.J_input_keys, output_keys)
 
     def list_deriv_vars(self):
         return self.J_input_keys, self.J_output_keys
@@ -1085,264 +1079,221 @@ class Assembly(Component):
                 'parameters': parameters, 'constraints': constraints,
                 'objectives': objectives}
 
-    def get_connections(self, src_name, dst_name):
-        ''' Get a list of the outputs from the component *src_name* (sources),
-            the inputs to the component *dst_name* (destinations) and the
-            connections between them.
+    def get_connectivity(self):
+        ''' Get a list of all the inputs and outputs that can be
+            connected in this assembly, and the connections between them.
+            This includes expressions represented by PseudoComponents.
         '''
-        conns = {}
 
-        # outputs
-        sources = []
-        if src_name:
-            src = self.get(src_name)
-        else:
-            src = self
-        connected = src.list_outputs(connected=True)
-        for name in src.list_outputs():
-            if src is self:
-                full = name
-            else:
-                full = '.'.join([src.name, name])
-            var = src.get(name)
-            vtype = type(var).__name__
-            if not '.' in name:  # vartree vars handled separately
-                units = ''
-                meta = src.get_metadata(name)
-                if meta and 'units' in meta:
-                    units = meta['units']
-                valid = self.get_valid([full])[0]
-                sources.append({
-                    'name': name,
-                    'type': vtype,
-                    'valid': valid,
-                    'units': units,
-                    'connected': (name in connected)
-                })
-            if isinstance(var, VariableTree):
-                for var_name in var.list_vars():
-                    vt_var = var.get(var_name)
-                    vt_var_name = name + '.' + var_name
-                    units = ''
-                    meta = var.get_metadata(var_name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    sources.append({
-                        'name': vt_var_name,
-                        'type':  type(vt_var).__name__,
-                        'valid': valid,
-                        'units': units,
-                        'connected': (vt_var_name in connected)
-                    })
-            elif vtype == 'ndarray':
-                for idx in range(0, len(var)):
-                    vname = name + '[' + str(idx) + ']'
-                    dtype = type(var[0]).__name__
-                    units = ''
-                    sources.append({
-                        'name': vname,
-                        'type': dtype,
-                        'valid': valid,
-                        'units': units,
-                        'connected': (vname in connected)
-                    })
+        # connectivity data
+        connectivity = {
+            'nodes': {},
+            'edges': []
+        }
 
-        # connections to assembly can be passthrough (input to input)
-        if src is self:
-            connected = src.list_inputs(connected=True)
-            for name in src.list_inputs():
-                var = src.get(name)
-                vtype = type(var).__name__
-                if not '.' in name:  # vartree vars handled separately
-                    units = ''
-                    meta = src.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    sources.append({
-                        'name': name,
-                        'type': vtype,
-                        'valid': src.get_valid([name])[0],
-                        'units': units,
-                        'connected': (name in connected)
-                    })
-                if isinstance(var, VariableTree):
-                    for var_name in var.list_vars():
-                        vt_var = var.get(var_name)
-                        vt_var_name = name + '.' + var_name
-                        units = ''
-                        meta = var.get_metadata(var_name)
+        # populate input and output nodes
+        for cname in self.list_containers():
+            cont = self.get(cname)
+            if isinstance(cont, Component):
+                for vname in cont.list_outputs():
+                    var = cont.get(vname)
+                    vtype = type(var).__name__
+                    if not '.' in vname:  # vartree vars handled separately
+                        full_name = cname + '.' + vname
+                        meta = cont.get_metadata(vname)
                         if meta and 'units' in meta:
                             units = meta['units']
-                        sources.append({
-                            'name': vt_var_name,
-                            'type':  type(vt_var).__name__,
-                            'valid': valid,
+                        else:
+                            units = ''
+                        connectivity['nodes'][full_name] = {
+                            'type': vtype,
                             'units': units,
-                            'connected': (vt_var_name in connected)
-                        })
-                elif vtype == 'ndarray':
-                    for idx in range(0, len(var)):
-                        vname = name + '[' + str(idx) + ']'
-                        dtype = type(var[0]).__name__
-                        units = ''
-                        sources.append({
-                            'name': vname,
-                            'type': dtype,
-                            'valid': valid,
-                            'units': units,
-                            'connected': (vname in connected)
-                        })
+                            'io':   'output'
+                        }
+                    if isinstance(var, VariableTree):
+                        for child_name in var.list_vars():
+                            child_var = var.get(child_name)
+                            full_name = cname + '.' + vname + '.' + child_name
+                            meta = var.get_metadata(child_name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
+                            else:
+                                units = ''
+                            connectivity['nodes'][full_name] = {
+                                'type':  type(child_var).__name__,
+                                'units': units,
+                                'io':   'output'
+                            }
+                    elif vtype == 'ndarray':
+                        for idx in range(0, len(var)):
+                            full_name = cname + '.' + vname + '[' + str(idx) + ']'
+                            units = ''
+                            connectivity['nodes'][full_name] = {
+                                'type':  type(var[0]).__name__,
+                                'units': units,
+                                'io':   'output'
+                            }
 
-        conns['sources'] = sorted(sources, key=lambda d: d['name'])
-
-        # inputs
-        dests = []
-        if dst_name:
-            dst = self.get(dst_name)
-        else:
-            dst = self
-        connected = dst.list_inputs(connected=True)
-        for name in dst.list_inputs():
-            if dst is self:
-                full = name
-            else:
-                full = '.'.join([dst.name, name])
-            var = dst.get(name)
-            vtype = type(var).__name__
-            if not '.' in name:  # vartree vars handled separately
-                units = ''
-                meta = dst.get_metadata(name)
-                if meta and 'units' in meta:
-                    units = meta['units']
-                dests.append({
-                    'name': name,
-                    'type': vtype,
-                    'valid': self.get_valid([full])[0],
-                    'units': units,
-                    'connected': (name in connected)
-                })
-            if isinstance(var, VariableTree):
-                for var_name in var.list_vars():
-                    vt_var = var.get(var_name)
-                    vt_var_name = name + '.' + var_name
-                    units = ''
-                    meta = var.get_metadata(var_name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    dests.append({
-                        'name': vt_var_name,
-                        'type': type(vt_var).__name__,
-                        'valid': valid,
-                        'units': units,
-                        'connected': (vt_var_name in connected)
-                    })
-            elif vtype == 'ndarray':
-                for idx in range(0, len(var)):
-                    vname = name + '[' + str(idx) + ']'
-                    dtype = type(var[0]).__name__
-                    units = ''
-                    dests.append({
-                        'name': vname,
-                        'type': dtype,
-                        'valid': valid,
-                        'units': units,
-                        'connected': (vname in connected)
-                    })
-
-        # connections to assembly can be passthrough (output to output)
-        if dst is self:
-            connected = dst.list_outputs(connected=True)
-            for name in dst.list_outputs():
-                var = dst.get(name)
-                vtype = type(var).__name__
-                if not '.' in name:  # vartree vars handled separately
-                    units = ''
-                    meta = dst.get_metadata(name)
-                    if meta and 'units' in meta:
-                        units = meta['units']
-                    dests.append({
-                        'name': name,
-                        'type': type(var).__name__,
-                        'valid': dst.get_valid([name])[0],
-                        'units': units,
-                        'connected': (name in connected)
-                    })
-                if isinstance(var, VariableTree):
-                    for var_name in var.list_vars():
-                        vt_var = var.get(var_name)
-                        vt_var_name = name + '.' + var_name
-                        units = ''
-                        meta = var.get_metadata(var_name)
+                for vname in cont.list_inputs():
+                    var = cont.get(vname)
+                    vtype = type(var).__name__
+                    if not '.' in vname:  # vartree vars handled separately
+                        full_name = cname + '.' + vname
+                        meta = cont.get_metadata(vname)
                         if meta and 'units' in meta:
                             units = meta['units']
-                        dests.append({
-                            'name': vt_var_name,
-                            'type': type(vt_var).__name__,
-                            'valid': valid,
+                        else:
+                            units = ''
+                        connectivity['nodes'][full_name] = {
+                            'type': vtype,
                             'units': units,
-                            'connected': (vt_var_name in connected)
-                        })
-                elif vtype == 'ndarray':
-                    for idx in range(0, len(var)):
-                        vname = name + '[' + str(idx) + ']'
-                        dtype = type(var[0]).__name__
+                            'io':   'input'
+                        }
+                    if isinstance(var, VariableTree):
+                        for child_name in var.list_vars():
+                            child_var = var.get(child_name)
+                            full_name = cname + '.' + vname + '.' + child_name
+                            meta = var.get_metadata(child_name)
+                            if meta and 'units' in meta:
+                                units = meta['units']
+                            else:
+                                units = ''
+                            connectivity['nodes'][full_name] = {
+                                'type':  type(child_var).__name__,
+                                'units': units,
+                                'io':   'input'
+                            }
+                    elif vtype == 'ndarray':
+                        for idx in range(0, len(var)):
+                            full_name = cname + '.' + vname + '[' + str(idx) + ']'
+                            units = ''
+                            connectivity['nodes'][full_name] = {
+                                'type':  type(var[0]).__name__,
+                                'units': units,
+                                'io':   'input'
+                            }
+
+        # add assembly vars, which can be input or output (due to passthroughs)
+        var_names =  self.list_outputs() + self.list_inputs()
+        for vname in var_names:
+            var = self.get(vname)
+            vtype = type(var).__name__
+            if not '.' in vname:  # vartree vars handled separately
+                full_name = vname
+                meta = self.get_metadata(vname)
+                if meta and 'units' in meta:
+                    units = meta['units']
+                else:
+                    units = ''
+                connectivity['nodes'][full_name] = {
+                    'type': vtype,
+                    'units': units,
+                    'io':   'io'
+                }
+            if isinstance(var, VariableTree):
+                for child_name in var.list_vars():
+                    child_var = var.get(child_name)
+                    full_name = vname + '.' + child_name
+                    meta = var.get_metadata(child_name)
+                    if meta and 'units' in meta:
+                        units = meta['units']
+                    else:
                         units = ''
-                        dests.append({
-                            'name': vname,
-                            'type': dtype,
-                            'valid': valid,
+                    connectivity['nodes'][full_name] = {
+                        'type':  type(child_var).__name__,
+                        'units': units,
+                        'io':   'io'
+                    }
+            elif vtype == 'ndarray':
+                for idx in range(0, len(var)):
+                    full_name = vname + '[' + str(idx) + ']'
+                    units = ''
+                    connectivity['nodes'][full_name] = {
+                        'type':  type(var[0]).__name__,
+                        'units': units,
+                        'io':   'io'
+                    }
+
+        # populate expression nodes and edges
+        for (source, target) in self.list_connections():
+            if source.startswith('_pseudo_'):
+                pname = source.split('.', 1)[0]
+                pcomp = getattr(self, pname)
+                if pcomp._pseudo_type in ['multi_var_expr', 'units']:
+                    source = pcomp._orig_src  # units source will be orig var
+                    if source not in connectivity['nodes'].keys():
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        if not units:
+                            units = ''
+                        connectivity['nodes'][source] = {
+                            'type': 'expr',
                             'units': units,
-                            'connected': (vname in connected)
-                        })
+                            'io':   'io',
+                        }
 
-        conns['destinations'] = sorted(dests, key=lambda d: d['name'])
+            if target.startswith('_pseudo_'):
+                pname = target.split('.', 1)[0]
+                pcomp = getattr(self, pname)
+                if pcomp._pseudo_type in ['multi_var_expr']:
+                    target = pcomp._orig_src
+                    if target not in connectivity['nodes'].keys():
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        if not units:
+                            units = ''
+                        connectivity['nodes'][target] = {
+                            'type': 'expr',
+                            'units': units,
+                            'io': 'io'
+                        }
 
-        # connections
-        connections = []
-        conntuples = self.list_connections(show_passthrough=True,
-                                           visible_only=True)
-        comp_names = self.list_components()
-        for src_var, dst_var in conntuples:
-            src_root = src_var.split('.')[0]
-            dst_root = dst_var.split('.')[0]
-            if (((src_name and src_root == src_name) or
-                 (not src_name and src_root not in comp_names)) and
-                ((dst_name and dst_root == dst_name) or
-                 (not dst_name and dst_root not in comp_names))):
-                connections.append([src_var, dst_var])
-        conns['connections'] = connections
+            if (not source.startswith('_pseudo_') and not target.startswith('_pseudo_')):
+                # ignore other types of PseudoComponents (objectives, etc)
+                connectivity['edges'].append([source, target])
 
-        return conns
+        return connectivity
+
+    # def _repr_svg_(self):
+    #     """ Returns an SVG representation of this Assembly's dependency graph
+    #     """
+    #     return graph_to_svg(self._depgraph.component_graph())
 
 
-def dump_iteration_tree(obj, full=False):
+def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
     of an OpenMDAO object or hierarchy.  The tree
     shows which are being iterated over by which
     drivers.
 
     If full is True, show pseudocomponents as well.
+    If derivs is True, include derivative input/output information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
+        tab = ' ' * tablevel
         if is_instance(obj, Driver):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
+            f.write("%s%s\n" % (tab, obj.name))
+            if derivs:
+                try:
+                    dgraph = obj.workflow.derivative_graph()
+                except Exception as err:
+                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                else:
+                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n" % (' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n" % (' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:
                     continue
                 if is_instance(comp, Driver) or is_instance(comp, Assembly):
-                    _dump_iteration_tree(comp, f, tablevel + 3)
+                    _dump_iteration_tree(comp, f, tablevel + tabsize)
+                elif is_instance(comp, PseudoComponent):
+                    f.write("%s%s  (%s)\n" %
+                        (' ' * (tablevel+tabsize), comp.name, comp._orig_expr))
                 else:
-                    f.write(' ' * (tablevel + 3))
-                    f.write(comp.get_pathname())
-                    f.write('\n')
+                    f.write("%s%s\n" % (' ' * (tablevel+tabsize), comp.name))
         elif is_instance(obj, Assembly):
-            f.write(' ' * tablevel)
-            f.write(obj.get_pathname())
-            f.write('\n')
-            _dump_iteration_tree(obj.driver, f, tablevel + 3)
-    f = cStringIO.StringIO()
+            f.write("%s%s\n" % (tab, obj.name))
+            _dump_iteration_tree(obj.driver, f, tablevel + tabsize)
+
     _dump_iteration_tree(obj, f, 0)
-    return f.getvalue()

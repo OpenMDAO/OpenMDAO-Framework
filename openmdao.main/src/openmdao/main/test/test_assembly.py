@@ -8,7 +8,7 @@ import logging
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
                               set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Instance, Int, Str, Slot, List, Array
+from openmdao.main.datatypes.api import Float, Instance, Int, Str, List, Array
 from openmdao.util.log import enable_trace, disable_trace
 from openmdao.util.fileutil import onerror
 from openmdao.util.decorators import add_delegate
@@ -21,6 +21,7 @@ import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consiste
 @add_delegate(HasParameters, HasConstraints, HasObjective)
 class DumbDriver(Driver):
     pass
+
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')
@@ -55,6 +56,7 @@ class Simple(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
+
 class SimpleUnits(Component):
 
     a = Float(iotype='in', units='inch')
@@ -74,7 +76,6 @@ class SimpleUnits(Component):
     def execute(self):
         self.c = self.a + self.b
         self.d = self.a - self.b
-
 
 
 class SimpleListComp(Component):
@@ -466,7 +467,6 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('exception expected')
 
-
     def test_self_connect(self):
         try:
             self.asm.connect('comp1.rout', 'comp1.r')
@@ -481,7 +481,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units', 'comp2.s')
         except Exception, err:
             self.assertEqual(str(err),
-                    ": Can't connect 'comp1.rout.units' to 'comp2.s': comp1: Couldn't find metadata for trait rout.units")
+                    ": Can't connect 'comp1.rout.units' to 'comp2.s': Couldn't find metadata for traits 'comp1.rout.units'")
         else:
             self.fail('Exception expected')
 
@@ -491,7 +491,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         meta = self.asm.comp1.get_metadata('rout')
         self.assertEqual(set(meta.keys()),
-                         set(['vartypename', 'units', 'high', 'iotype', 'type', 'low']))
+                         set(['assumed_default', 'vartypename', 'units', 'high', 'iotype', 'type', 'low']))
         self.assertEqual(meta['vartypename'], 'Float')
         self.assertEqual(self.asm.comp1.get_metadata('slistout', 'vartypename'), 'List')
 

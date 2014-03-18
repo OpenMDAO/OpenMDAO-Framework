@@ -262,7 +262,7 @@ class ObjectHandler(ReqHandler):
 
                     passthroughs
 
-                    connections
+                    connectivity
 
         PUT:    Create or replace object `pathname`; arguments are:
 
@@ -293,10 +293,8 @@ class ObjectHandler(ReqHandler):
                         result = cserver.get_available_events(pathname)
                     elif attr == 'passthroughs':
                         result = cserver.get_passthroughs(pathname)
-                    elif attr == 'connections':
-                        source = self.get_argument('source', default=None)
-                        target = self.get_argument('target', default=None)
-                        result = cserver.get_connections(pathname, source, target)
+                    elif attr == 'connectivity':
+                        result = cserver.get_connectivity(pathname)
                     else:
                         self.send_error(400)  # bad request
                 else:
