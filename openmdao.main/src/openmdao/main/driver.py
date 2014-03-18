@@ -4,7 +4,6 @@
 __all__ = ["Driver"]
 
 import fnmatch
-from uuid import uuid1
 
 from zope.interface import implementedBy
 
@@ -39,25 +38,28 @@ class GradientOptions(VariableTree):
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
                    desc='Finite difference mode (forward, backward, central',
                    framework_var=True)
-    fd_step = Float(1.0e-6, desc='Default finite difference stepsize', framework_var=True)
+    fd_step = Float(1.0e-6, desc='Default finite difference stepsize',
+                    framework_var=True)
     fd_step_type = Enum('absolute',
                         ['absolute', 'relative', 'bounds_scaled'],
                         desc='Set to absolute, relative, '
                         'or scaled to the bounds ( high-low) step sizes',
                         framework_var=True)
 
-    force_fd = Bool(False, desc="Set to True to force finite difference " +
-                                "of this driver's entire workflow in a" +
+    force_fd = Bool(False, desc="Set to True to force finite difference "
+                                "of this driver's entire workflow in a"
                                 "single block.",
                            framework_var=True)
 
     # KTM - story up for this one.
-    #fd_blocks = List([], desc='User can specify nondifferentiable blocks ' + \
+    #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
     #                          'by adding sets of component names.')
 
     # Analytic solution with GMRES
-    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES', framework_var=True)
-    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES', framework_var=True)
+    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES',
+                            framework_var=True)
+    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
+                        framework_var=True)
 
 
 @add_delegate(HasEvents)
@@ -79,7 +81,8 @@ class Driver(Component):
     workflow = Slot(Workflow, allow_none=True, required=True,
                     factory=Dataflow, hidden=True)
 
-    gradient_options = VarTree(GradientOptions(), iotype='in', framework_var=True)
+    gradient_options = VarTree(GradientOptions(), iotype='in',
+                               framework_var=True)
 
     def __init__(self):
         self._iter = None
@@ -331,9 +334,10 @@ class Driver(Component):
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
-        is met. If you don't want to structure your driver to use *pre_iteration*,
-        *post_iteration*, etc., just override this function. As a result, none
-        of the ``<start/pre/post/continue>_iteration()`` functions will be called.
+        is met. If you don't want to structure your driver to use
+        *pre_iteration*, *post_iteration*, etc., just override this function.
+        As a result, none of the ``<start/pre/post/continue>_iteration()``
+        functions will be called.
         """
         self._iter = None
         self.start_iteration()
@@ -392,14 +396,16 @@ class Driver(Component):
         return self._continue
 
     def pre_iteration(self):
-        """Called prior to each iteration.  This is where iteration events are set."""
+        """Called prior to each iteration.
+        This is where iteration events are set."""
         self.set_events()
 
     def run_iteration(self):
         """Runs workflow."""
         wf = self.workflow
         if len(wf) == 0:
-            self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
+            self._logger.warning("'%s': workflow is empty!"
+                                 % self.get_pathname())
 
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
@@ -503,7 +509,8 @@ class Driver(Component):
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
-        #case = Case(case_input, case_output, case_uuid=self.case_id , parent_uuid=self.parent_case_id)
+        #case = Case(case_input, case_output,
+        #            case_uuid=self.case_id, parent_uuid=self.parent_case_id)
         case = Case(case_input, case_output, parent_uuid=self._case_id)
 
         for recorder in self.recorders:
@@ -534,7 +541,7 @@ class Driver(Component):
             for var in comp.list_vars():
                 all_vars.append('%s%s.%s' % (header, comp.name, var))
 
-            # Recurse into assemblys
+            # Recurse into assemblies
             if isinstance(comp, Assembly):
 
                 assy_header = '%s%s.' % (header, comp.name)
@@ -549,6 +556,13 @@ class Driver(Component):
             matched_vars = fnmatch.filter(all_vars, pattern)
 
         return matched_vars
+
+    @rbac(('owner', 'user'))
+    def _run_terminated(self):
+        """ Executed at end of top-level run. """
+        super(Driver, self)._run_terminated()
+        for recorder in self.recorders:
+            recorder.close()
 
     def get_workflow(self):
         """ Get the driver info and the list of components that make up the

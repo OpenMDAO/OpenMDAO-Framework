@@ -80,8 +80,8 @@ class Float(Variable):
                 raise ValueError("Lower bound is greater than upper bound.")
 
             if default_value > high or default_value < low:
-                raise ValueError("Default value is outside of bounds [%s, %s]." %
-                                 (str(low), str(high)))
+                raise ValueError("Default value is outside of bounds [%s, %s]."
+                                 % (str(low), str(high)))
 
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
@@ -105,11 +105,11 @@ class Float(Variable):
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
         if not _default_set:
-            super(Float, self).__init__(default_value=default_value, assumed_default=True,
-                                        **metadata)
+            super(Float, self).__init__(default_value=default_value,
+                                        assumed_default=True, **metadata)
         else:
-            super(Float, self).__init__(default_value=default_value, assumed_default=False,
-                                        **metadata)
+            super(Float, self).__init__(default_value=default_value,
+                                        assumed_default=False, **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -117,8 +117,10 @@ class Float(Variable):
         """
 
         # pylint: disable-msg=E1101
-        # If both source and target have units, we need to process differently
-        if isinstance(value, AttrWrapper):
+        if isinstance(value, (float, int)):
+            pass
+        elif isinstance(value, AttrWrapper):
+            # If both source and target have units, we need to process differently
             if self.units:
                 valunits = value.metadata.get('units')
                 if valunits and isinstance(valunits, basestring) and \
@@ -130,6 +132,7 @@ class Float(Variable):
             value = value.value
         elif isinstance(value, UncertainDistribution):
             value = value.getvalue()
+
         try:
             return self._validator.validate(obj, name, value)
         except Exception:
@@ -159,8 +162,8 @@ class Float(Variable):
             info = "a float with a value < %s" % self.high
 
         vtype = type(value)
-        msg = "Variable '%s' must be %s, but a value of %s %s was specified." % \
-                               (name, info, value, vtype)
+        msg = "Variable '%s' must be %s, but a value of %s %s was specified." \
+              % (name, info, value, vtype)
         try:
             obj.raise_exception(msg, ValueError)
         except AttributeError:
