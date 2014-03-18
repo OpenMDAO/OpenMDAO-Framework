@@ -1054,7 +1054,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-        #print 'edges:', self._edges
+        print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 
