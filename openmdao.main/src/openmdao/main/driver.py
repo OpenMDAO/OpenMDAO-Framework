@@ -4,7 +4,7 @@
 __all__ = ["Driver"]
 
 import fnmatch
-from uuid import uuid1
+from ordereddict import OrderedDict
 
 from zope.interface import implementedBy
 
@@ -182,7 +182,9 @@ class Driver(Component):
         """Returns a tuple of sets of the form (src_set, dest_set)
         containing all dependencies introduced by any parameters,
         objectives, or constraints in this Driver.  If recurse is True,
-        include any refs from subdrivers.
+        include any refs from subdrivers. This returns variable names
+        only, i.e. if the expression contains a reference to x[4], only
+        x is returned.
         """
         srcset = set()
         destset = set()
@@ -661,6 +663,50 @@ class Driver(Component):
         """
         self.workflow.mpi.comm = self.mpi.comm
         self.workflow.setup_communicators()
+
+    def setup_sizes(self):
+        self.workflow.setup_sizes()
+
+    def get_vector_varnames(self):
+        """Assemble an ordereddict of names of variables needed by this
+        driver, which includes any that it references in parameters,
+        constraints, or objectives, as well as any used to connect 
+        any components in this driver's workflow, AND any returned from
+        calling get_vector_varnames on any subdrivers in this driver's
+        workflow.
+        """
+
+        variables = OrderedDict()
+
+        # collect variables from subdrivers
+        for sub in self.subdrivers():
+            variables.update(sub.get_vector_varnames())
+
+        # each var involved in a connection is added
+        # TODO: need to deal properly with slice connections...
+        # TODO: do we need sources and dests or just sources here?
+        for u,v in self.workflow.get_graph().list_connections():
+            variables[u] = {}
+            variables[v] = {}
+
+        # now add parameters from this driver
+        if hasattr(self, 'list_param_targets'):
+            for param in self.list_param_targets():
+                variables[param] = {}
+
+        # add pseudocomp outputs for all objectives
+        if hasattr(self, 'list_objective_targets'):
+            for obj in self.list_objective_targets():
+                variables[obj] = {}
+            
+        # add pseudocomp outputs for all constraints
+        if hasattr(self, 'list_objective_targets'):
+            for cnst in self.list_constraint_targets():
+                variables[cnst] = {}
+            
+        self._vector_vars = variables.copy()
+
+        return variables
 
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow

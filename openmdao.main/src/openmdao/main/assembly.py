@@ -8,12 +8,14 @@ import threading
 import re
 import sys
 
+import numpy
+
 from zope.interface import implementedBy
 
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 
-from openmdao.main.mpiwrap import MPI, PETSc
+from openmdao.main.mpiwrap import MPI, get_petsc_vec
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
@@ -1323,36 +1325,74 @@ class Assembly(Component):
     def get_cpu_range(self):
         """Return (requested_cpus, max_cpus)."""
         return self.driver.get_cpu_range()
-
-    def calc_var_sizes(self, nameset=None):
-        """Returns a sorted vector of tuples of the form:
-        (full_var_pathname, flattened_size).  nameset is the set
-        of names that sizes are required for.
-        """
-        names = super(Assembly, self).calc_var_sizes(nameset)
-
-        # get a list of all vars referenced by parameters,
-        # objectives, and constraints
-        nset, destset = self.driver.get_expr_var_depends(recurse=True)
-        nset.update(destset)
-
-        # now add all vars that are connected
-        conns = self._depgraph.list_connections()
-        nset.update([u.split('[',1)[0] for u,v in conns])
-        nset.update([v.split('[',1)[0] for u,v in conns])
         
-        for cname, vnames in partition_names_by_comp(nset).items():
+    def setup_sizes(self):
+        """Calculate the local sizes of all relevant variables
+        and share those across all processes in the communicator.
+        """
+        self.vector_vars = self.driver.get_vector_varnames()
+        for cname, vnames in partition_names_by_comp(self.vector_vars.keys()).items():
             if cname is None:
-                continue
-            comp = getattr(self, cname)
-            names.extend(comp.calc_var_sizes(set(vnames)))
-    
-        return names
+                for vname in vnames:
+                    
+                    self.vector_vars[vname]['size'] = self.get_float_var_size(vname)
+            else:
+                comp = getattr(self, cname)
+                for vname in vnames:
+                    self.vector_vars['.'.join(cname, vname)]['size'] = \
+                                            comp.get_float_var_size(vname)
+
+        # create an (nproc x numvars) var size vector containing 
+        # local sizes across all processes in our comm
+        self.local_var_sizes = numpy.zeros(self.size, 
+                                           len(self.vector_vars), int)
+        rank = self.comm.rank
+        for i, var in enumerate(self.vector_vars.values()):
+            self.local_var_sizes[rank, i] = var['size']
+
+        # collect local var sizes from all of the processes in our comm
+        self.comm.Allgather(self.local_var_sizes[rank,:], 
+                            self.local_var_sizes)
+
+        # this will calculate sizes for any subassemblies
+        self.driver.setup_sizes()
+
+        # create a (1 x nproc) vector for the sizes of all of our 
+        # local inputs
+        self.input_sizes = numpy.zeros(self.comm.size, int)
+
+        #self.
+        #??? do argSizes...
+
+    def setup_vectors(self):
+        """Creates vector wrapper objects to manage local and
+        distributed vectors need to solve the distributed system.
+        """
+        pass
+        #self.uVec = VecWrapper(paths, sizes)
 
     def setup_communicators(self):
         self.driver.communicator = self.mpi.comm
         self.driver.setup_communicators()
         
+
+class VecWrapper(object):
+    """A wrapper object for a local vector, a distributed PETSc vector,
+    and info about what var maps to what range within the distributed
+    vector.
+    """
+    def __init__(self, comm, paths, sizes):
+        tot_size = sum([s for s in sizes.values()])
+        self.array = numpy.zeros(tot_size)
+        self.petsc_vec = get_petsc_vec(comm, self.array)
+        # find bounds for each variable
+        i1 = i2 = 0
+        for name, size in sizes.items():
+            pass # FIXME
+
+    def scatter(self):
+        pass  # see if we can do scatter functionality here...
+
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree

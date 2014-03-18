@@ -1,9 +1,11 @@
-# pylint: disable-msg=C0111,C0103
 
+import sys
 import math
 
+import numpy as np 
+
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.datatypes.api import Float, Array, List, Dict
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
@@ -28,7 +30,7 @@ class NTimes(Driver):
         
     def run_iteration(self):
         self._count += 1
-        print "count = ",self._count
+        print "%s: iteration = %d" % (self.get_pathname(), self._count)
         super(NTimes, self).run_iteration()
 
     def continue_iteration(self):
@@ -36,18 +38,11 @@ class NTimes(Driver):
 
 
 class Simple(Component):
-    a = Float(iotype='in', units='ft')
-    b = Float(iotype='in', units='ft')
-    c = Float(iotype='out', units='ft')
-    d = Float(iotype='out', units='ft')
+    a = Array(np.ones(12, float), iotype='in')
+    b = Array(np.zeros(12, float), iotype='in')
+    c = Array(np.ones(12, float), iotype='out')
+    d = Array(np.ones(12, float), iotype='out')
     
-    def __init__(self):
-        super(Simple, self).__init__()
-        self.a = 1
-        self.b = 2
-        self.c = 3
-        self.d = -1
-
     def execute(self):
         global exec_order
         exec_order.append(self.name)

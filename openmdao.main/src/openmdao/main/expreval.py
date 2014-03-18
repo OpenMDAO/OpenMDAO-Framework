@@ -859,7 +859,6 @@ class ExprEvaluator(object):
 
         return metadata
 
-
     def get_referenced_varpaths(self, copy=True):
         """Return a set of pathnames relative to *scope.parent* and based on
         the names of Variables referenced in our expression string.

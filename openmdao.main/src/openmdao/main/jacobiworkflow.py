@@ -1,9 +1,8 @@
 """ Base class for all workflows. """
 
-from mpi4py import MPI
-from petsc4py import PETSc
-
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.sequentialflow import SequentialWorkflow
+from openmdao.main.pseudocomp import PseudoComponent
 
 class JacobiWorkflow(SequentialWorkflow):
     """
@@ -44,7 +43,8 @@ class JacobiWorkflow(SequentialWorkflow):
         child_comps = [c for c in self]
         
         cpus = [c.get_cpu_range() for c in child_comps]
-        assigned_procs = [c[0] for c in cpus]
+        requested_procs = [c[0] for c in cpus]
+        assigned_procs = [0 for c in cpus]
         max_procs = [c[1] for c in cpus]
 
         # if get_max_cpus() returns None, it means that comp can use
@@ -54,27 +54,41 @@ class JacobiWorkflow(SequentialWorkflow):
         else:
             max_usable = sum(max_procs)
 
-        assigned = sum(assigned_procs)
-        unassigned = size - assigned
-        if unassigned < 0:
-            raise RuntimeError("Allocated CPUs is short by %d" % -unassigned)
+        assigned = 0 #sum(assigned_procs)
+        #unassigned = size - assigned
+        # if unassigned < 0:
+        #     raise RuntimeError("Allocated CPUs is short by %d" % -unassigned)
 
-        limit = min(size, max_usable)
+        requested = sum(requested_procs)
+        limit = min(size, requested)
 
-        # for now, just use simple round robin assignment of extra CPUs
-        # until everybody is at their max or we run out of available CPUs
+        # first, just use simple round robin assignment of requested CPUs
+        # until everybody has what they asked for or we run out
         while assigned < limit:
             for i, comp in enumerate(child_comps):
-                if assigned_procs[i] == 0: # skip and deal with these later
+                if requested_procs[i] == 0: # skip and deal with these later
                     continue
-                if max_procs[i] is None or assigned_procs[i] != max_procs[i]:
+                if assigned_procs[i] < requested_procs[i]:
+                    assigned_procs[i] += 1
+                    assigned += 1
+                    if assigned == limit:
+                        break
+
+        # now, if we have any procs left after assigning all the requested 
+        # ones, allocate any remaining ones to any comp that can use them
+        limit = min(size, max_usable)
+        while assigned < limit:
+            for i, comp in enumerate(child_comps):
+                if requested_procs[i] == 0: # skip and deal with these later
+                    continue
+                if max_procs[i] is None or assigned_procs[i] < max_procs[i]:
                     assigned_procs[i] += 1
                     assigned += 1
                     if assigned == limit:
                         break
 
         color = []
-        for i, assigned in enumerate([a for a in assigned_procs if a != 0]):
+        for i, assigned in enumerate([p for p in assigned_procs if p != 0]):
             color.extend([i]*assigned)
 
         # if max_usable < size:
@@ -92,9 +106,10 @@ class JacobiWorkflow(SequentialWorkflow):
         for i,c in enumerate(child_comps):
             if i == rank_color:
                 c.mpi.comm = sub_comm
+                c.mpi.cpus = assigned_procs[i]
                 self.local_comps.append(c)
             elif assigned_procs[i] == 0:
-                c.mpi.comm = comm  # TODO: make sure this is the right comm
+                c.mpi.comm = sub_comm  # TODO: make sure this is the right comm
                 self.local_comps.append(c)
 
         for comp in self.local_comps:

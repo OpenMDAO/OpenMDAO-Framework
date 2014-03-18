@@ -653,7 +653,7 @@ class Component(Container):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
-                    print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
+                    #print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
                     self.execute()
 
                 self._post_execute()
@@ -2136,6 +2136,19 @@ class Component(Container):
     def setup_communicators(self):
         pass
 
+    def setup_sizes(self):
+        pass
+
+    def flattened_size(self, name):
+        """Return the local flattened size of the variable with
+        the given name.  NOTE: this method must be overridden
+        for components that use multiple processes.
+        """
+        if self.mpi.cpus:
+            self.raise_exception("flattened_size not implemented for a component that spans multiple processes.",
+                                 NotImplementedError)
+        return flattened_size(name, getattr(self, name), scope=self)
+
     def get_float_var_sizes(self):
         """Return a dict of names keyed to variable size for 
         for all variables that can be expressed as a flattened
@@ -2146,16 +2159,15 @@ class Component(Container):
             for name in self.list_vars():
                 if self.trait(name).framework_var:
                     continue  # skip framework vars
-                val = getattr(self, name)
                 try:
-                    size = flattened_size(name, val, scope=self)
+                    size = self.flattened_size(name)
                 except TypeError:
                     continue
                 self._var_sizes[name] = size
         return self._var_sizes
 
     def get_float_var_size(self, name):
-        """Returns the flattened size of the value of the 
+        """Returns the local flattened size of the value of the 
         named variable, if the flattened value can be expressed
         as an array of floats.  Otherwise, None is returned.
         """

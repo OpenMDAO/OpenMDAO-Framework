@@ -9,7 +9,7 @@ import ordereddict
 
 from numpy import ndarray
 
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {
@@ -464,6 +464,9 @@ class HasEqConstraints(_HasConstraintsBase):
         """Returns a list of outputs suitable for calc_gradient()."""
         return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
 
+    def list_constraint_targets(self):
+        return self.list_eq_constraint_targets()
+
 
 class HasIneqConstraints(_HasConstraintsBase):
     """Add this class as a delegate if your Driver supports inequality
@@ -568,6 +571,9 @@ class HasIneqConstraints(_HasConstraintsBase):
     def list_ineq_constraint_targets(self):
         """Returns a list of outputs suitable for calc_gradient()."""
         return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
+
+    def list_constraint_targets(self):
+        return self.list_ineq_constraint_targets()
 
 
 class HasConstraints(object):

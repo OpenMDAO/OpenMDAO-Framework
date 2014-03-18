@@ -1252,6 +1252,24 @@ class SequentialWorkflow(Workflow):
         # return arrays and suspects to make it easier to check from a test
         return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
+    ## MPI stuff ###
+
+    # def get_iter_const_inputs(self):
+    #     """Return list of input variables that are set 
+    #     into one of our components from outside of the scope 
+    #     of our iteration, i.e., they are constant during our 
+    #     iteration.
+    #     """
+    #     depgraph = self.scope._depgraph
+    #     wfgraph = self.get_graph()
+
+    #     ext_edges = edge_boundary(dapgraph, wfgraph.nodes_iter())
+
+    #     inputs = [v for u,v in ext_edges if v in wfgraph]
+    #     _, drvset = self._parent.get_expr_var_depends(recurse=True)
+        
+    #     return [v for v in inputs if v not in drvset]
+ 
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.

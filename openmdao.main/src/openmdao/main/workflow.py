@@ -40,6 +40,7 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+        self._wf_graph = None
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -154,7 +155,7 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        pass
+        self._wf_graph = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
@@ -180,12 +181,29 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    ## MPI stuff ###
+    def get_graph(self):
+        """Returns the subgraph of the full depgraph that is
+        relevant to this workflow.
+        """
+        if self._wf_graph is None:
+            dgraph = self.scope._depgraph
+            self.wf_graph = dgraph.full_subgraph(
+                                      self.get_names(full=True))
+        return self.wf_graph
+
+    ## MPI stuff ##
+
+    def setup_sizes(self):
+        for comp in self:
+            comp.setup_sizes()
 
     def setup_communicators(self):
         """Allocate communicators from here down to all of our
         child Components.
         """
+        comm = self.mpi.comm
+
         for comp in self:
-            comp.mpi.comm = self.mpi.comm
+            comp.mpi.comm = comm
             comp.setup_communicators()
+
