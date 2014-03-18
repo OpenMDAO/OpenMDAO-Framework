@@ -108,7 +108,7 @@ class JacobiWorkflow(SequentialWorkflow):
                 c.mpi.comm = sub_comm
                 c.mpi.cpus = assigned_procs[i]
                 self.local_comps.append(c)
-            elif assigned_procs[i] == 0:
+            elif assigned_procs[i] == 0:  # comp is duplicated everywhere
                 c.mpi.comm = sub_comm  # TODO: make sure this is the right comm
                 self.local_comps.append(c)
 
