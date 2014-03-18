@@ -293,17 +293,39 @@ class SequentialWorkflow(Workflow):
 
                 src_noidx = src.split('[', 1)[0]
 
-                # Special poke for boundary node
+                # Poke our source data
+
+                # Special case for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
                     if src_noidx not in basevars:
+
                         bound = (nEdge, nEdge+width)
                         self.set_bounds(measure_src, bound)
+                        self.set_bounds(src_noidx, bound)
+                        basevars.add(src_noidx)
 
-                # Poke our source data
+                    # Special case: '@in' slices without base '@in'
+                    if src_noidx != src:
+                        _, _, idx = src.partition('[')
+                        unmap_src = from_PA_var(measure_src)
+                        base = self.scope.get(unmap_src)
+                        exec("src_val = base[%s" % idx)
+                        if isinstance(src_val, ndarray):
+                            shape = src_val.shape
+                            istring, ix = flatten_slice(idx, shape, offset=nEdge,
+                                                        name='ix')
+                            bound = (istring, ix)
+                            if isinstance(istring, list):
+                                width = len(istring)
+                            else:
+                                width = 1
+                        else:
+                            width = 1
+                            bound = (nEdge, nEdge+width)
 
                 # Array slice of src that is already allocated
-                if '[' in src and src_noidx in basevars:
+                elif '[' in src and src_noidx in basevars:
                     _, _, idx = src.partition('[')
                     basebound = self.get_bounds(src_noidx)
                     if not '@in' in src_noidx:
