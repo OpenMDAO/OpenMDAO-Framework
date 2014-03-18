@@ -833,6 +833,8 @@ class FiniteDifference(object):
             elif has_interface(old_val, IVariableTree):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
+            else:
+                continue
 
             src, _, idx = src.partition('[')
             if idx:
