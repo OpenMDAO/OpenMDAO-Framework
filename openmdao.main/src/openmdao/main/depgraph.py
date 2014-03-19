@@ -1425,7 +1425,14 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             # via input-input connections. These are relevant, so save them.
             sub_params = drv.list_param_targets()
             pa_name = pa_list[-1].name
-            xtra_inputs.update([to_PA_var(v, pa_name) for v in sub_params])
+            sub_param_inputs = [to_PA_var(v, pa_name) for v in sub_params]
+            xtra_outputs.update(sub_param_inputs)
+
+            # Our parameter inputs are outputs to the outer drivers, so reverse the
+            # connection direction here.
+            for param in sub_param_inputs:
+                graph.add_edge(pa_name, param)
+                graph.node[param]['iotype'] = 'out'
 
         for pa in pa_list:
             pa.clean_graph(startgraph, graph, using)
@@ -1554,7 +1561,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     graph.graph['mapped_outputs'] = list(outputs)
 
     relevant = set()
-    
+
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
@@ -1570,7 +1577,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 graph.add_node(varname, basevar=base,
                                iotype='in', valid=True)
 
-            graph.add_edge(iname, varname, conn=True) 
+            graph.add_edge(iname, varname, conn=True)
 
             if varname in subvars:
                 # make sure this subvar is connected to its base in the direction we need
@@ -1625,7 +1632,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     _explode_vartrees(graph, scope)
 
     edges = _get_inner_edges(graph, inames, onames)
-
     edict = graph.edge
     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
     relevant.update([u for u,v in edges])
