@@ -2726,7 +2726,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
 
         # This will error unless we ignore missing derivs
-        derivs = self.top.check_gradient(name='dis2')
+        derivs = self.top.check_gradient(name='dis2', stream=None)
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
 
         self.top.driver.run_iteration()

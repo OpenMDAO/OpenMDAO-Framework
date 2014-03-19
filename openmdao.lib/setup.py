@@ -106,10 +106,10 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.surrogatemodels.logistic_regression.LogisticRegression = openmdao.lib.surrogatemodels.logistic_regression:LogisticRegression
       openmdao.lib.surrogatemodels.response_surface.ResponseSurface = openmdao.lib.surrogatemodels.response_surface:ResponseSurface
 
-      [openmdao.optproblems]
-      openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optprobelems.sellar:SellarProblem
-      openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optprobelems.branin:BraninProblem
-      openmdao.lib.optproblems.polyscale.PolyScalableProblem = openmdao.lib.optprobelems.polyscale:PolyScalableProblem
+      [openmdao.optproblem]
+      openmdao.lib.optproblems.sellar.SellarProblem = openmdao.lib.optproblems.sellar:SellarProblem
+      openmdao.lib.optproblems.branin.BraninProblem = openmdao.lib.optproblems.branin:BraninProblem
+      openmdao.lib.optproblems.polyscale.PolyScalableProblem = openmdao.lib.optproblems.polyscale:PolyScalableProblem
 
       [openmdao.caserecorder]
       openmdao.lib.casehandlers.dumpcase.DumpCaseRecorder = openmdao.lib.casehandlers.dumpcase:DumpCaseRecorder

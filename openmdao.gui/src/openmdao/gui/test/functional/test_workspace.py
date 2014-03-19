@@ -1125,6 +1125,17 @@ def _test_sorting(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+def _test_standard_library(browser):
+    project_dict, workspace_page = startup(browser)
+    workspace_page.set_library_filter('optproblems')
+    objects = workspace_page.get_object_types()
+
+    eq(objects,[
+        'BraninProblem',
+        'PolyScalableProblem',
+        'SellarProblem',])
+
+    closeout(project_dict, workspace_page)
 
 if __name__ == '__main__':
     main()

@@ -53,7 +53,7 @@ from multiprocessing import Process, current_process, connection, util
 from multiprocessing.forking import Popen
 from multiprocessing.managers import BaseManager, BaseProxy, RebuildProxy, \
                                      Server, State, Token, convert_to_error, \
-                                     dispatch
+                                     dispatch, RemoteError
 
 if sys.platform == 'win32':  #pragma no cover
     from _multiprocessing import win32
@@ -126,8 +126,11 @@ def has_interface(obj, *ifaces):
     if isinstance(obj, OpenMDAO_Proxy):
         for typ in ifaces:
             typename = '%s.%s' % (typ.__module__, typ.__name__)
-            if obj.__has_interface__(typename):
-                return True
+            try:
+                if obj.__has_interface__(typename):
+                    return True
+            except RemoteError:
+                return False
         return False
     else:
         return obj_has_interface(obj, *ifaces)

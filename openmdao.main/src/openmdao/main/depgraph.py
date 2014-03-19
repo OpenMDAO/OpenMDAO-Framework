@@ -801,14 +801,20 @@ class DependencyGraph(nx.DiGraph):
         if not vnames:
             return []
 
+        # Pre-resolve some things.
+        ndata = self.node
+        in_degree = self.in_degree
+        get_sources = self.get_sources
+        successors_iter = self.successors_iter
+        _indegs = self._indegs
+
         outset = set()  # set of changed boundary outputs
 
-        ndata = self.node
-        stack = [(n, self.successors_iter(n), not is_comp_node(self, n))
-                        for n in vnames]
+        stack = [(n, successors_iter(n), not is_comp_node(self, n))
+                 for n in vnames]
 
         visited = set()
-        while(stack):
+        while stack:
             src, neighbors, checkvisited = stack.pop()
             if checkvisited and src in visited:
                 continue
@@ -818,14 +824,14 @@ class DependencyGraph(nx.DiGraph):
             oldvalid = sdata['valid']
             if oldvalid is True:
                 if src.startswith('parent.'):
-                    ndata[src]['valid'] = False
+                    sdata['valid'] = False
                 else:
-                    indeg = self._indegs.get(src)
+                    indeg = _indegs.get(src)
                     if indeg is None:
-                        indeg = self.in_degree(src)
-                        self._indegs[src] = indeg
+                        indeg = in_degree(src)
+                        _indegs[src] = indeg
                     if indeg:  # don't invalidate unconnected inputs
-                        ndata[src]['valid'] = False
+                        sdata['valid'] = False
                 if 'boundary' in sdata and sdata.get('iotype') == 'out':
                     outset.add(src)
 
@@ -835,15 +841,15 @@ class DependencyGraph(nx.DiGraph):
                 if 'comp' in ddata:
                     if ddata['valid'] or ddata.get('invalidation')=='partial':
                         if parsources is None:
-                            parsources = self.get_sources(src)
+                            parsources = get_sources(src)
                         outs = getattr(scope, node).invalidate_deps(['.'.join(('parent', n))
                                                                       for n in parsources])
                         if outs is None:
-                            stack.append((node, self.successors_iter(node), True))
+                            stack.append((node, successors_iter(node), True))
                         elif outs: # partial invalidation
                             stack.append((node, ['.'.join((node,n)) for n in outs], False))
                 else:
-                    stack.append((node, self.successors_iter(node), True))
+                    stack.append((node, successors_iter(node), True))
 
         return outset
 
@@ -1419,7 +1425,14 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             # via input-input connections. These are relevant, so save them.
             sub_params = drv.list_param_targets()
             pa_name = pa_list[-1].name
-            xtra_inputs.update([to_PA_var(v, pa_name) for v in sub_params])
+            sub_param_inputs = [to_PA_var(v, pa_name) for v in sub_params]
+            xtra_outputs.update(sub_param_inputs)
+
+            # Our parameter inputs are outputs to the outer drivers, so reverse the
+            # connection direction here.
+            for param in sub_param_inputs:
+                graph.add_edge(pa_name, param)
+                graph.node[param]['iotype'] = 'out'
 
         for pa in pa_list:
             pa.clean_graph(startgraph, graph, using)
@@ -1548,7 +1561,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     graph.graph['mapped_outputs'] = list(outputs)
 
     relevant = set()
-    
+
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
@@ -1564,7 +1577,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 graph.add_node(varname, basevar=base,
                                iotype='in', valid=True)
 
-            graph.add_edge(iname, varname, conn=True) 
+            graph.add_edge(iname, varname, conn=True)
 
             if varname in subvars:
                 # make sure this subvar is connected to its base in the direction we need
@@ -1619,7 +1632,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     _explode_vartrees(graph, scope)
 
     edges = _get_inner_edges(graph, inames, onames)
-
     edict = graph.edge
     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
     relevant.update([u for u,v in edges])

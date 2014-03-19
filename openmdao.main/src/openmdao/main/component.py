@@ -208,6 +208,8 @@ class Component(Container):
 
         self._publish_vars = {}  # dict of varname to subscriber count
 
+        self._recorders = None
+
     @property
     def dir_context(self):
         """The :class:`DirectoryContext` for this component."""
@@ -426,11 +428,12 @@ class Component(Container):
         if self._call_cpath_updated:
             self.cpath_updated()
 
+        parent = self.parent
         if force:
             outs = self.invalidate_deps()
             if (outs is None) or outs:
-                if self.parent:
-                    self.parent.child_invalidated(self.name, outs)
+                if parent:
+                    parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
                 self._call_execute = True
@@ -441,15 +444,15 @@ class Component(Container):
                 # grab our new outputs
                 outs = self.invalidate_deps()
                 if (outs is None) or outs:
-                    if self.parent:
-                        self.parent.child_invalidated(self.name, outs)
+                    if parent:
+                        parent.child_invalidated(self.name, outs)
 
-        if self.parent is None:
+        if parent is None:
             # if parent is None, we're not part of an Assembly
             # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
         else:
-            self.parent.update_inputs(self.name)
+            parent.update_inputs(self.name)
 
         self.check_configuration()
 
@@ -522,7 +525,7 @@ class Component(Container):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 if savebase:
                     self.driver.calc_derivatives(first, second, savebase,
                                                  required_inputs, required_outputs)
@@ -605,9 +608,8 @@ class Component(Container):
             if self._call_execute or force:
 
                 if ffd_order == 1 \
-                   and not has_interface(self, IDriver) \
-                   and not has_interface(self, IAssembly) \
-                   and (hasattr(self, '_ffd_inputs')) \
+                   and not obj_has_interface(self, IDriver, IAssembly) \
+                   and hasattr(self, '_ffd_inputs') \
                    and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
@@ -626,12 +628,9 @@ class Component(Container):
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
-                       not obj_has_interface(self, IAssembly) and \
-                       not obj_has_interface(self, IDriver):
-
+                       not obj_has_interface(self, IDriver, IAssembly):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-
                     self.execute()
 
                 self._post_execute()
@@ -648,26 +647,18 @@ class Component(Container):
             if self.directory:
                 self.pop_dir()
 
+    @rbac(('owner', 'user'))
     def _run_terminated(self):
         """ Executed at end of top-level run. """
-        def _recursive_close(container, visited):
-            """ Close all case recorders. """
-            # Using ._alltraits() since .items() won't pickle.
-            # and we may be traversing a distributed tree.
-            for name in container._alltraits():
-                obj = getattr(container, name)
-                if id(obj) in visited:
-                    continue
-                visited.add(id(obj))
-                if obj_has_interface(obj, IDriver):
-                    for recorder in obj.recorders:
-                        recorder.close()
-                elif obj_has_interface(obj, ICaseRecorder):
-                    obj.close()
-                if isinstance(obj, Container):
-                    _recursive_close(obj, visited)
-        visited = set((id(self),))
-        _recursive_close(self, visited)
+        if self._recorders is None:
+            recorders = []
+            for name in self._alltraits():
+                obj = getattr(self, name)
+                if obj_has_interface(obj, ICaseRecorder):
+                    recorders.append(obj)
+            self._recorders = recorders
+        for recorder in self._recorders:
+            recorder.close()
 
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
@@ -769,7 +760,7 @@ class Component(Container):
                                  remove=remove)
 
     def remove_trait(self, name):
-        """Overrides base definition of *add_trait* in order to
+        """Overrides base definition of *remove_trait* in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
@@ -811,6 +802,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
         self._provideJ_bounds = None
+        self._recorders = None
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):
@@ -1899,13 +1891,13 @@ class Component(Container):
                         if slot_attr is not None:
                             slots.append(slot_attr)
 
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
-            if has_interface(self, IDriver):
+            if obj_has_interface(self, IDriver):
                 attrs['Workflow'] = self.get_workflow()
 
-            if has_interface(self, IHasCouplingVars):
+            if obj_has_interface(self, IHasCouplingVars):
                 couples = []
                 objs = self.list_coupling_vars()
                 for indep, dep in objs:
@@ -1915,7 +1907,7 @@ class Component(Container):
                     couples.append(attr)
                 attrs['CouplingVars'] = couples
 
-            if has_interface(self, IHasObjectives):
+            if obj_has_interface(self, IHasObjectives):
                 objectives = []
                 objs = self.get_objectives()
                 for key in objs.keys():
@@ -1926,7 +1918,7 @@ class Component(Container):
                     objectives.append(attr)
                 attrs['Objectives'] = objectives
 
-            if has_interface(self, IHasParameters):
+            if obj_has_interface(self, IHasParameters):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     attr = {}
@@ -1949,8 +1941,8 @@ class Component(Container):
 
             constraints = []
             has_constraints = False
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasEqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasEqConstraints):
                 has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
@@ -1959,8 +1951,8 @@ class Component(Container):
                     attr['expr'] = str(con)
                     constraints.append(attr)
 
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasIneqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasIneqConstraints):
                 has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
@@ -1972,11 +1964,11 @@ class Component(Container):
             if has_constraints:
                 attrs['Constraints'] = constraints
 
-            if has_interface(self, IHasEvents):
+            if obj_has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                      for path in self.get_events()]
 
-            if has_interface(self, IImplicitComponent):
+            if obj_has_interface(self, IImplicitComponent):
                 states = []
                 names = self.list_states()
                 for name in names:

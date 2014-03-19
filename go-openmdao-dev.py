@@ -2177,8 +2177,8 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2', 'argparse==1.2.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==0.11.3', 'ordereddict==1.1', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==0.13.3', 'slsqp==1.0.1', 'sympy==0.7.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
-    guireqs = ['PyYAML==3.10', 'argh==0.15.1', 'pathtools==0.1.2', 'pyV3D==0.4.2', 'pyzmq==13.1.0', 'tornado==2.2.1', 'watchdog==0.6.0']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'argparse==1.2.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==0.11.3', 'ordereddict==1.1', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==0.13.3', 'slsqp==1.0.1', 'sympy==0.7.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
+    guireqs = ['PyYAML==3.10', 'argh==0.15.1', 'pathtools==0.1.2', 'pyV3D==0.4.3', 'pyzmq==13.1.0', 'tornado==2.2.1', 'watchdog==0.6.0']
     guitestreqs = ['EasyProcess==0.1.4', 'PyVirtualDisplay==0.1.0', 'entrypoint2==0.0.5', 'lazr.testing==0.1.2a', 'mocker==1.1', 'path.py==2.2.2', 'selenium==2.35.0', 'zope.exceptions==3.6.1', 'zope.testing==4.1.1', 'zope.testrunner==4.0.4']
 
     if options.findlinks is None:
