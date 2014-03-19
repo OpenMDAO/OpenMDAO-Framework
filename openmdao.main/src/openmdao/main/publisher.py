@@ -39,12 +39,15 @@ else:
 
         def send(self, first=False):
             self.prepare_for_sends()
-            
+
             if first:
-                self.send_GPrim(self,  1, self.send_binary_data)  # send init packet
-                self.send_GPrim(self, -1, self.send_binary_data)  # send initial suite of GPrims
+                # send init packet
+                self.send_GPrim(self,  1, self.send_binary_data)
+                # send initial suite of GPrims
+                self.send_GPrim(self, -1, self.send_binary_data)
             else:
-                self.send_GPrim(self, -1, self.send_binary_data)  # send initial suite of GPrims
+                # send initial suite of GPrims
+                self.send_GPrim(self, -1, self.send_binary_data)
 
             self.finish_sends()
 
@@ -72,7 +75,7 @@ if zmq is None:
 
         @staticmethod
         def get_instance():
-            return Publisher()
+            return None
 
         @staticmethod
         def init(context, url, use_stream=True):
@@ -110,7 +113,6 @@ else:
                 self._sender = sock
 
         def publish(self, topic, value, lock=True, binary=False):
-            global _binpubs
             if Publisher.__enabled:
                 try:
                     if lock:
@@ -118,19 +120,22 @@ else:
                     if binary:
                         if not isinstance(value, bytes):
                             raise TypeError("published binary value must be of type 'bytes'")
-                        logger.debug("sending binary value for topic %s" % topic)
-                        self._sender.send_multipart([topic.encode('utf-8'), value])
+                        logger.debug("sending binary value for topic %s", topic)
+                        self._sender.send_multipart([topic.encode('utf-8'),
+                                                     value])
                     elif topic in _binpubs:
-                        # if a binary publisher exists for this topic, use that to
-                        # publish the value. It will call publish again (possibly multiple times)
-                        # with binary=True
-                        logger.debug("sending value via binpub for topic %s" % topic)
+                        # if a binary publisher exists for this topic, use that
+                        # to publish the value. It will call publish again
+                        # (possibly multiple times) with binary=True
+                        logger.debug("sending value via binpub for topic %s",
+                                     topic)
                         try:
                             _binpubs[topic][1].send(value)
                         except Exception:
-                            logger.error("ERROR: %s" % traceback.format_exc())
+                            logger.error("ERROR: %s", traceback.format_exc())
                     else:
-                        msg = json.dumps([topic.encode('utf-8'), value], default=json_default)
+                        msg = json.dumps([topic.encode('utf-8'), value],
+                                         default=json_default)
                         self._sender.send_multipart([msg])
                     if hasattr(self._sender, 'flush'):
                         self._sender.flush()
@@ -168,23 +173,24 @@ else:
 
         @staticmethod
         def register(topic, obj):
-            """Associates a given topic with a binary publisher based on the corresponding object type.
-            If no binpub type exists for that object type, nothing happens.
+            """Associates a given topic with a binary publisher based on the
+            corresponding object type. If no binpub type exists for that object
+            type, nothing happens.
             """
-            global _binpubs, _binpub_types
             sender = None
             if _binpub_types is None:
                 load_binpubs()
 
             with _lock:
                 if topic in _binpubs:
-                    logger.debug("found topic %s in _binpubs" % topic)
+                    logger.debug("found topic %s in _binpubs", topic)
                     _binpubs[topic][0] += 1
                 else:
                     # see if a sender is registered for this object type
                     for sender_type in _binpub_types:
                         if sender_type.supports(obj):
-                            logger.debug("creating a sender for topic: %s" % topic)
+                            logger.debug("creating a sender for topic: %s",
+                                         topic)
                             try:
                                 sender = sender_type(Pub_WV_Wrapper(topic))
                             except Exception:
@@ -198,10 +204,9 @@ else:
         @staticmethod
         def unregister(topic):
             """Removes an association between a 'sender' and a topic."""
-            global _binpubs
             with _lock:
                 if topic in _binpubs:
-                    logger.debug("Publisher unregistering topic %s" % topic)
+                    logger.debug("Publisher unregistering topic %s", topic)
                     if _binpubs[topic][0] <= 1:
                         del _binpubs[topic]
                     else:
@@ -232,8 +237,10 @@ else:
                 try:
                     klass = ep.load()
                 except Exception as err:
-                    logger.error("Entry point %s failed to load: %s" % (str(ep).split()[0], err))
+                    logger.error("Entry point %s failed to load: %s",
+                                 str(ep).split()[0], err)
                 else:
-                    logger.debug("adding binpub entry point: %s" % str(ep).split()[0])
+                    logger.debug("adding binpub entry point: %s",
+                                 str(ep).split()[0])
                     with _lock:
                         _binpub_types.append(klass)

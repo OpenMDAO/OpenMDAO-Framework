@@ -159,7 +159,9 @@ class Assembly(Component):
         to either in the source or the destination.
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u, v) for u, v in self._depgraph.list_connections(show_passthrough=True, show_external=True)
+        return [(u, v) for u, v
+                       in self._depgraph.list_connections(show_passthrough=True,
+                                                          show_external=True)
                                         if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
@@ -184,9 +186,10 @@ class Assembly(Component):
             old_rgx = re.compile(r'(\W?)%s.' % name)
             par_rgx = re.compile(r'(\W?)parent.')
 
+            pattern = r'\g<1>%s.' % '.'.join([self.name, name])
             for u, v in self._depgraph.list_autopassthroughs():
-                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
-                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
+                newu = re.sub(old_rgx, pattern, u)
+                newv = re.sub(old_rgx, pattern, v)
                 if newu != u or newv != v:
                     old_autos.append((u, v))
                     u = re.sub(par_rgx, r'\g<1>', newu)
@@ -214,16 +217,18 @@ class Assembly(Component):
         old_rgx = re.compile(r'(\W?)%s.' % oldname)
         par_rgx = re.compile(r'(\W?)parent.')
 
-        # recreate all of the broken connections after translating oldname to newname
+        # recreate all of the broken connections after translating
+        # oldname to newname
         for u, v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
                          re.sub(old_rgx, r'\g<1>%s.' % newname, v))
 
         # recreate autopassthroughs
         if self.parent:
+            pattern = r'\g<1>%s.' % '.'.join([self.name, newname])
             for u, v in old_autos:
-                u = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), u)
-                v = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), v)
+                u = re.sub(old_rgx, pattern, u)
+                v = re.sub(old_rgx, pattern, v)
                 u = re.sub(par_rgx, r'\g<1>', u)
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u, v)
@@ -627,6 +632,15 @@ class Assembly(Component):
         """Stop the calculation."""
         self.driver.stop()
 
+    @rbac(('owner', 'user'))
+    def _run_terminated(self):
+        """ Executed at end of top-level run. """
+        super(Assembly, self)._run_terminated()
+        for name in self.list_containers():
+            obj = getattr(self, name)
+            if has_interface(obj, IComponent):
+                obj._run_terminated()
+
     def list_connections(self, show_passthrough=True,
                                visible_only=False,
                                show_expressions=False):
@@ -945,7 +959,8 @@ class Assembly(Component):
         for src in required_inputs:
             varname = depgraph.base_var(src)
             target1 = [n for n in depgraph.successors(varname)
-                              if not n.startswith('parent.') and depgraph.base_var(n) != varname]
+                       if not n.startswith('parent.')
+                          and depgraph.base_var(n) != varname]
             target2 = []
             if src in depgraph.node:
                 target2 = [n for n in depgraph.successors(src)
@@ -1174,7 +1189,7 @@ class Assembly(Component):
                             }
 
         # add assembly vars, which can be input or output (due to passthroughs)
-        var_names =  self.list_outputs() + self.list_inputs()
+        var_names = self.list_outputs() + self.list_inputs()
         for vname in var_names:
             var = self.get(vname)
             vtype = type(var).__name__
@@ -1246,7 +1261,8 @@ class Assembly(Component):
                             'io': 'io'
                         }
 
-            if (not source.startswith('_pseudo_') and not target.startswith('_pseudo_')):
+            if not source.startswith('_pseudo_') and \
+               not target.startswith('_pseudo_'):
                 # ignore other types of PseudoComponents (objectives, etc)
                 connectivity['edges'].append([source, target])
 
@@ -1275,12 +1291,17 @@ def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
                 try:
                     dgraph = obj.workflow.derivative_graph()
                 except Exception as err:
-                    f.write("%s*ERR in deriv graph: %s\n" % (' '*(tablevel+tabsize+2), str(err)))
+                    f.write("%s*ERR in deriv graph: %s\n"
+                            % (' '*(tablevel+tabsize+2), str(err)))
                 else:
-                    inputs = dgraph.graph.get('mapped_inputs', dgraph.graph.get('inputs', []))
-                    outputs = dgraph.graph.get('mapped_outputs', dgraph.graph.get('outputs', []))
-                    f.write("%s*deriv inputs: %s\n" % (' '*(tablevel+tabsize+2), inputs))
-                    f.write("%s*deriv outputs: %s\n" % (' '*(tablevel+tabsize+2), outputs))
+                    inputs = dgraph.graph.get('mapped_inputs',
+                                              dgraph.graph.get('inputs', []))
+                    outputs = dgraph.graph.get('mapped_outputs',
+                                               dgraph.graph.get('outputs', []))
+                    f.write("%s*deriv inputs: %s\n"
+                            % (' '*(tablevel+tabsize+2), inputs))
+                    f.write("%s*deriv outputs: %s\n"
+                            % (' '*(tablevel+tabsize+2), outputs))
             names = set(obj.workflow.get_names())
             for comp in obj.workflow:
                 if not full and comp.name not in names:
