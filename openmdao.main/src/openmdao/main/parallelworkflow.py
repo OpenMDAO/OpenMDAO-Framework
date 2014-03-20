@@ -4,13 +4,14 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.pseudocomp import PseudoComponent
 
-class JacobiWorkflow(SequentialWorkflow):
+
+class ParallelWorkflow(SequentialWorkflow):
     """
     A Workflow where all components are intended to be executed in
     parallel.
     """
     def __init__(self, parent=None, scope=None, members=None):
-        super(JacobiWorkflow, self).__init__(parent, scope, members)
+        super(ParallelWorkflow, self).__init__(parent, scope, members)
         self.local_comps = []
 
     def run(self, ffd_order=0, case_id=''):

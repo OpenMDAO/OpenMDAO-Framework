@@ -700,7 +700,7 @@ class Driver(Component):
                 variables[obj] = {}
             
         # add pseudocomp outputs for all constraints
-        if hasattr(self, 'list_objective_targets'):
+        if hasattr(self, 'list_constraint_targets'):
             for cnst in self.list_constraint_targets():
                 variables[cnst] = {}
             

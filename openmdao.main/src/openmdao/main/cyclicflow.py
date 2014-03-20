@@ -237,7 +237,7 @@ class CyclicWorkflow(SequentialWorkflow):
             eqcons = self._parent.get_eq_constraints()
             old_j = 0
             for key, value in eqcons.iteritems():
-                con_targets = value.get_referenced_varpaths()
+                #con_targets = value.get_referenced_varpaths()
                 new_j = 0
                 for params in self._parent.list_param_group_targets():
                     if params[0] == value.rhs.text:

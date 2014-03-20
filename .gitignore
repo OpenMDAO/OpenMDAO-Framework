@@ -52,3 +52,15 @@ build.out
 .DS_Store
 ehthumbs.db
 Thumbs.db
+
+# Testing files #
+#################
+test_*.txt
+test_*.png
+pyBspline_pkl
+gui-server
+junk.out
+test_report.out
+foo
+bar
+

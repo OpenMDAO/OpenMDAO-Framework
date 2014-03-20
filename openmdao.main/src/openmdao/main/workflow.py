@@ -1,5 +1,7 @@
 """ Base class for all workflows. """
 
+from networkx import topological_sort
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
@@ -41,6 +43,7 @@ class Workflow(object):
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
         self._wf_graph = None
+        self._wf_comp_graph = None
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -88,8 +91,38 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_id=''):
-        """ Run the Components in this Workflow. """
+    def _run_comp(self, comp, ffd_order, case_id, iterbase):
+        if isinstance(comp, PseudoComponent):
+            comp.run(ffd_order=ffd_order, case_id=case_id)
+        else:
+            self._comp_count += 1
+            comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+            comp.run(ffd_order=ffd_order, case_id=case_id)
+        if self._stop:
+            raise RunStopped('Stop requested')
+        
+    def _mixed_run(self, ffd_order=0, case_id=''):
+        """Run the components in ths workflow in a mixed serial/parallel
+        mode.
+        """
+        self._stop = False
+        self._iterator = self.__iter__()
+        self._exec_count += 1
+        self._comp_count = 0
+        iterbase = self._iterbase(case_id)
+        scope = self.scope
+
+        for cname in self._sorted_comps:
+            if isinstance(cname, tuple):
+                for comp in self._collapsed_cgraph.node[cname]['local_comps']:
+                    self._run_comp(comp, ffd_order, case_id, iterbase)
+            else:
+                self._run_comp(getattr(scope, cname), ffd_order, case_id, iterbase)
+
+        self._iterator = None
+
+    def _serial_run(self, ffd_order=0, case_id=''):
+        """ Run the Components in this Workflow in serial. """
 
         self._stop = False
         self._iterator = self.__iter__()
@@ -98,15 +131,10 @@ class Workflow(object):
         iterbase = self._iterbase(case_id)
 
         for comp in self._iterator:
-            if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order, case_id=case_id)
-            else:
-                self._comp_count += 1
-                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-                comp.run(ffd_order=ffd_order, case_id=case_id)
-            if self._stop:
-                raise RunStopped('Stop requested')
+            self._run_comp(comp, ffd_order, case_id, iterbase)
         self._iterator = None
+
+    run = _serial_run
 
     def _iterbase(self, case_id):
         """ Return base for 'iteration coordinates'. """
@@ -156,6 +184,7 @@ class Workflow(object):
         (dependencies, etc.) has changed.
         """
         self._wf_graph = None
+        self._wf_comp_graph = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
@@ -191,19 +220,181 @@ class Workflow(object):
                                       self.get_names(full=True))
         return self.wf_graph
 
+    def get_comp_graph(self):
+        """Returns the subgraph of the component graph that contains
+        the components in this workflow.
+        """
+        if self._wf_comp_graph is None:
+            cgraph = self.scope._depgraph.component_graph()
+            self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
+        return self._wf_comp_graph
+
     ## MPI stuff ##
 
     def setup_sizes(self):
         for comp in self:
             comp.setup_sizes()
 
+    # def setup_communicators(self):
+    #     """Allocate communicators from here down to all of our
+    #     child Components.
+    #     """
+    #     comm = self.mpi.comm
+
+    #     for comp in self:
+    #         comp.mpi.comm = comm
+    #         comp.setup_communicators()
+
     def setup_communicators(self):
         """Allocate communicators from here down to all of our
-        child Components.
+        child Components.  Creates a graph of subworkflows,
+        where groups of components to be run in parallel will be
+        replaced with a ParallelWorkflow.
         """
+        # algorithm: 
+        # break the full workflow subgraph down into a serial wflow
+        # of parallel chunks by starting with the set of nodes with
+        # in degree of 0 and put them in a parallel wflow. Then collapse
+        # those into a single node and create a new prallel wflow of 
+        # the set of successors (if more than 1).
+
+        # at the serial workflow level, all components use all of the
+        # available processors, while in a parallel workflow, available
+        # processors are shared between the components in the workflow.
+        
+        # change our run function to allow for parallel execution
+        self.run = self._mixed_run
+
+        scope = self.scope
         comm = self.mpi.comm
 
-        for comp in self:
-            comp.mpi.comm = comm
-            comp.setup_communicators()
+        # first, get the component subgraph that is limited to 
+        # the components in this workflow.
+        cgraph = self.get_comp_graph().copy()
+
+        remaining = set(cgraph.nodes_iter())
+
+        # start with nodes having in degree of 0
+        nodes = [n for n in cgraph.nodes_iter() 
+                            if cgraph.in_degree(n)==0]   
+
+        assert len(nodes) > 0
+
+        while remaining:
+            remaining.difference_update(nodes)
+            newnodes = set()
+            for node in nodes:
+                newnodes.update(cgraph.successors_iter(node))
+            if len(nodes) > 1:
+                _collapse(cgraph, nodes)
+            nodes = newnodes
+
+        # now we have a collapsed graph with the parallel
+        # comps collapsed into single nodes with tuple names
+        self._collapsed_cgraph = cgraph
+        self._sorted_comps = topological_sort(cgraph)
+
+        for node in self._sorted_comps:
+            if isinstance(node, tuple):
+                # it's a parallel group, so divide up the processors
+                self._setup_parallel_comms(node)
+            else: # it's serial, so give all processors to this comp
+                getattr(scope, node).mpi.comm = comm
+
+    def _setup_parallel_comms(self, nodes):
+        local_comps = []
+
+        scope = self.scope
+        cgraph = self._collapsed_cgraph
+        comm = self.mpi.comm
+
+        size = comm.size
+        child_comps = [getattr(scope, n) for n in nodes]
+        
+        cpus = [c.get_cpu_range() for c in child_comps]
+        requested_procs = [c[0] for c in cpus]
+        assigned_procs = [0 for c in cpus]
+        max_procs = [c[1] for c in cpus]
+
+        # if get_max_cpus() returns None, it means that comp can use
+        # as many cpus as we can give it
+        if None in max_procs:
+            max_usable = size
+        else:
+            max_usable = sum(max_procs)
+
+        assigned = 0 #sum(assigned_procs)
+        #unassigned = size - assigned
+        # if unassigned < 0:
+        #     raise RuntimeError("Allocated CPUs is short by %d" % -unassigned)
+
+        requested = sum(requested_procs)
+        limit = min(size, requested)
+
+        # first, just use simple round robin assignment of requested CPUs
+        # until everybody has what they asked for or we run out
+        while assigned < limit:
+            for i, comp in enumerate(child_comps):
+                if requested_procs[i] == 0: # skip and deal with these later
+                    continue
+                if assigned_procs[i] < requested_procs[i]:
+                    assigned_procs[i] += 1
+                    assigned += 1
+                    if assigned == limit:
+                        break
+
+        # now, if we have any procs left after assigning all the requested 
+        # ones, allocate any remaining ones to any comp that can use them
+        limit = size # min(size, max_usable)
+        while assigned < limit:
+            for i, comp in enumerate(child_comps):
+                if requested_procs[i] == 0: # skip and deal with these later
+                    continue
+                if max_procs[i] is None or assigned_procs[i] < max_procs[i]:
+                    assigned_procs[i] += 1
+                    assigned += 1
+                    if assigned == limit:
+                        break
+
+        color = []
+        for i, assigned in enumerate([p for p in assigned_procs if p != 0]):
+            color.extend([i]*assigned)
+
+        # if max_usable < size:
+        #     color.extend([MPI.UNDEFINED]*(size-max_usable))
+
+        rank = self.mpi.comm.rank
+        sub_comm = comm.Split(color[rank])
+
+        rank_color = color[rank]
+        for i,c in enumerate(child_comps):
+            if i == rank_color:
+                c.mpi.comm = sub_comm
+                c.mpi.cpus = assigned_procs[i]
+                self.local_comps.append(c)
+            elif assigned_procs[i] == 0:  # comp is duplicated everywhere
+                c.mpi.comm = sub_comm  # TODO: make sure this is the right comm
+                self.local_comps.append(c)
+
+        for comp in local_comps:
+            if hasattr(c, 'setup_communicators'):
+                c.setup_communicators()
+
+        # store local_comps in the graph for later use during run()
+        cgraph.node[nodes]['local_comps'] = local_comps
+
+
+def _collapse(g, nodes):
+    """Collapse the named nodes in g into a single node
+    with a name that is a tuple of nodes.
+    """
+    # combine node names into a single tuple
+    newname = tuple(nodes)
+    g.add_node(newname)
+    for node in nodes:
+        for u,v in g.edges(node):
+            g.add_edge(newname, v)
+        g.remove_node(node)
+
+    
 
