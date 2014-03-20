@@ -13,6 +13,10 @@ try:
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array, identity, random
 
+from openmdao.lib.architectures.api import MDF
+from openmdao.lib.optproblems.api import UnitScalableProblem
+from openmdao.lib.optproblems.scalable import Discipline_No_Deriv
+
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
@@ -3350,7 +3354,25 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
         self.assertEqual(len(edges), 3)
+        
+    def test_PA_subvar_solver_edges(self):
 
+        # Note, this test documents a bug where the pseudoassembly didn't
+        # correctly identify its solver edges because they were subvars,
+        # resulting in an exception. The test runs to assure there is no
+        # exception.
+        
+        sp = UnitScalableProblem()
+        sp.architecture = MDF()
+        
+        # Remove the derivatives from the comps
+        sp.replace('d0', Discipline_No_Deriv(sp.prob_size))
+        sp.replace('d1', Discipline_No_Deriv(sp.prob_size))
+        sp.replace('d2', Discipline_No_Deriv(sp.prob_size))
+            
+        # Make sure it runs.
+        sp.run()
+        
 if __name__ == '__main__':
     import nose
     import sys

@@ -1396,7 +1396,8 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         if has_interface(comp, IDriver):
             # Solvers are absorbed into the top graph
             if has_interface(comp, ISolver):
-                dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+                dg = comp.workflow.derivative_graph(inputs=inputs, 
+                                                    outputs=outputs,
                                                     group_nondif=False)
                 xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
                 xtra_outputs.update(flatten_list_of_iters(dg.graph['outputs']))
@@ -1540,7 +1541,7 @@ def _check_for_missing_derivs(scope, comps):
 
     return remove
 
-def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
+def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=True):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
@@ -1737,27 +1738,30 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             # if we have an input source basevar that has multiple inputs (subvars)
             # then we have to create fake subvars at the destination to store
             # derivative related metadata
-            for sub in subs:
-                preds = graph.predecessors(sub)
-                newsrc = None
-                for p in preds:
-                    if graph.base_var(sub) != p:
-                        newsrc = p
-                        break
-                if newsrc is None:
-                    continue
-                new_target = sub.replace(src, dest, 1)
-                if new_target not in graph:
-                    graph.add_subvar(new_target)
-
-                if dest in graph.edge[src]:
-                    graph.add_edge(newsrc, new_target,
-                                                  attr_dict=graph.edge[src][dest])
-                else:
-                    graph.add_edge(newsrc, new_target)
-
-            to_remove.add((src, dest))
-
+            #
+            # Don't forward any input source vars if we are recursing a solver.
+            if group_nondiff and 'solver_state' not in graph.node[src]:
+                for sub in subs:
+                    preds = graph.predecessors(sub)
+                    newsrc = None
+                    for p in preds:
+                        if graph.base_var(sub) != p:
+                            newsrc = p
+                            break
+                    if newsrc is None:
+                        continue
+                    new_target = sub.replace(src, dest, 1)
+                    if new_target not in graph:
+                        graph.add_subvar(new_target)
+    
+                    if dest in graph.edge[src]:
+                        graph.add_edge(newsrc, new_target,
+                                       attr_dict=graph.edge[src][dest])
+                    else:
+                        graph.add_edge(newsrc, new_target)
+    
+                to_remove.add((src, dest))
+    
         else:
             base = graph.base_var(src)
             if is_boundary_node(graph, base):

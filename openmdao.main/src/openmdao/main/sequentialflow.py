@@ -712,7 +712,7 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd)
+            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd, group_nondif)
 
             if group_nondif:
                 self._derivative_graph = dgraph
@@ -1056,7 +1056,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-        #print 'edges:', self._edges
+        print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 
