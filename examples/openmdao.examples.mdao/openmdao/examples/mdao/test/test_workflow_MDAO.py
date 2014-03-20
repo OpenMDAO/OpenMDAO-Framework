@@ -5,6 +5,8 @@ Test run/step/stop aspects of a simple workflow.
 import os
 import unittest
 
+from numpy import array
+
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
 from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
@@ -13,7 +15,7 @@ from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 from openmdao.main.api import Assembly, Component, set_as_top
 import openmdao.main.pseudocomp as pcompmod
 from openmdao.lib.drivers.api import CONMINdriver, SLSQPdriver
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.lib.optproblems import sellar
 
 from openmdao.util.testutil import assert_rel_error
@@ -319,7 +321,7 @@ class TestCase(unittest.TestCase):
 
 
 class TestCon(Component):
-    """ test con constraint """    
+    """ test con constraint """
     x1 = Float(default_value=0,
               iotype='in', desc='test x')
     g1 = Float(iotype='out', desc='test g')
@@ -327,7 +329,7 @@ class TestCon(Component):
         self.g1 = self.x1
 
 class SolverCO(Assembly):
-    """ sovlver using assmebly """
+    """ solver using assmebly """
 
     x = Float(default_value=0,
               iotype='in', desc='test x')
@@ -354,6 +356,14 @@ class SolverCO(Assembly):
         self.testdrv.add_constraint('con.g1>=0')
 
 
+class SolverCO(Assembly):
+    x = Array(default_value=[0.0, 0.0], iotype='in', desc='test x')
+    def configure(self):
+        self.add('driver', SLSQPdriver())
+        self.driver.gradient_options.force_fd = True
+        self.driver.add_parameter('x', low=array([-10, -10]), high=array([10, 10]))
+        self.driver.add_objective('(x[0]-1)**2 + (x[1]-1)**2')
+
 class TestSubOptInclusion(unittest.TestCase):
 
     def setUp(self):
@@ -362,10 +372,19 @@ class TestSubOptInclusion(unittest.TestCase):
     def test_basic_CO(self):
         # Our CO model failed if our submodels didn't have outputs in the graph. This
         # test covers the fix.
-        
+
         sim = set_as_top(SolverCO())
         sim.run()
-        
+
+    def test_SolverCO(self):
+        # Fix for a bug reported on the forum
+        sim = set_as_top(SolverCO())
+        sim.driver.workflow.run()
+        J = sim.driver.workflow.calc_gradient()
+
+        assert_rel_error(self, J[0, 0], -2.0, .001)
+        assert_rel_error(self, J[0, 1], -2.0, .001)
+
 if __name__ == '__main__':
     import nose
     import sys
