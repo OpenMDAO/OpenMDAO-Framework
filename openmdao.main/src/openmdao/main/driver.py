@@ -100,6 +100,8 @@ class Driver(Component):
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
 
+        self._evaluators = {}  # Used to evaluate variables to e recorded.
+
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
         if newwf is not None:
@@ -500,10 +502,18 @@ class Driver(Component):
                     iotype = self.parent.get_metadata(var, 'iotype')
                     iotypes[var] = iotype
                 if iotype == 'in':
-                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    evaluator = self._evaluators.get(var)
+                    if evaluator is None:
+                        evaluator = ExprEvaluator(var, scope=self.parent)
+                        self._evaluators[var] = evaluator
+                    val = evaluator.evaluate()
                     case_input.append([var, val])
                 elif iotype == 'out':
-                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    evaluator = self._evaluators.get(var)
+                    if evaluator is None:
+                        evaluator = ExprEvaluator(var, scope=self.parent)
+                        self._evaluators[var] = evaluator
+                    val = evaluator.evaluate()
                     case_output.append([var, val])
                 else:
                     msg = "%s is not an input or output" % var
