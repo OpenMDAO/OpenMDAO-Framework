@@ -23,7 +23,8 @@ from openmdao.main.depgraph import find_related_pseudos, \
                                     find_all_connecting
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict, list_deriv_vars
+from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
+                                flatten_list_of_iters
 
 try:
     from numpy import ndarray, zeros
@@ -903,7 +904,8 @@ class SequentialWorkflow(Workflow):
                     for state in state_tuple:
                         if state not in dgraph:
                             for pcomp in pa_comps:
-                                if state in pcomp.inputs:
+                                flat_inputs = flatten_list_of_iters(pcomp.inputs)
+                                if state in flat_inputs:
                                     value_target.append(to_PA_var(state,
                                                                   pcomp.name))
                                     break
