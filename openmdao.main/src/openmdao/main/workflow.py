@@ -5,9 +5,7 @@ from networkx import topological_sort
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
-from openmdao.main.mpiwrap import MPI_info
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 
 __all__ = ['Workflow']
 
@@ -247,16 +245,15 @@ class Workflow(object):
 
     def setup_communicators(self):
         """Allocate communicators from here down to all of our
-        child Components.  Creates a graph of subworkflows,
-        where groups of components to be run in parallel will be
-        replaced with a ParallelWorkflow.
+        child Components.
         """
         # algorithm: 
         # break the full workflow subgraph down into a serial wflow
         # of parallel chunks by starting with the set of nodes with
         # in degree of 0 and put them in a parallel wflow. Then collapse
         # those into a single node and create a new prallel wflow of 
-        # the set of successors (if more than 1).
+        # the set of successors that are only dependent on the nodes
+        # already visited.
 
         # at the serial workflow level, all components use all of the
         # available processors, while in a parallel workflow, available
@@ -281,13 +278,14 @@ class Workflow(object):
         assert len(nodes) > 0
 
         while remaining:
-            remaining.difference_update(nodes)
             newnodes = set()
             for node in nodes:
                 newnodes.update(cgraph.successors_iter(node))
             if len(nodes) > 1:
                 _collapse(cgraph, nodes)
-            nodes = newnodes
+            remaining.difference_update(nodes)
+            nodes = [n for n in newnodes 
+                      if not set(cgraph.predecessors(n)).intersection(remaining)]
 
         # now we have a collapsed graph with the parallel
         # comps collapsed into single nodes with tuple names
@@ -302,6 +300,7 @@ class Workflow(object):
                 getattr(scope, node).mpi.comm = comm
 
     def _setup_parallel_comms(self, nodes):
+        mpiprint("_setup_parallel_comms: %s" % list(nodes))
         local_comps = []
 
         scope = self.scope
@@ -314,14 +313,14 @@ class Workflow(object):
         cpus = [c.get_cpu_range() for c in child_comps]
         requested_procs = [c[0] for c in cpus]
         assigned_procs = [0 for c in cpus]
-        max_procs = [c[1] for c in cpus]
+        #max_procs = [c[1] for c in cpus]
 
-        # if get_max_cpus() returns None, it means that comp can use
-        # as many cpus as we can give it
-        if None in max_procs:
-            max_usable = size
-        else:
-            max_usable = sum(max_procs)
+        # # if get_max_cpus() returns None, it means that comp can use
+        # # as many cpus as we can give it
+        # if None in max_procs:
+        #     max_usable = size
+        # else:
+        #     max_usable = sum(max_procs)
 
         assigned = 0 #sum(assigned_procs)
         #unassigned = size - assigned
@@ -331,9 +330,11 @@ class Workflow(object):
         requested = sum(requested_procs)
         limit = min(size, requested)
 
+        mpiprint("requested = %d" % requested)
         # first, just use simple round robin assignment of requested CPUs
         # until everybody has what they asked for or we run out
         while assigned < limit:
+            mpiprint("assigned, limit = %d, %d" % (assigned, limit))
             for i, comp in enumerate(child_comps):
                 if requested_procs[i] == 0: # skip and deal with these later
                     continue
@@ -343,38 +344,46 @@ class Workflow(object):
                     if assigned == limit:
                         break
 
-        # now, if we have any procs left after assigning all the requested 
-        # ones, allocate any remaining ones to any comp that can use them
-        limit = size # min(size, max_usable)
-        while assigned < limit:
-            for i, comp in enumerate(child_comps):
-                if requested_procs[i] == 0: # skip and deal with these later
-                    continue
-                if max_procs[i] is None or assigned_procs[i] < max_procs[i]:
+        if requested:
+            # now, if we have any procs left after assigning all the requested 
+            # ones, allocate any remaining ones to any comp that can use them
+            limit = size # min(size, max_usable)
+            while assigned < limit:
+                mpiprint("assigned, limit = %d, %d" % (assigned, limit))
+                for i, comp in enumerate(child_comps):
+                    if requested_procs[i] == 0: # skip and deal with these later
+                        continue
+                    #if assigned_procs[i] < max_procs[i] or max_procs[i] is None:
                     assigned_procs[i] += 1
                     assigned += 1
                     if assigned == limit:
                         break
 
         color = []
-        for i, assigned in enumerate([p for p in assigned_procs if p != 0]):
-            color.extend([i]*assigned)
+        for i, procs in enumerate([p for p in assigned_procs if p != 0]):
+            color.extend([i]*procs)
 
-        # if max_usable < size:
-        #     color.extend([MPI.UNDEFINED]*(size-max_usable))
+        if size > assigned:
+            color.extend([MPI.UNDEFINED]*(size-assigned))
 
         rank = self.mpi.comm.rank
+        mpiprint("splitting")
         sub_comm = comm.Split(color[rank])
+
+        if sub_comm == MPI.COMM_NULL:
+            mpiprint("null comm")
+        else:
+            mpiprint("subcomm size = %d" % sub_comm.size)
 
         rank_color = color[rank]
         for i,c in enumerate(child_comps):
             if i == rank_color:
                 c.mpi.comm = sub_comm
                 c.mpi.cpus = assigned_procs[i]
-                self.local_comps.append(c)
+                local_comps.append(c)
             elif assigned_procs[i] == 0:  # comp is duplicated everywhere
                 c.mpi.comm = sub_comm  # TODO: make sure this is the right comm
-                self.local_comps.append(c)
+                local_comps.append(c)
 
         for comp in local_comps:
             if hasattr(c, 'setup_communicators'):
@@ -396,5 +405,30 @@ def _collapse(g, nodes):
             g.add_edge(newname, v)
         g.remove_node(node)
 
-    
+def get_branch(g, node, visited=None):
+    """Return the full set of nodes that branch *exclusively*
+    from the given node.
+    """
+    if visited is None:
+        visited = set()
+    visited.add(node)
+    branch = []
+    for succ in g.successors(node):
+        preds = g.predecessors(succ)
+        for p in preds:
+            if p not in visited:
+                break
+        else:
+            branch.append(succ)
+            branch.extend(get_branch(g, succ, visited))
+    return branch
 
+
+# import networkx
+# g = networkx.DiGraph()
+# g.add_edges_from([(1,2),(2,3),(2,4),(4,5),(3,5),(3,6),(5,7),(6,7),
+#                   (7,8),(9,10),(10,11),(11,12),(11,13),(12,14),(13,14),(14,8)])
+# print "branch 1 = %s" % get_branch(g, 1)
+# print "branch 9 = %s" % get_branch(g, 9)
+# print "branch 3 = %s" % get_branch(g, 3)
+# print "branch 11 = %s" % get_branch(g, 11)
