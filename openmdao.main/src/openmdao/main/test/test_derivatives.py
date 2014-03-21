@@ -13,7 +13,7 @@ try:
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array, identity, random
 
-from openmdao.lib.architectures.api import MDF
+from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
 from openmdao.lib.optproblems.scalable import Discipline_No_Deriv
 
@@ -3354,25 +3354,58 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
         self.assertEqual(len(edges), 3)
-        
+
     def test_PA_subvar_solver_edges(self):
 
         # Note, this test documents a bug where the pseudoassembly didn't
         # correctly identify its solver edges because they were subvars,
         # resulting in an exception. The test runs to assure there is no
         # exception.
-        
+
         sp = UnitScalableProblem()
         sp.architecture = MDF()
-        
-        # Remove the derivatives from the comps
-        sp.replace('d0', Discipline_No_Deriv(sp.prob_size))
-        sp.replace('d1', Discipline_No_Deriv(sp.prob_size))
-        sp.replace('d2', Discipline_No_Deriv(sp.prob_size))
-            
+
         # Make sure it runs.
         sp.run()
-        
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
+    def test_PA_subvar_driver_edges(self):
+
+        # Ther was a keyerror here too, resulting from a basevar node
+        # that gor removed somehow on the recursed optimizer graph.
+
+        sp = UnitScalableProblem()
+        sp.architecture = CO()
+        sp.check_config()
+
+        # Don't run it forever
+        sp.driver.maxiter = 1
+        sp.local_opt_d0.maxiter = 1
+        sp.local_opt_d1.maxiter = 1
+
+        # Make sure it runs.
+        sp.run()
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
+
 if __name__ == '__main__':
     import nose
     import sys

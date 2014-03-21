@@ -1396,7 +1396,7 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         if has_interface(comp, IDriver):
             # Solvers are absorbed into the top graph
             if has_interface(comp, ISolver):
-                dg = comp.workflow.derivative_graph(inputs=inputs, 
+                dg = comp.workflow.derivative_graph(inputs=inputs,
                                                     outputs=outputs,
                                                     group_nondif=False)
                 xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
@@ -1434,6 +1434,11 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             for param in sub_param_inputs:
                 graph.add_edge(pa_name, param)
                 graph.node[param]['iotype'] = 'out'
+                if is_subvar_node(graph, param):
+                    base_param = graph.base_var(param)
+                    graph.add_edge(pa_name, base_param)
+                    graph.add_edge(base_param, param)
+                    graph.node[base_param]['iotype'] = 'out'
 
         for pa in pa_list:
             pa.clean_graph(startgraph, graph, using)
@@ -1721,7 +1726,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
                 to_remove.add((src, dest))
             continue
 
-        if is_input_node(graph, src):
+        # Note: don't forward any input source vars that come from subsolvers solver.
+        if is_input_node(graph, src) and 'solver_state' not in graph.node[src]:
 
             if is_basevar_node(graph, src):
                 subs = graph._all_child_vars(src, direction='in')
@@ -1738,9 +1744,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
             # if we have an input source basevar that has multiple inputs (subvars)
             # then we have to create fake subvars at the destination to store
             # derivative related metadata
-            #
-            # Don't forward any input source vars if we are recursing a solver.
-            if group_nondiff and 'solver_state' not in graph.node[src]:
+            if group_nondiff:
+                added_edge = False
                 for sub in subs:
                     preds = graph.predecessors(sub)
                     newsrc = None
@@ -1753,15 +1758,19 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
                     new_target = sub.replace(src, dest, 1)
                     if new_target not in graph:
                         graph.add_subvar(new_target)
-    
+                        added_edge = True
+
                     if dest in graph.edge[src]:
                         graph.add_edge(newsrc, new_target,
                                        attr_dict=graph.edge[src][dest])
+                        added_edge = True
                     else:
                         graph.add_edge(newsrc, new_target)
-    
-                to_remove.add((src, dest))
-    
+                        added_edge = True
+
+                if added_edge:
+                    to_remove.add((src, dest))
+
         else:
             base = graph.base_var(src)
             if is_boundary_node(graph, base):
@@ -1775,7 +1784,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
-
     return graph
 
 def _explode_vartrees(graph, scope):

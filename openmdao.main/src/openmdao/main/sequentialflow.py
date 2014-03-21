@@ -234,7 +234,7 @@ class SequentialWorkflow(Workflow):
         implicit_edges = self.get_implicit_info()
         sortedkeys = sorted(implicit_edges)
         sortedkeys.extend(sorted(edges.keys()))
-
+        flat_edge_keys = flatten_list_of_iters(edges.keys())
         nEdge = 0
         for src in sortedkeys:
 
@@ -338,6 +338,11 @@ class SequentialWorkflow(Workflow):
                                                 name='ix')
                     bound = (istring, ix)
                     # Already allocated
+                    width = 0
+
+                # This happens for subdriver states that are array connections.
+                elif '[' in src and src in basevars:
+                    bound = self.get_bounds(src)
                     width = 0
 
                 # Input-input connection to implicit state
@@ -1056,7 +1061,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-        print 'edges:', self._edges
+        #print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 
