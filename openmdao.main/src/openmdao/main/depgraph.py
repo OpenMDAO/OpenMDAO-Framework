@@ -1434,6 +1434,8 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             for param in sub_param_inputs:
                 graph.add_edge(pa_name, param)
                 graph.node[param]['iotype'] = 'out'
+
+                # Also gotta reverse basevar connectionss if we are sub
                 if is_subvar_node(graph, param):
                     base_param = graph.base_var(param)
                     graph.add_edge(pa_name, base_param)
@@ -1726,7 +1728,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
                 to_remove.add((src, dest))
             continue
 
-        # Note: don't forward any input source vars that come from subsolvers solver.
+        # Note: don't forward any input source vars that come from subsolvers
+        # states.
         if is_input_node(graph, src) and 'solver_state' not in graph.node[src]:
 
             if is_basevar_node(graph, src):
@@ -1768,6 +1771,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
                         graph.add_edge(newsrc, new_target)
                         added_edge = True
 
+                # If we don't add replacement edges, then don't dare to
+                # remove any
                 if added_edge:
                     to_remove.add((src, dest))
 

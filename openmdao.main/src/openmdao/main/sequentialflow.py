@@ -7,6 +7,7 @@ import sys
 from math import isnan
 from StringIO import StringIO
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
                                         flatten_slice, is_differentiable_val
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
@@ -234,7 +235,7 @@ class SequentialWorkflow(Workflow):
         implicit_edges = self.get_implicit_info()
         sortedkeys = sorted(implicit_edges)
         sortedkeys.extend(sorted(edges.keys()))
-        flat_edge_keys = flatten_list_of_iters(edges.keys())
+
         nEdge = 0
         for src in sortedkeys:
 
@@ -461,6 +462,7 @@ class SequentialWorkflow(Workflow):
         return i1
 
     def mimic(self, src):
+        '''Mimic capability'''
         self.clear()
         par = self._parent.parent
         if par is not None:
@@ -717,7 +719,8 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd, group_nondif)
+            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd,
+                                    group_nondif)
 
             if group_nondif:
                 self._derivative_graph = dgraph
@@ -725,8 +728,10 @@ class SequentialWorkflow(Workflow):
             else:
                 # we're being called to determine the deriv graph
                 # for a subsolver, so get rid of @in and @out nodes
-                dgraph.remove_nodes_from(['@in%d' % i for i in range(len(inputs))])
-                dgraph.remove_nodes_from(['@out%d' % i for i in range(len(outputs))])
+                dgraph.remove_nodes_from(['@in%d' % i \
+                                          for i in range(len(inputs))])
+                dgraph.remove_nodes_from(['@out%d' % i \
+                                          for i in range(len(outputs))])
                 dgraph.graph['inputs'] = inputs[:]
                 dgraph.graph['outputs'] = outputs[:]
                 return dgraph
