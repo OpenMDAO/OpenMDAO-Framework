@@ -3362,7 +3362,7 @@ class TestMultiDriver(unittest.TestCase):
         # resulting in an exception. The test runs to assure there is no
         # exception.
 
-        sp = UnitScalableProblem()
+        sp = set_as_top(UnitScalableProblem())
         sp.architecture = MDF()
 
         # Make sure it runs.
@@ -3383,7 +3383,7 @@ class TestMultiDriver(unittest.TestCase):
         # Ther was a keyerror here too, resulting from a basevar node
         # that gor removed somehow on the recursed optimizer graph.
 
-        sp = UnitScalableProblem()
+        sp = set_as_top(UnitScalableProblem())
         sp.architecture = CO()
         sp.check_config()
 
