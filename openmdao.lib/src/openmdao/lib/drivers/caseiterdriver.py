@@ -86,7 +86,7 @@ class CaseIterDriverBase(Driver):
         self._server_cases = {}
         self._exceptions = {}
         self._load_failures = {}
- 
+
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
         self._generation = 0  # Used to keep worker names unique.
@@ -212,7 +212,7 @@ class CaseIterDriverBase(Driver):
 
         self._iter = self.get_case_iterator()
         self._seqno = 0
-        
+
     def get_case_iterator(self):
         """Returns a new iterator over the Case set."""
         raise NotImplementedError('get_case_iterator')
@@ -539,7 +539,7 @@ class CaseIterDriverBase(Driver):
                 self._logger.debug('    run next case')
                 self._seqno += 1
                 in_use = self._run_case(case, self._seqno, server)
-                
+
         return in_use
 
     def _run_case(self, case, seqno, server, rerun=False):
@@ -556,18 +556,22 @@ class CaseIterDriverBase(Driver):
         # before they are in the server list.
         for printvar in self.printvars:
 
-            if  '*' in printvar:
+            if '*' in printvar:
                 printvars = self._get_all_varpaths(printvar)
             else:
                 printvars = [printvar]
 
             for var in printvars:
-                val = ExprEvaluator(var, scope=self.parent).evaluate()
+                evaluator = self._evaluators.get(var)
+                if evaluator is None:
+                    evaluator = ExprEvaluator(var, scope=self.parent)
+                    self._evaluators[var] = evaluator
+                val = evaluator.evaluate()
                 case.add_output(var, val)
 
         try:
-            for event in self.get_events(): 
-                try: 
+            for event in self.get_events():
+                try:
                     self._model_set(server, event, None, True)
                 except Exception as exc:
                     msg = 'Exception setting %r: %s' % (event, exc)
@@ -597,7 +601,7 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append((case, seqno))
         else:
-            
+
             for recorder in self.recorders:
                 recorder.record(case)
 
@@ -776,9 +780,9 @@ class CaseIteratorDriver(CaseIteratorDriverBase):
 
     iterator = Slot(ICaseIterator,
                       desc='Iterator supplying Cases to evaluate.')
-    
+
     evaluated = Slot(ICaseIterator,
                       desc='Iterator supplying evaluated Cases.')
-    
+
     filter = Slot(ICaseFilter,
                   desc='Filter used to select cases to evaluate.')
