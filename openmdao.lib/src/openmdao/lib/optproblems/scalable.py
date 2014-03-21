@@ -12,14 +12,14 @@ from openmdao.main.datatypes.api import Float, Array
 from numpy import array, matrix, identity, zeros, ones
 
 
-class Discipline(Component):
+class Discipline_No_Deriv(Component):
     '''Single discipline for the scalable problem.'''
 
     c_y_out = Float(1.0, iotype="in",
                     desc="Coefficient for the output variables.")
 
     def __init__(self, prob_size=1):
-        super(Discipline, self).__init__()
+        super(Discipline_No_Deriv, self).__init__()
 
         self.add_trait("z", Array(zeros((prob_size, 1)), iotype="in",
                                  desc="global variables",
@@ -59,7 +59,10 @@ class Discipline(Component):
         y = matrix(self.y_in)
 
         self.y_out = array(-1.0/self.c_y_out*(Cz*z + Cx*x - Cy*y))
-        #print "running", self.name, self.y_in, self.y_out
+        #print "running", self.name, z, x, self.y_in, self.y_out
+
+class Discipline(Discipline_No_Deriv):
+    '''Add derivatives to the scalable problem.'''
 
     def provideJ(self):
         """ Calculate the Jacobian """
@@ -95,7 +98,6 @@ class Discipline(Component):
                 result['y_in'] += self.Jy.T.dot(arg['y_out'])
             if 'z' in result:
                 result['z'] -= self.Jz.T.dot(arg['y_out'])
-
 
 
 

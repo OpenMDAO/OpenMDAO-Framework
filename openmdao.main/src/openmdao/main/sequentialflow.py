@@ -7,6 +7,7 @@ import sys
 from math import isnan
 from StringIO import StringIO
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
                                         flatten_slice, is_differentiable_val
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
@@ -23,7 +24,8 @@ from openmdao.main.depgraph import find_related_pseudos, \
                                     find_all_connecting
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict, list_deriv_vars
+from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
+                                flatten_list_of_iters
 
 try:
     from numpy import ndarray, zeros
@@ -339,6 +341,11 @@ class SequentialWorkflow(Workflow):
                     # Already allocated
                     width = 0
 
+                # This happens for subdriver states that are array connections.
+                elif '[' in src and src in basevars:
+                    bound = self.get_bounds(src)
+                    width = 0
+
                 # Input-input connection to implicit state
                 elif src_noidx in basevars:
                     bound = self.get_bounds(src_noidx)
@@ -455,6 +462,7 @@ class SequentialWorkflow(Workflow):
         return i1
 
     def mimic(self, src):
+        '''Mimic capability'''
         self.clear()
         par = self._parent.parent
         if par is not None:
@@ -711,7 +719,8 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd)
+            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd,
+                                    group_nondif)
 
             if group_nondif:
                 self._derivative_graph = dgraph
@@ -719,8 +728,10 @@ class SequentialWorkflow(Workflow):
             else:
                 # we're being called to determine the deriv graph
                 # for a subsolver, so get rid of @in and @out nodes
-                dgraph.remove_nodes_from(['@in%d' % i for i in range(len(inputs))])
-                dgraph.remove_nodes_from(['@out%d' % i for i in range(len(outputs))])
+                dgraph.remove_nodes_from(['@in%d' % i \
+                                          for i in range(len(inputs))])
+                dgraph.remove_nodes_from(['@out%d' % i \
+                                          for i in range(len(outputs))])
                 dgraph.graph['inputs'] = inputs[:]
                 dgraph.graph['outputs'] = outputs[:]
                 return dgraph
@@ -905,7 +916,8 @@ class SequentialWorkflow(Workflow):
                     for state in state_tuple:
                         if state not in dgraph:
                             for pcomp in pa_comps:
-                                if state in pcomp.inputs:
+                                flat_inputs = flatten_list_of_iters(pcomp.inputs)
+                                if state in flat_inputs:
                                     value_target.append(to_PA_var(state,
                                                                   pcomp.name))
                                     break
