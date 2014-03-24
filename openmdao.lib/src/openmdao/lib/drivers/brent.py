@@ -57,19 +57,22 @@ class Brent(Driver):
             self.raise_exception('bounds (low=%s, high=%s) do not bracket a root' %
                                  (self.lower_bound, self.upper_bound))
 
-        kwargs = {'maxiter':self.maxiter, 'a':self.lower_bound, 'b':self.upper_bound}
+        kwargs = {'maxiter':self.maxiter, 'a':self.lower_bound, 'b':self.upper_bound,
+                  'full_output': True}
         if self.xtol > 0:
             kwargs['xtol'] = self.xtol
         if self.rtol > 0:
             kwargs['rtol'] = self.rtol
 
         # Brent's method
-        xstar = brentq(self._eval, **kwargs)
-
-        # set result
-        #param.set(xstar)
+        xstar, r = brentq(self._eval, **kwargs)
+        print 'iterations:', r.iterations
+        
+        # Propagate solution back into the model
         self.xstar = xstar
-
+        self._param.set(xstar)
+        self.run_iteration()
+        self.record_case()
 
     def check_config(self):
         params = self.get_parameters().values()
