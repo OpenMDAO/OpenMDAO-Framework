@@ -10,8 +10,6 @@ from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
-from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class NTimes(Driver):
@@ -75,7 +73,6 @@ def _get_model1():
     return top
 
 if __name__ == '__main__':
-    from mpi4py import MPI
     from openmdao.main.mpiwrap import MPI_run
 
     top = _get_model1()

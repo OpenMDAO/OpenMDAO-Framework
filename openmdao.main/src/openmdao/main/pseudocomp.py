@@ -350,3 +350,6 @@ class PseudoComponent(object):
             names.append(('.'.join((cname, name)), size))
         
         return names
+
+    def get_cpu_range(self):
+        return (0, 0)
