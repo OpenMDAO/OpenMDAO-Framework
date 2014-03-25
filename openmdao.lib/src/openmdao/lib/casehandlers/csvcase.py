@@ -320,8 +320,6 @@ class CSVCaseRecorder(object):
             raise RuntimeError('Attempt to record on closed recorder')
 
         if self._write_headers or self._header_size == 0:
-            # add header when run component again in order to distinguish
-            # different runs
 
             headers = ['timestamp', 'label', '/INPUTS']
 
@@ -378,7 +376,6 @@ class CSVCaseRecorder(object):
             else:
                 backup_name = '%s_%s' % (self.filename, timestamp)
                 globname = self.filename
-            # avoiding error when appending mode and file has been earased
             if os.path.isfile(self.filename):
                 shutil.copyfile(self.filename, backup_name)
 
