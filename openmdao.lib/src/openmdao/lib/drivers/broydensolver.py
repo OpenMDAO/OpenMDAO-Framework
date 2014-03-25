@@ -150,6 +150,7 @@ class BroydenSolver(Driver):
             self.record_case()
 
             # successful termination if independents are below tolerance
+            #print "iter", n, norm(self.F)
             if norm(self.F) < self.tol:
                 return
 
