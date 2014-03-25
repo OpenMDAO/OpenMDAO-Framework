@@ -90,7 +90,10 @@ class PassthroughProperty(Variable):
     def set(self, obj, name, value):
         if obj not in self._vals:
             self._vals[obj] = {}
-        self._vals[obj][name] = self._trait.validate(obj, name, value)
+        old = self.get(obj, name)
+        if value != old:
+            self._vals[obj][name] = self._trait.validate(obj, name, value)
+            obj.trait_property_changed(name, old, value)
 
 
 def _find_common_interface(obj1, obj2):
