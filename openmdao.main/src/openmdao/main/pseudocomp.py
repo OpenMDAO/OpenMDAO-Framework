@@ -6,7 +6,8 @@ from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.numpy_fallback import array, ndarray, hstack, zeros
+from openmdao.main.numpy_fallback import zeros
+from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
@@ -94,6 +95,7 @@ class PseudoComponent(object):
         self._orig_src = srcexpr.text
         self._orig_dest = destexpr.text
         self.Jsize = None
+        self.mpi = MPI_info()
 
         varmap = {}
         rvarmap = {}

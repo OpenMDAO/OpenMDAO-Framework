@@ -1,12 +1,6 @@
 import os
 
-import pprint
-
 from openmdao.main.interfaces import obj_has_interface, IAssembly
-
-# a mapping of every component in the system to it's rank in 
-# MPI.COMM_WORLD
-#rank_map = {}
 
 def under_mpirun():
     """Return True if we're being executed under mpirun."""
@@ -14,7 +8,9 @@ def under_mpirun():
     # no consistent set of environment vars between MPI implementations
     for name in os.environ.keys():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
+            print "running under mpirun"
             return True
+    print "NOT running under mpirun"
     return False
 
 if under_mpirun():
@@ -22,17 +18,6 @@ if under_mpirun():
     from petsc4py import PETSc
 
     COMM_NULL = MPI.COMM_NULL
-
-    # def is_active(obj):
-    #     """Return True if the given object is active in the current
-    #     process.
-    #     """
-    #     global rank_map
-
-    #     comm = obj.communicator
-    #     if comm == COMM_NULL:
-    #         return False
-    #     return MPI.COMM_WORLD.rank in rank_map[obj.get_pathname()]
 
     def MPI_run(top):
         """Run a parallel version of the top object. comp_map
@@ -45,15 +30,12 @@ if under_mpirun():
         return PETSc.Vec().createWithArray(arr, comm=comm) 
 
     def mpiprint(msg):
-        print "(%d) %s" % (MPI.COMM_WORLD.rank, msg)
+        print "{%d} %s" % (MPI.COMM_WORLD.rank, msg)
 else:
     MPI = None
     PETSc = None
     COMM_NULL = None
     
-    # def is_active(obj):
-    #     return True
-
     def MPI_run(top):
         return top.run()
 
@@ -75,7 +57,6 @@ class MPI_info(object):
       
 def _setup_mpi(obj):
     """This is called on the top Assembly in the hierarchy."""
-    #global rank_map
 
     if not obj_has_interface(obj, IAssembly):
         raise RuntimeError("object passed to setup_mpi does not have "
@@ -85,8 +66,8 @@ def _setup_mpi(obj):
     obj.mpi.comm = comm
 
     obj.setup_communicators()
+
     #obj.setup_sizes()
 
     #self.setup_vectors()
     #self.setup_scatters()
-
