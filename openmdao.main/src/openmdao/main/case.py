@@ -56,7 +56,8 @@ def flatten_obj(name, obj):
     for klass in getmro(type(obj))[1:]:
         if klass in flatteners:
             return flatteners[klass](name, obj)
-    return []
+    # if cannot flatten return obj string
+    return [(name, '{%s}' % str(obj))]
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e.,
