@@ -2,7 +2,7 @@
 import ast
 from threading import RLock
 
-from openmdao.main.array_helpers import flattened_size
+from openmdao.main.array_helpers import flattened_size, get_val
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
@@ -96,6 +96,7 @@ class PseudoComponent(object):
         self._orig_dest = destexpr.text
         self.Jsize = None
         self.mpi = MPI_info()
+        self._var_sizes = {}
 
         varmap = {}
         rvarmap = {}
@@ -332,7 +333,7 @@ class PseudoComponent(object):
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
-    def calc_var_sizes(self, nameset=None):
+    def setup_sizes(self):
         """Returns a sorted vector of tuples of the form:
         (full_var_pathname, flattened_size).
         """
@@ -358,3 +359,25 @@ class PseudoComponent(object):
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
+
+    def get_float_var_size(self, name):
+        """Returns the local flattened size of the value of the 
+        named variable, if the flattened value can be expressed
+        as an array of floats.  Otherwise, None is returned.
+        """
+        if name in self._var_sizes:
+            return self._var_sizes[name]
+        else:
+            # make sure we've executed so we have inputs of the
+            # correct type
+            if self.out0 is None:
+                self.run(notify_parent=False)
+            try:
+                size = flattened_size(name, 
+                                      getattr(self, name), 
+                                      scope=self)
+            except TypeError:
+                size = None
+            self._var_sizes[name] = size
+                
+            return size

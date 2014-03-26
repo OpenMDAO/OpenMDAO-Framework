@@ -51,7 +51,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
-from openmdao.main.array_helpers import flattened_size
+from openmdao.main.array_helpers import flattened_size, get_val
 from openmdao.util.typegroups import real_types, int_types
 
 import openmdao.util.log as tracing
@@ -218,7 +218,7 @@ class Component(Container):
         self.ffd_order = 0
         self._provideJ_bounds = None
         self._case_id = ''
-        self._var_sizes = None
+        self._var_sizes = {}
 
         self._publish_vars = {}  # dict of varname to subscriber count
 
@@ -833,7 +833,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
         self._provideJ_bounds = None
-        self._var_sizes = None
+        self._var_sizes = {}
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):
@@ -2144,34 +2144,25 @@ class Component(Container):
         the given name.  NOTE: this method must be overridden
         for components that use multiple processes.
         """
-        if self.mpi.cpus:
+        if self.mpi.cpus > 1:
             self.raise_exception("flattened_size not implemented for a component that spans multiple processes.",
                                  NotImplementedError)
-        return flattened_size(name, getattr(self, name), scope=self)
-
-    def get_float_var_sizes(self):
-        """Return a dict of names keyed to variable size for 
-        for all variables that can be expressed as a flattened
-        array of floats.
-        """
-        if self._var_sizes is None:
-            self._var_sizes = {}
-            for name in self.list_vars():
-                if self.trait(name).framework_var:
-                    continue  # skip framework vars
-                try:
-                    size = self.flattened_size(name)
-                except TypeError:
-                    continue
-                self._var_sizes[name] = size
-        return self._var_sizes
+        return flattened_size(name, get_val(self, name), scope=self)
 
     def get_float_var_size(self, name):
         """Returns the local flattened size of the value of the 
         named variable, if the flattened value can be expressed
         as an array of floats.  Otherwise, None is returned.
         """
-        return self.get_float_var_sizes().get(name)
+        size = self._var_sizes.get(name, __missing__)
+        if size is __missing__:
+            try:
+                size = self.flattened_size(name)
+            except TypeError:
+                size = None
+            self._var_sizes[name] = size
+                
+        return size
 
 
         

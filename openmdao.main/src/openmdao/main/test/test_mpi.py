@@ -118,7 +118,7 @@ if __name__ == '__main__':
 
     MPI_run(top)
 
-    dump_parallel_graph(top.driver.workflow._subsystem)
+    #dump_parallel_graph(top.driver.workflow._subsystem)
 
         
 

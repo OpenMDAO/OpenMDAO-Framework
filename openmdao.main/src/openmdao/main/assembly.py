@@ -1330,6 +1330,9 @@ class Assembly(Component):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
+        # this will calculate sizes for any subassemblies
+        self.driver.setup_sizes()
+
         self.vector_vars = self.driver.get_vector_varnames()
         for cname, vnames in partition_names_by_comp(self.vector_vars.keys()).items():
             if cname is None:
@@ -1339,27 +1342,29 @@ class Assembly(Component):
             else:
                 comp = getattr(self, cname)
                 for vname in vnames:
-                    self.vector_vars['.'.join(cname, vname)]['size'] = \
+                    self.vector_vars['.'.join([cname, vname])]['size'] = \
                                             comp.get_float_var_size(vname)
+
+        comm = self.mpi.comm
 
         # create an (nproc x numvars) var size vector containing 
         # local sizes across all processes in our comm
-        self.local_var_sizes = numpy.zeros(self.size, 
-                                           len(self.vector_vars), int)
-        rank = self.comm.rank
-        for i, var in enumerate(self.vector_vars.values()):
+        self.local_var_sizes = numpy.zeros((comm.size, 
+                                           len(self.vector_vars)), int)
+        rank = comm.rank
+        for i, tup in enumerate(self.vector_vars.items()):
+            name, var = tup
             self.local_var_sizes[rank, i] = var['size']
 
         # collect local var sizes from all of the processes in our comm
-        self.comm.Allgather(self.local_var_sizes[rank,:], 
-                            self.local_var_sizes)
+        comm.Allgather(self.local_var_sizes[rank,:], 
+                       self.local_var_sizes)
 
-        # this will calculate sizes for any subassemblies
-        self.driver.setup_sizes()
+        print self.local_var_sizes
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
-        self.input_sizes = numpy.zeros(self.comm.size, int)
+        self.input_sizes = numpy.zeros(comm.size, int)
 
         #self.
         #??? do argSizes...

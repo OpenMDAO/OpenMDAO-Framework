@@ -63,8 +63,7 @@ def _setup_mpi(obj):
                            "the IAssembly interface.")
 
     obj.setup_communicators(MPI.COMM_WORLD)
-
-    #obj.setup_sizes()
+    obj.setup_sizes()
 
     #self.setup_vectors()
     #self.setup_scatters()
