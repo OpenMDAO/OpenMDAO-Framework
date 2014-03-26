@@ -6,7 +6,6 @@ from networkx import topological_sort
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
-from openmdao.main.interfaces import obj_has_interface, IComponent
 
 __all__ = ['Workflow']
 
@@ -279,11 +278,7 @@ class SerialSystem(System):
     def setup_communicators(self, comm, scope):
         self.mpi.comm = comm
         self.local_comps = []
-        #mpiprint("setting up comms for serial %s (%s)" % (self.name, id(self)))
-        # if comm != MPI.COMM_NULL:
-        #     mpiprint("size=%d" % comm.size)
-        # else:
-        #     mpiprint("null comm!")
+
         for name in topological_sort(self.graph):
             data = self.graph.node[name]
             if 'system' in data: # nested workflow
@@ -300,13 +295,15 @@ class ParallelSystem(System):
     def __init__(self, graph):
         super(ParallelSystem, self).__init__(graph)
         self.req_cpus = sum([graph.node[n]['req_cpus'] for n in graph])
-
+ 
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_comps]))
         # don't scatter unless we contain something that's actually 
         # going to run
-        if self.local_comps: 
-            pass # scatter(...)
+        if not self.local_comps:
+            return
+
+        # scatter(...)
 
         for i, comp in enumerate(self.local_comps):
             if isinstance(comp, System):
@@ -341,6 +338,7 @@ class ParallelSystem(System):
         assigned = 0
 
         requested = sum(requested_procs)
+
         limit = min(size, requested)
 
         # first, just use simple round robin assignment of requested CPUs
@@ -373,6 +371,11 @@ class ParallelSystem(System):
         mpiprint("requested_procs: %s" % requested_procs)
         mpiprint("assigned_procs: %s" % assigned_procs)
 
+        for i,comp in enumerate(child_comps):
+            if requested_procs[i] > 0 and assigned_procs[i] == 0:
+                raise RuntimeError("parallel group %s requested %d processors but got 0" %
+                                   (child_comps[i].name, requested_procs[i]))
+
         color = []
         for i, procs in enumerate([p for p in assigned_procs if p > 0]):
             color.extend([i]*procs)
@@ -380,7 +383,6 @@ class ParallelSystem(System):
         if size > assigned:
             color.extend([MPI.UNDEFINED]*(size-assigned))
 
-        #mpiprint("color=%s" % color)
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
 
@@ -392,10 +394,8 @@ class ParallelSystem(System):
         for i,c in enumerate(child_comps):
             if i == rank_color:
                 c.mpi.cpus = assigned_procs[i]
-                #mpiprint(" %s has the right color! (%d)" % (c.name, rank_color))
                 self.local_comps.append(c)
             elif requested_procs[i] == 0:  # comp is duplicated everywhere
-                #mpiprint("0 procs assigned to %s" % c.name)
                 self.local_comps.append(c)
 
         for comp in self.local_comps:
