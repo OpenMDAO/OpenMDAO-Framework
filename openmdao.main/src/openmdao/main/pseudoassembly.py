@@ -97,7 +97,10 @@ class PseudoAssembly(object):
         solver_states = []
         if fd is False:
             for comp in group:
-                solver_states.extend([node for node in dgraph.predecessors(comp)
+                
+                # Keep any node marked 'solver_state'. Note, only inputs can
+                # be solver_states.
+                solver_states.extend([node for node in dgraph.find_prefixed_nodes([comp])
                                       if 'solver_state' in dgraph.node[node]])
 
         pa_inputs = edges_to_dict(in_edges).values()
