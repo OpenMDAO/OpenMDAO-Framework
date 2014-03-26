@@ -13,8 +13,8 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
-from openmdao.lib.components.api import MetaModel, MultiObjExpectedImprovement,\
-     ParetoFilter
+from openmdao.lib.components.api import MetaModel, ParetoFilter, \
+     ConnectableParetoFilter, ConnectableMultiObjExpectedImprovement
 from openmdao.lib.drivers.api import DOEdriver, Genetic, CaseIteratorDriver, IterateUntil
 from openmdao.lib.casehandlers.api import DBCaseIterator
 from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
@@ -62,10 +62,10 @@ class Analysis(Assembly):
         self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
         self.spiral_meta_model.force_execute = True
         
-        self.add("MOEI",MultiObjExpectedImprovement())
+        self.add("MOEI",ConnectableMultiObjExpectedImprovement())
         self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         
-        self.add("filter",ParetoFilter())
+        self.add("filter",ConnectableParetoFilter())
         self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
         self.filter.case_sets = [self.spiral_meta_model.recorder.get_iterator()]
         self.filter.force_execute = True

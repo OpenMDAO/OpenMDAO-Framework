@@ -189,7 +189,7 @@ if __name__ == "__main__": #pragma: no cover
             if d < distance[i]:
                 distance[i] = d
                 closest_points[i] = (x,y,z.mu)
-    print "closes solutions: ", closest_points    
+    print "closest solutions: ", closest_points    
     
     plt.scatter(data_EI['branin_meta_model.x'],data_EI['branin_meta_model.y'],
                 s=30,
@@ -226,7 +226,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.title("Branin Meta Model Contours")
     plt.text(10.9,11,"Meta Model\nFunction\nValue")
     
-    #plt.show()
+    plt.show()
 
     analysis.cleanup()
     
