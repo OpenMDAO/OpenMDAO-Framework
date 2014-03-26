@@ -215,7 +215,7 @@ class Workflow(object):
         for comp in self:
             comp.setup_sizes()
 
-    def setup_communicators(self, scope):
+    def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our
         child Components.
         """
@@ -227,7 +227,7 @@ class Workflow(object):
         # requested for a parallel flow will be the sum of the requested
         # processors for the parallel components.
         
-        comm = self.mpi.comm
+        self.mpi.comm = comm
 
         # first, get the component subgraph that is limited to 
         # the components in this workflow.
@@ -247,8 +247,7 @@ class Workflow(object):
             mpiprint("creating parallel top: %s" % cgraph.nodes())
             self._subsystem = ParallelSystem(cgraph)
 
-        self._subsystem.mpi.comm = comm
-        self._subsystem.setup_communicators(scope)
+        self._subsystem.setup_communicators(comm, scope)
 
 
 class System(object):
@@ -277,8 +276,8 @@ class SerialSystem(System):
                 mpiprint("running %s" % comp.name)
                 comp.run(ffd_order=ffd_order, case_id=case_id)
 
-    def setup_communicators(self, scope):
-        comm = self.mpi.comm
+    def setup_communicators(self, comm, scope):
+        self.mpi.comm = comm
         self.local_comps = []
         #mpiprint("setting up comms for serial %s (%s)" % (self.name, id(self)))
         # if comm != MPI.COMM_NULL:
@@ -294,8 +293,7 @@ class SerialSystem(System):
             #mpiprint("*** serial child %s" % comp.name)
             comp.mpi.comm = comm
             self.local_comps.append(comp)
-            if hasattr(comp, 'setup_communicators'):
-                comp.setup_communicators(scope)
+            comp.setup_communicators(comm, scope)
 
 
 class ParallelSystem(System):
@@ -321,8 +319,8 @@ class ParallelSystem(System):
                 comp.set_itername('%s-%d' % (iterbase, i))
                 comp.run(ffd_order=ffd_order, case_id=case_id)
 
-    def setup_communicators(self, scope):
-        comm = self.mpi.comm
+    def setup_communicators(self, comm, scope):
+        self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
 
@@ -396,21 +394,17 @@ class ParallelSystem(System):
 
         for i,c in enumerate(child_comps):
             if i == rank_color:
-                c.mpi.comm = sub_comm
                 c.mpi.cpus = assigned_procs[i]
                 #mpiprint(" %s has the right color! (%d)" % (c.name, rank_color))
                 local_comps.append(c)
             elif assigned_procs[i] == 0:  # comp is duplicated everywhere
                 #mpiprint("0 procs assigned to %s" % c.name)
-                c.mpi.comm = sub_comm  # TODO: make sure this is the right comm
                 local_comps.append(c)
 
         self.local_comps = local_comps
 
         for comp in local_comps:
-            if hasattr(comp, 'setup_communicators'):
-                #mpiprint("setting up comms for child %s (%s)" % (comp.name, id(comp)))
-                comp.setup_communicators(scope)
+            comp.setup_communicators(sub_comm, scope)
 
 
 def transform_graph(g):

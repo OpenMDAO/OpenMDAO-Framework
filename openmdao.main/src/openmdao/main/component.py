@@ -2133,8 +2133,8 @@ class Component(Container):
         """Return (requested_cpus, max_cpus)."""
         return self.mpi.requested_cpus, self.mpi.max_cpus
 
-    def setup_communicators(self, scope=None):
-        pass
+    def setup_communicators(self, comm, scope=None):
+        self.mpi.comm = comm
 
     def setup_sizes(self):
         pass

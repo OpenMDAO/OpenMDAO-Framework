@@ -617,12 +617,12 @@ class Driver(Component):
             sum_maxs = sum(maxs)
         return sum(mins), sum_maxs
 
-    def setup_communicators(self, scope=None):
+    def setup_communicators(self, comm, scope=None):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self.workflow.mpi.comm = self.mpi.comm
-        self.workflow.setup_communicators(self.parent)
+        super(Driver, self).setup_communicators(comm, scope)
+        self.workflow.setup_communicators(comm, self.parent)
 
     def setup_sizes(self):
         self.workflow.setup_sizes()

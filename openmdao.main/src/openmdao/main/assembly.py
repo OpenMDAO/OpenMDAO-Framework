@@ -1371,9 +1371,9 @@ class Assembly(Component):
         pass
         #self.uVec = VecWrapper(paths, sizes)
 
-    def setup_communicators(self, scope=None):
-        self.driver.mpi.comm = self.mpi.comm
-        self.driver.setup_communicators()
+    def setup_communicators(self, comm, scope=None):
+        super(Assembly, self).setup_communicators(comm, scope)
+        self.driver.setup_communicators(comm)
         
 
 class VecWrapper(object):
