@@ -384,26 +384,21 @@ class ParallelSystem(System):
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
 
-        if sub_comm == MPI.COMM_NULL:
-            #mpiprint("null comm")
-            return
-        # else:
-        #     mpiprint("subcomm size = %d for graph(%s)" % (sub_comm.size,self.graph.nodes()))
+        self.local_comps = []
 
-        local_comps = []
+        if sub_comm == MPI.COMM_NULL:
+            return
 
         for i,c in enumerate(child_comps):
             if i == rank_color:
                 c.mpi.cpus = assigned_procs[i]
                 #mpiprint(" %s has the right color! (%d)" % (c.name, rank_color))
-                local_comps.append(c)
-            elif assigned_procs[i] == 0:  # comp is duplicated everywhere
+                self.local_comps.append(c)
+            elif requested_procs[i] == 0:  # comp is duplicated everywhere
                 #mpiprint("0 procs assigned to %s" % c.name)
-                local_comps.append(c)
+                self.local_comps.append(c)
 
-        self.local_comps = local_comps
-
-        for comp in local_comps:
+        for comp in self.local_comps:
             comp.setup_communicators(sub_comm, scope)
 
 
