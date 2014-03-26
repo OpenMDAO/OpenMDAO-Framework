@@ -1220,17 +1220,6 @@ class Container(SafeHasTraits):
                         setattr(self, path, value)
                     finally:
                         self._input_check = chk
-                    # Note: This was done to make foo.bar = 3 behave the
-                    # same as foo.set('bar', 3).
-                    # Without this, the output of the comp was
-                    # always invalidated when you call set_parameters.
-                    # This meant that component was always executed
-                    # even when the inputs were unchanged.
-                    # _call_execute is set in the on-trait-changed
-                    # callback, so it's a good test for whether the
-                    # value changed.
-                    if iotype == 'in' and getattr(self, "_call_execute", False):
-                        self._input_updated(path)
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
