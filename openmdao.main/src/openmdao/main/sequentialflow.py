@@ -1074,8 +1074,13 @@ class SequentialWorkflow(Workflow):
 
         # Make sure we have all the derivatives we are asking for.
         if mode != 'fd':
+
             comps = self._comp_edge_list()
+
             for comp_name in comps:
+
+                if '~' in comp_name:
+                    continue
 
                 comp = self.scope.get(comp_name)
 
