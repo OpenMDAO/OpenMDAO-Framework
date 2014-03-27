@@ -10,7 +10,6 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.mpiwrap import mpiprint
 from openmdao.util.decorators import add_delegate
-from openmdao.main.workflow import dump_parallel_graph
 
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class NTimes(Driver):
@@ -121,7 +120,7 @@ if __name__ == '__main__':
 
     MPI_run(top)
 
-    #dump_parallel_graph(top.driver.workflow._subsystem)
+    mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
 
         
 

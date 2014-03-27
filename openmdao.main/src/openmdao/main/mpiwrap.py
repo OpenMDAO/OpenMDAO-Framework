@@ -50,12 +50,12 @@ else:
         
 class MPI_info(object):
     def __init__(self):
-        self.requested_cpus = 0  # requested number of processors
-        self.max_cpus = 0  # max usable CPUs.  If None, all can be used
-        self.cpus = 0  # actual number of CPUs assigned. 0 means it's
-                       # duplicated across all processors
+        self.requested_cpus = 0  # requested number of processors.
+                                 # 0 means it's duplicated across 
+                                 # all processors
+        self.cpus = 0  # actual number of CPUs assigned. 
 
-        # the processes used by this comp and its children
+        # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
       
 def _setup_mpi(obj):

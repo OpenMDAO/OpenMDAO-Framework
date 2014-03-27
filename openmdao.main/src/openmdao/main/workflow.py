@@ -1,5 +1,6 @@
 """ Base class for all workflows. """
-
+import sys
+from StringIO import StringIO
 from networkx import topological_sort
 
 # pylint: disable-msg=E0611,F0401
@@ -210,6 +211,31 @@ class Workflow(object):
 
     ## MPI stuff ##
 
+    def _get_subsystem(self):
+        if self._subsystem is None:
+            scope = self.scope
+
+            # first, get the component subgraph that is limited to 
+            # the components in this workflow.
+            cgraph = self.get_comp_graph().copy()
+
+            # collapse the graph (recursively) with the parallel
+            # branches collapsed into single nodes with tuple names
+            transform_graph(cgraph, scope)
+
+            if len(cgraph.edges()) > 0:
+                mpiprint("creating serial top: %s" % cgraph.nodes())
+                self._subsystem = SerialSystem(cgraph, scope)
+            else:
+                mpiprint("creating parallel top: %s" % cgraph.nodes())
+                self._subsystem = ParallelSystem(cgraph, scope)
+
+        return self._subsystem
+
+    def get_req_cpus(self):
+        """Return requested_cpus"""
+        return self._get_subsystem().get_req_cpus()
+
     def setup_sizes(self):
         for comp in self:
             comp.setup_sizes()
@@ -218,36 +244,8 @@ class Workflow(object):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        # at the serial workflow level, all components use all of the
-        # available processors, while in a parallel workflow, available
-        # processors are shared between the components in the workflow.
-        # The requested processors for a serial flow will be the max
-        # requested by any component in that flow, while the cpus
-        # requested for a parallel flow will be the sum of the requested
-        # processors for the parallel components.
-        
         self.mpi.comm = comm
-
-        # first, get the component subgraph that is limited to 
-        # the components in this workflow.
-        cgraph = self.get_comp_graph().copy()
-
-        for node, data in cgraph.nodes_iter(data=True):
-            data['req_cpus'] = getattr(scope, node).get_cpu_range()[0]
-
-        # collapse the graph (recursively) with the parallel
-        # branches collapsed into single nodes with tuple names
-        transform_graph(cgraph)
-
-        if len(cgraph.edges()) > 0:
-            mpiprint("creating serial top: %s" % cgraph.nodes())
-            self._subsystem = SerialSystem(cgraph)
-        else:
-            mpiprint("creating parallel top: %s" % cgraph.nodes())
-            self._subsystem = ParallelSystem(cgraph)
-
-        self._subsystem.setup_communicators(comm, scope)
-
+        self._get_subsystem().setup_communicators(comm, scope)
 
 class System(object):
     def __init__(self, graph):
@@ -255,11 +253,45 @@ class System(object):
         self.name = str(tuple(sorted(graph.nodes())))
         self.local_comps = []
         self.mpi = MPI_info()
+
+    def dump_parallel_graph(self, nest=0, stream=sys.stdout):
+        if not self.local_comps:
+            return
+
+        if stream is None:
+            getval = True
+            stream = StringIO()
+        else:
+            getval = False
+
+        stream.write(" "*nest)
+        stream.write(self.name)
+        stream.write(" [%s](req=%d)(rank=%d)\n" % (self.__class__.__name__, 
+                                                   self.req_cpus, 
+                                                   MPI.COMM_WORLD.rank))
+
+        nest += 3
+        for comp in self.local_comps:
+            if isinstance(comp, System):
+                comp.dump_parallel_graph(nest, stream)
+            else:
+                stream.write(" "*nest)
+                stream.write("%s\n" % comp.name)
+
+        if getval:
+            return stream.getvalue()
+
         
 class SerialSystem(System):
-    def __init__(self, graph):
+    def __init__(self, graph, scope):
         super(SerialSystem, self).__init__(graph)
-        self.req_cpus = max([graph.node[n]['req_cpus'] for n in graph])
+        cpus = []
+        for node, data in graph.nodes_iter(data=True):
+            if 'system' in data:
+                cpus.append(data['system'].req_cpus)
+            else:
+                cpus.append(getattr(scope, node).get_req_cpus())
+        self.req_cpus = max(cpus)
 
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_comps]))
@@ -292,9 +324,17 @@ class SerialSystem(System):
 
 
 class ParallelSystem(System):
-    def __init__(self, graph):
+    def __init__(self, graph, scope):
         super(ParallelSystem, self).__init__(graph)
-        self.req_cpus = sum([graph.node[n]['req_cpus'] for n in graph])
+        cpus = 0
+        # in a parallel system, the required cpus is the sum of
+        # the required cpus of the members
+        for node, data in graph.nodes_iter(data=True):
+            if 'system' in data:
+                cpus += data['system'].req_cpus
+            else:
+                cpus += getattr(scope, node).get_req_cpus()
+        self.req_cpus = cpus
  
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_comps]))
@@ -331,7 +371,7 @@ class ParallelSystem(System):
                 #mpiprint("!! system %s requests %d cpus" % (system.name, system.req_cpus))
             else:
                 child_comps.append(getattr(scope, name))
-                requested_procs.append(getattr(scope, name).get_cpu_range()[0])
+                requested_procs.append(getattr(scope, name).get_req_cpus())
         
         assigned_procs = [0]*len(requested_procs)
 
@@ -402,7 +442,7 @@ class ParallelSystem(System):
             comp.setup_communicators(sub_comm, scope)
 
 
-def transform_graph(g):
+def transform_graph(g, scope):
     """Return a nested graph with metadata for parallel
     and serial subworkflows.
     """
@@ -429,18 +469,18 @@ def transform_graph(g):
 
             for branch in parallel_group:
                 if isinstance(branch, tuple):
-                    _collapse(g, branch, serial=True)
+                    _collapse(scope, g, branch, serial=True)
                     gcopy.remove_nodes_from(branch)
                 else:
                     gcopy.remove_node(branch)
 
             parallel_group = tuple(sorted(parallel_group))
-            _collapse(g, parallel_group, serial=False)
+            _collapse(scope, g, parallel_group, serial=False)
         else:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
     
 
-def _collapse(g, nodes, serial=True):
+def _collapse(scope, g, nodes, serial=True):
     """Collapse the named nodes in g into a single node
     with a name that is a tuple of nodes and put the
     subgraph containing those nodes into the new node's
@@ -471,13 +511,12 @@ def _collapse(g, nodes, serial=True):
     g.remove_nodes_from(nodes) 
 
     if serial:
-        transform_graph(subg)
-        subsys = SerialSystem(subg)
+        transform_graph(subg, scope)
+        subsys = SerialSystem(subg, scope)
     else:
-        subsys = ParallelSystem(subg)
+        subsys = ParallelSystem(subg, scope)
 
     g.node[newname]['system'] = subsys
-    g.node[newname]['req_cpus'] = subsys.req_cpus
  
 
 def get_branch(g, node, visited=None):
@@ -497,38 +536,4 @@ def get_branch(g, node, visited=None):
             branch.append(succ)
             branch.extend(get_branch(g, succ, visited))
     return branch
-
-def dump_parallel_graph(system, nest=0):
-    
-    print "{%d}" % MPI.COMM_WORLD.rank,
-    print " "*nest,
-    print system.name,
-    typ = "serial" if isinstance(system, SerialSystem) else "parallel"
-    print " [%s](req=%d)(rank=%d)" % (typ, system.req_cpus, MPI.COMM_WORLD.rank)
-
-    nest += 3
-    for comp in system.local_comps:
-        if isinstance(comp, System):
-            dump_parallel_graph(comp, nest)
-        else:
-            print "{%d}" % MPI.COMM_WORLD.rank,
-            print " "*nest,
-            print comp.name
-
-# import networkx
-# g = networkx.DiGraph()
-# nodes = range(1,15)
-# g.add_edges_from([(1,2),(2,3),(2,4),(4,5),(3,5),(3,6),(5,7),(6,7),
-#                   (7,8),(9,10),(10,11),(11,12),(11,13),(12,14),(13,14),(14,8)])
-# for n in nodes:
-#     g.node[n]['req_cpus'] = 1
-    
-# print "branch 1 = %s" % get_branch(g, 1)
-# print "branch 9 = %s" % get_branch(g, 9)
-# print "branch 3 = %s" % get_branch(g, 3)
-# print "branch 11 = %s" % get_branch(g, 11)
-# transform_graph(g)
-# print g.nodes()
-# dump_parallel_graph(g)
-
 

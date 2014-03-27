@@ -1317,14 +1317,17 @@ class Assembly(Component):
         return conns
 
     def get_comps(self):
+        """Returns a list of all of objects contained in this
+        Assembly implementing the IComponent interface.
+        """
         conts = [getattr(self, n) for n in sorted(self.list_containers())]
         return [c for c in conts if has_interface(c, IComponent)]
 
     ## Distributed computing methods ##
 
-    def get_cpu_range(self):
-        """Return (requested_cpus, max_cpus)."""
-        return self.driver.get_cpu_range()
+    def get_req_cpus(self):
+        """Return requested_cpus"""
+        return self.driver.get_req_cpus()
         
     def setup_sizes(self):
         """Calculate the local sizes of all relevant variables

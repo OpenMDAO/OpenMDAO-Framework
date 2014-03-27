@@ -354,8 +354,8 @@ class PseudoComponent(object):
         
         return names
 
-    def get_cpu_range(self):
-        return (0, 0)
+    def get_req_cpus(self):
+        return 0
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm

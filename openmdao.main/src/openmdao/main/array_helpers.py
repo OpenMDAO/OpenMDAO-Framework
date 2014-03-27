@@ -131,7 +131,11 @@ def flattened_size(name, val, scope=None):
                     ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
-    """ Return `val` as a 1D float array. """
+    """ Return `val` as a 1D float array. An exception will be
+    raised if val is not completely flattenable to a float
+    array.  A VariableTree is not considered completely 
+    flattenable unless all of its leaf nodes are flattenable.
+    """
     # have to check int_types before real_types because apparently
     # int_types are considered also to be real types
     if isinstance(val, int_types): 

@@ -604,18 +604,9 @@ class Driver(Component):
 
     #### MPI related methods ####
 
-    def get_cpu_range(self):
-        """Return (requested_cpus, max_cpus)."""
-        cpus = [c.get_cpu_range() for c in self.workflow]
-        mins = [c[0] for c in cpus]
-        maxs = [c[1] for c in cpus]
-
-        # a max of None means all available CPUs will be used
-        if None in maxs:
-            sum_maxs = None
-        else:
-            sum_maxs = sum(maxs)
-        return sum(mins), sum_maxs
+    def get_req_cpus(self):
+        """Return requested_cpus."""
+        return self.workflow.get_req_cpus()
 
     def setup_communicators(self, comm, scope=None):
         """Allocate communicators from here down to all of our
