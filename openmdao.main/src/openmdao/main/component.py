@@ -251,7 +251,8 @@ class Component(Container):
             if hasattr(self, n):  # if n in self._valid_dict:
                 name = n
 
-        self._input_check(name, old)
+        if self._input_check is not None:
+            self._input_check(name, old)
         self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
@@ -1747,9 +1748,9 @@ class Component(Container):
                         column_index = 0
 
                         for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
 
-                        column_index = column_index + array_indices[-1]
+                        column_index += array_indices[-1]
 
                         partially_connected_indices.append(column_index)
 

@@ -172,4 +172,4 @@ class Instance(Base):
             if field not in gui_excludes:
                 io_attr[field] = meta[field]
 
-        return io_attr
+        return io_attr, {}
