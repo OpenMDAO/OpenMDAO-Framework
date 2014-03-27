@@ -34,12 +34,15 @@ class NTimes(Driver):
 
 
 class ABCDArrayComp(Component):
-    a = Array(np.ones(12, float), iotype='in')
-    b = Array(np.ones(12, float), iotype='in')
-    c = Array(np.ones(12, float), iotype='out')
-    d = Array(np.ones(12, float), iotype='out')
     delay = Float(0.01, iotype='in')
     
+    def __init__(self, arr_size=12):
+        super(ABCDArrayComp, self).__init__()
+        self.add_trait('a', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('b', Array(np.ones(arr_size, float), iotype='in'))
+        self.add_trait('c', Array(np.ones(arr_size, float), iotype='out'))
+        self.add_trait('d', Array(np.ones(arr_size, float), iotype='out'))
+
     def execute(self):
         time.sleep(self.delay)
         self.c = self.a + self.b
@@ -64,7 +67,7 @@ def _get_model1():
     top.add('driver', NTimes(1))
     for i in range(1,12):
         name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
+        top.add(name, ABCDArrayComp(22))
         top.driver.workflow.add(name)
         getattr(top, name).mpi.requested_cpus = 1
 

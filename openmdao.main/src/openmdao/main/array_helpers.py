@@ -51,7 +51,7 @@ def get_val(scope, name):
     if '[' in name:
         val = getattr(scope, name.split('[',1)[0])
         idx = get_index(name)
-        # for object that are not numpy arrays, an index tuple
+        # for objects that are not numpy arrays, an index tuple
         #  really means [idx0][idx1]...[idx_n]
         if isinstance(idx, tuple) and not isinstance(val, ndarray):
             for i in idx:

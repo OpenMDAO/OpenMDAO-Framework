@@ -8,7 +8,9 @@ def under_mpirun():
     # no consistent set of environment vars between MPI implementations
     for name in os.environ.keys():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
-            print "running under mpirun"
+            from mpi4py import MPI
+            if MPI.COMM_WORLD.rank == 0:
+                print "running under mpirun"
             return True
     print "NOT running under mpirun"
     return False
@@ -29,8 +31,9 @@ if under_mpirun():
     def get_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm) 
 
-    def mpiprint(msg):
-        print "{%d} %s" % (MPI.COMM_WORLD.rank, msg)
+    def mpiprint(msg, rank=-1):
+        if rank < 0 or rank == MPI.COMM_WORLD.rank:
+            print "{%d} %s" % (MPI.COMM_WORLD.rank, str(msg))
 else:
     MPI = None
     PETSc = None
@@ -42,7 +45,7 @@ else:
     def get_petsc_vec(comm, arr):
         return None
 
-    def mpiprint(msg):
+    def mpiprint(msg, rank=-1):
         print msg
         
 class MPI_info(object):

@@ -15,7 +15,7 @@ from zope.interface import implementedBy
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 
-from openmdao.main.mpiwrap import MPI, get_petsc_vec
+from openmdao.main.mpiwrap import get_petsc_vec, mpiprint
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
@@ -1360,7 +1360,8 @@ class Assembly(Component):
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
-        print self.local_var_sizes
+        mpiprint(self.vector_vars.keys(), 0)
+        mpiprint(self.local_var_sizes, 0)
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
