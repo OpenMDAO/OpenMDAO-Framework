@@ -37,7 +37,6 @@ def _flatten_lst(name, lst):
     _recurse_flatten(ret, name, [], lst)
     return ret
 
-# dict of functions that know how to 'flatten' a given object instance
 flatteners = {
        int: _simpleflatten,
        float: _simpleflatten,
@@ -56,7 +55,11 @@ def flatten_obj(name, obj):
     for klass in getmro(type(obj))[1:]:
         if klass in flatteners:
             return flatteners[klass](name, obj)
-    return []
+    # if cannot flatten return obj string
+    if obj is not None:
+        return [(name, '{%s}' % str(obj))]
+    else:
+        return []
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e.,
