@@ -320,7 +320,8 @@ class SequentialWorkflow(Workflow):
                         exec("src_val = base[%s" % idx)
                         if isinstance(src_val, ndarray):
                             shape = src_val.shape
-                            istring, ix = flatten_slice(idx, shape, offset=nEdge,
+                            istring, ix = flatten_slice(idx, shape,
+                                                        offset=nEdge,
                                                         name='ix')
                             bound = (istring, ix)
                             if isinstance(istring, list):
@@ -434,9 +435,8 @@ class SequentialWorkflow(Workflow):
         width = self._width_cache.get(attr, _missing)
         if width is _missing:
             param = from_PA_var(attr)
-            self._width_cache[attr] = width = flattened_size(param,
-                                                             self.scope.get(param),
-                                                             self.scope)
+            width = flattened_size(param, self.scope.get(param), self.scope)
+            self._width_cache[attr] = width
         return width
 
     def _update(self, name, vtree, dv, i1=0):
@@ -843,7 +843,8 @@ class SequentialWorkflow(Workflow):
                 for src in inodes:
                     for targ in inodes:
                         if src != targ:
-                            nodeset.update(find_all_connecting(cgraph, src, targ))
+                            nodeset.update(find_all_connecting(cgraph, src,
+                                                               targ))
 
                 nondiff_groups.append(nodeset)
 
@@ -1070,6 +1071,29 @@ class SequentialWorkflow(Workflow):
                 mode = 'adjoint'
             else:
                 mode = 'forward'
+
+        # Make sure we have all the derivatives we are asking for.
+        if mode != 'fd':
+            comps = self._comp_edge_list()
+            for comp_name in comps:
+
+                comp = self.scope.get(comp_name)
+
+                if mode == 'forward':
+                    if hasattr(comp, 'apply_derivT') and \
+                       not hasattr(comp, 'apply_deriv'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "forward mode, but component %s" % comp.name
+                        msg += " only has adjoint derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
+
+                elif mode == 'adjoint':
+                    if hasattr(comp, 'apply_deriv') and \
+                       not hasattr(comp, 'apply_derivT'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "adjoint mode, but component %s" % comp.name
+                        msg += " only has forward derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
 
         if mode == 'adjoint':
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)

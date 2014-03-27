@@ -2921,6 +2921,40 @@ class Comp3_array(Component):
             result['x'] += dy.reshape((3, 3))
 
 
+class CompBase(Component):
+
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        self.y = self.x
+        pass
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        self.J = array([[1.0]])
+
+    def list_deriv_vars(self):
+        ''' What we have'''
+        return ('x',), ('y',)
+
+
+class CompForward(CompBase):
+
+    def apply_deriv(self, arg, result):
+
+        if 'y' in result and 'x' in arg:
+            result['y'] += arg['x']
+
+class CompAdjoint(CompBase):
+
+    def apply_derivT(self, arg, result):
+
+        if 'y' in arg and 'x' in result:
+            result['x'] += arg['y']
+
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
@@ -3072,6 +3106,55 @@ class Testcase_applyJT(unittest.TestCase):
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
 
+    def test_forward_adjoint_error(self):
+        # Test our error messages for when you have are missing one
+        # of (apply_deriv, apply_derivT) and try to run the other
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompForward())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'forward'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "adjoint mode, but component %s" % 'comp'
+            msg += " only has forward derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompAdjoint())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'forward'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "forward mode, but component %s" % 'comp'
+            msg += " only has adjoint derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
 
 class PreComp(Component):
     '''Comp with preconditioner'''
