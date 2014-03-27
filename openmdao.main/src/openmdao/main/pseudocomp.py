@@ -258,16 +258,13 @@ class PseudoComponent(object):
         self._valid = False
 
     def run(self, ffd_order=0, case_id='', notify_parent=True):
-        self.update_inputs()
+        self._parent.update_inputs(self.name)
 
         src = self._srcexpr.evaluate()
         setattr(self, 'out0', src)
         self._valid = True
         if notify_parent:
             self._parent.child_run_finished(self.name)
-
-    def update_inputs(self, inputs=None):
-        self._parent.update_inputs(self.name)
 
     def update_outputs(self, names):
         self.run()

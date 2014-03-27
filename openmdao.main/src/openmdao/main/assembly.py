@@ -7,6 +7,7 @@ __all__ = ['Assembly', 'set_as_top']
 import threading
 import re
 import sys
+from ordereddict import OrderedDict
 
 import numpy
 
@@ -688,10 +689,12 @@ class Assembly(Component):
         if invalids:
             loops = graph.get_loops()
 
+            bndry_updated = False
             for cname, vnames in partition_names_by_comp(invalids).items():
                 if cname is None or not is_comp_node(graph, cname): # boundary var
-                    if self.parent:
+                    if self.parent and not bndry_updated:
                         self.parent.update_inputs(self.name)
+                        bndry_updated = True
 
                 # If our start component is in a loop with us, don't
                 # run it. Otherwise you have infinite recursion. It is
@@ -1337,7 +1340,8 @@ class Assembly(Component):
         self.driver.setup_sizes()
 
         self.vector_vars = self.driver.get_vector_varnames()
-        for cname, vnames in partition_names_by_comp(self.vector_vars.keys()).items():
+        for cname, vnames in partition_names_by_comp(self.vector_vars.keys(), 
+                                                     OrderedDict()).items():
             if cname is None:
                 for vname in vnames:
                     
@@ -1360,6 +1364,10 @@ class Assembly(Component):
             self.local_var_sizes[rank, i] = var['size']
 
         # collect local var sizes from all of the processes in our comm
+        # these sizes will be the same in all processes except in cases
+        # where a variable belongs to a multiprocessor component.  In that
+        # case, the part of the component that runs in a given process will
+        # only have a slice of each of the component's variables.
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
