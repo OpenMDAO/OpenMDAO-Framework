@@ -113,6 +113,34 @@ def _get_model2():
     
     return top
 
+def _get_model_nested_drivers():
+    top = set_as_top(Assembly())
+    top.add('driver', NTimes(2))
+    for i in range(1,4):
+        name = 'C%d' % i
+        top.add(name, ABCDArrayComp())
+        getattr(top, name).mpi.requested_cpus = 1
+
+    top.add('subdriver', NTimes(2))
+
+    top.driver.workflow.add(['subdriver', 'C3'])
+
+    conns = [
+        ('C1.c','C2.a'),
+        ('C2.c','C3.a'),
+    ]
+
+    for u,v in conns:
+        top.connect(u, v)
+
+    top.driver.add_parameter('C3.b[1]', high=100.0, low=0.0)
+    top.driver.add_constraint('C3.d[0]>0.') 
+    
+    top.subdriver.add_parameter('C1.b[0]', high=100.0, low=0.0)
+    top.subdriver.add_constraint('C2.d[0]>0.') 
+    
+    return top
+
 if __name__ == '__main__':
     from openmdao.main.mpiwrap import MPI_run
 
@@ -121,6 +149,7 @@ if __name__ == '__main__':
     MPI_run(top)
 
     mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
+    #mpiprint(top.subdriver.workflow._subsystem.dump_parallel_graph(stream=None))
 
         
 

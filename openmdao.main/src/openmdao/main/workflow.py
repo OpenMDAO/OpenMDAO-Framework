@@ -6,6 +6,7 @@ from networkx import topological_sort
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
+from openmdao.main.interfaces import IDriver
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 
 __all__ = ['Workflow']
@@ -205,7 +206,8 @@ class Workflow(object):
         the components in this workflow.
         """
         if self._wf_comp_graph is None:
-            cgraph = self.scope._depgraph.component_graph()
+            cgraph = self.scope._depgraph.component_graph().copy()
+            add_driver_connections(cgraph, self.scope)
             self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
         return self._wf_comp_graph
 
@@ -223,12 +225,15 @@ class Workflow(object):
             # branches collapsed into single nodes with tuple names
             transform_graph(cgraph, scope)
 
-            if len(cgraph.edges()) > 0:
-                mpiprint("creating serial top: %s" % cgraph.nodes())
-                self._subsystem = SerialSystem(cgraph, scope)
+            if len(cgraph) > 1:
+                if len(cgraph.edges()) > 0:
+                    #mpiprint("creating serial top: %s" % cgraph.nodes())
+                    self._subsystem = SerialSystem(cgraph, scope)
+                else:
+                    #mpiprint("creating parallel top: %s" % cgraph.nodes())
+                    self._subsystem = ParallelSystem(cgraph, scope)
             else:
-                mpiprint("creating parallel top: %s" % cgraph.nodes())
-                self._subsystem = ParallelSystem(cgraph, scope)
+                self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
 
         return self._subsystem
 
@@ -253,6 +258,10 @@ class System(object):
         self.name = str(tuple(sorted(graph.nodes())))
         self.local_comps = []
         self.mpi = MPI_info()
+        self.mpi.req_cpus = None
+
+    def get_req_cpus(self):
+        return self.mpi.req_cpus 
 
     def dump_parallel_graph(self, nest=0, stream=sys.stdout):
         if not self.local_comps:
@@ -267,7 +276,7 @@ class System(object):
         stream.write(" "*nest)
         stream.write(self.name)
         stream.write(" [%s](req=%d)(rank=%d)\n" % (self.__class__.__name__, 
-                                                   self.req_cpus, 
+                                                   self.get_req_cpus(), 
                                                    MPI.COMM_WORLD.rank))
 
         nest += 3
@@ -287,11 +296,11 @@ class SerialSystem(System):
         super(SerialSystem, self).__init__(graph)
         cpus = []
         for node, data in graph.nodes_iter(data=True):
-            if 'system' in data:
-                cpus.append(data['system'].req_cpus)
+            if isinstance(node, tuple):
+                cpus.append(data['system'].get_req_cpus())
             else:
                 cpus.append(getattr(scope, node).get_req_cpus())
-        self.req_cpus = max(cpus)
+        self.mpi.req_cpus = max(cpus)
 
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_comps]))
@@ -330,11 +339,11 @@ class ParallelSystem(System):
         # in a parallel system, the required cpus is the sum of
         # the required cpus of the members
         for node, data in graph.nodes_iter(data=True):
-            if 'system' in data:
-                cpus += data['system'].req_cpus
+            if isinstance(node, tuple):
+                cpus += data['system'].get_req_cpus()
             else:
                 cpus += getattr(scope, node).get_req_cpus()
-        self.req_cpus = cpus
+        self.mpi.req_cpus = cpus
  
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_comps]))
@@ -367,7 +376,7 @@ class ParallelSystem(System):
             system = data.get('system')
             if system is not None: # nested workflow
                 child_comps.append(system)
-                requested_procs.append(system.req_cpus)
+                requested_procs.append(system.get_req_cpus())
                 #mpiprint("!! system %s requests %d cpus" % (system.name, system.req_cpus))
             else:
                 child_comps.append(getattr(scope, name))
@@ -406,8 +415,8 @@ class ParallelSystem(System):
             #         if assigned == limit:
             #             break
 
-        mpiprint("comm size = %d" % comm.size)
-        mpiprint("child_comps: %s" % [c.name for c in child_comps])
+        #mpiprint("comm size = %d" % comm.size)
+        #mpiprint("child_comps: %s" % [c.name for c in child_comps])
         mpiprint("requested_procs: %s" % requested_procs)
         mpiprint("assigned_procs: %s" % assigned_procs)
 
@@ -441,6 +450,26 @@ class ParallelSystem(System):
         for comp in self.local_comps:
             comp.setup_communicators(sub_comm, scope)
 
+def add_driver_connections(g, scope):
+    dconns = []
+    for node in g:
+        comp = getattr(scope, node)
+        #mpiprint("**%s**" % node)
+        if IDriver.providedBy(comp):
+            iterset = [c.name for c in comp.iteration_set()]
+            #mpiprint("*** iterset for %s = %s" % (node, iterset))
+            for itercomp in iterset:
+                for u,v in g.edges_iter(itercomp):
+                    #mpiprint("**%s, %s**" % (u,v))
+                    if v not in iterset:
+                        dconns.append((node, v))
+                for u,v in g.in_edges_iter(itercomp):
+                    #mpiprint("**%s, %s**" % (u,v))
+                    if u not in iterset:
+                        dconns.append((u, node))
+
+    g.add_edges_from(dconns)
+    #mpiprint("*** dconns = %s" % dconns)
 
 def transform_graph(g, scope):
     """Return a nested graph with metadata for parallel
@@ -448,6 +477,12 @@ def transform_graph(g, scope):
     """
     if len(g) <= 1:
         return g
+
+    # first, create connections between any subdrivers and anything
+    # that connects to their iteration set.  Otherwise we get parallel
+    # workflows when we really need sequential ones, e.g., if a subdriver
+    # iterates over C1 which feeds another component C2, then that
+    # subdriver should run BEFORE C2 in the workflow.
 
     gcopy = g.copy()
 
