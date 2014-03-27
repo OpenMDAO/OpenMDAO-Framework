@@ -297,6 +297,7 @@ class DependencyGraph(nx.DiGraph):
             self._conns = {}
             self._indegs = {}
             self._dstvars = {}
+            self._valid_src = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -693,13 +694,18 @@ class DependencyGraph(nx.DiGraph):
         destination value by any object other than the source
         specified in the graph.
         """
+        valid = self._valid_src.get(path, _missing)
+        if valid is src:
+            return
         preds = self.predecessors(path)
         for pred in preds:
             if src == pred:
+                self._valid_src[path] = src
                 return
             if pred.startswith(path):  # subvar
                 for p in self.predecessors_iter(pred):
                     if src == p:
+                        self._valid_src[path] = src
                         return
         if len(preds) > 0:
             raise RuntimeError(
@@ -866,11 +872,11 @@ class DependencyGraph(nx.DiGraph):
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
                is_input_base_node(self, node):
-                    if connected:
-                        if self.in_degree(node) > 0:
-                            ins.append(node)
-                    else:
+                if connected:
+                    if self.in_degree(node) > 0:
                         ins.append(node)
+                else:
+                    ins.append(node)
         self._bndryins[connected] = ins
         return ins[:]
 
@@ -1877,9 +1883,9 @@ def get_missing_derivs(obj, recurse=True):
                 cins.extend([n for n,v in vt_flattener(cin, obj)])
 
         for i,cout in enumerate(couts[:]):
-                    obj = comp.get(cout)
-                    if has_interface(obj, IVariableTree) :
-                        couts.extend([n for n,v in vt_flattener(cout, obj)])
+            obj = comp.get(cout)
+            if has_interface(obj, IVariableTree) :
+                couts.extend([n for n,v in vt_flattener(cout, obj)])
 
 
         if has_interface(comp, IAssembly):

@@ -175,7 +175,7 @@ class VariableTree(Container):
                     # modify the arglist of _input_trait_modified, so instead
                     # call _input_check (assuming source checking hasn't been
                     # turned off at the calling level) and _input_updated explicitly
-                    if self._input_check != self._input_nocheck:
+                    if self._input_check is not None:
                         p._input_check(vt.name, vt)
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
