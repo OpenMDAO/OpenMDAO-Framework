@@ -60,6 +60,17 @@ class GradientOptions(VariableTree):
                             framework_var=True)
     gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
                         framework_var=True)
+    derivative_direction = Enum('auto',
+                                ['auto', 'forward', 'adjoint'],
+                                desc = "Direction for derivative calculation. "
+                                "Can be 'forward', 'adjoint', or 'auto'. "
+                                "Auto is the default setting. "
+                                "When set to auto, OpenMDAO automatically "
+                                "figures out the best direction based on the "
+                                "number of parameters and responses. "
+                                "When the number of parameters and responses "
+                                "are equal, then forward direction is used.",
+                                framework_var=True)
 
 
 @add_delegate(HasEvents)
