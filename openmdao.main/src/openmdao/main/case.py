@@ -25,7 +25,7 @@ def _simpleflatten(name, obj):
 
 def _flatten_lst(name, lst):
     ret = []
-    
+
     def _recurse_flatten(ret, name, idx, lst):
         for i,entry in enumerate(lst):
             new_idx = idx+[i]
@@ -34,10 +34,10 @@ def _flatten_lst(name, lst):
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
                 ret.append(("%s%s" % (name, idxstr), entry))
-    
+
     _recurse_flatten(ret, name, [], lst)
     return ret
-        
+
 flatteners = { # dict of functions that know how to 'flatten' a given object instance
        int: _simpleflatten,
        float: _simpleflatten,
@@ -47,7 +47,7 @@ flatteners = { # dict of functions that know how to 'flatten' a given object ins
        tuple: _flatten_lst,
        array: _flatten_lst,
        MissingValue: _simpleflatten,
-    } 
+    }
 
 def flatten_obj(name, obj):
     f = flatteners.get(type(obj))
@@ -57,7 +57,10 @@ def flatten_obj(name, obj):
         if klass in flatteners:
             return flatteners[klass](name, obj)
     # if cannot flatten return obj string
-    return [(name, '{%s}' % str(obj))]
+    if obj is not None:
+        return [(name, '{%s}' % str(obj))]
+    else:
+        return []
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e.,
@@ -69,17 +72,17 @@ class Case(object):
     not have to refer to a single variable. After the Case is executed, it
     will contain an indicator of the exit status of the case, a string
     containing error messages associated with the running of the case (if
-    any), and a unique case identifier. 
+    any), and a unique case identifier.
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, label='', case_uuid=None, parent_uuid='', 
+                 retries=None, label='', case_uuid=None, parent_uuid='',
                  msg=None):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. Outputs must be
         an iterator that returns strings containing names or expressions.
-        
+
         """
         self._exprs = None
         self._outputs = None
@@ -88,7 +91,7 @@ class Case(object):
         self.max_retries = max_retries  # times to retry after error(s)
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
-                                        # Implies outputs are invalid. 
+                                        # Implies outputs are invalid.
         self.exc = None                 # Exception during execution.
         self.label = label              # Optional label.
         if case_uuid:
@@ -99,7 +102,7 @@ class Case(object):
 
         self.timestamp = time.time()
 
-        if inputs: 
+        if inputs:
             self.add_inputs(inputs)
         if outputs:
             self.add_outputs(outputs)
@@ -136,8 +139,8 @@ class Case(object):
         if self.exc is not None:
             stream.write("   exc: %s\n" % traceback_str(self.exc))
         return stream.getvalue()
-    
-    def __eq__(self, other): 
+
+    def __eq__(self, other):
         if self is other:
             return True
         try:
@@ -145,7 +148,7 @@ class Case(object):
                 return False
             if len(self) != len(other):
                 return False
-            for selftup, othertup in zip(self.items(flatten=True), 
+            for selftup, othertup in zip(self.items(flatten=True),
                                          other.items(flatten=True)):
                 if selftup[0] != othertup[0] or selftup[1] != othertup[1]:
                     return False
@@ -160,7 +163,7 @@ class Case(object):
         if self._outputs:
             return self._outputs[name]
         raise KeyError("'%s' not found" % name)
-    
+
     def __setitem__(self, name, value):
         if self._outputs and name in self._outputs:
             self._outputs[name] = value
@@ -168,24 +171,24 @@ class Case(object):
             self._inputs[name] = value
         else:
             raise KeyError("'%s' not found" % name)
-    
+
     def __contains__(self, name):
         return name in self._inputs or (self._outputs and name in self._outputs)
-    
+
     def __len__(self):
         if self._outputs is None:
             return len(self._inputs)
         else:
             return len(self._inputs) + len(self._outputs)
-    
+
     def get_input(self, name):
         return self._inputs[name]
-    
+
     def get_output(self, name):
         if self._outputs:
             return self._outputs[name]
         raise KeyError("'%s' not found" % name)
-    
+
     def get_inputs(self, flatten=False):
         if flatten:
             ret = []
@@ -194,7 +197,7 @@ class Case(object):
             return ret
         else:
             return self._inputs.items()
-        
+
     def get_outputs(self, flatten=False):
         if flatten:
             ret = []
@@ -203,15 +206,15 @@ class Case(object):
             return ret
         else:
             return self._outputs.items()
-        
+
     def items(self, iotype=None, flatten=False):
         """Return a list of (name,value) tuples for variables/expressions in this Case.
-        
+
         iotype: str or None
             If 'in', only inputs are returned.
             If 'out', only outputs are returned.
             If None (the default), inputs and outputs are returned.
-            
+
         flatten: bool
             If True, split multi-part Variables (like VariableTrees and Arrays) into
             their constituents.
@@ -230,30 +233,30 @@ class Case(object):
                 return []
         else:
             raise NameError("invalid iotype arg (%s). Must be 'in','out',or None" % str(iotype))
-        
+
     def keys(self, iotype=None, flatten=False):
         """Return a list of name/expression strings for this Case.
-        
+
         iotype: str or None
             If 'in', only inputs are returned.
             If 'out', only outputs are returned.
             If None (the default), inputs and outputs are returned.
         """
         return [k for k,v in self.items(iotype, flatten=flatten)]
-        
+
     def values(self, iotype=None, flatten=False):
         """Return a list of values for this Case.
-        
+
         iotype: str or None
             If 'in', only inputs are returned.
             If 'out', only outputs are returned
             If None (the default), inputs and outputs are returned
         """
         return [v for k,v in self.items(iotype, flatten=flatten)]
-    
+
     def reset(self):
         """Remove any saved output values, set retries to None, get a new uuid
-        and reset the parent_uuid.  Essentially this Case becomes like a new 
+        and reset the parent_uuid.  Essentially this Case becomes like a new
         Case with the same set of inputs and outputs that hasn't been executed
         yet.
         """
@@ -316,23 +319,23 @@ class Case(object):
 
         if last_excpt is not None:
             raise last_excpt
-            
+
     def add_input(self, name, value):
         """Adds an input and its value to this case.
-        
+
         name: str
             Name of the input to be added. May contain an expression as long
             as it is valid when placed on the left-hand side of an assignment.
-            
-        value: 
+
+        value:
             Value that the input will be assigned to.
         """
         self._register_expr(name)
         self._inputs[name] = value
-        
+
     def add_inputs(self, inp_iter):
         """Adds multiple inputs to this case.
-        
+
         inp_iter: Iterator returning (name,value)
             Iterator of input names and values.
         """
@@ -341,7 +344,7 @@ class Case(object):
 
     def add_output(self, name, value=_Missing):
         """Adds an output to this case.
-        
+
         name: str
             Name of output to be added.
         """
@@ -350,10 +353,10 @@ class Case(object):
             self._outputs = { name: value }
         else:
             self._outputs[name] = value
-        
+
     def add_outputs(self, outputs):
         """Adds outputs to this case.
-        
+
         outputs: iterator returning names or tuples of the form (name,value)
             outputs to be added
         """
@@ -362,7 +365,7 @@ class Case(object):
                 self.add_output(entry)
             else: # assume it's a tuple of the form (name, value)
                 self.add_output(entry[0], entry[1])
-                
+
     def subcase(self, names):
         """Return a new Case having a specified subset of this Case's inputs
         and outputs.
@@ -382,7 +385,7 @@ class Case(object):
         sc.timestamp = self.timestamp
         return sc
 
-        
+
     def _register_expr(self, s):
         """If the given string contains an expression, create an ExprEvaluator and
         store it in self._exprs.
