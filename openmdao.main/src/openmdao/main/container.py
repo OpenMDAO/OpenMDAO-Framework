@@ -1110,8 +1110,8 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple).
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
+        if '.' in path:
+            childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
             if obj is Missing or not is_instance(obj, Container):
                 return self._get_failed(path, index)
@@ -1125,12 +1125,12 @@ class Container(SafeHasTraits):
                 if expr is None:
                     expr = ExprEvaluator(path, scope=self)
                     self._exprcache[path] = expr
-                obj = expr.evaluate()
+                return expr.evaluate()
             else:
                 obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            return obj
+                if obj is Missing:
+                    return self._get_failed(path, index)
+                return obj
         else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:
@@ -1193,8 +1193,8 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple)
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
+        if '.' in path:
+            childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
@@ -1214,23 +1214,11 @@ class Container(SafeHasTraits):
                     self._check_source(path, src)
                 if index is None:
                     # bypass input source checking
-                    chk = self._input_check
-                    self._input_check = self._input_nocheck
+                    self._input_check = None
                     try:
                         setattr(self, path, value)
                     finally:
-                        self._input_check = chk
-                    # Note: This was done to make foo.bar = 3 behave the
-                    # same as foo.set('bar', 3).
-                    # Without this, the output of the comp was
-                    # always invalidated when you call set_parameters.
-                    # This meant that component was always executed
-                    # even when the inputs were unchanged.
-                    # _call_execute is set in the on-trait-changed
-                    # callback, so it's a good test for whether the
-                    # value changed.
-                    if iotype == 'in' and getattr(self, "_call_execute", False):
-                        self._input_updated(path)
+                        self._input_check = self._real_input_check
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1290,7 +1278,7 @@ class Container(SafeHasTraits):
                 full = '.'.join((path, full))
                 item = item.parent
 
-    def _input_check(self, name, old):
+    def _real_input_check(self, name, old):
         """This raises an exception if the specified input is attached
         to a source.
         """
@@ -1310,11 +1298,8 @@ class Container(SafeHasTraits):
                     "cannot be directly set" %
                     (name, preds[0]), RuntimeError)
 
-    def _input_nocheck(self, name, old):
-        """This method is substituted for `_input_check` to avoid source
-        checking during a set() call when we've already verified the source.
-        """
-        pass
+    # This gets set to None to disable checking, then reset to _real_input_check
+    _input_check = _real_input_check
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""

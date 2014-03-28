@@ -15,7 +15,7 @@ class ExpectedImprovementTests(unittest.TestCase):
         ei.criteria = "y"
         ei.predicted_value = NormalDistribution(mu=1,sigma=1)
         ei.execute()
-        self.assertAlmostEqual([0.91],ei.EI,2)
+        self.assertAlmostEqual([0.40],ei.EI,2)
         self.assertAlmostEqual(0.5,ei.PI,6)
         
     def test_ei_bad_criteria(self):

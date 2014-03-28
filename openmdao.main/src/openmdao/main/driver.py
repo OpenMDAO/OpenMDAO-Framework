@@ -36,14 +36,14 @@ class GradientOptions(VariableTree):
 
     # Finite Difference
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
-                   desc='Finite difference mode (forward, backward, central',
+                   desc='Finite difference mode (forward, backward, central)',
                    framework_var=True)
     fd_step = Float(1.0e-6, desc='Default finite difference stepsize',
                     framework_var=True)
     fd_step_type = Enum('absolute',
                         ['absolute', 'relative', 'bounds_scaled'],
                         desc='Set to absolute, relative, '
-                        'or scaled to the bounds ( high-low) step sizes',
+                        'or scaled to the bounds (high-low) step sizes',
                         framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference "
@@ -60,6 +60,17 @@ class GradientOptions(VariableTree):
                             framework_var=True)
     gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
                         framework_var=True)
+    derivative_direction = Enum('auto',
+                                ['auto', 'forward', 'adjoint'],
+                                desc = "Direction for derivative calculation. "
+                                "Can be 'forward', 'adjoint', or 'auto'. "
+                                "Auto is the default setting. "
+                                "When set to auto, OpenMDAO automatically "
+                                "figures out the best direction based on the "
+                                "number of parameters and responses. "
+                                "When the number of parameters and responses "
+                                "are equal, then forward direction is used.",
+                                framework_var=True)
 
 
 @add_delegate(HasEvents)
@@ -99,6 +110,8 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
+
+        self._evaluators = {}  # Used to evaluate variables to e recorded.
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -500,10 +513,18 @@ class Driver(Component):
                     iotype = self.parent.get_metadata(var, 'iotype')
                     iotypes[var] = iotype
                 if iotype == 'in':
-                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    evaluator = self._evaluators.get(var)
+                    if evaluator is None:
+                        evaluator = ExprEvaluator(var, scope=self.parent)
+                        self._evaluators[var] = evaluator
+                    val = evaluator.evaluate()
                     case_input.append([var, val])
                 elif iotype == 'out':
-                    val = ExprEvaluator(var, scope=self.parent).evaluate()
+                    evaluator = self._evaluators.get(var)
+                    if evaluator is None:
+                        evaluator = ExprEvaluator(var, scope=self.parent)
+                        self._evaluators[var] = evaluator
+                    val = evaluator.evaluate()
                     case_output.append([var, val])
                 else:
                     msg = "%s is not an input or output" % var
