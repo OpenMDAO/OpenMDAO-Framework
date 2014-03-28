@@ -2100,8 +2100,8 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = '-NZ'
 
     #To get rid of OSX 10.9 compiler errors by turning them to warnings.
-    # if is_darwin:
-    #    extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+    if is_darwin:
+        extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
     cmdline = [] if is_win else [join(bin_dir, 'python')]
@@ -2110,10 +2110,10 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %s" % ' '.join(cmdline))
     try:
-        # if is_darwin:
-        #    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
-        # else:
-        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+         if is_darwin:
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+         else:
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
 
     except OSError:
         failures.append(req)
@@ -2292,8 +2292,8 @@ def after_install(options, home_dir, activated=False):
 
         try:
             #Fix for newer 10.9 compiler errors, switching them to warnings.
-            # if is_darwin:
-            #    extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+            if is_darwin:
+                extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
             for pkg, pdir, _ in openmdao_packages:
                 if not options.gui and pkg == 'openmdao.gui':
@@ -2302,10 +2302,10 @@ def after_install(options, home_dir, activated=False):
                 cmdline = [join(absbin, 'python'), 'setup.py',
                            'develop', '-N'] + cmds
                 try:
-                    # if is_darwin:
-                    #    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
-                    # else:
-                    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                    if is_darwin:
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+                    else:
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
                 except OSError:
                     failures.append(pkg)
         finally:
