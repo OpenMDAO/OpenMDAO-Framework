@@ -118,11 +118,12 @@ class CaseIterDriverBase(Driver):
         try:
             if self.sequential:
                 self._logger.info('Start sequential evaluation.')
+                self._top_levels[None] = self.parent
                 while self._iter is not None:
                     if self._stop:
                         break
                     try:
-                        self.step()
+                        self._step()
                     except StopIteration:
                         break
             else:
@@ -136,7 +137,8 @@ class CaseIterDriverBase(Driver):
                 self.raise_exception('Run stopped', RunStopped)
             else:
                 self._iter = None
-                self.raise_exception('Run aborted: %s' % traceback_str(self._abort_exc),
+                self.raise_exception('Run aborted: %s'
+                                     % traceback_str(self._abort_exc),
                                      RuntimeError)
         else:
             self._iter = None
@@ -148,6 +150,11 @@ class CaseIterDriverBase(Driver):
         if self._iter is None:
             self.setup()
 
+        self._top_levels[None] = self.parent
+        self._step()
+
+    def _step(self):
+        """ Evaluate the next case. """
         try:
             case = self._iter.next()
         except StopIteration:
@@ -158,8 +165,9 @@ class CaseIterDriverBase(Driver):
 
         self._seqno += 1
         self._todo.append((case, self._seqno))
+        self._exceptions[None] = None
         self._server_cases[None] = None
-        self._server_states[None] = _EMPTY
+        self._server_states[None] = _LOADING  # 'server' already loaded.
         while self._server_ready(None, stepping=True):
             pass
 
@@ -196,7 +204,7 @@ class CaseIterDriverBase(Driver):
                             break
 
                 driver = self.parent.driver
-                self.parent.add('driver', Driver()) # this driver will execute the workflow once
+                self.parent.add('driver', Driver()) # execute the workflow once
                 self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
@@ -204,7 +212,8 @@ class CaseIterDriverBase(Driver):
                     egg_info = self.parent.save_to_egg(self.name, version,
                                                     need_requirements=need_reqs)
                 finally:
-                    self.parent.add('driver', driver) # need to do add here in order to update parent depgraph
+                    # need to do add here in order to update parent depgraph
+                    self.parent.add('driver', driver)
 
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
@@ -404,8 +413,9 @@ class CaseIterDriverBase(Driver):
         if state == _EMPTY:
             if server is None or server in self._queues:
                 if self._more_to_go(stepping):
-                    self._logger.debug('    load_model')
-                    self._load_model(server)
+                    if server is not None:
+                        self._logger.debug('    load_model')
+                        self._load_model(server)
                     self._server_states[server] = _LOADING
                 else:
                     self._logger.debug('    no more cases')
@@ -415,7 +425,7 @@ class CaseIterDriverBase(Driver):
                 in_use = False  # Never started.
 
         elif state == _LOADING:
-            exc = self._model_status(server)
+            exc = self._exceptions[server]
             if exc is None:
                 in_use = self._start_next_case(server, stepping)
             else:
@@ -438,12 +448,11 @@ class CaseIterDriverBase(Driver):
         elif state == _EXECUTING:
             case, seqno = self._server_cases[server]
             self._server_cases[server] = None
-            exc = self._model_status(server)
+            exc = self._exceptions[server]
             if exc is None:
                 # Grab the data from the model.
-                scope = self.parent if server is None else self._top_levels[server]
                 try:
-                    case.update_outputs(scope)
+                    case.update_outputs(self._top_levels[server])
                 except Exception as exc:
                     msg = 'Exception getting case outputs: %s' % exc
                     self._logger.debug('    %s', msg)
@@ -492,7 +501,9 @@ class CaseIterDriverBase(Driver):
         the model, or going straight to running it.
         """
         if self._more_to_go(stepping):
-            if reload:
+            if server is None:
+                in_use = self._start_next_case(server)
+            elif reload:
                 if self.reload_model:
                     self._logger.debug('    reload')
                     self._load_model(server)
@@ -555,12 +566,10 @@ class CaseIterDriverBase(Driver):
         # These must be added here so that the outputs are in the cases
         # before they are in the server list.
         for printvar in self.printvars:
-
             if '*' in printvar:
                 printvars = self._get_all_varpaths(printvar)
             else:
                 printvars = [printvar]
-
             for var in printvars:
                 evaluator = self._evaluators.get(var)
                 if evaluator is None:
@@ -568,18 +577,16 @@ class CaseIterDriverBase(Driver):
                     self._evaluators[var] = evaluator
                 val = evaluator.evaluate()
                 case.add_output(var, val)
-
         try:
             for event in self.get_events():
                 try:
-                    self._model_set(server, event, None, True)
+                    self._top_levels[server].set(event, None, None)
                 except Exception as exc:
                     msg = 'Exception setting %r: %s' % (event, exc)
                     self._logger.debug('    %s', msg)
                     self.raise_exception(msg, _ServerError)
             try:
-                scope = self.parent if server is None else self._top_levels[server]
-                case.apply_inputs(scope)
+                case.apply_inputs(self._top_levels[server])
             except Exception as exc:
                 msg = 'Exception setting case inputs: %s' % exc
                 self._logger.debug('    %s', msg)
@@ -601,7 +608,6 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append((case, seqno))
         else:
-
             for recorder in self.recorders:
                 recorder.record(case)
 
@@ -677,7 +683,8 @@ class CaseIterDriverBase(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server, self._egg_file, exc)
                 self._top_levels[server] = None
-                self._exceptions[server] = TracedError(exc, traceback.format_exc())
+                self._exceptions[server] = TracedError(exc,
+                                                       traceback.format_exc())
                 return
             else:
                 self._server_info[server]['egg_file'] = self._egg_file
@@ -692,13 +699,6 @@ class CaseIterDriverBase(Driver):
         else:
             self._top_levels[server] = tlo
 
-    def _model_set(self, server, name, index, value):
-        """ Set value in server's model. """
-        if server is None:
-            self.parent.set(name, value, index)
-        else:
-            self._top_levels[server].set(name, value, index)
-
     def _model_execute(self, server):
         """ Execute model in server. """
         self._exceptions[server] = None
@@ -707,7 +707,8 @@ class CaseIterDriverBase(Driver):
                 self.workflow._parent.update_parameters()
                 self.workflow.run(case_id=self._server_cases[server][0].uuid)
             except Exception as exc:
-                self._exceptions[server] = TracedError(exc, traceback.format_exc())
+                self._exceptions[server] = TracedError(exc,
+                                                       traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
@@ -720,14 +721,12 @@ class CaseIterDriverBase(Driver):
             self._top_levels[server].run(case_id=case.uuid)
         except Exception as exc:
             self._exceptions[server] = TracedError(exc, traceback.format_exc())
-            self._logger.error('Caught exception from server %r, PID %d on %s: %r',
+            self._logger.error('Caught exception from server %r,'
+                               ' PID %d on %s: %r',
                                self._server_info[server]['name'],
                                self._server_info[server]['pid'],
                                self._server_info[server]['host'], exc)
 
-    def _model_status(self, server):
-        """ Return execute status from model. """
-        return self._exceptions[server]
 
 class CaseIteratorDriverBase(CaseIterDriverBase):
     """
