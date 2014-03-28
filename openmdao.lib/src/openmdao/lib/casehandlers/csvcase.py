@@ -319,7 +319,7 @@ class CSVCaseRecorder(object):
         if self.outfile is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
-        if self._write_headers:
+        if self._write_headers or self._header_size == 0:
 
             headers = ['timestamp', 'label', '/INPUTS']
 
@@ -376,8 +376,8 @@ class CSVCaseRecorder(object):
             else:
                 backup_name = '%s_%s' % (self.filename, timestamp)
                 globname = self.filename
-
-            shutil.copyfile(self.filename, backup_name)
+            if os.path.isfile(self.filename):
+                shutil.copyfile(self.filename, backup_name)
 
             # Clean up old backups if we exceed our max
             backups = glob.glob(globname + '_*')

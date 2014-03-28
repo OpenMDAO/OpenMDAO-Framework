@@ -36,14 +36,14 @@ class GradientOptions(VariableTree):
 
     # Finite Difference
     fd_form = Enum('forward', ['forward', 'backward', 'central'],
-                   desc='Finite difference mode (forward, backward, central',
+                   desc='Finite difference mode (forward, backward, central)',
                    framework_var=True)
     fd_step = Float(1.0e-6, desc='Default finite difference stepsize',
                     framework_var=True)
     fd_step_type = Enum('absolute',
                         ['absolute', 'relative', 'bounds_scaled'],
                         desc='Set to absolute, relative, '
-                        'or scaled to the bounds ( high-low) step sizes',
+                        'or scaled to the bounds (high-low) step sizes',
                         framework_var=True)
 
     force_fd = Bool(False, desc="Set to True to force finite difference "
@@ -60,6 +60,17 @@ class GradientOptions(VariableTree):
                             framework_var=True)
     gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
                         framework_var=True)
+    derivative_direction = Enum('auto',
+                                ['auto', 'forward', 'adjoint'],
+                                desc = "Direction for derivative calculation. "
+                                "Can be 'forward', 'adjoint', or 'auto'. "
+                                "Auto is the default setting. "
+                                "When set to auto, OpenMDAO automatically "
+                                "figures out the best direction based on the "
+                                "number of parameters and responses. "
+                                "When the number of parameters and responses "
+                                "are equal, then forward direction is used.",
+                                framework_var=True)
 
 
 @add_delegate(HasEvents)

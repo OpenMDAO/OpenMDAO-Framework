@@ -227,6 +227,11 @@ class SequentialWorkflow(Workflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
+
+        # Cache this too
+        if self.res is not None:
+            return len(self.res)
+
         dgraph = self.derivative_graph()
         inputs = dgraph.graph['mapped_inputs']
 
@@ -315,7 +320,8 @@ class SequentialWorkflow(Workflow):
                         exec("src_val = base[%s" % idx)
                         if isinstance(src_val, ndarray):
                             shape = src_val.shape
-                            istring, ix = flatten_slice(idx, shape, offset=nEdge,
+                            istring, ix = flatten_slice(idx, shape,
+                                                        offset=nEdge,
                                                         name='ix')
                             bound = (istring, ix)
                             if isinstance(istring, list):
@@ -429,9 +435,8 @@ class SequentialWorkflow(Workflow):
         width = self._width_cache.get(attr, _missing)
         if width is _missing:
             param = from_PA_var(attr)
-            self._width_cache[attr] = width = flattened_size(param,
-                                                             self.scope.get(param),
-                                                             self.scope)
+            width = flattened_size(param, self.scope.get(param), self.scope)
+            self._width_cache[attr] = width
         return width
 
     def _update(self, name, vtree, dv, i1=0):
@@ -838,7 +843,8 @@ class SequentialWorkflow(Workflow):
                 for src in inodes:
                     for targ in inodes:
                         if src != targ:
-                            nodeset.update(find_all_connecting(cgraph, src, targ))
+                            nodeset.update(find_all_connecting(cgraph, src,
+                                                               targ))
 
                 nondiff_groups.append(nodeset)
 
@@ -1001,7 +1007,7 @@ class SequentialWorkflow(Workflow):
             self._derivative_graph = None
             self._edges = None
             self._comp_edges = None
-
+            self.res = None
             self._upscoped = upscope
 
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
@@ -1045,15 +1051,54 @@ class SequentialWorkflow(Workflow):
 
         shape = (num_out, num_in)
 
-        # Auto-determine which mode to use based on Jacobian shape.
+        # Auto-determine which direction to use based on Jacobian shape.
         if mode == 'auto':
+
             # TODO - additional determination based on presence of
             # apply_derivT
 
-            if num_in > num_out:
+            # User-controlled setting in the driver. This takes precedence
+            # over OpenMDAO's automatic choice.
+            opt = self._parent.gradient_options
+
+            if opt.derivative_direction == 'forward':
+                mode = 'forward'
+            elif opt.derivative_direction == 'adjoint':
+                mode = 'adjoint'
+
+            # OpenMDAO's automatic direction determination
+            elif num_in > num_out:
                 mode = 'adjoint'
             else:
                 mode = 'forward'
+
+        # Make sure we have all the derivatives we are asking for.
+        if mode != 'fd':
+
+            comps = self._comp_edge_list()
+
+            for comp_name in comps:
+
+                if '~' in comp_name:
+                    continue
+
+                comp = self.scope.get(comp_name)
+
+                if mode == 'forward':
+                    if hasattr(comp, 'apply_derivT') and \
+                       not hasattr(comp, 'apply_deriv'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "forward mode, but component %s" % comp.name
+                        msg += " only has adjoint derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
+
+                elif mode == 'adjoint':
+                    if hasattr(comp, 'apply_deriv') and \
+                       not hasattr(comp, 'apply_derivT'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "adjoint mode, but component %s" % comp.name
+                        msg += " only has forward derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
 
         if mode == 'adjoint':
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
