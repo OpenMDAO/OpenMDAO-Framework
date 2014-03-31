@@ -2,7 +2,7 @@
 
 import logging
 try:
-    from numpy import exp, abs, pi
+    from numpy import exp, abs, pi, seterr
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 _check = ['numpy']
@@ -51,14 +51,14 @@ class ExpectedImprovementBase(Component):
                                  "matched the criteria, '%s'"%self.criteria,
                                  ValueError)
         try:
-
+            seterr(divide='raise')
             self.PI = 0.5+0.5*erf((1/2**.5)*((target-mu)/sigma))
 
             T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
             T2 = sigma*((1./((2.*pi)**.5))*exp(-0.5*((target-mu)/sigma)**2.))
             self.EI = abs(T1+T2)
 
-        except (ValueError,ZeroDivisionError):
+        except (ValueError, ZeroDivisionError, FloatingPointError):
             self.EI = 0
             self.PI = 0
 
@@ -68,7 +68,7 @@ class ConnectableExpectedImprovement(ExpectedImprovementBase):
     best_case = Instance(CaseSet, iotype="in",
                        desc="CaseSet which contains a single case "
                             "representing the criteria value.")
-    
+
     predicted_value = Instance(NormalDistribution, iotype="in",
                              desc="The Normal Distribution of the predicted value "
                                   "for some function at some point where you wish to"
@@ -78,7 +78,7 @@ class ExpectedImprovement(ExpectedImprovementBase):
     best_case = Slot(CaseSet,
                        desc="CaseSet which contains a single case "
                             "representing the criteria value.")
-    
+
     predicted_value = Slot(NormalDistribution,
                              desc="The Normal Distribution of the predicted value "
                                   "for some function at some point where you wish to"
