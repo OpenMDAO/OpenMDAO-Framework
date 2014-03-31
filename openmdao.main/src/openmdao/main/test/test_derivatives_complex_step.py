@@ -27,6 +27,24 @@ class SimpleCompFloat(Component):
     def list_deriv_vars(self):
         return ('x',), ('y',)
     
+class SimpleCompArray(Component):
+
+    x = Array(array([[2.0, 4.0], [1.0, 3.0]]), iotype='in')
+    y = Array(iotype='out')
+
+    def execute(self):
+        self.J = array([[1.0, 3.0, 2.0, 5.0], 
+                        [-1.0, 3.0, 7.0, -5.0],
+                        [4.0, 4.0, 3.0, -3.0],
+                        [2.0, 5.0, 1.5, 2.0]])
+        self.y = self.J.dot(self.x.flatten()).reshape((2, 2))
+
+    def provideJ(self):
+        return self.J
+
+    def list_deriv_vars(self):
+        return ('x',), ('y',)
+    
     
 class TreeWithFloat(VariableTree):
 
@@ -58,6 +76,49 @@ class CompWithVarTreeSubTree(Component):
 
         return ins, outs
     
+class TreeWithArray(VariableTree):
+
+    x = Array(array([[2.0, 4.0], [1.0, 3.0]]))
+
+class TreeWithArraySubTree(VariableTree):
+
+    x = Array(array([[2.0, 4.0], [1.0, 3.0]]))
+    sub = VarTree(TreeWithArray())
+   
+class CompWithArrayVarTreeSubTree(Component):
+
+    ins = VarTree(TreeWithArraySubTree(), iotype="in")
+    outs = VarTree(TreeWithArraySubTree(), iotype="out")
+
+    def execute(self):
+        self.J1 = array([[1.0, 3.0, 2.0, 5.0], 
+                        [-1.0, 3.0, 7.0, -5.0],
+                        [4.0, 4.0, 3.0, -3.0],
+                        [2.0, 5.0, 1.5, 2.0]])
+        self.J2 = .9*self.J1
+        self.J3 = 1.1*self.J1
+        self.J4 = .7*self.J1
+        
+        x1 = self.ins.x.flatten()
+        x2 = self.ins.sub.x.flatten()
+        
+        self.outs.x = (self.J1.dot(x1) + self.J2.dot(x2)).reshape((2, 2))
+        self.outs.sub.x = (self.J3.dot(x1) + self.J4.dot(x2)).reshape((2, 2))
+
+    def provideJ(self):
+
+        self.J = zeros((8, 8))
+        self.J[:4, :4] = self.J1
+        self.J[:4, 4:] = self.J2
+        self.J[4:, :4] = self.J3
+        self.J[4:, 4:] = self.J4
+        return self.J
+
+    def list_deriv_vars(self):
+        ins = ('ins.x', 'ins.sub.x')
+        outs = ('outs.x','outs.sub.x')
+
+        return ins, outs
     
 class Testcase_ComplexStep_Traits(unittest.TestCase):
     """ Make sure trait Float works for complex stepping. """
@@ -93,4 +154,51 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         self.assertEqual(model.comp.ins.sub.x, 5+3j)
         self.assertEqual(model.comp.outs.x, 19+11j)
         self.assertEqual(model.comp.outs.sub.x, 13+7j)
+        
+    def test_array(self):
+        
+        model = set_as_top(Assembly())
+        model.add('comp', SimpleCompArray())
+        model.driver.workflow.add('comp')
+        
+        model.comp._complex_step = True
+        
+        model.comp.x = model.comp.x.astype('complex')
+        model.comp.x[1, 1] = 3+4j
+        model.run()
+        
+        print model.comp.y
+        
+        y_check = array([[31.0+20.0j, 2.0-20.0j], [18.0-12.0j, 31.5+8.0j]])
+        self.assertEqual(model.comp.x[1, 1], 3+4j)
+        self.assertEqual(model.comp.y[0, 0], y_check[0, 0])
+        self.assertEqual(model.comp.y[0, 1], y_check[0, 1])
+        self.assertEqual(model.comp.y[1, 0], y_check[1, 0])
+        self.assertEqual(model.comp.y[1, 1], y_check[1, 1])
+        
+    def test_array_in_vartree(self):
+        
+        model = set_as_top(Assembly())
+        model.add('comp', CompWithArrayVarTreeSubTree())
+        model.driver.workflow.add('comp')
+        
+        model.comp._complex_step = True
+        
+        model.comp.ins.x = model.comp.ins.x.astype('complex')
+        model.comp.ins.x[1, 1] = 1+2j
+        model.comp.ins.sub.x = model.comp.ins.sub.x.astype('complex')
+        model.comp.ins.sub.x[1, 1] = 3+4j
+        model.run()
+
+        print model.comp.ins.x, model.comp.ins.sub.x
+        print model.comp.outs.x, model.comp.outs.sub.x
+        
+        y_check = array([[5.0, 13.0+12.0j], [9.0, 23.0+20j]])
+        self.assertEqual(model.comp.x[1, 1], 3+4j)
+        self.assertEqual(model.comp.y[0, 0], y_check[0, 0])
+        self.assertEqual(model.comp.y[0, 1], y_check[0, 1])
+        self.assertEqual(model.comp.y[1, 0], y_check[1, 0])
+        self.assertEqual(model.comp.y[1, 1], y_check[1, 1])
+       
+        
         

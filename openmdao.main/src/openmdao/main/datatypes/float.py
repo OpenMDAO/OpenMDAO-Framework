@@ -157,7 +157,7 @@ class Float(Variable):
             
         if is_complex_step:
             
-            # TODO - Need to do unit conversion on the complex part.
+            # TODO - Need to do unit conversion on the complex part too.
             new_val += value_imag*1j
             
         #print name, new_val  
