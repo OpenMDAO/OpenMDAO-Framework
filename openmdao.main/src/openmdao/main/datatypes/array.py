@@ -153,7 +153,12 @@ class Array(TraitArray):
                                                          value.value,
                                                          valunits)
 
-        return super(Array, self).validate(obj, name, value)
+        try:
+            new_val = super(Array, self).validate(obj, name, value)
+        except Exception:
+            self.error(obj, name, value)
+            
+        return new_val
 
     def error(self, obj, name, value):
         """Returns an informative and descriptive error string."""

@@ -11,7 +11,7 @@ except ImportError as err:
     
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
-
+from openmdao.util.testutil import assert_rel_error
 
 class SimpleCompFloat(Component):
 
@@ -94,7 +94,7 @@ class CompWithArrayVarTreeSubTree(Component):
         self.J1 = array([[1.0, 3.0, 2.0, 5.0], 
                         [-1.0, 3.0, 7.0, -5.0],
                         [4.0, 4.0, 3.0, -3.0],
-                        [2.0, 5.0, 1.5, 2.0]])
+                        [2.0, 5.0, 1.0, 2.0]])
         self.J2 = .9*self.J1
         self.J3 = 1.1*self.J1
         self.J4 = .7*self.J1
@@ -193,12 +193,13 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         print model.comp.ins.x, model.comp.ins.sub.x
         print model.comp.outs.x, model.comp.outs.sub.x
         
-        y_check = array([[5.0, 13.0+12.0j], [9.0, 23.0+20j]])
-        self.assertEqual(model.comp.x[1, 1], 3+4j)
-        self.assertEqual(model.comp.y[0, 0], y_check[0, 0])
-        self.assertEqual(model.comp.y[0, 1], y_check[0, 1])
-        self.assertEqual(model.comp.y[1, 0], y_check[1, 0])
-        self.assertEqual(model.comp.y[1, 1], y_check[1, 1])
-       
+        y1_check = array([[48.9+28.j, 13.80-28.j], [40.20-16.8j, 54.9+11.2j]])
+        y2_check = array([[44.8+25.j,  14.6-25.j], [ 39.0-15.j, 51.4+10.j]])
         
+        self.assertEqual(model.comp.ins.x[1, 1], 1+2j)
+        self.assertEqual(model.comp.ins.sub.x[1, 1], 3+4j)
+        diff = abs(y1_check - model.comp.outs.x).max()
+        assert_rel_error(self, diff, 0.0, .0001)
+        diff = abs(y2_check - model.comp.outs.sub.x).max()
+        assert_rel_error(self, diff, 0.0, .0001)
         
