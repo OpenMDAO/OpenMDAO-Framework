@@ -299,7 +299,7 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         assert_rel_error(self, model.paraboloid.x, 7.175775, 0.01)
         assert_rel_error(self, model.paraboloid.y, -7.824225, 0.01)
 
-    def test_optimization(self):
+    def test_optimization2(self):
 
         model = set_as_top(OptimizationConstrained())
         model.driver.gradient_options.fd_form = 'complex_step'
