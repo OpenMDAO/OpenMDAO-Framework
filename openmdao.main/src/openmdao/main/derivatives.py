@@ -727,7 +727,6 @@ class FiniteDifference(object):
         self.x = zeros((in_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
-        self.yc = zeros((out_size,), dtype=complex128)
 
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
@@ -824,15 +823,16 @@ class FiniteDifference(object):
 
                     complex_step = fd_step*1j
                     self.pa.set_complex_step()
+                    yc = zeros(len(self.y), dtype=complex128)
 
                     # Step
                     self.set_value(src, complex_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
-                    self.get_outputs(self.yc)
+                    self.get_outputs(yc)
 
                     # Forward difference
-                    self.J[:, i] = (self.yc/fd_step).imag
+                    self.J[:, i] = (yc/fd_step).imag
 
                     # Undo step
                     self.set_value(src, -fd_step, i1, i2, i, complex_step=True)
