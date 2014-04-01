@@ -9,6 +9,7 @@ try:
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array, identity, random
 
+from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.util.testutil import assert_rel_error
@@ -83,6 +84,26 @@ class CompWithArrayVarTreeSubTree(Component):
         self.outs.x = (self.J1.dot(x1) + self.J2.dot(x2)).reshape((2, 2))
         self.outs.sub.x = (self.J3.dot(x1) + self.J4.dot(x2)).reshape((2, 2))
 
+class Paraboloid_Mixed(Component):
+    """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
+
+    # set up interface to the framework
+    # pylint: disable-msg=E1101
+    x = Float(0.0, iotype='in', fd_form='complex_step', desc='The variable x')
+    y = Float(0.0, iotype='in', desc='The variable y')
+
+    f_xy = Float(iotype='out', desc='F(x,y)')
+
+
+    def execute(self):
+        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+        Optimal solution (minimum): x = 6.6667; y = -7.3333
+        """
+
+        x = self.x
+        y = self.y
+
+        self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
 class Testcase_ComplexStep_Traits(unittest.TestCase):
     """ Make sure trait Float works for complex stepping. """
@@ -254,3 +275,37 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         assert_rel_error(self, diff, 0.0, .0001)
         self.assertTrue(J[0, 0] is not complex)
 
+    def test_mixed_CS_FD(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', Paraboloid_Mixed())
+        model.driver.workflow.add('comp')
+
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                                outputs=['comp.f_xy'])
+
+        assert_rel_error(self, J[0, 0], -6.0, .0001)
+        assert_rel_error(self, J[0, 1], 8.0, .0001)
+
+
+    def test_optimization(self):
+
+        model = set_as_top(OptimizationConstrained())
+        model.driver.gradient_options.fd_form = 'complex_step'
+        model.run()
+
+        assert_rel_error(self, model.paraboloid.x, 7.175775, 0.01)
+        assert_rel_error(self, model.paraboloid.y, -7.824225, 0.01)
+
+    def test_optimization(self):
+
+        model = set_as_top(OptimizationConstrained())
+        model.driver.gradient_options.fd_form = 'complex_step'
+        # Full model complex step (to test Pseudocomps)
+        model.driver.gradient_options.force_fd = True
+        model.run()
+
+        assert_rel_error(self, model.paraboloid.x, 7.175775, 0.01)
+        assert_rel_error(self, model.paraboloid.y, -7.824225, 0.01)
