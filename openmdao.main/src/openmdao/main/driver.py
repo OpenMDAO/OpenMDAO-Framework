@@ -35,8 +35,10 @@ class GradientOptions(VariableTree):
     ''' Options for calculation of the gradient by the driver's workflow. '''
 
     # Finite Difference
-    fd_form = Enum('forward', ['forward', 'backward', 'central'],
-                   desc='Finite difference mode (forward, backward, central)',
+    fd_form = Enum('forward', ['forward', 'backward', 'central', 'complex_step'],
+                   desc="Finite difference mode. (forward, backward, central) "
+                   "You can also set to 'complex_step' to peform the complex "
+                   "step method if your components support it.",
                    framework_var=True)
     fd_step = Float(1.0e-6, desc='Default finite difference stepsize',
                     framework_var=True)
