@@ -835,7 +835,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (yc/fd_step).imag
 
                     # Undo step
-                    self.set_value(src, -fd_step, i1, i2, i, complex_step=True)
+                    self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -912,7 +912,7 @@ class FiniteDifference(object):
             else:
                 x[i1:i2] = src_val[0]
 
-    def set_value(self, srcs, val, i1, i2, index, complex_step=False):
+    def set_value(self, srcs, val, i1, i2, index, undo_complex=False):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -951,7 +951,7 @@ class FiniteDifference(object):
                 # Scalar
                 else:
                     old_val = self.scope.get(src)
-                    if complex_step is True:
+                    if undo_complex is True:
                         self.scope.set(src, (old_val+val).real, force=True)
                     else:
                         self.scope.set(src, old_val+val, force=True)
