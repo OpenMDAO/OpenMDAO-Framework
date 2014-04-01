@@ -187,20 +187,20 @@ Hyperlinks
   Use ```Link text <http://target>`_`` for inline web links. 
 
   For example, typing:
-	 ```Python  2.7 <http://www.python.org/download/releases/2.7/>`_``
+	 ```Python  2.7 <https://www.python.org/download/releases/2.7/>`_``
 
   will result in the following hyperlink: 
-	`Python  2.7 <http://www.python.org/download/releases/2.7/>`_ 
+	`Python  2.7 <https://www.python.org/download/releases/2.7/>`_ 
 
   If the link text should be the Web address, you don't need special markup; just
   type the address in the reST file, and the parser will find the
   link/mailing address in the text.
 
   For example, typing:
-	``http://www.python.org/download/releases/2.7/`` 
+	``http:s//www.python.org/download/releases/2.7/`` 
 	
   will result in this hyperlink:
-	http://www.python.org/download/releases/2.7/
+	https://www.python.org/download/releases/2.7/
 
 
 **- External link -- to more than one web address (anonymous hyperlink)**
