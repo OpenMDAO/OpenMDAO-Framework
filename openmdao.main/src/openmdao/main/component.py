@@ -258,7 +258,11 @@ class Component(Container):
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
         self._set_exec_state("INVALID")
-        if self.parent:
+        if self._connected_inputs is None:
+            self._connected_inputs = \
+                       self._depgraph.get_boundary_inputs(connected=True)
+            self._input_names = [k for k, v in self.items(iotype='in')]
+        if name not in self._connected_inputs:
             try:
                 inval = self.parent.child_invalidated
             except AttributeError:
@@ -455,7 +459,8 @@ class Component(Container):
         else:
             parent.update_inputs(self.name)
 
-        self.check_configuration()
+        if self._call_check_config:
+            self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -565,7 +570,9 @@ class Component(Container):
 
         if self.parent:
             self.parent.child_run_finished(self.name, self._outputs_to_validate())
-        self.publish_vars()
+
+        if Publisher.get_instance() is not None:
+            self.publish_vars()
 
     def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""

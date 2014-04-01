@@ -575,8 +575,7 @@ class CaseIterDriverBase(Driver):
                 if evaluator is None:
                     evaluator = ExprEvaluator(var, scope=self.parent)
                     self._evaluators[var] = evaluator
-                val = evaluator.evaluate()
-                case.add_output(var, val)
+                case.add_output(var, evaluator.evaluate())
         try:
             for event in self.get_events():
                 try:
