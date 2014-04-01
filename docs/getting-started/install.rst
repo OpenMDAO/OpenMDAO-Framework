@@ -73,8 +73,8 @@ the front of your system path in the current shell so that when you type
 ``python``, you'll get a Python interpreter that's customized for your virtual
 environment, giving you access to everything in OpenMDAO.
 
-Navigate into the folder that was just created by your install script. Change
-directories so you are in the ``devenv`` directory.
+Navigate into the folder that was just created by your install script. It will have a name
+of the form ``openmdao-X.X.X``.
 
 If you are on **Linux,** you must be running bash to activate the virtual environment. If you are
 not running bash, start it up by typing:
