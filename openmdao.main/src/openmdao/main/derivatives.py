@@ -12,7 +12,7 @@ from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 try:
-    from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
+    from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack, complex128
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
 
@@ -727,6 +727,7 @@ class FiniteDifference(object):
         self.x = zeros((in_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
+        self.yc = zeros((out_size,), dtype=complex128)
 
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
@@ -821,26 +822,27 @@ class FiniteDifference(object):
                 #--------------------
                 elif form == 'complex_step':
 
-                    complex_step = fd_step*j
+                    complex_step = fd_step*1j
+                    self.pa.set_complex_step()
 
                     # Step
-                    self.set_value(src, fd_step, i1, i2, i)
+                    self.set_value(src, complex_step, i1, i2, i)
 
                     self.pa.run(ffd_order=1)
-                    self.get_outputs(self.y)
+                    self.get_outputs(self.yc)
 
                     # Forward difference
-                    self.J[:, i] = (self.y/fd_step).imag
+                    self.J[:, i] = (self.yc/fd_step).imag
 
                     # Undo step
-                    self.set_value(src, -fd_step, i1, i2, i)
+                    self.set_value(src, -fd_step, i1, i2, i, complex_step=True)
 
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
             old_val = self.scope.get(src)
 
-            if isinstance(old_val, float):
+            if isinstance(old_val, (float, complex)):
                 new_val = float(self.y_base[i1:i2])
             elif isinstance(old_val, ndarray):
                 shape = old_val.shape
@@ -905,12 +907,12 @@ class FiniteDifference(object):
 
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
-            if isinstance(src_val, ndarray):
+            if len(src_val) > 1:
                 x[i1:i2] = src_val.copy()
             else:
-                x[i1:i2] = src_val
+                x[i1:i2] = src_val[0]
 
-    def set_value(self, srcs, val, i1, i2, index):
+    def set_value(self, srcs, val, i1, i2, index, complex_step=False):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -949,7 +951,10 @@ class FiniteDifference(object):
                 # Scalar
                 else:
                     old_val = self.scope.get(src)
-                    self.scope.set(src, old_val+val, force=True)
+                    if complex_step is True:
+                        self.scope.set(src, (old_val+val).real, force=True)
+                    else:
+                        self.scope.set(src, old_val+val, force=True)
 
             # Full vector
             else:

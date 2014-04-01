@@ -21,12 +21,6 @@ class SimpleCompFloat(Component):
     def execute(self):
         self.y = 2.0*self.x
 
-    def provideJ(self):
-        return array([[2.0]])
-
-    def list_deriv_vars(self):
-        return ('x',), ('y',)
-
 class SimpleCompArray(Component):
 
     x = Array(array([[2.0, 4.0], [1.0, 3.0]]), iotype='in')
@@ -38,12 +32,6 @@ class SimpleCompArray(Component):
                         [4.0, 4.0, 3.0, -3.0],
                         [2.0, 5.0, 1.5, 2.0]])
         self.y = self.J.dot(self.x.flatten()).reshape((2, 2))
-
-    def provideJ(self):
-        return self.J
-
-    def list_deriv_vars(self):
-        return ('x',), ('y',)
 
 
 class TreeWithFloat(VariableTree):
@@ -65,16 +53,6 @@ class CompWithVarTreeSubTree(Component):
         self.outs.x = 2.0*self.ins.x + 3.0*self.ins.sub.x
         self.outs.sub.x = 4.0*self.ins.x + 1.0*self.ins.sub.x
 
-    def provideJ(self):
-
-        self.J = array([2.0, 3.0], [4.0, 1.0])
-        return self.J
-
-    def list_deriv_vars(self):
-        ins = ('ins.x', 'ins.sub.x')
-        outs = ('outs.x','outs.sub.x')
-
-        return ins, outs
 
 class TreeWithArray(VariableTree):
 
@@ -105,20 +83,6 @@ class CompWithArrayVarTreeSubTree(Component):
         self.outs.x = (self.J1.dot(x1) + self.J2.dot(x2)).reshape((2, 2))
         self.outs.sub.x = (self.J3.dot(x1) + self.J4.dot(x2)).reshape((2, 2))
 
-    def provideJ(self):
-
-        self.J = zeros((8, 8))
-        self.J[:4, :4] = self.J1
-        self.J[:4, 4:] = self.J2
-        self.J[4:, :4] = self.J3
-        self.J[4:, 4:] = self.J4
-        return self.J
-
-    def list_deriv_vars(self):
-        ins = ('ins.x', 'ins.sub.x')
-        outs = ('outs.x','outs.sub.x')
-
-        return ins, outs
 
 class Testcase_ComplexStep_Traits(unittest.TestCase):
     """ Make sure trait Float works for complex stepping. """
@@ -211,9 +175,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model.comp.ins.sub.x[1, 1] = 3+4j
         model.run()
 
-        print model.comp.ins.x, model.comp.ins.sub.x
-        print model.comp.outs.x, model.comp.outs.sub.x
-
         y1_check = array([[48.9+28.j, 13.80-28.j], [40.20-16.8j, 54.9+11.2j]])
         y2_check = array([[44.8+25.j,  14.6-25.j], [ 39.0-15.j, 51.4+10.j]])
 
@@ -232,6 +193,64 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', SimpleCompFloat())
         model.driver.workflow.add('comp')
+        model.driver.gradient_options.fd_form = 'complex_step'
 
-        model.comp._complex_step = True
         model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
+                                                outputs=['comp.y'])
+
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        self.assertTrue(model.comp.x is not complex)
+        self.assertTrue(model.comp.y is not complex)
+
+        # Make sure we can do whole workflows.
+        model.add('comp2', SimpleCompFloat())
+        model.driver.workflow.add('comp2')
+        model.connect('comp.y', 'comp2.x')
+
+        model.run()
+
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
+                                                outputs=['comp2.y'])
+
+        assert_rel_error(self, J[0, 0], 4.0, .000001)
+        self.assertTrue(model.comp.x is not complex)
+        self.assertTrue(model.comp2.y is not complex)
+
+    def test_simple_float_in_vartree(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompWithVarTreeSubTree())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.fd_form = 'complex_step'
+
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.ins.x', 'comp.ins.sub.x'],
+                                                outputs=['comp.outs.x', 'comp.outs.sub.x'])
+
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        assert_rel_error(self, J[0, 1], 3.0, .000001)
+        assert_rel_error(self, J[1, 0], 4.0, .000001)
+        assert_rel_error(self, J[1, 1], 1.0, .000001)
+        self.assertTrue(model.comp.ins.x is not complex)
+        self.assertTrue(model.comp.ins.sub.x is not complex)
+        self.assertTrue(model.comp.outs.x is not complex)
+        self.assertTrue(model.comp.outs.sub.x is not complex)
+
+    def test_simple_array(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', SimpleCompArray())
+        model.driver.workflow.add('comp')
+        #model.driver.gradient_options.fd_form = 'complex_step'
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
+                                                outputs=['comp.y'])
+        diff = abs(J - model.comp.J).max()
+        assert_rel_error(self, diff, 0.0, .0001)
+        self.assertTrue(J[0, 0] is not complex)
+
