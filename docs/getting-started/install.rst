@@ -20,7 +20,7 @@ OpenMDAO is installed using a bootstrap script that installs OpenMDAO in a *virt
 
 1. Download the installation script.
 
-   Go to the OpenMDAO `downloads <http://openmdao.org/downloads-2/recent/>`_ page and then click on the latest 
+   Go to the OpenMDAO `downloads <http://openmdao.org/downloads/recent/>`_ page and then click on the latest 
    ``go-openmdao.py`` script (listed first). You will see that earlier versions may also
    be downloaded.
 
@@ -73,8 +73,8 @@ the front of your system path in the current shell so that when you type
 ``python``, you'll get a Python interpreter that's customized for your virtual
 environment, giving you access to everything in OpenMDAO.
 
-Navigate into the folder that was just created by your install script. Change
-directories so you are in the ``devenv`` directory.
+Navigate into the folder that was just created by your install script. It will have a name
+of the form ``openmdao-X.X.X``.
 
 If you are on **Linux,** you must be running bash to activate the virtual environment. If you are
 not running bash, start it up by typing:
