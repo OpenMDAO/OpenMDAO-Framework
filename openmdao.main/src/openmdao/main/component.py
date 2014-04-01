@@ -202,13 +202,14 @@ class Component(Container):
         self._dir_stack = []
         self._dir_context = None
 
+        # Flags and caching used by the derivatives calculation
         self.ffd_order = 0
         self._provideJ_bounds = None
-        self._case_id = ''
+        self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
-
         self._recorders = None
+        self._case_id = ''
 
     @property
     def dir_context(self):

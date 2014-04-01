@@ -144,16 +144,21 @@ class Array(TraitArray):
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
         if isinstance(value, AttrWrapper):
+            value = value.value
             if self.units:
                 valunits = value.metadata.get('units')
                 if valunits and isinstance(valunits, basestring) and \
                    self.units != valunits:
-                    return self._validate_with_metadata(obj, name,
-                                                        value.value,
-                                                        valunits)
-            value = value.value
+                    value = self._validate_with_metadata(obj, name,
+                                                         value.value,
+                                                         valunits)
 
-        return super(Array, self).validate(obj, name, value)
+        try:
+            new_val = super(Array, self).validate(obj, name, value)
+        except Exception:
+            self.error(obj, name, value)
+            
+        return new_val
 
     def error(self, obj, name, value):
         """Returns an informative and descriptive error string."""
@@ -197,27 +202,28 @@ class Array(TraitArray):
         # pylint: disable-msg=E1101
         dst_units = self.units
 
-        try:
-            pq = PhysicalQuantity(1.0, src_units)
-        except NameError:
-            raise NameError("while setting value of %s: undefined unit '%s'" %
-                            (src_units, name))
+        # Convert units only if we have differing units
+        if src_units != dst_units:
 
-        try:
-            pq.convert_to_unit(dst_units)
-        except NameError:
-            raise NameError("undefined unit '%s' for variable '%s'" %
-                            (dst_units, name))
-        except TypeError:
-            msg = "%s: units '%s' are incompatible " % (name, src_units) + \
-                   "with assigning units of '%s'" % (dst_units)
-            raise TypeError(msg)
-
-        try:
+            try:
+                pq = PhysicalQuantity(1.0, src_units)
+            except NameError:
+                raise NameError("while setting value of %s: undefined unit '%s'" %
+                                (src_units, name))
+    
+            try:
+                pq.convert_to_unit(dst_units)
+            except NameError:
+                raise NameError("undefined unit '%s' for variable '%s'" %
+                                (dst_units, name))
+            except TypeError:
+                msg = "%s: units '%s' are incompatible " % (name, src_units) + \
+                       "with assigning units of '%s'" % (dst_units)
+                raise TypeError(msg)
+    
             value *= pq.value
-            return super(Array, self).validate(obj, name, value)
-        except Exception:
-            self.error(obj, name, value)
+                
+        return value
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
