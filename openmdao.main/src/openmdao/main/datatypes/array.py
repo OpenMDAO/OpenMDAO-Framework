@@ -133,7 +133,7 @@ class Array(TraitArray):
                     raise ValueError("Shape of the default value does not "
                                      "match the shape attribute.")
 
-        super(Array, self).__init__(dtype=dtype, value=default_value, assumed_default=assumed_default, 
+        super(Array, self).__init__(dtype=dtype, value=default_value, assumed_default=assumed_default,
                                     **metadata)
 
     def validate(self, obj, name, value):
@@ -157,7 +157,7 @@ class Array(TraitArray):
             new_val = super(Array, self).validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
-            
+
         return new_val
 
     def error(self, obj, name, value):
@@ -202,27 +202,24 @@ class Array(TraitArray):
         # pylint: disable-msg=E1101
         dst_units = self.units
 
-        # Convert units only if we have differing units
-        if src_units != dst_units:
+        try:
+            pq = PhysicalQuantity(1.0, src_units)
+        except NameError:
+            raise NameError("while setting value of %s: undefined unit '%s'" %
+                            (src_units, name))
 
-            try:
-                pq = PhysicalQuantity(1.0, src_units)
-            except NameError:
-                raise NameError("while setting value of %s: undefined unit '%s'" %
-                                (src_units, name))
-    
-            try:
-                pq.convert_to_unit(dst_units)
-            except NameError:
-                raise NameError("undefined unit '%s' for variable '%s'" %
-                                (dst_units, name))
-            except TypeError:
-                msg = "%s: units '%s' are incompatible " % (name, src_units) + \
-                       "with assigning units of '%s'" % (dst_units)
-                raise TypeError(msg)
-    
-            value *= pq.value
-                
+        try:
+            pq.convert_to_unit(dst_units)
+        except NameError:
+            raise NameError("undefined unit '%s' for variable '%s'" %
+                            (dst_units, name))
+        except TypeError:
+            msg = "%s: units '%s' are incompatible " % (name, src_units) + \
+                   "with assigning units of '%s'" % (dst_units)
+            raise TypeError(msg)
+
+        value *= pq.value
+
         return value
 
     def get_attribute(self, name, value, trait, meta):

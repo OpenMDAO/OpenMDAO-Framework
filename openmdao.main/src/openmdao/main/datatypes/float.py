@@ -102,10 +102,10 @@ class Float(Variable):
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
-        
+
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
-            
+
         if not _default_set:
             super(Float, self).__init__(default_value=default_value,
                                         assumed_default=True, **metadata)
@@ -123,7 +123,7 @@ class Float(Variable):
             value = value.getvalue()
         elif isinstance(value, AttrWrapper):
             value = value.value
-            
+
             # If both source and target have units, we need to proces the unit
             # conversion to find the new value.
             if self.units:
@@ -132,18 +132,18 @@ class Float(Variable):
                    self.units != valunits:
                     value = self._validate_with_metadata(obj, name, value,
                                                          valunits)
-            
+
         # Support for complex step method. We can step this trait in the
         # complex direction while keeping the Range validator, but only
         # do this when the user has requested complex step.
         is_complex_step = False
         if isinstance(value, complex):
-            
+
             # Vartree recursion, find the component parent.
             comp = obj
             while not hasattr(comp, '_complex_step'):
                 comp = comp._parent
-            
+
             if comp._complex_step == True:
                 value_imag = value.imag
                 value = value.real
@@ -154,13 +154,13 @@ class Float(Variable):
             new_val = self._validator.validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
-            
+
         if is_complex_step:
-            
+
             # TODO - Need to do unit conversion on the complex part too.
             new_val += value_imag*1j
-            
-        #print name, new_val  
+
+        #print name, new_val
         return new_val
 
     def error(self, obj, name, value):
@@ -222,29 +222,24 @@ class Float(Variable):
         # not a float. NPSS wrapper may be such a case. A test needs to be
         # constructed to test these lines.
 
-        # Convert units only if we have differing units
-        if src_units != dst_units:
+        try:
+            pq = PhysicalQuantity(value, src_units)
+        except NameError:
+            raise NameError("while setting value of %s: undefined unit '%s'" %
+                             (src_units, name))
 
-            try:
-                pq = PhysicalQuantity(value, src_units)
-            except NameError:
-                raise NameError("while setting value of %s: undefined unit '%s'" %
-                                 (src_units, name))
-    
-            try:
-                pq.convert_to_unit(dst_units)
-            except NameError:
-                raise NameError("undefined unit '%s' for variable '%s'" %
-                                 (dst_units, name))
-            except TypeError:
-                msg = "%s: units '%s' are incompatible " % (name, src_units) + \
-                       "with assigning units of '%s'" % (dst_units)
-                raise TypeError(msg)
-            
-            value = pq.value
+        try:
+            pq.convert_to_unit(dst_units)
+        except NameError:
+            raise NameError("undefined unit '%s' for variable '%s'" %
+                             (dst_units, name))
+        except TypeError:
+            msg = "%s: units '%s' are incompatible " % (name, src_units) + \
+                   "with assigning units of '%s'" % (dst_units)
+            raise TypeError(msg)
 
-        return value
-    
+        return pq.value
+
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is
         used by the GUI to populate the edit UI. The basic functionality that
