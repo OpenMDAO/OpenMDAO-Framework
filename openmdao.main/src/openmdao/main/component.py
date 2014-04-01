@@ -2136,10 +2136,10 @@ class Component(Container):
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
 
-    def setup_sizes(self):
+    def setup_sizes(self, variables):
         pass
 
-    def flattened_size(self, name):
+    def _flattened_size(self, name):
         """Return the local flattened size of the variable with
         the given name.  NOTE: this method must be overridden
         for components that use multiple processes.
@@ -2157,12 +2157,9 @@ class Component(Container):
         size = self._var_sizes.get(name, __missing__)
         if size is __missing__:
             try:
-                size = self.flattened_size(name)
+                size = self._flattened_size(name)
             except TypeError:
                 size = None
             self._var_sizes[name] = size
                 
         return size
-
-
-        

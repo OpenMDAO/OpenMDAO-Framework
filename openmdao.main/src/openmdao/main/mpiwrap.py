@@ -67,6 +67,5 @@ def _setup_mpi(obj):
 
     obj.setup_communicators(MPI.COMM_WORLD)
     obj.setup_sizes()
-
-    #self.setup_vectors()
-    #self.setup_scatters()
+    obj.setup_vectors()
+    #obj.setup_scatters()

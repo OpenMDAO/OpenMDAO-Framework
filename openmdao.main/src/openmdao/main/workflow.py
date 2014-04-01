@@ -2,12 +2,17 @@
 import sys
 from StringIO import StringIO
 from networkx import topological_sort
+#from collections import OrderedDict
+
+from networkx import edge_boundary
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.interfaces import IDriver
+from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
+#from openmdao.util.nameutil import partition_names_by_comp
 
 __all__ = ['Workflow']
 
@@ -203,17 +208,65 @@ class Workflow(object):
 
     def get_comp_graph(self):
         """Returns the subgraph of the component graph that contains
-        the components in this workflow.
+        the components in this workflow, including additional connections
+        needed due to subdriver iterations.
         """
         if self._wf_comp_graph is None:
             cgraph = self.scope._depgraph.component_graph().copy()
-            add_driver_connections(cgraph, self.scope)
+            self.add_driver_connections(cgraph)
             self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
         return self._wf_comp_graph
 
+    def add_driver_connections(self, g):
+        """Add edges in the workflow component graph to represent dependencies
+        between a comp and a driver if that comp is connected to any comps 
+        inside of the driver's iteration set.
+        """
+        scope = self.scope
+        dconns = []
+        for node in g:
+            comp = getattr(scope, node)
+            if has_interface(comp, IDriver):
+                iterset = [c.name for c in comp.iteration_set()]
+                for itercomp in iterset:
+                    for u,v in g.edges_iter(itercomp):
+                        if v not in iterset:
+                            dconns.append((node, v))
+                    for u,v in g.in_edges_iter(itercomp):
+                        if u not in iterset:
+                            dconns.append((u, node))
+
+        g.add_edges_from(dconns)
+
+        # now add metadata to indicate which vars are set or retrieved from
+        # our parent driver
+        srcset, destset = self._parent.get_expr_var_depends()
+
+        # now add variables that are connected inputs or outputs
+        wfgraph = self.get_graph()
+
+        conns = wfgraph.list_connections()
+
+        srcset.update([src for src,dest in conns])
+        destset.update([dest for src,dest in conns])
+
+        for name in srcset:
+            parts = name.split('.', 1)
+            if len(parts) > 1 and parts[0] in g:
+                g.node[parts[0]].setdefault('inputs', set()).add(parts[1])
+                
+        for name in destset:
+            parts = name.split('.', 1)
+            if len(parts) > 1 and parts[0] in g:
+                g.node[parts[0]].setdefault('outputs', set()).add(parts[1])
+     
     ## MPI stuff ##
 
     def _get_subsystem(self):
+        """Get the serial/parallel subsystem for this workflow. Each
+        subsystem contains a subgraph of this workflow's component 
+        graph, which contains components and/or other subsystems.
+        """
         if self._subsystem is None:
             scope = self.scope
 
@@ -241,9 +294,17 @@ class Workflow(object):
         """Return requested_cpus"""
         return self._get_subsystem().get_req_cpus()
 
-    def setup_sizes(self):
-        for comp in self:
-            comp.setup_sizes()
+    # def get_vector_vars(self):
+    #     """Assemble an ordereddict of names of variables needed by this
+    #     workflow, which includes any that its parent driver(s) reference
+    #     in parameters, constraints, or objectives, as well as any used to 
+    #     connect any components in this workflow, AND any returned from
+    #     calling get_vector_vars on any subsystems in this workflow.
+    #     """
+    #     return self._get_subsystem().get_vector_vars(self.scope)
+
+    def setup_sizes(self, variables):
+        self._get_subsystem().setup_sizes(variables)
 
     def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our
@@ -251,6 +312,7 @@ class Workflow(object):
         """
         self.mpi.comm = comm
         self._get_subsystem().setup_communicators(comm, scope)
+
 
 class System(object):
     def __init__(self, graph):
@@ -261,9 +323,35 @@ class System(object):
         self.mpi.req_cpus = None
 
     def get_req_cpus(self):
-        return self.mpi.req_cpus 
+        return self.mpi.req_cpus
 
+    def setup_sizes(self, variables):
+        """Given a dict of variables, set the sizes for 
+        those that are local.
+        """
+        comps = dict([(c.name, c) for c in self.local_comps])
+        for name in variables.keys():
+            parts = name.split('.', 1)
+            if len(parts) > 1:
+                cname, vname = parts
+                if cname in comps:
+                    comp = comps[cname]
+                    sz = comp.get_float_var_size(vname)
+                    if sz is not None:
+                        variables[name]['size'] = sz
+    
+        # pass the call down to any subdrivers/subsystems
+        # and subassemblies. subassemblies will ignore the
+        # variables passed into them in this case.
+        for comp in self.local_comps:
+            comp.setup_sizes(variables)
+            
     def dump_parallel_graph(self, nest=0, stream=sys.stdout):
+        """Prints out a textual representation of the collapsed
+        execution graph (with groups of component nodes collapsed
+        into SerialSystems and ParallelSystems).  It shows which
+        components run on the current processor.
+        """
         if not self.local_comps:
             return
 
@@ -290,6 +378,21 @@ class System(object):
         if getval:
             return stream.getvalue()
 
+    # def _add_vars_from_comp(self, comp, vecvars, scope):
+    #     if isinstance(comp, System):
+    #         vecvars.update(comp.get_vector_vars(scope))
+    #     else:
+    #         vecvars.update(comp.get_vector_vars())
+    #         # 'inputs' and 'outputs' metadata have been added
+    #         # to the comp nodes from drivers that iterate
+    #         # over them.
+    #         for name in self.graph.node[comp.name].get('inputs',()):
+    #             vecvars['.'.join([comp.name,name])] = \
+    #                                        comp.get_vector_var(name)
+    #         for name in self.graph.node[comp.name].get('outputs',()):
+    #             vecvars['.'.join([comp.name,name])] = \
+    #                                        comp.get_vector_var(name)
+        
         
 class SerialSystem(System):
     def __init__(self, graph, scope):
@@ -321,15 +424,26 @@ class SerialSystem(System):
         self.local_comps = []
 
         for name in topological_sort(self.graph):
-            data = self.graph.node[name]
-            if 'system' in data: # nested workflow
-                comp = data['system']
+            if isinstance(name, tuple): # it's a subsystem
+                comp = self.graph.node[name]['system']
             else:
                 comp = getattr(scope, name)
             #mpiprint("*** serial child %s" % comp.name)
             comp.mpi.comm = comm
             self.local_comps.append(comp)
             comp.setup_communicators(comm, scope)
+
+    # def get_vector_vars(self, scope):
+    #     """Assemble an ordereddict of names of variables needed by this
+    #     workflow, which includes any that its parent driver(s) reference
+    #     in parameters, constraints, or objectives, as well as any used to 
+    #     connect any components in this workflow, AND any returned from
+    #     calling get_vector_vars on any subsystems in this workflow.
+    #     """
+    #     self.vector_vars = OrderedDict()
+    #     for comp in self.local_comps:
+    #         self._add_vars_from_comp(comp, self.vector_vars, scope)
+    #     return self.vector_vars
 
 
 class ParallelSystem(System):
@@ -379,9 +493,10 @@ class ParallelSystem(System):
                 requested_procs.append(system.get_req_cpus())
                 #mpiprint("!! system %s requests %d cpus" % (system.name, system.req_cpus))
             else:
-                child_comps.append(getattr(scope, name))
-                requested_procs.append(getattr(scope, name).get_req_cpus())
-        
+                comp = getattr(scope, name)
+                child_comps.append(comp)
+                requested_procs.append(comp.get_req_cpus())
+
         assigned_procs = [0]*len(requested_procs)
 
         assigned = 0
@@ -402,18 +517,6 @@ class ParallelSystem(System):
                         assigned += 1
                         if assigned == limit:
                             break
-
-            # # now, if we have any procs left after assigning all the requested 
-            # # ones, allocate any remaining ones to any comp that can use them
-            # limit = size
-            # while assigned < limit:
-            #     for i, comp in enumerate(child_comps):
-            #         if requested_procs[i] == 0: # skip and deal with these later
-            #             continue
-            #         assigned_procs[i] += 1
-            #         assigned += 1
-            #         if assigned == limit:
-            #             break
 
         #mpiprint("comm size = %d" % comm.size)
         #mpiprint("child_comps: %s" % [c.name for c in child_comps])
@@ -450,26 +553,47 @@ class ParallelSystem(System):
         for comp in self.local_comps:
             comp.setup_communicators(sub_comm, scope)
 
-def add_driver_connections(g, scope):
-    dconns = []
-    for node in g:
-        comp = getattr(scope, node)
-        #mpiprint("**%s**" % node)
-        if IDriver.providedBy(comp):
-            iterset = [c.name for c in comp.iteration_set()]
-            #mpiprint("*** iterset for %s = %s" % (node, iterset))
-            for itercomp in iterset:
-                for u,v in g.edges_iter(itercomp):
-                    #mpiprint("**%s, %s**" % (u,v))
-                    if v not in iterset:
-                        dconns.append((node, v))
-                for u,v in g.in_edges_iter(itercomp):
-                    #mpiprint("**%s, %s**" % (u,v))
-                    if u not in iterset:
-                        dconns.append((u, node))
+    #def get_vector_vars(self, scope):
+        # """Assemble an ordereddict of names of variables needed by this
+        # workflow, which includes any that its parent driver(s) reference
+        # in parameters, constraints, or objectives, as well as any used to 
+        # connect any components in this workflow, AND any returned from
+        # calling get_vector_vars on any subsystems in this workflow.
+        # """
+        # self.vector_vars = OrderedDict()
+        # vector_vars = OrderedDict()
+        # if self.local_comps:
+        #     comp = self.local_comps[0]
+        #     self._add_vars_from_comp(comp, vector_vars, scope)
+        # vnames = self.mpi.comm.allgather(vector_vars.keys())
 
-    g.add_edges_from(dconns)
-    #mpiprint("*** dconns = %s" % dconns)
+        # fullnamelst = []
+        # seen = set()
+        # for names in vnames:
+        #     for name in names:
+        #         if name not in seen:
+        #             seen.add(name)
+        #             fullnamelst.append(name)
+
+        # # group names (in order) by component
+        # compdct = OrderedDict()
+        # partition_names_by_comp(fullnamelst, compdct)
+
+        # # TODO: may need to mess with ordering once we add in
+        # # derivative calculations, so that order of vars
+        # # within a comp matches order returned by list_deriv_vars...
+        # for cname, vname in compdct:
+        #     if cname is None:
+        #         self.vector_vars[cname] = None
+        #     else:
+        #         self.vector_vars['.'.join((cname, vname))] = None
+
+        # self.vector_vars.update(vector_vars)
+
+        # for comp in self.local_comps:
+        #     self._add_vars_from_comp(comp, self.vector_vars, scope)
+        # return self.vector_vars
+                
 
 def transform_graph(g, scope):
     """Return a nested graph with metadata for parallel
@@ -514,6 +638,16 @@ def transform_graph(g, scope):
         else:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
     
+def _expand_tuples(nodes):
+    lst = []
+    stack = list(nodes)
+    while stack:
+        node = stack.pop()
+        if isinstance(node, tuple):
+            stack.extend(node)
+        else:
+            lst.append(node)
+    return lst
 
 def _collapse(scope, g, nodes, serial=True):
     """Collapse the named nodes in g into a single node
@@ -543,7 +677,13 @@ def _collapse(scope, g, nodes, serial=True):
 
     # must do this after adding edges because otherwise we 
     # get some edges to removed nodes that we don't want
-    g.remove_nodes_from(nodes) 
+    g.remove_nodes_from(nodes)
+
+    # collect all of the edges that have been collapsed
+    g.node[newname]['xfers'] = edge_boundary(scope._depgraph, 
+                                    scope._depgraph.find_prefixed_nodes(_expand_tuples(nodes)))
+
+    #mpiprint("*** edge boundary = %s for %s" % (g.node[newname]['xfers'],newname))
 
     if serial:
         transform_graph(subg, scope)

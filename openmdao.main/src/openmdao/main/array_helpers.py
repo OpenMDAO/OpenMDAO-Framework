@@ -62,6 +62,44 @@ def get_val(scope, name):
     else:
         return getattr(scope, name)
 
+def get_flattened_index(index, shape):
+    """Given an index (int, slice, or tuple of ints and slices), into
+    an array, return the equivalent indices into a flattened version 
+    of the array.
+
+    """
+    if not isinstance(index, (tuple, list)):
+        index = (index,)
+
+    if len(index) < len(shape):
+        index = list(index)
+        for i in range(len(shape)-len(index)):
+            index.append(slice(None))
+
+    indices = []
+    for idx, size in zip(index, shape):
+        i = arange(size)[idx]
+        if not isinstance(i, ndarray):
+            i = array([i])
+        indices.append(i)
+
+    if len(indices) > 1:
+        indices = zip(*itertools.product(*indices))
+
+    idxs = ravel_multi_index(indices, dims=shape)
+    if len(idxs) == 1:
+        return idxs[0]
+
+    imin = min(idxs)
+    imax = max(idxs)
+    stride = idxs[1]-idxs[0]
+    if all(arange(imin, imax+1, stride) == list(idxs)):
+        return slice(imin, imax+1, stride)
+        
+    raise RuntimeError("couldn't get a valid flat index from '%s'" % index)
+    #return idxs  # could allow a discrete set of indices, but then
+                  # we couldn't feed it straight into __getitem__
+
 def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name)
     if 'data_shape' in meta and meta['data_shape']:

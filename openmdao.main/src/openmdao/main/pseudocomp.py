@@ -330,26 +330,8 @@ class PseudoComponent(object):
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
-    def setup_sizes(self):
-        """Returns a sorted vector of tuples of the form:
-        (full_var_pathname, flattened_size).
-        """
-        names = []
-
-        # make sure we have calculated values
-        if self.out0 is None:
-            self.run(notify_parent=False)
-
-        cname = self.get_pathname()
-        for name in self._inputs + ['out0']:
-            val = getattr(self, name)
-            try:
-                size = flattened_size(name, val, self)
-            except TypeError:
-                continue
-            names.append(('.'.join((cname, name)), size))
-        
-        return names
+    def setup_sizes(self, variables):
+        pass
 
     def get_req_cpus(self):
         return 0

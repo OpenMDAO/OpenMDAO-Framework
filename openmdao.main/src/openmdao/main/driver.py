@@ -615,49 +615,49 @@ class Driver(Component):
         super(Driver, self).setup_communicators(comm, scope)
         self.workflow.setup_communicators(comm, self.parent)
 
-    def setup_sizes(self):
-        self.workflow.setup_sizes()
+    def setup_sizes(self, variables):
+        self.workflow.setup_sizes(variables)
 
-    def get_vector_varnames(self):
-        """Assemble an ordereddict of names of variables needed by this
-        driver, which includes any that it references in parameters,
-        constraints, or objectives, as well as any used to connect 
-        any components in this driver's workflow, AND any returned from
-        calling get_vector_varnames on any subdrivers in this driver's
-        workflow.
-        """
+    # def get_vector_vars(self):
+    #     """Assemble an ordereddict of names of variables needed by this
+    #     driver, which includes any that it references in parameters,
+    #     constraints, or objectives, as well as any used to connect 
+    #     any components in this driver's workflow, AND any returned from
+    #     calling get_vector_vars on any subdrivers in this driver's
+    #     workflow.
+    #     """
 
-        variables = OrderedDict()
+    #     # variables = OrderedDict()
 
-        # collect variables from subdrivers
-        for sub in self.subdrivers():
-            variables.update(sub.get_vector_varnames())
+    #     # # collect variables from subdrivers
+    #     # for sub in self.subdrivers():
+    #     #     variables.update(sub.get_vector_vars())
 
-        # each var involved in a connection is added
-        # TODO: need to deal properly with slice connections...
-        # TODO: do we need sources and dests or just sources here?
-        for u,v in self.workflow.get_graph().list_connections():
-            variables[u] = {}
-            variables[v] = {}
+    #     # # each var involved in a connection is added
+    #     # # TODO: need to deal properly with slice connections...
+    #     # # TODO: do we need sources and dests or just sources here?
+    #     # for u,v in self.workflow.get_graph().list_connections():
+    #     #     variables[u] = {}
+    #     #     variables[v] = {}
 
-        # now add parameters from this driver
-        if hasattr(self, 'list_param_targets'):
-            for param in self.list_param_targets():
-                variables[param] = {}
+    #     # # now add parameters from this driver
+    #     # if hasattr(self, 'list_param_targets'):
+    #     #     for param in self.list_param_targets():
+    #     #         variables[param] = {}
 
-        # add pseudocomp outputs for all objectives
-        if hasattr(self, 'list_objective_targets'):
-            for obj in self.list_objective_targets():
-                variables[obj] = {}
+    #     # # add pseudocomp outputs for all objectives
+    #     # if hasattr(self, 'list_objective_targets'):
+    #     #     for obj in self.list_objective_targets():
+    #     #         variables[obj] = {}
             
-        # add pseudocomp outputs for all constraints
-        if hasattr(self, 'list_constraint_targets'):
-            for cnst in self.list_constraint_targets():
-                variables[cnst] = {}
+    #     # # add pseudocomp outputs for all constraints
+    #     # if hasattr(self, 'list_constraint_targets'):
+    #     #     for cnst in self.list_constraint_targets():
+    #     #         variables[cnst] = {}
             
-        self._vector_vars = variables.copy()
+    #     self._vector_vars = self.workflow.get_vector_vars().copy()
 
-        return variables
+    #     return self._vector_vars
 
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow

@@ -713,8 +713,6 @@ class DependencyGraph(nx.DiGraph):
         ret = self._chvars.get((node, direction))
         if ret is None:
             bunch = set()
-            ndot = node+'.'
-            nbrack = node+'['
 
             if direction != 'in':
                 succ = self.successors(node)
@@ -731,6 +729,8 @@ class DependencyGraph(nx.DiGraph):
                     # sucessors instead of predecessors
                     bunch.update(self.successors_iter(p))
 
+            ndot = node+'.'
+            nbrack = node+'['
             ret = [n for n in bunch if n.startswith(ndot)
                                      or n.startswith(nbrack)]
             self._chvars[(node, direction)] = ret
@@ -1119,7 +1119,8 @@ class DependencyGraph(nx.DiGraph):
 
         try:
             for sexpr, dexpr in zip(sexprs, dexprs):
-                dexpr.set(sexpr.evaluate(scope=scope), src=sexpr.text, scope=scope)
+                dexpr.set(sexpr.evaluate(scope=scope), 
+                                         src=sexpr.text, scope=scope)
         except Exception as err:
             raise err.__class__("cannot set '%s' from '%s': %s" %
                                  (dexpr.text, sexpr.text, str(err)))

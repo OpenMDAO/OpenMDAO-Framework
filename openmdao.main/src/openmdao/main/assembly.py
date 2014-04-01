@@ -7,11 +7,12 @@ __all__ = ['Assembly', 'set_as_top']
 import threading
 import re
 import sys
+from itertools import chain
 from ordereddict import OrderedDict
 
 import numpy
 
-from zope.interface import implementedBy
+from zope.interface import implementedBy, providedBy
 
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
@@ -37,7 +38,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node
+from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_subvar_node
 
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.nameutil import partition_names_by_comp
@@ -1331,26 +1332,78 @@ class Assembly(Component):
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.driver.get_req_cpus()
-        
-    def setup_sizes(self):
+       
+    def _get_vector_vars(self):
+        """Return an ordereddict of names of variables needed by 
+        subsystems in this Assembly. This includes all variables
+        that are inputs or outputs of connections, and all variables
+        that are driver inputs or outputs, i.e., parameters, objectives,
+        or constraints.  Entries are ordered by component.
+        """
+
+        # add all inputs first, then all outputs, so that after
+        # we group by component, component inputs and outputs
+        # will be contiguous.
+        # TODO: need to deal properly with slice connections...
+        conns = self._depgraph.list_connections()
+
+        # get any additional vars used as input or output to any
+        # drivers
+        srcs, dests = self.driver.get_expr_var_depends(recurse=True)
+
+        allvars = set([u for u,v in conns])
+        allvars.update([v for u,v in conns])
+        allvars.update(srcs)
+        allvars.update(dests)
+
+        # find all boundary vars (used in partition_names_by_comp
+        # to identify vartree boundary subvars).
+        bndry_vars = set(self._depgraph.get_boundary_inputs())
+        bndry_vars.update(self._depgraph.get_boundary_outputs())
+
+        # create input and output lists (not ordered by comp). 
+        inputs = []
+        outputs = []
+        graph = self._depgraph
+        data = graph.node
+
+        for name in allvars:
+            if 'basevar' in data[name]: # it's a subvar
+                iotype = data[data[name]['basevar']].get('iotype')
+            else:
+                iotype = data[name].get('iotype')
+            if iotype in ['in', 'state']:
+                inputs.append(name)
+            else:
+                outputs.append(name)
+
+        # now group them by comp, maintaining their former order
+        # within a comp
+        compdict = OrderedDict()
+        partition_names_by_comp(chain(inputs, outputs), compdict, 
+                                boundary_vars=bndry_vars)
+
+        # reassemble the list from the component dict
+        variables = OrderedDict()
+        for cname, vnames in compdict.items():
+            for vname in vnames:
+                name = vname if cname is None else '.'.join((cname,vname))
+                variables[name] = { 'size': 0 }
+                if is_subvar_node(graph, name):
+                    variables[name]['basevar'] = graph.base_var(name)
+
+        return variables
+ 
+    def setup_sizes(self, variables=None):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
-        # this will calculate sizes for any subassemblies
-        self.driver.setup_sizes()
+        # determine the list of variables used to build the
+        # distributed vector(s)
+        self.vector_vars = self._get_vector_vars()
 
-        self.vector_vars = self.driver.get_vector_varnames()
-        for cname, vnames in partition_names_by_comp(self.vector_vars.keys(), 
-                                                     OrderedDict()).items():
-            if cname is None:
-                for vname in vnames:
-                    
-                    self.vector_vars[vname]['size'] = self.get_float_var_size(vname)
-            else:
-                comp = getattr(self, cname)
-                for vname in vnames:
-                    self.vector_vars['.'.join([cname, vname])]['size'] = \
-                                            comp.get_float_var_size(vname)
+        # this will calculate sizes for any subassemblies
+        self.driver.setup_sizes(self.vector_vars)
 
         comm = self.mpi.comm
 
@@ -1358,10 +1411,11 @@ class Assembly(Component):
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((comm.size, 
                                            len(self.vector_vars)), int)
+
         rank = comm.rank
-        for i, tup in enumerate(self.vector_vars.items()):
-            name, var = tup
-            self.local_var_sizes[rank, i] = var['size']
+        for i, (name, dct) in enumerate(self.vector_vars.items()):
+            self.local_var_sizes[rank, i] = dct['size']
+            dct['idx'] = i  # map varname to index
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -1371,22 +1425,22 @@ class Assembly(Component):
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
-        mpiprint(self.vector_vars.keys(), 0)
-        mpiprint(self.local_var_sizes, 0)
+        mpiprint(self.local_var_sizes)
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
         self.input_sizes = numpy.zeros(comm.size, int)
 
-        #self.
-        #??? do argSizes...
+        #comm.Allgather(self.input_sizes, ???)
 
     def setup_vectors(self):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        pass
-        #self.uVec = VecWrapper(paths, sizes)
+        self.uVec = VecWrapper(self.mpi.comm,
+                                   self.vector_vars.keys(),
+                                   self.vector_vars, 
+                                   self.local_var_sizes)
 
     def setup_communicators(self, comm, scope=None):
         super(Assembly, self).setup_communicators(comm, scope)
@@ -1398,17 +1452,51 @@ class VecWrapper(object):
     and info about what var maps to what range within the distributed
     vector.
     """
-    def __init__(self, comm, paths, sizes):
-        tot_size = sum([s for s in sizes.values()])
-        self.array = numpy.zeros(tot_size)
+    def __init__(self, comm, myvars, allvars, sizes):
+        self.view = {} # dict of array views into larger array
+        size = 0
+        rank = comm.rank
+        myset = set()
+        for v in myvars:
+            base = allvars[v].get('basevar')
+            # don't add size for subvars having basevars in the vector
+            if not (base and base in myset):
+                size += sizes[rank, allvars[v]['idx']]
+            myset.add(v)
+
+        self.array = numpy.zeros(size)
+        start, end = 0, 0
+        for name in myvars:
+            varinfo = allvars.get(name)
+            sz = varinfo['size']
+            if sz:
+                end += sz
+                self.view[name] = self.array[start:end]
+                mpiprint("*** view for %s is %s" % (name, [start,end]))
+                start += sz
         self.petsc_vec = get_petsc_vec(comm, self.array)
-        # find bounds for each variable
-        i1 = i2 = 0
-        for name, size in sizes.items():
-            pass # FIXME
 
     def scatter(self):
         pass  # see if we can do scatter functionality here...
+
+
+
+def _linspace(self, start, end):
+    """ Return a linspace vector of the right int type for PETSc """
+    return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

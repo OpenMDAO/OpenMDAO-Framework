@@ -1035,7 +1035,7 @@ class HasParameters(object):
         variables in the model.  If the 'case' arg is supplied, the values
         will be set into the case and not into the model.
 
-        values: iterator
+        values: iterator (must support slicing)
             Iterator of input values with an order defined to match the
             order of parameters returned by the get_parameters method. All
             'values' must support the len() function.
