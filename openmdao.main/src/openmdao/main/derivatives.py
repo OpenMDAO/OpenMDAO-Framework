@@ -816,6 +816,25 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, fd_step, i1, i2, i)
 
+                #--------------------
+                # Complex Step
+                #--------------------
+                elif form == 'complex_step':
+
+                    complex_step = fd_step*j
+
+                    # Step
+                    self.set_value(src, fd_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+
+                    # Forward difference
+                    self.J[:, i] = (self.y/fd_step).imag
+
+                    # Undo step
+                    self.set_value(src, -fd_step, i1, i2, i)
+
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
