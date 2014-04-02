@@ -316,8 +316,8 @@ class DependencyGraph(nx.DiGraph):
         old_outs -= old_states
         old_outs -= old_resids
 
-        new_ins  = set(['.'.join([cname,n]) for n in child.list_inputs()])
-        new_outs = set(['.'.join([cname,n]) for n in child.list_outputs()])
+        new_ins  = set(['.'.join((cname, n)) for n in child.list_inputs()])
+        new_outs = set(['.'.join((cname, n)) for n in child.list_outputs()])
 
         if has_interface(child, IImplicitComponent):
             new_states = set(child.list_states())
@@ -380,8 +380,8 @@ class DependencyGraph(nx.DiGraph):
         kwargs['comp'] = True
         kwargs['valid'] = False
 
-        inputs  = ['.'.join([cname, v]) for v in obj.list_inputs()]
-        outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
+        inputs  = ['.'.join((cname, v)) for v in obj.list_inputs()]
+        outputs = ['.'.join((cname, v)) for v in obj.list_outputs()]
 
         self.add_node(cname, **kwargs)
         self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
@@ -391,8 +391,8 @@ class DependencyGraph(nx.DiGraph):
         self.add_edges_from([(cname, v) for v in outputs])
 
         if has_interface(obj, IImplicitComponent):
-            states = ['.'.join([cname, v]) for v in obj.list_states()]
-            resids = ['.'.join([cname, v]) for v in obj.list_residuals()]
+            states = ['.'.join((cname, v)) for v in obj.list_states()]
+            resids = ['.'.join((cname, v)) for v in obj.list_residuals()]
             self.add_nodes_from(states, var=True, iotype='state', valid=True)
             self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
 
@@ -893,11 +893,11 @@ class DependencyGraph(nx.DiGraph):
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
                is_output_base_node(self, node):
-                    if connected:
-                        if self.out_degree(node) > 0:
-                            outs.append(node)
-                    else:
+                if connected:
+                    if self.out_degree(node) > 0:
                         outs.append(node)
+                else:
+                    outs.append(node)
         self._bndryouts[connected] = outs
         return outs[:]
 
@@ -1054,7 +1054,7 @@ class DependencyGraph(nx.DiGraph):
             neighbors = G.predecessors_iter
         else:
             neighbors = G.neighbors_iter
-        visited=set()
+        visited = set()
         queue = deque([(source, neighbors(source))])
 
         while queue:
@@ -1094,7 +1094,7 @@ class DependencyGraph(nx.DiGraph):
 
         if outs:
             if childname:
-                outs = ['.'.join([childname,n]) for n in outs]
+                outs = ['.'.join((childname, n)) for n in outs]
             for out in outs:
                 data[out]['valid'] = True
                 for var in self._all_child_vars(out, direction='out'):
@@ -1550,7 +1550,7 @@ def _check_for_missing_derivs(scope, comps):
             elif comp.missing_deriv_policy == 'assume_zero':
                 # remove the vars with zero derivatives
                 comps[cname] = [n for n in vnames if n not in missing]
-                remove.extend(['.'.join([cname, m]) for m in missing])
+                remove.extend(['.'.join((cname, m)) for m in missing])
 
     return remove
 
@@ -1813,7 +1813,7 @@ def _explode_vartrees(graph, scope):
                 obj = scope.get(src)
             if has_interface(obj, IVariableTree):
                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                srcnames = ['.'.join([src, n]) for n in srcnames]
+                srcnames = ['.'.join((src, n)) for n in srcnames]
 
         if '@' not in dest and '[' not in dest:
 
@@ -1824,7 +1824,7 @@ def _explode_vartrees(graph, scope):
 
             if has_interface(obj, IVariableTree):
                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                destnames = ['.'.join([dest, n]) for n in destnames]
+                destnames = ['.'.join((dest, n)) for n in destnames]
 
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
@@ -1941,12 +1941,12 @@ def get_missing_derivs(obj, recurse=True):
 
             base_name, _, index = name.partition("[")
             if index:
-                if base_name in dins or base_name in douts :
+                if base_name in dins or base_name in douts:
                     continue
 
 
             if name not in dins and name not in douts and is_differentiable_var(name, comp):
-                missing.append('.'.join([comp.get_pathname(), name]))
+                missing.append('.'.join((comp.get_pathname(), name)))
 
 
 
