@@ -12,6 +12,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error, assert_raises
+import openmdao.main.pseudocomp as pcompmod
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -184,12 +185,12 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         self.prob = None
-        pass
+        pcompmod._count = 0 # keep pseudocomp names consistent for each test
+                            # to avoid weird stuff like hash order changes
 
     def tearDown(self):
         """ Called after each test. """
         self.prob = None
-        pass
 
     def test_Broyden2(self):
 
