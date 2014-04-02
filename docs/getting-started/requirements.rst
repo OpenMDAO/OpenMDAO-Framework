@@ -69,7 +69,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
 **Windows**: 
 
-- `Python 2.7.x <http://www.python.org/download/releases/>`_
+- `Python 2.7.x <https://www.python.org/download/releases/>`_
 
 - `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
 

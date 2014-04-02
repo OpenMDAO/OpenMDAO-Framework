@@ -92,8 +92,12 @@ class PseudoComponent(object):
         self._valid = False
         self._parent = parent
         self._inputs = []
+
+        # Flags and caching used by the derivatives calculation
         self.force_fd = False
         self._provideJ_bounds = None
+        self._complex_step = False
+
         self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
                                          # this is, e.g., 'units', 'constraint', 'objective',
                                          # or 'multi_var_expr'

@@ -121,7 +121,7 @@ following files found in our distribution directory:
     possible to add some unit tests for our plugin.
     
 
-.. __: http://docs.python.org/2/distutils/sourcedist.html#the-manifest-in-template
+.. __: https://docs.python.org/2/distutils/sourcedist.html#the-manifest-in-template
 
 
 The following sections describe how to edit these files in more detail.
