@@ -895,9 +895,9 @@ class SequentialWorkflow(Workflow):
 
             if has_interface(comp, IImplicitComponent):
                 if not comp.eval_only:
-                    key = tuple(['.'.join([cname, n])
+                    key = tuple(['.'.join((cname, n))
                                      for n in comp.list_residuals()])
-                    info[key] = ['.'.join([cname, n])
+                    info[key] = ['.'.join((cname, n))
                                      for n in comp.list_states()]
 
         # Nested solvers act implicitly.
