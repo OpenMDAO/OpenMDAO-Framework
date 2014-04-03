@@ -81,7 +81,7 @@ valid variable name. Variables are also Python variables, so they must follow Py
 naming convention. They must begin with a letter or underscore and should consist of only
 alphanumeric characters and the underscore. Keep in mind that a leading underscore is generally used
 for private data or functions. **Spaces cannot be used in a variable name.** Generally, we've tried
-to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_  standard for component instance 
+to follow the `PEP 8 <http://legacy.python.org/dev/peps/pep-0008/>`_  standard for component instance 
 names as well as Python variable names. PEP 8 prescribes the use of lower case names with words
 separated by underscores.
 

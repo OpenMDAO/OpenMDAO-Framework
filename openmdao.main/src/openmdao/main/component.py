@@ -202,13 +202,14 @@ class Component(Container):
         self._dir_stack = []
         self._dir_context = None
 
+        # Flags and caching used by the derivatives calculation
         self.ffd_order = 0
         self._provideJ_bounds = None
-        self._case_id = ''
+        self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
-
         self._recorders = None
+        self._case_id = ''
 
     @property
     def dir_context(self):
@@ -222,7 +223,7 @@ class Component(Container):
             self._exec_state = state
             pub = Publisher.get_instance()
             if pub:
-                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
+                pub.publish('.'.join((self.get_pathname(), 'exec_state')), state)
 
     @rbac(('owner', 'user'))
     def get_invalidation_type(self):
@@ -243,9 +244,8 @@ class Component(Container):
         """
         self.itername = itername
 
-    # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-
+        """Called if any trait having 'iotype' metadata of 'in' is changed."""
         if name.endswith('_items'):
             n = name[:-6]
             if hasattr(self, n):  # if n in self._valid_dict:
@@ -257,14 +257,14 @@ class Component(Container):
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        self._set_exec_state("INVALID")
-        if self.parent:
-            try:
-                inval = self.parent.child_invalidated
-            except AttributeError:
-                pass
-            else:
-                inval(self.name, vnames=[name], iotype='in')
+        if self._exec_state != 'INVALID':
+            self._set_exec_state('INVALID')
+        try:
+            inval = self.parent.child_invalidated
+        except AttributeError:
+            pass
+        else:
+            inval(self.name, vnames=[name], iotype='in')
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -455,7 +455,8 @@ class Component(Container):
         else:
             parent.update_inputs(self.name)
 
-        self.check_configuration()
+        if self._call_check_config:
+            self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -563,9 +564,12 @@ class Component(Container):
         """
         self._validate()
 
-        if self.parent:
-            self.parent.child_run_finished(self.name, self._outputs_to_validate())
-        self.publish_vars()
+        parent = self.parent
+        if parent:
+            parent.child_run_finished(self.name, self._outputs_to_validate())
+
+        if Publisher.get_instance() is not None:
+            self.publish_vars()
 
     def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""
@@ -1560,8 +1564,9 @@ class Component(Container):
         Returns None, indicating that all outputs are newly invalidated, or [],
         indicating that no outputs are newly invalidated.
         """
-        self._call_execute = True
-        self._set_exec_state('INVALID')
+        if self._exec_state != 'INVALID':
+            self._call_execute = True
+            self._set_exec_state('INVALID')
         return None
 
     def _outputs_to_validate(self):
@@ -1601,14 +1606,14 @@ class Component(Container):
                             return
 
                 if publish:
-                    Publisher.register('.'.join([self.get_pathname(), name]),
+                    Publisher.register('.'.join((self.get_pathname(), name)),
                                        obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
-                    Publisher.unregister('.'.join([self.get_pathname(), name]))
+                    Publisher.unregister('.'.join((self.get_pathname(), name)))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
@@ -1628,7 +1633,7 @@ class Component(Container):
                     if var == __attributes__:
                         lst.append((pname, self.get_attributes(io_only=False)))
                     else:
-                        lst.append(('.'.join([pname, var]), getattr(self, var)))
+                        lst.append(('.'.join((pname, var)), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
@@ -2014,7 +2019,7 @@ class Component(Container):
         """
         if self.parent and has_interface(self.parent, IAssembly):
             return self.parent.get_valid(
-                ['.'.join([self.name, n]) for n in names])
+                ['.'.join((self.name, n)) for n in names])
         else:
             valids = []
             if self._exec_state == 'INVALID':
