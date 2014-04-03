@@ -2,7 +2,8 @@
 import ast
 from threading import RLock
 
-from openmdao.main.array_helpers import flattened_size, get_val
+from openmdao.main.array_helpers import flattened_size_info
+from openmdao.main.container import get_val_and_index
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
@@ -352,9 +353,7 @@ class PseudoComponent(object):
             if self.out0 is None:
                 self.run(notify_parent=False)
             try:
-                size = flattened_size(name, 
-                                      getattr(self, name), 
-                                      scope=self)
+                size = flattened_size_info(name, self)
             except TypeError:
                 size = None
             self._var_sizes[name] = size

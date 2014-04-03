@@ -20,13 +20,13 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray
 
-from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL, MPI_info
+from openmdao.main.mpiwrap import MPI_info
 
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
-from openmdao.main.container import Container
+from openmdao.main.container import Container, get_val_and_index
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IContainer, IDriver, \
@@ -51,8 +51,8 @@ from openmdao.main.vartree import VariableTree
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
-from openmdao.main.array_helpers import flattened_size, get_val
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.main.array_helpers import flattened_size, get_flattened_index, \
+                                        get_var_shape, flattened_size_info
 
 import openmdao.util.log as tracing
 
@@ -2139,16 +2139,6 @@ class Component(Container):
     def setup_sizes(self, variables):
         pass
 
-    def _flattened_size(self, name):
-        """Return the local flattened size of the variable with
-        the given name.  NOTE: this method must be overridden
-        for components that use multiple processes.
-        """
-        if self.mpi.cpus > 1:
-            self.raise_exception("flattened_size not implemented for a component that spans multiple processes.",
-                                 NotImplementedError)
-        return flattened_size(name, get_val(self, name), scope=self)
-
     def get_float_var_size(self, name):
         """Returns the local flattened size of the value of the 
         named variable, if the flattened value can be expressed
@@ -2157,7 +2147,7 @@ class Component(Container):
         size = self._var_sizes.get(name, __missing__)
         if size is __missing__:
             try:
-                size = self._flattened_size(name)
+                size = flattened_size_info(name, self)
             except TypeError:
                 size = None
             self._var_sizes[name] = size

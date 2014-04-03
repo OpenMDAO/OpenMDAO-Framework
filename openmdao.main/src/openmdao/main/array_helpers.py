@@ -2,7 +2,7 @@
 
 import itertools
 
-from openmdao.main.vartree import VariableTree
+from openmdao.main.vartree import VariableTree, get_val_and_index
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -14,60 +14,22 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import ndarray, arange, array
 
 
-class IndexGetter(object):
-    """A simple class the returns the slice object used
-    to call its __getitem__ method.
-    """
-    def __getitem__(self, idx):
-        return idx
 
-_idx_cache = {}
-_idx_getter = IndexGetter()
-
-
-def get_index(name):
-    """Return the index (int or slice or tuple combination) 
-    associated with the given string, e.g. x[1:3, 5] would return 
-    a (slice(1,3),5) tuple.  This value can be passed into
-    an object's __getitem__ method, e.g., myval[idx], in order
-    to retrieve a particular slice from that object without 
-    having to parse the index more than once.
-    """
-    global _idx_getter, _idx_cache
-    name = name.replace('][',',')
-    brack = name.index('[')
-    if brack < 0:
-        return None
-    idxstr = name[brack:]
-    idx = _idx_cache.get(idxstr)
-    if idx is None:
-        _idx_cache[idxstr] = idx = eval('_idx_getter'+idxstr)
-    return idx
-    
-def get_val(scope, name):
-    """Return the value of the attr with the given name.
-    name may contain element access, e.g. x[2:8]
-    """
-    if '[' in name:
-        val = getattr(scope, name.split('[',1)[0])
-        idx = get_index(name)
-        # for objects that are not numpy arrays, an index tuple
-        #  really means [idx0][idx1]...[idx_n]
-        if isinstance(idx, tuple) and not isinstance(val, ndarray):
-            for i in idx:
-                val = val[i]
-        else:
-            val = val[idx]
-        return val
-    else:
-        return getattr(scope, name)
+_flat_idx_cache = {}
 
 def get_flattened_index(index, shape):
     """Given an index (int, slice, or tuple of ints and slices), into
-    an array, return the equivalent indices into a flattened version 
+    an array, return the equivalent index into a flattened version 
     of the array.
 
     """
+    global _flat_idx_cache
+
+    sindex = str(index)
+    fidx = _flat_idx_cache.get((sindex, shape))
+    if fidx:
+        return fidx
+
     if not isinstance(index, (tuple, list)):
         index = (index,)
 
@@ -90,19 +52,101 @@ def get_flattened_index(index, shape):
     if len(idxs) == 1:
         return idxs[0]
 
+    # see if we can convert the discrete list of indices 
+    # into a single slice object
     imin = min(idxs)
     imax = max(idxs)
     stride = idxs[1]-idxs[0]
     if all(arange(imin, imax+1, stride) == list(idxs)):
+        _flat_idx_cache[(sindex, shape)] = slice(imin, imax+1, stride)
         return slice(imin, imax+1, stride)
         
-    raise RuntimeError("couldn't get a valid flat index from '%s'" % index)
-    #return idxs  # could allow a discrete set of indices, but then
-                  # we couldn't feed it straight into __getitem__
+    # if all else fails, return a discrete list of indices into
+    # the flat array.
+    _flat_idx_cache[(sindex, shape)] = idxs.copy()
+    return idxs
+
+def offset_flat_index(idx, offset):
+    """Return an index into a flat array with the
+    given offset applied.  All indices are assumed
+    to have been converted to explicit form, so no
+    negative indices, slices with ':', etc. are
+    allowed.
+    """
+    if isinstance(idx, tuple):
+        pass
+    elif isinstance(idx, slice):
+        pass
+    elif isinstance(idx, ndarray):  # index array
+        pass
+    else:  # simple index
+        return idx + offset
+
+def get_flat_index_start(parent_start, idx):
+    if isinstance(idx, tuple):
+        pass
+    elif isinstance(idx, slice):
+        pass
+    elif isinstance(idx, ndarray):  # index array
+        pass
+    else:  # simple index
+        return parent_start + idx
+
+def get_var_shape(name, scope):
+    meta = scope.get_metadata(name, 'data_shape')
+    if meta:
+        return meta
+    val = getattr(scope, name)
+    if isinstance(val, ndarray):
+        return val.shape
+    if isinstance(val, real_types):
+        return (1,)
+
+    if isinstance(val, VariableTree):
+        raise NotImplementedError("get_var_shape not supported for vartrees")
+        sz = flattened_size(name, val, scope)
+        if sz:
+            return (sz,)
+
+    return None
+
+def flattened_size_info(name, scope):
+    """Return the local flattened size of the variable with
+    the given name along with its flattened index into
+    its basevar and its basevar name (if it has one). If it
+    doesn't have a basevar, then index and basevar name are
+    None.
+    """
+    # TODO: add checking of local_size metadata...
+    parts = name.split('.')
+    if len(parts) > 1:  
+        vt = getattr(scope, parts[0]) # vartree reference
+        obj = vt
+        for part in parts[1:-1]:
+            obj = getattr(obj, part)
+        val, idx = get_val_and_index(obj, parts[-1])
+    else:
+        vt = None
+        val, idx = get_val_and_index(scope, name)
+
+    if vt is not None:  # name is a vartree subvar
+        base = vt.name
+        if '[' in name:  # array ref inside of a vartree
+            raise NotImplementedError("no support yet for array element access within vartrees")
+        else:
+            flat_idx = vt.get_flattened_index(name[len(base)+1:])
+    elif '[' in name:  # array index into basevar
+        base = name.split('[',1)[0]
+        flat_idx = get_flattened_index(idx, get_var_shape(base, scope))
+    else:
+        base = None
+        flat_idx = None
+        
+    return (flattened_size(name, val, scope=scope), flat_idx,  base)
 
 def is_differentiable_var(name, scope):
-    meta = scope.get_metadata(name)
-    if 'data_shape' in meta and meta['data_shape']:
+    meta = scope.get_metadata(name, 'data_shape')
+    if meta:
         return True
 
     if is_differentiable_val(scope.get(name)):
@@ -119,20 +163,6 @@ def is_differentiable_val(val):
     elif isinstance(val, VariableTree):
         return all([is_differentiable_val(getattr(val,k)) for k in val.list_vars()])
     return False
-
-def group_flattened_indices(names, scope):
-    """Return a list of slices corresponding to each name's value, 
-    as well as the total flattened size of the vector
-    of flattened values. Names may be subvars.
-    """
-    pass
-
-def group_flattened_vec(names, vec=None):
-    """Will fill vec with the flattened representation
-    of the variables specified in names.  If vec is not
-    provided, a new vector will be allocated and returned.
-    """
-    pass
 
 def flattened_size(name, val, scope=None):
     """ Return size of `val` flattened to a 1D float array. """
@@ -159,7 +189,7 @@ def flattened_size(name, val, scope=None):
         return size
 
     elif scope is not None:
-        dshape = scope.get_metadata(name).get('data_shape')
+        dshape = scope.get_metadata(name,'data_shape')
 
         # Custom data objects with data_shape in the metadata
         if dshape:

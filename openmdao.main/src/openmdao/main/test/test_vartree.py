@@ -19,7 +19,13 @@ class DumbVT3(VariableTree):
     a = Float(1., units='ft')
     b = Float(12., units='inch')
     data = File()
+    
+class DumbVT3arr(VariableTree):
 
+    a = Float(1., units='ft')
+    b = Float(12., units='inch')
+    arr = Array([1,2,3,4,5])
+    data = File()
 
 class DumbVT2(VariableTree):
 
@@ -27,7 +33,13 @@ class DumbVT2(VariableTree):
     y = Float(-2.)
     data = File()
     vt3 = VarTree(DumbVT3())
+    
+class DumbVT2arr(VariableTree):
 
+    x = Float(-1.)
+    y = Float(-2.)
+    data = File()
+    vt3 = VarTree(DumbVT3arr())
 
 class BadVT2(VariableTree):
 
@@ -43,6 +55,14 @@ class DumbVT(VariableTree):
     v2 = Float(2., desc='vv2')
     data = File()
     vt2 = VarTree(DumbVT2())
+    
+class DumbVTarr(VariableTree):
+
+    v1 = Float(1., desc='vv1')
+    v2 = Float(2., desc='vv2')
+    data = File()
+    vt2 = VarTree(DumbVT2arr())
+
 
 
 class SimpleComp(Component):
@@ -483,6 +503,11 @@ class NestedVTTestCase(unittest.TestCase):
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
                          set(['topfloat','lev1','lev1float','lev2','lev2float']))
+
+    def test_dict_access(self):
+        vt = DumbVTarr()
+        self.assertEqual(vt['vt2.vt3.b'], 12.)
+        self.assertEqual(vt['vt2.vt3.arr[2]'], 3)
 
 
 class ListConnectTestCase(unittest.TestCase):

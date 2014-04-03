@@ -24,6 +24,12 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
+try:
+    from numpy import ndarray
+except ImportError as err:
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import ndarray
+
 from traits.api import HasTraits, Missing, Python, \
                        push_exception_handler, TraitType, CTrait
 from traits.has_traits import FunctionType, _clone_trait, MetaHasTraits
@@ -1708,6 +1714,53 @@ def _get_entry_group(obj):
 
 _get_entry_group.group_map = None  # Map from class/interface to group name.
 
+
+class IndexGetter(object):
+    """A simple class the returns the slice object used
+    to call its __getitem__ method.
+    """
+    def __getitem__(self, idx):
+        return idx
+
+_idx_cache = {}
+_idx_getter = IndexGetter()
+
+def get_index(name):
+    """Return the index (int or slice or tuple combination) 
+    associated with the given string, e.g. x[1:3, 5] would return 
+    a (slice(1,3),5) tuple.  This value can be passed into
+    an object's __getitem__ method, e.g., myval[idx], in order
+    to retrieve a particular slice from that object without 
+    having to parse the index more than once.
+    """
+    global _idx_getter, _idx_cache
+    name = name.replace('][',',')
+    brack = name.index('[')
+    if brack < 0:
+        return None
+    idxstr = name[brack:]
+    idx = _idx_cache.get(idxstr)
+    if idx is None:
+        _idx_cache[idxstr] = idx = eval('_idx_getter'+idxstr)
+    return idx
+    
+def get_val_and_index(scope, name):
+    """Return a tuple of (value, index) for the given name, 
+    which may contain array element access.
+    """
+    if '[' in name:
+        val = getattr(scope, name.split('[',1)[0])
+        idx = get_index(name)
+        # for objects that are not numpy arrays, an index tuple
+        #  really means [idx0][idx1]...[idx_n]
+        if isinstance(idx, tuple) and not isinstance(val, ndarray):
+            for i in idx:
+                val = val[i]
+        else:
+            val = val[idx]
+        return (val, idx)
+    else:
+        return (getattr(scope, name), None)
 
 def dump(cont, recurse=False, stream=None, **metadata):
     """Print all items having specified metadata and

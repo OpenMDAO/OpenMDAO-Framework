@@ -330,16 +330,21 @@ class System(object):
         those that are local.
         """
         comps = dict([(c.name, c) for c in self.local_comps])
+
         for name in variables.keys():
             parts = name.split('.', 1)
             if len(parts) > 1:
                 cname, vname = parts
-                if cname in comps:
-                    comp = comps[cname]
+                comp = comps.get(cname)
+                if comp is not None:
                     sz = comp.get_float_var_size(vname)
                     if sz is not None:
-                        variables[name]['size'] = sz
-    
+                        vdict = variables[name]
+                        sz, flat_idx, base = sz
+                        vdict['size'] = sz
+                        if flat_idx is not None:
+                            vdict['flat_idx'] = flat_idx
+
         # pass the call down to any subdrivers/subsystems
         # and subassemblies. subassemblies will ignore the
         # variables passed into them in this case.

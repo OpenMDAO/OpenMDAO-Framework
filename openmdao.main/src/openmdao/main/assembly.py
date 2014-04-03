@@ -37,7 +37,8 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
-from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var, offset_flat_index, \
+                                        get_flat_index_start
 from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_subvar_node
 
 from openmdao.util.graph import list_deriv_vars
@@ -1332,7 +1333,7 @@ class Assembly(Component):
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.driver.get_req_cpus()
-       
+
     def _get_vector_vars(self):
         """Return an ordereddict of names of variables needed by 
         subsystems in this Assembly. This includes all variables
@@ -1344,7 +1345,8 @@ class Assembly(Component):
         # add all inputs first, then all outputs, so that after
         # we group by component, component inputs and outputs
         # will be contiguous.
-        # TODO: need to deal properly with slice connections...
+
+        # collect all vars involved in connections
         conns = self._depgraph.list_connections()
 
         # get any additional vars used as input or output to any
@@ -1377,6 +1379,9 @@ class Assembly(Component):
             else:
                 outputs.append(name)
 
+        inputs.sort()
+        outputs.sort()
+
         # now group them by comp, maintaining their former order
         # within a comp
         compdict = OrderedDict()
@@ -1388,9 +1393,9 @@ class Assembly(Component):
         for cname, vnames in compdict.items():
             for vname in vnames:
                 name = vname if cname is None else '.'.join((cname,vname))
-                variables[name] = { 'size': 0 }
+                variables[name] = var = { 'size': 0 }
                 if is_subvar_node(graph, name):
-                    variables[name]['basevar'] = graph.base_var(name)
+                    var['basevar'] = graph.base_var(name)
 
         return variables
  
@@ -1400,22 +1405,25 @@ class Assembly(Component):
         """
         # determine the list of variables used to build the
         # distributed vector(s)
-        self.vector_vars = self._get_vector_vars()
+        self.all_vector_vars = self._get_vector_vars()
+        sizes_add, sizes_noadd = _partition_subvars(self.all_vector_vars.keys(),
+                                                    self.all_vector_vars)
 
         # this will calculate sizes for any subassemblies
-        self.driver.setup_sizes(self.vector_vars)
+        self.driver.setup_sizes(self.all_vector_vars)
 
         comm = self.mpi.comm
 
         # create an (nproc x numvars) var size vector containing 
         # local sizes across all processes in our comm
-        self.local_var_sizes = numpy.zeros((comm.size, 
-                                           len(self.vector_vars)), int)
-
+        self.local_var_sizes = numpy.zeros((comm.size, len(sizes_add)), 
+                                           int)
         rank = comm.rank
-        for i, (name, dct) in enumerate(self.vector_vars.items()):
-            self.local_var_sizes[rank, i] = dct['size']
-            dct['idx'] = i  # map varname to index
+        self.vector_vars = OrderedDict()
+        for i, name in enumerate(sizes_add):
+            self.vector_vars[name] = var = self.all_vector_vars[name]
+            self.local_var_sizes[rank, i] = var['size']
+            var['idx'] = i  # map varname back to index into size array
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -1437,44 +1445,91 @@ class Assembly(Component):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        self.uVec = VecWrapper(self.mpi.comm,
-                                   self.vector_vars.keys(),
-                                   self.vector_vars, 
-                                   self.local_var_sizes)
+        self.uVec = VecWrapper(self, self.all_vector_vars.keys())
 
     def setup_communicators(self, comm, scope=None):
         super(Assembly, self).setup_communicators(comm, scope)
         self.driver.setup_communicators(comm)
         
 
+def _partition_subvars(names, vardict):
+    """If a subvar has a basevar that is also included in a
+    var vector, then the size of the subvar does not add
+    to the total size of the var vector because it's size
+    is already included in its basevar size.
+
+    This method returns (sizes, nosizes), where sizes is a list 
+    of vars/subvars that add to the size of the var vector and 
+    nosizes is a list of subvars that do not.
+
+    names are assumed to be sorted such that a basevar will
+    always be found in the list before any of its subvars.
+    """
+    nameset = set()
+    nosizes = []
+    sizes = []
+    for name in names:
+        base = vardict[name].get('basevar')
+        if base and base in nameset:
+            nosizes.append(name)
+        else:
+            sizes.append(name)
+        nameset.add(name)
+
+    return (sizes, nosizes)
+       
 class VecWrapper(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
     and info about what var maps to what range within the distributed
     vector.
     """
-    def __init__(self, comm, myvars, allvars, sizes):
-        self.view = {} # dict of array views into larger array
-        size = 0
-        rank = comm.rank
-        myset = set()
-        for v in myvars:
-            base = allvars[v].get('basevar')
-            # don't add size for subvars having basevars in the vector
-            if not (base and base in myset):
-                size += sizes[rank, allvars[v]['idx']]
-            myset.add(v)
+    def __init__(self, obj, varlist):
+        comm = obj.mpi.comm
+        allvars = obj.all_vector_vars
+        varsizes_added, varsizes_noadd = _partition_subvars(varlist, allvars)
+
+        self._info = {} # dict of (start_idx, view)
+
+        size = sum([allvars[name]['size'] for name in varsizes_added])
 
         self.array = numpy.zeros(size)
+
+        # first, add views for vars whose sizes are added to the total
         start, end = 0, 0
-        for name in myvars:
-            varinfo = allvars.get(name)
-            sz = varinfo['size']
+        for name in varsizes_added:
+            sz = allvars[name].get('size')
             if sz:
                 end += sz
-                self.view[name] = self.array[start:end]
+                self._info[name] = (self.array[start:end], start)
                 mpiprint("*** view for %s is %s" % (name, [start,end]))
                 start += sz
+
         self.petsc_vec = get_petsc_vec(comm, self.array)
+
+        # now add views for subvars
+        for name in varsizes_noadd:
+            varinfo = allvars[name]
+            sz = varinfo['size']
+            if sz:
+                mpiprint("%s: %s" % (name, varinfo))
+                idx = varinfo['flat_idx']
+                basestart = self.get_start(varinfo['basevar'])
+                substart = get_flat_index_start(basestart, idx)
+                sub_idx = offset_flat_index(idx, substart)
+                #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
+                #            (size,basestart, substart, sub_idx))
+                self._info[name] = (self.array[sub_idx], substart)
+                #mpiprint("*** view for %s is %s" % (name, list(self.get_bounds(name))))
+
+    def get_view(self, name):
+        return self._info[name][0]
+
+    def get_start(self, name):
+        return self._info[name][1]
+
+    def get_bounds(self, name):
+        view, start = self._info[name]
+        return (start, start + view.size)
 
     def scatter(self):
         pass  # see if we can do scatter functionality here...
@@ -1484,14 +1539,6 @@ class VecWrapper(object):
 def _linspace(self, start, end):
     """ Return a linspace vector of the right int type for PETSc """
     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
-
-
-
-
-
-
-
-
 
 
 

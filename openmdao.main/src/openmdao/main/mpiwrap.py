@@ -1,4 +1,5 @@
 import os
+import sys
 
 from openmdao.main.interfaces import obj_has_interface, IAssembly
 
@@ -18,6 +19,7 @@ def under_mpirun():
 if under_mpirun():
     from mpi4py import MPI
     from petsc4py import PETSc
+    import traceback
 
     COMM_NULL = MPI.COMM_NULL
 
@@ -25,15 +27,20 @@ if under_mpirun():
         """Run a parallel version of the top object. comp_map
         is a dict that maps component names (full pathname) to processes.
         """
-        _setup_mpi(top)
-        return top.run()
+        try:
+            _setup_mpi(top)
+            return top.run()
+        except Exception:
+            mpiprint(traceback.format_exc())
 
     def get_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm) 
 
     def mpiprint(msg, rank=-1):
         if rank < 0 or rank == MPI.COMM_WORLD.rank:
-            print "{%d} %s" % (MPI.COMM_WORLD.rank, str(msg))
+            for part in str(msg).split('\n'):
+                print "{%d} %s" % (MPI.COMM_WORLD.rank, part)
+            sys.stdout.flush()
 else:
     MPI = None
     PETSc = None

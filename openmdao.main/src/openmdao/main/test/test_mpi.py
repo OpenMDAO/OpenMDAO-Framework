@@ -64,28 +64,28 @@ def _get_model():
 def _get_model1():
     top = set_as_top(Assembly())
     top.add('driver', NTimes(1))
-    for i in range(1,12):
+    for i in range(1,9):
         name = 'C%d' % i
         top.add(name, ABCDArrayComp(22))
         top.driver.workflow.add(name)
         getattr(top, name).mpi.requested_cpus = 1
 
     conns = [
-        ('C1.c','C6.a'),
+        ('C1.c','C4.a'),
         ('C2.c','C5.a'),
-        ('C3.c','C11.a'),
-        ('C3.d','C8.a'),
-        ('C5.c','C6.b'),
-        ('C5.d','C8.b'),
-        ('C8.c','C11.b'),
-        ('C8.d','C10.a'),
+        ('C3.c','C8.a'),
+        ('C3.d','C6.a'),
+        ('C5.c','C4.b'),
+        ('C5.d','C6.b'),
+        ('C6.c','C8.b'),
+        ('C6.d','C7.a'),
     ]
 
     for u,v in conns:
         top.connect(u, v)
 
     top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C8.d[0]>C11.d[0]') 
+    top.driver.add_constraint('C6.d[0]>C8.d[0]') 
     
     return top
 
