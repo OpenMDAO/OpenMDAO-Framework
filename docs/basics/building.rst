@@ -43,7 +43,7 @@ compliance when a variable or Component instance is created:
     NameError: name 'the chassis' contains illegal characters
 
 In the OpenMDAO source and examples, we've tried to follow the `PEP 8
-<http://www.python.org/dev/peps/pep-0008/>`_ standard, which specifies a naming
+<http://legacy.python.org/dev/peps/pep-0008/>`_ standard, which specifies a naming
 convention for component instance names and variable names. For all
 variable names, PEP 8 prescribes the use of lower case names with words
 separated by underscores. Naturally, PEP 8 compliance is not a requirement

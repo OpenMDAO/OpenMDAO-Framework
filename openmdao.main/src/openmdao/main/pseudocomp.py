@@ -2,12 +2,11 @@
 import ast
 from threading import RLock
 
-from openmdao.main.attrwrapper import UnitsAttrWrapper
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.numpy_fallback import array, ndarray, hstack, zeros
+from openmdao.main.numpy_fallback import zeros
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
@@ -93,8 +92,12 @@ class PseudoComponent(object):
         self._valid = False
         self._parent = parent
         self._inputs = []
+
+        # Flags and caching used by the derivatives calculation
         self.force_fd = False
         self._provideJ_bounds = None
+        self._complex_step = False
+
         self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
                                          # this is, e.g., 'units', 'constraint', 'objective',
                                          # or 'multi_var_expr'
@@ -203,7 +206,7 @@ class PseudoComponent(object):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-        return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
+        return '.'.join((self._parent.get_pathname(rel_to_scope), self.name))
 
     def list_connections(self, is_hidden=False, show_expressions=False):
         """list all of the inputs and output connections of this PseudoComponent.
@@ -222,10 +225,10 @@ class PseudoComponent(object):
             else:
                 return []
         else:
-            conns = [(src, '.'.join([self.name, dest]))
+            conns = [(src, '.'.join((self.name, dest)))
                          for src, dest in self._inmap.items()]
             if self._outdests:
-                conns.extend([('.'.join([self.name, 'out0']), dest)
+                conns.extend([('.'.join((self.name, 'out0')), dest)
                                            for dest in self._outdests])
         return conns
 

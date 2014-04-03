@@ -64,7 +64,7 @@ def flattened_size(name, val, scope=None):
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
-    if isinstance(val, (float,int)):
+    if isinstance(val, (float, int, complex)):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
