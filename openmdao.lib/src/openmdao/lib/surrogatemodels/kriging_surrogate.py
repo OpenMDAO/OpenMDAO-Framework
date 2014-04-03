@@ -136,9 +136,9 @@ class KrigingSurrogate(Container):
         cons = []
         for i in xrange(self.m):
             cons.append({'type': 'ineq', 'fun': lambda log10t: log10t[i] - log10(1e-2)}) #min
-            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(10) - log10t[i]}) #max
+            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(3) - log10t[i]}) #max
 
-        self.thetas = minimize(_calcll, thetas, method='COBYLA', constraints=cons).x
+        self.thetas = minimize(_calcll, thetas, method='COBYLA', constraints=cons, tol=1e-8).x
         #print self.thetas
         self._calculate_log_likelihood()
 
