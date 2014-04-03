@@ -6,6 +6,7 @@ from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 
 
 class ListCaseIterator(object):
+
     """An iterator that returns :class:`Case` objects from a passed-in iterator
     of cases. This can be useful for runtime-generated cases from an
     optimizer, etc.
@@ -14,9 +15,9 @@ class ListCaseIterator(object):
     implements(ICaseIterator)
 
     def __init__(self, cases):
-        self._cases=cases
-        super(ListCaseIterator, self).__init__()
-    def __getitem__(self,num):
+        self._cases = cases
+
+    def __getitem__(self, num):
         return self._cases[num]
 
     def get_attributes(self, io_only=True):
@@ -31,6 +32,7 @@ class ListCaseIterator(object):
 
 
 class ListCaseRecorder(object):
+
     """Stores cases in a list."""
 
     implements(ICaseRecorder)
