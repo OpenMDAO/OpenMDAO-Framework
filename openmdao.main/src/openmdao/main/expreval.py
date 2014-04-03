@@ -859,16 +859,22 @@ class ExprEvaluator(object):
 
         return metadata
 
-    def get_referenced_varpaths(self, copy=True):
-        """Return a set of pathnames relative to *scope.parent* and based on
-        the names of Variables referenced in our expression string.
+    def get_referenced_varpaths(self, copy=True, refs=False):
+        """Return a set of pathnames relative to *scope.parent* and 
+        based on the names of Variables referenced in our expression 
+        string.  If refs is True, return full references that may 
+        include not only the var name but also an array index, e.g.,
+        'x[3]' instead of just 'x'.
         """
         if self._code is None:
             self._parse()
-        if copy:
-            return self.var_names.copy()
+        if refs:
+            return self.refs(copy)
         else:
-            return self.var_names
+            if copy:
+                return self.var_names.copy()
+            else:
+                return self.var_names
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the pathnames of

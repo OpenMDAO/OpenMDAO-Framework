@@ -178,7 +178,7 @@ class Driver(Component):
         return new_list
 
     @rbac(('owner', 'user'))
-    def get_expr_var_depends(self, recurse=True):
+    def get_expr_var_depends(self, recurse=True, refs=False):
         """Returns a tuple of sets of the form (src_set, dest_set)
         containing all dependencies introduced by any parameters,
         objectives, or constraints in this Driver.  If recurse is True,
@@ -192,15 +192,16 @@ class Driver(Component):
             for dname, dclass in self._delegates_.items():
                 delegate = getattr(self, dname)
                 if isinstance(delegate, HasParameters):
-                    destset.update(delegate.get_referenced_varpaths())
+                    destset.update(delegate.get_referenced_varpaths(refs=refs))
                 elif isinstance(delegate, (HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
                                      HasObjective, HasObjectives)):
-                    srcset.update(delegate.get_referenced_varpaths())
+                    srcset.update(delegate.get_referenced_varpaths(refs=refs))
 
             if recurse:
                 for sub in self.subdrivers():
-                    srcs, dests = sub.get_expr_var_depends(recurse)
+                    srcs, dests = sub.get_expr_var_depends(recurse=recurse,
+                                                           refs=refs)
                     srcset.update(srcs)
                     destset.update(dests)
 

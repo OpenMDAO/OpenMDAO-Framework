@@ -343,7 +343,7 @@ class VariableTree(Container):
         current vartree that is occupied by the named 
         subvar.
         """
-        raise NotImplementedError('get_flattened_slice')  # FIXME
+        raise NotImplementedError('get_flattened_index')  # FIXME
             
 
 # register a flattener for Cases

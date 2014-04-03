@@ -70,27 +70,27 @@ def offset_flat_index(idx, offset):
     """Return an index into a flat array with the
     given offset applied.  All indices are assumed
     to have been converted to explicit form, so no
-    negative indices, slices with ':', etc. are
-    allowed.
+    negative indices, slices with ':', or tuples
+    are allowed.
     """
-    if isinstance(idx, tuple):
-        pass
-    elif isinstance(idx, slice):
-        pass
-    elif isinstance(idx, ndarray):  # index array
-        pass
-    else:  # simple index
+    if isinstance(idx, slice):
+        return slice(idx.start+offset, idx.stop+offset, idx.step)
+    else:  # simple index or index array
         return idx + offset
 
-def get_flat_index_start(parent_start, idx):
-    if isinstance(idx, tuple):
-        pass
-    elif isinstance(idx, slice):
-        pass
+def get_flat_index_start(idx):
+    """Return the starting simple index for the given
+    simple index, slice, or array idx.  All indices are 
+    assumed to have been converted to explicit form, so no
+    negative indices, slices with ':', or tuples
+    are allowed.
+    """
+    if isinstance(idx, slice):
+        return idx.start
     elif isinstance(idx, ndarray):  # index array
-        pass
+        return idx[0]
     else:  # simple index
-        return parent_start + idx
+        return idx
 
 def get_var_shape(name, scope):
     meta = scope.get_metadata(name, 'data_shape')

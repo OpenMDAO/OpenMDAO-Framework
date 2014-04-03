@@ -196,15 +196,15 @@ class Constraint(object):
             return self.lhs.get_referenced_compnames().union(
                                             self.rhs.get_referenced_compnames())
 
-    def get_referenced_varpaths(self, copy=True):
+    def get_referenced_varpaths(self, copy=True, refs=False):
         """Returns a set of names of each component referenced by this
         constraint.
         """
         if isinstance(self.rhs, float):
-            return self.lhs.get_referenced_varpaths(copy=copy)
+            return self.lhs.get_referenced_varpaths(copy=copy, refs=refs)
         else:
             return self.lhs.get_referenced_varpaths(copy=copy).union(
-                                    self.rhs.get_referenced_varpaths(copy=copy))
+                    self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
 
     def __str__(self):
         return ' '.join([str(self.lhs), self.comparator, str(self.rhs)])
@@ -330,13 +330,14 @@ class _HasConstraintsBase(object):
             names.update(constraint.get_referenced_compnames())
         return names
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns a set of variable names referenced by a
         constraint.
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.get_referenced_varpaths(copy=False))
+            names.update(constraint.get_referenced_varpaths(copy=False, 
+                                                            refs=refs))
         return names
 
     def mimic(self, target):
@@ -778,12 +779,12 @@ class HasConstraints(object):
         names.update(self._ineq.get_referenced_compnames())
         return names
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns a set of names of each component referenced by a
         constraint.
         """
-        names = set(self._eq.get_referenced_varpaths())
-        names.update(self._ineq.get_referenced_varpaths())
+        names = set(self._eq.get_referenced_varpaths(refs=refs))
+        names.update(self._ineq.get_referenced_varpaths(refs=refs))
         return names
 
     def mimic(self, target):

@@ -1351,7 +1351,8 @@ class Assembly(Component):
 
         # get any additional vars used as input or output to any
         # drivers
-        srcs, dests = self.driver.get_expr_var_depends(recurse=True)
+        srcs, dests = self.driver.get_expr_var_depends(recurse=True,
+                                                       refs=True)
 
         allvars = set([u for u,v in conns])
         allvars.update([v for u,v in conns])
@@ -1370,8 +1371,9 @@ class Assembly(Component):
         data = graph.node
 
         for name in allvars:
-            if 'basevar' in data[name]: # it's a subvar
-                iotype = data[data[name]['basevar']].get('iotype')
+            base = graph.base_var(name)
+            if base != name: # it's a subvar
+                iotype = data[base].get('iotype')
             else:
                 iotype = data[name].get('iotype')
             if iotype in ['in', 'state']:
@@ -1511,23 +1513,32 @@ class VecWrapper(object):
             varinfo = allvars[name]
             sz = varinfo['size']
             if sz:
-                mpiprint("%s: %s" % (name, varinfo))
                 idx = varinfo['flat_idx']
                 basestart = self.get_start(varinfo['basevar'])
-                substart = get_flat_index_start(basestart, idx)
-                sub_idx = offset_flat_index(idx, substart)
+                sub_idx = offset_flat_index(idx, basestart)
+                substart = get_flat_index_start(sub_idx)
                 #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
                 #            (size,basestart, substart, sub_idx))
                 self._info[name] = (self.array[sub_idx], substart)
-                #mpiprint("*** view for %s is %s" % (name, list(self.get_bounds(name))))
+                mpiprint("*** view for %s is %s" % (name, list(self.get_bounds(name))))
 
     def get_view(self, name):
+        """Return the array view into the larger array for the
+        given name.  name may contain array indexing.
+        """
         return self._info[name][0]
 
     def get_start(self, name):
+        """Return the starting index for the array view belonging
+        to the given name. name may contain array indexing.
+        """
         return self._info[name][1]
 
     def get_bounds(self, name):
+        """Return the bounds corresponding to the slice occupied
+        by the named variable within the flattened array.
+        name may contain array indexing.
+        """
         view, start = self._info[name]
         return (start, start + view.size)
 
@@ -1536,9 +1547,9 @@ class VecWrapper(object):
 
 
 
-def _linspace(self, start, end):
-    """ Return a linspace vector of the right int type for PETSc """
-    return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
+# def _linspace(self, start, end):
+#     """ Return a linspace vector of the right int type for PETSc """
+#     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
 
 
 
