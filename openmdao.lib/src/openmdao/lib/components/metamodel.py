@@ -24,6 +24,13 @@ from openmdao.main.interfaces import ISurrogate, ICaseRecorder
 from openmdao.main.vartree import VariableTree
 
 class MetaModel(Component):
+    """ Class that creates a reduced order model for a tuple of outputs from
+    a tuple of inputs. Accepts surrogate models that adhere to ISurrogate.
+    Multiple surrogate models can be used. Training inputs and outputs should
+    be provided in the training_inputs and training_outputs variable trees.
+
+    For a Float variable, the training data is an array of length m.
+    """
 
     default_surrogate = Slot(ISurrogate, allow_none=True,
                              desc="This surrogate will be used for all "
@@ -62,7 +69,7 @@ class MetaModel(Component):
             input_tree.add(name, Array([0.0], desc='training input'))
 
         output_tree = self.get('training_outputs')
-        for name in inputs:
+        for name in outputs:
             self.add(name, Float(0.0, iotype='out', desc='metamodel output'))
             output_tree.add(name, Array([0.0], desc='training output'))
 
@@ -71,22 +78,12 @@ class MetaModel(Component):
 
         self._surrogate_overrides = set()  # keeps track of which sur_<name> slots are full
         self._training_data = {}
-        self._training_input_history = []
         self._const_inputs = {}  # dict of constant training inputs indices and their values
         self._train = False
         self._default_surrogate_copies = {}  # need to maintain separate copy of
                                              # default surrogate for each sur_*
                                              # that doesn't have a surrogate
                                              # defined
-
-        # the following line will work for classes that inherit from MetaModel
-        # as long as they declare their traits in the class body and not in
-        # the __init__ function.  If they need to create traits dynamically
-        # during initialization they'll have to provide the value of
-        # _mm_class_traitnames
-        self._mm_class_traitnames = set(self.traits(iotype=not_none).keys())
-
-        #self.on_trait_change(self._surrogate_updated, "surrogates_items")
 
     def _input_updated(self, name, fullpath=None):
         ''' Set _train if anything changes in our inputs so that training
@@ -95,6 +92,32 @@ class MetaModel(Component):
         self._train = True
         super(MetaModel, self)._input_updated(name, fullpath)
 
+    def execute(self):
+        """If the training flag is set, train the metamodel. Otherwise,
+        predict outputs.
+        """
+
+        if self._train:
+
+            # Surrogate models take an (m, n) list of lists
+            # m = number of training samples
+            # n = number of inputs
+            #
+            # TODO - Why not numpy array instead?
+
+
+            for name in self._surrogate_output_names:
+                surrogate = self._get_surrogate(name)
+                if surrogate is not None:
+                    surrogate.train(training_input_history, output_history)
+
+            self._train = False
+
+# TODO - remove this stuff later
+if __name__ == "__main__":
+
+    z = MetaModel(inputs=('x1', 'x2'), outputs=('y1', 'y2'))
+    print z.training_inputs.x2, z.training_outputs.y2
 
 #from copy import deepcopy, copy
 
