@@ -127,7 +127,6 @@ class KrigingSurrogate(Container):
         #if self.thetas == None:
         #self.thetas = fmin(_calcll, thetas, disp=False, ftol=0.0001)
         def lowerBound(log10t): 
-            print 
             return log10t - log10(self.thetas)
 
         def upperBound(log10t): 
