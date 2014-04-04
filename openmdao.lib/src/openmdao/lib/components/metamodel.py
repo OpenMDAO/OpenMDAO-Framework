@@ -17,6 +17,7 @@
 # Disable complaints about Too many local variables (%s/%s) Used
 # pylint: disable-msg=R0914
 
+from copy import deepcopy
 
 from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Array, Dict, Float, Slot, Str, VarTree
@@ -76,14 +77,15 @@ class MetaModel(Component):
         self._surrogate_input_names = inputs
         self._surrogate_output_names = outputs
 
-        self._surrogate_overrides = set()  # keeps track of which sur_<name> slots are full
         self._training_data = {}
-        self._const_inputs = {}  # dict of constant training inputs indices and their values
         self._train = False
-        self._default_surrogate_copies = {}  # need to maintain separate copy of
-                                             # default surrogate for each sur_*
-                                             # that doesn't have a surrogate
-                                             # defined
+        
+        # keeps track of which sur_<name> slots are full
+        self._surrogate_overrides = set()  
+        
+        # need to maintain separate copy of default surrogate for each sur_*
+        # that doesn't have a surrogate defined
+        self._default_surrogate_copies = {}  
 
     def _input_updated(self, name, fullpath=None):
         ''' Set _train if anything changes in our inputs so that training
@@ -97,28 +99,129 @@ class MetaModel(Component):
         predict outputs.
         """
 
+        # Train first
         if self._train:
+            
+            input_data = []
+                
+            allocated = False
+            for name in self._surrogate_input_names:
+                train_name = "training_inputs.%s" % name
+                val = self.get(train_name)
+                num_sample = len(val)
 
+                for j in xrange(0, num_sample):
+                    
+                    if allocated is False:
+                        input_data.append([])
+                    input_data[j].append(val[j])
+                    
+                allocated = True
+                
             # Surrogate models take an (m, n) list of lists
             # m = number of training samples
             # n = number of inputs
             #
             # TODO - Why not numpy array instead?
 
-
             for name in self._surrogate_output_names:
+                
+                train_name = "training_outputs.%s" % name
+                output_data = self.get(train_name)
                 surrogate = self._get_surrogate(name)
+                
                 if surrogate is not None:
-                    surrogate.train(training_input_history, output_history)
+                    surrogate.train(input_data, output_data)
 
             self._train = False
+
+        # Now Predict for current inputs
+        
+        inputs = []
+        for name in self._surrogate_input_names:
+            val = self.get(name)
+            inputs.append(val)
+            
+        for name in self._surrogate_output_names:
+            surrogate = self._get_surrogate(name)
+            if surrogate is not None:
+                setattr(self, name, surrogate.predict(inputs))
+
+    def _get_surrogate(self, name):
+        """Return the designated surrogate for the given output."""
+
+        surrogate = self.surrogates.get(name)
+        if surrogate is None and self.default_surrogate is not None:
+            surrogate = self._default_surrogate_copies.get(name)
+
+        return surrogate
+
+    def _default_surrogate_changed(self, old_obj, new_obj):
+        """Callback whenever the default_surrogate model is changed."""
+        
+        if old_obj:
+            old_obj.on_trait_change(self._def_surrogate_trait_modified,
+                                    remove=True)
+        if new_obj:
+            new_obj.on_trait_change(self._def_surrogate_trait_modified)
+
+            # due to the way "add" works, container will always remove the
+            # old before it adds the new one. So you actually get this method
+            # called twice on a replace. You only do this update when the new
+            # one gets set
+
+            for name in self._surrogate_output_names:
+                if name not in self._surrogate_overrides:
+                    surrogate = deepcopy(self.default_surrogate)
+                    self._default_surrogate_copies[name] = surrogate
+
+        self.config_changed()
+
+    def _def_surrogate_trait_modified(self, surrogate, name, old, new):
+        # a trait inside of the default_surrogate was changed, so we need to
+        # replace all of the default copies
+
+        for name in self._default_surrogate_copies:
+            self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+
+    def _surrogate_updated(self, obj, name, old, new):
+        """Called when self.surrogates is updated."""
+
+        if new.changed:
+            varname = new.changed.keys()[0]
+            if self.surrogates[varname] is None:
+                if self.default_surrogate:
+                    self._default_surrogate_copies[varname] = \
+                        deepcopy(self.default_surrogate)
+                if varname in self._surrogate_overrides:
+                    self._surrogate_overrides.remove(varname)
+            else:
+                self._surrogate_overrides.add(varname)
+                self._add_var_for_surrogate(self.surrogates[varname], varname)
+                if name in self._default_surrogate_copies:
+                    del self._default_surrogate_copies[name]
+
+        self.config_changed()
+
 
 # TODO - remove this stuff later
 if __name__ == "__main__":
 
     z = MetaModel(inputs=('x1', 'x2'), outputs=('y1', 'y2'))
     print z.training_inputs.x2, z.training_outputs.y2
+    z.training_inputs.x1 = [1.0, 2.0, 3.0]
+    z.training_inputs.x2 = [1.0, 3.0, 4.0]
+    z.training_outputs.y1 = [3.0, 2.0, 1.0]
+    z.training_outputs.y2 = [1.0, 4.0, 7.0]
 
+    from openmdao.lib.surrogatemodels.api import ResponseSurface
+    z.default_surrogate = ResponseSurface()
+    
+    z.x1 = 2.0
+    z.x2 = 3.0
+    z.run()
+    print z.y1, z.y2
+    
 #from copy import deepcopy, copy
 
 #from traits.trait_base import not_none
