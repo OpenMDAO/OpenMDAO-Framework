@@ -1425,7 +1425,6 @@ class Assembly(Component):
         for i, name in enumerate(sizes_add):
             self.vector_vars[name] = var = self.all_vector_vars[name]
             self.local_var_sizes[rank, i] = var['size']
-            var['idx'] = i  # map varname back to index into size array
 
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
@@ -1435,7 +1434,7 @@ class Assembly(Component):
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
-        mpiprint(self.local_var_sizes)
+        mpiprint("local sizes = %s" % self.local_var_sizes[rank,:])
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
@@ -1448,6 +1447,7 @@ class Assembly(Component):
         distributed vectors need to solve the distributed system.
         """
         self.uVec = VecWrapper(self, self.all_vector_vars.keys())
+        #self.pVec = VecWrapper(self, ???)
 
     def setup_communicators(self, comm, scope=None):
         super(Assembly, self).setup_communicators(comm, scope)
@@ -1479,7 +1479,8 @@ def _partition_subvars(names, vardict):
         nameset.add(name)
 
     return (sizes, nosizes)
-       
+
+
 class VecWrapper(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
     and info about what var maps to what range within the distributed
@@ -1488,7 +1489,8 @@ class VecWrapper(object):
     def __init__(self, obj, varlist):
         comm = obj.mpi.comm
         allvars = obj.all_vector_vars
-        varsizes_added, varsizes_noadd = _partition_subvars(varlist, allvars)
+        varsizes_added, varsizes_noadd = _partition_subvars(varlist, 
+                                                            allvars)
 
         self._info = {} # dict of (start_idx, view)
 
@@ -1514,27 +1516,27 @@ class VecWrapper(object):
             sz = varinfo['size']
             if sz:
                 idx = varinfo['flat_idx']
-                basestart = self.get_start(varinfo['basevar'])
+                basestart = self.start(varinfo['basevar'])
                 sub_idx = offset_flat_index(idx, basestart)
                 substart = get_flat_index_start(sub_idx)
                 #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
                 #            (size,basestart, substart, sub_idx))
                 self._info[name] = (self.array[sub_idx], substart)
-                mpiprint("*** view for %s is %s" % (name, list(self.get_bounds(name))))
+                mpiprint("*** view for %s is %s" % (name, list(self.bounds(name))))
 
-    def get_view(self, name):
+    def view(self, name):
         """Return the array view into the larger array for the
         given name.  name may contain array indexing.
         """
         return self._info[name][0]
 
-    def get_start(self, name):
+    def start(self, name):
         """Return the starting index for the array view belonging
         to the given name. name may contain array indexing.
         """
         return self._info[name][1]
 
-    def get_bounds(self, name):
+    def bounds(self, name):
         """Return the bounds corresponding to the slice occupied
         by the named variable within the flattened array.
         name may contain array indexing.

@@ -3,7 +3,6 @@ import ast
 from threading import RLock
 
 from openmdao.main.array_helpers import flattened_size_info
-from openmdao.main.container import get_val_and_index
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node

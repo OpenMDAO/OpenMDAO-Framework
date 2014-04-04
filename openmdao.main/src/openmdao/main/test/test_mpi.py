@@ -142,14 +142,15 @@ def _get_model_nested_drivers():
     return top
 
 if __name__ == '__main__':
-    from openmdao.main.mpiwrap import MPI_run
+    from openmdao.main.mpiwrap import MPI_run, under_mpirun
 
     top = _get_model1()
 
     MPI_run(top)
 
-    mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
-    #mpiprint(top.subdriver.workflow._subsystem.dump_parallel_graph(stream=None))
+    if under_mpirun():
+        mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
+        #mpiprint(top.subdriver.workflow._subsystem.dump_parallel_graph(stream=None))
 
         
 
