@@ -11,23 +11,75 @@ import thread
 import threading
 import traceback
 
-from openmdao.main.datatypes.api import Bool, Dict, Enum, Instance, Int, Slot
+from openmdao.main.numpy_fallback import zeros
 
-from openmdao.main.api import Driver
-from openmdao.main.exceptions import RunStopped, TracedError, traceback_str
+from openmdao.main.api import Driver, VariableTree
+from openmdao.main.datatypes.api import Array, Bool, Dict, Enum, Int, VarTree
+from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import ICaseIterator, ICaseFilter
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasresponses import HasResponses
+from openmdao.main.interfaces import IHasParameters, IHasResponses, implements
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
+
+from openmdao.util.decorators import add_delegate
 from openmdao.util.filexfer import filexfer
 
-from openmdao.lib.casehandlers.api import ListCaseRecorder
 
 _EMPTY     = 'empty'
 _LOADING   = 'loading'
 _EXECUTING = 'executing'
 
+
+class _HasParameters(HasParameters):
+
+    def add_parameter(self, target, low=None, high=None,
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
+        super(_HasParameters, self).add_parameter(target, low, high, scaler,
+                                                  adder, start, fd_step, name,
+                                                  scope)
+        obj = self._parent
+        names = ['case_inputs'] + target.split('.')
+        for name in names[:-1]:
+            try:
+                val = obj.get(name)
+            except AttributeError:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='in'))
+            obj = val
+        name = names[-1]
+        try:
+            val = obj.get(name)
+        except AttributeError:
+            obj.add_trait(name, Array(iotype='in'))
+        else:
+            self._parent.raise_exception("'%s' already exists" % name,
+                                         ValueError)
+
+class _HasResponses(HasResponses):
+
+    def add_response(self, expr, name=None, scope=None):
+        super(_HasResponses, self).add_response(expr, name, scope)
+        obj = self._parent
+        names = ['case_outputs'] + expr.split('.')
+        for name in names[:-1]:
+            try:
+                val = obj.get(name)
+            except AttributeError:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='out'))
+            obj = val
+        name = names[-1]
+        try:
+            val = obj.get(name)
+        except AttributeError:
+            obj.add_trait(name, Array(iotype='out'))
+        else:
+            self._parent.raise_exception("'%s' already exists" % name,
+                                         ValueError)
 
 class _ServerData(object):
 
@@ -50,13 +102,15 @@ class _ServerError(Exception):
     pass
 
 
-class CaseIterDriverBase(Driver):
+@add_delegate(_HasParameters, _HasResponses)
+class CaseIteratorDriver(Driver):
     """
-    A base class for Drivers that run sets of cases in a manner similar
-    to the ROSE framework. Concurrent evaluation is supported, with the various
-    evaluations executed across servers obtained from the
-    :class:`ResourceAllocationManager`.
+    A base class for Drivers that run sets of cases. Concurrent evaluation is
+    supported, with the various evaluations executed across servers obtained
+    from the :class:`ResourceAllocationManager`.
     """
+
+    implements(IHasParameters, IHasResponses)
 
     sequential = Bool(True, iotype='in',
                       desc='If True, evaluate cases sequentially.')
@@ -80,10 +134,11 @@ class CaseIterDriverBase(Driver):
                                         ' generated egg.')
 
     def __init__(self, *args, **kwargs):
-        super(CaseIterDriverBase, self).__init__(*args, **kwargs)
+        super(CaseIteratorDriver, self).__init__(*args, **kwargs)
         self._iter = None  # Set to None when iterator is empty.
         self._seqno = 0    # Used to set itername for case.
         self._replicants = 0
+        self._evaluated = []
         self._abort_exc = None  # Set if error_policy == ABORT.
 
         self._egg_file = None
@@ -109,22 +164,7 @@ class CaseIterDriverBase(Driver):
         Runs all cases and records results in `recorder`.
         Uses :meth:`setup` and :meth:`resume` with default arguments.
         """
-        self.setup()
-        self.resume()
-
-    def resume(self, remove_egg=True):
-        """
-        Resume execution.
-
-        remove_egg: bool
-            If True, then the egg file created for concurrent evaluation is
-            removed at the end of the run.  Re-using the egg file can
-            eliminate a lot of startup overhead.
-        """
-        self._stop = False
-        self._abort_exc = None
-        if self._iter is None:
-            self.raise_exception('Run already complete', RuntimeError)
+        self._setup()
 
         try:
             if self.sequential:
@@ -132,110 +172,95 @@ class CaseIterDriverBase(Driver):
                 server = self._servers[None] = self._seq_server
                 server.top = self.parent
                 while self._iter is not None:
-                    if self._stop:
-                        break
                     try:
-                        self._step(server)
+                        case = self._iter.next()
+                        self._seqno += 1
+                        self._todo.append((case, self._seqno))
+                        server.exception = None
+                        server.case = None
+                        server.state = _LOADING  # 'server' already loaded.
+                        while self._server_ready(server, stepping=True):
+                            pass
                     except StopIteration:
+                        if not self._rerun:
+                            self._iter = None
+                            self._seqno = 0
                         break
             else:
                 self._logger.info('Start concurrent evaluation.')
                 self._start()
         finally:
-            self._cleanup(remove_egg)
+            self._cleanup()
 
-        if self._stop:
-            if self._abort_exc is None:
-                self.raise_exception('Run stopped', RunStopped)
-            else:
-                self._iter = None
-                self.raise_exception('Run aborted: %s'
-                                     % traceback_str(self._abort_exc),
-                                     RuntimeError)
+        if self._abort_exc is None:
+            for i, case in enumerate(self._evaluated):
+                for name, value in case.get_outputs():
+                    print name, value, i
+                    self.set('case_outputs.'+name, value, index=(i,), force=True)
         else:
-            self._iter = None
-
-    def step(self):
-        """ Evaluate the next case. """
-        self._stop = False
-        self._abort_exc = None
-        if self._iter is None:
-            self.setup()
-
-        server = self._servers[None] = self._seq_server
-        server.top = self.parent
-        self._step(server)
-
-    def _step(self, server):
-        """ Evaluate the next case. """
-        try:
-            case = self._iter.next()
-        except StopIteration:
-            if not self._rerun:
-                self._iter = None
-                self._seqno = 0
-                raise
-
-        self._seqno += 1
-        self._todo.append((case, self._seqno))
-        server.exception = None
-        server.case = None
-        server.state = _LOADING  # 'server' already loaded.
-        while self._server_ready(server, stepping=True):
-            pass
-
-    def stop(self):
-        """ Stop evaluating cases. """
-        # Necessary to avoid default driver handling of stop signal.
-        self._stop = True
-
-    def setup(self, replicate=True):
-        """
-        Setup to begin new run.
-
-        replicate: bool
-             If True, then replicate the model and save to an egg file
-             first (for concurrent evaluation).
-        """
+            self.raise_exception('Run aborted: %s'
+                                 % traceback_str(self._abort_exc),
+                                 RuntimeError)
+    def _setup(self):
+        """ Setup to begin new run. """
         if not self.sequential:
-            if replicate or self._egg_file is None:
-                # Save model to egg.
-                # Must do this before creating any locks or queues.
-                self._replicants += 1
-                version = 'replicant.%d' % (self._replicants)
+            # Save model to egg.
+            # Must do this before creating any locks or queues.
+            self._replicants += 1
+            version = 'replicant.%d' % (self._replicants)
 
-                # If only local host will be used, we can skip determining
-                # distributions required by the egg.
-                allocators = RAM.list_allocators()
-                need_reqs = False
-                if not self.ignore_egg_requirements:
-                    for allocator in allocators:
-                        if not isinstance(allocator, LocalAllocator):
-                            need_reqs = True
-                            break
+            # If only local host will be used, we can skip determining
+            # distributions required by the egg.
+            allocators = RAM.list_allocators()
+            need_reqs = False
+            if not self.ignore_egg_requirements:
+                for allocator in allocators:
+                    if not isinstance(allocator, LocalAllocator):
+                        need_reqs = True
+                        break
 
-                driver = self.parent.driver
-                self.parent.add('driver', Driver()) # execute the workflow once
-                self.parent.driver.workflow = self.workflow
-                try:
-                    #egg_info = self.model.save_to_egg(self.model.name, version)
-                    # FIXME: what name should we give to the egg?
-                    egg_info = self.parent.save_to_egg(self.name, version,
-                                                    need_requirements=need_reqs)
-                finally:
-                    # need to do add here in order to update parent depgraph
-                    self.parent.add('driver', driver)
+            driver = self.parent.driver
+            self.parent.add('driver', Driver()) # execute the workflow once
+            self.parent.driver.workflow = self.workflow
+            try:
+                #egg_info = self.model.save_to_egg(self.model.name, version)
+                # FIXME: what name should we give to the egg?
+                egg_info = self.parent.save_to_egg(self.name, version,
+                                                   need_requirements=need_reqs)
+            finally:
+                # need to do add here in order to update parent depgraph
+                self.parent.add('driver', driver)
 
-                self._egg_file = egg_info[0]
-                self._egg_required_distributions = egg_info[1]
-                self._egg_orphan_modules = [name for name, path in egg_info[2]]
+            self._egg_file = egg_info[0]
+            self._egg_required_distributions = egg_info[1]
+            self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-        self._iter = self.get_case_iterator()
+        names = []
+        values = []
+        for name in self.get_parameters():
+            names.append(name)
+            values.append(self.get('case_inputs.'+name))
+
+        outputs = []
+        for name in self.get_responses():
+            outputs.append(name)
+
+        length = len(values[0])
+        cases = []
+        for i in range(length):
+            inputs = []
+            for j in range(len(names)):
+                inputs.append((names[j], values[j][i]))
+            from openmdao.main.api import Case
+            cases.append(Case(inputs, outputs))
+
+        for name in self.get_responses():
+            self.set('case_outputs.'+name, zeros(length), force=True)
+
+        self._iter = iter(cases)
         self._seqno = 0
-
-    def get_case_iterator(self):
-        """Returns a new iterator over the Case set."""
-        raise NotImplementedError('get_case_iterator')
+        self._abort_exc = None
+        self._evaluated = []
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -379,7 +404,6 @@ class CaseIterDriverBase(Driver):
             if server.queue is not None:
                 self._logger.warning('Timeout waiting for %r to shut-down.',
                                      server.name)
-
     def _busy(self):
         """ Return True while at least one server is in use. """
         for server in self._servers.values():
@@ -387,12 +411,13 @@ class CaseIterDriverBase(Driver):
                 return True
         return False
 
-    def _cleanup(self, remove_egg=True):
+    def _cleanup(self):
         """
         Cleanup internal state, and egg file if necessary.
         Note: this happens unconditionally, so it will cause issues
               for workers which haven't shut down by now.
         """
+        self._iter = None
         self._reply_q = None
         self._server_lock = None
         self._servers = {}
@@ -400,7 +425,7 @@ class CaseIterDriverBase(Driver):
         self._todo = []
         self._rerun = []
 
-        if remove_egg and self._egg_file and os.path.exists(self._egg_file):
+        if self._egg_file and os.path.exists(self._egg_file):
             os.remove(self._egg_file)
             self._egg_file = None
 
@@ -613,8 +638,7 @@ class CaseIterDriverBase(Driver):
             case.retries += 1
             self._rerun.append((case, seqno))
         else:
-            for recorder in self.recorders:
-                recorder.record(case)
+            self._evaluated.append(case)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -730,61 +754,3 @@ class CaseIterDriverBase(Driver):
                                server.info['name'], server.info['pid'],
                                server.info['host'], exc)
 
-
-class CaseIteratorDriverBase(CaseIterDriverBase):
-    """
-    Base functionality for a case iterator driver.
-    Not to be instantiated directly. Should be subclassed.
-    """
-
-    def get_case_iterator(self):
-        """Returns a new iterator over the Case set."""
-        if self.iterator is not None:
-            if self.filter is None:
-                return iter(self.iterator)
-            else:
-                return self._select_cases()
-        else:
-            self.raise_exception("iterator has not been set", ValueError)
-
-    def _select_cases(self):
-        """ Select cases to be evaluated. """
-        for i, case in enumerate(iter(self.iterator)):
-            if self.filter.select(i, case):
-                yield case
-
-    def execute(self):
-        """ Evaluate cases from `iterator` and place in `evaluated`. """
-        self.evaluated = None
-        self.recorders.append(ListCaseRecorder())
-        try:
-            super(CaseIteratorDriverBase, self).execute()
-        finally:
-            self.evaluated = self.recorders.pop().get_iterator()
-
-class ConnectableCaseIteratorDriver(CaseIteratorDriverBase):
-    """
-    Same functionality as CaseIteratorDriver but without slots.
-    Allows for creating connections between iterator, evaluated
-    and filter.
-    """
-
-    iterator = Instance(ICaseIterator, iotype="in")
-    evaluated = Instance(ICaseIterator, iotype="out")
-    filter = Instance(ICaseFilter, iotype="in")
-
-class CaseIteratorDriver(CaseIteratorDriverBase):
-    """
-    Run a set of cases provided by an :class:`ICaseIterator`. Concurrent
-    evaluation is supported, with the various evaluations executed across
-    servers obtained from the :class:`ResourceAllocationManager`.
-    """
-
-    iterator = Slot(ICaseIterator,
-                      desc='Iterator supplying Cases to evaluate.')
-
-    evaluated = Slot(ICaseIterator,
-                      desc='Iterator supplying evaluated Cases.')
-
-    filter = Slot(ICaseFilter,
-                  desc='Filter used to select cases to evaluate.')
