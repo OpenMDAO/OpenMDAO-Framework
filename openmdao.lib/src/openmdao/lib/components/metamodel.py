@@ -20,7 +20,8 @@
 from copy import deepcopy
 
 from openmdao.main.api import Component
-from openmdao.main.datatypes.api import Array, Dict, Float, Slot, Str, VarTree
+from openmdao.main.datatypes.api import Array, Bool, Dict, Float, Slot, Str, \
+                                        VarTree
 from openmdao.main.interfaces import ISurrogate, ICaseRecorder
 from openmdao.main.vartree import VariableTree
 
@@ -28,7 +29,7 @@ class MetaModel(Component):
     """ Class that creates a reduced order model for a tuple of outputs from
     a tuple of inputs. Accepts surrogate models that adhere to ISurrogate.
     Multiple surrogate models can be used. Training inputs and outputs should
-    be provided in the training_inputs and training_outputs variable trees.
+    be provided in the params and responses variable trees.
 
     For a Float variable, the training data is an array of length m.
     """
@@ -42,57 +43,69 @@ class MetaModel(Component):
                       value_trait=Slot(ISurrogate),
                       desc='surrogates for output variables')
 
-    training_inputs = VarTree(VariableTree(), iotype='in')
+    params = VarTree(VariableTree(), iotype='in')
 
-    training_outputs = VarTree(VariableTree(), iotype='in')
+    responses = VarTree(VariableTree(), iotype='in')
 
     recorder = Slot(ICaseRecorder,
                     desc='Records training cases')
 
-    def __init__(self, inputs=None, outputs=None):
+    warm_restart = Bool(False, iotype='in',
+                        desc="When set to False (default), the metamodel "
+                             "retrains with the new dataset whenever the "
+                             "training data values are changed. When set to "
+                             "True, the new data is appended to the old data "
+                             "and all of the data is used to train.")
+
+    def __init__(self, params=None, responses=None):
         super(MetaModel, self).__init__()
 
-        if inputs is None or not isinstance(inputs, tuple):
-            msg = "Metamodel inputs argument needs to be a tuple of " + \
+        if params is None or not isinstance(params, tuple):
+            msg = "Metamodel params argument needs to be a tuple of " + \
                   "variable names."
             self.raise_exception(msg, ValueError)
 
-        if outputs is None or not isinstance(outputs, tuple):
-            msg = "Metamodel outputs argument needs to be a tuple of " + \
+        if responses is None or not isinstance(responses, tuple):
+            msg = "Metamodel responses argument needs to be a tuple of " + \
                   "variable names."
             self.raise_exception(msg, ValueError)
 
         # Inputs and Outputs created immediately.
 
-        input_tree = self.get('training_inputs')
-        for name in inputs:
-            self.add(name, Float(0.0, iotype='in', desc='metamodel input'))
-            input_tree.add(name, Array([0.0], desc='training input'))
+        input_tree = self.get('params')
+        self._param_data = []
+        for name in params:
+            self.add(name, Float(0.0, iotype='in', desc='metamodel param'))
+            input_tree.add(name, Array([0.0], desc='training param'))
 
-        output_tree = self.get('training_outputs')
-        for name in outputs:
-            self.add(name, Float(0.0, iotype='out', desc='metamodel output'))
-            output_tree.add(name, Array([0.0], desc='training output'))
+        output_tree = self.get('responses')
+        self._response_data = {}
+        for name in responses:
+            self.add(name, Float(0.0, iotype='out', desc='metamodel response'))
+            output_tree.add(name, Array([0.0], desc='training response'))
+            self._response_data[name] = []
 
-        self._surrogate_input_names = inputs
-        self._surrogate_output_names = outputs
-
-        self._training_data = {}
-        self._train = False
-        
-        # keeps track of which sur_<name> slots are full
-        self._surrogate_overrides = set()  
-        
-        # need to maintain separate copy of default surrogate for each sur_*
-        # that doesn't have a surrogate defined
-        self._default_surrogate_copies = {}  
-
-    def _input_updated(self, name, fullpath=None):
-        ''' Set _train if anything changes in our inputs so that training
-        occurs on the next execution.'''
+        self._surrogate_input_names = params
+        self._surrogate_output_names = responses
 
         self._train = True
-        super(MetaModel, self)._input_updated(name, fullpath)
+
+        # keeps track of which sur_<name> slots are full
+        self._surrogate_overrides = set()
+
+        # need to maintain separate copy of default surrogate for each sur_*
+        # that doesn't have a surrogate defined
+        self._default_surrogate_copies = {}
+
+    def _params_changed(self, old, new):
+        ''' Set _train if anything changes in our inputs so that training
+        occurs on the next execution.'''
+        self._train = True
+
+    def _responses_changed(self, old, new):
+        ''' Set _train if anything changes in our inputs so that training
+        occurs on the next execution.'''
+        self._train = True
 
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise,
@@ -101,23 +114,29 @@ class MetaModel(Component):
 
         # Train first
         if self._train:
-            
-            input_data = []
-                
-            allocated = False
+
+            input_data = self._param_data
+            if self.warm_restart is False:
+                input_data = []
+                allocated = False
+                base = 0
+            else:
+                base = len(input_data)
+                allocated = True
+
             for name in self._surrogate_input_names:
-                train_name = "training_inputs.%s" % name
+                train_name = "params.%s" % name
                 val = self.get(train_name)
                 num_sample = len(val)
 
-                for j in xrange(0, num_sample):
-                    
+                for j in xrange(base, base + num_sample):
+
                     if allocated is False:
                         input_data.append([])
-                    input_data[j].append(val[j])
-                    
+                    input_data[j].append(val[j-base])
+
                 allocated = True
-                
+
             # Surrogate models take an (m, n) list of lists
             # m = number of training samples
             # n = number of inputs
@@ -125,23 +144,28 @@ class MetaModel(Component):
             # TODO - Why not numpy array instead?
 
             for name in self._surrogate_output_names:
-                
-                train_name = "training_outputs.%s" % name
-                output_data = self.get(train_name)
+
+                train_name = "responses.%s" % name
+                output_data = self._response_data[name]
+
+                if self.warm_restart is False:
+                    output_data = []
+
+                output_data.extend(self.get(train_name))
                 surrogate = self._get_surrogate(name)
-                
+
                 if surrogate is not None:
                     surrogate.train(input_data, output_data)
 
             self._train = False
 
         # Now Predict for current inputs
-        
+
         inputs = []
         for name in self._surrogate_input_names:
             val = self.get(name)
             inputs.append(val)
-            
+
         for name in self._surrogate_output_names:
             surrogate = self._get_surrogate(name)
             if surrogate is not None:
@@ -158,7 +182,7 @@ class MetaModel(Component):
 
     def _default_surrogate_changed(self, old_obj, new_obj):
         """Callback whenever the default_surrogate model is changed."""
-        
+
         if old_obj:
             old_obj.on_trait_change(self._def_surrogate_trait_modified,
                                     remove=True)
@@ -207,21 +231,21 @@ class MetaModel(Component):
 # TODO - remove this stuff later
 if __name__ == "__main__":
 
-    z = MetaModel(inputs=('x1', 'x2'), outputs=('y1', 'y2'))
-    print z.training_inputs.x2, z.training_outputs.y2
-    z.training_inputs.x1 = [1.0, 2.0, 3.0]
-    z.training_inputs.x2 = [1.0, 3.0, 4.0]
-    z.training_outputs.y1 = [3.0, 2.0, 1.0]
-    z.training_outputs.y2 = [1.0, 4.0, 7.0]
+    z = MetaModel(params=('x1', 'x2'), responses=('y1', 'y2'))
+    print z.params.x2, z.responses.y2
+    z.params.x1 = [1.0, 2.0, 3.0]
+    z.params.x2 = [1.0, 3.0, 4.0]
+    z.responses.y1 = [3.0, 2.0, 1.0]
+    z.responses.y2 = [1.0, 4.0, 7.0]
 
     from openmdao.lib.surrogatemodels.api import ResponseSurface
     z.default_surrogate = ResponseSurface()
-    
+
     z.x1 = 2.0
     z.x2 = 3.0
     z.run()
     print z.y1, z.y2
-    
+
 #from copy import deepcopy, copy
 
 #from traits.trait_base import not_none

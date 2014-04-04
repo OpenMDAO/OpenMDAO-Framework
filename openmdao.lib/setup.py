@@ -88,7 +88,6 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.external_code.ExternalCode = openmdao.lib.components.external_code:ExternalCode
       openmdao.lib.components.metamodel.MetaModelBase = openmdao.lib.components.metamodel:MetaModelBase
       openmdao.lib.components.metamodel.MetaModel = openmdao.lib.components.metamodel:MetaModel
-      openmdao.lib.components.metamodel.ConnectableMetaModel = openmdao.lib.components.metamodel:ConnectableMetaModel
       openmdao.lib.components.mux.Mux = openmdao.lib.components.mux:Mux
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster

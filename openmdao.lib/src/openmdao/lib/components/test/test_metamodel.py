@@ -32,7 +32,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution, UncertainD
 
 from openmdao.main.datatypes.api import Float, VarTree
 from openmdao.lib.casehandlers.api import ListCaseIterator
-from openmdao.lib.components.metamodel import ConnectableMetaModel, MetaModel
+from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.kriging_surrogate import KrigingSurrogate, FloatKrigingSurrogate
 from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
 
