@@ -1,15 +1,15 @@
 """ Surrogate model based on Kriging. """
-
 from math import log, e, sqrt
 import logging
+
 
 # pylint: disable-msg=E0611,F0401
 try:
     from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, \
-         sum
+         sum, log10
     from numpy.linalg import det, linalg, lstsq
     from scipy.linalg import cho_factor, cho_solve
-    from scipy.optimize import fmin
+    from scipy.optimize import fmin, minimize
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 
@@ -36,7 +36,6 @@ class KrigingSurrogate(Container):
         self.R = None
         self.R_fact = None
         self.mu = None
-        self.sig2 = None
         self.log_likelihood = None
 
     def get_uncertain_value(self, value):
@@ -117,6 +116,7 @@ class KrigingSurrogate(Container):
         self.n = len(X)
 
         thetas = zeros(self.m)
+        #print "initial guess", thetas
 
         def _calcll(thetas):
             ''' Callback function'''
@@ -125,7 +125,20 @@ class KrigingSurrogate(Container):
             return -self.log_likelihood
 
         #if self.thetas == None:
-        self.thetas = fmin(_calcll, thetas, disp=False, ftol=0.0001)
+        #self.thetas = fmin(_calcll, thetas, disp=False, ftol=0.0001)
+        def lowerBound(log10t): 
+            return log10t - log10(self.thetas)
+
+        def upperBound(log10t): 
+            return log10(self.thetas) - log10t
+
+        cons = []
+        for i in xrange(self.m):
+            cons.append({'type': 'ineq', 'fun': lambda log10t: log10t[i] - log10(1e-2)}) #min
+            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(3) - log10t[i]}) #max
+
+        self.thetas = minimize(_calcll, thetas, method='COBYLA', constraints=cons, tol=1e-8).x
+        #print self.thetas
         self._calculate_log_likelihood()
 
     def _calculate_log_likelihood(self):
