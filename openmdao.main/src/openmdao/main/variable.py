@@ -19,13 +19,20 @@ namecheck_rgx = re.compile(
 
 gui_excludes = ['type', 'vartypename', 'iotype', 'copy', 'validation_trait']
 
+_verified = {}
+
 def is_legal_name(name):
     '''Verifies a Pythonic legal name for use as an OpenMDAO object.'''
-
-    match = namecheck_rgx.match(name)
-    if match is None or match.group() != name or iskeyword(name) or name in _expr_dict:
-        return False
-    return name not in ['parent', 'self']
+    legal = _verified.get(name)
+    if legal is None:
+        match = namecheck_rgx.match(name)
+        if match is None or match.group() != name or iskeyword(name) or \
+           name in _expr_dict or name in ('parent', 'self'):
+            legal = False
+        else:
+            legal = True
+        _verified[name] = legal
+    return legal
 
 
 def json_default(obj):

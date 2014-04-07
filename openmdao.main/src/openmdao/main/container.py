@@ -888,7 +888,7 @@ class Container(SafeHasTraits):
                     if obj:
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
-                            yield ('.'.join([name, chname]), child)
+                            yield ('.'.join((name, chname)), child)
 
             for name, trait in match_dict.items():
                 obj = getattr(self, name, Missing)
