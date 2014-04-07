@@ -3,16 +3,11 @@
 import unittest
 
 # pylint: disable-msg=F0401,E0611
-from traits.api import HasTraits
+from openmdao.main.api import Component, Assembly, set_as_top
 
-from openmdao.main.api import Component, Assembly, set_as_top, Case
-from openmdao.main.interfaces import implements, ICaseRecorder
+from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.main.uncertain_distributions import NormalDistribution, \
-                                                  UncertainDistribution
-
-from openmdao.main.datatypes.api import Float, VarTree
-from openmdao.lib.casehandlers.api import ListCaseIterator
+from openmdao.main.datatypes.api import Float
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.api import ResponseSurface, \
                   KrigingSurrogate, FloatKrigingSurrogate, LogisticRegression
