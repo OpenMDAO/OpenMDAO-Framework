@@ -1,29 +1,20 @@
 """ Metamodel provides basic Meta Modeling capability."""
 
-# pylint: disable-msg=C0111,C0103
-# disable complaints about Module 'numpy' has no 'array' member
-# pylint: disable-msg=E1101
-
-# Disable complaints Invalid name "setUp" (should match [a-z_][a-z0-9_]{2,30}$)
-# pylint: disable-msg=C0103
-
 # Disable complaints about not being able to import modules that Python
 #     really can import
 # pylint: disable-msg=F0401,E0611
-
-# Disable complaints about Too many arguments (%s/%s)
-# pylint: disable-msg=R0913
-
-# Disable complaints about Too many local variables (%s/%s) Used
-# pylint: disable-msg=R0914
 
 from copy import deepcopy
 
 from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Array, Bool, Dict, Float, Slot, Str, \
                                         VarTree
-from openmdao.main.interfaces import ISurrogate, ICaseRecorder
+from openmdao.main.datatypes.uncertaindist import UncertainDistVar
+from openmdao.main.interfaces import ISurrogate, ICaseRecorder, \
+                                     IUncertainVariable
+from openmdao.main.mp_support import has_interface
 from openmdao.main.vartree import VariableTree
+from openmdao.util.typegroups import int_types, real_types
 
 class MetaModel(Component):
     """ Class that creates a reduced order model for a tuple of outputs from
@@ -96,16 +87,40 @@ class MetaModel(Component):
         # need to maintain separate copy of default surrogate for each sur_*
         # that doesn't have a surrogate defined
         self._default_surrogate_copies = {}
+        
+        # Special callback for whenver anything changes in the surrogates
+        # Dict items.
+        self.on_trait_change(self._surrogate_updated, "surrogates_items")
 
-    def _params_changed(self, old, new):
+    def _input_updated(self, name, fullpath=None):
         ''' Set _train if anything changes in our inputs so that training
         occurs on the next execution.'''
-        self._train = True
+        
+        if fullpath is not None:
+            if fullpath.startswith('params.') or \
+               fullpath.startswith('responses.'):
+                self._train = True
+            
+        super(MetaModel, self)._input_updated(name.split('.',1)[0])
+        
+    def check_config(self):
+        '''Called as part of pre_execute. Does some simple error checking.'''
 
-    def _responses_changed(self, old, new):
-        ''' Set _train if anything changes in our inputs so that training
-        occurs on the next execution.'''
-        self._train = True
+        # Either there are no surrogates set and no default surrogate (just
+        # do passthrough ) or all outputs must have surrogates assigned
+        # either explicitly or through the default surrogate
+        if self.default_surrogate is None:
+            no_sur = []
+            for name in self._surrogate_output_names:
+                if name not in self.surrogates:
+                    no_sur.append(name)
+            if len(no_sur) > 0:
+                self.raise_exception("No default surrogate model is defined and"
+                                     " the following outputs do not have a"
+                                     " surrogate model: %s. Either specify"
+                                     " default_surrogate, or specify a"
+                                     " surrogate model for all outputs." %
+                                     no_sur, RuntimeError)
 
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise,
@@ -118,11 +133,9 @@ class MetaModel(Component):
             input_data = self._param_data
             if self.warm_restart is False:
                 input_data = []
-                allocated = False
                 base = 0
             else:
                 base = len(input_data)
-                allocated = True
 
             for name in self._surrogate_input_names:
                 train_name = "params.%s" % name
@@ -131,11 +144,9 @@ class MetaModel(Component):
 
                 for j in xrange(base, base + num_sample):
 
-                    if allocated is False:
+                    if j > len(input_data) - 1:
                         input_data.append([])
                     input_data[j].append(val[j-base])
-
-                allocated = True
 
             # Surrogate models take an (m, n) list of lists
             # m = number of training samples
@@ -198,53 +209,72 @@ class MetaModel(Component):
                 if name not in self._surrogate_overrides:
                     surrogate = deepcopy(self.default_surrogate)
                     self._default_surrogate_copies[name] = surrogate
+                    self._update_var_for_surrogate(surrogate, name)
 
         self.config_changed()
+        self._train = True
 
     def _def_surrogate_trait_modified(self, surrogate, name, old, new):
         # a trait inside of the default_surrogate was changed, so we need to
         # replace all of the default copies
 
         for name in self._default_surrogate_copies:
-            self._default_surrogate_copies[name] = deepcopy(self.default_surrogate)
+            surr_copy = deepcopy(self.default_surrogate)
+            self._default_surrogate_copies[name] = surr_copy
 
     def _surrogate_updated(self, obj, name, old, new):
-        """Called when self.surrogates is updated."""
+        """Called when self.surrogates Dict is updated."""
 
-        if new.changed:
-            varname = new.changed.keys()[0]
-            if self.surrogates[varname] is None:
+        all_changes = new.changed.keys() + new.added.keys() + \
+                      new.removed.keys()
+        
+        for varname in all_changes:
+            surr = self.surrogates.get(varname)
+            if surr is None:
                 if self.default_surrogate:
-                    self._default_surrogate_copies[varname] = \
-                        deepcopy(self.default_surrogate)
+                    def_surr = deepcopy(self.default_surrogate)
+                    self._default_surrogate_copies[varname] = def_surr
+                    self._update_var_for_surrogate(def_surr, varname)
                 if varname in self._surrogate_overrides:
                     self._surrogate_overrides.remove(varname)
             else:
                 self._surrogate_overrides.add(varname)
-                self._add_var_for_surrogate(self.surrogates[varname], varname)
                 if name in self._default_surrogate_copies:
                     del self._default_surrogate_copies[name]
 
+                self._update_var_for_surrogate(surr, varname)
+                
         self.config_changed()
+        self._train = True
 
+    def _update_var_for_surrogate(self, surrogate, varname):
+        """Different surrogates have different types of output values, so create
+        the appropriate type of output Variable based on the return value
+        of get_uncertain_value on the surrogate.
+        
+        Presently, this just adds the UncertainVariable for Kriging
+        """
 
-# TODO - remove this stuff later
-if __name__ == "__main__":
+        # TODO - ISurrogate should have a get_datatype or get_uncertainty_type
+        val = surrogate.get_uncertain_value(1.0)
+        
+        if has_interface(val, IUncertainVariable):
+            ttype = UncertainDistVar
+        #elif isinstance(val, int_types):
+        #    ttype = Int
+        elif isinstance(val, real_types):
+            ttype = Float
+        else:
+            self.raise_exception("value type of '%s' is not a supported"
+                                 " surrogate return value" %
+                                 val.__class__.__name__)
 
-    z = MetaModel(params=('x1', 'x2'), responses=('y1', 'y2'))
-    print z.params.x2, z.responses.y2
-    z.params.x1 = [1.0, 2.0, 3.0]
-    z.params.x2 = [1.0, 3.0, 4.0]
-    z.responses.y1 = [3.0, 2.0, 1.0]
-    z.responses.y2 = [1.0, 4.0, 7.0]
+        self.add(varname, ttype(default_value=val, iotype='out',
+                                desc=self.trait(varname).desc))
+        setattr(self, varname, val)
 
-    from openmdao.lib.surrogatemodels.api import ResponseSurface
-    z.default_surrogate = ResponseSurface()
+        return
 
-    z.x1 = 2.0
-    z.x2 = 3.0
-    z.run()
-    print z.y1, z.y2
 
 #from copy import deepcopy, copy
 
@@ -392,56 +422,6 @@ if __name__ == "__main__":
 
     #def child_run_finished(self, childname, outs=None):
         #pass
-
-    #def check_config(self):
-        #'''Called as part of pre_execute.'''
-
-        ## 1. model must be set
-        #if self.model is None:
-            #self.raise_exception("MetaModel object must have a model!",
-                                 #RuntimeError)
-
-        ## 2. can't have both includes and excludes
-        #if self.excludes and self.includes:
-            #self.raise_exception("includes and excludes are mutually exclusive",
-                                 #RuntimeError)
-
-        ## 3. the includes and excludes must match actual inputs and outputs of the model
-        #input_names = self.surrogate_input_names()
-        #output_names = self.surrogate_output_names()
-        #input_and_output_names = input_names + output_names
-        #for include in self.includes:
-            #if include not in input_and_output_names:
-                #self.raise_exception('The include "%s" is not one of the '
-                                     #'model inputs or outputs ' % include, ValueError)
-        #for exclude in self.excludes:
-            #if exclude not in input_and_output_names:
-                #self.raise_exception('The exclude "%s" is not one of the '
-                                     #'model inputs or outputs ' % exclude, ValueError)
-
-        ## 4. Either there are no surrogates set and no default surrogate
-        ##    ( just do passthrough )
-        ##        or
-        ##    all outputs must have surrogates assigned either explicitly
-        ##    or through the default surrogate
-        #if self.default_surrogate is None:
-            #no_sur = []
-            #for name in self.surrogate_output_names():
-                #if not self.surrogates[name]:
-                    #no_sur.append(name)
-            #if len(no_sur) > 0 and len(no_sur) != len(self._surrogate_output_names):
-                #self.raise_exception("No default surrogate model is defined and"
-                                     #" the following outputs do not have a"
-                                     #" surrogate model: %s. Either specify"
-                                     #" default_surrogate, or specify a"
-                                     #" surrogate model for all outputs." %
-                                     #no_sur, RuntimeError)
-
-        ## 5. All the explicitly set surrogates[] should match actual outputs of the model
-        #for surrogate_name in self.surrogates.keys():
-            #if surrogate_name not in output_names:
-                #self.raise_exception('The surrogate "%s" does not match one of the '
-                                     #'model outputs ' % surrogate_name, ValueError)
 
     #def execute(self):
         #"""If the training flag is set, train the metamodel. Otherwise,
