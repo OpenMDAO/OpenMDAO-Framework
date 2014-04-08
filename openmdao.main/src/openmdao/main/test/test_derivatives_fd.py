@@ -26,7 +26,7 @@ class MyComp(Component):
     #     gradient_options.fd_step_type to 'bounds_scaled'
     x6 = Float(1.0, iotype='in', fd_step = 0.001,
                low=0.0, high=100.0
-               ) 
+               )
     # So we can test the check on needing low and high when using bounds_scaled
     x7 = Float(1.0, iotype='in', fd_step = 0.01,
                fd_step_type='bounds_scaled')
@@ -100,6 +100,16 @@ class TestFiniteDifference(unittest.TestCase):
 
         assert_rel_error(self, J[0, 1], 8.004, 0.0001)
 
+        # More Parameter Groups with pseudocomps in them.
+        model.driver.add_parameter('comp.x4', low=-100, high=100, fd_step=1.001)
+        model.driver.add_objective('comp.x1 + comp.x2 + comp.x3 + comp.x4 + comp.y')
+
+
+        model.run()
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x4'], mode='fd')
+        assert_rel_error(self, J[0, 0], 1.006, 0.0001)
+
 
     def test_central(self):
 
@@ -169,7 +179,7 @@ class TestFiniteDifference(unittest.TestCase):
                "For variable 'comp.x7', a finite "
                "difference step type of bounds_scaled "
                "is used but required low and high "
-               "values are not set" ) 
+               "values are not set" )
         else:
             self.fail("Exception expected because low "
                       "and high not set for comp.x7")
