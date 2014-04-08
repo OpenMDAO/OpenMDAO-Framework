@@ -164,10 +164,13 @@ class Constraint(object):
 
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
-        pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
-        val = pcomp.out0
+        if self.pcomp_name:
+            pcomp = getattr(scope, self.pcomp_name)
+            if not pcomp.is_valid():
+                pcomp.update_outputs(['out0'])
+            val = pcomp.out0
+        else:
+            val = self.lhs.evaluate(scope=scope)
 
         if isinstance(val, ndarray):
             return val.flatten()
@@ -203,7 +206,7 @@ class Constraint(object):
         if isinstance(self.rhs, float):
             return self.lhs.get_referenced_varpaths(copy=copy, refs=refs)
         else:
-            return self.lhs.get_referenced_varpaths(copy=copy).union(
+            return self.lhs.get_referenced_varpaths(copy=copy, refs=refs).union(
                     self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
 
     def __str__(self):

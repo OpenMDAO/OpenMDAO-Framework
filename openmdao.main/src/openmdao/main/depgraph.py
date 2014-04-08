@@ -195,6 +195,14 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
+def is_drv_connection(graph, src, dest, driver):
+    try:
+        if driver is True: # True for any driver
+            return 'drv_conn' in graph.edge[src][dest]
+        else:  # only True for specific driver
+            return graph.edge[src][dest]['drv_conn'] == driver
+    except KeyError:
+        return False
 
 def _break_loop(graph, loop):
     src = loop[0]
@@ -648,21 +656,30 @@ class DependencyGraph(nx.DiGraph):
             return self._var_connections(path, direction)
 
     def list_connections(self, show_passthrough=True,
-                               show_external=False):
-        conns = self._conns.get((show_passthrough, show_external))
+                               show_external=False, driver=False):
+        conns = self._conns.get((show_passthrough, 
+                                 show_external, driver))
         if conns is None:
+            if driver:
+                conn_test = lambda g,u,v: is_connection(g,u,v) or \
+                                     is_drv_connection(g,u,v,driver)
+            else:
+                conn_test = is_connection
+
             conns = [(u,v) for u,v in self.edges_iter()
-                              if is_connection(self, u, v)]
+                              if conn_test(self, u, v)]
 
             if show_passthrough is False:
-                conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
+                conns = [(u,v) for u,v in conns 
+                           if not ('.' in u or '.' in v)]
 
             if show_external is False:
                 conns = [(u,v) for u,v in conns
                               if not (u.startswith('parent.')
                                    or v.startswith('parent.'))]
 
-            self._conns[(show_passthrough, show_external)] = conns
+            self._conns[(show_passthrough, show_external,
+                         driver)] = conns
         return conns[:]
 
     def get_sources(self, name):
@@ -958,7 +975,7 @@ class DependencyGraph(nx.DiGraph):
 
         return conns
 
-    def component_graph(self):
+    def component_graph(self, driver=False):
         """Return a subgraph containing only Components
         and PseudoComponents and edges between them.
         """
@@ -971,11 +988,12 @@ class DependencyGraph(nx.DiGraph):
         for comp in compset:
             g.add_node(comp, self.node[comp].copy())
 
-        for src, dest in self.list_connections():
+        for src, dest in self.list_connections(driver=driver):
             destcomp = dest.split('.', 1)[0]
             srccomp  =  src.split('.', 1)[0]
             if srccomp in compset and destcomp in compset:
                 g.add_edge(srccomp, destcomp)
+                g[srccomp][destcomp].setdefault('var_edges',[]).append((src,dest))
 
         self._component_graph = g
         return g
@@ -1217,6 +1235,32 @@ class DependencyGraph(nx.DiGraph):
                             comps[comp]['outputs'].remove(var)
 
         return comps
+
+    def prune_unconnected(self):
+        """Removes all unconnected variable and component
+        nodes in the graph.  The graph at this point
+        should contain connections for all driver dependencies
+        as well as all normal data connections.
+        """
+        # save the set of all vars used in a connection
+        conns = self.list_connections(driver=True)
+        save = set([u for u,v in conns])
+        save.update([v for u,v in conns])
+        base = self.base_var
+
+        # save all basevars for any connected subvars
+        save.update([base(v) for v in save])
+
+        # finally, save all component nodes
+        save.update(self.all_comps())
+
+        # now do the pruning of variables
+        self.remove_nodes_from([n for n in self.nodes_iter() 
+                                        if n not in save])
+
+        # now, prune any component with no connections
+        self.remove_nodes_from([c for c in self.all_comps() 
+                                 if self.degree(c)==0])
 
     def add_node(self, n, attr_dict=None, **attr):
         super(DependencyGraph, self).add_node(n,

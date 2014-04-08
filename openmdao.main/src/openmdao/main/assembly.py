@@ -1498,19 +1498,21 @@ class VecWrapper(object):
 
         self.array = numpy.zeros(size)
 
-        # first, add views for vars whose sizes are added to the total
+        # first, add views for vars whose sizes are added to the total,
+        # i.e., their basevars are not included in the vector.
         start, end = 0, 0
         for name in varsizes_added:
             sz = allvars[name].get('size')
             if sz:
                 end += sz
                 self._info[name] = (self.array[start:end], start)
-                mpiprint("*** view for %s is %s" % (name, [start,end]))
+                #mpiprint("*** view for %s is %s" % (name, [start,end]))
                 start += sz
 
         self.petsc_vec = get_petsc_vec(comm, self.array)
 
-        # now add views for subvars
+        # now add views for subvars that are subviews of their
+        # basevars
         for name in varsizes_noadd:
             varinfo = allvars[name]
             sz = varinfo['size']
@@ -1522,7 +1524,7 @@ class VecWrapper(object):
                 #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
                 #            (size,basestart, substart, sub_idx))
                 self._info[name] = (self.array[sub_idx], substart)
-                mpiprint("*** view for %s is %s" % (name, list(self.bounds(name))))
+                #mpiprint("*** view for %s is %s" % (name, list(self.bounds(name))))
 
     def view(self, name):
         """Return the array view into the larger array for the

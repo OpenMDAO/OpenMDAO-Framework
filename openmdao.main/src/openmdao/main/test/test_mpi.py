@@ -121,7 +121,7 @@ def _get_model_nested_drivers():
         top.add(name, ABCDArrayComp())
         getattr(top, name).mpi.requested_cpus = 1
 
-    top.add('subdriver', NTimes(2))
+    top.add('subdriver', NTimes(3))
 
     top.driver.workflow.add(['subdriver', 'C3'])
 

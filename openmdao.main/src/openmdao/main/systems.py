@@ -8,7 +8,9 @@ from networkx import edge_boundary
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
-from openmdao.util.nameutil import partition_edges_by_comp
+#from openmdao.util.nameutil import partition_edges_by_comp
+from openmdao.main.mp_support import has_interface
+from openmdao.main.interfaces import IDriver
 
 class System(object):
     def __init__(self, graph):
@@ -75,6 +77,8 @@ class System(object):
             else:
                 stream.write(" "*nest)
                 stream.write("%s\n" % comp.name)
+                if has_interface(comp, IDriver):
+                    comp.workflow._subsystem.dump_parallel_graph(nest, stream)
 
         if getval:
             return stream.getvalue()
@@ -113,11 +117,11 @@ class SerialSystem(System):
             if isinstance(comp, System):
                 comp.run(scope, ffd_order, case_id, iterbase)
             elif isinstance(comp, PseudoComponent):
-                mpiprint("running %s" % comp.name)
+                mpiprint("seq running %s" % comp.name)
                 comp.run(ffd_order=ffd_order, case_id=case_id)
             else:
                 comp.set_itername('%s-%d' % (iterbase, i))
-                mpiprint("running %s" % comp.name)
+                mpiprint("seq running %s" % comp.name)
                 comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def setup_communicators(self, comm, scope):
@@ -173,10 +177,10 @@ class ParallelSystem(System):
             if isinstance(comp, System):
                 comp.run(scope, ffd_order, case_id, iterbase)
             elif isinstance(comp, PseudoComponent):
-                mpiprint("running %s" % comp.name)
+                mpiprint("parallel running %s" % comp.name)
                 comp.run(ffd_order=ffd_order, case_id=case_id)
             else:
-                mpiprint("running %s" % comp.name)
+                mpiprint("parallel running %s" % comp.name)
                 comp.set_itername('%s-%d' % (iterbase, i))
                 comp.run(ffd_order=ffd_order, case_id=case_id)
 
@@ -224,6 +228,8 @@ class ParallelSystem(System):
         mpiprint("requested_procs: %s" % requested_procs)
         mpiprint("assigned_procs: %s" % assigned_procs)
 
+        self.local_comps = []
+
         for i,comp in enumerate(child_comps):
             if requested_procs[i] > 0 and assigned_procs[i] == 0:
                 raise RuntimeError("parallel group %s requested %d processors but got 0" %
@@ -238,8 +244,6 @@ class ParallelSystem(System):
 
         rank_color = color[rank]
         sub_comm = comm.Split(rank_color)
-
-        self.local_comps = []
 
         if sub_comm == MPI.COMM_NULL:
             return
@@ -300,16 +304,12 @@ def transform_graph(g, scope):
     """Return a nested graph with metadata for parallel
     and serial subworkflows.
     """
-    if len(g) <= 1:
+    if len(g) < 2:
         return g
 
-    # first, create connections between any subdrivers and anything
-    # that connects to their iteration set.  Otherwise we get parallel
-    # workflows when we really need sequential ones, e.g., if a subdriver
-    # iterates over C1 which feeds another component C2, then that
-    # subdriver should run BEFORE C2 in the workflow.
-
     gcopy = g.copy()
+
+    to_remove = []
 
     while len(gcopy) > 1:
         # find all nodes with in degree 0. If we find 
@@ -329,16 +329,39 @@ def transform_graph(g, scope):
 
             for branch in parallel_group:
                 if isinstance(branch, tuple):
-                    _collapse(scope, g, branch, serial=True)
+                    to_remove.extend(branch)
+                    subg = _precollapse(scope, g, branch)
+                    transform_graph(subg, scope)
+                    g.node[branch]['system'] = SerialSystem(subg, scope)
                     gcopy.remove_nodes_from(branch)
                 else:
                     gcopy.remove_node(branch)
 
             parallel_group = tuple(sorted(parallel_group))
-            _collapse(scope, g, parallel_group, serial=False)
+            to_remove.extend(parallel_group)
+            subg = _precollapse(scope, g, parallel_group)
+            g.node[parallel_group]['system'] = ParallelSystem(subg, scope)
         else:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
+
+    # Now remove all of the old nodes
+    g.remove_nodes_from(to_remove)
     
+def collapse_subdrivers(g, driver):
+    """collapse subdriver iteration sets into single nodes."""
+    # collapse all subdrivers (recursively) 
+    scope = driver.parent
+    wfnames = driver.workflow.get_names(full=True)
+    for child_drv in driver.subdrivers():
+        iterset = [c.name for c in child_drv.iteration_set()
+                    if c.name not in wfnames]
+        iterset.append(child_drv.name)
+        #mpiprint("%s: iterset = %s" % (child_drv.name,iterset))
+        _precollapse(scope, g, iterset, newname=child_drv.name)
+        iterset.remove(child_drv.name)
+        g.remove_nodes_from(iterset)
+        #mpiprint("post-collapse: %s" % g.nodes())
+
 def _expand_tuples(nodes):
     lst = []
     stack = list(nodes)
@@ -350,17 +373,14 @@ def _expand_tuples(nodes):
             lst.append(node)
     return lst
 
-def _collapse(scope, g, nodes, serial=True):
-    """Collapse the named nodes in g into a single node
-    with a name that is a tuple of nodes and put the
-    subgraph containing those nodes into the new node's
-    metadata.
-
-    If serial is True, also transform the new subgraph by
-    locating any internal parallel branches.
+def _precollapse(scope, g, nodes, newname=None):
+    """Update all metadata and crate new combined nodes based
+    on the named nodes, but don't actuall remove the old nodes.
+    Returns a subgraph containing only the specified nodes.
     """
-    # combine node names into a single tuple
-    newname = tuple(sorted(nodes))
+    if newname is None:
+        # combine node names into a single tuple if new name not given
+        newname = tuple(sorted(nodes))
 
     # create a subgraph containing all of the collapsed nodes
     # inside of the new node
@@ -368,51 +388,43 @@ def _collapse(scope, g, nodes, serial=True):
 
     #mpiprint("collapsing %s" % list(nodes))
 
-    # collect all of the edges that have been collapsed
-    conns = edge_boundary(scope._depgraph, 
-                scope._depgraph.find_prefixed_nodes(_expand_tuples(nodes)))
+    # the component graph connection edges contain 'var_edges' metadata
+    # that contains all variable connections that were collapsed into
+    # each component connection.
+    nset = set(nodes)
+    opp = set(g.nodes_iter())-nset
 
-    # partition all edges by the comps they connect
-    edict = partition_edges_by_comp(conns)
+    # get all incoming and outgoing boundary edges
+    out_edges = edge_boundary(g, nodes)
+    in_edges = edge_boundary(g, opp)
 
-    xfers = {}
-    new_edges = []
-    for node in nodes:
-        for succ in g.successors_iter(node):
-            new_edges.append((newname, succ))
-            var_edges = edict.get((node, succ), ())
-            xfers.setdefault((newname, succ), 
-                             { 'edges': [] })['edges'].extend(var_edges)
-
-        for pred in g.predecessors_iter(node):
-            new_edges.append((pred, newname))
-            var_edges = edict.get((node, pred), ())
-            xfers.setdefault((pred, newname), 
-                             { 'edges': [] })['edges'].extend(var_edges)
-        
     g.add_node(newname)
-    g.add_edges_from(new_edges)
 
+    #mpiprint("collapsing edges: %s" % collapsing_edges)
+    xfers = {}
+    for u,v in out_edges:
+        var_edges = g.edge[u][v].get('var_edges', ())
+        #mpiprint("adding edge (%s,%s)" % (newname, v))
+        g.add_edge(newname, v)
+        xfers.setdefault((newname, v), []).extend(var_edges)
+
+    for u,v in in_edges:
+        var_edges = g.edge[u][v].get('var_edges', ())
+        #mpiprint("adding edge (%s,%s)" % (u, newname))
+        g.add_edge(u, newname)
+        xfers.setdefault((u, newname), []).extend(var_edges)
+
+    # save the collapsed edges in the metadata of the new edges
     for edge, var_edges in xfers.items():
-        g[edge[0]][edge[1]]['edges'] = var_edges['edges']
+        g[edge[0]][edge[1]]['var_edges'] = var_edges
 
-    # must do this after adding edges because otherwise we 
-    # get some edges to removed nodes that we don't want
-    g.remove_nodes_from(nodes)
+    #g.remove_nodes_from([n for n in nodes if n != newname])
 
+    # for u,v,data in g.edges_iter(data=True):
+    #     mpiprint("(%s,%s): %s" % (u,v,data))
 
-    for u,v,data in g.edges_iter(data=True):
-        mpiprint("(%s,%s): %s" % (u,v,data))
-    #mpiprint("*** edge boundary = %s for %s" % (g.node[newname]['xfers'],newname))
+    return subg
 
-    if serial:
-        transform_graph(subg, scope)
-        subsys = SerialSystem(subg, scope)
-    else:
-        subsys = ParallelSystem(subg, scope)
-
-    g.node[newname]['system'] = subsys
- 
 
 def get_branch(g, node, visited=None):
     """Return the full list of nodes that branch *exclusively*

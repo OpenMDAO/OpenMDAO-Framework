@@ -1,12 +1,15 @@
 """ Base class for all workflows. """
 
+#from networkx.algorithms.components import strongly_connected_components
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.interfaces import IDriver
-from openmdao.main.mp_support import has_interface
+#from openmdao.main.interfaces import IDriver
+#from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info, mpiprint
-from openmdao.main.systems import SerialSystem, ParallelSystem, transform_graph
+from openmdao.main.systems import SerialSystem, ParallelSystem, \
+                                  transform_graph, collapse_subdrivers
 
 __all__ = ['Workflow']
 
@@ -41,7 +44,7 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
-        self._wf_graph = None
+        self._drv_graph = None
         self._wf_comp_graph = None
         self._subsystem = None
         if members:
@@ -162,7 +165,7 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        self._wf_graph = None
+        self._drv_graph
         self._wf_comp_graph = None
         self._subsystem = None
 
@@ -190,15 +193,27 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    def get_graph(self):
+    def get_driver_graph(self):
         """Returns the subgraph of the full depgraph that is
-        relevant to this workflow.
+        relevant to this workflow and this workflow's driver (and
+        all subdrivers).
         """
-        if self._wf_graph is None:
-            dgraph = self.scope._depgraph
-            self.wf_graph = dgraph.full_subgraph(
-                                      self.get_names(full=True))
-        return self.wf_graph
+        if self._drv_graph is None:
+            # make a copy of the depgraph we can modify
+            depgraph = self.scope._depgraph
+            graph = depgraph.subgraph(depgraph.nodes_iter())
+            # add all driver related 'connections'
+            self._parent.add_driver_connections(graph, recurse=True)
+
+            # mpiprint("before pruning:")
+            # for u,v,data in graph.edges(data=True):
+            #     mpiprint("(%s,%s): %s" % (u,v,data.get("var_edges")))
+
+            # remove all unconnected variables and components, 
+            # and only what's relevant remains
+            graph.prune_unconnected()
+            self._drv_graph = graph
+        return self._drv_graph
 
     def get_comp_graph(self):
         """Returns the subgraph of the component graph that contains
@@ -207,52 +222,51 @@ class Workflow(object):
         """
         if self._wf_comp_graph is None:
             cgraph = self.scope._depgraph.component_graph().copy()
-            self.add_driver_connections(cgraph)
             self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
         return self._wf_comp_graph
 
-    def add_driver_connections(self, g):
-        """Add edges in the workflow component graph to represent dependencies
-        between a comp and a driver if that comp is connected to any comps 
-        inside of the driver's iteration set.
-        """
-        scope = self.scope
-        dconns = []
-        for node in g:
-            comp = getattr(scope, node)
-            if has_interface(comp, IDriver):
-                iterset = [c.name for c in comp.iteration_set()]
-                for itercomp in iterset:
-                    for u,v in g.edges_iter(itercomp):
-                        if v not in iterset:
-                            dconns.append((node, v))
-                    for u,v in g.in_edges_iter(itercomp):
-                        if u not in iterset:
-                            dconns.append((u, node))
+    # def add_driver_connections(self, g):
+    #     """Add edges in the workflow component graph to represent dependencies
+    #     between a comp and a driver if that comp is connected to any comps 
+    #     inside of the driver's iteration set.
+    #     """
+    #     scope = self.scope
+    #     dconns = []
+    #     for node in g:
+    #         comp = getattr(scope, node)
+    #         if has_interface(comp, IDriver):
+    #             iterset = [c.name for c in comp.iteration_set()]
+    #             for itercomp in iterset:
+    #                 for u,v in g.edges_iter(itercomp):
+    #                     if v not in iterset:
+    #                         dconns.append((node, v))
+    #                 for u,v in g.in_edges_iter(itercomp):
+    #                     if u not in iterset:
+    #                         dconns.append((u, node))
 
-        g.add_edges_from(dconns)
+    #     g.add_edges_from(dconns)
 
-        # now add metadata to indicate which vars are set or retrieved from
-        # our parent driver
-        srcset, destset = self._parent.get_expr_var_depends()
+    #     # now add metadata to indicate which vars are set or retrieved from
+    #     # our parent driver
+    #     srcset, destset = self._parent.get_expr_var_depends()
 
-        # now add variables that are connected inputs or outputs
-        wfgraph = self.get_graph()
+    #     # now add variables that are connected inputs or outputs
+    #     wfgraph = self.get_graph()
 
-        conns = wfgraph.list_connections()
+    #     conns = wfgraph.list_connections()
 
-        srcset.update([src for src,dest in conns])
-        destset.update([dest for src,dest in conns])
+    #     srcset.update([src for src,dest in conns])
+    #     destset.update([dest for src,dest in conns])
 
-        for name in srcset:
-            parts = name.split('.', 1)
-            if len(parts) > 1 and parts[0] in g:
-                g.node[parts[0]].setdefault('inputs', set()).add(parts[1])
+    #     for name in srcset:
+    #         parts = name.split('.', 1)
+    #         if len(parts) > 1 and parts[0] in g:
+    #             g.node[parts[0]].setdefault('inputs', set()).add(parts[1])
                 
-        for name in destset:
-            parts = name.split('.', 1)
-            if len(parts) > 1 and parts[0] in g:
-                g.node[parts[0]].setdefault('outputs', set()).add(parts[1])
+    #     for name in destset:
+    #         parts = name.split('.', 1)
+    #         if len(parts) > 1 and parts[0] in g:
+    #             g.node[parts[0]].setdefault('outputs', set()).add(parts[1])
      
     ## MPI stuff ##
 
@@ -264,14 +278,23 @@ class Workflow(object):
         if self._subsystem is None:
             scope = self.scope
 
+            drvgraph = self.get_driver_graph()
+
             # first, get the component subgraph that is limited to 
             # the components in this workflow.
-            cgraph = self.get_comp_graph().copy()
+            cgraph = drvgraph.component_graph(driver=True)
+
+            collapse_subdrivers(cgraph, self._parent)
+            cgraph.remove_node(self._parent.name)
+
+            #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
             # collapse the graph (recursively) with the parallel
             # branches collapsed into single nodes with tuple names
             transform_graph(cgraph, scope)
 
+            #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
+            #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
@@ -282,6 +305,7 @@ class Workflow(object):
             else:
                 self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
 
+        #mpiprint("got subsystem %s" % self._subsystem.name)
         return self._subsystem
 
     def get_req_cpus(self):

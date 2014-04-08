@@ -4,7 +4,6 @@
 __all__ = ["Driver"]
 
 import fnmatch
-from ordereddict import OrderedDict
 
 from zope.interface import implementedBy
 
@@ -29,7 +28,7 @@ from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL
+from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL, mpiprint
 
 from openmdao.util.decorators import add_delegate
 
@@ -207,9 +206,43 @@ class Driver(Component):
 
         return srcset, destset
 
+
+    @rbac(('owner', 'user'))
+    def add_driver_connections(self, graph, recurse=False):
+        """Adds connections to the graph based on dependencies introduced 
+        by any parameters, objectives, or constraints in this Driver.  
+        The connections will be of the form (drvname,cname.vname)
+        or (cname.vname,drvname) depending on the direction 
+        of the dataflow.
+
+        If recurse is True, include any refs from subdrivers. 
+        """
+        if hasattr(self, '_delegates_'):
+            for dname, dclass in self._delegates_.items():
+                delegate = getattr(self, dname)
+                if isinstance(delegate, HasParameters):
+                    for param in delegate.list_param_targets():
+                        graph.add_edge(self.name, param, drv_conn=self.name)
+                        #mpiprint("!!!!!param = %s" % param)
+                elif isinstance(delegate, (HasConstraints,
+                                     HasEqConstraints, HasIneqConstraints)):
+                    for cnst in delegate.list_constraint_targets():
+                        #mpiprint("!!!!!cnst = %s" % cnst)
+                        graph.add_edge(cnst, self.name, drv_conn=self.name)
+                elif isinstance(delegate, (HasObjective, HasObjectives)):
+                    for obj in delegate.list_objective_targets():
+                        #mpiprint("!!!!!obj = %s" % obj)
+                        graph.add_edge(obj, self.name, drv_conn=self.name)
+
+            if recurse:
+                for sub in self.subdrivers():
+                    sub.add_driver_connections(graph, recurse=recurse)
+
     @rbac(('owner', 'user'))
     def subdrivers(self):
-        """Returns a generator of of subdrivers of this driver."""
+        """Returns a generator of of direct subdrivers of 
+        this driver.
+        """
         for d in self.iteration_set():
             if has_interface(d, IDriver):
                 yield d
