@@ -322,7 +322,7 @@ class Workflow(object):
     #     return self._get_subsystem().get_vector_vars(self.scope)
 
     def setup_sizes(self, variables):
-        self._get_subsystem().setup_sizes(variables)
+        return self._get_subsystem().setup_sizes(variables)
 
     def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our

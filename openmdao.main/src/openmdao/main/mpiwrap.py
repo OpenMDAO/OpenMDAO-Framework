@@ -72,6 +72,8 @@ def _setup_mpi(obj):
         raise RuntimeError("object passed to setup_mpi does not have "
                            "the IAssembly interface.")
 
+    MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+
     obj.setup_communicators(MPI.COMM_WORLD)
     obj.setup_sizes()
     obj.setup_vectors()

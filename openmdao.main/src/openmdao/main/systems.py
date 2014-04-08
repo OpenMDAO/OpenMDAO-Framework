@@ -1,7 +1,7 @@
 import sys
 from StringIO import StringIO
 from networkx import topological_sort
-#from collections import OrderedDict
+from collections import OrderedDict
 
 from networkx import edge_boundary
 
@@ -19,6 +19,7 @@ class System(object):
         self.local_comps = []
         self.mpi = MPI_info()
         self.mpi.req_cpus = None
+        self.variables = OrderedDict()
 
     def get_req_cpus(self):
         return self.mpi.req_cpus
@@ -27,6 +28,7 @@ class System(object):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
+
         comps = dict([(c.name, c) for c in self.local_comps])
 
         for name in variables.keys():
@@ -36,18 +38,22 @@ class System(object):
                 comp = comps.get(cname)
                 if comp is not None:
                     sz = comp.get_float_var_size(vname)
+                    vdict = variables[name]
                     if sz is not None:
-                        vdict = variables[name]
                         sz, flat_idx, base = sz
                         vdict['size'] = sz
                         if flat_idx is not None:
                             vdict['flat_idx'] = flat_idx
+                    self.variables[name] = vdict.copy()
 
         # pass the call down to any subdrivers/subsystems
         # and subassemblies. subassemblies will ignore the
         # variables passed into them in this case.
         for comp in self.local_comps:
             comp.setup_sizes(variables)
+
+        return self.variables
+            
             
     def dump_parallel_graph(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -69,6 +75,9 @@ class System(object):
         stream.write(" [%s](req=%d)(rank=%d)\n" % (self.__class__.__name__, 
                                                    self.get_req_cpus(), 
                                                    MPI.COMM_WORLD.rank))
+        for v, data in self.variables.items():
+            stream.write(" "*(nest+2))
+            stream.write("%s (%d)\n" % (v,data.get('size',0)))
 
         nest += 3
         for comp in self.local_comps:
@@ -83,21 +92,6 @@ class System(object):
         if getval:
             return stream.getvalue()
 
-    # def _add_vars_from_comp(self, comp, vecvars, scope):
-    #     if isinstance(comp, System):
-    #         vecvars.update(comp.get_vector_vars(scope))
-    #     else:
-    #         vecvars.update(comp.get_vector_vars())
-    #         # 'inputs' and 'outputs' metadata have been added
-    #         # to the comp nodes from drivers that iterate
-    #         # over them.
-    #         for name in self.graph.node[comp.name].get('inputs',()):
-    #             vecvars['.'.join([comp.name,name])] = \
-    #                                        comp.get_vector_var(name)
-    #         for name in self.graph.node[comp.name].get('outputs',()):
-    #             vecvars['.'.join([comp.name,name])] = \
-    #                                        comp.get_vector_var(name)
-        
         
 class SerialSystem(System):
     def __init__(self, graph, scope):
@@ -257,47 +251,6 @@ class ParallelSystem(System):
 
         for comp in self.local_comps:
             comp.setup_communicators(sub_comm, scope)
-
-    #def get_vector_vars(self, scope):
-        # """Assemble an ordereddict of names of variables needed by this
-        # workflow, which includes any that its parent driver(s) reference
-        # in parameters, constraints, or objectives, as well as any used to 
-        # connect any components in this workflow, AND any returned from
-        # calling get_vector_vars on any subsystems in this workflow.
-        # """
-        # self.vector_vars = OrderedDict()
-        # vector_vars = OrderedDict()
-        # if self.local_comps:
-        #     comp = self.local_comps[0]
-        #     self._add_vars_from_comp(comp, vector_vars, scope)
-        # vnames = self.mpi.comm.allgather(vector_vars.keys())
-
-        # fullnamelst = []
-        # seen = set()
-        # for names in vnames:
-        #     for name in names:
-        #         if name not in seen:
-        #             seen.add(name)
-        #             fullnamelst.append(name)
-
-        # # group names (in order) by component
-        # compdct = OrderedDict()
-        # partition_names_by_comp(fullnamelst, compdct)
-
-        # # TODO: may need to mess with ordering once we add in
-        # # derivative calculations, so that order of vars
-        # # within a comp matches order returned by list_deriv_vars...
-        # for cname, vname in compdct:
-        #     if cname is None:
-        #         self.vector_vars[cname] = None
-        #     else:
-        #         self.vector_vars['.'.join((cname, vname))] = None
-
-        # self.vector_vars.update(vector_vars)
-
-        # for comp in self.local_comps:
-        #     self._add_vars_from_comp(comp, self.vector_vars, scope)
-        # return self.vector_vars
                 
 
 def transform_graph(g, scope):
@@ -320,8 +273,7 @@ def transform_graph(g, scope):
         if len(zero_in_nodes) > 1: # start of parallel chunk
             parallel_group = []
             for node in zero_in_nodes:
-                brnodes = [node]
-                brnodes.extend(get_branch(gcopy, node))
+                brnodes = get_branch(gcopy, node)
                 if len(brnodes) > 1:
                     parallel_group.append(tuple(sorted(brnodes)))
                 else:
@@ -374,8 +326,8 @@ def _expand_tuples(nodes):
     return lst
 
 def _precollapse(scope, g, nodes, newname=None):
-    """Update all metadata and crate new combined nodes based
-    on the named nodes, but don't actuall remove the old nodes.
+    """Update all metadata and create new combined nodes based
+    on the named nodes, but don't actually remove the old nodes.
     Returns a subgraph containing only the specified nodes.
     """
     if newname is None:
@@ -418,29 +370,23 @@ def _precollapse(scope, g, nodes, newname=None):
     for edge, var_edges in xfers.items():
         g[edge[0]][edge[1]]['var_edges'] = var_edges
 
-    #g.remove_nodes_from([n for n in nodes if n != newname])
-
-    # for u,v,data in g.edges_iter(data=True):
-    #     mpiprint("(%s,%s): %s" % (u,v,data))
-
     return subg
 
 
 def get_branch(g, node, visited=None):
     """Return the full list of nodes that branch *exclusively*
-    from the given node.  The starting node is not included in 
+    from the given node.  The starting node is included in 
     the list.
     """
     if visited is None:
         visited = set()
     visited.add(node)
-    branch = []
+    branch = [node]
     for succ in g.successors(node):
         for p in g.predecessors(succ):
             if p not in visited:
                 break
         else:
-            branch.append(succ)
             branch.extend(get_branch(g, succ, visited))
     return branch
 

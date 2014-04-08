@@ -150,6 +150,7 @@ if __name__ == '__main__':
 
     if under_mpirun():
         mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
+        #mpiprint(top.driver.workflow._subsystem.dump_variables(stream=None))
         #mpiprint(top.subdriver.workflow._subsystem.dump_parallel_graph(stream=None))
 
         

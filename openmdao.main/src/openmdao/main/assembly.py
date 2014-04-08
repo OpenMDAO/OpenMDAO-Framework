@@ -12,7 +12,7 @@ from ordereddict import OrderedDict
 
 import numpy
 
-from zope.interface import implementedBy, providedBy
+#from zope.interface import implementedBy, providedBy
 
 # pylint: disable-msg=E0611,F0401
 import networkx as nx

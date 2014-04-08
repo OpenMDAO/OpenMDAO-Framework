@@ -650,7 +650,7 @@ class Driver(Component):
         self.workflow.setup_communicators(comm, self.parent)
 
     def setup_sizes(self, variables):
-        self.workflow.setup_sizes(variables)
+        return self.workflow.setup_sizes(variables)
 
     # def get_vector_vars(self):
     #     """Assemble an ordereddict of names of variables needed by this
