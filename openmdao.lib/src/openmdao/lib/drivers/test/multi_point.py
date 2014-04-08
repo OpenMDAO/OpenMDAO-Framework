@@ -1,12 +1,12 @@
 from openmdao.main.api import Component, Assembly
 from openmdao.main.datatypes.api import Array, Float
-from openmdao.lib.drivers.api import CaseIteratorDriver
+from openmdao.lib.drivers.api import CaseIteratorDriver, SimpleCaseIterDriver
 
 
 class SimpleComp(Component):
 
-    in1 = Float(6, iotype='in', low=-1e10, high=1e10)
-    in2 = Float(7, iotype='in', low=-1e10, high=1e10)
+    in1 = Float(6, iotype='in')
+    in2 = Float(7, iotype='in')
 
     out1 = Float(iotype='out')
     out2 = Float(iotype='out')
@@ -43,6 +43,7 @@ class SampleAssembly(Assembly):
         self.connect('b.out1', 'c.in1')
 
         self.add('cid_driver', CaseIteratorDriver())
+#        self.add('cid_driver', SimpleCaseIterDriver())
 
         #note, using "new" parameter interface that does not require low/high
         self.cid_driver.add_parameter('b.in2')
@@ -65,8 +66,6 @@ class SampleAssembly(Assembly):
 
         #d is a component that does mp_aggregation 
         #NOTE: d is expecting arrays of equal length
-        from openmdao.main.container import dump
-        dump(self.cid_driver, recurse=True)
         self.connect('cid_driver.case_outputs.b.out1', 'd.in1')
         self.connect('cid_driver.case_outputs.b.out2', 'd.in2')
         self.connect('cid_driver.case_outputs.c.out1', 'd.in3')

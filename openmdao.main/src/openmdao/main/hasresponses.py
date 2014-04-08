@@ -1,6 +1,9 @@
-
 import ordereddict
 
+from numpy import array, ndarray
+
+from openmdao.main.vartree import VariableTree
+from openmdao.main.datatypes.api import Array, List, VarTree
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
@@ -12,7 +15,7 @@ class Response(ConnectedExprEvaluator):
         self.pcomp_name = None
 
     def activate(self):
-        """Make this constraint active by creating the appropriate
+        """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
         if self.pcomp_name is None:
@@ -22,7 +25,7 @@ class Response(ConnectedExprEvaluator):
         getattr(self.scope, self.pcomp_name).make_connections(self.scope)
 
     def deactivate(self):
-        """Remove this objective from the dependency graph and remove
+        """Remove this response from the dependency graph and remove
         its pseudocomp from the scoping object.
         """
         if self.pcomp_name:
@@ -235,4 +238,39 @@ class HasResponses(object):
         self.clear_responses()
         for name, response in target._responses.items():
             self.add_response(response.text, name=name, scope=response.scope)
+
+
+class HasVarTreeResponses(HasResponses):
+
+    def add_response(self, expr, name=None, scope=None):
+        super(HasVarTreeResponses, self).add_response(expr, name, scope)
+
+        name = expr if name is None else name
+        value = self._responses[name].evaluate()
+
+        obj = self._parent
+        names = ['case_outputs'] + expr.split('.')
+        for name in names[:-1]:
+            if obj.get_trait(name):
+                val = obj.get(name)
+            else:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='out'))
+            obj = val
+        name = names[-1]
+
+        if isinstance(value, (float, int, bool, ndarray)):
+            obj.add_trait(name, Array(iotype='out'))
+        else:
+            obj.add_trait(name, List(iotype='out'))
+
+    def init_responses(self, length):
+        nans = [float('NaN')] * length
+        nones = [None] * length
+        for path, expr in self._responses.items():
+            if isinstance(expr.evaluate(), (float, int, bool, ndarray)):
+                self._parent.set('case_outputs.'+path, array(nans), force=True)
+            else:
+                self._parent.set('case_outputs.'+path, list(nones), force=True)
+
 

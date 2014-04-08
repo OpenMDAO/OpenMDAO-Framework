@@ -1,5 +1,7 @@
 import ordereddict
 
+from openmdao.main.vartree import VariableTree
+from openmdao.main.datatypes.api import Array, VarTree
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.util.typegroups import real_types, int_types
 
@@ -186,10 +188,10 @@ class Parameter(ParameterBase):
         if self.vartypename == 'Enum':
             return    # it's an Enum, so no need to set high or low
 
-        if not isinstance(_val, real_types) and not isinstance(_val, int_types):
-            raise ValueError("The value of parameter '%s' must be a real or"
-                             " integral type, but its type is '%s'." %
-                             (target, type(_val).__name__))
+#        if not isinstance(_val, real_types) and not isinstance(_val, int_types):
+#            raise ValueError("The value of parameter '%s' must be a real or"
+#                             " integral type, but its type is '%s'." %
+#                             (target, type(_val).__name__))
 
         # metadata is in the form (varname, metadata), so use [1] to get
         # the actual metadata dict
@@ -203,12 +205,6 @@ class Parameter(ParameterBase):
                 raise ValueError("Trying to add parameter '%s', but the lower"
                                  " limit supplied (%s) exceeds the built-in"
                                  " lower limit (%s)." % (target, low, meta_low))
-        else:
-            if low is None:
-                raise ValueError("Trying to add parameter '%s', "
-                                 "but no lower limit was found and no "
-                                 "'low' argument was given. One or the "
-                                 "other must be specified." % target)
 
         meta_high = metadata.get('high')  # will be None if 'high' isn't there
         if meta_high is not None:
@@ -219,12 +215,6 @@ class Parameter(ParameterBase):
                                  " limit supplied (%s) exceeds the built-in"
                                  " upper limit (%s)."
                                  % (target, high, meta_high))
-        else:
-            if high is None:
-                raise ValueError("Trying to add parameter '%s', "
-                                 "but no upper limit was found and no "
-                                 "'high' argument was given. One or the "
-                                 "other must be specified." % target)
 
         if self.low > self.high:
             raise ValueError("Parameter '%s' has a lower bound (%s) that"
@@ -553,12 +543,6 @@ class ArrayParameter(ParameterBase):
                                      " lower limit supplied (%s) exceeds the"
                                      " built-in lower limit (%s)."
                                      % (target, _low, _meta_low))
-            else:
-                if _low is None:
-                    raise ValueError("Trying to add parameter '%s',"
-                                     " but no lower limit was found and no"
-                                     " 'low' argument was given. One or the"
-                                     " other must be specified." % target)
 
             if meta_high is not None:
                 _meta_high = self._fetch('meta_high', meta_high, i)
@@ -569,13 +553,6 @@ class ArrayParameter(ParameterBase):
                                      " upper limit supplied (%s) exceeds the"
                                      " built-in upper limit (%s)."
                                      % (target, _high, _meta_high))
-            else:
-                if _high is None:
-                    raise ValueError("Trying to add parameter '%s',"
-                                     " but no upper limit was found and no"
-                                     " 'high' argument was given. One or the"
-                                     " other must be specified." % target)
-
             if _low > _high:
                 raise ValueError("Parameter '%s' has a lower bound (%s) that"
                                  " exceeds its upper bound (%s)"
@@ -817,8 +794,7 @@ class HasParameters(object):
 
         If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the variable being
-        referenced. If they are not specified in the metadata and not provided
-        as arguments, a ValueError is raised.
+        referenced.
         """
 
         if self._parent.parent:
@@ -1177,3 +1153,25 @@ class HasParameters(object):
         except Exception:
             self._parameters = old
             raise
+
+
+class HasVarTreeParameters(HasParameters):
+
+    def add_parameter(self, target, low=None, high=None,
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
+        super(HasVarTreeParameters, self).add_parameter(
+            target, low, high, scaler, adder, start, fd_step, name, scope)
+
+        obj = self._parent
+        names = ['case_inputs'] + target.split('.')
+        for name in names[:-1]:
+            if obj.get_trait(name):
+                val = obj.get(name)
+            else:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='in'))
+            obj = val
+        name = names[-1]
+        obj.add_trait(name, Array(iotype='in'))
+

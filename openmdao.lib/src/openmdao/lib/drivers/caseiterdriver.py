@@ -11,14 +11,11 @@ import thread
 import threading
 import traceback
 
-from openmdao.main.numpy_fallback import zeros
-
-from openmdao.main.api import Driver, VariableTree
-from openmdao.main.datatypes.api import Array, Bool, Dict, Enum, Int, VarTree
+from openmdao.main.api import Driver
+from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
 from openmdao.main.exceptions import TracedError, traceback_str
-from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasresponses import HasResponses
+from openmdao.main.hasparameters import HasVarTreeParameters
+from openmdao.main.hasresponses import HasVarTreeResponses
 from openmdao.main.interfaces import IHasParameters, IHasResponses, implements
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
@@ -32,54 +29,6 @@ _EMPTY     = 'empty'
 _LOADING   = 'loading'
 _EXECUTING = 'executing'
 
-
-class _HasParameters(HasParameters):
-
-    def add_parameter(self, target, low=None, high=None,
-                      scaler=None, adder=None, start=None,
-                      fd_step=None, name=None, scope=None):
-        super(_HasParameters, self).add_parameter(target, low, high, scaler,
-                                                  adder, start, fd_step, name,
-                                                  scope)
-        obj = self._parent
-        names = ['case_inputs'] + target.split('.')
-        for name in names[:-1]:
-            try:
-                val = obj.get(name)
-            except AttributeError:
-                val = VariableTree()
-                obj.add_trait(name, VarTree(val, iotype='in'))
-            obj = val
-        name = names[-1]
-        try:
-            val = obj.get(name)
-        except AttributeError:
-            obj.add_trait(name, Array(iotype='in'))
-        else:
-            self._parent.raise_exception("'%s' already exists" % name,
-                                         ValueError)
-
-class _HasResponses(HasResponses):
-
-    def add_response(self, expr, name=None, scope=None):
-        super(_HasResponses, self).add_response(expr, name, scope)
-        obj = self._parent
-        names = ['case_outputs'] + expr.split('.')
-        for name in names[:-1]:
-            try:
-                val = obj.get(name)
-            except AttributeError:
-                val = VariableTree()
-                obj.add_trait(name, VarTree(val, iotype='out'))
-            obj = val
-        name = names[-1]
-        try:
-            val = obj.get(name)
-        except AttributeError:
-            obj.add_trait(name, Array(iotype='out'))
-        else:
-            self._parent.raise_exception("'%s' already exists" % name,
-                                         ValueError)
 
 class _ServerData(object):
 
@@ -102,7 +51,7 @@ class _ServerError(Exception):
     pass
 
 
-@add_delegate(_HasParameters, _HasResponses)
+@add_delegate(HasVarTreeParameters, HasVarTreeResponses)
 class CaseIteratorDriver(Driver):
     """
     A base class for Drivers that run sets of cases. Concurrent evaluation is
@@ -193,10 +142,11 @@ class CaseIteratorDriver(Driver):
             self._cleanup()
 
         if self._abort_exc is None:
-            for i, case in enumerate(self._evaluated):
-                for name, value in case.get_outputs():
-                    print name, value, i
-                    self.set('case_outputs.'+name, value, index=(i,), force=True)
+            for case in self._evaluated:
+                i = case.label
+                if case.msg is None:
+                    for name, value in case.get_outputs():
+                        self.set('case_outputs.'+name, value, index=(i,), force=True)
         else:
             self.raise_exception('Run aborted: %s'
                                  % traceback_str(self._abort_exc),
@@ -235,27 +185,26 @@ class CaseIteratorDriver(Driver):
             self._egg_required_distributions = egg_info[1]
             self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-        names = []
+        paths = []
         values = []
-        for name in self.get_parameters():
-            names.append(name)
-            values.append(self.get('case_inputs.'+name))
+        for path in self.get_parameters():
+            paths.append(path)
+            values.append(self.get('case_inputs.'+path))
 
         outputs = []
-        for name in self.get_responses():
-            outputs.append(name)
+        for path in self.get_responses():
+            outputs.append(path)
 
         length = len(values[0])
         cases = []
         for i in range(length):
             inputs = []
-            for j in range(len(names)):
-                inputs.append((names[j], values[j][i]))
+            for j in range(len(paths)):
+                inputs.append((paths[j], values[j][i]))
             from openmdao.main.api import Case
-            cases.append(Case(inputs, outputs))
-
-        for name in self.get_responses():
-            self.set('case_outputs.'+name, zeros(length), force=True)
+            case = Case(inputs, outputs, label=i)
+            cases.append(case)
+        self.init_responses(length)
 
         self._iter = iter(cases)
         self._seqno = 0
@@ -593,28 +542,7 @@ class CaseIteratorDriver(Driver):
         case.msg = None
         case.parent_uuid = self._case_id
 
-        # Additional user-requested variables
-        # These must be added here so that the outputs are in the cases
-        # before they are in the server list.
-        for printvar in self.printvars:
-            if '*' in printvar:
-                printvars = self._get_all_varpaths(printvar)
-            else:
-                printvars = [printvar]
-            for var in printvars:
-                evaluator = self._evaluators.get(var)
-                if evaluator is None:
-                    evaluator = ExprEvaluator(var, scope=self.parent)
-                    self._evaluators[var] = evaluator
-                case.add_output(var, evaluator.evaluate())
         try:
-            for event in self.get_events():
-                try:
-                    server.top.set(event, None, None)
-                except Exception as exc:
-                    msg = 'Exception setting %r: %s' % (event, exc)
-                    self._logger.debug('    %s', msg)
-                    self.raise_exception(msg, _ServerError)
             try:
                 case.apply_inputs(server.top)
             except Exception as exc:
@@ -733,7 +661,7 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-                self.workflow._parent.update_parameters()
+#                self.workflow._parent.update_parameters()
                 self.workflow.run(case_id=server.case[0].uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())
