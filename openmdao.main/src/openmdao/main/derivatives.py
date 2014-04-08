@@ -655,9 +655,10 @@ class FiniteDifference(object):
             if 'high' in meta:
                 high = meta[ 'high' ]
 
-            if srcs[0] in driver_targets:
-                if srcs[0] in driver_params:
-                    param = driver_params[srcs[0]]
+            param_srcs = [item for item in srcs if item in driver_targets]
+            if param_srcs:
+                if param_srcs[0] in driver_params:
+                    param = driver_params[param_srcs[0]]
                     if param.fd_step is not None:
                         self.fd_step[j] = param.fd_step
                     if param.low is not None:
@@ -669,7 +670,7 @@ class FiniteDifference(object):
                     for param_group in driver_params:
                         is_fd_step_not_set = is_low_not_set = is_high_not_set = True
                         if not isinstance(param_group, str) and \
-                           srcs[0] in param_group:
+                           param_srcs[0] in param_group:
                             param = driver_params[param_group]
                             if is_fd_step_not_set and param.fd_step is not None:
                                 self.fd_step[j] = param.fd_step
