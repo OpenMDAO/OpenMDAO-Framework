@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import List, VarTree
+from openmdao.main.datatypes.api import Array, List, VarTree
 from openmdao.main.api import Component
 
 class ParetoFilter(Component):
@@ -11,14 +11,15 @@ class ParetoFilter(Component):
     """
 
     # pylint: disable-msg=E1101
-    criteria = List(Str, iotype="in",
-                    desc="List of outputs from the case to consider for "
-                         "filtering. Note that only case outputs are allowed as "
-                         "criteria.")
-
     params = VarTree(VariableTree(), iotype='in')
 
     responses = VarTree(VariableTree(), iotype='in')
+
+    pareto_inputs = Array(iotype='out', desc='Array of input values in the '
+                          'Pareto frontier')
+
+    pareto_outputs = Array(iotype='out', desc='Array of response values in the '
+                          'Pareto frontier')
 
     def __init__(self, params=None, responses=None):
         super(ParetoFilter, self).__init__()
@@ -38,13 +39,15 @@ class ParetoFilter(Component):
         input_tree = self.get('params')
         self._param_data = []
         for name in params:
-            input_tree.add(name, Array([0.0], desc='ParetoFilter param'))
+            input_tree.add(name, Array([0.0], desc='ParetoFilter input'))
 
         output_tree = self.get('responses')
         self._response_data = {}
         for name in responses:
             output_tree.add(name, Array([0.0], desc='ParetoFilter response'))
 
+        self._input_names = params
+        self._output_names = responses
 
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2.
@@ -59,36 +62,16 @@ class ParetoFilter(Component):
         return True
 
     def execute(self):
-        """Finds and removes pareto optimal points in the given case set.
-        Returns a list of pareto optimal points. Smaller is better for all
-        criteria.
+        """Returns an araray of pareto optimal points and their response values.
         """
-        #convert stuff to caseSets if they are not
-        case_sets = []
-        for ci in self.case_sets:
-            if not isinstance(ci, CaseSet):
-                case_sets.append(caseiter_to_caseset(ci))
-            else:
-                case_sets.append(ci)
 
-        y_list = []
-        if len(case_sets) > 1:
-            case_set = case_sets[0].union(*case_sets[1:])
-        else:
-            case_set = case_sets[0]
-        criteria_count = len(self.criteria)
+        n_param = len(self._input_names)
+        n_response = len(self._output_names)
+        n_points = len(self.get(self._input_names[0]))
 
-        try:
-            # need to transpose the list of outputs
-            y_list = zip(*[case_set[crit] for crit in self.criteria])
-        except KeyError:
-            self.raise_exception('no cases provided had all of the outputs '
-                 'matching the provided criteria, %s' % self.criteria, ValueError)
-
-        y_temp = list(y_list)
-
-        self.dominated_set = CaseSet()
-        self.pareto_set = CaseSet()  # TODO: need a way to copy casesets
+        nondominated_input = []
+        nondominated_output = []
+        for point in n_points:
 
         for point1, case in zip(y_list, iter(case_set)):
             dominated = False
