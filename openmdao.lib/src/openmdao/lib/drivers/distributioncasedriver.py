@@ -14,7 +14,7 @@ from zope.interface import Interface
 from openmdao.main.numpy_fallback import zeros
 
 from openmdao.main.datatypes.api import List, Str, Slot, Int, Enum, Bool
-from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.api import Container
 from openmdao.main.case import Case
 from openmdao.util.decorators import add_delegate
@@ -101,11 +101,8 @@ class FiniteDifferenceGenerator(Container):
                 mask[iparam] = 0.0
 
 
-@add_delegate(HasParameters)
-class DistributionCaseDriver(CaseIterDriverBase):
+class DistributionCaseDriver(CaseIteratorDriver):
     """ Driver for evaluating models at point distributions. """
-
-    implements(IHasParameters)
 
     distribution_generator = Slot(IDistributionGenerator,
                                   required=True,

@@ -8,24 +8,19 @@
 import csv
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import Bool, List, Slot, Float, Str, Instance
+from openmdao.main.datatypes.api import Bool, List, Slot, Float, Str
 
 from openmdao.main.case import Case
-from openmdao.main.interfaces import IDOEgenerator, ICaseFilter, implements, \
-                                     IHasParameters
-from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasparameters import HasParameters
+from openmdao.main.interfaces import IDOEgenerator
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 
-@add_delegate(HasParameters)
-class DOEdriverBase(CaseIterDriverBase):
+class DOEdriver(CaseIteratorDriver):
     """ Driver for Design of Experiments. """
 
-    implements(IHasParameters)
-
-
     # pylint: disable-msg=E1101
+    DOEgenerator = Slot(IDOEgenerator, required=True,
+                        desc='Iterator supplying normalized DOE values.')
 
     record_doe = Bool(True, iotype='in',
                       desc='Record normalized DOE values to CSV file.')
@@ -84,31 +79,15 @@ class DOEdriverBase(CaseIterDriverBase):
             self._csv_file.close()
             self._csv_file = None
 
-class ConnectableDOEdriver(DOEdriverBase):
-    DOEgenerator = Instance(IDOEgenerator, required=True, iotype="in",
-                        desc='Iterator supplying normalized DOE values.')
 
-    case_filter = Instance(ICaseFilter, iotype="in", desc='Selects cases to be run.')
-
-class DOEdriver(DOEdriverBase):
-    """ Driver for Design of Experiments. """
-
-    implements(IHasParameters)
-
-
-    # pylint: disable-msg=E1101
-    DOEgenerator = Slot(IDOEgenerator, required=True,
-                        desc='Iterator supplying normalized DOE values.')
-
-    case_filter = Slot(ICaseFilter, desc='Selects cases to be run.')
-
-
-@add_delegate(HasParameters)
-class NeighborhoodDOEdriverBase(CaseIterDriverBase):
+class NeighborhoodDOEdriver(CaseIteratorDriver):
     """Driver for Design of Experiments within a specified neighborhood
     around a point."""
 
     # pylint: disable-msg=E1101
+    DOEgenerator = Slot(IDOEgenerator, required=True,
+                          desc='Iterator supplying normalized DOE values.')
+
     case_outputs = List(Str, iotype='in',
                            desc='A list of outputs to be saved with each case.')
 
@@ -150,11 +129,3 @@ class NeighborhoodDOEdriverBase(CaseIterDriverBase):
 
             yield case
 
-class NeighborhoodDOEdriver(NeighborhoodDOEdriverBase):
-    DOEgenerator = Slot(IDOEgenerator, required=True,
-                          desc='Iterator supplying normalized DOE values.')
-
-
-class ConnectableNeighborhoodDOEdriver(NeighborhoodDOEdriverBase):
-    DOEgenerator = Instance(IDOEgenerator, iotype="in", required=True,
-                          desc='Iterator supplying normalized DOE values.')
