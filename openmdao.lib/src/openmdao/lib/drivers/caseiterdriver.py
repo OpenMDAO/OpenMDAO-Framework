@@ -11,6 +11,8 @@ import thread
 import threading
 import traceback
 
+from numpy import array
+
 from openmdao.main.api import Driver
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
 from openmdao.main.exceptions import TracedError, traceback_str
@@ -108,6 +110,24 @@ class CaseIteratorDriver(Driver):
         # var wasn't showing up in parent depgraph without this
         self.error_policy = 'ABORT'
 
+    def set_inputs(self, generator):
+        """ Set case inputs from generator values. """
+        inputs = array([vals for vals in generator])
+        start = 0
+        for path, param in self.get_parameters().items():
+            size = param.size
+            if size == 1:
+                values = inputs[:, start]
+            else:
+                end = start + size
+                values = inputs[:, start:end].reshape((-1,)+param.shape)
+            start += size
+            if isinstance(path, basestring):
+                self.set('case_inputs.'+path, values)
+            else:
+                for target in path:  # ParameterGroup
+                    self.set('case_inputs.'+target, values)
+
     def execute(self):
         """
         Runs all cases and records results in `recorder`.
@@ -188,8 +208,13 @@ class CaseIteratorDriver(Driver):
         paths = []
         values = []
         for path in self.get_parameters():
-            paths.append(path)
-            values.append(self.get('case_inputs.'+path))
+            if isinstance(path, basestring):
+                paths.append(path)
+                values.append(self.get('case_inputs.'+path))
+            else:
+                for target in path:  # ParameterGroup
+                    paths.append(target)
+                    values.append(self.get('case_inputs.'+target))
 
         outputs = []
         for path in self.get_responses():

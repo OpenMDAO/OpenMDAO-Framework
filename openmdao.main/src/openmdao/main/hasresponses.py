@@ -243,6 +243,7 @@ class HasResponses(object):
 class HasVarTreeResponses(HasResponses):
 
     def add_response(self, expr, name=None, scope=None):
+        """Adds a response to the driver."""
         super(HasVarTreeResponses, self).add_response(expr, name, scope)
 
         name = expr if name is None else name
@@ -265,6 +266,7 @@ class HasVarTreeResponses(HasResponses):
             obj.add_trait(name, List(iotype='out'))
 
     def init_responses(self, length):
+        """Initializes response storage in the driver."""
         nans = [float('NaN')] * length
         nones = [None] * length
         for path, expr in self._responses.items():
@@ -273,4 +275,16 @@ class HasVarTreeResponses(HasResponses):
             else:
                 self._parent.set('case_outputs.'+path, list(nones), force=True)
 
+    def remove_response(self, expr):
+        """Removes the specified response expression. Spaces within
+        the expression are ignored.
+        """
+        super(HasVarTreeResponses, self).remove_response(expr)
+        expr = _remove_spaces(expr)
+        obj = self._parent
+        names = ['case_outputs'] + expr.split('.')
+        for name in names[:-1]:
+            obj = obj.get(name)
+        name = names[-1]
+        obj.remove_trait(name)
 

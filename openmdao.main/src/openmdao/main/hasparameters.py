@@ -1160,18 +1160,35 @@ class HasVarTreeParameters(HasParameters):
     def add_parameter(self, target, low=None, high=None,
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
+        """Adds a parameter or group of parameters to the driver."""
         super(HasVarTreeParameters, self).add_parameter(
             target, low, high, scaler, adder, start, fd_step, name, scope)
 
+        if isinstance(target, basestring):
+            targets = (target,)
+        else:
+            targets = target  # ParameterGroup
+
+        for target in targets:
+            obj = self._parent
+            names = ['case_inputs'] + target.split('.')
+            for name in names[:-1]:
+                if obj.get_trait(name):
+                    val = obj.get(name)
+                else:
+                    val = VariableTree()
+                    obj.add_trait(name, VarTree(val, iotype='in'))
+                obj = val
+            name = names[-1]
+            obj.add_trait(name, Array(iotype='in'))
+
+    def remove_parameter(self, name):
+        """Removes the parameter with the given name."""
+        super(HasVarTreeParameters, self).remove_parameter(name)
         obj = self._parent
-        names = ['case_inputs'] + target.split('.')
+        names = ['case_inputs'] + name.split('.')
         for name in names[:-1]:
-            if obj.get_trait(name):
-                val = obj.get(name)
-            else:
-                val = VariableTree()
-                obj.add_trait(name, VarTree(val, iotype='in'))
-            obj = val
+            obj = obj.get(name)
         name = names[-1]
-        obj.add_trait(name, Array(iotype='in'))
+        obj.remove_trait(name)
 
