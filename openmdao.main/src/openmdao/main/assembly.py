@@ -37,8 +37,7 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
-from openmdao.main.array_helpers import is_differentiable_var, offset_flat_index, \
-                                        get_flat_index_start
+from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node, is_subvar_node
 
 from openmdao.util.graph import list_deriv_vars
@@ -1342,72 +1341,72 @@ class Assembly(Component):
         super(Assembly, self).setup_variables()
         self.driver.setup_variables()
 
-    def _get_vector_vars(self):
-        """Return an ordereddict of names of variables needed by 
-        subsystems in this Assembly. This includes all variables
-        that are inputs or outputs of connections, and all variables
-        that are driver inputs or outputs, i.e., parameters, objectives,
-        or constraints.  Entries are ordered by component.
-        """
+    # def _get_vector_vars(self):
+    #     """Return an ordereddict of names of variables needed by 
+    #     subsystems in this Assembly. This includes all variables
+    #     that are inputs or outputs of connections, and all variables
+    #     that are driver inputs or outputs, i.e., parameters, objectives,
+    #     or constraints.  Entries are ordered by component.
+    #     """
 
-        # add all inputs first, then all outputs, so that after
-        # we group by component, component inputs and outputs
-        # will be contiguous.
+    #     # add all inputs first, then all outputs, so that after
+    #     # we group by component, component inputs and outputs
+    #     # will be contiguous.
 
-        # collect all vars involved in connections
-        conns = self._depgraph.list_connections()
+    #     # collect all vars involved in connections
+    #     conns = self._depgraph.list_connections()
 
-        # get any additional vars used as input or output to any
-        # drivers
-        srcs, dests = self.driver.get_expr_var_depends(recurse=True,
-                                                       refs=True)
+    #     # get any additional vars used as input or output to any
+    #     # drivers
+    #     srcs, dests = self.driver.get_expr_var_depends(recurse=True,
+    #                                                    refs=True)
 
-        allvars = set([u for u,v in conns])
-        allvars.update([v for u,v in conns])
-        allvars.update(srcs)
-        allvars.update(dests)
+    #     allvars = set([u for u,v in conns])
+    #     allvars.update([v for u,v in conns])
+    #     allvars.update(srcs)
+    #     allvars.update(dests)
 
-        # find all boundary vars (used in partition_names_by_comp
-        # to identify vartree boundary subvars).
-        bndry_vars = set(self._depgraph.get_boundary_inputs())
-        bndry_vars.update(self._depgraph.get_boundary_outputs())
+    #     # find all boundary vars (used in partition_names_by_comp
+    #     # to identify vartree boundary subvars).
+    #     bndry_vars = set(self._depgraph.get_boundary_inputs())
+    #     bndry_vars.update(self._depgraph.get_boundary_outputs())
 
-        # create input and output lists (not ordered by comp). 
-        inputs = []
-        outputs = []
-        graph = self._depgraph
-        data = graph.node
+    #     # create input and output lists (not ordered by comp). 
+    #     inputs = []
+    #     outputs = []
+    #     graph = self._depgraph
+    #     data = graph.node
 
-        for name in allvars:
-            base = graph.base_var(name)
-            if base != name: # it's a subvar
-                iotype = data[base].get('iotype')
-            else:
-                iotype = data[name].get('iotype')
-            if iotype in ['in', 'state']:
-                inputs.append(name)
-            else:
-                outputs.append(name)
+    #     for name in allvars:
+    #         base = graph.base_var(name)
+    #         if base != name: # it's a subvar
+    #             iotype = data[base].get('iotype')
+    #         else:
+    #             iotype = data[name].get('iotype')
+    #         if iotype in ['in', 'state']:
+    #             inputs.append(name)
+    #         else:
+    #             outputs.append(name)
 
-        inputs.sort()
-        outputs.sort()
+    #     inputs.sort()
+    #     outputs.sort()
 
-        # now group them by comp, maintaining their former order
-        # within a comp
-        compdict = OrderedDict()
-        partition_names_by_comp(chain(inputs, outputs), compdict, 
-                                boundary_vars=bndry_vars)
+    #     # now group them by comp, maintaining their former order
+    #     # within a comp
+    #     compdict = OrderedDict()
+    #     partition_names_by_comp(chain(inputs, outputs), compdict, 
+    #                             boundary_vars=bndry_vars)
 
-        # reassemble the list from the component dict
-        variables = OrderedDict()
-        for cname, vnames in compdict.items():
-            for vname in vnames:
-                name = vname if cname is None else '.'.join((cname,vname))
-                variables[name] = var = { 'size': 0 }
-                if is_subvar_node(graph, name):
-                    var['basevar'] = graph.base_var(name)
+    #     # reassemble the list from the component dict
+    #     variables = OrderedDict()
+    #     for cname, vnames in compdict.items():
+    #         for vname in vnames:
+    #             name = vname if cname is None else '.'.join((cname,vname))
+    #             variables[name] = var = { 'size': 0 }
+    #             if is_subvar_node(graph, name):
+    #                 var['basevar'] = graph.base_var(name)
 
-        return variables
+    #     return variables
  
     def setup_sizes(self, scope=None):
         """Calculate the local sizes of all relevant variables
@@ -1451,94 +1450,19 @@ class Assembly(Component):
 
         # #comm.Allgather(self.input_sizes, ???)
 
-    def setup_vectors(self):
+    def setup_vectors(self, vecs=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
+        if vecs is None:
+            # top level call, so create top level vectors and pass
+            # down.
+            pass
+            
         self.driver.setup_vectors()
 
         #self.uVec = VecWrapper(self, self.all_vector_vars.keys())
         #self.pVec = VecWrapper(self, ???)
-
-
-class VecWrapper(object):
-    """A wrapper object for a local vector, a distributed PETSc vector,
-    and info about what var maps to what range within the distributed
-    vector.
-    """
-    def __init__(self, obj, varlist):
-        comm = obj.mpi.comm
-        allvars = obj.all_vector_vars
-        varsizes_added, varsizes_noadd = _partition_subvars(varlist, 
-                                                            allvars)
-
-        self._info = {} # dict of (start_idx, view)
-
-        size = sum([allvars[name]['size'] for name in varsizes_added])
-
-        self.array = numpy.zeros(size)
-
-        # first, add views for vars whose sizes are added to the total,
-        # i.e., their basevars are not included in the vector.
-        start, end = 0, 0
-        for name in varsizes_added:
-            sz = allvars[name].get('size')
-            if sz:
-                end += sz
-                self._info[name] = (self.array[start:end], start)
-                #mpiprint("*** view for %s is %s" % (name, [start,end]))
-                start += sz
-
-        self.petsc_vec = get_petsc_vec(comm, self.array)
-
-        # now add views for subvars that are subviews of their
-        # basevars
-        for name in varsizes_noadd:
-            varinfo = allvars[name]
-            sz = varinfo['size']
-            if sz:
-                idx = varinfo['flat_idx']
-                basestart = self.start(varinfo['basevar'])
-                sub_idx = offset_flat_index(idx, basestart)
-                substart = get_flat_index_start(sub_idx)
-                #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
-                #            (size,basestart, substart, sub_idx))
-                self._info[name] = (self.array[sub_idx], substart)
-                #mpiprint("*** view for %s is %s" % (name, list(self.bounds(name))))
-
-    def view(self, name):
-        """Return the array view into the larger array for the
-        given name.  name may contain array indexing.
-        """
-        return self._info[name][0]
-
-    def start(self, name):
-        """Return the starting index for the array view belonging
-        to the given name. name may contain array indexing.
-        """
-        return self._info[name][1]
-
-    def bounds(self, name):
-        """Return the bounds corresponding to the slice occupied
-        by the named variable within the flattened array.
-        name may contain array indexing.
-        """
-        view, start = self._info[name]
-        return (start, start + view.size)
-
-    def scatter(self):
-        pass  # see if we can do scatter functionality here...
-
-
-
-# def _linspace(self, start, end):
-#     """ Return a linspace vector of the right int type for PETSc """
-#     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
-
-
-
-
-
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

@@ -655,6 +655,9 @@ class Driver(Component):
     def setup_sizes(self):
         return self.workflow.setup_sizes()
 
+    def setup_vectors(self, vecs=None):
+        return self.workflow.setup_vectors(vecs)
+
 
 class Run_Once(Driver):
     """An assembly starts with a bare driver that just executes the workflow

@@ -342,10 +342,14 @@ class PseudoComponent(object):
     def setup_variables(self):
         pass
 
-    def get_float_var_size(self, name):
-        """Returns the local flattened size of the value of the 
-        named variable, if the flattened value can be expressed
-        as an array of floats.  Otherwise, None is returned.
+    def setup_vectors(self, vecs=None):
+        pass
+
+    def get_float_var_info(self, name):
+        """Returns the local flattened size, index and basevar info
+        of the value of the named variable, if the flattened value 
+        can be expressed as an array of floats.  Otherwise, None is 
+        returned.
         """
         if name in self._var_sizes:
             return self._var_sizes[name]

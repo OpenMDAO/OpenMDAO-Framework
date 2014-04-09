@@ -194,23 +194,23 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    def get_driver_graph(self):
-        """Returns the subgraph of the full depgraph that is
-        relevant to this workflow and this workflow's driver (and
-        all subdrivers).
-        """
-        if self._drv_graph is None:
-            # make a copy of the depgraph we can modify
-            depgraph = self.scope._depgraph
-            graph = depgraph.subgraph(depgraph.nodes_iter())
-            # add all driver related 'connections'
-            self._parent.add_driver_connections(graph, recurse=True)
+    # def get_driver_graph(self):
+    #     """Returns the subgraph of the full depgraph that is
+    #     relevant to this workflow and this workflow's driver (and
+    #     all subdrivers).
+    #     """
+    #     if self._drv_graph is None:
+    #         # make a copy of the depgraph we can modify
+    #         depgraph = self.scope._depgraph
+    #         graph = depgraph.subgraph(depgraph.nodes_iter())
+    #         # add all driver related 'connections'
+    #         self._parent.add_driver_connections(graph, recurse=True)
 
-            # remove all unconnected variables and components, 
-            # and only what's relevant remains
-            graph.prune_unconnected()
-            self._drv_graph = graph
-        return self._drv_graph
+    #         # remove all unconnected variables and components, 
+    #         # and only what's relevant remains
+    #         graph.prune_unconnected()
+    #         self._drv_graph = graph
+    #     return self._drv_graph
 
     def get_comp_graph(self):
         """Returns the subgraph of the component graph that contains
@@ -235,12 +235,12 @@ class Workflow(object):
                 if cname in wfnames:
                     drvins = wfgraph.node[cname].setdefault('drv_inputs',set())
                     for inp in inputs:
-                        drvins.add(inp)
+                        drvins.add('.'.join((cname,inp)))
             for cname, outputs in comp_outs.items():
                 if cname in wfnames:
                     drvouts = wfgraph.node[cname].setdefault('drv_outputs',set())
                     for out in outputs:
-                        drvouts.add(out)
+                        drvouts.add('.'.join((cname,out)))
 
         return self._wf_comp_graph
      
@@ -331,3 +331,6 @@ class Workflow(object):
 
     def setup_sizes(self):
         return self._get_subsystem().setup_sizes(scope=self.scope)
+
+    def setup_vectors(self, vecs=None):
+        return self._get_subsystem().setup_vectors(vecs)

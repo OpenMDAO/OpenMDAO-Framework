@@ -2,7 +2,6 @@ import sys
 from StringIO import StringIO
 from networkx import topological_sort
 from collections import OrderedDict
-from itertools import chain
 
 from networkx import edge_boundary
 
@@ -10,10 +9,12 @@ import numpy
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
-#from openmdao.util.nameutil import partition_edges_by_comp
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, get_petsc_vec
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver
+from openmdao.main.array_helpers import offset_flat_index, \
+                                        get_flat_index_start
+from openmdao.util.nameutil import partition_names_by_comp
 
 class System(object):
     def __init__(self, graph):
@@ -23,6 +24,7 @@ class System(object):
         self.mpi = MPI_info()
         self.mpi.req_cpus = None
         self.all_variables = OrderedDict()
+        self.vec = {}
 
     def get_req_cpus(self):
         return self.mpi.req_cpus
@@ -32,8 +34,14 @@ class System(object):
             comp.setup_variables()
 
         g = self.graph.graph
-        for vname in chain(g.get('inputs',()), g.get('outputs',())):
-            self.all_variables[vname] = { 'size': 0 }         
+        inputs = sorted(g.get('inputs',()))
+        outputs = sorted(g.get('outputs',()))
+        compdict = partition_names_by_comp(inputs, OrderedDict())
+        partition_names_by_comp(outputs, compdict)
+        allcomps = sorted(compdict.keys())
+        for cname in allcomps:
+            for vname in compdict[cname]:
+                self.all_variables['.'.join((cname,vname))] = { 'size': 0 }         
 
     def setup_sizes(self, scope):
         """Given a dict of variables, set the sizes for 
@@ -42,35 +50,22 @@ class System(object):
 
         comps = dict([(c.name, c) for c in self.local_comps])
 
-        # for name in variables.keys():
-        #     parts = name.split('.', 1)
-        #     if len(parts) > 1:
-        #         cname, vname = parts
-        #         comp = comps.get(cname)
-        #         if comp is not None:
-        #             sz = comp.get_float_var_size(vname)
-        #             vdict = variables[name]
-        #             if sz is not None:
-        #                 sz, flat_idx, base = sz
-        #                 vdict['size'] = sz
-        #                 if flat_idx is not None:
-        #                     vdict['flat_idx'] = flat_idx
-
         for i, (name, vdict) in enumerate(self.all_variables.items()):
             cname, vname = name.split('.',1)
             comp = comps.get(cname)
             if comp is not None:
-                info = comp.get_float_var_size(vname)
+                info = comp.get_float_var_info(vname)
                 if info is not None:
                     sz, flat_idx, base = info
                     vdict['size'] = sz
                     if flat_idx is not None:
                         vdict['flat_idx'] = flat_idx
+                    if base is not None:
+                        vdict['basevar'] = base
 
         comm = self.mpi.comm
 
-        sizes_add, sizes_noadd = _partition_subvars(scope._depgraph,
-                                                    self.all_variables.keys(),
+        sizes_add, sizes_noadd = _partition_subvars(self.all_variables.keys(),
                                                     self.all_variables)
 
         # create an (nproc x numvars) var size vector containing 
@@ -106,12 +101,16 @@ class System(object):
         for comp in self.local_comps:
             comp.setup_sizes(scope)
             
-    def setup_vectors(self):
+    def setup_vectors(self, vecs):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        self.uVec = VecWrapper(self, self.variables.keys())
+        mpiprint("**** setting up vectors for %s" % self.name)
+        self.vec['u'] = VecWrapper(self.mpi.comm, self.variables.keys(),
+                        self.all_variables)
         #self.pVec = VecWrapper(self, ???)
+        for comp in self.local_comps:
+            comp.setup_vectors(self.vec)
 
     def dump_parallel_graph(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -190,18 +189,6 @@ class SerialSystem(System):
             comp.mpi.comm = comm
             self.local_comps.append(comp)
             comp.setup_communicators(comm, scope)
-
-    # def get_vector_vars(self, scope):
-    #     """Assemble an ordereddict of names of variables needed by this
-    #     workflow, which includes any that its parent driver(s) reference
-    #     in parameters, constraints, or objectives, as well as any used to 
-    #     connect any components in this workflow, AND any returned from
-    #     calling get_vector_vars on any subsystems in this workflow.
-    #     """
-    #     self.vector_vars = OrderedDict()
-    #     for comp in self.local_comps:
-    #         self._add_vars_from_comp(comp, self.vector_vars, scope)
-    #     return self.vector_vars
 
 
 class ParallelSystem(System):
@@ -418,26 +405,39 @@ def _precollapse(scope, g, nodes, newname=None):
 
     #mpiprint("collapsing edges: %s" % collapsing_edges)
     xfers = {}
-    subg.graph['inputs'] = inputs = []
-    subg.graph['outputs'] = outputs = []
+    subg.graph['inputs'] = inputs = set()
+    subg.graph['outputs'] = outputs = set()
     for u,v in out_edges:
         var_edges = g.edge[u][v].get('var_edges', ())
         #mpiprint("adding edge (%s,%s)" % (newname, v))
         g.add_edge(newname, v)
         xfers.setdefault((newname, v), []).extend(var_edges)
-        outputs.extend([u for u,v in var_edges])
+        outputs.update([u for u,v in var_edges])
 
     for u,v in in_edges:
         var_edges = g.edge[u][v].get('var_edges', ())
         #mpiprint("adding edge (%s,%s)" % (u, newname))
         g.add_edge(u, newname)
         xfers.setdefault((u, newname), []).extend(var_edges)
-        inputs.extend([v for u,v in var_edges])
+        inputs.update([v for u,v in var_edges])
 
     # save the collapsed edges in the metadata of the new edges
     # so each subsystem knows what its inputs and outputs are
     for edge, var_edges in xfers.items():
         g[edge[0]][edge[1]]['var_edges'] = var_edges
+
+    # add any driver inputs/outputs to our input/output list
+    drv_inputs = set()
+    drv_outputs = set()
+    for node, data in subg.nodes_iter(data=True):
+        drv_inputs.update(data.get('drv_inputs', ()))
+        drv_outputs.update(data.get('drv_outputs', ()))
+
+    g.node[newname]['drv_inputs'] = drv_inputs
+    g.node[newname]['drv_outputs'] = drv_outputs
+
+    inputs.update(drv_inputs)
+    outputs.update(drv_outputs)
 
     return subg
 
@@ -460,7 +460,7 @@ def get_branch(g, node, visited=None):
     return branch
 
 
-def _partition_subvars(graph, names, vardict):
+def _partition_subvars(names, vardict):
     """If a subvar has a basevar that is also included in a
     var vector, then the size of the subvar does not add
     to the total size of the var vector because it's size
@@ -477,7 +477,7 @@ def _partition_subvars(graph, names, vardict):
     nosizes = []
     sizes = []
     for name in names:
-        base = graph.node[name].get('basevar')
+        base = vardict[name].get('basevar')
         if base and base in nameset:
             nosizes.append(name)
         else:
@@ -485,3 +485,78 @@ def _partition_subvars(graph, names, vardict):
         nameset.add(name)
 
     return (sizes, nosizes)
+
+
+class VecWrapper(object):
+    """A wrapper object for a local vector, a distributed PETSc vector,
+    and info about what var maps to what range within the distributed
+    vector.
+    """
+    def __init__(self, comm, varlist, allvars):
+        varsizes_added, varsizes_noadd = _partition_subvars(varlist, 
+                                                            allvars)
+
+        self._info = {} # dict of (start_idx, view)
+
+        size = sum([allvars[name]['size'] for name in varsizes_added])
+
+        self.array = numpy.zeros(size)
+
+        # first, add views for vars whose sizes are added to the total,
+        # i.e., their basevars are not included in the vector.
+        start, end = 0, 0
+        for name in varsizes_added:
+            sz = allvars[name].get('size')
+            if sz:
+                end += sz
+                self._info[name] = (self.array[start:end], start)
+                mpiprint("*** view for %s is %s" % (name, [start,end]))
+                start += sz
+
+        self.petsc_vec = get_petsc_vec(comm, self.array)
+
+        # now add views for subvars that are subviews of their
+        # basevars
+        for name in varsizes_noadd:
+            varinfo = allvars[name]
+            sz = varinfo['size']
+            if sz:
+                idx = varinfo['flat_idx']
+                basestart = self.start(varinfo['basevar'])
+                sub_idx = offset_flat_index(idx, basestart)
+                substart = get_flat_index_start(sub_idx)
+                #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
+                #            (size,basestart, substart, sub_idx))
+                self._info[name] = (self.array[sub_idx], substart)
+                mpiprint("*** view for %s is %s" % (name, list(self.bounds(name))))
+
+    def view(self, name):
+        """Return the array view into the larger array for the
+        given name.  name may contain array indexing.
+        """
+        return self._info[name][0]
+
+    def start(self, name):
+        """Return the starting index for the array view belonging
+        to the given name. name may contain array indexing.
+        """
+        return self._info[name][1]
+
+    def bounds(self, name):
+        """Return the bounds corresponding to the slice occupied
+        by the named variable within the flattened array.
+        name may contain array indexing.
+        """
+        view, start = self._info[name]
+        return (start, start + view.size)
+
+    def scatter(self):
+        pass  # see if we can do scatter functionality here...
+
+
+
+# def _linspace(self, start, end):
+#     """ Return a linspace vector of the right int type for PETSc """
+#     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
+
+
