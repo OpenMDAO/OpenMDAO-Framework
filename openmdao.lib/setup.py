@@ -79,14 +79,9 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.brent.Brent = openmdao.lib.drivers.brent:Brent
 
       [openmdao.component]
-      openmdao.lib.components.expected_improvement.ExpectedImprovementBase = openmdao.lib.components.expected_improvement:ExpectedImprovementBase
-      openmdao.lib.components.expected_improvement.ConnectableExpectedImprovement = openmdao.lib.components.expected_improvement:ConnectedExpectedImprovement
       openmdao.lib.components.expected_improvement.ExpectedImprovement = openmdao.lib.components.expected_improvement:ExpectedImprovement
-      openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovementBase = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovementBase
       openmdao.lib.components.expected_improvement_multiobj.MultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:MultiObjExpectedImprovement
-      openmdao.lib.components.expected_improvement_multiobj.ConnectableMultiObjExpectedImprovement = openmdao.lib.components.expected_improvement_multiobj:ConnectableMultiObjExpectedImprovement
       openmdao.lib.components.external_code.ExternalCode = openmdao.lib.components.external_code:ExternalCode
-      openmdao.lib.components.metamodel.MetaModelBase = openmdao.lib.components.metamodel:MetaModelBase
       openmdao.lib.components.metamodel.MetaModel = openmdao.lib.components.metamodel:MetaModel
       openmdao.lib.components.mux.Mux = openmdao.lib.components.mux:Mux
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
