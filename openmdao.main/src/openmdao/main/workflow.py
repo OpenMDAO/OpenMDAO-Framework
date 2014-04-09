@@ -10,6 +10,7 @@ from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.mpiwrap import MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   transform_graph, collapse_subdrivers
+from openmdao.util.nameutil import partition_names_by_comp
 
 __all__ = ['Workflow']
 
@@ -218,8 +219,29 @@ class Workflow(object):
         """
         if self._wf_comp_graph is None:
             cgraph = self.scope._depgraph.component_graph().copy()
-            # TODO: add driver I/O data here...
-            self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
+
+            topdrv = self._parent.parent.driver
+            srcs, dests = topdrv.get_expr_var_depends(recurse=True,
+                                                      refs=True)
+            wfnames = set(self.get_names(full=True))
+            self._wf_comp_graph = wfgraph = cgraph.subgraph(wfnames)
+
+            # get ALL driver inputs and outputs and label the
+            # appropriate graph nodes so we can use that during
+            # decomposition
+            comp_ins = partition_names_by_comp(dests)
+            comp_outs = partition_names_by_comp(srcs)
+            for cname, inputs in comp_ins.items():
+                if cname in wfnames:
+                    drvins = wfgraph.node[cname].setdefault('drv_inputs',set())
+                    for inp in inputs:
+                        drvins.add(inp)
+            for cname, outputs in comp_outs.items():
+                if cname in wfnames:
+                    drvouts = wfgraph.node[cname].setdefault('drv_outputs',set())
+                    for out in outputs:
+                        drvouts.add(out)
+
         return self._wf_comp_graph
      
     ## MPI stuff ##
