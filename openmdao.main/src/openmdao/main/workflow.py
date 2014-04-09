@@ -205,10 +205,6 @@ class Workflow(object):
             # add all driver related 'connections'
             self._parent.add_driver_connections(graph, recurse=True)
 
-            # mpiprint("before pruning:")
-            # for u,v,data in graph.edges(data=True):
-            #     mpiprint("(%s,%s): %s" % (u,v,data.get("var_edges")))
-
             # remove all unconnected variables and components, 
             # and only what's relevant remains
             graph.prune_unconnected()
@@ -222,53 +218,37 @@ class Workflow(object):
         """
         if self._wf_comp_graph is None:
             cgraph = self.scope._depgraph.component_graph().copy()
+            # TODO: add driver I/O data here...
             self._wf_comp_graph = cgraph.subgraph(self.get_names(full=True))
         return self._wf_comp_graph
-
-    # def add_driver_connections(self, g):
-    #     """Add edges in the workflow component graph to represent dependencies
-    #     between a comp and a driver if that comp is connected to any comps 
-    #     inside of the driver's iteration set.
-    #     """
-    #     scope = self.scope
-    #     dconns = []
-    #     for node in g:
-    #         comp = getattr(scope, node)
-    #         if has_interface(comp, IDriver):
-    #             iterset = [c.name for c in comp.iteration_set()]
-    #             for itercomp in iterset:
-    #                 for u,v in g.edges_iter(itercomp):
-    #                     if v not in iterset:
-    #                         dconns.append((node, v))
-    #                 for u,v in g.in_edges_iter(itercomp):
-    #                     if u not in iterset:
-    #                         dconns.append((u, node))
-
-    #     g.add_edges_from(dconns)
-
-    #     # now add metadata to indicate which vars are set or retrieved from
-    #     # our parent driver
-    #     srcset, destset = self._parent.get_expr_var_depends()
-
-    #     # now add variables that are connected inputs or outputs
-    #     wfgraph = self.get_graph()
-
-    #     conns = wfgraph.list_connections()
-
-    #     srcset.update([src for src,dest in conns])
-    #     destset.update([dest for src,dest in conns])
-
-    #     for name in srcset:
-    #         parts = name.split('.', 1)
-    #         if len(parts) > 1 and parts[0] in g:
-    #             g.node[parts[0]].setdefault('inputs', set()).add(parts[1])
-                
-    #     for name in destset:
-    #         parts = name.split('.', 1)
-    #         if len(parts) > 1 and parts[0] in g:
-    #             g.node[parts[0]].setdefault('outputs', set()).add(parts[1])
      
     ## MPI stuff ##
+
+    # def _add_driver_deps(self):
+    #     """Adds driver dependencies to the inputs and outputs metadata
+    #     in the component graph.
+    #     """
+
+    #     if hasattr(self, '_delegates_'):
+    #         for dname, dclass in self._delegates_.items():
+    #             delegate = getattr(self, dname)
+    #             if isinstance(delegate, HasParameters):
+    #                 for param in delegate.list_param_targets():
+    #                     graph.add_edge(self.name, param, drv_conn=self.name)
+    #                     #mpiprint("!!!!!param = %s" % param)
+    #             elif isinstance(delegate, (HasConstraints,
+    #                                  HasEqConstraints, HasIneqConstraints)):
+    #                 for cnst in delegate.list_constraint_targets():
+    #                     #mpiprint("!!!!!cnst = %s" % cnst)
+    #                     graph.add_edge(cnst, self.name, drv_conn=self.name)
+    #             elif isinstance(delegate, (HasObjective, HasObjectives)):
+    #                 for obj in delegate.list_objective_targets():
+    #                     #mpiprint("!!!!!obj = %s" % obj)
+    #                     graph.add_edge(obj, self.name, drv_conn=self.name)
+
+    #         if recurse:
+    #             for sub in self.subdrivers():
+    #                 sub.add_driver_connections(graph, recurse=recurse)
 
     def _get_subsystem(self):
         """Get the serial/parallel subsystem for this workflow. Each
@@ -278,19 +258,25 @@ class Workflow(object):
         if self._subsystem is None:
             scope = self.scope
 
-            drvgraph = self.get_driver_graph()
+            #drvgraph = self.get_driver_graph()
 
             # first, get the component subgraph that is limited to 
-            # the components in this workflow.
-            cgraph = drvgraph.component_graph(driver=True)
+            # the components in this workflow, but has extra edges
+            # due to driver dependencies.
+            cgraph = self.get_comp_graph().copy()
 
+            # collapse driver iteration sets into a single node for
+            # the driver, except for nodes from their iteration set
+            # that are in the iteration set of their parent.
+            # TODO: what about nodes in the itersets of sibling drivers?
+            #    - this is starting to remind me very much of PseudoAssembly
             collapse_subdrivers(cgraph, self._parent)
-            cgraph.remove_node(self._parent.name)
+            #cgraph.remove_node(self._parent.name)
 
             #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
-            # collapse the graph (recursively) with the parallel
-            # branches collapsed into single nodes with tuple names
+            # collapse the graph (recursively) into nodes representing
+            # serial and parallel subsystems
             transform_graph(cgraph, scope)
 
             #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
@@ -305,24 +291,11 @@ class Workflow(object):
             else:
                 self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
 
-        #mpiprint("got subsystem %s" % self._subsystem.name)
         return self._subsystem
 
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self._get_subsystem().get_req_cpus()
-
-    # def get_vector_vars(self):
-    #     """Assemble an ordereddict of names of variables needed by this
-    #     workflow, which includes any that its parent driver(s) reference
-    #     in parameters, constraints, or objectives, as well as any used to 
-    #     connect any components in this workflow, AND any returned from
-    #     calling get_vector_vars on any subsystems in this workflow.
-    #     """
-    #     return self._get_subsystem().get_vector_vars(self.scope)
-
-    def setup_sizes(self, variables):
-        return self._get_subsystem().setup_sizes(variables)
 
     def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our
@@ -330,3 +303,9 @@ class Workflow(object):
         """
         self.mpi.comm = comm
         self._get_subsystem().setup_communicators(comm, scope)
+
+    def setup_variables(self):
+        return self._get_subsystem().setup_variables()
+
+    def setup_sizes(self):
+        return self._get_subsystem().setup_sizes(scope=self.scope)

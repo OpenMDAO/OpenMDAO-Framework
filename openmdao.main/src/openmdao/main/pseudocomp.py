@@ -2,7 +2,7 @@
 import ast
 from threading import RLock
 
-from openmdao.main.array_helpers import flattened_size_info
+from openmdao.main.array_helpers import flattened_size, flattened_size_info
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
@@ -338,6 +338,9 @@ class PseudoComponent(object):
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
+
+    def setup_variables(self):
+        pass
 
     def get_float_var_size(self, name):
         """Returns the local flattened size of the value of the 

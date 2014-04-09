@@ -75,6 +75,7 @@ def _setup_mpi(obj):
     MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
 
     obj.setup_communicators(MPI.COMM_WORLD)
+    obj.setup_variables()
     obj.setup_sizes()
     obj.setup_vectors()
     #obj.setup_scatters()

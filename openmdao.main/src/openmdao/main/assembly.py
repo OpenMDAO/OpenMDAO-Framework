@@ -1334,6 +1334,14 @@ class Assembly(Component):
         """Return requested_cpus"""
         return self.driver.get_req_cpus()
 
+    def setup_communicators(self, comm, scope=None):
+        super(Assembly, self).setup_communicators(comm, scope)
+        self.driver.setup_communicators(comm)
+        
+    def setup_variables(self):
+        super(Assembly, self).setup_variables()
+        self.driver.setup_variables()
+
     def _get_vector_vars(self):
         """Return an ordereddict of names of variables needed by 
         subsystems in this Assembly. This includes all variables
@@ -1401,84 +1409,56 @@ class Assembly(Component):
 
         return variables
  
-    def setup_sizes(self, variables=None):
+    def setup_sizes(self, scope=None):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
-        # determine the list of variables used to build the
-        # distributed vector(s)
-        self.all_vector_vars = self._get_vector_vars()
-        sizes_add, sizes_noadd = _partition_subvars(self.all_vector_vars.keys(),
-                                                    self.all_vector_vars)
+        # # determine the list of variables used to build the
+        # # distributed vector(s)
+        # self.all_vector_vars = self._get_vector_vars()
+        # sizes_add, sizes_noadd = _partition_subvars(self.all_vector_vars.keys(),
+        #                                             self.all_vector_vars)
 
-        # this will calculate sizes for any subassemblies
-        self.driver.setup_sizes(self.all_vector_vars)
+        # # this will calculate sizes for any subassemblies
+        # self.driver.setup_sizes(self.all_vector_vars)
+        self.driver.setup_sizes()
 
-        comm = self.mpi.comm
+        # comm = self.mpi.comm
 
-        # create an (nproc x numvars) var size vector containing 
-        # local sizes across all processes in our comm
-        self.local_var_sizes = numpy.zeros((comm.size, len(sizes_add)), 
-                                           int)
-        rank = comm.rank
-        self.vector_vars = OrderedDict()
-        for i, name in enumerate(sizes_add):
-            self.vector_vars[name] = var = self.all_vector_vars[name]
-            self.local_var_sizes[rank, i] = var['size']
+        # # create an (nproc x numvars) var size vector containing 
+        # # local sizes across all processes in our comm
+        # self.local_var_sizes = numpy.zeros((comm.size, len(sizes_add)), 
+        #                                    int)
+        # rank = comm.rank
+        # self.vector_vars = OrderedDict()
+        # for i, name in enumerate(sizes_add):
+        #     self.vector_vars[name] = var = self.all_vector_vars[name]
+        #     self.local_var_sizes[rank, i] = var['size']
 
-        # collect local var sizes from all of the processes in our comm
-        # these sizes will be the same in all processes except in cases
-        # where a variable belongs to a multiprocessor component.  In that
-        # case, the part of the component that runs in a given process will
-        # only have a slice of each of the component's variables.
-        comm.Allgather(self.local_var_sizes[rank,:], 
-                       self.local_var_sizes)
+        # # collect local var sizes from all of the processes in our comm
+        # # these sizes will be the same in all processes except in cases
+        # # where a variable belongs to a multiprocessor component.  In that
+        # # case, the part of the component that runs in a given process will
+        # # only have a slice of each of the component's variables.
+        # comm.Allgather(self.local_var_sizes[rank,:], 
+        #                self.local_var_sizes)
 
-        mpiprint("local sizes = %s" % self.local_var_sizes[rank,:])
+        # mpiprint("local sizes = %s" % self.local_var_sizes[rank,:])
 
-        # create a (1 x nproc) vector for the sizes of all of our 
-        # local inputs
-        self.input_sizes = numpy.zeros(comm.size, int)
+        # # create a (1 x nproc) vector for the sizes of all of our 
+        # # local inputs
+        # self.input_sizes = numpy.zeros(comm.size, int)
 
-        #comm.Allgather(self.input_sizes, ???)
+        # #comm.Allgather(self.input_sizes, ???)
 
     def setup_vectors(self):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        self.uVec = VecWrapper(self, self.all_vector_vars.keys())
+        self.driver.setup_vectors()
+
+        #self.uVec = VecWrapper(self, self.all_vector_vars.keys())
         #self.pVec = VecWrapper(self, ???)
-
-    def setup_communicators(self, comm, scope=None):
-        super(Assembly, self).setup_communicators(comm, scope)
-        self.driver.setup_communicators(comm)
-        
-
-def _partition_subvars(names, vardict):
-    """If a subvar has a basevar that is also included in a
-    var vector, then the size of the subvar does not add
-    to the total size of the var vector because it's size
-    is already included in its basevar size.
-
-    This method returns (sizes, nosizes), where sizes is a list 
-    of vars/subvars that add to the size of the var vector and 
-    nosizes is a list of subvars that do not.
-
-    names are assumed to be sorted such that a basevar will
-    always be found in the list before any of its subvars.
-    """
-    nameset = set()
-    nosizes = []
-    sizes = []
-    for name in names:
-        base = vardict[name].get('basevar')
-        if base and base in nameset:
-            nosizes.append(name)
-        else:
-            sizes.append(name)
-        nameset.add(name)
-
-    return (sizes, nosizes)
 
 
 class VecWrapper(object):

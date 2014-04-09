@@ -2,8 +2,11 @@ import sys
 from StringIO import StringIO
 from networkx import topological_sort
 from collections import OrderedDict
+from itertools import chain
 
 from networkx import edge_boundary
+
+import numpy
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.pseudocomp import PseudoComponent
@@ -19,42 +22,97 @@ class System(object):
         self.local_comps = []
         self.mpi = MPI_info()
         self.mpi.req_cpus = None
-        self.variables = OrderedDict()
+        self.all_variables = OrderedDict()
 
     def get_req_cpus(self):
         return self.mpi.req_cpus
 
-    def setup_sizes(self, variables):
+    def setup_variables(self):
+        for comp in self.local_comps:
+            comp.setup_variables()
+
+        g = self.graph.graph
+        for vname in chain(g.get('inputs',()), g.get('outputs',())):
+            self.all_variables[vname] = { 'size': 0 }         
+
+    def setup_sizes(self, scope):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
 
         comps = dict([(c.name, c) for c in self.local_comps])
 
-        for name in variables.keys():
-            parts = name.split('.', 1)
-            if len(parts) > 1:
-                cname, vname = parts
-                comp = comps.get(cname)
-                if comp is not None:
-                    sz = comp.get_float_var_size(vname)
-                    vdict = variables[name]
-                    if sz is not None:
-                        sz, flat_idx, base = sz
-                        vdict['size'] = sz
-                        if flat_idx is not None:
-                            vdict['flat_idx'] = flat_idx
-                    self.variables[name] = vdict.copy()
+        # for name in variables.keys():
+        #     parts = name.split('.', 1)
+        #     if len(parts) > 1:
+        #         cname, vname = parts
+        #         comp = comps.get(cname)
+        #         if comp is not None:
+        #             sz = comp.get_float_var_size(vname)
+        #             vdict = variables[name]
+        #             if sz is not None:
+        #                 sz, flat_idx, base = sz
+        #                 vdict['size'] = sz
+        #                 if flat_idx is not None:
+        #                     vdict['flat_idx'] = flat_idx
+
+        for i, (name, vdict) in enumerate(self.all_variables.items()):
+            cname, vname = name.split('.',1)
+            comp = comps.get(cname)
+            if comp is not None:
+                info = comp.get_float_var_size(vname)
+                if info is not None:
+                    sz, flat_idx, base = info
+                    vdict['size'] = sz
+                    if flat_idx is not None:
+                        vdict['flat_idx'] = flat_idx
+
+        comm = self.mpi.comm
+
+        sizes_add, sizes_noadd = _partition_subvars(scope._depgraph,
+                                                    self.all_variables.keys(),
+                                                    self.all_variables)
+
+        # create an (nproc x numvars) var size vector containing 
+        # local sizes across all processes in our comm
+        self.local_var_sizes = numpy.zeros((comm.size, len(sizes_add)), 
+                                           int)
+
+        self.variables = OrderedDict()
+        for name, var in self.all_variables.items():
+            self.variables[name] = var
+        
+        rank = comm.rank
+        for i, (name, var) in enumerate(self.variables.items()):
+            self.local_var_sizes[rank, i] = var['size']
+
+        # collect local var sizes from all of the processes in our comm
+        # these sizes will be the same in all processes except in cases
+        # where a variable belongs to a multiprocessor component.  In that
+        # case, the part of the component that runs in a given process will
+        # only have a slice of each of the component's variables.
+        comm.Allgather(self.local_var_sizes[rank,:], 
+                       self.local_var_sizes)
+
+        mpiprint("local sizes = %s" % self.local_var_sizes[rank,:])
+
+        # create a (1 x nproc) vector for the sizes of all of our 
+        # local inputs
+        self.input_sizes = numpy.zeros(comm.size, int)
 
         # pass the call down to any subdrivers/subsystems
-        # and subassemblies. subassemblies will ignore the
-        # variables passed into them in this case.
+        # and subassemblies. components will ignore the
+        # scope passed into them in this case.
         for comp in self.local_comps:
-            comp.setup_sizes(variables)
+            comp.setup_sizes(scope)
+            
+    def setup_vectors(self):
+        """Creates vector wrapper objects to manage local and
+        distributed vectors need to solve the distributed system.
+        """
+        self.uVec = VecWrapper(self, self.variables.keys())
+        #self.pVec = VecWrapper(self, ???)
 
-        return self.variables
-            
-            
     def dump_parallel_graph(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
         execution graph (with groups of component nodes collapsed
@@ -99,6 +157,7 @@ class SerialSystem(System):
         cpus = []
         for node, data in graph.nodes_iter(data=True):
             if isinstance(node, tuple):
+                #mpiprint("%d getting system for %s %s" % (id(graph), type(node),str(node)))
                 cpus.append(data['system'].get_req_cpus())
             else:
                 cpus.append(getattr(scope, node).get_req_cpus())
@@ -255,7 +314,7 @@ class ParallelSystem(System):
 
 def transform_graph(g, scope):
     """Return a nested graph with metadata for parallel
-    and serial subworkflows.
+    and serial subworkflows.  Graph must have no cycles.
     """
     if len(g) < 2:
         return g
@@ -264,6 +323,7 @@ def transform_graph(g, scope):
 
     to_remove = []
 
+    #mpiprint("transforming graph %d: %s" % (id(g),g.nodes()))
     while len(gcopy) > 1:
         # find all nodes with in degree 0. If we find 
         # more than one, we can execute them in parallel
@@ -284,6 +344,7 @@ def transform_graph(g, scope):
                     to_remove.extend(branch)
                     subg = _precollapse(scope, g, branch)
                     transform_graph(subg, scope)
+                    #mpiprint("%d adding system for %s %s" % (id(g),type(branch),str(branch)))
                     g.node[branch]['system'] = SerialSystem(subg, scope)
                     gcopy.remove_nodes_from(branch)
                 else:
@@ -292,12 +353,14 @@ def transform_graph(g, scope):
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
             subg = _precollapse(scope, g, parallel_group)
+            #mpiprint("%d adding system for %s %s" % (id(g),type(parallel_group),str(parallel_group)))
             g.node[parallel_group]['system'] = ParallelSystem(subg, scope)
         else:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
 
     # Now remove all of the old nodes
     g.remove_nodes_from(to_remove)
+    #mpiprint("graph %d post transform: %s" % (id(g),g.nodes()))
     
 def collapse_subdrivers(g, driver):
     """collapse subdriver iteration sets into single nodes."""
@@ -332,11 +395,12 @@ def _precollapse(scope, g, nodes, newname=None):
     """
     if newname is None:
         # combine node names into a single tuple if new name not given
-        newname = tuple(sorted(nodes))
+        newname = tuple(nodes)
 
     # create a subgraph containing all of the collapsed nodes
     # inside of the new node
     subg = g.subgraph(nodes).copy()
+    #mpiprint("%d precollapse: subgraph %s" % (id(subg),subg.nodes()))
 
     #mpiprint("collapsing %s" % list(nodes))
 
@@ -354,19 +418,24 @@ def _precollapse(scope, g, nodes, newname=None):
 
     #mpiprint("collapsing edges: %s" % collapsing_edges)
     xfers = {}
+    subg.graph['inputs'] = inputs = []
+    subg.graph['outputs'] = outputs = []
     for u,v in out_edges:
         var_edges = g.edge[u][v].get('var_edges', ())
         #mpiprint("adding edge (%s,%s)" % (newname, v))
         g.add_edge(newname, v)
         xfers.setdefault((newname, v), []).extend(var_edges)
+        outputs.extend([u for u,v in var_edges])
 
     for u,v in in_edges:
         var_edges = g.edge[u][v].get('var_edges', ())
         #mpiprint("adding edge (%s,%s)" % (u, newname))
         g.add_edge(u, newname)
         xfers.setdefault((u, newname), []).extend(var_edges)
+        inputs.extend([v for u,v in var_edges])
 
     # save the collapsed edges in the metadata of the new edges
+    # so each subsystem knows what its inputs and outputs are
     for edge, var_edges in xfers.items():
         g[edge[0]][edge[1]]['var_edges'] = var_edges
 
@@ -390,3 +459,29 @@ def get_branch(g, node, visited=None):
             branch.extend(get_branch(g, succ, visited))
     return branch
 
+
+def _partition_subvars(graph, names, vardict):
+    """If a subvar has a basevar that is also included in a
+    var vector, then the size of the subvar does not add
+    to the total size of the var vector because it's size
+    is already included in its basevar size.
+
+    This method returns (sizes, nosizes), where sizes is a list 
+    of vars/subvars that add to the size of the var vector and 
+    nosizes is a list of subvars that do not.
+
+    names are assumed to be sorted such that a basevar will
+    always be found in the list before any of its subvars.
+    """
+    nameset = set()
+    nosizes = []
+    sizes = []
+    for name in names:
+        base = graph.node[name].get('basevar')
+        if base and base in nameset:
+            nosizes.append(name)
+        else:
+            sizes.append(name)
+        nameset.add(name)
+
+    return (sizes, nosizes)

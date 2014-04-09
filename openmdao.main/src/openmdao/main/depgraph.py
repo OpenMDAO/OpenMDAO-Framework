@@ -975,7 +975,7 @@ class DependencyGraph(nx.DiGraph):
 
         return conns
 
-    def component_graph(self, driver=False):
+    def component_graph(self):
         """Return a subgraph containing only Components
         and PseudoComponents and edges between them.
         """
@@ -988,7 +988,10 @@ class DependencyGraph(nx.DiGraph):
         for comp in compset:
             g.add_node(comp, self.node[comp].copy())
 
-        for src, dest in self.list_connections(driver=driver):
+        # create 'var_edges' metadata in graph edges to 
+        # indicate which edges from the variable graph have
+        # been collapsed. 
+        for src, dest in self.list_connections():
             destcomp = dest.split('.', 1)[0]
             srccomp  =  src.split('.', 1)[0]
             if srccomp in compset and destcomp in compset:

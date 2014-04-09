@@ -2136,7 +2136,13 @@ class Component(Container):
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
 
+    def setup_variables(self):
+        pass
+
     def setup_sizes(self, variables):
+        pass
+
+    def setup_vectors(self):
         pass
 
     def get_float_var_size(self, name):
