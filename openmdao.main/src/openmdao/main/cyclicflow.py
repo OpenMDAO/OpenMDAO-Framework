@@ -229,22 +229,24 @@ class CyclicWorkflow(SequentialWorkflow):
             signs on the constraints.
         """
 
-        deps = self._parent.eval_eq_constraints(self.scope)
+        parent = self._parent
+        deps = parent.eval_eq_constraints(self.scope)
 
         # Reorder for fixed point
         if fixed_point is True:
             newdeps = zeros(len(deps))
-            eqcons = self._parent.get_eq_constraints()
+            eqcons = parent.get_eq_constraints()
             old_j = 0
             for key, value in eqcons.iteritems():
                 con_targets = value.get_referenced_varpaths()
                 new_j = 0
-                for params in self._parent.list_param_group_targets():
+                width = value.size
+                for params in parent.list_param_group_targets():
                     if params[0] == value.rhs.text:
-                        newdeps[new_j] = deps[old_j]
+                        newdeps[new_j:new_j+width] = deps[old_j:old_j+width]
                     elif params[0] == value.lhs.text:
-                        newdeps[new_j] = -deps[old_j]
-                    new_j += 1
+                        newdeps[new_j:new_j+width] = -deps[old_j:old_j+width]
+                    new_j += width
                 old_j += 1
             deps = newdeps
 
