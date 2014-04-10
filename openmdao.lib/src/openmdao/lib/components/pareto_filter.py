@@ -50,12 +50,12 @@ class ParetoFilter(Component):
         input_tree = self.get('params')
         self._param_data = []
         for name in params:
-            input_tree.add(name, Array([0.0], desc='ParetoFilter input'))
+            input_tree.add(name, List([], desc='ParetoFilter input'))
 
         output_tree = self.get('responses')
         self._response_data = {}
         for name in responses:
-            output_tree.add(name, Array([0.0], desc='ParetoFilter response'))
+            output_tree.add(name, List([], desc='ParetoFilter response'))
 
         self._input_names = params
         self._output_names = responses

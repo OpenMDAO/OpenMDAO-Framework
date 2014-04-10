@@ -7,7 +7,7 @@
 from copy import deepcopy
 
 from openmdao.main.api import Component
-from openmdao.main.datatypes.api import Array, Bool, Dict, Float, Slot, Str, \
+from openmdao.main.datatypes.api import List, Bool, Dict, Float, Slot, Str, \
                                         VarTree
 from openmdao.main.datatypes.uncertaindist import UncertainDistVar
 from openmdao.main.interfaces import ISurrogate, ICaseRecorder, \
@@ -67,13 +67,13 @@ class MetaModel(Component):
         self._param_data = []
         for name in params:
             self.add(name, Float(0.0, iotype='in', desc='metamodel param'))
-            input_tree.add(name, Array([0.0], desc='training param'))
+            input_tree.add(name, List([], desc='training param'))
 
         output_tree = self.get('responses')
         self._response_data = {}
         for name in responses:
             self.add(name, Float(0.0, iotype='out', desc='metamodel response'))
-            output_tree.add(name, Array([0.0], desc='training response'))
+            output_tree.add(name, List([], desc='training response'))
             self._response_data[name] = []
 
         self._surrogate_input_names = params
