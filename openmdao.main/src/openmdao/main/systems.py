@@ -12,7 +12,7 @@ import numpy
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, get_petsc_vec
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
 #from openmdao.util.nameutil import partition_names_by_comp
@@ -57,10 +57,10 @@ class System(object):
             if vname not in self.all_variables:
                 self.all_variables[vname] = { 'size': 0 }
 
-        mpiprint("AFTER setup_variables, %s has %s" % (self.name,
-                                                       self.all_variables.keys()))
+        #mpiprint("AFTER setup_variables, %s has %s" % (self.name,
+        #                                               self.all_variables.keys()))
         
-    def setup_sizes(self, scope):
+    def setup_sizes(self):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
@@ -128,13 +128,12 @@ class System(object):
         mpiprint("input sizes for %s = %s" % (self.name, self.input_sizes))
 
         # pass the call down to any subdrivers/subsystems
-        # and subassemblies. components will ignore the
-        # scope passed into them in this case.
+        # and subassemblies. 
         for sub in self.subsystems:
-            sub.setup_sizes(scope)
+            sub.setup_sizes()
 
-        mpiprint("AFTER setup_sizes in %s, variables=%s" % (self.name, self.variables.keys()))
-        mpiprint("AFTER setup_sizes in %s, local_sizes=%s" % (self.name, self.local_var_sizes[rank]))
+        #mpiprint("AFTER setup_sizes in %s, variables=%s" % (self.name, self.variables.keys()))
+        #mpiprint("AFTER setup_sizes in %s, local_sizes=%s" % (self.name, self.local_var_sizes[rank]))
             
     def setup_vectors(self, arrays):
         """Creates vector wrapper objects to manage local and
@@ -152,9 +151,9 @@ class System(object):
                 arrays[name] = self.vec[name].array
         else: # if we're the top level, we don't need input arrays
 
-            for name, vec in arrays.items():
-                mpiprint("TOTAL LOC SIZE for %s = %d" % (self.name, vec.size))
-                self.vec[name] = VecWrapper(self, vec)
+            for name, arr in arrays.items():
+                mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
+                self.vec[name] = VecWrapper(self, arr)
 
             insize = self.input_sizes[rank]
             # for name in ['p', 'dp']:
@@ -164,7 +163,7 @@ class System(object):
         for sub in self.subsystems:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.comm.rank, :])
             end += sz
-            mpiprint("%s: passing [%d,%d] view of size %d array to %s" % 
+            mpiprint("%s: PASSING [%d,%d] view of size %d array to %s" % 
                         (self.name,start,end,arrays['u'].size,sub.name))
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
                                         ['u']])) #, 'f', 'du', 'df']]))
@@ -238,13 +237,31 @@ class DriverSystem(SimpleSystem):
         self.mpi.comm = comm
         self.subsystems = [self._comp.workflow.get_subsystem()]
 
-    
+
+class AssemblySystem(SimpleSystem):
+    """A System to handle an Assembly."""
+
+    def setup_communicators(self, comm, scope):
+        super(AssemblySystem, self).setup_communicators(comm, None)
+        self._comp.setup_communicators(comm)
+
+    def setup_variables(self):
+        self._comp.setup_variables()
+
+    def setup_sizes(self):
+        self._comp.setup_sizes()
+
+    def setup_vectors(self, arrays):
+        self._comp.setup_vectors()
+
+
 class CompoundSystem(System):
     def __init__(self, graph, scope):
         super(CompoundSystem, self).__init__(graph)
         for node, data in self.graph.nodes_iter(data=True):
             if isinstance(node, basestring):
                 _create_simple_sys(graph, scope, node)
+
 
 class SerialSystem(CompoundSystem):
 
@@ -396,6 +413,8 @@ def _create_simple_sys(g, scope, name):
     subg = _precollapse(scope, g, (name,), newname=name)
     if has_interface(comp, IDriver):
         g.node[name]['system'] = DriverSystem(subg, scope)
+    elif has_interface(comp, IAssembly):
+        g.node[name]['system'] = AssemblySystem(subg, scope)
     else:
         g.node[name]['system'] = SimpleSystem(subg, scope)
 

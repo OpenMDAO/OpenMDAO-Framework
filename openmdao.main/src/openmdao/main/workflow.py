@@ -333,7 +333,7 @@ class Workflow(object):
         return self.get_subsystem().setup_variables()
 
     def setup_sizes(self):
-        return self.get_subsystem().setup_sizes(scope=self.scope)
+        return self.get_subsystem().setup_sizes()
 
     def setup_vectors(self, arrays=None):
         return self.get_subsystem().setup_vectors(arrays)

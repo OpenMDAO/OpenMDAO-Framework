@@ -2142,7 +2142,7 @@ class Component(Container):
     def get_variables(self):
         return {}
 
-    def setup_sizes(self, variables):
+    def setup_sizes(self):
         pass
 
     def setup_vectors(self, arrays=None):

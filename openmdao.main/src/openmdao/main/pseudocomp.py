@@ -330,7 +330,7 @@ class PseudoComponent(object):
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
-    def setup_sizes(self, variables):
+    def setup_sizes(self):
         pass
 
     def get_req_cpus(self):

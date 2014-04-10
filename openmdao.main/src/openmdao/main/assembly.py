@@ -1345,7 +1345,7 @@ class Assembly(Component):
         # FIXME: need to add boundary vars somewhere if they
         #        connect internally
  
-    def setup_sizes(self, scope=None):
+    def setup_sizes(self):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
