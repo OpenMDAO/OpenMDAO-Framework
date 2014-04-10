@@ -342,7 +342,10 @@ class PseudoComponent(object):
     def setup_variables(self):
         pass
 
-    def setup_vectors(self, vecs=None):
+    def get_variables(self):
+        return {}
+
+    def setup_vectors(self, arrays=None):
         pass
 
     def get_float_var_info(self, name):

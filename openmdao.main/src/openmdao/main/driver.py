@@ -193,9 +193,11 @@ class Driver(Component):
                 if isinstance(delegate, HasParameters):
                     destset.update(delegate.get_referenced_varpaths(refs=refs))
                 elif isinstance(delegate, (HasConstraints,
-                                     HasEqConstraints, HasIneqConstraints,
-                                     HasObjective, HasObjectives)):
-                    srcset.update(delegate.get_referenced_varpaths(refs=refs))
+                                     HasEqConstraints, HasIneqConstraints)):
+                    srcset.update(delegate.list_constraint_targets())
+                elif isinstance(delegate,
+                                 (HasObjective, HasObjectives)):
+                    srcset.update(delegate.list_objective_targets())
 
             if recurse:
                 for sub in self.subdrivers():
@@ -655,8 +657,8 @@ class Driver(Component):
     def setup_sizes(self):
         return self.workflow.setup_sizes()
 
-    def setup_vectors(self, vecs=None):
-        return self.workflow.setup_vectors(vecs)
+    def setup_vectors(self, arrays=None):
+        return self.workflow.setup_vectors(arrays)
 
 
 class Run_Once(Driver):

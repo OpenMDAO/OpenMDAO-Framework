@@ -50,14 +50,14 @@ class ABCDArrayComp(Component):
 def _get_model():
     top = set_as_top(Assembly())
     top.add('driver', NTimes(3))
-    for i in range(1,5):
+    for i in range(1,3):
         name = 'C%d' % i
         top.add(name, ABCDArrayComp())
         top.driver.workflow.add(name)
         getattr(top, name).mpi.requested_cpus = 1
 
     top.driver.add_parameter('C1.a[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C2.d[0]>C3.d[0]') 
+    top.driver.add_constraint('C1.d[0]>C2.d[0]') 
     
     return top
 
@@ -144,14 +144,14 @@ def _get_model_nested_drivers():
 if __name__ == '__main__':
     from openmdao.main.mpiwrap import MPI_run, under_mpirun
 
-    top = _get_model1()
+    top = _get_model()
 
     MPI_run(top)
 
     if under_mpirun():
-        mpiprint(top.driver.workflow._subsystem.dump_parallel_graph(stream=None))
-        #mpiprint(top.driver.workflow._subsystem.dump_variables(stream=None))
-        #mpiprint(top.subdriver.workflow._subsystem.dump_parallel_graph(stream=None))
+        mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
+        #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
+        #mpiprint(top.subdriver.workflow._subsystem.dump_subsystem_tree(stream=None))
 
         
 

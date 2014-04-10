@@ -9,7 +9,7 @@ from openmdao.main.pseudocomp import PseudoComponent
 #from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  transform_graph, collapse_subdrivers
+                                  partition_subsystems, collapse_subdrivers
 from openmdao.util.nameutil import partition_names_by_comp
 
 __all__ = ['Workflow']
@@ -223,6 +223,9 @@ class Workflow(object):
             topdrv = self._parent.parent.driver
             srcs, dests = topdrv.get_expr_var_depends(recurse=True,
                                                       refs=True)
+
+            #mpiprint("DRIVER SRCS: %s" % srcs)
+            #mpiprint("DRIVER DESTS: %s" % dests)
             wfnames = set(self.get_names(full=True))
             self._wf_comp_graph = wfgraph = cgraph.subgraph(wfnames)
 
@@ -233,12 +236,12 @@ class Workflow(object):
             comp_outs = partition_names_by_comp(srcs)
             for cname, inputs in comp_ins.items():
                 if cname in wfnames:
-                    drvins = wfgraph.node[cname].setdefault('drv_inputs',set())
+                    drvins = wfgraph.node[cname].setdefault('inputs',set())
                     for inp in inputs:
                         drvins.add('.'.join((cname,inp)))
             for cname, outputs in comp_outs.items():
                 if cname in wfnames:
-                    drvouts = wfgraph.node[cname].setdefault('drv_outputs',set())
+                    drvouts = wfgraph.node[cname].setdefault('outputs',set())
                     for out in outputs:
                         drvouts.add('.'.join((cname,out)))
 
@@ -272,7 +275,7 @@ class Workflow(object):
     #             for sub in self.subdrivers():
     #                 sub.add_driver_connections(graph, recurse=recurse)
 
-    def _get_subsystem(self):
+    def get_subsystem(self):
         """Get the serial/parallel subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component 
         graph, which contains components and/or other subsystems.
@@ -299,7 +302,7 @@ class Workflow(object):
 
             # collapse the graph (recursively) into nodes representing
             # serial and parallel subsystems
-            transform_graph(cgraph, scope)
+            partition_subsystems(cgraph, scope)
 
             #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
             #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
@@ -317,20 +320,20 @@ class Workflow(object):
 
     def get_req_cpus(self):
         """Return requested_cpus"""
-        return self._get_subsystem().get_req_cpus()
+        return self.get_subsystem().get_req_cpus()
 
     def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our
         child Components.
         """
         self.mpi.comm = comm
-        self._get_subsystem().setup_communicators(comm, scope)
+        self.get_subsystem().setup_communicators(comm, scope)
 
     def setup_variables(self):
-        return self._get_subsystem().setup_variables()
+        return self.get_subsystem().setup_variables()
 
     def setup_sizes(self):
-        return self._get_subsystem().setup_sizes(scope=self.scope)
+        return self.get_subsystem().setup_sizes(scope=self.scope)
 
-    def setup_vectors(self, vecs=None):
-        return self._get_subsystem().setup_vectors(vecs)
+    def setup_vectors(self, arrays=None):
+        return self.get_subsystem().setup_vectors(arrays)

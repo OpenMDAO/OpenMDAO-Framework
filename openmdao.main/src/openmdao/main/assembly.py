@@ -1334,135 +1334,30 @@ class Assembly(Component):
         return self.driver.get_req_cpus()
 
     def setup_communicators(self, comm, scope=None):
-        super(Assembly, self).setup_communicators(comm, scope)
         self.driver.setup_communicators(comm)
         
     def setup_variables(self):
-        super(Assembly, self).setup_variables()
         self.driver.setup_variables()
-
-    # def _get_vector_vars(self):
-    #     """Return an ordereddict of names of variables needed by 
-    #     subsystems in this Assembly. This includes all variables
-    #     that are inputs or outputs of connections, and all variables
-    #     that are driver inputs or outputs, i.e., parameters, objectives,
-    #     or constraints.  Entries are ordered by component.
-    #     """
-
-    #     # add all inputs first, then all outputs, so that after
-    #     # we group by component, component inputs and outputs
-    #     # will be contiguous.
-
-    #     # collect all vars involved in connections
-    #     conns = self._depgraph.list_connections()
-
-    #     # get any additional vars used as input or output to any
-    #     # drivers
-    #     srcs, dests = self.driver.get_expr_var_depends(recurse=True,
-    #                                                    refs=True)
-
-    #     allvars = set([u for u,v in conns])
-    #     allvars.update([v for u,v in conns])
-    #     allvars.update(srcs)
-    #     allvars.update(dests)
-
-    #     # find all boundary vars (used in partition_names_by_comp
-    #     # to identify vartree boundary subvars).
-    #     bndry_vars = set(self._depgraph.get_boundary_inputs())
-    #     bndry_vars.update(self._depgraph.get_boundary_outputs())
-
-    #     # create input and output lists (not ordered by comp). 
-    #     inputs = []
-    #     outputs = []
-    #     graph = self._depgraph
-    #     data = graph.node
-
-    #     for name in allvars:
-    #         base = graph.base_var(name)
-    #         if base != name: # it's a subvar
-    #             iotype = data[base].get('iotype')
-    #         else:
-    #             iotype = data[name].get('iotype')
-    #         if iotype in ['in', 'state']:
-    #             inputs.append(name)
-    #         else:
-    #             outputs.append(name)
-
-    #     inputs.sort()
-    #     outputs.sort()
-
-    #     # now group them by comp, maintaining their former order
-    #     # within a comp
-    #     compdict = OrderedDict()
-    #     partition_names_by_comp(chain(inputs, outputs), compdict, 
-    #                             boundary_vars=bndry_vars)
-
-    #     # reassemble the list from the component dict
-    #     variables = OrderedDict()
-    #     for cname, vnames in compdict.items():
-    #         for vname in vnames:
-    #             name = vname if cname is None else '.'.join((cname,vname))
-    #             variables[name] = var = { 'size': 0 }
-    #             if is_subvar_node(graph, name):
-    #                 var['basevar'] = graph.base_var(name)
-
-    #     return variables
+        # find all boundary vars (used in partition_names_by_comp
+        # to identify vartree boundary subvars).
+        bndry_vars = sorted(self._depgraph.get_boundary_inputs()) + \
+                     sorted(self._depgraph.get_boundary_outputs())
+        # FIXME: need to add boundary vars somewhere if they
+        #        connect internally
  
     def setup_sizes(self, scope=None):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
-        # # determine the list of variables used to build the
-        # # distributed vector(s)
-        # self.all_vector_vars = self._get_vector_vars()
-        # sizes_add, sizes_noadd = _partition_subvars(self.all_vector_vars.keys(),
-        #                                             self.all_vector_vars)
-
-        # # this will calculate sizes for any subassemblies
+        # # this will calculate sizes for all subsystems
         # self.driver.setup_sizes(self.all_vector_vars)
         self.driver.setup_sizes()
 
-        # comm = self.mpi.comm
-
-        # # create an (nproc x numvars) var size vector containing 
-        # # local sizes across all processes in our comm
-        # self.local_var_sizes = numpy.zeros((comm.size, len(sizes_add)), 
-        #                                    int)
-        # rank = comm.rank
-        # self.vector_vars = OrderedDict()
-        # for i, name in enumerate(sizes_add):
-        #     self.vector_vars[name] = var = self.all_vector_vars[name]
-        #     self.local_var_sizes[rank, i] = var['size']
-
-        # # collect local var sizes from all of the processes in our comm
-        # # these sizes will be the same in all processes except in cases
-        # # where a variable belongs to a multiprocessor component.  In that
-        # # case, the part of the component that runs in a given process will
-        # # only have a slice of each of the component's variables.
-        # comm.Allgather(self.local_var_sizes[rank,:], 
-        #                self.local_var_sizes)
-
-        # mpiprint("local sizes = %s" % self.local_var_sizes[rank,:])
-
-        # # create a (1 x nproc) vector for the sizes of all of our 
-        # # local inputs
-        # self.input_sizes = numpy.zeros(comm.size, int)
-
-        # #comm.Allgather(self.input_sizes, ???)
-
-    def setup_vectors(self, vecs=None):
+    def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        if vecs is None:
-            # top level call, so create top level vectors and pass
-            # down.
-            pass
-            
         self.driver.setup_vectors()
-
-        #self.uVec = VecWrapper(self, self.all_vector_vars.keys())
-        #self.pVec = VecWrapper(self, ???)
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

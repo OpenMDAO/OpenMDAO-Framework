@@ -2139,10 +2139,13 @@ class Component(Container):
     def setup_variables(self):
         pass
 
+    def get_variables(self):
+        return {}
+
     def setup_sizes(self, variables):
         pass
 
-    def setup_vectors(self, vecs=None):
+    def setup_vectors(self, arrays=None):
         pass
 
     def get_float_var_info(self, name):

@@ -15,6 +15,7 @@ from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
+from openmdao.main.mpiwrap import mpiprint
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -987,17 +988,26 @@ class DependencyGraph(nx.DiGraph):
         g = nx.DiGraph()
         for comp in compset:
             g.add_node(comp, self.node[comp].copy())
+            g.node[comp]['inputs'] = set()
+            g.node[comp]['outputs'] = set()
 
         # create 'var_edges' metadata in graph edges to 
         # indicate which edges from the variable graph have
-        # been collapsed. 
+        # been collapsed, and mark active inputs and outputs
+        # in node metadata.
         for src, dest in self.list_connections():
             destcomp = dest.split('.', 1)[0]
-            srccomp  =  src.split('.', 1)[0]
+            srccomp =  src.split('.', 1)[0]
             if srccomp in compset and destcomp in compset:
                 g.add_edge(srccomp, destcomp)
                 g[srccomp][destcomp].setdefault('var_edges',[]).append((src,dest))
 
+            if srccomp in compset:
+                g.node[srccomp]['outputs'].add(src)
+
+            if destcomp in compset:
+                g.node[destcomp]['inputs'].add(dest)
+        
         self._component_graph = g
         return g
 
