@@ -6,11 +6,11 @@ from ordereddict import OrderedDict
 from networkx.algorithms.components import strongly_connected_components
 
 try:
-    from numpy import ndarray, hstack, zeros
+    from numpy import ndarray, hstack, zeros, array
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, hstack, zeros
+    from openmdao.main.numpy_fallback import ndarray, hstack, zeros, array
 
 
 from openmdao.main.array_helpers import flattened_value
@@ -230,7 +230,7 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         parent = self._parent
-        deps = parent.eval_eq_constraints(self.scope)
+        deps = array(parent.eval_eq_constraints(self.scope))
 
         # Reorder for fixed point
         if fixed_point is True:
@@ -247,7 +247,7 @@ class CyclicWorkflow(SequentialWorkflow):
                     elif params[0] == value.lhs.text:
                         newdeps[new_j:new_j+width] = -deps[old_j:old_j+width]
                     new_j += width
-                old_j += 1
+                old_j += width
             deps = newdeps
 
         sev_deps = []
