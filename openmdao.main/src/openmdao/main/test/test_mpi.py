@@ -144,7 +144,7 @@ def _get_model_nested_drivers():
 if __name__ == '__main__':
     from openmdao.main.mpiwrap import MPI_run, under_mpirun
 
-    top = _get_model()
+    top = _get_model1()
 
     MPI_run(top)
 

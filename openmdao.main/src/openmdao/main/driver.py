@@ -648,7 +648,6 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        super(Driver, self).setup_communicators(comm, scope)
         self.workflow.setup_communicators(comm, self.parent)
 
     def setup_variables(self):

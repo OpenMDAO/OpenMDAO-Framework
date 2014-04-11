@@ -50,7 +50,8 @@ def get_flattened_index(index, shape):
 
     idxs = ravel_multi_index(indices, dims=shape)
     if len(idxs) == 1:
-        return idxs[0]
+        _flat_idx_cache[(sindex, shape)] = slice(idxs[0], idxs[0]+1)
+        return slice(idxs[0], idxs[0]+1)
 
     # see if we can convert the discrete list of indices 
     # into a single slice object

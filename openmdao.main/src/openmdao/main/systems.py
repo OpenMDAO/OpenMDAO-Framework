@@ -49,12 +49,15 @@ class System(object):
 
         for sub in self.subsystems:
             sub.setup_variables()
+
+            #mpiprint("%s for SUB %s, adding vars %s" % (self.name,sub.name,sub.all_variables.keys()))
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
 
         for vname in chain(sorted(self.get_inputs()), 
                            sorted(self.get_outputs())):
             if vname not in self.all_variables:
+                #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
                 self.all_variables[vname] = { 'size': 0 }
 
         #mpiprint("AFTER setup_variables, %s has %s" % (self.name,
@@ -64,29 +67,17 @@ class System(object):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
-
-        subs = dict([(c.name, c) for c in self.subsystems])
-
-        for i, (name, vdict) in enumerate(self.all_variables.items()):
-            cname, vname = name.split('.',1)
-            sub = subs.get(cname)
-            if sub is not None: # only SimpleSystems will match cname
-                comp = sub._comp
-                info = comp.get_float_var_info(vname)
-                if info is not None:
-                    sz, flat_idx, base = info
-                    vdict['size'] = sz
-                    if flat_idx is not None:
-                        vdict['flat_idx'] = flat_idx
-                    if base is not None:
-                        vdict['basevar'] = base
-
         comm = self.mpi.comm
+
+        # pass the call down to any subdrivers/subsystems
+        # and subassemblies. 
+        for sub in self.subsystems:
+            sub.setup_sizes()
 
         sizes_add, sizes_noadd = _partition_subvars(self.all_variables.keys(),
                                                     self.all_variables)
 
-        mpiprint("in %s, add=%s, noadd = %s" % (self.name,sizes_add,sizes_noadd))
+        #mpiprint("in %s, add=%s, noadd = %s" % (self.name,sizes_add,sizes_noadd))
 
         # create an (nproc x numvars) var size vector containing 
         # local sizes across all processes in our comm
@@ -96,11 +87,14 @@ class System(object):
         self.variables = OrderedDict()
         for name in sizes_add:
             self.variables[name] = self.all_variables[name]
+
+        #mpiprint("%s setup_sizes: vars = %s" % (self.name, self.variables.keys()))
         
         rank = comm.rank
         for i, (name, var) in enumerate(self.variables.items()):
             self.local_var_sizes[rank, i] = var['size']
 
+        #mpiprint("%s before ALLGATHER: local_var_sizes[%d] = %s" % (self.name,rank,self.local_var_sizes[rank]))
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
@@ -113,6 +107,8 @@ class System(object):
         #for name, sz in zip(self.variables.keys(), self.local_var_sizes[rank, :]):
         #    mpiprint("%s ( %d )" % (name, sz))
 
+        mpiprint("%s local_var_sizes:\n %s" % (self.name, self.local_var_sizes))
+
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
         self.input_sizes = numpy.zeros(comm.size, int)
@@ -123,14 +119,13 @@ class System(object):
                                         for n,v in self.variables.items() 
                                            if n in inputs])
 
+        #mpiprint("%s before ALLGATHER: input_sizes[%d] = %s" % (self.name,rank,self.input_sizes[rank]))
         comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
-        mpiprint("input sizes for %s = %s" % (self.name, self.input_sizes))
-
-        # pass the call down to any subdrivers/subsystems
-        # and subassemblies. 
-        for sub in self.subsystems:
-            sub.setup_sizes()
+        #mpiprint("inputs = %s for %s" % ([(n,v['size'])
+        #                                     for n,v in self.variables.items() 
+        #                                   if n in inputs], self.name))
+        #mpiprint("input sizes for %s = %s" % (self.name,self.input_sizes[rank]))
 
         #mpiprint("AFTER setup_sizes in %s, variables=%s" % (self.name, self.variables.keys()))
         #mpiprint("AFTER setup_sizes in %s, local_sizes=%s" % (self.name, self.local_var_sizes[rank]))
@@ -145,26 +140,32 @@ class System(object):
             # create top level vectors            
             #mpiprint("**** setting up vectors for %s" % self.name)
             size = numpy.sum(self.local_var_sizes[rank, :])
-            mpiprint("TOTAL LOCAL SIZE for %s = %d" % (self.name, size))
+            #mpiprint("TOTAL LOCAL SIZE for %s (rank=%d) = %d" % (self.name, rank,size))
             for name in ['u']: #, 'f', 'du', 'df']:
+                #mpiprint("creating top level Vec in %s, size=%d" % (self.name,size))
                 self.vec[name] = VecWrapper(self, numpy.zeros(size))
                 arrays[name] = self.vec[name].array
         else: # if we're the top level, we don't need input arrays
 
-            for name, arr in arrays.items():
-                mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
-                self.vec[name] = VecWrapper(self, arr)
+            for name in ['u']: #, 'f', 'du', 'df']:
+                #mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
+                #mpiprint("creating Vec %s in %s, size=%d" % (name, self.name,arrays[name].size))
+                self.vec[name] = VecWrapper(self, arrays[name])
 
             insize = self.input_sizes[rank]
-            # for name in ['p', 'dp']:
-            #     self.vec[name] = VecWrapper(self, numpy.zeros(insize))
+            inputs = self.get_inputs()
+            for name in ['p']:#, 'dp']:
+                #mpiprint("creating input Vec %s in %s, size=%d" % (name, self.name,insize))
+                self.vec[name] = VecWrapper(self, numpy.zeros(insize), inputs=inputs)
 
         start, end = 0, 0
         for sub in self.subsystems:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.comm.rank, :])
+            #mpiprint("SUB %s says it has size %d" % (sub.name,sz))
             end += sz
-            mpiprint("%s: PASSING [%d,%d] view of size %d array to %s" % 
-                        (self.name,start,end,arrays['u'].size,sub.name))
+            if end-start >= arrays['u'][start:end].size:
+                mpiprint("PASSING [%d,%d] view of size %d array from %s to %s" % 
+                            (start,end,arrays['u'][start:end].size,self.name,sub.name))
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
                                         ['u']])) #, 'f', 'du', 'df']]))
             start += sz
@@ -183,13 +184,20 @@ class System(object):
 
         stream.write(" "*nest)
         stream.write(self.name)
-        stream.write(" [%s](req=%d)(rank=%d)\n" % (self.__class__.__name__, 
+        stream.write(" [%s](req=%d)(rank=%d)(u size=%d)(p size=%d)\n" % (self.__class__.__name__, 
                                                    self.get_req_cpus(), 
-                                                   MPI.COMM_WORLD.rank))
+                                                   MPI.COMM_WORLD.rank,
+                                                   self.vec['u'].array.size,
+                                                   self.input_sizes[self.mpi.comm.rank]))
+        inputs = self.get_inputs()
+
         #for v, data in self.all_variables.items():
         for v, (arr, start) in self.vec['u']._info.items():
             stream.write(" "*(nest+2))
-            stream.write("%s (%s)\n" % (v, list(self.vec['u'].bounds(v))))
+            if v in inputs:
+                stream.write("%s (%s) *input*\n" % (v, list(self.vec['u'].bounds(v))))
+            else:
+                stream.write("%s (%s)\n" % (v, list(self.vec['u'].bounds(v))))
 
         nest += 3
         for sub in self.subsystems:
@@ -224,16 +232,30 @@ class SimpleSystem(System):
         comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s" % self.name)
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = []
+
+    def setup_variables(self):
+        super(SimpleSystem, self).setup_variables()
+        comp = self._comp
+        for name, vdict in self.all_variables.items():
+            cname, vname = name.split('.',1)
+            info = comp.get_float_var_info(vname)
+            if info is not None:
+                sz, flat_idx, base = info
+                vdict['size'] = sz
+                if flat_idx is not None:
+                    vdict['flat_idx'] = flat_idx
+                if base is not None:
+                    vdict['basevar'] = '.'.join((cname, base))
 
 
 class DriverSystem(SimpleSystem):
     """A System for a Driver component."""
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s" % self.name)
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = [self._comp.workflow.get_subsystem()]
 
@@ -287,12 +309,12 @@ class SerialSystem(CompoundSystem):
                 comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def setup_communicators(self, comm, scope):
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = []
 
         for name in topological_sort(self.graph):
             sub = self.graph.node[name]['system']
-            sub.mpi.comm = comm
             self.subsystems.append(sub)
             sub.setup_communicators(comm, scope)
 
@@ -304,10 +326,7 @@ class ParallelSystem(CompoundSystem):
         # in a parallel system, the required cpus is the sum of
         # the required cpus of the members
         for node, data in self.graph.nodes_iter(data=True):
-            try:
-                cpus += data['system'].get_req_cpus()
-            except KeyError:
-                mpiprint("NO SYSTEM for %s" % str(node))
+            cpus += data['system'].get_req_cpus()
         self.mpi.requested_cpus = cpus
         return cpus
  
@@ -324,6 +343,7 @@ class ParallelSystem(CompoundSystem):
             sub.run(scope, ffd_order, case_id, iterbase)
 
     def setup_communicators(self, comm, scope):
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
@@ -381,6 +401,7 @@ class ParallelSystem(CompoundSystem):
         if sub_comm == MPI.COMM_NULL:
             return
 
+        #mpiprint("RANKCOLOR: %d,  COLOR: %s, comm.size: %d, subcomm.size: %d" % (rank_color, color,comm.size,sub_comm.size))
         for i,sub in enumerate(subsystems):
             if i == rank_color:
                 sub.mpi.cpus = assigned_procs[i]
@@ -393,18 +414,27 @@ class ParallelSystem(CompoundSystem):
              
     def setup_variables(self):
         """ Determine variables from local subsystems """
+        self.all_variables = OrderedDict()
+
         for sub in self.subsystems:
             sub.setup_variables()
 
-        self.all_variables = OrderedDict()
-
-        sub = self.subsystems[0]
-        varkeys_list = self.mpi.comm.allgather(sub.all_variables.keys())
+        if self.subsystems:
+            sub = self.subsystems[0]
+            names = sub.all_variables.keys()
+        else:
+            sub = None
+            names = []
+        #mpiprint("%s before ALLGATHER, varkeys=%s" % (self.name, names))
+        varkeys_list = self.mpi.comm.allgather(names)
+        #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
             for name in varkeys:
                 self.all_variables[name] = { 'size': 0 }
-        for name, var in sub.all_variables.items():
-            self.all_variables[name] = var
+
+        for sub in self.subsystems:
+            for name, var in sub.all_variables.items():
+                self.all_variables[name] = var
 
 
    
@@ -586,22 +616,24 @@ def _partition_subvars(names, vardict):
     of vars/subvars that add to the size of the var vector and 
     nosizes is a list of subvars that do not.
 
-    names are assumed to be sorted such that a basevar will
-    always be found in the list before any of its subvars.
-
     The items in each list will have the same ordering as they
     had in the original list of names.
     """
-    nameset = set()
     nosizes = []
     sizes = []
+    nameset = set(names)
     for name in names:
-        base = vardict[name].get('basevar')
-        if base and base in nameset:
+        if '[' in name:
+            base = name.split('[', 1)[0]
+            if base in nameset:
+                nosizes.append(name)
+                continue
+        else:
+            base = name
+        if base.rsplit('.', 1)[0] in nameset:
             nosizes.append(name)
         else:
             sizes.append(name)
-        nameset.add(name)
 
     return (sizes, nosizes)
 
@@ -611,37 +643,48 @@ class VecWrapper(object):
     and info about what var maps to what range within the distributed
     vector.
     """
-    def __init__(self, system, array):
+    def __init__(self, system, array, inputs=None):
         self.array = array
 
-        rank = system.mpi.comm.rank
         allvars = system.all_variables
         variables = system.variables
-        sizes = system.local_var_sizes
         
         self._info = OrderedDict() # dict of (start_idx, view)
+        #mpiprint("creating Vec in  %s, array size = %d" % (system.name, array.size))
+
+        if inputs is None:
+            vset = allvars
+        else:
+            vset = inputs 
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., their basevars are not included in the vector.
         start, end = 0, 0
         for i, (name, var) in enumerate(variables.items()):
-            sz = sizes[rank][i]
+            if name not in vset:
+                continue
+            sz = var['size']
+            if sz != system.local_var_sizes[system.mpi.comm.rank,i]:
+                mpiprint("!!!!NOOOOO sz (%d) != local_var_sizes (%d) in %s" % 
+                          (sz,system.local_var_sizes[system.mpi.comm.rank,i],system.name))
             if sz > 0:
                 end += sz
                 if self.array.size < (end-start):
                     raise RuntimeError("in subsystem %s, can't create a view of [%d,%d] from a %d size array" %
                                          (system.name,start,end,self.array.size))
                 self._info[name] = (self.array[start:end], start)
-                mpiprint("*** %s: view for %s is %s, size=%d" % (system.name,name, [start,end],self._info[name][0].size))
+                if end-start > self.array[start:end].size:
+                    mpiprint("*** MISMATCH! %s: view for %s is %s, size=%d" % 
+                                 (system.name,name, [start,end],self._info[name][0].size))
                 start += sz
 
         # now add views for subvars that are subviews of their
         # basevars
         for name, var in allvars.items():
-            if name not in variables:
+            if name not in variables and name in vset:
                 sz = var['size']
                 if sz > 0:
-                    mpiprint("FOUND A SUBVAR: %s, size=%d" % (name, sz))
+                    #mpiprint("FOUND A SUBVAR: %s, size=%d" % (name, sz))
                     idx = var['flat_idx']
                     basestart = self.start(var['basevar'])
                     sub_idx = offset_flat_index(idx, basestart)
@@ -649,7 +692,8 @@ class VecWrapper(object):
                     #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
                     #            (size,basestart, substart, sub_idx))
                     self._info[name] = (self.array[sub_idx], substart)
-                    mpiprint("*** %s: view for %s is %s" % (system.name, name, list(self.bounds(name))))
+                    if self.array[sub_idx].size != sz:
+                        mpiprint("*** MISMATCH! %s: view for %s is %s, idx=%s, size=%d" % (system.name, name, list(self.bounds(name)),sub_idx,self.array[sub_idx].size))
 
         # create the PETSc vector
         self.petsc_vec = get_petsc_vec(system.mpi.comm, self.array)
@@ -685,6 +729,3 @@ class VecWrapper(object):
 # def _linspace(self, start, end):
 #     """ Return a linspace vector of the right int type for PETSc """
 #     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')
-
-
-    
