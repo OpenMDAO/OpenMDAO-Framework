@@ -709,8 +709,15 @@ class FiniteDifference(object):
             if 'fd_form' in meta:
                 self.form_custom[j] = meta['fd_form']
 
+
             val = self.scope.get(srcs[0])
             width = flattened_size(srcs[0], val, self.scope)
+
+            if low is not None and val - self.fd_step[j] < low:
+                self.form_custom[j] = 'forward'
+            if high is not None and val + self.fd_step[j] > high:
+                self.form_custom[j] = 'backward'
+
             for src in srcs:
                 self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
