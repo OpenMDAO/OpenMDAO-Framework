@@ -1,11 +1,10 @@
 import ordereddict
 
-from numpy import array, ndarray
-
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import Array, List, VarTree
+from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.variable import make_legal_path
 
 
 class Response(ConnectedExprEvaluator):
@@ -241,16 +240,16 @@ class HasResponses(object):
 
 
 class HasVarTreeResponses(HasResponses):
+    """ Responses associated with a case driver which has VarTree outputs. """
 
     def add_response(self, expr, name=None, scope=None):
         """Adds a response to the driver."""
         super(HasVarTreeResponses, self).add_response(expr, name, scope)
 
-        name = expr if name is None else name
-        value = self._responses[name].evaluate()
-
+        path = _remove_spaces(expr) if name is None else name
+        path = make_legal_path(path)
         obj = self._parent
-        names = ['case_outputs'] + expr.split('.')
+        names = ['case_outputs'] + path.split('.')
         for name in names[:-1]:
             if obj.get_trait(name):
                 val = obj.get(name)
@@ -258,33 +257,29 @@ class HasVarTreeResponses(HasResponses):
                 val = VariableTree()
                 obj.add_trait(name, VarTree(val, iotype='out'))
             obj = val
-        name = names[-1]
 
-        if isinstance(value, (float, int, bool, ndarray)):
-            obj.add_trait(name, Array(iotype='out'))
-        else:
-            obj.add_trait(name, List(iotype='out'))
+        name = names[-1]
+        obj.add_trait(name, List(iotype='out'))
 
     def init_responses(self, length):
         """Initializes response storage in the driver."""
         nans = [float('NaN')] * length
-        nones = [None] * length
-        for path, expr in self._responses.items():
-            if isinstance(expr.evaluate(), (float, int, bool, ndarray)):
-                self._parent.set('case_outputs.'+path, array(nans), force=True)
-            else:
-                self._parent.set('case_outputs.'+path, list(nones), force=True)
+        for path in self._responses:
+            path = make_legal_path(path)
+            self._parent.set('case_outputs.'+path, list(nans), force=True)
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within
         the expression are ignored.
         """
         super(HasVarTreeResponses, self).remove_response(expr)
-        expr = _remove_spaces(expr)
+
+        path = make_legal_path(_remove_spaces(expr))
         obj = self._parent
-        names = ['case_outputs'] + expr.split('.')
+        names = ['case_outputs'] + path.split('.')
         for name in names[:-1]:
             obj = obj.get(name)
+
         name = names[-1]
         obj.remove_trait(name)
 

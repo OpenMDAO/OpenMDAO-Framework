@@ -7,8 +7,7 @@ import unittest
 # pylint: disable-msg=F0401,E0611
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
-                                            Discipline2_WithDerivatives, \
-                                            Discipline1, Discipline2
+                                            Discipline2_WithDerivatives
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error
@@ -357,7 +356,7 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
                                                    mode='fd')
 
         J = (J1 - J2)
-        print J.max()
+        #print J.max()
         self.assertTrue(J.max() < 1.0e-3)
 
 

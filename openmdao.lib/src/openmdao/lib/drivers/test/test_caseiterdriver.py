@@ -16,11 +16,9 @@ import random
 import numpy.random as numpy_random
 
 from math import isnan
-from numpy import array
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.eggchecker import check_save_load
-from openmdao.main.exceptions import RunStopped
 
 from openmdao.main.datatypes.api import Float, Bool, Array, Int, Str, \
                                         List, VarTree
@@ -94,22 +92,22 @@ class MyModel(Assembly):
 class Generator(Component):
     """ Generates cases to be evaluated. """
 
-    x = Array(iotype='out')
-    y = Array(iotype='out')
+    x = List(iotype='out')
+    y = List(iotype='out')
 
     def execute(self):
         """ Generate some cases to be evaluated. """
-        self.x = array([numpy_random.normal(size=4) for i in range(10)])
-        self.y = array([numpy_random.normal(size=10) for i in range(10)])
+        self.x = [numpy_random.normal(size=4) for i in range(10)]
+        self.y = [numpy_random.normal(size=10) for i in range(10)]
 
 
 class Verifier(Component):
     """ Verifies evaluated cases. """
 
-    x = Array(iotype='in')
-    y = Array(iotype='in')
-    rosen_suzuki = Array(iotype='in')
-    sum_y = Array(iotype='in')
+    x = List(iotype='in')
+    y = List(iotype='in')
+    rosen_suzuki = List(iotype='in')
+    sum_y = List(iotype='in')
 
     def execute(self):
         """ Verify evaluated cases. """
@@ -147,11 +145,11 @@ class TestCase(unittest.TestCase):
     def generate_cases(self, force_errors=False):
         driver = self.model.driver
         driver.case_inputs.driven.x = \
-            array([numpy_random.normal(size=4) for i in range(10)])
+            [numpy_random.normal(size=4) for i in range(10)]
         driver.case_inputs.driven.y = \
-            array([numpy_random.normal(size=10) for i in range(10)])
+            [numpy_random.normal(size=10) for i in range(10)]
         driver.case_inputs.driven.raise_error = \
-            array([force_errors and i%4 == 3 for i in range(10)])
+            [force_errors and i%4 == 3 for i in range(10)]
 
     def tearDown(self):
         self.model.pre_delete()
@@ -359,8 +357,8 @@ class TestCase(unittest.TestCase):
         for i in range(3):
             logging.debug('%s: %r %r', i,
                           outs.comp1.itername, outs.comp2.itername)
-            prefix1, dot, iter1 = outs.comp1.itername[i].partition('.')
-            prefix2, dot, iter2 = outs.comp2.itername[i].partition('.')
+            prefix1, _, iter1 = outs.comp1.itername[i].partition('.')
+            prefix2, _, iter2 = outs.comp2.itername[i].partition('.')
             if subassembly:
                 prefix = '1-1'
             else:
@@ -418,7 +416,7 @@ class TestCase(unittest.TestCase):
             stdout.close()
             stdout = open('cid_slot.out', 'r')
             for line in stdout:
-                logging.debug('    %s' % line.rstrip())
+                logging.debug('    %s', line.rstrip())
             stdout.close()
             os.remove('cid_slot.out')
         finally:
@@ -458,7 +456,7 @@ class A_l(Assembly):
         cid.workflow.add('c1')
         cid.add_parameter('c1.i')
         cid.add_response('c1.val')
-        cid.case_inputs.c1.i = array(range(N))
+        cid.case_inputs.c1.i = range(N)
 
         self.connect('c0.l', 'c1.l')
 
@@ -495,7 +493,7 @@ class A_vt(Assembly):
         cid.workflow.add(['c1'])
         cid.add_parameter('c1.i')
         cid.add_response('c1.val')
-        cid.case_inputs.c1.i = array(range(N))
+        cid.case_inputs.c1.i = range(N)
 
         self.connect('c0.vt', 'c1.vt')
 
@@ -578,9 +576,9 @@ class Aggregator(Component):
         self.out1 = self.in1 + self.in2 + self.in3
 
 
-class SampleAssembly(Assembly): 
+class SampleAssembly(Assembly):
 
-    def configure(self): 
+    def configure(self):
 
         self.add('a', SimpleComp())
         self.add('b', SimpleComp())
@@ -612,21 +610,21 @@ class SampleAssembly(Assembly):
         self.cid_driver.case_inputs.b.in2 = [1, 2, 3, 4, 5, 6]
         self.cid_driver.case_inputs.c.in2 = [0, 1, 0, 1, 0, 1]
 
-        #d is a component that does mp_aggregation 
+        #d is a component that does mp_aggregation
         #NOTE: d is expecting arrays of equal length
         self.connect('cid_driver.case_outputs.b.out1', 'd.in1')
         self.connect('cid_driver.case_outputs.b.out2', 'd.in2')
         self.connect('cid_driver.case_outputs.c.out1', 'd.in3')
 
-        #Options: 
+        #Options:
         #  1) d could  be a very simple component that requires all the array
         #     data to be pulled onto one processor
         #  2) d could be a more advanced component that works with distributed
         #     vectors to do aggregation operations (like sum or norm)
         #Possibly could make a setting or two different MPIMultiPoint drivers
-        # to control this behavior. 
+        # to control this behavior.
         #One would require a standard array output. The other a distributed
-        # vector. I'm not sure what the right answer is... 
+        # vector. I'm not sure what the right answer is...
 
         self.driver.workflow.add(['a', 'cid_driver', 'd'])
 

@@ -1,8 +1,9 @@
 import ordereddict
 
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import Array, VarTree
+from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.variable import make_legal_path
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -1156,39 +1157,51 @@ class HasParameters(object):
 
 
 class HasVarTreeParameters(HasParameters):
+    """ Parameters associated with a case driver which has VarTree inputs. """
 
     def add_parameter(self, target, low=None, high=None,
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver."""
         super(HasVarTreeParameters, self).add_parameter(
-            target, low, high, scaler, adder, start, fd_step, name, scope)
+                  target, low, high, scaler, adder, start, fd_step, name, scope)
 
-        if isinstance(target, basestring):
-            targets = (target,)
+        if name is not None:
+            path = name
+        elif isinstance(target, basestring):
+            path = target
         else:
-            targets = target  # ParameterGroup
+            path = target[0]
 
-        for target in targets:
-            obj = self._parent
-            names = ['case_inputs'] + target.split('.')
-            for name in names[:-1]:
-                if obj.get_trait(name):
-                    val = obj.get(name)
-                else:
-                    val = VariableTree()
-                    obj.add_trait(name, VarTree(val, iotype='in'))
-                obj = val
-            name = names[-1]
-            obj.add_trait(name, Array(iotype='in'))
+        path = make_legal_path(path)
+        obj = self._parent
+        names = ['case_inputs'] + path.split('.')
+        for name in names[:-1]:
+            if obj.get_trait(name):
+                val = obj.get(name)
+            else:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='in'))
+            obj = val
+
+        name = names[-1]
+        obj.add_trait(name, List(iotype='in'))
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         super(HasVarTreeParameters, self).remove_parameter(name)
+
+        if isinstance(name, basestring):
+            path = name
+        else:
+            path = name[0]
+
+        path = make_legal_path(name)
         obj = self._parent
-        names = ['case_inputs'] + name.split('.')
+        names = ['case_inputs'] + path.split('.')
         for name in names[:-1]:
             obj = obj.get(name)
+
         name = names[-1]
         obj.remove_trait(name)
 
