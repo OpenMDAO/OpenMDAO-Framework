@@ -234,7 +234,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
 
         it = self.top.driver.recorders[0].get_iterator()
-        case1 = it.pop()
+        case1 = it[0]
         self.assertEqual(case1.get_input('comp1.x'), 33.5)
 
     def test_CSVCaseIterator_read_external_file_without_header(self):
@@ -288,7 +288,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
 
         it = self.top.driver.recorders[0].get_iterator()
-        case1 = it.pop()
+        case1 = it[0]
         self.assertEqual(case1.get_input('comp1.x'), 33.5)
 
     def test_inoutCSV_empty_inputs(self):

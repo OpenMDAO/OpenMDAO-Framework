@@ -83,6 +83,19 @@ class ArrayMulti(Component):
     def execute(self):
         self.out = self.arr/10.0
 
+class MultiArrayMulti(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    arr1 = Array([1., 1.], iotype="in")
+    arr2 = Array([1., 1.], iotype="in")
+    out1 = Array([0., 0.], iotype="out")
+    out2 = Array([0., 0.], iotype="out")
+
+    def execute(self):
+        self.out1 = self.arr1/10.0
+        self.out2 = self.arr2/10.0
+
+
 
 class FixedPointIteratorTestCase(unittest.TestCase):
     """test FixedPointIterator component"""
@@ -196,6 +209,28 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+    def test_multi_array_multi(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MultiArrayMulti())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.out2 = simple.arr2')
+        self.top.driver.add_parameter('simple.arr1', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.arr2', -9e99, 9e99)
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.arr2[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
         self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_maxiteration(self):
