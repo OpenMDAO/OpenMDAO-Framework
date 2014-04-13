@@ -26,7 +26,7 @@ class Float(Variable):
 
     def __init__(self, default_value=None, iotype=None, desc=None,
                  low=None, high=None, exclude_low=False, exclude_high=False,
-                 units=None, **metadata):
+                 units=None, bound_relax_ratio=0.0, **metadata):
 
         _default_set = False
 
@@ -66,6 +66,12 @@ class Float(Variable):
         if low is None and high is None:
             self._validator = TraitFloat(default_value, **metadata)
         else:
+            # Relax bounds is only used when both of high and low exist
+            if low is None or high is None:
+                relax_delta = 0.0
+            else:
+                relax_delta = self.bound_relax_ratio * (high - low)
+
             if low is None:
                 low = -float_info.max
             else:
@@ -86,7 +92,8 @@ class Float(Variable):
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
 
-            self._validator = Range(low=low, high=high, value=default_value,
+            self._validator = Range(low=low-relax_delta, high=high+relax_delta,
+                                          value=default_value,
                                           exclude_low=exclude_low,
                                           exclude_high=exclude_high,
                                           **metadata)
@@ -102,6 +109,7 @@ class Float(Variable):
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
+        metadata['bound_relax_ratio'] = bound_relax_ratio
 
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
