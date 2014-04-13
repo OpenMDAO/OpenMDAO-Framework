@@ -70,7 +70,7 @@ class Float(Variable):
             if low is None or high is None:
                 relax_delta = 0.0
             else:
-                relax_delta = self.bound_relax_ratio * (high - low)
+                relax_delta = bound_relax_ratio * (high - low)
 
             if low is None:
                 low = -float_info.max

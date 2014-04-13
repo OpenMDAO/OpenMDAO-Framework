@@ -529,7 +529,7 @@ class MetaModelBase(Component):
         if hasattr(trait, 'get'):  # Property trait -- don't use normal clone.
             val = getattr(self.model, name)
             metadata = {}
-            for attr in ('iotype', 'desc', 'low', 'high',
+            for attr in ('iotype', 'desc', 'low', 'high', 'bound_relax_ratio',
                          'exclude_low', 'exclude_high', 'units'):
                 try:
                     metadata[attr] = getattr(trait, attr)
