@@ -23,7 +23,8 @@ from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IContainer, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
-                                     IHasParameters, IHasConstraints, \
+                                     IHasParameters, IHasResponses, \
+                                     IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
                                      IHasEvents, ICaseIterator, ICaseRecorder, \
                                      IImplicitComponent
@@ -1657,9 +1658,9 @@ class Component(Container):
             connected_outputs = self._depgraph.get_boundary_outputs(connected=True)
 
         # Additionally, we need to know if anything is connected to a
-        # param, objective, or constraint.
-        # Objectives and constraints are "implicit" connections. Parameters
-        # are as well, though they lock down their variable targets.
+        # parameter, objective, response, or constraint.
+        # Objectives, responses, and constraints are "implicit" connections.
+        # Parameters are as well, though they lock down their variable targets.
         parameters = {}
         implicit = {}
         partial_parameters = {}
@@ -1681,6 +1682,11 @@ class Component(Container):
                 if target not in implicit:
                     implicit[target] = []
                 implicit[target].append(objective)
+
+            for target, response in dataflow['responses']:
+                if target not in implicit:
+                    implicit[target] = []
+                implicit[target].append(response)
 
             for target, constraint in dataflow['constraints']:
                 if target not in implicit:
@@ -1916,13 +1922,24 @@ class Component(Container):
             if obj_has_interface(self, IHasObjectives):
                 objectives = []
                 objs = self.get_objectives()
-                for key in objs.keys():
+                for key in objs:
                     attr = {}
                     attr['name'] = str(key)
                     attr['expr'] = objs[key].text
                     attr['scope'] = objs[key].scope.name
                     objectives.append(attr)
                 attrs['Objectives'] = objectives
+
+            if obj_has_interface(self, IHasResponses):
+                responses = []
+                resps = self.get_responses()
+                for key in resps:
+                    attr = {}
+                    attr['name'] = str(key)
+                    attr['expr'] = resps[key].text
+                    attr['scope'] = resps[key].scope.name
+                    responses.append(attr)
+                attrs['Responses'] = responses
 
             if obj_has_interface(self, IHasParameters):
                 parameters = []

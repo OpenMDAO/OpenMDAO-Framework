@@ -166,7 +166,7 @@ openmdao.ConnectivityFrame = function(project, pathname) {
     function connect(source, target) {
         debug.info('connecting', source, target);
         var cmd = self.pathname + '.connect("'
-                + source.data()[0] + '","'
+                + source.data()[0] + '", "'
                 + target.data()[0] + '")';
         debug.info('cmd', cmd);
         project.issueCommand(cmd);

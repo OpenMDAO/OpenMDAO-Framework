@@ -13,7 +13,7 @@ from openmdao.main.variable import Variable
 
 class Complex(Variable):
     """A variable wrapper for a complex variable.
-       """
+    """
 
     def __init__(self, default_value=(0.+0.j), iotype=None, desc=None,
                  **metadata):
@@ -36,7 +36,3 @@ class Complex(Variable):
         """
         return self._validator.validate(obj, name, value)
 
-    def create_editor(self):
-        """ User the one in the Enthought trait.
-        """
-        return self._validator.create_editor()

@@ -171,7 +171,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         # DATAFLOW
         dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(dataflow), 5)
+        self.assertEqual(len(dataflow), 6)
 
         self.assertTrue('components' in dataflow)
         components = dataflow['components']
@@ -207,6 +207,10 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('objectives' in dataflow)
         objectives = dataflow['objectives']
         self.assertEqual(len(objectives), 0)
+
+        self.assertTrue('responses' in dataflow)
+        responses = dataflow['responses']
+        self.assertEqual(len(responses), 0)
 
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')

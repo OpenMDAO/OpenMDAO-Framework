@@ -34,6 +34,15 @@ def is_legal_name(name):
         _verified[name] = legal
     return legal
 
+def make_legal_path(path):
+    """Return `path`, possibly with some character replacements.
+    ``[,]`` are replaced with ``_``.
+    """
+    if '[' in path:
+        path = path.replace('[', '_')
+        path = path.replace(']', '_')
+    return path
+
 
 def json_default(obj):
     """A function to be passed to json.dumps to handle objects that aren't:
