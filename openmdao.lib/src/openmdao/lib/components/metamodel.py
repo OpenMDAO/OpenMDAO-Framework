@@ -79,6 +79,11 @@ class MetaModelBase(Component):
                          "the errors but log that they happened and "
                          "exclude the case from the training set.")
 
+    ignore_duplicate_input = Bool(False, iotype='in',
+                                  desc=' if True, when add training points,'
+                                  'metamodel will ignore dumplicate inputs '
+                                  'to avoid error in some surrogatemodels.')
+
     recorder = Slot(ICaseRecorder,
                     desc='Records training cases')
 
@@ -222,7 +227,9 @@ class MetaModelBase(Component):
         if self._train:
             try:
                 inputs = self.update_model_inputs()
-                self.model.run(force=True)
+                if not self.ignore_duplicate_input or \
+                        inputs not in self._training_input_history:
+                    self.model.run(force=True)
 
             except Exception as err:
                 if self.report_errors:
@@ -230,22 +237,24 @@ class MetaModelBase(Component):
                 else:
                     self._failed_training_msgs.append(str(err))
             else:  # if no exceptions are generated, save the data
+                if not self.ignore_duplicate_input or \
+                        inputs not in self._training_input_history:
+                    # ignore duplicate value
+                    self._training_input_history.append(inputs)
+                    self.update_outputs_from_model()
+                    case_outputs = []
 
-                self._training_input_history.append(inputs)
-                self.update_outputs_from_model()
-                case_outputs = []
-
-                for name, output_history in self._training_data.items():
-                    case_outputs.append(('.'.join([self.name, name]),
-                                         output_history[-1]))
-                # save the case, making sure to add out name to the local input
-                # name since this Case is scoped to our parent Assembly
-                case_inputs = [('.'.join([self.name, name]), val)
-                               for name, val in zip(self.surrogate_input_names(),
-                                                    inputs)]
-                if self.recorder:
-                    self.recorder.record(Case(inputs=case_inputs,
-                                              outputs=case_outputs))
+                    for name, output_history in self._training_data.items():
+                        case_outputs.append(('.'.join([self.name, name]),
+                                             output_history[-1]))
+                    # save the case, making sure to add out name to the local input
+                    # name since this Case is scoped to our parent Assembly
+                    case_inputs = [('.'.join([self.name, name]), val)
+                                   for name, val in zip(self.surrogate_input_names(),
+                                                        inputs)]
+                    if self.recorder:
+                        self.recorder.record(Case(inputs=case_inputs,
+                                                  outputs=case_outputs))
 
             self._train = False
         else:
