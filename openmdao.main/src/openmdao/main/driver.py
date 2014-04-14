@@ -64,7 +64,7 @@ class GradientOptions(VariableTree):
                         framework_var=True)
     derivative_direction = Enum('auto',
                                 ['auto', 'forward', 'adjoint'],
-                                desc = "Direction for derivative calculation. "
+                                desc="Direction for derivative calculation. "
                                 "Can be 'forward', 'adjoint', or 'auto'. "
                                 "Auto is the default setting. "
                                 "When set to auto, OpenMDAO automatically "
@@ -200,7 +200,7 @@ class Driver(Component):
         srcset = set()
         destset = set()
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 delegate = getattr(self, dname)
                 if isinstance(delegate, HasParameters):
                     destset.update(delegate.get_referenced_varpaths())
@@ -255,7 +255,7 @@ class Driver(Component):
         """
         pcomps = []
         if hasattr(self, '_delegates_'):
-            for name, dclass in self._delegates_.items():
+            for name in self._delegates_:
                 delegate = getattr(self, name)
                 if hasattr(delegate, 'list_pseudocomps'):
                     pcomps.extend(delegate.list_pseudocomps())
@@ -271,7 +271,7 @@ class Driver(Component):
         """
         refs = {}
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
@@ -287,7 +287,7 @@ class Driver(Component):
             Name of component being removed.
         """
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
@@ -380,7 +380,7 @@ class Driver(Component):
         '''Step through a single workflow comp and then return control'''
         while self.continue_iteration():
             self.pre_iteration()
-            for junk in self._step_workflow():
+            for _ in self._step_workflow():
                 yield
             self.post_iteration()
         self._iter = None
@@ -454,7 +454,7 @@ class Driver(Component):
         if self.workflow is not None:
             self.workflow.config_changed()
 
-    def record_case(self):
+    def record_case(self, case_uuid=None):
         """ A driver can call this function to record the current state of the
         current iteration as a Case into all slotted case recorders. Generally,
         the driver should call this function once per iteration and may also
@@ -476,26 +476,34 @@ class Driver(Component):
             for name, param in self.get_parameters().iteritems():
                 if isinstance(name, tuple):
                     name = name[0]
-                case_input.append([name, param.evaluate(self.parent)])
+                value = param.evaluate(self.parent)
+                if param.size == 1:  # Evaluate always returns a sequence.
+                    value = value[0]
+                case_input.append((name, value))
                 iotypes[name] = 'in'
 
         # Objectives
         if hasattr(self, 'eval_objective'):
-            case_output.append(["Objective", self.eval_objective()])
+            case_output.append(("Objective", self.eval_objective()))
         elif hasattr(self, 'eval_objectives'):
             for j, obj in enumerate(self.eval_objectives()):
-                case_output.append(["Objective_%d" % j, obj])
+                case_output.append(("Objective_%d" % j, obj))
+
+        # Responses
+        if hasattr(self, 'eval_responses'):
+            for j, response in enumerate(self.eval_responses()):
+                case_output.append(("Response_%d" % j, response))
 
         # Constraints
         if hasattr(self, 'get_ineq_constraints'):
             for name, con in self.get_ineq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val])
+                case_output.append(("Constraint ( %s )" % name, val))
 
         if hasattr(self, 'get_eq_constraints'):
             for name, con in self.get_eq_constraints().iteritems():
                 val = con.evaluate(self.parent)
-                case_output.append(["Constraint ( %s )" % name, val])
+                case_output.append(("Constraint ( %s )" % name, val))
 
         tmp_printvars = self.printvars[:]
         tmp_printvars.append('%s.workflow.itername' % self.name)
@@ -520,21 +528,22 @@ class Driver(Component):
                         evaluator = ExprEvaluator(var, scope=self.parent)
                         self._evaluators[var] = evaluator
                     val = evaluator.evaluate()
-                    case_input.append([var, val])
+                    case_input.append((var, val))
                 elif iotype == 'out':
                     evaluator = self._evaluators.get(var)
                     if evaluator is None:
                         evaluator = ExprEvaluator(var, scope=self.parent)
                         self._evaluators[var] = evaluator
                     val = evaluator.evaluate()
-                    case_output.append([var, val])
+                    case_output.append((var, val))
                 else:
                     msg = "%s is not an input or output" % var
                     self.raise_exception(msg, ValueError)
 
         #case = Case(case_input, case_output,
         #            case_uuid=self.case_id, parent_uuid=self.parent_case_id)
-        case = Case(case_input, case_output, parent_uuid=self._case_id)
+        case = Case(case_input, case_output,
+                    case_uuid=case_uuid, parent_uuid=self._case_id)
 
         for recorder in self.recorders:
             recorder.record(case)

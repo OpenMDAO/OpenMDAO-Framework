@@ -120,7 +120,7 @@ class TestCaseDOE(unittest.TestCase):
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x1', 'driven.x2', 'driven.x3'])
         val = self.model.driver.get('case_inputs.driven.x1')
-        self.assertEqual(val.size, 0)
+        self.assertEqual(len(val), 0)
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
@@ -242,7 +242,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x1', 'driven.x2', 'driven.x3'])
         val = self.model.driver.get('case_inputs.driven.x1')
-        self.assertEqual(val.size, 0)
+        self.assertEqual(len(val), 0)
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',

@@ -67,7 +67,7 @@ class NeighborhoodDOEdriver(CaseIteratorDriver):
 
     # pylint: disable-msg=E1101
     DOEgenerator = Slot(IDOEgenerator, required=True,
-                          desc='Iterator supplying normalized DOE values.')
+                        desc='Iterator supplying normalized DOE values.')
 
     alpha = Float(.3, low=.01, high=1.0, iotype='in',
                   desc='Multiplicative factor for neighborhood DOE Driver.')

@@ -3,6 +3,7 @@
 
 """
 
+from cStringIO import StringIO
 import logging
 import os.path
 import Queue
@@ -10,18 +11,21 @@ import sys
 import thread
 import threading
 import traceback
+from uuid import uuid1, getnode
 
 from numpy import array
 
 from openmdao.main.api import Driver
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
 from openmdao.main.exceptions import TracedError, traceback_str
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
 from openmdao.main.interfaces import IHasParameters, IHasResponses, implements
 from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
+from openmdao.main.variable import is_legal_name, make_legal_path
 
 from openmdao.util.decorators import add_delegate
 from openmdao.util.filexfer import filexfer
@@ -32,7 +36,124 @@ _LOADING   = 'loading'
 _EXECUTING = 'executing'
 
 
+class _Case(object):
+    """ Input data and required outputs for a particular simulation run. """
+
+    _uuid_node = getnode()
+    _uuid_seq = 0
+
+    @staticmethod
+    def next_uuid():
+        """ Generate a unique identifier. """
+        _Case._uuid_seq += 1
+        return str(uuid1(node=_Case._uuid_node, clock_seq=_Case._uuid_seq))
+
+    def __init__(self, index, inputs, outputs, case_uuid=None, parent_uuid=''):
+        self.index = index  # Index of input and output values.
+        self.retries = 0    # Retry counter.
+        self.msg = None     # Exception message.
+        self.exc = None     # Exception.
+        self._exprs = None  # Dictionary of ExprEvaluators.
+
+        self._inputs = {}
+        for name, value in inputs:
+            if isinstance(name, tuple):
+                for _name in name:
+                    self._register_expr(_name)
+                    self._inputs[_name] = value
+            else:
+                self._register_expr(name)
+                self._inputs[name] = value
+
+        self._outputs = outputs
+        for name in outputs:
+            self._register_expr(name)
+
+        if case_uuid:
+            self.uuid = str(case_uuid)
+        else:
+            self.uuid = _Case.next_uuid()
+        self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
+
+    def _register_expr(self, name):
+        """If the given string contains an expression, create an ExprEvaluator
+        and store it in self._exprs.
+        """
+        if not is_legal_name(name):
+            expr = ExprEvaluator(name)
+            if self._exprs is None:
+                self._exprs = {}
+            self._exprs[name] = expr
+
+    def apply_inputs(self, scope):
+        """Take the values of all of the inputs in this case and apply them
+        to the specified scope.
+        """
+        if self._exprs:
+            for name, value in self._inputs.items():
+                expr = self._exprs.get(name)
+                if expr:
+                    expr.set(value, scope)
+                else:
+                    scope.set(name, value)
+        else:
+            for name, value in self._inputs.items():
+                scope.set(name, value)
+
+    def fetch_outputs(self, scope):
+        """ Return list of ``(name, value)`` of outputs from `scope`. """
+        last_exc = None
+        outputs = self._outputs
+        exprs = self._exprs
+        data = []
+        if exprs:
+            for name in outputs:
+                expr = exprs.get(name)
+                try:
+                    if expr:
+                        value = expr.evaluate(scope)
+                    else:
+                        value = scope.get(name)
+                    data.append((name, value))
+                except Exception as exc:
+                    last_exc = TracedError(exc, traceback.format_exc())
+                    self.msg = str(exc)
+        else:
+            for name in outputs:
+                try:
+                    value = scope.get(name)
+                    data.append((name, value))
+                except Exception as exc:
+                    last_exc = TracedError(exc, traceback.format_exc())
+                    self.msg = str(exc)
+
+        if last_exc is not None:
+            raise last_exc
+
+        return data
+
+    def __str__(self):
+        stream = StringIO()
+        stream.write("Case: %s\n", self.index)
+        stream.write("   uuid: %s\n" % self.uuid)
+        stream.write("   parent_uuid: %s\n" % self.parent_uuid)
+        stream.write("   inputs:\n")
+        for name, val in sorted(self._inputs.items()):
+            stream.write("      %s: %s\n" % (name, val))
+        stream.write("   outputs:\n")
+        for name in sorted(self._outputs):
+            stream.write("      %s\n" % name)
+        stream.write("   retries: %s\n" % self.retries)
+        stream.write("   msg: %s\n" % self.msg)
+        if self.exc is None:
+            stream.write("   exc: %s\n" % self.exc)
+        else:
+            stream.write("   exc: %s\n" % traceback_str(self.exc))
+        return stream.getvalue()
+
+
 class _ServerData(object):
+    """ Holds data related to a server and it's current state. """
 
     def __init__(self, name):
         self.name = name        # Name for log output (None => local).
@@ -87,9 +208,7 @@ class CaseIteratorDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
         self._iter = None  # Set to None when iterator is empty.
-        self._seqno = 0    # Used to set itername for case.
         self._replicants = 0
-        self._evaluated = []
         self._abort_exc = None  # Set if error_policy == ABORT.
 
         self._egg_file = None
@@ -122,11 +241,11 @@ class CaseIteratorDriver(Driver):
                 end = start + size
                 values = inputs[:, start:end].reshape((-1,)+param.shape)
             start += size
-            if isinstance(path, basestring):
-                self.set('case_inputs.'+path, values)
-            else:
-                for target in path:  # ParameterGroup
-                    self.set('case_inputs.'+target, values)
+
+            if isinstance(path, tuple):
+                path = path[0]  # Use first target of ParameterGroup.
+            path = make_legal_path(path)
+            self.set('case_inputs.'+path, list(values))
 
     def execute(self):
         """
@@ -143,8 +262,7 @@ class CaseIteratorDriver(Driver):
                 while self._iter is not None:
                     try:
                         case = self._iter.next()
-                        self._seqno += 1
-                        self._todo.append((case, self._seqno))
+                        self._todo.append(case)
                         server.exception = None
                         server.case = None
                         server.state = _LOADING  # 'server' already loaded.
@@ -153,7 +271,6 @@ class CaseIteratorDriver(Driver):
                     except StopIteration:
                         if not self._rerun:
                             self._iter = None
-                            self._seqno = 0
                         break
             else:
                 self._logger.info('Start concurrent evaluation.')
@@ -161,13 +278,7 @@ class CaseIteratorDriver(Driver):
         finally:
             self._cleanup()
 
-        if self._abort_exc is None:
-            for case in self._evaluated:
-                i = case.label
-                if case.msg is None:
-                    for name, value in case.get_outputs():
-                        self.set('case_outputs.'+name, value, index=(i,), force=True)
-        else:
+        if self._abort_exc is not None:
             self.raise_exception('Run aborted: %s'
                                  % traceback_str(self._abort_exc),
                                  RuntimeError)
@@ -205,36 +316,28 @@ class CaseIteratorDriver(Driver):
             self._egg_required_distributions = egg_info[1]
             self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-        paths = []
-        values = []
+        inp_paths = []
+        inp_values = []
         for path in self.get_parameters():
-            if isinstance(path, basestring):
-                paths.append(path)
-                values.append(self.get('case_inputs.'+path))
-            else:
-                for target in path:  # ParameterGroup
-                    paths.append(target)
-                    values.append(self.get('case_inputs.'+target))
+            inp_paths.append(path)
+            if isinstance(path, tuple):
+                path = path[0]  # Use first target of ParameterGroup.
+            path = make_legal_path(path)
+            inp_values.append(self.get('case_inputs.'+path))
 
-        outputs = []
-        for path in self.get_responses():
-            outputs.append(path)
+        outputs = self.get_responses().keys()
 
-        length = len(values[0])
+        length = len(inp_values[0])
         cases = []
         for i in range(length):
             inputs = []
-            for j in range(len(paths)):
-                inputs.append((paths[j], values[j][i]))
-            from openmdao.main.api import Case
-            case = Case(inputs, outputs, label=i)
-            cases.append(case)
+            for j in range(len(inp_paths)):
+                inputs.append((inp_paths[j], inp_values[j][i]))
+            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_id))
         self.init_responses(length)
 
         self._iter = iter(cases)
-        self._seqno = 0
         self._abort_exc = None
-        self._evaluated = []
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -269,11 +372,9 @@ class CaseIteratorDriver(Driver):
             except StopIteration:
                 if not self._rerun:
                     self._iter = None
-                    self._seqno = 0
                     break
 
-            self._seqno += 1
-            self._todo.append((case, self._seqno))
+            self._todo.append(case)
 
             # Start server worker thread.
             n_servers += 1
@@ -436,13 +537,13 @@ class CaseIteratorDriver(Driver):
                         in_use = False
 
         elif state == _EXECUTING:
-            case, seqno = server.case
+            case = server.case
             server.case = None
             exc = server.exception
             if exc is None:
-                # Grab the data from the model.
+                # Grab the results from the model and record.
                 try:
-                    case.update_outputs(server.top)
+                    self._record_case(server.top, case)
                 except Exception as exc:
                     msg = 'Exception getting case outputs: %s' % exc
                     self._logger.debug('    %s', msg)
@@ -456,9 +557,6 @@ class CaseIteratorDriver(Driver):
                 if self._abort_exc is None:
                     self._abort_exc = exc
                 self._stop = True
-
-            # Record the data.
-            self._record_case(case, seqno)
 
             # Set up for next case.
             in_use = self._start_processing(server, stepping, reload=True)
@@ -532,12 +630,12 @@ class CaseIteratorDriver(Driver):
 
         if self._todo:
             self._logger.debug('    run startup case')
-            case, seqno = self._todo.pop(0)
-            in_use = self._run_case(case, seqno, server)
+            case = self._todo.pop(0)
+            in_use = self._run_case(case, server)
         elif self._rerun:
             self._logger.debug('    rerun case')
-            case, seqno = self._rerun.pop(0)
-            in_use = self._run_case(case, seqno, server, rerun=True)
+            case = self._rerun.pop(0)
+            in_use = self._run_case(case, server, rerun=True)
         elif self._iter is None:
             self._logger.debug('    no more cases')
             in_use = False
@@ -549,20 +647,16 @@ class CaseIteratorDriver(Driver):
             except StopIteration:
                 self._logger.debug('    no more cases')
                 self._iter = None
-                self._seqno = 0
                 in_use = False
             else:
                 self._logger.debug('    run next case')
-                self._seqno += 1
-                in_use = self._run_case(case, self._seqno, server)
+                in_use = self._run_case(case, server)
 
         return in_use
 
-    def _run_case(self, case, seqno, server, rerun=False):
+    def _run_case(self, case, server, rerun=False):
         """ Setup and start a case. Returns True if started. """
         if not rerun:
-            if not case.max_retries:
-                case.max_retries = self.max_retries
             case.retries = 0
         case.msg = None
         case.parent_uuid = self._case_id
@@ -574,24 +668,32 @@ class CaseIteratorDriver(Driver):
                 msg = 'Exception setting case inputs: %s' % exc
                 self._logger.debug('    %s', msg)
                 self.raise_exception(msg, _ServerError)
-            server.case = (case, seqno)
+            server.case = case
             self._model_execute(server)
             server.state = _EXECUTING
         except _ServerError as exc:
-            case.msg = str(exc)
-            self._record_case(case, seqno)
+            if case.retries < self.max_retries:
+                case.retries += 1
+                self._rerun.append(case)
             return self._start_processing(server, stepping=False)
         else:
             return True
 
-    def _record_case(self, case, seqno):
-        """ If successful, record the case. Otherwise possibly retry. """
-        if case.msg and case.retries < case.max_retries:
-            case.msg = None
-            case.retries += 1
-            self._rerun.append((case, seqno))
-        else:
-            self._evaluated.append(case)
+    def _record_case(self, scope, case):
+        """ Record case data from `scope` in ``case_outputs``. """
+        for path, value in case.fetch_outputs(scope):
+            path = make_legal_path(path)
+            self.set('case_outputs.'+path, value,
+                     index=(case.index,), force=True)
+
+        # Record regular case in recorders.
+        inputs = case._inputs.items()
+        outputs = case.fetch_outputs(scope)
+        from openmdao.main.case import Case
+        recorded = Case(inputs, outputs, retries=case.retries,
+                        case_uuid=case.uuid, parent_uuid=case.parent_uuid)
+        for recorder in self.recorders:
+            recorder.record(recorded)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -687,7 +789,7 @@ class CaseIteratorDriver(Driver):
         if server.queue is None:
             try:
 #                self.workflow._parent.update_parameters()
-                self.workflow.run(case_id=server.case[0].uuid)
+                self.workflow.run(case_id=server.case.uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -696,9 +798,9 @@ class CaseIteratorDriver(Driver):
 
     def _remote_model_execute(self, server):
         """ Execute model in remote server. """
-        case, seqno = server.case
+        case = server.case
         try:
-            server.top.set_itername(self.get_itername(), seqno)
+            server.top.set_itername(self.get_itername(), case.index+1)
             server.top.run(case_id=case.uuid)
         except Exception as exc:
             server.exception = TracedError(exc, traceback.format_exc())

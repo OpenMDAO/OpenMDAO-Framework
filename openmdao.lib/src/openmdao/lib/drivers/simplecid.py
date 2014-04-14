@@ -1,12 +1,15 @@
 """ A simple driver that runs cases from a CaseIterator and records them
 with a CaseRecorder. """
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, Case
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
 from openmdao.main.interfaces import IHasResponses, IHasParameters, implements
+from openmdao.main.variable import is_legal_name, make_legal_path
 
 from openmdao.util.decorators import add_delegate
+
 
 
 @add_delegate(HasVarTreeParameters, HasVarTreeResponses)
@@ -21,20 +24,54 @@ class SimpleCaseIterDriver(Driver):
 
     def execute(self):
         """ Run each parameter set. """
+        exprs = {}
+        case_paths = {}
         inputs = []
         values = []
         for path in self.get_parameters():
-            inputs.append(path)
+            if isinstance(path, tuple):
+                for target in path:
+                    inputs.append(target)
+                    if not is_legal_name(target):
+                        exprs[target] = ExprEvaluator(target)
+                path = path[0]
+            else:
+                inputs.append(path)
+                if not is_legal_name(path):
+                    exprs[path] = ExprEvaluator(path)
+
+            path = make_legal_path(path)
             values.append(self.get('case_inputs.'+path))
 
-        length = len(values[0])
+        for path in self.get_responses():
+            if not is_legal_name(path):
+                exprs[path] = ExprEvaluator(path)
+            case_paths[path] = make_legal_path(path)
+
+        length = len(values[0]) if values else 0
         self.init_responses(length)
 
         for i in range(length):
             for j, path in enumerate(inputs):
-                self.parent.set(path, values[j][i])
-            self.workflow.run()
+                value = values[j][i]
+                expr = exprs.get(path)
+                if expr:
+                    expr.set(value, self.parent)
+                else:
+                    self.parent.set(path, value)
+
+            case_uuid = Case.next_uuid()
+            self.workflow.run(case_id=case_uuid)
+
             for path in self.get_responses():
-                value = self.parent.get(path)
+                expr = exprs.get(path)
+                if expr:
+                    value = expr.evaluate(self.parent)
+                else:
+                    value = self.parent.get(path)
+
+                path = case_paths[path]
                 self.set('case_outputs.'+path, value, index=(i,), force=True)
+
+            self.record_case(case_uuid)
 
