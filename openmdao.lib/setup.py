@@ -56,6 +56,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
           ],
       entry_points="""
       [openmdao.driver]
+      openmdao.lib.drivers.adaptivesampledriver.AdaptiveSampleDriver = openmdao.lib.drivers.adaptivesampledriver:AdaptiveSampleDriver
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
       openmdao.lib.drivers.caseiterdriver.ConnectableCaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:ConnectableCaseIteratorDriver

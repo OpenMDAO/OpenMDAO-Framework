@@ -6,8 +6,18 @@ and a CaseIteratorDriver thereafter.
 # pylint: disable-msg=E0611,F0401
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.doedriver import DOEdriver
+from openmdao.main.datatypes.api import List, VarTree
+from openmdao.main.pseudocomp import _remove_spaces
+from openmdao.main.variable import make_legal_path
+from openmdao.main.vartree import VariableTree
 
 class AdaptiveSampleDriver(DOEdriver):
+
+    adaptive_inputs = VarTree(VariableTree(), iotype='in')
+
+    accumulated_inputs = VarTree(VariableTree(), iotype='out')
+
+    accumulated_outputs = VarTree(VariableTree(), iotype='out')
 
     def __init__(self):
         super(AdaptiveSampleDriver, self).__init__()
@@ -26,29 +36,76 @@ class AdaptiveSampleDriver(DOEdriver):
 
         # DOE
         if self.run_DOE is True:
-            print 'run doe'
             super(AdaptiveSampleDriver, self).execute()
             self.run_DOE = False
+            self._accumulate_data(reset=True)
 
-            # Clean out the DOE inputs to prepare for case inputs
+            # Workaround for bug in cyclic flow
             for path in self.get_parameters():
                 if isinstance(path, tuple):
                     path = path[0]  # Use first target of ParameterGroup.
-                var_name = 'case_inputs.' + path
-                val = self.get(var_name)
-                if len(val) > 1:
-                    # Use the last point we ran as the placeholder
-                    self.set(var_name, [val[-1]])
+                src = 'adaptive_inputs.' + path
+                target = 'case_inputs.' + path
+                val = self.get(target)
+                self.set(src, [val[-1]])
 
         # Case Iterator
         else:
-            print 'run cid', self.case_inputs.driven.x
-            super(DOEdriver, self).execute()
+
+            # Feed our new input to the parent
+            changed = False
+            for path in self.get_parameters():
+                if isinstance(path, tuple):
+                    path = path[0]  # Use first target of ParameterGroup.
+                src = 'adaptive_inputs.' + path
+                target = 'case_inputs.' + path
+                src_val = self.get(src)
+                target_val = self.get(target)
+                if src_val != target_val[-1]:
+                    changed = True
+                    self.set(target, src_val)
+
+            if changed:
+                super(DOEdriver, self).execute()
+                self._accumulate_data()
+
+    def _accumulate_data(self, reset=False):
+        ''' We save the original DOE data as well as every point we add
+        afterwards'''
+
+        for path in self.get_parameters():
+            if isinstance(path, tuple):
+                path = path[0]  # Use first target of ParameterGroup.
+
+            # Accumulate the inputs
+            src = 'case_inputs.' + path
+            target = 'accumulated_inputs.' + path
+            src_val = self.get(src)
+            if reset is True:
+                target_val = []
+            else:
+                target_val = self.get(target)
+            target_val.extend(src_val)
+            self.set(target, target_val)
+
+        for path in self.get_responses():
+
+            # Accumulate the outputs
+            src = 'case_outputs.' + path
+            target = 'accumulated_outputs.' + path
+            src_val = self.get(src)
+            if reset is True:
+                target_val = []
+            else:
+                target_val = self.get(target)
+            target_val.extend(src_val)
+            self.set(target, target_val)
+
 
     def add_parameter(self, target, low=None, high=None,
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
-        """We need to put dummy cases in so that we can connect a FPI."""
+        """We need to create our special variable trees."""
 
         super(AdaptiveSampleDriver, self).add_parameter(
                   target, low, high, scaler, adder, start, fd_step, name, scope)
@@ -56,5 +113,42 @@ class AdaptiveSampleDriver(DOEdriver):
         # Parameter gets [0] as an initial case, just for connectability.
         if isinstance(target, tuple):
             target = target[0]  # Use first target of ParameterGroup.
-        var_name = 'case_inputs.' + target
-        self.set(var_name, [0.0])
+
+        path = make_legal_path(target)
+
+        desc = 'Input for adding new points during parent iteration.'
+        self._add_vartrees('adaptive_inputs', target, desc)
+
+        desc = 'Holds all inputs processed by this driver.'
+        self._add_vartrees('accumulated_inputs', target, desc)
+
+    def add_response(self, expr, name=None, scope=None):
+        """We need to create our special variable trees."""
+
+        super(AdaptiveSampleDriver, self).add_response(expr, name, scope)
+
+        path = _remove_spaces(expr) if name is None else name
+        path = make_legal_path(path)
+
+        desc = 'Holds all outputs processed by this driver.'
+        self._add_vartrees('accumulated_outputs', path, desc)
+
+    def _add_vartrees(self, tree_name, path, desc):
+        ''' Adds a vartree, the component sub leaf, and the final variable
+        leaf.
+        '''
+
+        obj = self
+        names = [tree_name] + path.split('.')
+        for name in names[:-1]:
+            if obj.get_trait(name):
+                val = obj.get(name)
+            else:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='in'))
+            obj = val
+
+        name = names[-1]
+        obj.add_trait(name, List([0.0], desc=desc))
+
+

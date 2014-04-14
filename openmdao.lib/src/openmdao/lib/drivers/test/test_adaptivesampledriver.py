@@ -21,7 +21,7 @@ class DrivenComponent(Component):
     def execute(self):
         """ Compute results from input vector. """
 
-        self.y = 3.0*self.x
+        self.y = 3.0*self.x + 1
 
 class MyModel(Assembly):
     """ Use AdaptiveSampleDriver"""
@@ -57,19 +57,21 @@ class TestCaseAdaptiveSample(unittest.TestCase):
         self.model.driver.max_iterations = 1
         self.model.run()
 
-        self.assertEqual(self.model.driven.y, 30.0)
+        self.assertEqual(self.model.driven.y, 31.0)
 
     def test_execute_doe_and_cid(self):
 
         # Run twice, so next point comes from case iterator
         self.model.replace('driver', FixedPointIterator())
         self.model.driver.max_iteration = 3
-        self.model.driver.add_parameter('adaptive.case_inputs.driven.x[0]')
-        self.model.driver.add_constraint('adaptive.case_inputs.driven.x[0] = driven.y')
+        self.model.driver.add_parameter('adaptive.adaptive_inputs.driven.x[0]')
+        self.model.driver.add_constraint('adaptive.adaptive_inputs.driven.x[0] = driven.y')
         self.model.run()
 
-        self.assertEqual(self.model.driven.y, 270.0)
-
+        self.assertEqual(self.model.driven.y, 283.0)
+        print self.model.adaptive.accumulated_inputs.driven.x
+        self.assertTrue(self.model.adaptive.accumulated_inputs.driven.x == [-10.0, 10.0, 31.0, 94.0])
+        self.assertTrue(self.model.adaptive.accumulated_outputs.driven.y == [-29.0, 31.0, 94.0, 283.0])
 
 
 if __name__ == "__main__":

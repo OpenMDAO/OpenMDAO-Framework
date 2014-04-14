@@ -1,7 +1,7 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from numpy import array
+from numpy import array, zeros
 
 from openmdao.main.datatypes.api import Array, List, VarTree
 from openmdao.main.api import Component
@@ -57,8 +57,11 @@ class ParetoFilter(Component):
         for name in responses:
             output_tree.add(name, List([], desc='ParetoFilter response'))
 
-        self._input_names = params
-        self._output_names = responses
+        self._param_names = params
+        self._response_names = responses
+
+        self.pareto_inputs = zeros((1, len(params)))
+        self.pareto_outputs = zeros((1, len(responses)))
 
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2.
@@ -76,14 +79,14 @@ class ParetoFilter(Component):
         """Returns an araray of pareto optimal points and their response values.
         """
 
-        first_name = "responses.%s" % self._output_names[0]
-        n_param = len(self._input_names)
-        n_response = len(self._output_names)
+        first_name = "responses.%s" % self._response_names[0]
+        n_param = len(self._param_names)
+        n_response = len(self._response_names)
         n_points = len(self.get(first_name))
 
         # Get our output data once, then rearrange it after.
         data = []
-        for varname in self._output_names:
+        for varname in self._response_names:
             name = "responses.%s" % varname
             val = self.get(name)
             data.append(val)
@@ -101,7 +104,7 @@ class ParetoFilter(Component):
         if n_param > 0:
 
             data = []
-            for varname in self._input_names:
+            for varname in self._param_names:
                 name = "params.%s" % varname
                 val = self.get(name)
                 data.append(val)
@@ -125,7 +128,7 @@ class ParetoFilter(Component):
         self.pareto_outputs = array(nondominated_output)
 
         if n_param > 0:
-            data = [nondominated_input[j] for j in xrange(0, n_param) \
+            data = [nondominated_input[j] for j in xrange(0, n_points) \
                     if j not in nd_input_list]
             self.pareto_inputs = array(data)
 
