@@ -26,7 +26,7 @@ OpenMDAO requires that the following software be installed at the system level o
   
 - NumPy (version 1.6 or higher) 
 
-- SciPy (version .10 or higher)
+- SciPy (version .11 or higher)
 
 - Matplotlib
 
