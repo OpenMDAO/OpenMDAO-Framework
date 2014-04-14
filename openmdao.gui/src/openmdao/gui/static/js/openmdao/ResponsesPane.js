@@ -1,11 +1,11 @@
 
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
-openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
-    var objectives,
-        objectivesDiv = jQuery("<div id='"+name+"_objectives' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
-        addButton = jQuery("<button>Add Objective</button>").button(),
-        clrButton = jQuery("<button>Clear Objectives</button>").button(),
+openmdao.ResponsesPane = function(elm, project, pathname, name, editable) {
+    var responses,
+        responsesDiv = jQuery("<div id='"+name+"_responses' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
+        addButton = jQuery("<button>Add Response</button>").button(),
+        clrButton = jQuery("<button>Clear Responses</button>").button(),
         columns = [
             {id:"del",   name:"",            field:"del",   width:25, formatter:buttonFormatter},
             {id:"expr",  name:"Expression",  field:"expr",  width:180},
@@ -18,11 +18,10 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
             autoEdit: false
         };
 
-    function buttonFormatter(row,cell,value,columnDef,dataContext) {
-        button = '<div class="ui-icon-trash"></div>';
-        return button;
+    function buttonFormatter(row, cell, value, columnDef, dataContext) {
+        return '<div class="ui-icon-trash"></div>';
     }
-    elm.append(objectivesDiv).width('100%');
+    elm.append(responsesDiv).width('100%');
 
     var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
         table = jQuery('<table width="100%">'),
@@ -37,26 +36,26 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
         options.editOnDoubleClick = true;
     }
 
-    objectives = new Slick.Grid(objectivesDiv, [], columns, options);
+    responses = new Slick.Grid(responsesDiv, [], columns, options);
     if (editable) {
-        objectives.onCellChange.subscribe(function(e,args) {
+        responses.onCellChange.subscribe(function(e, args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
-            cmd = pathname+'.'+args.item.name+' = '+args.item.value;
+            var cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
-    }
-    objectives.onClick.subscribe(function (e) {
-        var cell = objectives.getCellFromEvent(e);
+   }
+    responses.onClick.subscribe(function (e) {
+        var cell = responses.getCellFromEvent(e);
         if (cell.cell === 0) {
-            var delname = objectives.getData()[cell.row].name;
-            var cmd = pathname+'.remove_objective("'+delname+'")';
+            var delname = responses.getData()[cell.row].name;
+            var cmd = pathname+'.remove_response("'+delname+'")';
             project.issueCommand(cmd);
         }
     });
 
-    /** add a new objective */
-    function addObjective(expr,name) {
-        var cmd = pathname+".add_objective('"+expr+"'";
+    /** add a new response */
+    function addResponse(expr, name) {
+        var cmd = pathname+".add_response('"+expr+"'";
         if (name) {
             cmd = cmd + ", name='"+name+"'";
         }
@@ -64,33 +63,32 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
         project.issueCommand(cmd);
     }
 
-    objectivesDiv.bind('resizeCanvas', function() {
-        objectives.resizeCanvas();
+    responsesDiv.bind('resizeCanvas', function() {
+        responses.resizeCanvas();
     });
 
-    /** prompt for new objective */
-    function promptForObjective(callback) {
+    /** prompt for new response */
+    function promptForResponse(callback) {
         // Build dialog markup
-        var win = jQuery('<div id="objective-dialog"></div>'),
-            expr   = jQuery('<input id="objective-expr" type="text" style="width:100%"></input>'),
-            name   = jQuery('<input id="objective-name" type="text" style="width:75%"></input>');
+        var win = jQuery('<div id="response-dialog"></div>'),
+            expr = jQuery('<input id="response-expr" type="text" style="width:100%"></input>'),
+            name = jQuery('<input id="response-name" type="text" style="width:75%"></input>');
 
         win.append(jQuery('<div>Expression: </div>').append(expr));
 
         var table = jQuery('<table>');
-        row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
+        var row = jQuery('<tr>').append(jQuery('<td>').append(jQuery('<div>Name: </div>').append(name)));
         table.append(row);
         win.append(table);
-
 
         // Display dialog
         jQuery(win).dialog({
             'modal': true,
-            'title': 'New Objective',
+            'title': 'New Response',
             'buttons': [
                 {
                     text: 'Ok',
-                    id: 'objective-ok',
+                    id: 'response-ok',
                     click: function() {
                         jQuery(this).dialog('close');
                         callback(expr.val(),name.val());
@@ -100,7 +98,7 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
                 },
                 {
                     text: 'Cancel',
-                    id: 'objective-cancel',
+                    id: 'response-cancel',
                     click: function() {
                         jQuery(this).dialog('close');
                         // remove from DOM
@@ -111,26 +109,26 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
         });
     }
 
-    /** clear all objectives */
-    function clearObjectives() {
-        var cmd = pathname+".clear_objectives()";
+    /** clear all responses */
+    function clearResponses() {
+        var cmd = pathname+".clear_responses()";
         project.issueCommand(cmd);
     }
 
-    addButton.click(function() { promptForObjective(addObjective); });
-    clrButton.click(function() { clearObjectives(); });
+    addButton.click(function() { promptForResponse(addResponse); });
+    clrButton.click(function() { clearResponses(); });
 
     /** load the table with the given properties */
     this.loadData = function(properties) {
         if (properties) {
-            objectives.setData(properties);
+            responses.setData(properties);
         }
         else {
-            objectives.setData([]);
+            responses.setData([]);
             alert('Error getting properties for '+pathname+' ('+name+')');
         }
-        objectives.updateRowCount();
-        objectives.render();
+        responses.updateRowCount();
+        responses.render();
     };
 };
 

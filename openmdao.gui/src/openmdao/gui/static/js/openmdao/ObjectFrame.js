@@ -29,6 +29,7 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
             'Residuals',
             'Parameters',
             'Objectives',
+            'Responses',
             'Constraints',
             'CouplingVars',
             'Triggers',
@@ -84,6 +85,11 @@ openmdao.ObjectFrame = function(project, pathname, selectTabName) {
         }
         else if (name === 'Objectives') {
             _panes[name] = new openmdao.ObjectivesPane(contentPane, project,
+                                pathname, name, true);
+            _panes[name].loadData(val);
+        }
+        else if (name === 'Responses') {
+            _panes[name] = new openmdao.ResponsesPane(contentPane, project,
                                 pathname, name, true);
             _panes[name].loadData(val);
         }

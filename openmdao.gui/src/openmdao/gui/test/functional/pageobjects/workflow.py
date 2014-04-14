@@ -89,7 +89,7 @@ class WorkflowFigure(BasePageObject):
     def highlighted(self):
         """ True if the flow div background is highlighted. """
         bg_image = self.flow.value_of_css_property('background-image')
-        return (bg_image.find('highlight') > 0)
+        return bg_image.find('highlight') > 0
 
     @property
     def horizontal(self):
@@ -183,11 +183,11 @@ class WorkflowComponentFigure(BasePageObject):
         """ Exec state of this component. """
         rect = self.root.find_element_by_css_selector('rect')
         style = rect.get_attribute('style').lower()
-        if ('stroke: #ff0000' in style):
+        if ('stroke: #ff0000' in style) or ('stroke: rgb(255, 0, 0)' in style):
             return 'INVALID'
-        elif ('stroke: #00ff00' in style):
+        elif ('stroke: #00ff00' in style) or ('stroke: rgb(0, 255, 0)' in style):
             return 'VALID'
-        elif ('stroke: #0000ff' in style):
+        elif ('stroke: #0000ff' in style) or ('stroke: rgb(0, 0, 255)' in style):
             return 'RUNNING'
         else:
             return 'UNKNOWN'
