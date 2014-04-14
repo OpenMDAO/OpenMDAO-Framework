@@ -1,8 +1,9 @@
 """ A workflow that contains cyclic graphs. Note that a special solver is
 required to converge this workflow in order to execute it. """
+from ordereddict import OrderedDict
 
 import networkx as nx
-from ordereddict import OrderedDict
+from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 try:
@@ -17,23 +18,16 @@ from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
-from openmdao.main.sequentialflow import SequentialWorkflow
+from openmdao.main.dataflow import Dataflow
 from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
 
 
-# SequentialWorkflow gives us the add and remove methods.
-class CyclicWorkflow(SequentialWorkflow):
+class CyclicWorkflow(Dataflow):
     """A CyclicWorkflow consists of a collection of Components that contains
     loops in the graph.
     """
-
-    def __init__(self, parent=None, scope=None, members=None):
-        """ Create an empty flow. """
-
-        super(CyclicWorkflow, self).__init__(parent, scope, members)
-        self.config_changed()
 
     def config_changed(self):
         """Notifies the Workflow that its configuration (dependencies, etc.)
@@ -45,50 +39,48 @@ class CyclicWorkflow(SequentialWorkflow):
         self._severed_edges = []
         self._mapped_severed_edges = []
 
-    def __iter__(self):
-        """Iterate through the nodes in some proper order."""
-
-        # resolve all of the components up front so if there's a problem it'll
-        # fail early and not waste time running components
-        scope = self.scope
-        return [getattr(scope, n) for n in self._get_topsort()].__iter__()
-
     def _get_topsort(self):
         """ Return a sorted list of components in the workflow.
         """
 
         if self._topsort is None:
-            graph = nx.DiGraph(self._get_collapsed_graph())
-
-            cyclic = True
             self._severed_edges = set()
-
-            while cyclic:
-
-                try:
-                    self._topsort = nx.topological_sort(graph)
-                    cyclic = False
-
-                except nx.NetworkXUnfeasible:
-                    strong = strongly_connected_components(graph)
-
-                    # We may have multiple loops. We only deal with one at
-                    # a time because multiple loops create some non-unique
-                    # paths.
-                    strong = strong[0]
-
-                    # Break one edge of the loop.
-                    # For now, just break the first edge.
-                    # TODO: smarter ways to choose edge to break.
-                    graph.remove_edge(strong[-1], strong[0])
-
-                    # Keep a list of the edges we break, so that a solver
-                    # can use them as its independents/dependents.
-                    depgraph = self.scope._depgraph
-                    edge_set = set(depgraph.get_directional_interior_edges(strong[-1],
-                                                                            strong[0]))
-
-                    self._severed_edges.update(edge_set)
+            
+            compgraph = self.scope._depgraph.component_graph()
+            if is_directed_acyclic_graph(compgraph):
+                super(CyclicWorkflow, self)._get_topsort()
+                self._workflow_graph = self._collapsed_graph
+            else:
+                graph = nx.DiGraph(self._get_collapsed_graph())
+    
+                cyclic = True
+    
+                while cyclic:
+    
+                    try:
+                        self._topsort = nx.topological_sort(graph)
+                        cyclic = False
+    
+                    except nx.NetworkXUnfeasible:
+                        strong = strongly_connected_components(graph)
+    
+                        # We may have multiple loops. We only deal with one at
+                        # a time because multiple loops create some non-unique
+                        # paths.
+                        strong = strong[0]
+    
+                        # Break one edge of the loop.
+                        # For now, just break the first edge.
+                        # TODO: smarter ways to choose edge to break.
+                        graph.remove_edge(strong[-1], strong[0])
+    
+                        # Keep a list of the edges we break, so that a solver
+                        # can use them as its independents/dependents.
+                        depgraph = self.scope._depgraph
+                        edge_set = set(depgraph.get_directional_interior_edges(strong[-1],
+                                                                                strong[0]))
+    
+                        self._severed_edges.update(edge_set)
 
         return self._topsort
 
@@ -110,6 +102,9 @@ class CyclicWorkflow(SequentialWorkflow):
 
         return self._workflow_graph
 
+    def check_config(self):
+        pass # cyclic graphs are OK
+    
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
