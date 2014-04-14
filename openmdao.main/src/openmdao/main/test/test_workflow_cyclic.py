@@ -10,10 +10,14 @@ try:
 except ImportError as err:
     from openmdao.main.numpy_fallback import zeros, array
 
-from openmdao.main.api import Assembly, Component, CyclicWorkflow, VariableTree
+from openmdao.main.api import Assembly, Component, Driver, CyclicWorkflow, VariableTree
 from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.main.test.test_derivatives import SimpleDriver
-
+from openmdao.main.interfaces import ISolver, implements
+from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasconstraints import HasEqConstraints
+from openmdao.main.hasobjective import HasObjectives
+from openmdao.util.decorators import add_delegate
 
 class MyComp(Component):
 
@@ -61,6 +65,52 @@ class MultiPath(Assembly):
         self.connect('c1.yy', 'c3.xx')
         self.connect('c3.yy', 'c1.xx')
 
+@add_delegate(HasParameters, HasEqConstraints)
+class MySolver(Driver): 
+    implements(ISolver)
+    
+    def __init__(self):
+        super(MySolver, self).__init__()
+        self.workflow = CyclicWorkflow()
+
+@add_delegate(HasParameters, HasEqConstraints, HasObjectives)
+class MyDriver(Driver):
+    pass
+
+class TestRatio(Component):
+    y = Float(iotype='in', default_value=0.0)
+    ratio = Float(iotype='out')
+    def execute(self):
+        self.ratio = self.y+1
+
+class TestCom(Component):
+    x = Float(default_value=1.0,
+              iotype='in')
+    y = Float(iotype='out')
+
+    ratio = Float(default_value=0.0, iotype = 'in')
+
+    def execute(self):
+        self.y = self.x**2. + self.ratio
+
+class TestOptSubToSolver(Assembly):
+
+    def configure(self):
+
+        self.add('com', TestCom())
+        self.add('ratio', TestRatio())
+
+        self.add('driver', MySolver())
+        self.add('opt', MyDriver())
+
+        self.connect('com.y', 'ratio.y')
+        self.driver.add_parameter('com.ratio', low=1e-99, high=1e99)
+        self.driver.add_constraint('ratio.ratio=com.ratio')
+
+        self.opt.add_parameter('com.x', low=0, high=1)
+        self.opt.add_objective('com.y')
+        self.opt.workflow.add('com')
+        self.driver.workflow.add(['opt', 'ratio'])
 
 class TestCase(unittest.TestCase):
     """ Test run/step/stop aspects of a simple workflow. """
@@ -88,6 +138,11 @@ class TestCase(unittest.TestCase):
 
         self.assertEqual(self.model.driver.workflow._topsort,
                          ['c3', 'c4', 'c1', 'c2'])
+
+    def test_opt_nested_in_solver(self):
+        sim = TestOptSubToSolver()
+        sim.run()
+        self.assertEqual([c.name for c in sim.driver.workflow], ['opt','ratio','_pseudo_0'])
 
 
 class Tree2(VariableTree):
