@@ -75,6 +75,7 @@ class MetaModel(Component):
             self.add(name, Float(0.0, iotype='out', desc='metamodel response'))
             output_tree.add(name, List([], desc='training response'))
             self._response_data[name] = []
+            self.surrogates[name] = None
 
         self._surrogate_input_names = params
         self._surrogate_output_names = responses

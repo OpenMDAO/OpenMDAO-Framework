@@ -15,9 +15,9 @@ class AdaptiveSampleDriver(DOEdriver):
 
     adaptive_inputs = VarTree(VariableTree(), iotype='in')
 
-    accumulated_inputs = VarTree(VariableTree(), iotype='out')
+    all_case_inputs = VarTree(VariableTree(), iotype='out')
 
-    accumulated_outputs = VarTree(VariableTree(), iotype='out')
+    all_case_outputs = VarTree(VariableTree(), iotype='out')
 
     def __init__(self):
         super(AdaptiveSampleDriver, self).__init__()
@@ -79,7 +79,7 @@ class AdaptiveSampleDriver(DOEdriver):
 
             # Accumulate the inputs
             src = 'case_inputs.' + path
-            target = 'accumulated_inputs.' + path
+            target = 'all_case_inputs.' + path
             src_val = self.get(src)
             if reset is True:
                 target_val = []
@@ -92,7 +92,7 @@ class AdaptiveSampleDriver(DOEdriver):
 
             # Accumulate the outputs
             src = 'case_outputs.' + path
-            target = 'accumulated_outputs.' + path
+            target = 'all_case_outputs.' + path
             src_val = self.get(src)
             if reset is True:
                 target_val = []
@@ -120,7 +120,7 @@ class AdaptiveSampleDriver(DOEdriver):
         self._add_vartrees('adaptive_inputs', target, desc)
 
         desc = 'Holds all inputs processed by this driver.'
-        self._add_vartrees('accumulated_inputs', target, desc)
+        self._add_vartrees('all_case_inputs', target, desc)
 
     def add_response(self, expr, name=None, scope=None):
         """We need to create our special variable trees."""
@@ -131,7 +131,7 @@ class AdaptiveSampleDriver(DOEdriver):
         path = make_legal_path(path)
 
         desc = 'Holds all outputs processed by this driver.'
-        self._add_vartrees('accumulated_outputs', path, desc)
+        self._add_vartrees('all_case_outputs', path, desc)
 
     def _add_vartrees(self, tree_name, path, desc):
         ''' Adds a vartree, the component sub leaf, and the final variable

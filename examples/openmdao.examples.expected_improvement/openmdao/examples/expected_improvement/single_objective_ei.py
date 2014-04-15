@@ -66,9 +66,9 @@ class Analysis(Assembly):
         adapt.add_response('branin.f_xy')
 
         #pass training data from sampler to metamodel and pareto filter
-        self.connect('adapt.accumulated_inputs.branin.x', ['meta.params.x','pareto.params.x'])
-        self.connect('adapt.accumulated_inputs.branin.y', ['meta.params.y','pareto.params.y'])
-        self.connect('adapt.accumulated_outputs.branin.f_xy', ['meta.responses.f_xy','pareto.responses.f_xy'])
+        self.connect('adapt.all_case_inputs.branin.x', ['meta.params.x','pareto.params.x'])
+        self.connect('adapt.all_case_inputs.branin.y', ['meta.params.y','pareto.params.y'])
+        self.connect('adapt.all_case_outputs.branin.f_xy', ['meta.responses.f_xy','pareto.responses.f_xy'])
 
         #connect meta and pareto to ei
         self.connect('meta.f_xy', 'ei.current') #this passes a normal distribution variable
@@ -83,8 +83,9 @@ class Analysis(Assembly):
         ei_opt.add_objective('ei.PI') #could use ei.EI too
 
         #Iterative sampling process
-        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]') #no low/high needed
-        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]') #no low/high needed
+        # TODO: Note, soon low and high will not be needed.
+        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]', low=-1e99, high=1e99)
+        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]', low=-1e99, high=1e99)
         driver.add_constraint('adapt.adaptive_inputs.branin.x[0] = meta.x')
         driver.add_constraint('adapt.adaptive_inputs.branin.y[0] = meta.y')
         driver.max_iterations = 30

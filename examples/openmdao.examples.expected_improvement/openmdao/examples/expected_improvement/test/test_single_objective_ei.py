@@ -24,8 +24,8 @@ class SingleObjectiveEITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
 
     def tearDown(self):
-        if os.path.exists('DOE_trainer.csv'):
-            os.remove('DOE_trainer.csv')
+        if os.path.exists('adapt.csv'):
+            os.remove('adapt.csv')
 
     def test_EI(self):
 

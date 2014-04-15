@@ -64,14 +64,14 @@ class TestCaseAdaptiveSample(unittest.TestCase):
         # Run twice, so next point comes from case iterator
         self.model.replace('driver', FixedPointIterator())
         self.model.driver.max_iteration = 3
-        self.model.driver.add_parameter('adaptive.adaptive_inputs.driven.x[0]')
+        self.model.driver.add_parameter('adaptive.adaptive_inputs.driven.x[0]',
+                                  low=-10., high=10.)
         self.model.driver.add_constraint('adaptive.adaptive_inputs.driven.x[0] = driven.y')
         self.model.run()
 
         self.assertEqual(self.model.driven.y, 283.0)
-        print self.model.adaptive.accumulated_inputs.driven.x
-        self.assertTrue(self.model.adaptive.accumulated_inputs.driven.x == [-10.0, 10.0, 31.0, 94.0])
-        self.assertTrue(self.model.adaptive.accumulated_outputs.driven.y == [-29.0, 31.0, 94.0, 283.0])
+        self.assertTrue(self.model.adaptive.all_case_inputs.driven.x == [-10.0, 10.0, 31.0, 94.0])
+        self.assertTrue(self.model.adaptive.all_case_outputs.driven.y == [-29.0, 31.0, 94.0, 283.0])
 
 
 if __name__ == "__main__":

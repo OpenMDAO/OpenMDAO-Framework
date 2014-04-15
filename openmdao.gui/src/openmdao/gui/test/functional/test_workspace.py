@@ -35,15 +35,17 @@ def _test_slots_sorted_by_name(browser):
     project_dict, workspace_page = startup(browser)
 
     #drop 'metamodel' onto the grid
-    meta_name = workspace_page.put_element_on_grid('MetaModel')
-    #find it on the page
-    metamodel = workspace_page.get_dataflow_figure(meta_name)
-
+    workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
+    workspace_page.show_dataflow('top')
+    args = ["('ratio1', 'ratio2')", "('torque_ratio', 'RPM')"]
+    workspace_page.add_library_item_to_dataflow(
+        'openmdao.lib.components.metamodel.MetaModel', 'mm', args=args)
     #open the 'edit' dialog on metamodel
-    editor = metamodel.editor_page(False)
+    metamodel = workspace_page.get_dataflow_figure('mm', 'top')
+    mm_editor = metamodel.editor_page()
 
     # see if the slot names are sorted
-    slot_name_elements = editor.root.find_elements_by_css_selector('text#name')
+    slot_name_elements = mm_editor.root.find_elements_by_css_selector('text#name')
     slot_names = [s.text for s in slot_name_elements]
     eq(slot_names, sorted(slot_names))
 
@@ -708,8 +710,9 @@ def _test_driver_config(browser):
     # Add MetaModel so we can test events.
     workspace_page.add_library_item_to_dataflow('openmdao.main.assembly.Assembly', 'top')
     workspace_page.show_dataflow('top')
+    args = ["('x', )", "('y', )"]
     workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.metamodel.MetaModel', 'mm')
+        'openmdao.lib.components.metamodel.MetaModel', 'mm', args=args)
 
     # Replace default driver with CONMIN and edit.
     workspace_page.replace_driver('top', 'CONMINdriver')
@@ -787,29 +790,6 @@ def _test_driver_config(browser):
     browser.implicitly_wait(1)  # Not expecting to find anything.
     try:
         for i, row in enumerate(constraints.value):
-            eq(row, expected[i])
-    finally:
-        browser.implicitly_wait(TMO)
-
-    # Add the 'train_next' event'
-    editor('triggers_tab').click()
-    dialog = editor.new_trigger()
-    dialog.target = 'mm.train_next'
-    dialog('ok').click()
-    events = editor.get_triggers()
-    expected = [['', 'mm.train_next']]
-    eq(len(events.value), len(expected))
-    for i, row in enumerate(events.value):
-        eq(row, expected[i])
-
-    # Delete the event.
-    delbutton = editor('triggers').find_elements_by_css_selector('.ui-icon-trash')
-    delbutton[0].click()
-    events = editor.get_triggers()
-    expected = []
-    browser.implicitly_wait(1)  # Not expecting to find anything.
-    try:
-        for i, row in enumerate(events.value):
             eq(row, expected[i])
     finally:
         browser.implicitly_wait(TMO)
@@ -999,61 +979,6 @@ def _test_libsearch(browser):
     eq(searches, doe_searches)
 
     # Clean up.
-    closeout(project_dict, workspace_page)
-
-
-def _test_arguments(browser):
-    # Check that objects requiring constructor arguments are handled.
-    project_dict, workspace_page = startup(browser)
-
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.main.assembly.Assembly', 'top')
-    workspace_page.show_dataflow('top')
-    workspace_page.add_library_item_to_dataflow(
-        'openmdao.lib.components.metamodel.MetaModel', 'mm')
-    mm_figure = workspace_page.get_dataflow_figure('mm', 'top')
-    mm_editor = mm_figure.editor_page()
-    mm_editor.show_slots()
-    mm_editor.move(-200, 0)
-
-    # Plug ListCaseIterator into warm_start_data.
-    slot = find_slot_figure(workspace_page, 'warm_start_data', prefix='top.mm')
-    args = ['[]']
-    workspace_page.fill_slot_from_library(slot, 'ListCaseIterator', args)
-
-    # Plug ListCaseRecorder into recorder.
-    slot = find_slot_figure(workspace_page, 'recorder', prefix='top.mm')
-    workspace_page.fill_slot_from_library(slot, 'ListCaseRecorder')
-
-    # Plug ExecComp into model.
-    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
-    args = ["('z = x * y',)"]
-    workspace_page.fill_slot_from_library(slot, 'ExecComp', args)
-
-    # Check that inputs were created from expression.
-    slot = find_slot_figure(workspace_page, 'model', prefix='top.mm')
-    exe_editor = slot.editor_page()
-    exe_editor.move(-100, 0)
-    inputs = exe_editor.get_inputs()
-    expected = [
-        ['', 'x',             '0',     '',  ''],
-        ['', 'y',             '0',     '',  ''],
-        ['', 'directory',  '',  '',
-         'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
-        ['', 'force_fd', 'False', '',
-         'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '',
-         'Determines behavior when some analytical derivatives are provided'
-         ' but some are missing']
-    ]
-
-    for i, row in enumerate(inputs.value):
-        eq(row, expected[i])
-    exe_editor.close()
-    mm_editor.close()
-
     closeout(project_dict, workspace_page)
 
 
