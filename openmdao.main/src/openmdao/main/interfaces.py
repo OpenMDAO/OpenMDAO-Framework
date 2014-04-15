@@ -891,6 +891,6 @@ def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces
     specified."""
     for iface in ifaces:
-        if issubclass(iface, Interface) and iface.providedBy(obj):
+        if iface.providedBy(obj):
             return True
     return False

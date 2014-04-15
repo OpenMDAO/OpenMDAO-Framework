@@ -162,7 +162,7 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True and \
            not trait.assumed_default and trait._illegal_default_ is True:
 
         msg = "variable '%s' is required and cannot have a default value" % name
@@ -668,7 +668,7 @@ class Container(SafeHasTraits):
                     obj = obj.copy()
                 else:
                     obj = _copydict[trait.copy](obj)
-        else: # index is not None
+        else:  # index is not None
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
@@ -1131,7 +1131,7 @@ class Container(SafeHasTraits):
             if obj is Missing:
                 return self._get_failed(path, index)
             return obj
-        else: # has an index
+        else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)

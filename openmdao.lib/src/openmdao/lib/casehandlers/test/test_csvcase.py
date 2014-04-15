@@ -376,7 +376,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             "      comp1.vt.vt2.x: -1.0",
             "      comp1.vt.vt2.y: -2.0",
             ]
-        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case: case1'):
@@ -429,7 +428,11 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.recorders[0].num_backups = 0
         self.top.run()
-        case = Case(inputs=[('comp2.a_slot', None)])
+        outputs = [('comp1.z', 0), ('comp2.z', 0), ('comp1.a_string', 'world'),
+                   ('comp1.a_array[2]', 0), ('driver.workflow.itername', '1')]
+        inputs = [('comp1.x', 0.1), ('comp1.y', 2 + .1),
+                  ('comp1.x_array[1]', 99.88), ('comp1.b_bool', True)]
+        case = Case(inputs=inputs, outputs=outputs)
         assert_raises(self, 'self.top.recorders[0].record(case)',
                       globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
