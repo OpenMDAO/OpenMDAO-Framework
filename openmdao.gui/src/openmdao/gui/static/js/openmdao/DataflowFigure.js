@@ -526,7 +526,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         // evaluate, for ImplicitComponent only
         if (jQuery.inArray('IImplicitComponent', this.interfaces) >= 0) {
             menu.appendMenuItem(new draw2d.MenuItem("Evaluate", null, function() {
-                var cmd = pathname + '.evaluate();';
+                var cmd = pathname + '.evaluate()';
                 self.project.issueCommand(cmd);
             }));
         }
@@ -587,7 +587,7 @@ openmdao.DataflowFigure.prototype.getContextMenu=function(){
         asm = openmdao.Util.getPath(pathname);
         if ((this.maxmin !== '-') && (asm.length > 0)) {
             menu.appendMenuItem(new draw2d.MenuItem("Disconnect", null, function() {
-                var cmd = asm + '.disconnect("'+name+'");';
+                var cmd = asm + '.disconnect("'+name+'")';
                 self.project.issueCommand(cmd);
             }));
         }
@@ -699,6 +699,7 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
     flows = flows.concat(json.parameters);
     flows = flows.concat(json.constraints);
     flows = flows.concat(json.objectives);
+    flows = flows.concat(json.responses);
 
     jQuery.each(json.components,function(idx, comp) {
         var name = comp.name,
@@ -770,7 +771,8 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
         data:       new draw2d.Color(100, 100, 100),
         parameter:  new draw2d.Color(  0,   0, 200),
         constraint: new draw2d.Color(  0,   0, 200),
-        objective:  new draw2d.Color(  0,   0, 200)
+        objective:  new draw2d.Color(  0,   0, 200),
+        response:   new draw2d.Color(  0,   0, 200)
     };
 
     var displayFlow = function(conn, type, tabName) {
@@ -921,6 +923,10 @@ openmdao.DataflowFigure.prototype.updateDataflow=function(json) {
             displayFlow(flow, 'objective', 'Objectives');
         });
         flows = flows.concat(json.objectives);
+        jQuery.each(json.responses, function(idx, flow) {
+            displayFlow(flow, 'response', 'Responses');
+        });
+        flows = flows.concat(json.responses);
     }
 
     // remove any component figures that are not in the updated data

@@ -59,16 +59,10 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.drivers.adaptivesampledriver.AdaptiveSampleDriver = openmdao.lib.drivers.adaptivesampledriver:AdaptiveSampleDriver
       openmdao.lib.drivers.broydensolver.BroydenSolver = openmdao.lib.drivers.broydensolver:BroydenSolver
       openmdao.lib.drivers.caseiterdriver.CaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriver
-      openmdao.lib.drivers.caseiterdriver.ConnectableCaseIteratorDriver = openmdao.lib.drivers.caseiterdriver:ConnectableCaseIteratorDriver
-      openmdao.lib.drivers.caseiterdriver.CaseIteratorDriverBase = openmdao.lib.drivers.caseiterdriver:CaseIteratorDriverBase
       openmdao.lib.drivers.conmindriver.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
       openmdao.lib.drivers.cobyladriver.COBYLAdriver = openmdao.lib.drivers.cobyladriver:COBYLAdriver
-      openmdao.lib.drivers.doedriver.DOEdriverBase = openmdao.lib.drivers.doedriver:DOEdriverBase
       openmdao.lib.drivers.doedriver.DOEdriver = openmdao.lib.drivers.doedriver:DOEdriver
-      openmdao.lib.drivers.doedriver.ConnectableDOEdriver = openmdao.lib.drivers.doedriver:ConnectableDOEdriver
-      openmdao.lib.drivers.doedriver.NeighborhoodDOEdriverBase = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriverBase
       openmdao.lib.drivers.doedriver.NeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:NeighborhoodDOEdriver
-      openmdao.lib.drivers.doedriver.ConnectableNeighborhoodDOEdriver = openmdao.lib.drivers.doedriver:ConnectableNeighborhoodDOEdriver
       openmdao.lib.drivers.genetic.Genetic = openmdao.lib.drivers.genetic:Genetic
       openmdao.lib.drivers.iterate.FixedPointIterator = openmdao.lib.drivers.iterate:FixedPointIterator
       openmdao.lib.drivers.iterate.IterateUntil = openmdao.lib.drivers.iterate:IterateUntil
