@@ -61,5 +61,5 @@ class ExpectedImprovement(Component):
             self.EI = 0
             self.PI = 0
 
-        print self.EI
+
 

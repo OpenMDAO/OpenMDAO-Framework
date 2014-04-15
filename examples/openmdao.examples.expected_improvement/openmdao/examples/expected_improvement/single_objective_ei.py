@@ -75,6 +75,9 @@ class Analysis(Assembly):
         self.connect('pareto.pareto_outputs[0, 0]', 'ei.target') #for single objective, frontier is just a scalar value that is the minimum of the set
 
         #EI optimization to find next point
+        ei_opt.opt_type = "maximize"
+        ei_opt.population_size = 100
+        ei_opt.generations = 10
         ei_opt.add_parameter('meta.x', low=-5, high=10)
         ei_opt.add_parameter('meta.y', low=0, high=15)
         ei_opt.add_objective('ei.PI') #could use ei.EI too
@@ -87,9 +90,9 @@ class Analysis(Assembly):
         driver.max_iterations = 30
 
         #Iteration Heirarchy
-        self.driver.workflow.add(['adapt', 'pareto', 'ei_opt'])
-        self.adapt.workflow.add(['branin'])
-        self.ei_opt.workflow.add(['meta', 'ei'])
+        driver.workflow.add(['adapt', 'pareto', 'ei_opt'])
+        adapt.workflow.add(['branin'])
+        ei_opt.workflow.add(['meta', 'ei'])
 
         #FPI doesn't currently have stop conditions, this is up for discussion
         driver.add_stop_condition('ei.EI <= .0001')
