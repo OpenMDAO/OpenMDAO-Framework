@@ -5,7 +5,7 @@ import ConfigParser
 
 import nose
 from nose.plugins.base import Plugin
-from pkg_resources import working_set, to_filename
+from pkg_resources import working_set, to_filename, get_distribution
 
 import atexit
 
@@ -110,7 +110,7 @@ def _trace_atexit():
 def _get_openmdao_packages():
     # pkg_resources uses a 'safe' name for dists, which replaces all 'illegal' chars with '-'
     # '_' is an illegal char used in one of our packages
-    return [to_filename(d.project_name) for d in working_set 
+    return [d for d in working_set 
             if d.project_name.startswith('openmdao.')]
 
 def read_config(options):
@@ -182,7 +182,7 @@ def run_openmdao_suite_deprecated():
 def is_dev_install():
     return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
 
-def run_openmdao_suite(argv=None):
+def run_openmdao_suite(options=None, argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
     
@@ -192,32 +192,44 @@ def run_openmdao_suite(argv=None):
     if argv is None:
         argv = sys.argv
 
-    #Add any default packages/directories to search for tests to tlist.
-    tlist = _get_openmdao_packages()
-    
+    # check for args not starting with '-'
+    args = argv[:]
+        
+    if options.packages:
+        tlist = [get_distribution(package) for package in options.packages]
+        test_packages = [distribution.location for distribution in tlist]
+    else:
+        #Add any default packages/directories to search for tests to tlist.
+        tlist = _get_openmdao_packages()
+        
+        # in a release install, default is the set of tests specified in release_tests.cfg
+        if not is_dev_install() or options.small:
+            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
+            test_packages = []
+
+        else: # in a dev install, default is all tests
+            args.append('--all') 
+            test_packages = [distribution.location for distribution in tlist]
+
     break_check = ['--help', '-h', '--all']
     
     covpkg = False # if True, --cover-package was specified by the user
     
-    # check for args not starting with '-'
-    args = argv[:]
+    # check for --cover-package arg
     for i, arg in enumerate(args):
         if arg.startswith('--cover-package'):
             covpkg = True
-        if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
-    else:  # no non '-' args, so assume they want to run the default test suite
-        # in a release install, default is the set of tests specified in release_tests.cfg
-        if not is_dev_install() or '--small' in args:
-            if '--small' in args:
-                args.remove('--small')
-            args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
-        else: # in a dev install, default is all tests
-            args.append('--all') 
-        
+   
+    #stop nose from modifying sys.path
+    args.append('--no-path-adjustment')
+ 
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
     
+    #disable nose from adjusting sys.path
+    #args.append('--no-path-adjustment')    
+
     # Clobber cached data in case Python environment has changed.
     base = os.path.expanduser(os.path.join('~', '.openmdao'))
     for name in ('eggsaver.dat', 'fileanalyzer.dat'):
@@ -232,7 +244,7 @@ def run_openmdao_suite(argv=None):
         args.append('--cover-erase')
         if '--all' in args and not covpkg:
             for pkg in tlist:
-                opt = '--cover-package=%s' % pkg
+                opt = '--cover-package=%s' % to_filename(pkg.project_name)
                 if opt not in args:
                     args.append(opt)
 
@@ -250,8 +262,7 @@ def run_openmdao_suite(argv=None):
         
     if '--all' in args:
         args.remove('--all')
-        args.extend(tlist)
-    
+ 
     if '--plugins' in args:
         args.remove('--plugins')
         from openmdao.main.plugin import plugin_install, _get_plugin_parser
@@ -268,13 +279,11 @@ def run_openmdao_suite(argv=None):
         do_gui_tests = True
 
     # run GUI functional tests, overriding default action
-    if '--gui' in args:
-        args.remove('--gui')
+    if options.gui:
         do_gui_tests = True
 
     # skip GUI functional tests, overriding default action
-    if '--skip-gui' in args:
-        args.remove('--skip-gui')
+    if options.skip_gui:
         do_gui_tests = False
 
     if not do_gui_tests:
@@ -290,7 +299,9 @@ def run_openmdao_suite(argv=None):
         pass
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
-    
+   
+    args.extend(test_packages)
+
 #    _trace_atexit()
     nose.run_exit(argv=args)
 
