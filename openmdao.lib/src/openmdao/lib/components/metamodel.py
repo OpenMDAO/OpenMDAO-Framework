@@ -113,7 +113,8 @@ class MetaModel(Component):
         if self.default_surrogate is None:
             no_sur = []
             for name in self._surrogate_output_names:
-                if name not in self.surrogates:
+                if name not in self.surrogates or \
+                               self.surrogates[name] is None:
                     no_sur.append(name)
             if len(no_sur) > 0:
                 self.raise_exception("No default surrogate model is defined and"

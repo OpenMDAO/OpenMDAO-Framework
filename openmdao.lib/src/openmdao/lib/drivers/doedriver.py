@@ -29,6 +29,7 @@ class DOEdriver(CaseIteratorDriver):
 
     def execute(self):
         """Generate and evaluate cases."""
+        print "Executing", self.name
         self.set_inputs(self._get_cases())
         self._csv_file = None
         try:
