@@ -56,9 +56,9 @@ class Simulation(Assembly):
         self.add("DOE_Validate", DOEdriver())
         self.DOE_Validate.workflow = SequentialWorkflow()
         self.DOE_Validate.DOEgenerator = Uniform()
-        self.DOE_Validate.DOEgenerator.num_samples = 10#0
+        self.DOE_Validate.DOEgenerator.num_samples = 100
         self.DOE_Validate.add_parameter(("sin_meta_model.x", "sin_calc.x"),
-                                        low=0, high=20, name="combined_input")
+                                        low=0, high=20) # , name="combined_input"
         self.DOE_Validate.add_response("sin_calc.f_x")
         self.DOE_Validate.add_response("sin_meta_model.f_x")
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     #This is how you can access any of the data
     train_inputs = sim.DOE_Trainer.case_inputs.sin_calc.x
     train_actual = sim.DOE_Trainer.case_outputs.sin_calc.f_x
-    inputs = sim.DOE_Validate.case_inputs.combined_input
+    inputs = sim.DOE_Validate.case_inputs.sin_meta_model.x
     actual = sim.DOE_Validate.case_outputs.sin_calc.f_x
     predicted = sim.DOE_Validate.case_outputs.sin_meta_model.f_x
 
