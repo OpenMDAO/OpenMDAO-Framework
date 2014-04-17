@@ -767,12 +767,23 @@ class FiniteDifference(object):
                     if current_val > self.relative_threshold:
                         fd_step = fd_step*current_val
 
-                if self.low[j] is not None and \
-                        current_val - fd_step < self.low[j]:
-                    form = 'forward'
-                if self.high[j] is not None and \
-                        current_val + fd_step > self.high[j]:
-                    form = 'backward'
+                # Switch to forward if we get near the low boundary
+                if self.low[j] is not None:
+                    if isinstance(self.low[j], (list, ndarray)):
+                        bound_val = self.low[j][i]
+                    else:
+                        bound_val = self.low[j]
+                    if current_val - fd_step < bound_val:
+                        form = 'forward'
+
+                # Switch to backward if we get near the high boundary
+                if self.high[j] is not None:
+                    if isinstance(self.high[j], (list, ndarray)):
+                        bound_val = self.high[j][i]
+                    else:
+                        bound_val = self.high[j]
+                    if current_val + fd_step > bound_val:
+                        form = 'backward'
 
                 #--------------------
                 # Forward difference

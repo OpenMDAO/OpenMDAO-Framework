@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.testutil import assert_rel_error
@@ -65,6 +65,17 @@ class MyCompDerivs(Component):
         output_keys = ('y', )
         return input_keys, output_keys
 
+class ArrayParaboloid(Component):
+
+    x = Array([[0., 0.]], iotype='in', desc='The variable x')
+    f_x = Float(iotype='out', desc='F(x)')
+
+    def execute(self):
+        """f(x) = (x[0][0]-3)^2 + x[0][0]x[0][1] + (x[0][1]+4)^2 - 3
+        Optimal solution (minimum): x[0][0] = 6.6667; x[0][1] = -7.3333
+        """
+        x = self.x
+        self.f_x = (x[0][0]-3.0)**2 + x[0][0]*x[0][1] + (x[0][1]+4.0)**2 - 3.0
 
 class TestFiniteDifference(unittest.TestCase):
 
@@ -283,6 +294,18 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertTrue('comp4' not in pa1.comps)
         self.assertTrue('comp5' not in pa1.comps)
         self.assertTrue(pa1.comps == pa1.itercomps)
+
+    def test_smart_low_high_array_param(self):
+
+        top = Assembly()
+        top.add('paraboloid', ArrayParaboloid())
+        driver = top.add('driver', SimpleDriver())
+        driver.add_objective('paraboloid.f_x')
+        driver.add_parameter('paraboloid.x', low=[-100, -99], high=[100, 99])
+        driver.workflow.add('paraboloid')
+        top.run()
+
+        J = top.driver.workflow.calc_gradient()
 
 if __name__ == '__main__':
     import nose
