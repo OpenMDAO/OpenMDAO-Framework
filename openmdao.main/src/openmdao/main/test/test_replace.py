@@ -199,22 +199,21 @@ class ReplaceTestCase(unittest.TestCase):
                              " delegate '_hasineqconstraints' has no match")
 
 
+class Dummy(Component):
+    fin = Float(1.5, iotype="in")
+    fout = Float(3.0, iotype='out')
+    
+    def execute(self):
+        self.fout = self.fin * 2
+        
+        
+class Dummy2(Dummy):
+    def execute(self):
+        self.fout = self.fin * 4
+
+
 class Replace2TestCase(unittest.TestCase):
     def test_replace(self):
-
-        class Dummy(Component):
-            fin = Float(1.5, iotype="in")
-            fout = Float(3.0, iotype='out')
-
-            def execute(self):
-                self.fout = self.fin * 2
-
-
-        class Dummy2(Dummy):
-            def execute(self):
-                self.fout = self.fin * 4
-
-
         class AutoAssemb(Assembly):
 
             d2 = Slot(Dummy)
@@ -247,6 +246,29 @@ class Replace2TestCase(unittest.TestCase):
         self.assertEqual(aa.d2.fout, 80.0)
         self.assertEqual(aa.d3.fout, 160.0)
         self.assertEqual(aa.fout, 160.0)
+
+    def test_replace_slot(self):
+        # check to make sure you can call replace on
+        #   a interface slot if it has nothing in it.
+        #   Test to verify bug #69054122 stays fixed
+        class SimpleAssembly(Assembly):
+
+            d = Slot(Dummy)
+
+            def configure(self):
+
+                self.driver.workflow.add('d')
+
+        a = set_as_top(SimpleAssembly())
+        a.replace('d', Dummy())
+        a.d.fin = 10.0
+        a.run()
+        self.assertEqual(a.d.fout, 20.0)
+
+        a.replace('d', Dummy2())
+        a.d.fin = 10.0
+        a.run()
+        self.assertEqual(a.d.fout, 40.0)
 
 if __name__ == "__main__":
     unittest.main()

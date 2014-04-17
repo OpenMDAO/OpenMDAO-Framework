@@ -250,6 +250,10 @@ class Assembly(Component):
         inputs and connections of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
+        
+        if not tobj:
+            self.add( target_name, newobj )
+            return
 
         # Save existing driver references.
         refs = {}
