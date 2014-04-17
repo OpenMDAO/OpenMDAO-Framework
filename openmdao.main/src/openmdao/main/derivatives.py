@@ -1,4 +1,4 @@
-""" Some functions and objects that provide the backboneto OpenMDAO's
+""" Some functions and objects that provide the backbone to OpenMDAO's
 differentiation capability.
 """
 from sys import float_info
