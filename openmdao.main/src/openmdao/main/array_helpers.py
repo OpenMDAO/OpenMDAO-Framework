@@ -2,7 +2,7 @@
 
 import itertools
 
-from openmdao.main.vartree import VariableTree, get_val_and_index
+from openmdao.main.interfaces import IVariableTree
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -14,8 +14,53 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import ndarray, arange, array
 
 
+class IndexGetter(object):
+    """A simple class the returns the slice object used
+    to call its __getitem__ method.
+    """
+    def __getitem__(self, idx):
+        return idx
 
 _flat_idx_cache = {}
+_idx_cache = {}
+_idx_getter = IndexGetter()
+
+def get_index(name):
+    """Return the index (int or slice or tuple combination) 
+    associated with the given string, e.g. x[1:3, 5] would return 
+    a (slice(1,3),5) tuple.  This value can be passed into
+    an object's __getitem__ method, e.g., myval[idx], in order
+    to retrieve a particular slice from that object without 
+    having to parse the index more than once.
+    """
+    global _idx_getter, _idx_cache
+    brack = name.index('[')
+    if brack < 0:
+        return None
+    idxstr = name[brack:]
+    idx = _idx_cache.get(idxstr)
+    if idx is None:
+        commas = idxstr.replace('][',',')
+        _idx_cache[idxstr] = idx = eval('_idx_getter'+commas)
+    return idx
+    
+def get_val_and_index(scope, name):
+    """Return a tuple of (value, index) for the given name, 
+    which may contain array element access.
+    """
+    if '[' in name:
+        val = getattr(scope, name.split('[',1)[0])
+        idx = get_index(name)
+        # for objects that are not numpy arrays, an index tuple
+        #  really means [idx0][idx1]...[idx_n]
+        if isinstance(idx, tuple) and not isinstance(val, ndarray):
+            for i in idx:
+                val = val[i]
+        else:
+            val = val[idx]
+        return (val, idx)
+    else:
+        return (getattr(scope, name), None)
 
 def get_flattened_index(index, shape):
     """Given an index (int, slice, or tuple of ints and slices), into
@@ -97,13 +142,13 @@ def get_var_shape(name, scope):
     meta = scope.get_metadata(name, 'data_shape')
     if meta:
         return meta
-    val = getattr(scope, name)
+    val = scope.get(name)
     if isinstance(val, ndarray):
         return val.shape
     if isinstance(val, real_types):
         return (1,)
 
-    if isinstance(val, VariableTree):
+    if IVariableTree.providedBy(val):
         raise NotImplementedError("get_var_shape not supported for vartrees")
         sz = flattened_size(name, val, scope)
         if sz:
@@ -161,7 +206,7 @@ def is_differentiable_val(val):
         return True
     elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
         return True
-    elif isinstance(val, VariableTree):
+    elif IVariableTree.providedBy(val):
         return all([is_differentiable_val(getattr(val,k)) for k in val.list_vars()])
     return False
 
@@ -182,9 +227,9 @@ def flattened_size(name, val, scope=None):
         return val.size
 
     # Variable Trees
-    elif isinstance(val, VariableTree):
+    elif IVariableTree.providedBy(val):
         size = 0
-        for key in sorted(val.list_vars()):  # Force repeatable order.
+        for key in val.list_vars():
             size += flattened_size('.'.join((name, key)), 
                                    getattr(val, key))
         return size
@@ -213,7 +258,7 @@ def flattened_value(name, val):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
-    elif isinstance(val, VariableTree):
+    elif IVariableTree.providedBy(val):
         vals = []
         for key in sorted(val.list_vars()):  # Force repeatable order.
             value = getattr(val, key)

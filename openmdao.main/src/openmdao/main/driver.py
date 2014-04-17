@@ -657,7 +657,10 @@ class Driver(Component):
         return self.workflow.setup_sizes()
 
     def setup_vectors(self, arrays=None):
-        return self.workflow.setup_vectors(arrays)
+        self.workflow.setup_vectors(arrays)
+
+    def setup_scatters(self):
+        self.workflow.setup_scatters()
 
 
 class Run_Once(Driver):

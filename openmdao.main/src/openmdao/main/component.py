@@ -26,7 +26,7 @@ from openmdao.main.mpiwrap import MPI_info
 from traits.trait_base import not_event
 from traits.api import Property
 
-from openmdao.main.container import Container, get_val_and_index
+from openmdao.main.container import Container
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IContainer, IDriver, \
@@ -52,7 +52,8 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
 from openmdao.main.array_helpers import flattened_size, get_flattened_index, \
-                                        get_var_shape, flattened_size_info
+                                        get_var_shape, flattened_size_info, \
+                                        get_val_and_index
 
 import openmdao.util.log as tracing
 

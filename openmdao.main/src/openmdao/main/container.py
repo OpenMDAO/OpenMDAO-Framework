@@ -7,7 +7,7 @@ import copy
 import pprint
 import socket
 import sys
-
+import logging
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -43,7 +43,8 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, IComponent
+                                     IContainer, IParametricGeometry, \
+                                     IComponent, IVariableTree
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
@@ -51,9 +52,12 @@ from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
+from openmdao.main.array_helpers import flattened_value, get_val_and_index, \
+                                        get_index
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.util.typegroups import real_types, int_types
 
 
 _copydict = {
@@ -1148,6 +1152,51 @@ class Container(SafeHasTraits):
                     obj = obj[idx]
             return obj
 
+    @rbac(('owner', 'user'), proxy_types=[FileRef])
+    def get_flattened_value(self, path):
+        """Return the named value, which may include
+        an array index, as a flattened array of floats.  If
+        the value is not flattenable into an array of floats,
+        raise a TypeError.
+        """
+        childname, _, restofpath = path.partition('.')
+        if restofpath:
+            obj = getattr(self, childname, Missing)
+            if obj is Missing or not is_instance(obj, Container):
+                self.raise_exception("%s was not found" % path)
+            return obj.get_flattened_value(restofpath)
+        else:
+            val, idx = get_val_and_index(self, path)
+            return flattened_value(val, path)
+
+    @rbac(('owner', 'user'))
+    def set_flattened_value(self, path, value):
+        childname, _, restofpath = path.partition('.')
+        if restofpath:
+            obj = getattr(self, childname, Missing)
+            if obj is Missing or not is_instance(obj, Container):
+                self.raise_exception("%s not found" % path)
+            obj.set(restofpath, value)
+        else:
+            val = getattr(self, path.split('[',1)[0])
+            idx = get_index(self, path)
+            if isinstance(val, int_types): 
+                pass  # fall through to exception
+            if isinstance(val, real_types):
+                if idx is None:
+                    setattr(self, path, value[0])
+                    return
+                # else, fall through to error
+            elif isinstance(val, ndarray):
+                if idx is None:
+                    setattr(self, path, value)
+                else:
+                    val[idx] = value
+            elif IVariableTree.providedBy(val):
+                raise NotImplementedError("no support for setting flattened values into vartrees")
+
+            self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
+                
     def _set_failed(self, path, value, index=None, src=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
         Inherited classes can override this to locate the variable elsewhere
@@ -1714,53 +1763,6 @@ def _get_entry_group(obj):
 
 _get_entry_group.group_map = None  # Map from class/interface to group name.
 
-
-class IndexGetter(object):
-    """A simple class the returns the slice object used
-    to call its __getitem__ method.
-    """
-    def __getitem__(self, idx):
-        return idx
-
-_idx_cache = {}
-_idx_getter = IndexGetter()
-
-def get_index(name):
-    """Return the index (int or slice or tuple combination) 
-    associated with the given string, e.g. x[1:3, 5] would return 
-    a (slice(1,3),5) tuple.  This value can be passed into
-    an object's __getitem__ method, e.g., myval[idx], in order
-    to retrieve a particular slice from that object without 
-    having to parse the index more than once.
-    """
-    global _idx_getter, _idx_cache
-    name = name.replace('][',',')
-    brack = name.index('[')
-    if brack < 0:
-        return None
-    idxstr = name[brack:]
-    idx = _idx_cache.get(idxstr)
-    if idx is None:
-        _idx_cache[idxstr] = idx = eval('_idx_getter'+idxstr)
-    return idx
-    
-def get_val_and_index(scope, name):
-    """Return a tuple of (value, index) for the given name, 
-    which may contain array element access.
-    """
-    if '[' in name:
-        val = getattr(scope, name.split('[',1)[0])
-        idx = get_index(name)
-        # for objects that are not numpy arrays, an index tuple
-        #  really means [idx0][idx1]...[idx_n]
-        if isinstance(idx, tuple) and not isinstance(val, ndarray):
-            for i in idx:
-                val = val[i]
-        else:
-            val = val[idx]
-        return (val, idx)
-    else:
-        return (getattr(scope, name), None)
 
 def dump(cont, recurse=False, stream=None, **metadata):
     """Print all items having specified metadata and

@@ -10,12 +10,12 @@ import numpy
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, get_petsc_vec
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, get_petsc_vec, PETSc
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
-#from openmdao.util.nameutil import partition_names_by_comp
+from openmdao.main.vecwrapper import VecWrapper
 
 class System(object):
     def __init__(self, graph):
@@ -29,6 +29,7 @@ class System(object):
         self.mpi.requested_cpus = None
         self.all_variables = OrderedDict()
         self.vec = {}
+        self.app_ordering = None
         #self._dump_graph()
 
     def get_inputs(self):
@@ -136,6 +137,8 @@ class System(object):
         """
         rank = self.mpi.comm.rank
         if arrays is None:  # we're the top level System in our Assembly
+            insize = 0
+            inputs = []
             arrays = {}
             # create top level vectors            
             #mpiprint("**** setting up vectors for %s" % self.name)
@@ -143,32 +146,42 @@ class System(object):
             #mpiprint("TOTAL LOCAL SIZE for %s (rank=%d) = %d" % (self.name, rank,size))
             for name in ['u']: #, 'f', 'du', 'df']:
                 #mpiprint("creating top level Vec in %s, size=%d" % (self.name,size))
-                self.vec[name] = VecWrapper(self, numpy.zeros(size))
-                arrays[name] = self.vec[name].array
+                arrays[name] = numpy.zeros(size)
         else: # if we're the top level, we don't need input arrays
-
-            for name in ['u']: #, 'f', 'du', 'df']:
-                #mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
-                #mpiprint("creating Vec %s in %s, size=%d" % (name, self.name,arrays[name].size))
-                self.vec[name] = VecWrapper(self, arrays[name])
-
             insize = self.input_sizes[rank]
             inputs = self.get_inputs()
-            for name in ['p']:#, 'dp']:
-                #mpiprint("creating input Vec %s in %s, size=%d" % (name, self.name,insize))
-                self.vec[name] = VecWrapper(self, numpy.zeros(insize), inputs=inputs)
+
+        for name in ['u']: #, 'f', 'du', 'df']:
+            #mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
+            #mpiprint("creating Vec %s in %s, size=%d" % (name, self.name,arrays[name].size))
+            self.vec[name] = VecWrapper(self, arrays[name])
+
+        for name in ['p']:#, 'dp']:
+            #mpiprint("creating input Vec %s in %s, size=%d" % (name, self.name,insize))
+            self.vec[name] = VecWrapper(self, numpy.zeros(insize), inputs=inputs)
 
         start, end = 0, 0
         for sub in self.subsystems:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.comm.rank, :])
             #mpiprint("SUB %s says it has size %d" % (sub.name,sz))
             end += sz
-            if end-start >= arrays['u'][start:end].size:
+            if end-start > arrays['u'][start:end].size:
                 mpiprint("PASSING [%d,%d] view of size %d array from %s to %s" % 
                             (start,end,arrays['u'][start:end].size,self.name,sub.name))
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
                                         ['u']])) #, 'f', 'du', 'df']]))
             start += sz
+
+        return self.vec
+
+    def get_all_subsystems(self):
+        for node, data in self.graph.nodes_iter(data=True):
+            yield data['system']
+
+    def get_simple_subsystems(self):
+        for sub in self.get_all_subsystems():
+            if isinstance(sub, SimpleSystem):
+                yield sub
 
     def dump_subsystem_tree(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -182,13 +195,17 @@ class System(object):
         else:
             getval = False
 
+        name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
+                     'SimpleSystem': 'simp', 'DriverSystem': 'drv',
+                     'AssemblySystem': 'asm' }
         stream.write(" "*nest)
-        stream.write(self.name)
-        stream.write(" [%s](req=%d)(rank=%d)(u size=%d)(p size=%d)\n" % (self.__class__.__name__, 
-                                                   self.get_req_cpus(), 
-                                                   MPI.COMM_WORLD.rank,
-                                                   self.vec['u'].array.size,
-                                                   self.input_sizes[self.mpi.comm.rank]))
+        stream.write(str(self.name).replace(' ','').replace("'",""))
+        stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" % 
+                                          (name_map[self.__class__.__name__], 
+                                           self.get_req_cpus(), 
+                                           MPI.COMM_WORLD.rank,
+                                           self.vec['u'].array.size,
+                                           self.input_sizes[self.mpi.comm.rank]))
         inputs = self.get_inputs()
 
         #for v, data in self.all_variables.items():
@@ -206,6 +223,20 @@ class System(object):
         if getval:
             return stream.getvalue()
 
+    def create_scatter(self, var_idxs, input_idxs):
+        """ Concatenates lists of indices and creates a PETSc Scatter """
+        #mpiprint("src_idxs = %s, dest_idxs = %s" % (var_idxs,input_idxs))
+        merge = lambda x: numpy.concatenate(x) if len(x) > 0 else []
+        var_idx_set = PETSc.IS().createGeneral(merge(var_idxs), comm=self.mpi.comm)
+        input_idx_set = PETSc.IS().createGeneral(merge(input_idxs), comm=self.mpi.comm)
+        if self.app_ordering is not None:
+            var_idx_set = self.app_ordering.app2petsc(var_idx_set)
+
+        if len(merge(var_idxs)) != len(merge(input_idxs)):
+            mpiprint("creating scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(merge(var_idxs)),len(merge(input_idxs)),merge(var_idxs),merge(input_idxs),self.name))
+        return PETSc.Scatter().create(self.vec['u'].petsc_vec, var_idx_set,
+                                      self.vec['p'].petsc_vec, input_idx_set)
+
     def _dump_graph(self):
         mpiprint("GRAPH DUMP for %s" % self.name)
         for node, data in self.graph.nodes_iter(data=True):
@@ -221,6 +252,7 @@ class SimpleSystem(System):
         self.graph.graph.setdefault('outputs',set()).update(self.graph.node[self.name]['outputs'])
         self._comp = getattr(scope, graph.nodes()[0])
         self.mpi.requested_cpus = self._comp.get_req_cpus()
+        mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
 
     def run(self, scope, ffd_order, case_id, iterbase):
         comp = self._comp
@@ -250,6 +282,23 @@ class SimpleSystem(System):
                 if base is not None:
                     vdict['basevar'] = '.'.join((cname, base))
 
+    def setup_scatters(self):
+        rank = self.mpi.comm.rank
+        start = numpy.sum(self.input_sizes[:rank])
+        end = numpy.sum(self.input_sizes[:rank+1])
+        dest_idxs = [petsc_linspace(start, end)]
+        src_idxs = []
+        varkeys = self.variables.keys()
+        for dest in self.get_inputs():
+            if dest in self.variables:
+                ivar = varkeys.index(dest)
+                # FIXME: currently just using the local var size for input size
+                src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + # ??? args[arg] - user really needs to be able to define size for multi-proc comps
+                                      numpy.arange(0, self.local_var_sizes[rank,ivar], dtype='i'))
+        # if len(src_idxs) != len(dest_idxs):
+        #     mpiprint("setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(src_idxs),len(dest_idxs),src_idxs,dest_idxs,self.name))
+        self.scatter_full = self.create_scatter(src_idxs, dest_idxs)
+
 
 class DriverSystem(SimpleSystem):
     """A System for a Driver component."""
@@ -276,6 +325,9 @@ class AssemblySystem(SimpleSystem):
     def setup_vectors(self, arrays):
         self._comp.setup_vectors()
 
+    def setup_scatters(self):
+        self._comp.setup_scatters()
+
 
 class CompoundSystem(System):
     def __init__(self, graph, scope):
@@ -283,6 +335,62 @@ class CompoundSystem(System):
         for node, data in self.graph.nodes_iter(data=True):
             if isinstance(node, basestring):
                 _create_simple_sys(graph, scope, node)
+
+    def setup_scatters(self):
+        """ Defines a scatter for args at this system's level """
+        var_sizes = self.local_var_sizes
+        input_sizes = self.input_sizes
+        rank = self.mpi.comm.rank
+
+        app_indices = []
+        for ivar in xrange(len(self.variables)):
+            start = numpy.sum(var_sizes[:, :ivar]) + numpy.sum(var_sizes[:rank, ivar])
+            end = start + var_sizes[rank, ivar]
+            app_indices.append(petsc_linspace(start, end))
+        app_indices = numpy.concatenate(app_indices)
+
+        start = numpy.sum(var_sizes[:rank, :])
+        end = numpy.sum(var_sizes[:rank+1, :])
+        petsc_indices = petsc_linspace(start, end)
+
+        app_ind_set = PETSc.IS().createGeneral(app_indices, comm=self.mpi.comm)
+        petsc_ind_set = PETSc.IS().createGeneral(petsc_indices, comm=self.mpi.comm)
+        self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set, 
+                                                   comm=self.mpi.comm)
+
+        src_full = []
+        dest_full = []
+        start = end = numpy.sum(input_sizes[:rank])
+        varkeys = self.variables.keys()
+
+        #for subsystem in self.get_all_subsystems():
+        for subsystem in self.subsystems:
+            src_partial = []
+            dest_partial = []
+            for inp in subsystem.get_inputs():
+                if not hasattr(subsystem, 'variables'):
+                    mpiprint("****** %s HAS NO VARIABLES" % subsystem.name)
+                    continue
+                if inp not in subsystem.all_variables and inp in self.variables:
+                    ivar = varkeys.index(inp)
+                    dest_size = self.local_var_sizes[rank, ivar]
+                    src_idxs = numpy.sum(var_sizes[:, :ivar]) + numpy.arange(0, dest_size) #args[arg]
+
+                    end += dest_size #args[arg].shape[0]
+                    dest_idxs = petsc_linspace(start, end)
+                    start += dest_size #args[arg].shape[0]
+
+                    src_partial.append(src_idxs)
+                    dest_partial.append(dest_idxs)
+                    src_full.append(src_idxs)
+                    dest_full.append(dest_idxs)
+
+            subsystem.scatter_partial = subsystem.create_scatter(src_partial, dest_partial)
+
+        self.scatter_full = self.create_scatter(src_full, dest_full)
+
+        for sub in self.subsystems:
+            sub.setup_scatters()
 
 
 class SerialSystem(CompoundSystem):
@@ -638,94 +746,7 @@ def _partition_subvars(names, vardict):
     return (sizes, nosizes)
 
 
-class VecWrapper(object):
-    """A wrapper object for a local vector, a distributed PETSc vector,
-    and info about what var maps to what range within the distributed
-    vector.
-    """
-    def __init__(self, system, array, inputs=None):
-        self.array = array
+def petsc_linspace(start, end):
+    """ Return a linspace vector of the right int type for PETSc """
+    return numpy.arange(start, end, dtype='i')
 
-        allvars = system.all_variables
-        variables = system.variables
-        
-        self._info = OrderedDict() # dict of (start_idx, view)
-        #mpiprint("creating Vec in  %s, array size = %d" % (system.name, array.size))
-
-        if inputs is None:
-            vset = allvars
-        else:
-            vset = inputs 
-
-        # first, add views for vars whose sizes are added to the total,
-        # i.e., their basevars are not included in the vector.
-        start, end = 0, 0
-        for i, (name, var) in enumerate(variables.items()):
-            if name not in vset:
-                continue
-            sz = var['size']
-            if sz != system.local_var_sizes[system.mpi.comm.rank,i]:
-                mpiprint("!!!!NOOOOO sz (%d) != local_var_sizes (%d) in %s" % 
-                          (sz,system.local_var_sizes[system.mpi.comm.rank,i],system.name))
-            if sz > 0:
-                end += sz
-                if self.array.size < (end-start):
-                    raise RuntimeError("in subsystem %s, can't create a view of [%d,%d] from a %d size array" %
-                                         (system.name,start,end,self.array.size))
-                self._info[name] = (self.array[start:end], start)
-                if end-start > self.array[start:end].size:
-                    mpiprint("*** MISMATCH! %s: view for %s is %s, size=%d" % 
-                                 (system.name,name, [start,end],self._info[name][0].size))
-                start += sz
-
-        # now add views for subvars that are subviews of their
-        # basevars
-        for name, var in allvars.items():
-            if name not in variables and name in vset:
-                sz = var['size']
-                if sz > 0:
-                    #mpiprint("FOUND A SUBVAR: %s, size=%d" % (name, sz))
-                    idx = var['flat_idx']
-                    basestart = self.start(var['basevar'])
-                    sub_idx = offset_flat_index(idx, basestart)
-                    substart = get_flat_index_start(sub_idx)
-                    #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
-                    #            (size,basestart, substart, sub_idx))
-                    self._info[name] = (self.array[sub_idx], substart)
-                    if self.array[sub_idx].size != sz:
-                        mpiprint("*** MISMATCH! %s: view for %s is %s, idx=%s, size=%d" % (system.name, name, list(self.bounds(name)),sub_idx,self.array[sub_idx].size))
-
-        # create the PETSc vector
-        self.petsc_vec = get_petsc_vec(system.mpi.comm, self.array)
-
-    def view(self, name):
-        """Return the array view into the larger array for the
-        given name.  name may contain array indexing.
-        """
-        return self._info[name][0]
-
-    def views(self):
-        return self._info.keys()
-
-    def start(self, name):
-        """Return the starting index for the array view belonging
-        to the given name. name may contain array indexing.
-        """
-        return self._info[name][1]
-
-    def bounds(self, name):
-        """Return the bounds corresponding to the slice occupied
-        by the named variable within the flattened array.
-        name may contain array indexing.
-        """
-        view, start = self._info[name]
-        return (start, start + view.size)
-
-    def scatter(self):
-        pass  # see if we can do scatter functionality here...
-
-
-
-# def _linspace(self, start, end):
-#     """ Return a linspace vector of the right int type for PETSc """
-#     return numpy.array(numpy.linspace(start, end-1, end-start), 'i')

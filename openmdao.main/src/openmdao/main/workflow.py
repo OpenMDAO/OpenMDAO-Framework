@@ -249,32 +249,6 @@ class Workflow(object):
      
     ## MPI stuff ##
 
-    # def _add_driver_deps(self):
-    #     """Adds driver dependencies to the inputs and outputs metadata
-    #     in the component graph.
-    #     """
-
-    #     if hasattr(self, '_delegates_'):
-    #         for dname, dclass in self._delegates_.items():
-    #             delegate = getattr(self, dname)
-    #             if isinstance(delegate, HasParameters):
-    #                 for param in delegate.list_param_targets():
-    #                     graph.add_edge(self.name, param, drv_conn=self.name)
-    #                     #mpiprint("!!!!!param = %s" % param)
-    #             elif isinstance(delegate, (HasConstraints,
-    #                                  HasEqConstraints, HasIneqConstraints)):
-    #                 for cnst in delegate.list_constraint_targets():
-    #                     #mpiprint("!!!!!cnst = %s" % cnst)
-    #                     graph.add_edge(cnst, self.name, drv_conn=self.name)
-    #             elif isinstance(delegate, (HasObjective, HasObjectives)):
-    #                 for obj in delegate.list_objective_targets():
-    #                     #mpiprint("!!!!!obj = %s" % obj)
-    #                     graph.add_edge(obj, self.name, drv_conn=self.name)
-
-    #         if recurse:
-    #             for sub in self.subdrivers():
-    #                 sub.add_driver_connections(graph, recurse=recurse)
-
     def get_subsystem(self):
         """Get the serial/parallel subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component 
@@ -336,4 +310,7 @@ class Workflow(object):
         return self.get_subsystem().setup_sizes()
 
     def setup_vectors(self, arrays=None):
-        return self.get_subsystem().setup_vectors(arrays)
+        self.get_subsystem().setup_vectors(arrays)
+
+    def setup_scatters(self):
+        self.get_subsystem().setup_scatters()

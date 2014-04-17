@@ -78,4 +78,4 @@ def _setup_mpi(obj):
     obj.setup_variables()
     obj.setup_sizes()
     obj.setup_vectors()
-    #obj.setup_scatters()
+    obj.setup_scatters()

@@ -9,11 +9,12 @@ from traits.has_traits import FunctionType
 from traits.trait_base import not_event
 
 from openmdao.main.interfaces import IVariable, IVariableTree
-from openmdao.main.container import Container, get_val_and_index
+from openmdao.main.container import Container
 from openmdao.main.datatypes.str import Str
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.array_helpers import get_val_and_index
 
 
 class VariableTree(Container):
@@ -328,15 +329,6 @@ class VariableTree(Container):
 
         return attrs
 
-    def __getitem__(self, name):
-        # add dict functionality for accessing internal values
-        # and subtrees.  name may contain array entry access
-        obj = self
-        parts = name.split('.')
-        for part in parts[:-1]:
-            obj = getattr(obj, part)
-
-        return get_val_and_index(obj, parts[-1])[0]
 
     def get_flattened_index(self, name):
         """Return the slice within the flattened array of the 

@@ -1359,6 +1359,9 @@ class Assembly(Component):
         """
         self.driver.setup_vectors()
 
+    def setup_scatters(self):
+        self.driver.setup_scatters()
+
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
