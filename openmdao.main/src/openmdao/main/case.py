@@ -1,5 +1,5 @@
 import time
-from uuid import uuid1
+from uuid import uuid1, getnode
 from array import array
 import traceback
 from StringIO import StringIO
@@ -39,7 +39,6 @@ def _flatten_lst(name, lst):
     _recurse_flatten(ret, name, [], lst)
     return ret
 
-# dict of functions that know how to 'flatten' a given object instance
 flatteners = {
        int: _simpleflatten,
        float: _simpleflatten,
@@ -49,7 +48,7 @@ flatteners = {
        tuple: _flatten_lst,
        array: _flatten_lst,
        MissingValue: _simpleflatten,
-    } 
+    }
 
 def flatten_obj(name, obj):
     f = flatteners.get(type(obj))
@@ -58,7 +57,11 @@ def flatten_obj(name, obj):
     for klass in getmro(type(obj))[1:]:
         if klass in flatteners:
             return flatteners[klass](name, obj)
-    return []
+    # if cannot flatten return obj string
+    if obj is not None:
+        return [(name, '{%s}' % str(obj))]
+    else:
+        return []
 
 
 class Case(object):
@@ -74,6 +77,10 @@ class Case(object):
     any), and a unique case identifier.
 
     """
+
+    _uuid_node = getnode()
+    _uuid_seq = 0
+
     def __init__(self, inputs=None, outputs=None, max_retries=None,
                  retries=None, label='', case_uuid=None, parent_uuid='',
                  msg=None):
@@ -96,7 +103,10 @@ class Case(object):
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
-            self.uuid = str(uuid1())  # unique identifier
+            # generate a unique identifier
+            Case._uuid_seq += 1
+            self.uuid = str(uuid1(node=Case._uuid_node,
+                                  clock_seq=Case._uuid_seq))
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
         self.timestamp = time.time()
@@ -207,8 +217,8 @@ class Case(object):
             return self._outputs.items()
 
     def items(self, iotype=None, flatten=False):
-        """Return a list of (name,value) tuples for variables/expressions in
-        this Case.
+        """Return a list of (name,value) tuples for variables/expressions
+        in this Case.
 
         iotype: str or None
             If 'in', only inputs are returned.
@@ -232,8 +242,8 @@ class Case(object):
             else:
                 return []
         else:
-            raise NameError("invalid iotype arg (%s)."
-                            " Must be 'in','out',or None" % str(iotype))
+            raise NameError("invalid iotype arg (%s). Must be 'in', 'out',"
+                            " or None" % str(iotype))
 
     def keys(self, iotype=None, flatten=False):
         """Return a list of name/expression strings for this Case.
@@ -288,29 +298,31 @@ class Case(object):
         """
         self.msg = msg
         last_excpt = None
-        if self._outputs is not None:
-            if self._exprs:
-                for name in self._outputs.keys():
-                    expr = self._exprs.get(name)
+        outputs = self._outputs
+        if outputs is not None:
+            exprs = self._exprs
+            if exprs:
+                for name in outputs.keys():
+                    expr = exprs.get(name)
                     try:
                         if expr:
-                            self._outputs[name] = expr.evaluate(scope)
+                            outputs[name] = expr.evaluate(scope)
                         else:
-                            self._outputs[name] = scope.get(name)
+                            outputs[name] = scope.get(name)
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
-                        self._outputs[name] = _Missing
+                        outputs[name] = _Missing
                         if self.msg is None:
                             self.msg = str(err)
                         else:
                             self.msg = self.msg + " %s" % err
             else:
-                for name in self._outputs.keys():
+                for name in outputs.keys():
                     try:
-                        self._outputs[name] = scope.get(name)
+                        outputs[name] = scope.get(name)
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
-                        self._outputs[name] = _Missing
+                        outputs[name] = _Missing
                         if self.msg is None:
                             self.msg = str(err)
                         else:

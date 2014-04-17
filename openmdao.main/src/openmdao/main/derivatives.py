@@ -12,7 +12,7 @@ from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 try:
-    from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack
+    from numpy import ndarray, zeros, ones, unravel_index, vstack, hstack, complex128
     # Can't solve derivatives without these
     from scipy.sparse.linalg import gmres, LinearOperator
 
@@ -655,9 +655,10 @@ class FiniteDifference(object):
             if 'high' in meta:
                 high = meta[ 'high' ]
 
-            if srcs[0] in driver_targets:
-                if srcs[0] in driver_params:
-                    param = driver_params[srcs[0]]
+            param_srcs = [item for item in srcs if item in driver_targets]
+            if param_srcs:
+                if param_srcs[0] in driver_params:
+                    param = driver_params[param_srcs[0]]
                     if param.fd_step is not None:
                         self.fd_step[j] = param.fd_step
                     if param.low is not None:
@@ -669,7 +670,7 @@ class FiniteDifference(object):
                     for param_group in driver_params:
                         is_fd_step_not_set = is_low_not_set = is_high_not_set = True
                         if not isinstance(param_group, str) and \
-                           srcs[0] in param_group:
+                           param_srcs[0] in param_group:
                             param = driver_params[param_group]
                             if is_fd_step_not_set and param.fd_step is not None:
                                 self.fd_step[j] = param.fd_step
@@ -816,12 +817,33 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, fd_step, i1, i2, i)
 
+                #--------------------
+                # Complex Step
+                #--------------------
+                elif form == 'complex_step':
+
+                    complex_step = fd_step*1j
+                    self.pa.set_complex_step()
+                    yc = zeros(len(self.y), dtype=complex128)
+
+                    # Step
+                    self.set_value(src, complex_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(yc)
+
+                    # Forward difference
+                    self.J[:, i] = (yc/fd_step).imag
+
+                    # Undo step
+                    self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
+
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]
             old_val = self.scope.get(src)
 
-            if isinstance(old_val, float):
+            if isinstance(old_val, (float, complex)):
                 new_val = float(self.y_base[i1:i2])
             elif isinstance(old_val, ndarray):
                 shape = old_val.shape
@@ -833,6 +855,8 @@ class FiniteDifference(object):
             elif has_interface(old_val, IVariableTree):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
+            else:
+                continue
 
             src, _, idx = src.partition('[')
             if idx:
@@ -884,12 +908,12 @@ class FiniteDifference(object):
 
             src_val = flattened_value(src, src_val)
             i1, i2 = self.out_bounds[src]
-            if isinstance(src_val, ndarray):
+            if len(src_val) > 1:
                 x[i1:i2] = src_val.copy()
             else:
-                x[i1:i2] = src_val
+                x[i1:i2] = src_val[0]
 
-    def set_value(self, srcs, val, i1, i2, index):
+    def set_value(self, srcs, val, i1, i2, index, undo_complex=False):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -928,7 +952,10 @@ class FiniteDifference(object):
                 # Scalar
                 else:
                     old_val = self.scope.get(src)
-                    self.scope.set(src, old_val+val, force=True)
+                    if undo_complex is True:
+                        self.scope.set(src, (old_val+val).real, force=True)
+                    else:
+                        self.scope.set(src, old_val+val, force=True)
 
             # Full vector
             else:

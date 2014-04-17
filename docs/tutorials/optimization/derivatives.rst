@@ -246,3 +246,29 @@ to True.
     top.add('my_comp', ParaboloidDerivative())
     top.my_comp.force_fd = True
 
+
+*Complex Step*
+~~~~~~~~~~~~~~~~~~~
+
+You can also choose to calculate the derivatives with the Complex Step method instead of finite
+difference. Its advantage over finite difference is that its accuracty is not sensitive to the choice of
+stepsize. However, to use this method, your model needs to be able to operate on complex inputs and
+produce complex outputs. This will already be true of most python modules, but your external codes
+may need special modification to use complex step.
+
+To use complex step to calculate the gradient during the paraboloid optimization:
+
+.. testcode:: Paraboloid_derivative
+
+        from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
+        model = OptimizationConstrained()
+        model.driver.gradient_options.fd_form = 'complex_step'
+        model.driver.gradient_options.fd_step = 1.0e-3
+        model.driver.gradient_options.fd_step_type = 'relative'
+
+you can also specify it on a specific model inputs:
+
+.. testcode:: Paraboloid_derivative
+
+        x = Float(0.0, iotype='in', fd_step=0.01, fd_form = 'complex_step')
+        y = Float(0.0, iotype='in', fd_step=0.01)

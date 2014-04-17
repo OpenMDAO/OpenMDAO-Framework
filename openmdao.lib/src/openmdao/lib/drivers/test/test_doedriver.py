@@ -50,21 +50,14 @@ class DrivenComponent(Component):
     x1 = Float(1., iotype='in')
     x2 = Float(1., iotype='in')
     x3 = Float(1., iotype='in')
-    err_event = Event()
     stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
-
-    def __init__(self):
-        super(DrivenComponent, self).__init__()
-        self._raise_err = False
-
-    def _err_event_fired(self):
-        self._raise_err = True
+    raise_err = Bool(iotype='in')
 
     def execute(self):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x0, self.x1, self.x2, self.x3)
-        if self._raise_err:
+        if self.raise_err:
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
@@ -131,14 +124,6 @@ class TestCaseDOE(unittest.TestCase):
             self.assertEqual(str(err), "driver: Can't add parameter"
                              " 'foobar.blah' because it doesn't exist.")
 
-    def test_event_removal(self):
-        self.model.driver.add_event('driven.err_event')
-        lst = self.model.driver.get_events()
-        self.assertEqual(lst, ['driven.err_event'])
-        self.model.driver.remove_event('driven.err_event')
-        lst = self.model.driver.get_events()
-        self.assertEqual(lst, [])
-
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
@@ -147,17 +132,6 @@ class TestCaseDOE(unittest.TestCase):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x2', 'driven.x3'])
-
-    def test_no_event(self):
-        logging.debug('')
-        logging.debug('test_no_event')
-        try:
-            self.model.driver.add_event('foobar.blah')
-        except AttributeError as err:
-            self.assertEqual(str(err), "driver: Can't add event"
-                             " 'foobar.blah' because it doesn't exist")
-        else:
-            self.fail("expected AttributeError")
 
     def test_nooutput(self):
         logging.debug('')
@@ -239,7 +213,7 @@ class TestCaseDOE(unittest.TestCase):
         self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
-            self.model.driver.add_event('driven.err_event')
+            self.model.driven.raise_err = True
 
         if retry:
             self.model.run()
@@ -356,14 +330,6 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
             self.assertEqual(str(err), "driver: Can't add parameter"
                              " 'foobar.blah' because it doesn't exist.")
 
-    def test_event_removal(self):
-        self.model.driver.add_event('driven.err_event')
-        lst = self.model.driver.get_events()
-        self.assertEqual(lst, ['driven.err_event'])
-        self.model.driver.remove_event('driven.err_event')
-        lst = self.model.driver.get_events()
-        self.assertEqual(lst, [])
-
     def test_param_removal(self):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
@@ -372,17 +338,6 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x2', 'driven.x3'])
-
-    def test_no_event(self):
-        logging.debug('')
-        logging.debug('test_no_event')
-        try:
-            self.model.driver.add_event('foobar.blah')
-        except AttributeError as err:
-            self.assertEqual(str(err), "driver: Can't add event"
-                             " 'foobar.blah' because it doesn't exist")
-        else:
-            self.fail("expected AttributeError")
 
     def test_nooutput(self):
         logging.debug('')
@@ -463,7 +418,7 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         self.model.recorders = [results]
         self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
-            self.model.driver.add_event('driven.err_event')
+            self.model.driven.raise_err = True
 
         if retry:
             self.model.run()

@@ -67,7 +67,7 @@ class NewtonSolver(Driver):
         self.execute_fsolve()
 
     def execute_fsolve(self):
-        """ Solver execution loop: Newton-Krylov. """
+        """ Solver execution loop: scipy.fsolve. """
 
         x0 = self.workflow.get_independents()
         fsolve(self._solve_callback, x0, fprime=self._jacobian_callback,

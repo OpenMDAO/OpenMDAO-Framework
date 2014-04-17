@@ -202,12 +202,15 @@ class Component(Container):
         self._dir_stack = []
         self._dir_context = None
 
+        # Flags and caching used by the derivatives calculation
         self.ffd_order = 0
         self._provideJ_bounds = None
-        self._case_id = ''
-        self._case_uuid = ''
+        self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
+        self._recorders = None
+        self._case_id = ''
+        self._case_uuid = ''
 
     @property
     def dir_context(self):
@@ -221,7 +224,7 @@ class Component(Container):
             self._exec_state = state
             pub = Publisher.get_instance()
             if pub:
-                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
+                pub.publish('.'.join((self.get_pathname(), 'exec_state')), state)
 
     @rbac(('owner', 'user'))
     def get_invalidation_type(self):
@@ -242,27 +245,27 @@ class Component(Container):
         """
         self.itername = itername
 
-    # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-
+        """Called if any trait having 'iotype' metadata of 'in' is changed."""
         if name.endswith('_items'):
             n = name[:-6]
             if hasattr(self, n):  # if n in self._valid_dict:
                 name = n
 
-        self._input_check(name, old)
+        if self._input_check is not None:
+            self._input_check(name, old)
         self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
         self._call_execute = True
-        self._set_exec_state("INVALID")
-        if self.parent:
-            try:
-                inval = self.parent.child_invalidated
-            except AttributeError:
-                pass
-            else:
-                inval(self.name, vnames=[name], iotype='in')
+        if self._exec_state != 'INVALID':
+            self._set_exec_state('INVALID')
+        try:
+            inval = self.parent.child_invalidated
+        except AttributeError:
+            pass
+        else:
+            inval(self.name, vnames=[name], iotype='in')
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -427,11 +430,12 @@ class Component(Container):
         if self._call_cpath_updated:
             self.cpath_updated()
 
+        parent = self.parent
         if force:
             outs = self.invalidate_deps()
             if (outs is None) or outs:
-                if self.parent:
-                    self.parent.child_invalidated(self.name, outs)
+                if parent:
+                    parent.child_invalidated(self.name, outs)
         else:
             if not self.is_valid():
                 self._call_execute = True
@@ -442,17 +446,18 @@ class Component(Container):
                 # grab our new outputs
                 outs = self.invalidate_deps()
                 if (outs is None) or outs:
-                    if self.parent:
-                        self.parent.child_invalidated(self.name, outs)
+                    if parent:
+                        parent.child_invalidated(self.name, outs)
 
-        if self.parent is None:
+        if parent is None:
             # if parent is None, we're not part of an Assembly
             # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
         else:
-            self.parent.update_inputs(self.name)
+            parent.update_inputs(self.name)
 
-        self.check_configuration()
+        if self._call_check_config:
+            self.check_configuration()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -523,7 +528,7 @@ class Component(Container):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 if savebase:
                     self.driver.calc_derivatives(first, second, savebase,
                                                  required_inputs, required_outputs)
@@ -560,9 +565,12 @@ class Component(Container):
         """
         self._validate()
 
-        if self.parent:
-            self.parent.child_run_finished(self.name, self._outputs_to_validate())
-        self.publish_vars()
+        parent = self.parent
+        if parent:
+            parent.child_run_finished(self.name, self._outputs_to_validate())
+
+        if Publisher.get_instance() is not None:
+            self.publish_vars()
 
     def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""
@@ -607,9 +615,8 @@ class Component(Container):
             if self._call_execute or force:
 
                 if ffd_order == 1 \
-                   and not has_interface(self, IDriver) \
-                   and not has_interface(self, IAssembly) \
-                   and (hasattr(self, '_ffd_inputs')) \
+                   and not obj_has_interface(self, IDriver, IAssembly) \
+                   and hasattr(self, '_ffd_inputs') \
                    and self.force_fd is not True:
                     # During Fake Finite Difference, the available derivatives
                     # are used to approximate the outputs.
@@ -628,12 +635,9 @@ class Component(Container):
                     # Component executes as normal
                     self.exec_count += 1
                     if tracing.TRACER is not None and \
-                       not obj_has_interface(self, IAssembly) and \
-                       not obj_has_interface(self, IDriver):
-
+                       not obj_has_interface(self, IDriver, IAssembly):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-
                     self.execute()
 
                 self._post_execute()
@@ -650,6 +654,7 @@ class Component(Container):
             if self.directory:
                 self.pop_dir()
 
+    @rbac(('owner', 'user'))
     def _run_terminated(self):
         """ Executed at end of top-level run. """
         if hasattr(self, 'recorders'):
@@ -756,7 +761,7 @@ class Component(Container):
                                  remove=remove)
 
     def remove_trait(self, name):
-        """Overrides base definition of *add_trait* in order to
+        """Overrides base definition of *remove_trait* in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
@@ -798,6 +803,7 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
         self._provideJ_bounds = None
+        self._recorders = None
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):
@@ -1554,8 +1560,9 @@ class Component(Container):
         Returns None, indicating that all outputs are newly invalidated, or [],
         indicating that no outputs are newly invalidated.
         """
-        self._call_execute = True
-        self._set_exec_state('INVALID')
+        if self._exec_state != 'INVALID':
+            self._call_execute = True
+            self._set_exec_state('INVALID')
         return None
 
     def _outputs_to_validate(self):
@@ -1595,14 +1602,14 @@ class Component(Container):
                             return
 
                 if publish:
-                    Publisher.register('.'.join([self.get_pathname(), name]),
+                    Publisher.register('.'.join((self.get_pathname(), name)),
                                        obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
-                    Publisher.unregister('.'.join([self.get_pathname(), name]))
+                    Publisher.unregister('.'.join((self.get_pathname(), name)))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
@@ -1622,7 +1629,7 @@ class Component(Container):
                     if var == __attributes__:
                         lst.append((pname, self.get_attributes(io_only=False)))
                     else:
-                        lst.append(('.'.join([pname, var]), getattr(self, var)))
+                        lst.append(('.'.join((pname, var)), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
@@ -1742,9 +1749,9 @@ class Component(Container):
                         column_index = 0
 
                         for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
 
-                        column_index = column_index + array_indices[-1]
+                        column_index += array_indices[-1]
 
                         partially_connected_indices.append(column_index)
 
@@ -1886,13 +1893,13 @@ class Component(Container):
                         if slot_attr is not None:
                             slots.append(slot_attr)
 
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
-            if has_interface(self, IDriver):
+            if obj_has_interface(self, IDriver):
                 attrs['Workflow'] = self.get_workflow()
 
-            if has_interface(self, IHasCouplingVars):
+            if obj_has_interface(self, IHasCouplingVars):
                 couples = []
                 objs = self.list_coupling_vars()
                 for indep, dep in objs:
@@ -1902,7 +1909,7 @@ class Component(Container):
                     couples.append(attr)
                 attrs['CouplingVars'] = couples
 
-            if has_interface(self, IHasObjectives):
+            if obj_has_interface(self, IHasObjectives):
                 objectives = []
                 objs = self.get_objectives()
                 for key in objs.keys():
@@ -1913,7 +1920,7 @@ class Component(Container):
                     objectives.append(attr)
                 attrs['Objectives'] = objectives
 
-            if has_interface(self, IHasParameters):
+            if obj_has_interface(self, IHasParameters):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     attr = {}
@@ -1936,8 +1943,8 @@ class Component(Container):
 
             constraints = []
             has_constraints = False
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasEqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasEqConstraints):
                 has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
@@ -1946,8 +1953,8 @@ class Component(Container):
                     attr['expr'] = str(con)
                     constraints.append(attr)
 
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasIneqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasIneqConstraints):
                 has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
@@ -1959,11 +1966,11 @@ class Component(Container):
             if has_constraints:
                 attrs['Constraints'] = constraints
 
-            if has_interface(self, IHasEvents):
+            if obj_has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                      for path in self.get_events()]
 
-            if has_interface(self, IImplicitComponent):
+            if obj_has_interface(self, IImplicitComponent):
                 states = []
                 names = self.list_states()
                 for name in names:
@@ -2008,7 +2015,7 @@ class Component(Container):
         """
         if self.parent and has_interface(self.parent, IAssembly):
             return self.parent.get_valid(
-                ['.'.join([self.name, n]) for n in names])
+                ['.'.join((self.name, n)) for n in names])
         else:
             valids = []
             if self._exec_state == 'INVALID':

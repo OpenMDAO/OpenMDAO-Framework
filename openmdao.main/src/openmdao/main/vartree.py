@@ -175,7 +175,7 @@ class VariableTree(Container):
                     # modify the arglist of _input_trait_modified, so instead
                     # call _input_check (assuming source checking hasn't been
                     # turned off at the calling level) and _input_updated explicitly
-                    if self._input_check != self._input_nocheck:
+                    if self._input_check is not None:
                         p._input_check(vt.name, vt)
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
@@ -219,7 +219,7 @@ class VariableTree(Container):
                        id(obj) not in visited:
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
-                            yield ('.'.join([name, chname]), child)
+                            yield ('.'.join((name, chname)), child)
 
     def _check_req_traits(self, comp):
         """Raise an exception if any child traits with required=True have not
@@ -340,7 +340,7 @@ from openmdao.main.case import flatteners, flatten_obj
 def _flatten_vartree(name, vt):
     ret = []
     for n, v in vt._items(set()):
-        ret.extend([('.'.join([name, k]), v) for k, v in flatten_obj(n, v)])
+        ret.extend([('.'.join((name, k)), v) for k, v in flatten_obj(n, v)])
     return ret
 
 flatteners[VariableTree] = _flatten_vartree

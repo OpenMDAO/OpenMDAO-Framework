@@ -61,7 +61,7 @@ class Constraint(object):
 
         if unresolved_vars:
             msg = "Left hand side of constraint '{0}' has invalid variables {1}"
-            expression = ' '.join([lhs, comparator, rhs])
+            expression = ' '.join((lhs, comparator, rhs))
 
             raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
@@ -71,7 +71,7 @@ class Constraint(object):
 
         if unresolved_vars:
             msg = "Right hand side of constraint '{0}' has invalid variables {1}"
-            expression = ' '.join([lhs, comparator, rhs])
+            expression = ' '.join((lhs, comparator, rhs))
 
             raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
 
@@ -207,7 +207,7 @@ class Constraint(object):
                                     self.rhs.get_referenced_varpaths(copy=copy))
 
     def __str__(self):
-        return ' '.join([str(self.lhs), self.comparator, str(self.rhs)])
+        return ' '.join((str(self.lhs), self.comparator, str(self.rhs)))
 
     def __eq__(self, other):
         if not isinstance(other, Constraint):
@@ -401,7 +401,7 @@ class HasEqConstraints(_HasConstraintsBase):
         if not isinstance(rhs, basestring):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
-        ident = _remove_spaces('='.join([lhs, rhs]))
+        ident = _remove_spaces('='.join((lhs, rhs)))
         if ident in self._constraints:
             self._parent.raise_exception('A constraint of the form "%s" already'
                                          ' exists in the driver. Add failed.'
@@ -504,7 +504,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         if not isinstance(rhs, basestring):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
-        ident = _remove_spaces(rel.join([lhs, rhs]))
+        ident = _remove_spaces(rel.join((lhs, rhs)))
         if ident in self._constraints:
             self._parent.raise_exception('A constraint of the form "%s" already'
                                          ' exists in the driver. Add failed.'

@@ -625,7 +625,11 @@ class ExprEvaluator(object):
         """Return the value of the scoped string, evaluated
         using the eval() function.
         """
-        scope = self._get_updated_scope(scope)
+        if scope is None:
+            scope = self.scope
+        else:
+            self.scope = scope
+
         try:
             if self._code is None:
                 self._parse()
@@ -782,7 +786,7 @@ class ExprEvaluator(object):
 
                     if grad is None:
                         var_dict[var][index] = base
-                        grad = self._finite_difference(grad_code,var_dict, var,
+                        grad = self._finite_difference(grad_code, var_dict, var,
                                                        stepsize, index)
                     gradient[var][:, i] = grad
                     var_dict[var][index] = base
@@ -796,7 +800,7 @@ class ExprEvaluator(object):
 
                 if grad is None:
                     var_dict[var] = base
-                    grad = self._finite_difference(grad_code,var_dict, var,
+                    grad = self._finite_difference(grad_code, var_dict, var,
                                                    stepsize)
                 gradient[var] = grad
                 var_dict[var] = base

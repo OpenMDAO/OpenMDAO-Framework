@@ -1,16 +1,17 @@
 """ A workflow that contains cyclic graphs. Note that a special solver is
 required to converge this workflow in order to execute it. """
+from ordereddict import OrderedDict
 
 import networkx as nx
-from ordereddict import OrderedDict
+from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 try:
-    from numpy import ndarray, hstack, zeros
+    from numpy import ndarray, hstack, zeros, array
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, hstack, zeros
+    from openmdao.main.numpy_fallback import ndarray, hstack, zeros, array
 
 
 from openmdao.main.array_helpers import flattened_value
@@ -18,6 +19,7 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
+from openmdao.main.dataflow import Dataflow
 from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
@@ -58,10 +60,11 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         if self._topsort is None:
+            self._severed_edges = set()
+            
             graph = nx.DiGraph(self._get_collapsed_graph())
 
             cyclic = True
-            self._severed_edges = set()
 
             while cyclic:
 
@@ -92,24 +95,102 @@ class CyclicWorkflow(SequentialWorkflow):
 
         return self._topsort
 
+    #def _get_collapsed_graph(self):
+        #"""Get a dependency graph with only our workflow components
+        #in it. This graph can be cyclic."""
+
+        ## Cached
+        #if self._workflow_graph is None:
+
+            #contents = self.get_components(full=True)
+
+            ## get the parent assembly's component graph
+            #scope = self.scope
+            #compgraph = scope._depgraph.component_graph()
+            #graph = compgraph.subgraph([c.name for c in contents])
+
+            #self._workflow_graph = graph
+
+        #return self._workflow_graph
+
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
-        in it. This graph can be cyclic."""
+        in it, with additional edges added to it from sub-workflows
+        of any Driver components in our workflow, and from any ExprEvaluators
+        in any components in our workflow.
+        """
+        if self._workflow_graph:
+            return self._workflow_graph
 
-        # Cached
-        if self._workflow_graph is None:
+        to_add = []
+        scope = self.scope
+        graph = scope._depgraph
 
-            contents = self.get_components(full=True)
+        # find all of the incoming and outgoing edges to/from all of the
+        # components in each driver's iteration set so we can add edges to/from
+        # the driver in our collapsed graph
+        comps = self.get_components(full=True)
+        cnames = set([c.name for c in comps])
+        removes = set()
+        itersets = {}
+        graph_with_subs = graph.component_graph()
+        collapsed_graph = graph_with_subs.subgraph(cnames)
 
-            # get the parent assembly's component graph
-            scope = self.scope
-            compgraph = scope._depgraph.component_graph()
-            graph = compgraph.subgraph([c.name for c in contents])
+        for comp in comps:
+            cname = comp.name
+            if has_interface(comp, IDriver):
+                iterset = [c.name for c in comp.iteration_set()]
+                itersets[cname] = iterset
+                removes.update(iterset)
+                for u, v in graph_with_subs.edges_iter(nbunch=iterset):  # outgoing edges
+                    if v != cname and v not in iterset and not v.startswith('_pseudo_'):
+                        collapsed_graph.add_edge(cname, v)
+                for u, v in graph_with_subs.in_edges_iter(nbunch=iterset):  # incoming edges
+                    if u != cname and u not in iterset and not u.startswith('_pseudo_'):
+                        collapsed_graph.add_edge(u, cname)
 
-            self._workflow_graph = graph
+        # connect all of the edges from each driver's iterset members to itself
+        # For this, we need the graph with the subdriver itersets all still in it.
+        to_add = []
+        for drv, iterset in itersets.items():
+            for cname in iterset:
+                for u, v in graph_with_subs.edges_iter(cname):
+                    if v != drv:
+                        to_add.append((drv, v))
+                for u, v in graph_with_subs.in_edges_iter(cname):
+                    if u != drv:
+                        to_add.append((u, drv))
+        collapsed_graph.add_edges_from(to_add)
+
+        collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+
+        # now add some fake dependencies for degree 0 nodes in an attempt to
+        # mimic a SequentialWorkflow in cases where nodes aren't connected.
+        # Edges are added from each degree 0 node to all nodes after it in
+        # sequence order.
+        self._duplicates = set()
+        last = len(self._names)-1
+        if last > 0:
+            to_add = []
+            for i, cname in enumerate(self._names):
+                if collapsed_graph.degree(cname) == 0:
+                    if self._names.count(cname) > 1:
+                        # Don't introduce circular dependencies.
+                        self._duplicates.add(cname)
+                    else:
+                        if i < last:
+                            for n in self._names[i+1:]:
+                                to_add.append((cname, n))
+                        else:
+                            for n in self._names[0:i]:
+                                to_add.append((n, cname))
+            collapsed_graph.add_edges_from([(u, v) for u, v in to_add
+                                            if u in collapsed_graph and v in collapsed_graph])
+
+        self._workflow_graph = collapsed_graph
 
         return self._workflow_graph
-
+    
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
@@ -229,23 +310,25 @@ class CyclicWorkflow(SequentialWorkflow):
             signs on the constraints.
         """
 
-        deps = self._parent.eval_eq_constraints(self.scope)
+        parent = self._parent
+        deps = array(parent.eval_eq_constraints(self.scope))
 
         # Reorder for fixed point
         if fixed_point is True:
             newdeps = zeros(len(deps))
-            eqcons = self._parent.get_eq_constraints()
+            eqcons = parent.get_eq_constraints()
             old_j = 0
             for key, value in eqcons.iteritems():
                 con_targets = value.get_referenced_varpaths()
                 new_j = 0
-                for params in self._parent.list_param_group_targets():
+                width = value.size
+                for params in parent.list_param_group_targets():
                     if params[0] == value.rhs.text:
-                        newdeps[new_j] = deps[old_j]
+                        newdeps[new_j:new_j+width] = deps[old_j:old_j+width]
                     elif params[0] == value.lhs.text:
-                        newdeps[new_j] = -deps[old_j]
-                    new_j += 1
-                old_j += 1
+                        newdeps[new_j:new_j+width] = -deps[old_j:old_j+width]
+                    new_j += width
+                old_j += width
             deps = newdeps
 
         sev_deps = []

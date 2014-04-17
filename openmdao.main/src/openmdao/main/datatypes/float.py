@@ -10,13 +10,13 @@ from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
 from traits.api import Range
+from traits.api import Complex as TraitComplex
 from traits.api import Float as TraitFloat
-from openmdao.units import PhysicalQuantity
 
-from openmdao.main.variable import Variable
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
-
 from openmdao.main.uncertain_distributions import UncertainDistribution
+from openmdao.main.variable import Variable
+from openmdao.units import PhysicalQuantity
 
 
 class Float(Variable):
@@ -80,8 +80,8 @@ class Float(Variable):
                 raise ValueError("Lower bound is greater than upper bound.")
 
             if default_value > high or default_value < low:
-                raise ValueError("Default value is outside of bounds [%s, %s]." %
-                                 (str(low), str(high)))
+                raise ValueError("Default value is outside of bounds [%s, %s]."
+                                 % (str(low), str(high)))
 
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
@@ -102,14 +102,16 @@ class Float(Variable):
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
+
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
+
         if not _default_set:
-            super(Float, self).__init__(default_value=default_value, assumed_default=True,
-                                        **metadata)
+            super(Float, self).__init__(default_value=default_value,
+                                        assumed_default=True, **metadata)
         else:
-            super(Float, self).__init__(default_value=default_value, assumed_default=False,
-                                        **metadata)
+            super(Float, self).__init__(default_value=default_value,
+                                        assumed_default=False, **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -117,23 +119,49 @@ class Float(Variable):
         """
 
         # pylint: disable-msg=E1101
-        # If both source and target have units, we need to process differently
-        if isinstance(value, AttrWrapper):
+        if isinstance(value, UncertainDistribution):
+            value = value.getvalue()
+        elif isinstance(value, AttrWrapper):
+            value = value.value
+
+            # If both source and target have units, we need to proces the unit
+            # conversion to find the new value.
             if self.units:
                 valunits = value.metadata.get('units')
                 if valunits and isinstance(valunits, basestring) and \
                    self.units != valunits:
-                    return self._validate_with_metadata(obj, name,
-                                                        value.value,
-                                                        valunits)
+                    value = self._validate_with_metadata(obj, name, value,
+                                                         valunits)
 
-            value = value.value
-        elif isinstance(value, UncertainDistribution):
-            value = value.getvalue()
+        # Support for complex step method. We can step this trait in the
+        # complex direction while keeping the Range validator, but only
+        # do this when the user has requested complex step.
+        is_complex_step = False
+        if isinstance(value, complex):
+
+            # Vartree recursion, find the component parent.
+            comp = obj
+            while not hasattr(comp, '_complex_step'):
+                comp = comp._parent
+
+            if comp._complex_step == True:
+                value_imag = value.imag
+                value = value.real
+                if value_imag != 0:
+                    is_complex_step = True
+
         try:
-            return self._validator.validate(obj, name, value)
+            new_val = self._validator.validate(obj, name, value)
         except Exception:
             self.error(obj, name, value)
+
+        if is_complex_step:
+
+            # TODO - Need to do unit conversion on the complex part too.
+            new_val += value_imag*1j
+
+        #print name, new_val
+        return new_val
 
     def error(self, obj, name, value):
         """Returns a descriptive error string."""
@@ -159,8 +187,8 @@ class Float(Variable):
             info = "a float with a value < %s" % self.high
 
         vtype = type(value)
-        msg = "Variable '%s' must be %s, but a value of %s %s was specified." % \
-                               (name, info, value, vtype)
+        msg = "Variable '%s' must be %s, but a value of %s %s was specified." \
+              % (name, info, value, vtype)
         try:
             obj.raise_exception(msg, ValueError)
         except AttributeError:
@@ -194,13 +222,6 @@ class Float(Variable):
         # not a float. NPSS wrapper may be such a case. A test needs to be
         # constructed to test these lines.
 
-        # Note: benchmarking showed that this check does speed things up -- KTM
-        if src_units == dst_units:
-            try:
-                return self._validator.validate(obj, name, value)
-            except Exception:
-                self.error(obj, name, value)
-
         try:
             pq = PhysicalQuantity(value, src_units)
         except NameError:
@@ -217,10 +238,7 @@ class Float(Variable):
                    "with assigning units of '%s'" % (dst_units)
             raise TypeError(msg)
 
-        try:
-            return self._validator.validate(obj, name, pq.value)
-        except Exception:
-            self.error(obj, name, pq.value)
+        return pq.value
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is

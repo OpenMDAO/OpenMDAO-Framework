@@ -97,7 +97,10 @@ class PseudoAssembly(object):
         solver_states = []
         if fd is False:
             for comp in group:
-                solver_states.extend([node for node in dgraph.predecessors(comp)
+
+                # Keep any node marked 'solver_state'. Note, only inputs can
+                # be solver_states.
+                solver_states.extend([node for node in dgraph.find_prefixed_nodes([comp])
                                       if 'solver_state' in dgraph.node[node]])
 
         pa_inputs = edges_to_dict(in_edges).values()
@@ -306,3 +309,9 @@ class PseudoAssembly(object):
             compname, _, varname = varpath.partition('.')
             if varname and (compname in self.comps):
                 map_outputs[i] = to_PA_var(varpath, self.name)
+
+    def set_complex_step(self):
+        """Activate support for complex stepping in the comps in this PA."""
+        for name in self.itercomps:
+            comp = self.wflow.scope.get(name)
+            comp._complex_step = True

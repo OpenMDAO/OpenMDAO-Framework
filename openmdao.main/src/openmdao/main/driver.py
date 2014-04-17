@@ -3,6 +3,8 @@
 #public symbols
 __all__ = ["Driver"]
 
+import fnmatch
+
 from zope.interface import implementedBy
 
 # pylint: disable-msg=E0611,F0401
@@ -30,8 +32,10 @@ class GradientOptions(VariableTree):
     ''' Options for calculation of the gradient by the driver's workflow. '''
 
     # Finite Difference
-    fd_form = Enum('forward', ['forward', 'backward', 'central'],
-                   desc='Finite difference mode (forward, backward, central',
+    fd_form = Enum('forward', ['forward', 'backward', 'central', 'complex_step'],
+                   desc="Finite difference mode. (forward, backward, central) "
+                   "You can also set to 'complex_step' to peform the complex "
+                   "step method if your components support it.",
                    framework_var=True)
     fd_step = Float(1.0e-6, desc='Default finite difference stepsize',
                     framework_var=True)
@@ -55,7 +59,17 @@ class GradientOptions(VariableTree):
                             framework_var=True)
     gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
                         framework_var=True)
-
+    derivative_direction = Enum('auto',
+                                ['auto', 'forward', 'adjoint'],
+                                desc = "Direction for derivative calculation. "
+                                "Can be 'forward', 'adjoint', or 'auto'. "
+                                "Auto is the default setting. "
+                                "When set to auto, OpenMDAO automatically "
+                                "figures out the best direction based on the "
+                                "number of parameters and responses. "
+                                "When the number of parameters and responses "
+                                "are equal, then forward direction is used.",
+                                framework_var=True)
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -87,6 +101,8 @@ class Driver(Component):
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
+
+        self._evaluators = {}  # Used to evaluate variables to e recorded.
 
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
@@ -381,7 +397,8 @@ class Driver(Component):
         return self._continue
 
     def pre_iteration(self):
-        """Called prior to each iteration. This is where iteration events are set."""
+        """Called prior to each iteration.
+        This is where iteration events are set."""
         self.set_events()
 
     def run_iteration(self):
@@ -390,6 +407,7 @@ class Driver(Component):
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
+
         wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,

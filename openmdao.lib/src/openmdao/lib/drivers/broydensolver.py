@@ -148,6 +148,7 @@ class BroydenSolver(Driver):
             self.F[:] = self.eval_eq_constraints()
 
             # successful termination if independents are below tolerance
+            #print "iter", n, norm(self.F)
             if norm(self.F) < self.tol:
                 return
 

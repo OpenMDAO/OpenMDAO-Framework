@@ -297,6 +297,7 @@ class DependencyGraph(nx.DiGraph):
             self._conns = {}
             self._indegs = {}
             self._dstvars = {}
+            self._valid_src = {}
 
     def child_config_changed(self, child, adding=True, removing=True):
         """A child has changed its input lists and/or output lists,
@@ -315,8 +316,8 @@ class DependencyGraph(nx.DiGraph):
         old_outs -= old_states
         old_outs -= old_resids
 
-        new_ins  = set(['.'.join([cname,n]) for n in child.list_inputs()])
-        new_outs = set(['.'.join([cname,n]) for n in child.list_outputs()])
+        new_ins  = set(['.'.join((cname, n)) for n in child.list_inputs()])
+        new_outs = set(['.'.join((cname, n)) for n in child.list_outputs()])
 
         if has_interface(child, IImplicitComponent):
             new_states = set(child.list_states())
@@ -379,8 +380,8 @@ class DependencyGraph(nx.DiGraph):
         kwargs['comp'] = True
         kwargs['valid'] = False
 
-        inputs  = ['.'.join([cname, v]) for v in obj.list_inputs()]
-        outputs = ['.'.join([cname, v]) for v in obj.list_outputs()]
+        inputs  = ['.'.join((cname, v)) for v in obj.list_inputs()]
+        outputs = ['.'.join((cname, v)) for v in obj.list_outputs()]
 
         self.add_node(cname, **kwargs)
         self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
@@ -390,8 +391,8 @@ class DependencyGraph(nx.DiGraph):
         self.add_edges_from([(cname, v) for v in outputs])
 
         if has_interface(obj, IImplicitComponent):
-            states = ['.'.join([cname, v]) for v in obj.list_states()]
-            resids = ['.'.join([cname, v]) for v in obj.list_residuals()]
+            states = ['.'.join((cname, v)) for v in obj.list_states()]
+            resids = ['.'.join((cname, v)) for v in obj.list_residuals()]
             self.add_nodes_from(states, var=True, iotype='state', valid=True)
             self.add_nodes_from(resids, var=True, iotype='residual', valid=True)
 
@@ -693,13 +694,18 @@ class DependencyGraph(nx.DiGraph):
         destination value by any object other than the source
         specified in the graph.
         """
+        valid = self._valid_src.get(path, _missing)
+        if valid is src:
+            return
         preds = self.predecessors(path)
         for pred in preds:
             if src == pred:
+                self._valid_src[path] = src
                 return
             if pred.startswith(path):  # subvar
                 for p in self.predecessors_iter(pred):
                     if src == p:
+                        self._valid_src[path] = src
                         return
         if len(preds) > 0:
             raise RuntimeError(
@@ -866,11 +872,11 @@ class DependencyGraph(nx.DiGraph):
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
                is_input_base_node(self, node):
-                    if connected:
-                        if self.in_degree(node) > 0:
-                            ins.append(node)
-                    else:
+                if connected:
+                    if self.in_degree(node) > 0:
                         ins.append(node)
+                else:
+                    ins.append(node)
         self._bndryins[connected] = ins
         return ins[:]
 
@@ -887,11 +893,11 @@ class DependencyGraph(nx.DiGraph):
         for node in self.nodes_iter():
             if is_boundary_node(self, node) and \
                is_output_base_node(self, node):
-                    if connected:
-                        if self.out_degree(node) > 0:
-                            outs.append(node)
-                    else:
+                if connected:
+                    if self.out_degree(node) > 0:
                         outs.append(node)
+                else:
+                    outs.append(node)
         self._bndryouts[connected] = outs
         return outs[:]
 
@@ -1048,7 +1054,7 @@ class DependencyGraph(nx.DiGraph):
             neighbors = G.predecessors_iter
         else:
             neighbors = G.neighbors_iter
-        visited=set()
+        visited = set()
         queue = deque([(source, neighbors(source))])
 
         while queue:
@@ -1088,7 +1094,7 @@ class DependencyGraph(nx.DiGraph):
 
         if outs:
             if childname:
-                outs = ['.'.join([childname,n]) for n in outs]
+                outs = ['.'.join((childname, n)) for n in outs]
             for out in outs:
                 data[out]['valid'] = True
                 for var in self._all_child_vars(out, direction='out'):
@@ -1396,7 +1402,8 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         if has_interface(comp, IDriver):
             # Solvers are absorbed into the top graph
             if has_interface(comp, ISolver):
-                dg = comp.workflow.derivative_graph(inputs=inputs, outputs=outputs,
+                dg = comp.workflow.derivative_graph(inputs=inputs,
+                                                    outputs=outputs,
                                                     group_nondif=False)
                 xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
                 xtra_outputs.update(flatten_list_of_iters(dg.graph['outputs']))
@@ -1425,7 +1432,21 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             # via input-input connections. These are relevant, so save them.
             sub_params = drv.list_param_targets()
             pa_name = pa_list[-1].name
-            xtra_inputs.update([to_PA_var(v, pa_name) for v in sub_params])
+            sub_param_inputs = [to_PA_var(v, pa_name) for v in sub_params]
+            xtra_outputs.update(sub_param_inputs)
+
+            # Our parameter inputs are outputs to the outer drivers, so reverse the
+            # connection direction here.
+            for param in sub_param_inputs:
+                graph.add_edge(pa_name, param)
+                graph.node[param]['iotype'] = 'out'
+
+                # Also gotta reverse basevar connectionss if we are sub
+                if is_subvar_node(graph, param):
+                    base_param = graph.base_var(param)
+                    graph.add_edge(pa_name, base_param)
+                    graph.add_edge(base_param, param)
+                    graph.node[base_param]['iotype'] = 'out'
 
         for pa in pa_list:
             pa.clean_graph(startgraph, graph, using)
@@ -1529,11 +1550,11 @@ def _check_for_missing_derivs(scope, comps):
             elif comp.missing_deriv_policy == 'assume_zero':
                 # remove the vars with zero derivatives
                 comps[cname] = [n for n in vnames if n not in missing]
-                remove.extend(['.'.join([cname, m]) for m in missing])
+                remove.extend(['.'.join((cname, m)) for m in missing])
 
     return remove
 
-def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
+def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=True):
     """Adds needed nodes and connections to the given graph
     for use in derivative calculations.
     """
@@ -1554,7 +1575,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     graph.graph['mapped_outputs'] = list(outputs)
 
     relevant = set()
-    
+
     # add nodes for input parameters
     for i, varnames in enumerate(inputs):
         iname = '@in%d' % i
@@ -1570,7 +1591,7 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 graph.add_node(varname, basevar=base,
                                iotype='in', valid=True)
 
-            graph.add_edge(iname, varname, conn=True) 
+            graph.add_edge(iname, varname, conn=True)
 
             if varname in subvars:
                 # make sure this subvar is connected to its base in the direction we need
@@ -1625,7 +1646,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
     _explode_vartrees(graph, scope)
 
     edges = _get_inner_edges(graph, inames, onames)
-
     edict = graph.edge
     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
     relevant.update([u for u,v in edges])
@@ -1714,7 +1734,9 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
                 to_remove.add((src, dest))
             continue
 
-        if is_input_node(graph, src):
+        # Note: don't forward any input source vars that come from subsolvers
+        # states.
+        if is_input_node(graph, src) and 'solver_state' not in graph.node[src]:
 
             if is_basevar_node(graph, src):
                 subs = graph._all_child_vars(src, direction='in')
@@ -1731,26 +1753,34 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             # if we have an input source basevar that has multiple inputs (subvars)
             # then we have to create fake subvars at the destination to store
             # derivative related metadata
-            for sub in subs:
-                preds = graph.predecessors(sub)
-                newsrc = None
-                for p in preds:
-                    if graph.base_var(sub) != p:
-                        newsrc = p
-                        break
-                if newsrc is None:
-                    continue
-                new_target = sub.replace(src, dest, 1)
-                if new_target not in graph:
-                    graph.add_subvar(new_target)
+            if group_nondiff:
+                added_edge = False
+                for sub in subs:
+                    preds = graph.predecessors(sub)
+                    newsrc = None
+                    for p in preds:
+                        if graph.base_var(sub) != p:
+                            newsrc = p
+                            break
+                    if newsrc is None:
+                        continue
+                    new_target = sub.replace(src, dest, 1)
+                    if new_target not in graph:
+                        graph.add_subvar(new_target)
+                        added_edge = True
 
-                if dest in graph.edge[src]:
-                    graph.add_edge(newsrc, new_target,
-                                                  attr_dict=graph.edge[src][dest])
-                else:
-                    graph.add_edge(newsrc, new_target)
+                    if dest in graph.edge[src]:
+                        graph.add_edge(newsrc, new_target,
+                                       attr_dict=graph.edge[src][dest])
+                        added_edge = True
+                    else:
+                        graph.add_edge(newsrc, new_target)
+                        added_edge = True
 
-            to_remove.add((src, dest))
+                # If we don't add replacement edges, then don't dare to
+                # remove any
+                if added_edge:
+                    to_remove.add((src, dest))
 
         else:
             base = graph.base_var(src)
@@ -1765,7 +1795,6 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False):
             to_remove.add((s,d))
 
     graph.remove_edges_from(to_remove)
-
     return graph
 
 def _explode_vartrees(graph, scope):
@@ -1784,7 +1813,7 @@ def _explode_vartrees(graph, scope):
                 obj = scope.get(src)
             if has_interface(obj, IVariableTree):
                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                srcnames = ['.'.join([src, n]) for n in srcnames]
+                srcnames = ['.'.join((src, n)) for n in srcnames]
 
         if '@' not in dest and '[' not in dest:
 
@@ -1795,7 +1824,7 @@ def _explode_vartrees(graph, scope):
 
             if has_interface(obj, IVariableTree):
                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                destnames = ['.'.join([dest, n]) for n in destnames]
+                destnames = ['.'.join((dest, n)) for n in destnames]
 
         if '@' not in src and '@' not in dest and (srcnames or destnames):
             _replace_full_vtree_conn(graph, src, srcnames,
@@ -1854,9 +1883,9 @@ def get_missing_derivs(obj, recurse=True):
                 cins.extend([n for n,v in vt_flattener(cin, obj)])
 
         for i,cout in enumerate(couts[:]):
-                    obj = comp.get(cout)
-                    if has_interface(obj, IVariableTree) :
-                        couts.extend([n for n,v in vt_flattener(cout, obj)])
+            obj = comp.get(cout)
+            if has_interface(obj, IVariableTree) :
+                couts.extend([n for n,v in vt_flattener(cout, obj)])
 
 
         if has_interface(comp, IAssembly):
@@ -1912,12 +1941,12 @@ def get_missing_derivs(obj, recurse=True):
 
             base_name, _, index = name.partition("[")
             if index:
-                if base_name in dins or base_name in douts :
+                if base_name in dins or base_name in douts:
                     continue
 
 
             if name not in dins and name not in douts and is_differentiable_var(name, comp):
-                missing.append('.'.join([comp.get_pathname(), name]))
+                missing.append('.'.join((comp.get_pathname(), name)))
 
 
 

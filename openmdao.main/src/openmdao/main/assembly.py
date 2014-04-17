@@ -92,7 +92,10 @@ class PassthroughProperty(Variable):
     def set(self, obj, name, value):
         if obj not in self._vals:
             self._vals[obj] = {}
-        self._vals[obj][name] = self._trait.validate(obj, name, value)
+        old = self.get(obj, name)
+        if value != old:
+            self._vals[obj][name] = self._trait.validate(obj, name, value)
+            obj.trait_property_changed(name, old, value)
 
 
 def _find_common_interface(obj1, obj2):
@@ -168,7 +171,9 @@ class Assembly(Component):
         to either in the source or the destination.
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
-        return [(u, v) for u, v in self._depgraph.list_connections(show_passthrough=True, show_external=True)
+        return [(u, v) for u, v
+                       in self._depgraph.list_connections(show_passthrough=True,
+                                                          show_external=True)
                                         if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
@@ -193,9 +198,10 @@ class Assembly(Component):
             old_rgx = re.compile(r'(\W?)%s.' % name)
             par_rgx = re.compile(r'(\W?)parent.')
 
+            pattern = r'\g<1>%s.' % '.'.join((self.name, name))
             for u, v in self._depgraph.list_autopassthroughs():
-                newu = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), u)
-                newv = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, name]), v)
+                newu = re.sub(old_rgx, pattern, u)
+                newv = re.sub(old_rgx, pattern, v)
                 if newu != u or newv != v:
                     old_autos.append((u, v))
                     u = re.sub(par_rgx, r'\g<1>', newu)
@@ -223,16 +229,18 @@ class Assembly(Component):
         old_rgx = re.compile(r'(\W?)%s.' % oldname)
         par_rgx = re.compile(r'(\W?)parent.')
 
-        # recreate all of the broken connections after translating oldname to newname
+        # recreate all of the broken connections after translating
+        # oldname to newname
         for u, v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
                          re.sub(old_rgx, r'\g<1>%s.' % newname, v))
 
         # recreate autopassthroughs
         if self.parent:
+            pattern = r'\g<1>%s.' % '.'.join((self.name, newname))
             for u, v in old_autos:
-                u = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), u)
-                v = re.sub(old_rgx, r'\g<1>%s.' % '.'.join([self.name, newname]), v)
+                u = re.sub(old_rgx, pattern, u)
+                v = re.sub(old_rgx, pattern, v)
                 u = re.sub(par_rgx, r'\g<1>', u)
                 v = re.sub(par_rgx, r'\g<1>', v)
                 self.parent.connect(u, v)
@@ -439,7 +447,7 @@ class Assembly(Component):
             inputs[comp] = {}
             input_vars = self.get(comp).list_inputs()
             for var_name in input_vars:
-                var_path = '.'.join([comp, var_name])
+                var_path = '.'.join((comp, var_name))
                 if var_path in passthroughs:
                     inputs[comp][var_name] = passthroughs[var_path]
                 else:
@@ -448,7 +456,7 @@ class Assembly(Component):
             outputs[comp] = {}
             output_vars = self.get(comp).list_outputs()
             for var_name in output_vars:
-                var_path = '.'.join([comp, var_name])
+                var_path = '.'.join((comp, var_name))
                 if var_path in passthroughs:
                     outputs[comp][var_name] = passthroughs[var_path]
                 else:
@@ -557,7 +565,7 @@ class Assembly(Component):
             if varpath2 is None and self.parent and '.' not in varpath and \
                is_boundary_node(self._depgraph, varpath):
                 # boundary var. make sure it's disconnected in parent
-                self.parent.disconnect('.'.join([self.name, varpath]))
+                self.parent.disconnect('.'.join((self.name, varpath)))
 
             to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
@@ -698,6 +706,15 @@ class Assembly(Component):
         """Stop the calculation."""
         self.driver.stop()
 
+    @rbac(('owner', 'user'))
+    def _run_terminated(self):
+        """ Executed at end of top-level run. """
+        super(Assembly, self)._run_terminated()
+        for name in self.list_containers():
+            obj = getattr(self, name)
+            if has_interface(obj, IComponent):
+                obj._run_terminated()
+
     def list_connections(self, show_passthrough=True,
                                visible_only=False,
                                show_expressions=False):
@@ -727,8 +744,7 @@ class Assembly(Component):
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        invalid_ins = self._depgraph.list_inputs(compname,
-                                                 invalid=True)
+        invalid_ins = self._depgraph.list_inputs(compname, invalid=True)
         if invalid_ins:
             self._update_invalid_dests(compname, invalid_ins)
 
@@ -738,8 +754,7 @@ class Assembly(Component):
         variables valid.
         """
         data = self._depgraph.node
-        invalid_dests = [n for n in outnames
-                           if data[n]['valid'] is False]
+        invalid_dests = [n for n in outnames if data[n]['valid'] is False]
         if invalid_dests:
             self._update_invalid_dests(None, invalid_dests)
 
@@ -795,8 +810,8 @@ class Assembly(Component):
 
         if vnames is None:
             vnames = [childname]
-        elif childname:
-            vnames = ['.'.join([childname, n]) for n in vnames]
+        else:
+            vnames = ['.'.join((childname, n)) for n in vnames]
             if iotype == 'in':
                 for name in vnames[:]:
                     vnames.extend(self._depgraph._all_child_vars(name,
@@ -852,7 +867,8 @@ class Assembly(Component):
         else:
             names = varnames
 
-        self._set_exec_state('INVALID')
+        if self._exec_state != 'INVALID':
+            self._set_exec_state('INVALID')
 
         return self._depgraph.invalidate_deps(self, names)
 
@@ -950,12 +966,12 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull inputs from driver
             elif has_interface(obj, IAssembly):
-                inputs = ['.'.join([obj.name, inp])
+                inputs = ['.'.join((obj.name, inp))
                           for inp in obj.list_inputs()
                                   if is_differentiable_var(inp, obj)]
                 inputs = sorted(inputs)
             elif has_interface(obj, IComponent):
-                inputs = ['.'.join([obj.name, inp])
+                inputs = ['.'.join((obj.name, inp))
                           for inp in list_deriv_vars(obj)[0]]
                 inputs = sorted(inputs)
             else:
@@ -964,12 +980,12 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull outputs from driver
             elif has_interface(obj, IAssembly):
-                outputs = ['.'.join([obj.name, out])
+                outputs = ['.'.join((obj.name, out))
                            for out in obj.list_outputs()
                                    if is_differentiable_var(out, obj)]
                 outputs = sorted(outputs)
             elif has_interface(obj, IComponent):
-                outputs = ['.'.join([obj.name, outp])
+                outputs = ['.'.join((obj.name, outp))
                           for outp in list_deriv_vars(obj)[1]]
                 inputs = sorted(inputs)
             else:
@@ -1319,7 +1335,8 @@ class Assembly(Component):
                             'io': 'io'
                         }
 
-            if not source.startswith('_pseudo_') and not target.startswith('_pseudo_'):
+            if not source.startswith('_pseudo_') and \
+               not target.startswith('_pseudo_'):
                 # ignore other types of PseudoComponents (objectives, etc)
                 connectivity['edges'].append([source, target])
 

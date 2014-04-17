@@ -87,15 +87,15 @@ top level assembly would look like this:
                 self.driver.workflow.add('vehicle')
             
                 # Acceleration Sim setup
-                self.sim_acc.add_parameter('vehicle.velocity', name='velocity',
+                self.driver.add_parameter('vehicle.velocity', name='velocity',
                                            low=0.0, high=150.0)
-                self.sim_acc.add_parameter('vehicle.throttle', name='throttle',
+                self.driver.add_parameter('vehicle.throttle', name='throttle',
                                            low=0.01, high=1.0)
-                self.sim_acc.add_parameter('vehicle.current_gear', name='gear',
+                self.driver.add_parameter('vehicle.current_gear', name='gear',
                                            low=0, high=5)
                                            
-                self.sim_acc.add_objective('vehicle.acceleration', name='acceleration')
-                self.sim_acc.add_objective('vehicle.overspeed', name='overspeed')
+                self.driver.add_objective('vehicle.acceleration', name='acceleration')
+                self.driver.add_objective('vehicle.overspeed', name='overspeed')
         
                 
         if __name__ == "__main__": 
