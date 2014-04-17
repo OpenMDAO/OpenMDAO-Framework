@@ -304,8 +304,30 @@ class TestFiniteDifference(unittest.TestCase):
         driver.add_parameter('paraboloid.x', low=[-100, -99], high=[100, 99])
         driver.workflow.add('paraboloid')
         top.run()
-
         J = top.driver.workflow.calc_gradient()
+
+    def test_smart_low_high(self):
+
+        top = Assembly()
+        top.add('comp', MyComp())
+        driver = top.add('driver', SimpleDriver())
+        top.comp.add('x1', Float(1.0, iotype='in', low=-1.0, high=1.0))
+        driver.add_objective('comp.y')
+        driver.add_parameter('comp.x1', low=-1.0, high=1.0)
+        driver.workflow.add('comp')
+
+        top.driver.gradient_options.fd_form = 'central'
+        top.driver.gradient_options.fd_step = 0.1
+
+        top.comp.x1 = -0.95
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], -3.6, 0.001)
+
+        top.comp.x1 = 0.95
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 3.6, 0.001)
 
 if __name__ == '__main__':
     import nose
