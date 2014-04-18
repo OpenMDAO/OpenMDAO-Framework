@@ -7,7 +7,6 @@ import StringIO
 
 from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import ListCaseIterator
 from openmdao.lib.casehandlers.api import DumpCaseRecorder
 from openmdao.lib.drivers.sensitivity import SensitivityDriver
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
@@ -29,7 +28,9 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
-        driver.iterator = ListCaseIterator(cases)
+
+        Case.set_vartree_inputs(driver, cases)
+        driver.add_responses(outputs)
 
     def test_bad_recorder(self):
         try:
@@ -47,21 +48,24 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
 
         expected = [
-            'Case: case8',
+            'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',
-            '      comp1.x: 8',
-            '      comp1.y: 16',
+            '      comp1.x: 8.0',
+            '      comp1.y: 16.0',
             '   outputs:',
-            '      comp1.z: 24.0',
-            '      comp2.z: 25.0',
+            '      Response_0: 24.0',
+            '      Response_1: 25.0',
             '      driver.workflow.itername: 9',
             ]
 
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
-            index = lines.index('Case: case8')
+            start = 0
+            for i in range(9):
+                index = start + lines[start:].index('Case: ')
+                start = index + 1
             for i in range(len(expected)):
                 if expected[i].startswith('   uuid:'):
                     self.assertTrue(lines[index+i].startswith('   uuid:'))
@@ -86,7 +90,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',
-            '      comp1.x: [0.0]',
+            '      comp1.x: 0.0',
             '   outputs:',
             '      Objective_0: 0.0',
             '      Objective_1: 1.0',

@@ -11,16 +11,23 @@ import shutil
 
 from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import DBCaseIterator, ListCaseIterator, \
-                                          DBCaseRecorder, DumpCaseRecorder, \
-                                          case_db_to_dict
+from openmdao.lib.casehandlers.api import DBCaseIterator, DBCaseRecorder, \
+                                          DumpCaseRecorder, case_db_to_dict
 from openmdao.lib.drivers.api import SimpleCaseIterDriver, CaseIteratorDriver
 from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.main.datatypes.api import List, Dict
+from openmdao.main.datatypes.api import List, Dict, Str
 from openmdao.util.testutil import assert_raises
 from openmdao.util.fileutil import onerror
 
 from openmdao.main.caseiter import caseiter_to_dict
+
+
+class TracedExecComp(ExecComp):
+
+    label = Str(iotype='in')
+
+    def execute(self):
+        super(TracedExecComp, self).execute()
 
 
 class DBCaseRecorderTestCase(unittest.TestCase):
@@ -43,7 +50,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                       ('comp1.a_dict', {'a': 'b'}),
                       ('comp1.a_list', ['a', 'b'])]
             cases.append(Case(inputs=inputs, outputs=outputs, label='case%s' % i))
-        driver.iterator = ListCaseIterator(cases)
+        Case.set_vartree_inputs(driver, cases)
+        driver.add_responses(outputs)
 
     def test_inoutDB(self):
         # This test runs some cases, puts them in a DB using a DBCaseRecorder,
@@ -67,27 +75,32 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                        'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
 
         # now use the DB as source of Cases
-        self.top.driver.iterator = self.top.recorders[0].get_iterator()
+        cases = [case for case in self.top.recorders[0].get_iterator()]
+        Case.set_vartree_inputs(self.top.driver, cases)
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
-            'Case: case8',
+            'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',
             "      comp1.a_dict: {'a': 'b'}",
             "      comp1.a_list: ['a', 'b']",
-            '      comp1.x: 8',
-            '      comp1.y: 16',
+            '      comp1.x: 8.0',
+            '      comp1.y: 16.0',
             '   outputs:',
-            '      comp1.z: 24.0',
-            '      comp2.z: 25.0',
+            '      Response_0: 24.0',
+            '      Response_1: 25.0',
         ]
         lines = sout.getvalue().split('\n')
+        count = 0
         for index, line in enumerate(lines):
-            if line.startswith('Case: case8'):
+            if line.startswith('Case: '):
+                count += 1
+                if count != 9:
+                    continue
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
@@ -103,8 +116,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder()
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2.)]
-            outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i), 0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs, label='case%s' % i))
+            outputs = [('comp1.z', i*1.5),
+                       ('comp2.normal', NormalDistribution(float(i), 0.5))]
+            recorder.record(Case(inputs=inputs, outputs=outputs,
+                                 label='case%s' % i))
         iterator = recorder.get_iterator()
         for i, case in enumerate(iterator):
             self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
@@ -118,8 +133,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder()
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2.)]
-            outputs = [('comp1.z', i*1.5), ('comp2.normal', NormalDistribution(float(i), 0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs, label='case%s' % i))
+            outputs = [('comp1.z', i*1.5),
+                       ('comp2.normal', NormalDistribution(float(i), 0.5))]
+            recorder.record(Case(inputs=inputs, outputs=outputs,
+                                 label='case%s' % i))
         iterator = recorder.get_iterator()
         iterator.selectors = ["value>=0", "value<3"]
 
@@ -172,15 +189,15 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         varinfo = case_db_to_dict(dfile, varnames)
 
         self.assertEqual(len(varinfo), 3)
-        # each var list should have 3 data values in it (5 with the required variables minus
-        # 2 with errors
+        # each var list should have 3 data values in it
+        # (5 with the required variables minus 2 with errors)
         for name, lst in varinfo.items():
             self.assertEqual(len(lst), 3)
 
         # now use caseiter_to_dict to grab the same data
         varinfo = caseiter_to_dict(recorder.get_iterator(), varnames)
-        # each var list should have 3 data values in it (5 with the required variables minus
-        # 2 with errors
+        # each var list should have 3 data values in it
+        # (5 with the required variables minus 2 with errors)
         for name, lst in varinfo.items():
             self.assertEqual(len(lst), 3)
 
@@ -193,7 +210,6 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
         caseiter = DBCaseIterator()
         attrs = caseiter.get_attributes()
-        print attrs
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'dbfile',
                          'type': 'str',
@@ -262,8 +278,8 @@ class NestedCaseTestCase(unittest.TestCase):
     def _create_assembly(self, dbname, drivertype):
         asm = Assembly()
         driver = asm.add('driver', drivertype())
-        asm.add('comp1', ExecComp(exprs=['z=x+y']))
-        asm.add('comp2', ExecComp(exprs=['z=x+y']))
+        asm.add('comp1', TracedExecComp(exprs=['z=x+y']))
+        asm.add('comp2', TracedExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
         asm.recorders = [DBCaseRecorder(dbname, append=True)]
@@ -276,10 +292,10 @@ class NestedCaseTestCase(unittest.TestCase):
         top.asm.add('asm', self._create_assembly(dbname, drivertype))
         top.asm.driver.workflow.add('asm')
 
-        top.driver.iterator = ListCaseIterator(self._create_cases(1))
         top.recorders = [DBCaseRecorder(dbname, append=True)]
-        top.asm.driver.iterator = ListCaseIterator(self._create_cases(2))
-        top.asm.asm.driver.iterator = ListCaseIterator(self._create_cases(3))
+        Case.set_vartree_inputs(top.driver, self._create_cases(1))
+        Case.set_vartree_inputs(top.asm.driver, self._create_cases(2))
+        Case.set_vartree_inputs(top.asm.asm.driver, self._create_cases(3))
 
         return top
 
@@ -295,28 +311,29 @@ class NestedCaseTestCase(unittest.TestCase):
         top.driver2.workflow.add(['driver3'])
         top.driver3.workflow.add(['comp1', 'comp2'])
 
-        top.driver.iterator = ListCaseIterator(self._create_cases(1))
-        top.driver2.iterator = ListCaseIterator(self._create_cases(2))
-        top.driver3.iterator = ListCaseIterator(self._create_cases(3))
+        Case.set_vartree_inputs(top.driver, self._create_cases(1))
+        Case.set_vartree_inputs(top.driver2, self._create_cases(2))
+        Case.set_vartree_inputs(top.driver3, self._create_cases(3))
         return top
 
     def _create_cases(self, level):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(self.num_cases):
-            inputs = [('comp1.x', 100*level+i), ('comp1.y', 100*level+i+1)]
-            cases.append(Case(inputs=inputs, outputs=outputs,
-                              label='L%d_case%d' % (level, i)))
+            inputs = [('comp1.x', 100*level+i),
+                      ('comp1.y', 100*level+i+1),
+                      ('comp1.label', 'L%d_case%d' % (level, i))]
+            cases.append(Case(inputs=inputs, outputs=outputs))
         return cases
 
     def _get_level_cases(self, caseiter):
         levels = [[], [], []]
         for case in caseiter:
-            if case.label.startswith('L1_'):
+            if case['comp1.label'].startswith('L1_'):
                 levels[0].append(case)
-            elif case.label.startswith('L2_'):
+            elif case['comp1.label'].startswith('L2_'):
                 levels[1].append(case)
-            elif case.label.startswith('L3_'):
+            elif case['comp1.label'].startswith('L3_'):
                 levels[2].append(case)
             else:
                 raise RuntimeError("case label doesn't start with 'L?_'")
@@ -356,6 +373,9 @@ class NestedCaseTestCase(unittest.TestCase):
         self.assertEqual(len(levels[2]), self.top.asm.asm.comp1.exec_count)
 
     def test_nested_workflows_simple(self):
+        from nose import SkipTest
+        raise SkipTest("New case drivers don't report nested workflows")
+
         dbname = os.path.join(self.tdir, 'dbfile')
         self.top = self._create_nested_workflows(dbname, SimpleCaseIterDriver)
         self.top.run()
@@ -365,6 +385,9 @@ class NestedCaseTestCase(unittest.TestCase):
                          self.top.comp1.exec_count)
 
     def test_nested_workflows_caseiter(self):
+        from nose import SkipTest
+        raise SkipTest("New case drivers don't report nested workflows")
+
         dbname = os.path.join(self.tdir, 'dbfile')
         self.top = self._create_nested_workflows(dbname, CaseIteratorDriver)
         self.top.run()

@@ -93,7 +93,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                                 openmdao.Util.notify('Invalid target variable');
                             }
                             else {
-                                project.issueCommand(self.pathname+'.connect("'+src+'","'+tgt+'")');
+                                project.issueCommand(self.pathname+'.connect("'+src+'", "'+tgt+'")');
                                 src_var_selector.val('');
                                 tgt_var_selector.val('');
                             }
@@ -640,7 +640,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
             y = e.clientY - offset.top,
             source = r.getElementByPoint(e.clientX, e.clientY),
             target,
-            line;
+            line, cmd;
 
         if (source !== null) {
             if (e.button === 2) {
@@ -684,7 +684,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                                             tgt_name+') is already connected to something!');
                                     }
                                     else {
-                                        cmd = cmd+src_name+'","'+tgt_name+'")';
+                                        cmd = cmd+src_name+'", "'+tgt_name+'")';
                                         project.issueCommand(cmd);
                                     }
                                 }
@@ -694,7 +694,7 @@ openmdao.ConnectionsFrame = function(project, pathname, src_comp, tgt_comp) {
                                             src_name+') is already connected to something!');
                                     }
                                     else {
-                                        cmd = cmd+tgt_name+'","'+src_name+'")';
+                                        cmd = cmd+tgt_name+'", "'+src_name+'")';
                                         project.issueCommand(cmd);
                                     }
                                 }

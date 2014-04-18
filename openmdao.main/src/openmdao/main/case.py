@@ -8,7 +8,7 @@ import weakref
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError, traceback_str
-from openmdao.main.variable import is_legal_name
+from openmdao.main.variable import is_legal_name, make_legal_path
 
 __all__ = ["Case"]
 
@@ -81,6 +81,12 @@ class Case(object):
     _uuid_node = getnode()
     _uuid_seq = 0
 
+    @staticmethod
+    def next_uuid():
+        """Generate a unique identifier."""
+        Case._uuid_seq += 1
+        return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
+
     def __init__(self, inputs=None, outputs=None, max_retries=None,
                  retries=None, label='', case_uuid=None, parent_uuid='',
                  msg=None):
@@ -103,10 +109,7 @@ class Case(object):
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
-            # generate a unique identifier
-            Case._uuid_seq += 1
-            self.uuid = str(uuid1(node=Case._uuid_node,
-                                  clock_seq=Case._uuid_seq))
+            self.uuid = Case.next_uuid()
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
         self.timestamp = time.time()
@@ -407,6 +410,22 @@ class Case(object):
             if self._exprs is None:
                 self._exprs = {}
             self._exprs[s] = expr
+
+    @staticmethod
+    def set_vartree_inputs(driver, cases):
+        """ Set ``case_inputs`` vartree on `driver` from `cases`. """
+        nans = [float('NaN')] * len(cases)
+        parameters = driver.get_parameters()
+        for path, value in cases[0].get_inputs():
+            if path not in parameters:
+                driver.add_parameter(path)
+            path = make_legal_path(path)
+            driver.set('case_inputs.'+path, nans)
+
+        for i, case in enumerate(cases):
+            for path, value in case.get_inputs():
+                path = make_legal_path(path)
+                driver.set('case_inputs.'+path, value, index=(i,))
 
 
 class CaseTreeNode(object):

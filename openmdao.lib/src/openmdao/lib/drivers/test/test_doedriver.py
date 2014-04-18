@@ -11,18 +11,13 @@ import re
 import sys
 import unittest
 
-from openmdao.main.datatypes.api import Event
+from math import isnan, sqrt
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.case import MissingValue
 from openmdao.main.datatypes.api import Float, Bool, Array
-from openmdao.lib.casehandlers.api import SequenceCaseFilter
 from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
-from openmdao.lib.casehandlers.api import ListCaseRecorder, DumpCaseRecorder
-from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial, \
-                                           CSVFile
-from openmdao.util.testutil import case_assert_rel_error, assert_rel_error, \
-                                   assert_raises
+from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
+from openmdao.util.testutil import assert_rel_error, assert_raises
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -50,7 +45,6 @@ class DrivenComponent(Component):
     x1 = Float(1., iotype='in')
     x2 = Float(1., iotype='in')
     x3 = Float(1., iotype='in')
-    stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
     raise_err = Bool(iotype='in')
 
@@ -59,8 +53,6 @@ class DrivenComponent(Component):
         self.rosen_suzuki = rosen_suzuki(self.x0, self.x1, self.x2, self.x3)
         if self.raise_err:
             self.raise_exception('Forced error', RuntimeError)
-        if self.stop_exec:
-            self.parent.driver.stop()  # Only valid if sequential!
 
 
 class MyModel(Assembly):
@@ -71,12 +63,12 @@ class MyModel(Assembly):
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
-        self.driver.case_outputs = ['driven.rosen_suzuki']
         self.driver.add_parameter(('driven.x0', 'driven.y0'),
                                   low=-10., high=10., scaler=20., adder=10.)
         for name in ['x1', 'x2', 'x3']:
             self.driver.add_parameter("driven.%s" % name,
                                       low=-10., high=10., scaler=20., adder=10.)
+        self.driver.add_response('driven.rosen_suzuki')
 
 
 class TestCaseDOE(unittest.TestCase):
@@ -128,96 +120,31 @@ class TestCaseDOE(unittest.TestCase):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x1', 'driven.x2', 'driven.x3'])
+        val = self.model.driver.get('case_inputs.driven.x1')
+        self.assertEqual(len(val), 0)
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x2', 'driven.x3'])
-
-    def test_nooutput(self):
-        logging.debug('')
-        logging.debug('test_nooutput')
-
-        results = ListCaseRecorder()
-        self.model.recorders = [results]
-        self.model.driver.error_policy = 'RETRY'
-        self.model.driver.case_outputs.append('driven.sum_z')
-
-        self.model.run()
-
-        self.assertEqual(len(results),
-                         self.model.driver.DOEgenerator.num_samples)
-        for case in results.cases:
-            expected = "driver: Exception getting case outputs: " \
-                       "driven \([0-9]+-1\): " \
-                       "'DrivenComponent' object has no attribute 'sum_z'"
-            msg = replace_uuid(case.msg)
-            self.assertTrue(re.match(expected, msg))
-
-    def test_noiterator(self):
-        logging.debug('')
-        logging.debug('test_noiterator')
-
-        # Check resoponse to no iterator set.
-        self.model.recorders = [ListCaseRecorder()]
-        self.model.driver.DOEgenerator = None
         try:
-            self.model.run()
-        except Exception as exc:
-            msg = "driver: required plugin 'DOEgenerator' is not present"
-            self.assertEqual(str(exc), msg)
+            self.model.driver.get('case_inputs.driven.x1')
+        except AttributeError:
+            pass
         else:
-            self.fail('Exception expected')
-
-    def test_norecorder(self):
-        logging.debug('')
-        logging.debug('test_norecorder')
-
-        self.model.recorders = []
-        self.model.run()
-
-    def test_output_error(self):
-        class Dummy(Component):
-            x = Float(0, iotype="in")
-            y = Float(0, iotype="out")
-            z = Float(0, iotype="out")
-
-            def execute(self):
-                self.y = 10 + self.x
-
-        class Analysis(Assembly):
-
-            def configure(self):
-                self.add('d', Dummy())
-                self.add('driver', DOEdriver())
-                self.driver.DOEgenerator = FullFactorial(2)
-                self.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x', low=0, high=10)
-                self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
-
-        a = Analysis()
-
-        try:
-            a.run()
-        except Exception as err:
-            err = replace_uuid(str(err))
-            self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(err.endswith("d (1-1): 'Dummy' object has no attribute 'bad'"))
-        else:
-            self.fail("Exception expected")
+            self.fail('Expected AttributeError')
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
 
-        self.model.driver.sequential = sequential
-        results = ListCaseRecorder()
-        self.model.recorders = [results]
-        self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
+        doe = self.model.driver
+        doe.sequential = sequential
+        doe.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driven.raise_err = True
 
         if retry:
             self.model.run()
-            self.assertEqual(len(results), 10)
+            self.assertEqual(len(doe.case_outputs.driven.rosen_suzuki), 10)
             self.verify_results(forced_errors)
         else:
             assert_raises(self, 'self.model.run()', globals(), locals(),
@@ -233,47 +160,28 @@ class TestCaseDOE(unittest.TestCase):
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
 
-        for case in self.model.recorders[0].cases:
+        doe = self.model.driver
+        for i, result in enumerate(doe.case_outputs.driven.rosen_suzuki):
             if forced_errors:
-                expected = 'driven \([0-9]+-1\): Forced error'
-                msg = replace_uuid(case.msg)
-                self.assertTrue(re.match(expected, msg))
+                self.assertTrue(isnan(result))
             else:
-                self.assertEqual(case.msg, None)
-                assert_rel_error(self, case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                x0 = doe.case_inputs.driven.x0[i]
+                x1 = doe.case_inputs.driven.x1[i]
+                x2 = doe.case_inputs.driven.x2[i]
+                x3 = doe.case_inputs.driven.x3[i]
+                assert_rel_error(self, result, rosen_suzuki(x0, x1, x2, x3),
                                  0.0001)
-
-    def test_rerun(self):
-        logging.debug('')
-        logging.debug('test_rerun')
-
-        self.run_cases(sequential=True)
-        orig_cases = self.model.recorders[0].cases
-
-        self.model.driver.DOEgenerator = CSVFile(self.model.driver.doe_filename)
-        self.model.driver.record_doe = False
-        rerun_seq = (1, 3, 5, 7, 9)
-        self.model.driver.case_filter = SequenceCaseFilter(rerun_seq)
-        rerun = ListCaseRecorder()
-        self.model.recorders[0] = rerun
-        self.model.run()
-
-        self.assertEqual(len(orig_cases), 10)
-        self.assertEqual(len(rerun.cases), len(rerun_seq))
-        for i, case in enumerate(rerun.cases):
-            case_assert_rel_error(case, orig_cases[rerun_seq[i]], self, .0001)
 
 
 class MyModel2(Assembly):
-    """ Use DOEdriver with DrivenComponent. """
+    """ Use NeighborhoodDOEdriver with DrivenComponent. """
 
     def configure(self):
         self.add('driver', NeighborhoodDOEdriver())
         self.add('driven', DrivenComponent())
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
-        self.driver.case_outputs = ['driven.rosen_suzuki']
+        self.driver.add_response('driven.rosen_suzuki')
         self.driver.add_parameter(('driven.x0', 'driven.y0'),
                                   low=-10., high=10., scaler=20., adder=10.)
         for name in ['x1', 'x2', 'x3']:
@@ -334,119 +242,50 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x1', 'driven.x2', 'driven.x3'])
+        val = self.model.driver.get('case_inputs.driven.x1')
+        self.assertEqual(len(val), 0)
         self.model.driver.remove_parameter('driven.x1')
         lst = self.model.driver.list_param_targets()
         self.assertEqual(lst, ['driven.x0', 'driven.y0',
                                'driven.x2', 'driven.x3'])
-
-    def test_nooutput(self):
-        logging.debug('')
-        logging.debug('test_nooutput')
-
-        results = ListCaseRecorder()
-        self.model.recorders = [results]
-        self.model.driver.error_policy = 'RETRY'
-        self.model.driver.case_outputs.append('driven.sum_z')
-
-        self.model.run()
-
-        self.assertEqual(len(results), 1 + self.model.driver.DOEgenerator.num_samples)
-        for case in results.cases:
-            expected = "driver: Exception getting case outputs: " \
-                       "driven \([0-9]+-1\): " \
-                       "'DrivenComponent' object has no attribute 'sum_z'"
-            msg = replace_uuid(case.msg)
-            self.assertTrue(re.match(expected, msg))
-
-    def test_noiterator(self):
-        logging.debug('')
-        logging.debug('test_noiterator')
-
-        # Check resoponse to no iterator set.
-        self.model.recorders = [ListCaseRecorder()]
-        self.model.driver.DOEgenerator = None
         try:
-            self.model.run()
-        except Exception as exc:
-            msg = "driver: required plugin 'DOEgenerator' is not present"
-            self.assertEqual(str(exc), msg)
+            self.model.driver.get('case_inputs.driven.x1')
+        except AttributeError:
+            pass
         else:
-            self.fail('Exception expected')
-
-    def test_norecorder(self):
-        logging.debug('')
-        logging.debug('test_norecorder')
-
-        self.model.recorders = []
-        self.model.run()
-
-    def test_output_error(self):
-        class Dummy(Component):
-            x = Float(0, iotype="in")
-            y = Float(0, iotype="out")
-            z = Float(0, iotype="out")
-
-            def execute(self):
-                self.y = 10 + self.x
-
-        class Analysis(Assembly):
-
-            def configure(self):
-                self.add('d', Dummy())
-                self.add('driver', NeighborhoodDOEdriver())
-                self.driver.DOEgenerator = FullFactorial(2)
-                self.recorders = [DumpCaseRecorder()]
-                self.driver.add_parameter('d.x', low=0, high=10)
-                self.driver.case_outputs = ['d.y', 'd.bad', 'd.z']
-
-        a = Analysis()
-
-        try:
-            a.run()
-        except Exception as err:
-            err = replace_uuid(str(err))
-            self.assertTrue(err.startswith('driver: Run aborted: Traceback '))
-            self.assertTrue(err.endswith("d (1-1): 'Dummy' object has no attribute 'bad'"))
-        else:
-            self.fail("Exception expected")
+            self.fail('Expected AttributeError')
 
     def run_cases(self, sequential, forced_errors=False, retry=True):
         # Evaluate cases, either sequentially or across  multiple servers.
 
-        self.model.driver.sequential = sequential
-        results = ListCaseRecorder()
-        self.model.recorders = [results]
-        self.model.driver.error_policy = 'RETRY' if retry else 'ABORT'
+        doe = self.model.driver
+        doe.sequential = sequential
+        doe.error_policy = 'RETRY' if retry else 'ABORT'
         if forced_errors:
             self.model.driven.raise_err = True
 
         if retry:
             self.model.run()
-            self.assertEqual(len(results), 11)
+            self.assertEqual(len(doe.case_outputs.driven.rosen_suzuki), 11)
             self.verify_results(forced_errors)
         else:
             assert_raises(self, 'self.model.run()', globals(), locals(),
                           RuntimeError, "driver: Run aborted:"
                           " RuntimeError('driven: Forced error',)")
 
-    def test_scaling(self):
-        self.model.driver.DOEgenerator = ff = FullFactorial(num_levels=3)
-        ff.num_parameters = 4
-        for case in self.model.driver._get_cases():
-            print case
-
     def verify_results(self, forced_errors=False):
         # Verify recorded results match expectations.
 
-        for case in self.model.recorders[0].cases:
+        doe = self.model.driver
+        for i, result in enumerate(doe.case_outputs.driven.rosen_suzuki):
             if forced_errors:
-                expected = 'driven \([0-9]+-1\): Forced error'
-                msg = replace_uuid(case.msg)
-                self.assertTrue(re.match(expected, msg))
+                self.assertTrue(isnan(result))
             else:
-                self.assertEqual(case.msg, None)
-                assert_rel_error(self, case['driven.rosen_suzuki'],
-                                 rosen_suzuki(*[case['driven.x%s' % i] for i in range(4)]),
+                x0 = doe.case_inputs.driven.x0[i]
+                x1 = doe.case_inputs.driven.x1[i]
+                x2 = doe.case_inputs.driven.x2[i]
+                x3 = doe.case_inputs.driven.x3[i]
+                assert_rel_error(self, result, rosen_suzuki(x0, x1, x2, x3),
                                  0.0001)
 
 
@@ -469,7 +308,7 @@ class ArrayModel(Assembly):
         self.add('driven', ArrayComponent())
         self.driver.workflow.add('driven')
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
-        self.driver.case_outputs = ['driven.rosen_suzuki']
+        self.driver.add_response('driven.rosen_suzuki')
         self.driver.add_parameter('driven.x', low=-10., high=10.,
                                   scaler=20., adder=10.)
 
@@ -488,14 +327,12 @@ class ArrayTest(unittest.TestCase):
         logging.debug('')
         logging.debug('test_sequential')
 
-        results = ListCaseRecorder()
-        self.model.recorders = [results]
         self.model.run()
 
-        for case in results.cases:
-            self.assertEqual(case.msg, None)
-            assert_rel_error(self, case['driven.rosen_suzuki'],
-                             rosen_suzuki(*[case['driven.x'][i] for i in range(4)]),
+        doe = self.model.driver
+        for i, result in enumerate(doe.case_outputs.driven.rosen_suzuki):
+            x = doe.case_inputs.driven.x[i]
+            assert_rel_error(self, result, rosen_suzuki(x[0], x[1], x[2], x[3]),
                              0.0001)
 
 
@@ -505,20 +342,21 @@ class ComponentWhichRaisesException(Component):
 
     x = Float(0.0, iotype='in', desc='The variable x')
 
-    f_x = Float(0.0,iotype='out', desc='F(x)')
+    f_x = Float(0.0, iotype='out', desc='F(x)')
 
 
     def execute(self):
         """f(x) = math.sqrt(x)"""
 
-        if self.x < 0.0 :
+        if self.x < 0.0:
             raise RuntimeError("Cannot take square root of negative number")
 
-        self.f_x = math.sqrt( self.x )
+        self.f_x = sqrt(self.x)
+
 
 
 class ModelWithException(Assembly):
-    """ Use DOEdriver with Component which throws exceptio. """
+    """ Use DOEdriver with Component which throws exception. """
 
     def configure(self):
         self.add('driver', DOEdriver())
@@ -526,8 +364,8 @@ class ModelWithException(Assembly):
         self.driver.workflow.add('driven')
         self.driver.error_policy = 'RETRY'
         self.driver.DOEgenerator = FullFactorial(2)
-        self.driver.add_parameter('driven.x',low=-50,high=50)
-        self.driver.case_outputs = ['driven.f_x',]
+        self.driver.add_parameter('driven.x', low=-50, high=50)
+        self.driver.add_response('driven.f_x')
 
 
 class ModelWithExceptionTest(unittest.TestCase):
@@ -543,13 +381,13 @@ class ModelWithExceptionTest(unittest.TestCase):
         logging.debug('')
         logging.debug('test_recording')
 
-        results = ListCaseRecorder()
-        self.model.recorders = [results,]
         self.model.run()
-        self.assertEqual(results.cases[0].msg,
-                         "Cannot take square root of negative number")
-        self.assertEqual(type(results.cases[0].get_outputs()[1][1]),
-                         MissingValue)
+        for i, result in enumerate(self.model.driver.case_outputs.driven.f_x):
+            x = self.model.driver.case_inputs.driven.x[i]
+            if x < 0:
+                self.assertTrue(isnan(result))
+            else:
+                self.assertEqual(result, sqrt(x))
 
 
 if __name__ == "__main__":

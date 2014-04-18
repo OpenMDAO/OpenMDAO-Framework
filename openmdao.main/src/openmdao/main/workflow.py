@@ -1,7 +1,5 @@
 """ Base class for all workflows. """
 
-from uuid import uuid1
-
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
@@ -98,7 +96,7 @@ class Workflow(object):
         if case_uuid is None:
             # We record the case and are responsible for unique case_ids.
             record_case = True
-            case_uuid = str(uuid1())
+            case_uuid = Case.next_uuid()
         else:
             record_case = False
 
@@ -137,7 +135,10 @@ class Workflow(object):
             for name, param in driver.get_parameters().iteritems():
                 if isinstance(name, tuple):
                     name = name[0]
-                inputs.append((name, param.evaluate(scope)))
+                value = param.evaluate(scope)
+                if param.size == 1:  # evaluate() always returns list.
+                    value = value[0]
+                inputs.append((name, value))
 
         # Objectives
         if hasattr(driver, 'eval_objective'):
@@ -145,6 +146,11 @@ class Workflow(object):
         elif hasattr(driver, 'eval_objectives'):
             for j, obj in enumerate(driver.eval_objectives()):
                 outputs.append(('Objective_%d' % j, obj))
+
+        # Responses
+        if hasattr(driver, 'eval_responses'):
+            for j, response in enumerate(driver.eval_responses()):
+                outputs.append(("Response_%d" % j, response))
 
         # Constraints
         if hasattr(driver, 'get_ineq_constraints'):
@@ -157,11 +163,13 @@ class Workflow(object):
                 val = con.evaluate(scope)
                 outputs.append(('Constraint ( %s )' % name, val))
 
+        # Other
         case_inputs, case_outputs = top.get_case_variables()
         inputs.extend(case_inputs)
         outputs.extend(case_outputs)
         outputs.append(('%s.workflow.itername' % driver.get_pathname(),
                         self.itername))
+
         case = Case(inputs, outputs, label=label,
                     case_uuid=case_uuid, parent_uuid=self._parent._case_uuid)
 

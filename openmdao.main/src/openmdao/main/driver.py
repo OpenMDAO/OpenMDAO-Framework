@@ -61,7 +61,7 @@ class GradientOptions(VariableTree):
                         framework_var=True)
     derivative_direction = Enum('auto',
                                 ['auto', 'forward', 'adjoint'],
-                                desc = "Direction for derivative calculation. "
+                                desc="Direction for derivative calculation. "
                                 "Can be 'forward', 'adjoint', or 'auto'. "
                                 "Auto is the default setting. "
                                 "When set to auto, OpenMDAO automatically "
@@ -189,7 +189,7 @@ class Driver(Component):
         srcset = set()
         destset = set()
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 delegate = getattr(self, dname)
                 if isinstance(delegate, HasParameters):
                     destset.update(delegate.get_referenced_varpaths())
@@ -244,7 +244,7 @@ class Driver(Component):
         """
         pcomps = []
         if hasattr(self, '_delegates_'):
-            for name, dclass in self._delegates_.items():
+            for name in self._delegates_:
                 delegate = getattr(self, name)
                 if hasattr(delegate, 'list_pseudocomps'):
                     pcomps.extend(delegate.list_pseudocomps())
@@ -260,7 +260,7 @@ class Driver(Component):
         """
         refs = {}
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
@@ -276,7 +276,7 @@ class Driver(Component):
             Name of component being removed.
         """
         if hasattr(self, '_delegates_'):
-            for dname, dclass in self._delegates_.items():
+            for dname in self._delegates_:
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
@@ -366,7 +366,7 @@ class Driver(Component):
         '''Step through a single workflow comp and then return control'''
         while self.continue_iteration():
             self.pre_iteration()
-            for junk in self._step_workflow():
+            for _ in self._step_workflow():
                 yield
             self.post_iteration()
         self._iter = None

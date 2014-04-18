@@ -8,6 +8,7 @@ import cStringIO, StringIO
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
+
 class CSVCaseIterator(object):
     """An iterator that returns :class:`Case` objects from a passed-in iterator
     of cases. This can be useful for runtime-generated cases from an

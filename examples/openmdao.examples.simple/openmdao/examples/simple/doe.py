@@ -13,6 +13,7 @@ from openmdao.examples.simple.paraboloid import Paraboloid
 class Analysis(Assembly):
 
     def configure(self):
+<<<<<<< HEAD
 
         self.add('paraboloid', Paraboloid())
 
@@ -28,7 +29,7 @@ class Analysis(Assembly):
         self.driver.add_parameter('paraboloid.y', low=-50, high=50)
         # Tell the DOEdriver to also record any other variables you want to
         # know for each case.
-        self.driver.case_outputs = ['paraboloid.f_xy',]
+        self.driver.add_response('paraboloid.f_xy')
 
         # Simple recorder which stores the cases in memory.
         self.recorders = [ListCaseRecorder(),]

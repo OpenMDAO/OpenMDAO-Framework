@@ -975,14 +975,10 @@ def _test_libsearch(browser):
     objects = workspace_page.get_object_types()
     eq(objects, [
         'CentralComposite',
-        'ConnectableDOEdriver',
-        'ConnectableNeighborhoodDOEdriver',
         'CSVFile',
         'DOEdriver',
-        'DOEdriverBase',
         'FullFactorial',
         'NeighborhoodDOEdriver',
-        'NeighborhoodDOEdriverBase',
         'OptLatinHypercube',
         'PlugNozzleGeometry',
         'Uniform'])
@@ -1048,7 +1044,8 @@ def _test_arguments(browser):
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -1099,7 +1096,8 @@ def _test_sorting(browser):
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
 
     for i, row in enumerate(inputs.value):
@@ -1124,17 +1122,19 @@ def _test_sorting(browser):
     editor.close()
     closeout(project_dict, workspace_page)
 
+
 def _test_standard_library(browser):
     project_dict, workspace_page = startup(browser)
     workspace_page.set_library_filter('optproblems')
     objects = workspace_page.get_object_types()
 
-    eq(objects,[
+    eq(objects, [
         'BraninProblem',
         'PolyScalableProblem',
         'SellarProblem',])
 
     closeout(project_dict, workspace_page)
+
 
 if __name__ == '__main__':
     main()

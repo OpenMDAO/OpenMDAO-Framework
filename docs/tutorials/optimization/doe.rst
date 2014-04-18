@@ -33,20 +33,20 @@ variable. Create a file called ``doe.py`` and copy the following into it:
     
         def configure(self):
             
-            self.add('paraboloid',Paraboloid())
+            self.add('paraboloid', Paraboloid())
             
-            self.add('driver',DOEdriver())
+            self.add('driver', DOEdriver())
             #There are a number of different kinds of DOE available in openmdao.lib.doegenerators
             self.driver.DOEgenerator = FullFactorial(10) #Full Factorial DOE with 10 levels for each variable
             
             #DOEdriver will automatically record the values of any parameters for each case
-            self.driver.add_parameter('paraboloid.x',low=-50,high=50)
-            self.driver.add_parameter('paraboloid.y',low=-50,high=50)
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
             #tell the DOEdriver to also record any other variables you want to know for each case
-            self.driver.case_outputs = ['paraboloid.f_xy',]
+            self.driver.add_response('paraboloid.f_xy')
             
             #Simple recorder which stores the cases in memory. 
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
             
             self.driver.workflow.add('paraboloid')
             
@@ -93,24 +93,24 @@ if you notice, we specified a ListCaseRecorder as part of a list.
     
         def configure(self):
             
-            self.add('paraboloid',Paraboloid())
+            self.add('paraboloid', Paraboloid())
             
-            self.add('driver',DOEdriver())
+            self.add('driver', DOEdriver())
             #There are a number of different kinds of DOE available in openmdao.lib.doegenerators
             self.driver.DOEgenerator = FullFactorial(10) #Full Factorial DOE with 10 levels for each variable
             
             #DOEdriver will automatically record the values of any parameters for each case
-            self.driver.add_parameter('paraboloid.x',low=-50,high=50)
-            self.driver.add_parameter('paraboloid.y',low=-50,high=50)
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
             #tell the DOEdriver to also record any other variables you want to know for each case
-            self.driver.case_outputs = ['paraboloid.f_xy',]
+            self.driver.add_response('paraboloid.f_xy')
     
     self = Analysis()
    
 .. testcode:: simple_model_doe_pieces
     
             #Simple recorder which stores the cases in memory. 
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
 
 You can add as many CaseRecorders to that list as you want, and each one will record every case separately. This
 enables you to save information to more than one place at the same time.
@@ -118,13 +118,13 @@ enables you to save information to more than one place at the same time.
 The last new thing to look at is where we specify some extra variables to be saved off for each case. The DOEdriver 
 automatically saves all the variables that were specified as parameters in every case. That way, you will always
 know exactly what variable values were used for each case. But, of course, the inputs are just half the story. You will 
-also want to store relevant outputs from each case. This is what the ``case_outputs`` attribute is for, on the DOEdriver. 
-You would put any variables you want to track into this list, but here we have only the one output from 
+also want to store relevant outputs from each case. This is what the ``add_response`` method is for, on the DOEdriver. 
+You could add any variables you want to track as responses, but here we have only the one output from 
 paraboloid. 
 
 .. testcode:: simple_model_doe_pieces
 
-           self.driver.case_outputs = ['paraboloid.f_xy',]
+           self.driver.add_response('paraboloid.f_xy')
            
            
 
@@ -144,20 +144,20 @@ To run this analysis, you would do the following:
         
         def configure(self):
             
-            self.add('paraboloid',Paraboloid())
+            self.add('paraboloid', Paraboloid())
             
-            self.add('driver',DOEdriver())
+            self.add('driver', DOEdriver())
             #There are a number of different kinds of DOE available in openmdao.lib.doegenerators
             self.driver.DOEgenerator = FullFactorial(10) #Full Factorial DOE with 10 levels for each variable
             
             #DOEdriver will automatically record the values of any parameters for each case
-            self.driver.add_parameter('paraboloid.x',low=-50,high=50)
-            self.driver.add_parameter('paraboloid.y',low=-50,high=50)
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
             #tell the DOEdriver to also record any other variables you want to know for each case
-            self.driver.case_outputs = ['paraboloid.f_xy',]
+            self.driver.add_response('paraboloid.f_xy')
             
             #Simple recorder which stores the cases in memory. 
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
             
             self.driver.workflow.add('paraboloid')
                 
@@ -175,7 +175,7 @@ To run this analysis, you would do the following:
         print "Elapsed time: ", time.time()-tt, "seconds"
         
         #write the case output to the screen
-        for c in analysis.driver.recorders[0].get_iterator():
+        for c in analysis.recorders[0].get_iterator():
             print "x: %f, y: %f, z: %f"%(c['paraboloid.x'],c['paraboloid.y'],c['paraboloid.f_xy'])
             
 The only new stuff here is the bit at the end where we loop over all the cases that were run. To keep
@@ -207,7 +207,7 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
         raw_data = {}
         X=set()
         Y=set()
-        for c in analysis.driver.recorders[0].get_iterator():
+        for c in analysis.recorders[0].get_iterator():
             raw_data[(c['paraboloid.x'],c['paraboloid.y'])] = c['paraboloid.f_xy']
             X.add(c['paraboloid.x'])
             Y.add(c['paraboloid.y'])
@@ -266,7 +266,7 @@ the cases previously generated.
             self.driver.DOEgenerator = Uniform(num_samples=1000)
             self.driver.add_parameter('paraboloid.x', low=-50, high=50)
             self.driver.add_parameter('paraboloid.y', low=-50, high=50)
-            self.driver.case_outputs = ['paraboloid.f_xy']
+            self.driver.add_response('paraboloid.f_xy')
             self.driver.workflow.add('paraboloid')
 
 
@@ -289,125 +289,11 @@ the cases previously generated.
         analysis.run()
 
 
-Re-running the full experiment is often not of interest. Instead, only certain
-cases need to be rerun. OpenMDAO provides case filters to select cases, and
-DOEdriver's ``case_filter`` attribute is used to configure what filter to use.
-Note that filters are applied *after* the normalized parameter values have
-been converted to actual values.
-
-.. testcode:: simple_model_doe_filter
-
-    from openmdao.main.api import Assembly
-    from openmdao.lib.drivers.api import DOEdriver
-    from openmdao.lib.doegenerators.api import CSVFile, Uniform
-    from openmdao.lib.casehandlers.api import ExprCaseFilter, SequenceCaseFilter, SliceCaseFilter
-
-    from openmdao.examples.simple.paraboloid import Paraboloid
-    
-    
-    class Analysis(Assembly): 
-        
-        def configure(self):
-            self.add('paraboloid', Paraboloid())
-            doe = self.add('driver', DOEdriver())
-            doe.DOEgenerator = Uniform(num_samples=1000)
-            doe.add_parameter('paraboloid.x', low=-50, high=50)
-            doe.add_parameter('paraboloid.y', low=-50, high=50)
-            doe.case_outputs = ['paraboloid.f_xy']
-            doe.workflow.add('paraboloid')
-
-
-    if __name__ == '__main__':    
-
-        analysis = Analysis()
-        doe = analysis.driver
-
-        # Run full experiment.
-        analysis.run() 
-
-        # Don't record reruns.
-        doe.record_doe = False
-
-        # Rerun just 5th and 7th cases.
-        doe.DOEgenerator = CSVFile('driver.csv')
-        doe.case_filter = SequenceCaseFilter((5, 7))
-        analysis.run()
-
-        # Rerun every third case starting at 100 through case 200.
-        doe.DOEgenerator = CSVFile('driver.csv')
-        doe.case_filter = SliceCaseFilter(100, 200, 3)
-        analysis.run()
- 
-        # Rerun every case where x > 0 and y < 0.
-        doe.DOEgenerator = CSVFile('driver.csv')
-        doe.case_filter = ExprCaseFilter("case['paraboloid.x'] > 0 and case['paraboloid.y'] < 0")
-        analysis.run()
-
-
-In the above example we were able to filter cases on input values, or their
-location in the sequence of cases run. If instead you need to rerun cases
-based on output values, or if they failed, the filtering has to be applied to
-cases after they have been run.
-:ref:`CaseIteratorDriver <caseiterdriver.py>` is a driver which will run an
-arbitrary set of cases given to it, such as those recorded by DOEdriver.
-CaseIteratorDriver has a ``filter`` attribute that can be used in the same
-way we used filters with DOEdriver above, but now the filter can operate on
-outputs as well as inputs.
-
-.. testcode:: simple_model_cid_filter
-
-    from openmdao.main.api import Assembly
-    from openmdao.lib.drivers.api import CaseIteratorDriver, DOEdriver
-    from openmdao.lib.doegenerators.api import Uniform
-    from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator, ExprCaseFilter
-
-    from openmdao.examples.simple.paraboloid import Paraboloid
-    
-    
-    class Analysis(Assembly): 
-        
-        def configure(self):
-            self.add('paraboloid', Paraboloid())
-            doe = self.add('driver', DOEdriver())
-            doe.DOEgenerator = Uniform(num_samples=1000)
-            doe.add_parameter('paraboloid.x', low=-50, high=50)
-            doe.add_parameter('paraboloid.y', low=-50, high=50)
-            doe.case_outputs = ['paraboloid.f_xy']
-            doe.workflow.add('paraboloid')
-
-
-    if __name__ == '__main__':    
-
-        analysis = Analysis()
-
-        # Run full experiment and record results.
-        recorder = ListCaseRecorder()
-        analysis.driver.recorders = [recorder]
-        analysis.run() 
-
-        # Reconfigure driver.
-        workflow = analysis.driver.workflow
-        analysis.add('driver', CaseIteratorDriver())
-        analysis.driver.workflow = workflow
-
-        # Rerun cases where paraboloid.f_xy <= 0.
-        analysis.driver.iterator = recorder.get_iterator()
-        analysis.driver.filter = ExprCaseFilter("case['paraboloid.f_xy'] <= 0")
-        analysis.run() 
-
-        # Rerun cases which failed.
-        analysis.driver.iterator = recorder.get_iterator()
-        analysis.driver.filter = ExprCaseFilter("case.msg")
-        analysis.run() 
-
-
 ..
-  Since DOEdriver and CaseIteratorDriver are derived from
-  :ref:`CaseIterDriverBase <caseiterdriver.py>`,
+
+  Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
   it's possible to run the various cases concurrently.  If evaluating a case
   takes considerable time and you have a multiprocessor machine, setting
   ``analysis.driver.sequential`` to False will cause the cases to be evaluated
   concurrently, based on available resources, which will usually be quicker.
-  Note that concurrent evaluation means you can't rely on the recorded cases
-  being in the order you might expect.
 

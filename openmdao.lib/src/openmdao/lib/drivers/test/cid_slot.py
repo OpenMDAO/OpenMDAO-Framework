@@ -4,10 +4,8 @@ can be passed as inputs to a CaseIteratorDriver.
 """
 
 from openmdao.main.api import Assembly, Component
-from openmdao.main.case import Case
 from openmdao.main.datatypes.slot import Slot
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-from openmdao.lib.casehandlers.api import ListCaseRecorder, ListCaseIterator
 from openmdao.main.datatypes.api import Int
 
 
@@ -37,32 +35,36 @@ class PGrafSubComponent(PGrafComponent):
 class PGrafAssembly(Assembly):
 
     def configure(self):
-        self.add('driver', CaseIteratorDriver())
+        cid = self.add('driver', CaseIteratorDriver())
         self.add('runner', PGrafSubComponent())
-        self.driver.workflow.add('runner')
-        self.driver.sequential = False
+        cid.workflow.add('runner')
+        cid.sequential = True #False
         # uncomment to keep simulation directories for debugging purposes
         #import os
         #os.environ['OPENMDAO_KEEPDIRS'] = '1'
 
-        cases = []
-        for num in range(4):
-            cases.append(Case(inputs=[('runner.obj', PGrafObject(num)),
-                                      ('runner.num', num)],
-                              outputs=['runner.result']))
+        cid.add_parameter('runner.obj')
+        cid.add_parameter('runner.num')
+        cid.add_response('runner.result')
 
-        self.driver.iterator = ListCaseIterator(cases)
-        self.recorders = [ListCaseRecorder()]
+        cid.case_inputs.runner.obj = [PGrafObject(num) for num in range(4)]
+        cid.case_inputs.runner.num = [num for num in range(4)]
 
 
-if __name__ == '__main__':
+def main():
     top = PGrafAssembly()
     top.run()
 
+    inps = top.driver.case_inputs
+    outs = top.driver.case_outputs
     results = 0
-    for case in top.recorders[0].cases:
-        print case
-        assert case.get_output('runner.result') == case.get_input('runner.num') ** 2
+    for i, result in enumerate(outs.runner.result):
+        num = inps.runner.num[i]
+        print result, num
+        assert result == num ** 2
         results += 1
     assert results == 4
 
+
+if __name__ == '__main__':
+    main()

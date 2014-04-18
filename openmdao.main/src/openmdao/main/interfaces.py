@@ -794,6 +794,38 @@ class IHasObjective(IHasObjectives):
         """Returns the value of the evaluated objective."""
 
 
+class IHasResponses(Interface):
+    """An Interface for objects having a responses."""
+
+    def add_responses(response_iter):
+        """Takes an iterator of response strings and creates
+        responses for them in the driver.
+        """
+
+    def add_response(expr):
+        """Adds an response to the driver.
+
+        expr: string
+            String containing the response expression.
+         """
+
+    def remove_response(expr):
+        """Removes the specified response expression. Spaces within
+        the expression are ignored.
+        """
+
+    def clear_responses():
+        """Removes all responses."""
+
+    def eval_responses():
+        """Returns a list of values of the evaluated responses."""
+
+    def get_expr_depends():
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our responses.
+        """
+
+
 class IVariable(Interface):
     def validate(obj, name, value):
         """ Validates that the specified value is valid and can be assigned
