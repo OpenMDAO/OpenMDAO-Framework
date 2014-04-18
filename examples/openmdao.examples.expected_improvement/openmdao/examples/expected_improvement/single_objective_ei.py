@@ -1,18 +1,17 @@
 '''Single Ojective EI Example'''
 
-import os
 from tempfile import mkdtemp
 import os.path
 import shutil
 
-from openmdao.main.api import Assembly, Driver, SequentialWorkflow
-
-from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
+from openmdao.lib.components.api import MetaModel, ExpectedImprovement, \
+                                        ParetoFilter
 from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.drivers.adaptivesampledriver import AdaptiveSampleDriver
-from openmdao.lib.drivers.api import DOEdriver, Genetic, FixedPointIterator
+from openmdao.lib.drivers.api import Genetic, FixedPointIterator
 from openmdao.lib.optproblems.branin import BraninComponent
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
+from openmdao.main.api import Assembly
 
 class Analysis(Assembly):
     '''Top level assembly for the Single Ojective EI Example.'''
@@ -30,8 +29,8 @@ class Analysis(Assembly):
 
         branin = self.add('branin', BraninComponent())
 
-        kwargs = {'params':("x","y"),
-                  'responses':('f_xy',)}
+        kwargs = {'params':("x", "y"),
+                  'responses':('f_xy', )}
 
         meta = self.add('meta', MetaModel(**kwargs))
         meta.default_surrogate = KrigingSurrogate()
@@ -47,9 +46,12 @@ class Analysis(Assembly):
         adapt.add_response('branin.f_xy')
 
         #pass training data from sampler to metamodel and pareto filter
-        self.connect('adapt.all_case_inputs.branin.x', ['meta.params.x', 'pareto.params.x'])
-        self.connect('adapt.all_case_inputs.branin.y', ['meta.params.y', 'pareto.params.y'])
-        self.connect('adapt.all_case_outputs.branin.f_xy', ['meta.responses.f_xy', 'pareto.responses.f_xy'])
+        self.connect('adapt.all_case_inputs.branin.x', ['meta.params.x',
+                                                        'pareto.params.x'])
+        self.connect('adapt.all_case_inputs.branin.y', ['meta.params.y',
+                                                        'pareto.params.y'])
+        self.connect('adapt.all_case_outputs.branin.f_xy', ['meta.responses.f_xy',
+                                                            'pareto.responses.f_xy'])
 
         #connect meta and pareto to ei
         self.connect('meta.f_xy', 'ei.current') #this passes a normal distribution variable
@@ -65,8 +67,10 @@ class Analysis(Assembly):
 
         #Iterative sampling process
         # TODO: Note, soon low and high will not be needed.
-        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]', low=-1e99, high=1e99)
-        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]', low=-1e99, high=1e99)
+        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]',
+                             low=-1e99, high=1e99)
+        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]',
+                             low=-1e99, high=1e99)
         driver.add_constraint('adapt.adaptive_inputs.branin.x[0] = meta.x')
         driver.add_constraint('adapt.adaptive_inputs.branin.y[0] = meta.y')
         driver.max_iterations = 30
@@ -90,9 +94,7 @@ if __name__ == "__main__": #pragma: no cover
     import matplotlib
     from matplotlib import pyplot as plt
     from matplotlib.pylab import get_cmap
-    from numpy import meshgrid,array, pi,arange,cos
-
-    from openmdao.lib.casehandlers.api import case_db_to_dict
+    from numpy import meshgrid, array, pi,arange,cos
 
     seed = None
     backend = None
@@ -116,8 +118,11 @@ if __name__ == "__main__": #pragma: no cover
     analysis = Analysis()
     analysis.run()
 
-    points = [(-pi,12.275,.39789), (pi,2.275,.39789), (9.42478,2.745,.39789)]
-    for x,y,z in points:
+    points = [(-pi, 12.275, .39789),
+              (pi, 2.275, .39789),
+              (9.42478, 2.745, .39789)]
+
+    for x, y, z in points:
         print "x: ", x, "; y: ", y
         analysis.meta.x = x
         analysis.meta.y = y
@@ -203,7 +208,7 @@ if __name__ == "__main__": #pragma: no cover
         Z2.append(row)
     Z2 = array(Z2)
 
-    plt.contour(X,Y,Z2,arange(1, 200, 2), zorder=1)
+    plt.contour(X, Y, Z2, arange(1, 200, 2), zorder=1)
     cb = plt.colorbar(shrink=.45)
     plt.axis([-5, 10, 0, 15])
     plt.xlabel("x")
