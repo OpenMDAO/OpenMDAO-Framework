@@ -1,27 +1,17 @@
 '''Multi Ojective EI Example'''
 
-import os
 from tempfile import mkdtemp
-import os.path
 import shutil
 
 from numpy import sin, cos, pi
 
-from openmdao.main.api import Assembly, Component, Driver, \
-     SequentialWorkflow, Case
-from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.main.hasstopcond import HasStopConditions
-
+from openmdao.main.api import Assembly
 from openmdao.lib.components.api import MetaModel, ParetoFilter, \
      MultiObjExpectedImprovement, Mux
+from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.drivers.adaptivesampledriver import AdaptiveSampleDriver
 from openmdao.lib.drivers.api import Genetic, FixedPointIterator
-from openmdao.lib.casehandlers.api import DBCaseIterator
-from openmdao.lib.casehandlers.api import DBCaseRecorder, DumpCaseRecorder
-
 from openmdao.lib.surrogatemodels.api import KrigingSurrogate
-
-from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 
@@ -50,7 +40,6 @@ class Analysis(Assembly):
         pareto = self.add('pareto', ParetoFilter(**kwargs))
 
         MOEI = self.add('MOEI', MultiObjExpectedImprovement())
-        MOEI.calc_switch = 'EI'
 
         #initial training DOE
         adapt.DOEgenerator = OptLatinHypercube(num_samples=25)
@@ -100,77 +89,17 @@ class Analysis(Assembly):
         MOEI_opt.workflow.add(['meta', 'mux', 'MOEI'])
 
         #FPI now support stop conditions
-        driver.add_stop_condition('MOEI.EI <= .0001')
+        driver.add_stop_condition('MOEI.PI <= .0001')
 
-
-        ## Old
-
-        ##Components
-        #self.add("spiral_meta_model",MetaModel())
-        #self.spiral_meta_model.default_surrogate = KrigingSurrogate()
-        #self.spiral_meta_model.model = SpiralComponent()
-        #self.spiral_meta_model.recorder = DBCaseRecorder(':memory:')
-        #self.spiral_meta_model.force_execute = True
-        #self.add("MOEI",ConnectableMultiObjExpectedImprovement())
-        #self.MOEI.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
-
-        #self.add("filter",ConnectableParetoFilter())
-        #self.filter.criteria = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
-        #self.filter.case_sets = [self.spiral_meta_model.recorder.get_iterator()]
-        #self.filter.force_execute = True
-
-        ##Driver Configuration
-        #self.add("DOE_trainer",DOEdriver())
-        #self.DOE_trainer.sequential = True
-        #self.DOE_trainer.DOEgenerator = OptLatinHypercube(num_samples=25)
-        #self.DOE_trainer.add_parameter("spiral_meta_model.x")
-        #self.DOE_trainer.add_parameter("spiral_meta_model.y")
-        #self.DOE_trainer.add_event("spiral_meta_model.train_next")
-        #self.DOE_trainer.case_outputs = ['spiral_meta_model.f1_xy',
-                                         #'spiral_meta_model.f2_xy']
-        #self.DOE_trainer.recorders = [DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))]
-
-        #self.add("MOEI_opt",Genetic())
-        #self.MOEI_opt.opt_type = "maximize"
-        #self.MOEI_opt.population_size = 100
-        #self.MOEI_opt.generations = 10
-        ##self.MOEI_opt.selection_method = "tournament"
-        #self.MOEI_opt.add_parameter("spiral_meta_model.x")
-        #self.MOEI_opt.add_parameter("spiral_meta_model.y")
-        #self.MOEI_opt.add_objective("MOEI.PI")
-
-        #self.add("retrain",MyDriver())
-        #self.retrain.add_event("spiral_meta_model.train_next")
-        #self.retrain.recorders = [DBCaseRecorder(os.path.join(self._tdir,'retrain.db'))]
-
-        #self.add("iter",IterateUntil())
-        #self.iter.iterations = 30
-        #self.iter.add_stop_condition('MOEI.PI <= .0001')
-
-
-        ##Iteration Heirarchy
-        #self.driver.workflow.add(['DOE_trainer', 'iter'])
-
-        #self.DOE_trainer.workflow.add('spiral_meta_model')
-
-        #self.iter.workflow = SequentialWorkflow()
-        #self.iter.workflow.add(['filter', 'MOEI_opt', 'retrain'])
-
-        #self.MOEI_opt.workflow.add(['spiral_meta_model', 'MOEI'])
-        #self.retrain.workflow.add('spiral_meta_model')
-
-        ##Data Connections
-        #self.connect("filter.pareto_set","MOEI.best_cases")
-        #self.connect("spiral_meta_model.f1_xy","MOEI.predicted_values[0]")
-        #self.connect("spiral_meta_model.f2_xy","MOEI.predicted_values[1]")
 
     def cleanup(self):
         """cleans up any files left in the temp directory from execution"""
         shutil.rmtree(self._tdir, ignore_errors=True)
 
+
 if __name__ == "__main__": #pragma: no cover
+
     import sys
-    from openmdao.lib.casehandlers.api import case_db_to_dict
 
     seed = None
     backend = None
@@ -184,14 +113,15 @@ if __name__ == "__main__": #pragma: no cover
             backend = arg.split('=')[1]
         if arg.startswith('--figname='):
             figname = arg.split('=')[1]
+
     import matplotlib
     if backend is not None:
         matplotlib.use(backend)
     elif sys.platform == 'win32':
         matplotlib.use('WxAgg')
-    from matplotlib import pyplot as plt, cm
+
+    from matplotlib import pyplot as plt
     from matplotlib.pylab import get_cmap
-    from mpl_toolkits.mplot3d import Axes3D
     from numpy import meshgrid, array, arange
 
 
@@ -209,15 +139,15 @@ if __name__ == "__main__": #pragma: no cover
     def f2(x,y):
         return sin(x)/x+cos(y)/y
 
-    X_range = arange(0.75,5.*pi,0.5)
-    Y_range = arange(0.75,5.*pi,0.5)
+    X_range = arange(0.75, 5.*pi, 0.5)
+    Y_range = arange(0.75, 5.*pi, 0.5)
 
     X , Y = meshgrid(X_range,Y_range)
-    Z1,Z2 = f1(X,Y),f2(X,Y)
+    Z1,Z2 = f1(X, Y),f2(X, Y)
 
     plt.figure()
     plt.subplot(121)
-    plt.contour(X,Y,Z1,50)
+    plt.contour(X, Y, Z1,50)
     plt.axis([0.75,5*pi,0.75,5*pi])
 
     plt.subplot(122)
@@ -233,7 +163,7 @@ if __name__ == "__main__": #pragma: no cover
     for x_row,y_row in zip(X,Y):
         row1 = []
         row2 = []
-        for x,y in zip(x_row,y_row):
+        for x,y in zip(x_row, y_row):
             analysis.meta.x = x
             analysis.meta.y = y
             analysis.meta.execute()
