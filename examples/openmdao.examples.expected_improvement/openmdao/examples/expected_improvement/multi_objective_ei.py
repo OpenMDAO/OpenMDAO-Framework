@@ -13,7 +13,7 @@ from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.hasstopcond import HasStopConditions
 
 from openmdao.lib.components.api import MetaModel, ParetoFilter, \
-     MultiObjExpectedImprovement
+     MultiObjExpectedImprovement, Mux
 from openmdao.lib.drivers.adaptivesampledriver import AdaptiveSampleDriver
 from openmdao.lib.drivers.api import Genetic, FixedPointIterator
 from openmdao.lib.casehandlers.api import DBCaseIterator
@@ -25,28 +25,6 @@ from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 
 from openmdao.examples.expected_improvement.spiral_component import SpiralComponent
 
-
-class MyDriver(Driver):
-    """Custom driver to retrain the MetaModel each iteration. Also records each
-    retrain case"""
-
-    def __init__(self):
-        super(MyDriver,self).__init__()
-
-        self.ins = ['spiral_meta_model.x','spiral_meta_model.y']
-        self.outs = ['spiral_meta_model.f1_xy','spiral_meta_model.f2_xy']
-
-    def execute(self):
-        self.set_events()
-        self.run_iteration()
-
-        inputs = [(name, self.parent.get(name)) for name in self.ins]
-        outputs = [(name, self.parent.get(name)) for name in self.outs]
-        case = Case(inputs = inputs,
-                    outputs = outputs)
-
-        for recorder in self.recorders:
-            recorder.record(case)
 
 class Analysis(Assembly):
     '''Top level assembly for the Multi Ojective EI Example.'''
@@ -90,6 +68,13 @@ class Analysis(Assembly):
         self.connect('adapt.all_case_outputs.spiral.f2_xy', ['meta.responses.f2_xy',
                                                             'pareto.responses.f2_xy'])
 
+        #connect meta and pareto to ei
+        self.add('mux', Mux(2))
+        self.connect('meta.f1_xy', 'mux.input_1')
+        self.connect('meta.f2_xy', 'mux.input_2')
+        self.connect('mux.output', 'MOEI.current')
+        self.connect('pareto.pareto_outputs', 'MOEI.target')
+
         # MOEI optimization to find next point
         MOEI_opt.opt_type = "maximize"
         MOEI_opt.population_size = 100
@@ -111,7 +96,7 @@ class Analysis(Assembly):
         #Iteration Heirarchy
         driver.workflow.add(['adapt', 'pareto', 'MOEI_opt'])
         adapt.workflow.add(['spiral'])
-        MOEI_opt.workflow.add(['meta', 'MOEI'])
+        MOEI_opt.workflow.add(['meta', 'mux', 'MOEI'])
 
         #FPI now support stop conditions
         driver.add_stop_condition('MOEI.EI <= .0001')
@@ -206,7 +191,7 @@ if __name__ == "__main__": #pragma: no cover
     from matplotlib import pyplot as plt, cm
     from matplotlib.pylab import get_cmap
     from mpl_toolkits.mplot3d import Axes3D
-    from numpy import meshgrid,array, pi,arange,cos
+    from numpy import meshgrid, array, arange
 
 
     #create the analysis
@@ -248,46 +233,47 @@ if __name__ == "__main__": #pragma: no cover
         row1 = []
         row2 = []
         for x,y in zip(x_row,y_row):
-            analysis.spiral_meta_model.x = x
-            analysis.spiral_meta_model.y = y
-            analysis.spiral_meta_model.execute()
-            row1.append(analysis.spiral_meta_model.f1_xy.mu)
-            row2.append(analysis.spiral_meta_model.f2_xy.mu)
+            analysis.meta.x = x
+            analysis.meta.y = y
+            analysis.meta.execute()
+            row1.append(analysis.meta.f1_xy.mu)
+            row2.append(analysis.meta.f2_xy.mu)
         Z1_pred.append(row1)
         Z2_pred.append(row2)
     Z1_pred = array(Z1_pred)
     Z2_pred = array(Z2_pred)
 
     #plot the initial training data
-    data_train = case_db_to_dict(os.path.join(analysis._tdir,'trainer.db'),
-                                     ['spiral_meta_model.x',
-                                      'spiral_meta_model.y',
-                                      'spiral_meta_model.f1_xy',
-                                      'spiral_meta_model.f2_xy'])
+    data_train = {}
+    data_train['meta.y'] = analysis.adapt.DOE_inputs.spiral.y
+    data_train['meta.x'] = analysis.adapt.DOE_inputs.spiral.x
+    data_train['meta.f1_xy'] = analysis.adapt.DOE_outputs.spiral.f1_xy
+    data_train['meta.f2_xy'] = analysis.adapt.DOE_outputs.spiral.f2_xy
 
-    plt.scatter(data_train['spiral_meta_model.x'],
-                data_train['spiral_meta_model.y'],s=30,c='#572E07',zorder=10)
+    plt.scatter(data_train['meta.x'],
+                data_train['meta.y'],s=30,c='#572E07',zorder=10)
 
-    data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
-                                     ['spiral_meta_model.y',
-                                      'spiral_meta_model.x',
-                                      'spiral_meta_model.f1_xy',
-                                      'spiral_meta_model.f2_xy'])
+    n_train = len(data_train['meta.y'])
+    data_EI = {}
+    data_EI['meta.y'] = analysis.adapt.all_case_inputs.spiral.y[n_train:]
+    data_EI['meta.x'] = analysis.adapt.all_case_inputs.spiral.x[n_train:]
+    data_EI['meta.f1_xy'] = analysis.adapt.all_case_outputs.spiral.f1_xy[n_train:]
+    data_EI['meta.f2_xy'] = analysis.adapt.all_case_outputs.spiral.f2_xy[n_train:]
 
-    count = len(data_EI['spiral_meta_model.x'])
+    count = len(data_EI['meta.x'])
     colors = arange(0,count)/float(count)
     color_map = get_cmap('spring')
 
-    f1_train = [case.mu for case in data_train['spiral_meta_model.f1_xy']]
-    f2_train = [case.mu for case in data_train['spiral_meta_model.f2_xy']]
-    f1_iter = [case.mu for case in data_EI['spiral_meta_model.f1_xy']]
-    f2_iter = [case.mu for case in data_EI['spiral_meta_model.f2_xy']]
+    f1_train = [case for case in data_train['meta.f1_xy']]
+    f2_train = [case for case in data_train['meta.f2_xy']]
+    f1_iter = [case for case in data_EI['meta.f1_xy']]
+    f2_iter = [case for case in data_EI['meta.f2_xy']]
 
     plt.subplot(121)
-    plt.contour(X,Y,Z1_pred,50)
-    plt.scatter(data_train['spiral_meta_model.x'],
-                data_train['spiral_meta_model.y'],s=30,c='#572E07',zorder=10)
-    plt.scatter(data_EI['spiral_meta_model.x'],data_EI['spiral_meta_model.y'],
+    plt.contour(X, Y, Z1_pred,50)
+    plt.scatter(data_train['meta.x'],
+                data_train['meta.y'], s=30, c='#572E07', zorder=10)
+    plt.scatter(data_EI['meta.x'], data_EI['meta.y'],
                 s=30,
                 c=colors,
                 zorder=11,
@@ -295,22 +281,22 @@ if __name__ == "__main__": #pragma: no cover
     plt.axis([0.75,5*pi,0.75,5*pi])
 
     plt.subplot(122)
-    plt.contour(X,Y,Z2_pred,50)
+    plt.contour(X, Y, Z2_pred,50)
     cb = plt.colorbar(shrink=.6)
-    plt.scatter(data_train['spiral_meta_model.x'],
-                data_train['spiral_meta_model.y'],s=30,c='#572E07',zorder=10)
-    plt.scatter(data_EI['spiral_meta_model.x'],data_EI['spiral_meta_model.y'],
+    plt.scatter(data_train['meta.x'],
+                data_train['meta.y'], s=30, c='#572E07', zorder=10)
+    plt.scatter(data_EI['meta.x'], data_EI['meta.y'],
                 s=30,
                 c=colors,
                 zorder=11,
                 cmap=color_map)
 
-    plt.axis([0.75,5*pi,0.75,5*pi])
+    plt.axis([0.75,5*pi, 0.75, 5*pi])
 
     plt.figure()
     plt.scatter(Z1,Z2)
-    plt.scatter(f1_train,f2_train,s=30,c='#572E07',zorder=10)
-    plt.scatter(f1_iter,f2_iter,s=30,c=colors,zorder=11,cmap=color_map)
+    plt.scatter(f1_train, f2_train, s=30, c='#572E07', zorder=10)
+    plt.scatter(f1_iter, f2_iter, s=30, c=colors,zorder=11, cmap=color_map)
 
     plt.show()
     analysis.cleanup()
