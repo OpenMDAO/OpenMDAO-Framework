@@ -623,6 +623,9 @@ class FiniteDifference(object):
         options = pa.wflow._parent.gradient_options
 
         self.fd_step = options.fd_step*ones((len(self.inputs)))
+        self.low = [None] * len(self.inputs)
+        self.high = [None] * len(self.inputs)
+
         self.form = options.fd_form
         self.form_custom = {}
         self.step_type = options.fd_step_type
@@ -712,9 +715,13 @@ class FiniteDifference(object):
 
             val = self.scope.get(srcs[0])
             width = flattened_size(srcs[0], val, self.scope)
+
             for src in srcs:
                 self.in_bounds[src] = (in_size, in_size+width)
             in_size += width
+
+            self.high[j] = high
+            self.low[j] = low
 
         out_size = 0
         for src in self.outputs:
@@ -755,10 +762,28 @@ class FiniteDifference(object):
 
                 # Relative stepsizing
                 fd_step = self.fd_step[j]
+                current_val = self.get_value(src, i1, i2, i)
                 if step_type == 'relative':
-                    current_val = self.get_value(src, i1, i2, i)
                     if current_val > self.relative_threshold:
                         fd_step = fd_step*current_val
+
+                # Switch to forward if we get near the low boundary
+                if self.low[j] is not None:
+                    if isinstance(self.low[j], (list, ndarray)):
+                        bound_val = self.low[j][i]
+                    else:
+                        bound_val = self.low[j]
+                    if current_val - fd_step < bound_val:
+                        form = 'forward'
+
+                # Switch to backward if we get near the high boundary
+                if self.high[j] is not None:
+                    if isinstance(self.high[j], (list, ndarray)):
+                        bound_val = self.high[j][i]
+                    else:
+                        bound_val = self.high[j]
+                    if current_val + fd_step > bound_val:
+                        form = 'backward'
 
                 #--------------------
                 # Forward difference

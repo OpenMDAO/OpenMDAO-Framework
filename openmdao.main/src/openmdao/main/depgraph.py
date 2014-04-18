@@ -1428,6 +1428,9 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
                                              graph, inputs, outputs,
                                              wflow, using))
 
+            if not hasattr(drv, 'list_param_targets'):
+                continue
+
             # The parameters of other drivers can propagate to our expressions
             # via input-input connections. These are relevant, so save them.
             sub_params = drv.list_param_targets()
