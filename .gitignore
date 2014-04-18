@@ -46,9 +46,15 @@ build.out
 *.log
 *.sql
 *.sqlite
+*.csv
 
 # OS generated files #
 ######################
 .DS_Store
 ehthumbs.db
 Thumbs.db
+
+# Editor generated files #
+##########################
+*.swp
+*.bak
