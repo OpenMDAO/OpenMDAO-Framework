@@ -50,6 +50,7 @@ class Analysis(Assembly):
         pareto = self.add('pareto', ParetoFilter(**kwargs))
 
         MOEI = self.add('MOEI', MultiObjExpectedImprovement())
+        MOEI.calc_switch = 'EI'
 
         #initial training DOE
         adapt.DOEgenerator = OptLatinHypercube(num_samples=25)
