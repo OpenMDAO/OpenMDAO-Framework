@@ -89,11 +89,11 @@ class AdaptiveSampleDriver(DOEdriver):
                 doe = 'DOE_inputs.' + path
                 doe_val = []
                 doe_val.extend(src_val)
-                self.set(doe, doe_val)
+                self.set(doe, doe_val, force=True)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
-            self.set(target, target_val)
+            self.set(target, target_val, force=True)
 
         for path in self.get_responses():
 
@@ -106,11 +106,11 @@ class AdaptiveSampleDriver(DOEdriver):
                 doe = 'DOE_outputs.' + path
                 doe_val = []
                 doe_val.extend(src_val)
-                self.set(doe, doe_val)
+                self.set(doe, doe_val, force=True)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
-            self.set(target, target_val)
+            self.set(target, target_val, force=True)
 
 
     def add_parameter(self, target, low=None, high=None,
@@ -122,7 +122,9 @@ class AdaptiveSampleDriver(DOEdriver):
                   target, low, high, scaler, adder, start, fd_step, name, scope)
 
         # Parameter gets [0] as an initial case, just for connectability.
-        if isinstance(target, tuple):
+        if name is not None:
+            target = name
+        elif isinstance(target, tuple):
             target = target[0]  # Use first target of ParameterGroup.
 
         path = make_legal_path(target)
