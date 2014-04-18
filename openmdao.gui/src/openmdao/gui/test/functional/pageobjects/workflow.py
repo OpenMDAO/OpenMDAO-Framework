@@ -6,11 +6,10 @@ from selenium.webdriver.common.by import By
 
 from selenium.common.exceptions import StaleElementReferenceException
 
-from openmdao.gui.test.functional.util import Color, Style, str_to_color
-
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement
 
+from util import Color, Style
 
 class WorkflowFigure(BasePageObject):
     """ Represents elements within a workflow figure. """
@@ -185,7 +184,7 @@ class WorkflowComponentFigure(BasePageObject):
         """ Exec state of this component. """
         rect = self.root.find_element_by_css_selector('rect')
         style = Style(rect.get_attribute('style'))
-        stroke = str_to_color(style.stroke)
+        stroke = Color.from_string(style.stroke)
 
         #red stroke
         if(stroke == Color(255, 0, 0)):

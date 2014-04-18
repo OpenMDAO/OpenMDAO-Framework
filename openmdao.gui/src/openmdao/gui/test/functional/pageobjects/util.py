@@ -3,6 +3,8 @@ import threading
 import time
 import logging
 
+from collections import namedtuple
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
@@ -15,6 +17,53 @@ from elements import ButtonElement, InputElement, TextElement
 # Set this True on fatal driver errors.
 _ABORT = False
 
+class Color(namedtuple('Color', 'red, green, blue')):
+    @classmethod
+    def from_string(cls, string):
+        if string.startswith('#'):
+	    return cls._from_hex_string(string)
+
+        if string.startswith('rgb(') and string.endswith(')'):
+	    return cls._from_rgb_string(string)
+
+    	raise ValueError("String must be formatted as '#xxxxxx' or 'rbg(<red>, <green>, <blue>)'")
+        
+    @classmethod
+    def _from_hex_string(cls, string):
+        string = string.replace('#', '')
+
+	red   = int(string[0:2])
+	green = int(string[2:4])
+	blue  = int(string[4:6])
+
+        return cls(red, green, blue)
+
+    @classmethod
+    def _from_rgb_string(cls, string):
+        string = string.replace('rgb', '')
+        string = string.replace('(', '')
+        string = string.replace(')', '')
+        string = string.replace(' ', '')
+       
+       	red, green, blue = [int(value) for value in string.split(',')]
+
+        return cls(red, green, blue)
+
+class Style(object):
+    def __init__(self, style_string):
+        style_string = style_string.lower()
+        attributes = [string for string in style_string.split(';') if string.strip()]
+
+        for attribute in attributes:
+            colon_index = attribute.index(':')
+
+            name = attribute[ :colon_index]
+            value = attribute[ colon_index + 1:]
+
+            name = name.strip()
+            value = value.strip()
+
+            setattr(self, name, value)
 
 def abort(value=None):
     """ Return current abort status and optionally update it. """
