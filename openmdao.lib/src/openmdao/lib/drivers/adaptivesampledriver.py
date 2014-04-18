@@ -16,8 +16,11 @@ class AdaptiveSampleDriver(DOEdriver):
     adaptive_inputs = VarTree(VariableTree(), iotype='in')
 
     all_case_inputs = VarTree(VariableTree(), iotype='out')
-
     all_case_outputs = VarTree(VariableTree(), iotype='out')
+
+    # Save the DOE data seperately
+    DOE_inputs = VarTree(VariableTree(), iotype='out')
+    DOE_outputs = VarTree(VariableTree(), iotype='out')
 
     def __init__(self):
         super(AdaptiveSampleDriver, self).__init__()
@@ -83,6 +86,10 @@ class AdaptiveSampleDriver(DOEdriver):
             src_val = self.get(src)
             if reset is True:
                 target_val = []
+                doe = 'DOE_inputs.' + path
+                doe_val = []
+                doe_val.extend(src_val)
+                self.set(doe, doe_val)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
@@ -96,6 +103,10 @@ class AdaptiveSampleDriver(DOEdriver):
             src_val = self.get(src)
             if reset is True:
                 target_val = []
+                doe = 'DOE_outputs.' + path
+                doe_val = []
+                doe_val.extend(src_val)
+                self.set(doe, doe_val)
             else:
                 target_val = self.get(target)
             target_val.extend(src_val)
@@ -122,6 +133,10 @@ class AdaptiveSampleDriver(DOEdriver):
         desc = 'Holds all inputs processed by this driver.'
         self._add_vartrees('all_case_inputs', target, desc)
 
+        desc = 'Holds just the DOE inputs.'
+        self._add_vartrees('DOE_inputs', target, desc)
+
+
     def add_response(self, expr, name=None, scope=None):
         """We need to create our special variable trees."""
 
@@ -132,6 +147,10 @@ class AdaptiveSampleDriver(DOEdriver):
 
         desc = 'Holds all outputs processed by this driver.'
         self._add_vartrees('all_case_outputs', path, desc)
+
+        desc = 'Holds just the DOE outputs.'
+        self._add_vartrees('DOE_outputs', path, desc)
+
 
     def _add_vartrees(self, tree_name, path, desc):
         ''' Adds a vartree, the component sub leaf, and the final variable

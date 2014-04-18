@@ -7,7 +7,6 @@ import shutil
 
 from openmdao.main.api import Assembly, Driver, SequentialWorkflow
 
-from openmdao.lib.casehandlers.api import DBCaseRecorder
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, ParetoFilter
 from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.drivers.adaptivesampledriver import AdaptiveSampleDriver
@@ -48,9 +47,9 @@ class Analysis(Assembly):
         adapt.add_response('branin.f_xy')
 
         #pass training data from sampler to metamodel and pareto filter
-        self.connect('adapt.all_case_inputs.branin.x', ['meta.params.x','pareto.params.x'])
-        self.connect('adapt.all_case_inputs.branin.y', ['meta.params.y','pareto.params.y'])
-        self.connect('adapt.all_case_outputs.branin.f_xy', ['meta.responses.f_xy','pareto.responses.f_xy'])
+        self.connect('adapt.all_case_inputs.branin.x', ['meta.params.x', 'pareto.params.x'])
+        self.connect('adapt.all_case_inputs.branin.y', ['meta.params.y', 'pareto.params.y'])
+        self.connect('adapt.all_case_outputs.branin.f_xy', ['meta.responses.f_xy', 'pareto.responses.f_xy'])
 
         #connect meta and pareto to ei
         self.connect('meta.f_xy', 'ei.current') #this passes a normal distribution variable
@@ -115,7 +114,6 @@ if __name__ == "__main__": #pragma: no cover
         matplotlib.use('WxAgg')
 
     analysis = Analysis()
-    analysis.meta.recorder = DBCaseRecorder(':memory:')
     analysis.run()
 
     points = [(-pi,12.275,.39789), (pi,2.275,.39789), (9.42478,2.745,.39789)]
@@ -138,25 +136,25 @@ if __name__ == "__main__": #pragma: no cover
     X,Y = meshgrid(X_range, Y_range)
     Z = branin(X, Y)
 
-    iterator = analysis.meta.recorder.get_iterator()
-
     plt.contour(X, Y, Z, arange(1,200,2), zorder=1)
 
     cb = plt.colorbar(shrink=.45)
 
     #plot the initial training data
-    data_train = case_db_to_dict(os.path.join(analysis._tdir, 'trainer.db'),
-                                     ['meta.y',
-                                      'meta.x',
-                                      'meta.f_xy'])
+    data_train = {}
+    data_train['meta.y'] = analysis.adapt.DOE_inputs.branin.y
+    data_train['meta.x'] = analysis.adapt.DOE_inputs.branin.x
+    data_train['meta.f_xy'] = analysis.adapt.DOE_outputs.branin.f_xy
 
     plt.scatter(data_train['meta.x'],
                 data_train['meta.y'], s=30, c='#572E07', zorder=10)
 
-    data_EI = case_db_to_dict(os.path.join(analysis._tdir,'retrain.db'),
-                                     ['meta.y',
-                                      'meta.x',
-                                      'meta.f_xy'])
+
+    n_train = len(data_train['meta.y'])
+    data_EI = {}
+    data_EI['meta.y'] = analysis.adapt.all_case_inputs.branin.y[n_train:]
+    data_EI['meta.x'] = analysis.adapt.all_case_inputs.branin.x[n_train:]
+    data_EI['meta.f_xy'] = analysis.adapt.all_case_outputs.branin.f_xy[n_train:]
 
     count = len(data_EI['meta.x'])
     colors = arange(0,count)/float(count)
@@ -165,28 +163,29 @@ if __name__ == "__main__": #pragma: no cover
 
     print "# adaptive samples:", len(data_EI['meta.x'])
 
-    points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
-    distance = [10000.,10000.,10000.]
-    closest_points = [(),(),()]
-    for x,y,z in zip(data_EI['meta.x'],data_EI['meta.y'],data_EI['meta.f_xy']):
+    points = [(-pi,12.275,.39789), (pi,2.275,.39789), (9.42478,2.745,.39789)]
+    distance = [10000., 10000., 10000.]
+    closest_points = [(), (), ()]
+    for x,y,z in zip(data_EI['meta.x'], data_EI['meta.y'], data_EI['meta.f_xy']):
         for i,p in enumerate(points):
             d = ((p[0]-x)**2 + (p[1]-y)**2)**.5
             if d < distance[i]:
                 distance[i] = d
-                closest_points[i] = (x,y,z.mu)
+                closest_points[i] = (x, y, z)
+
     print "closest solutions: ", closest_points
 
-    plt.scatter(data_EI['meta.x'],data_EI['meta.y'],
+    plt.scatter(data_EI['meta.x'], data_EI['meta.y'],
                 s=30,
                 c=colors,
                 zorder=11,
                 cmap=color_map)
 
-    plt.axis([-5,10,0,15])
+    plt.axis([-5, 10, 0, 15])
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Branin Function Contours and EI Sample Points")
-    plt.text(10.9,11,"Branin\nFunction\nValue")
+    plt.text(10.9,11, "Branin\nFunction\nValue")
 
     if figname is not None:
         matplotlib.pylab.savefig(figname)
@@ -194,22 +193,23 @@ if __name__ == "__main__": #pragma: no cover
     plt.figure()
     Z2 = []
 
-    for x_row,y_row in zip(X,Y):
+    for x_row,y_row in zip(X, Y):
         row = []
-        for x,y in zip(x_row,y_row):
+        for x,y in zip(x_row, y_row):
             analysis.meta.x = x
             analysis.meta.y = y
             analysis.meta.execute()
             row.append(analysis.meta.f_xy.mu)
         Z2.append(row)
     Z2 = array(Z2)
-    plt.contour(X,Y,Z2,arange(1,200,2), zorder=1)
+
+    plt.contour(X,Y,Z2,arange(1, 200, 2), zorder=1)
     cb = plt.colorbar(shrink=.45)
-    plt.axis([-5,10,0,15])
+    plt.axis([-5, 10, 0, 15])
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Branin Meta Model Contours")
-    plt.text(10.9,11,"Meta Model\nFunction\nValue")
+    plt.text(10.9,11, "Meta Model\nFunction\nValue")
 
     plt.show()
 

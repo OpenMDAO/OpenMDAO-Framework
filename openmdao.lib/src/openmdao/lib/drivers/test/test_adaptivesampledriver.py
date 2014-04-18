@@ -72,6 +72,8 @@ class TestCaseAdaptiveSample(unittest.TestCase):
         self.assertEqual(self.model.driven.y, 283.0)
         self.assertTrue(self.model.adaptive.all_case_inputs.driven.x == [-10.0, 10.0, 31.0, 94.0])
         self.assertTrue(self.model.adaptive.all_case_outputs.driven.y == [-29.0, 31.0, 94.0, 283.0])
+        self.assertTrue(self.model.adaptive.DOE_inputs.driven.x == [-10.0, 10.0])
+        self.assertTrue(self.model.adaptive.DOE_outputs.driven.y == [-29.0, 31.0])
 
 
 if __name__ == "__main__":
