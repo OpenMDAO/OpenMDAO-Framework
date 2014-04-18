@@ -9,7 +9,9 @@ MetaModel is a class which supports generalized meta modeling
 (a.k.a. surrogate modeling) capabilities. The Metamodel can
 be used to create a reduced order (and faster) respresentation
 of any input-output relationship in your model. The inputs to
-a metamodel are called params, and the outputs are called responses.
+a metamodel are called params, and the outputs are called responses. When
+you instantiate a metamodel, you give it a tuple of params and a tuple of
+responses that you want it to model.
 
 Let's start by creating an assembly with a component (the `BraninComponent`)
 and a metamodel of its response with respect to its two inputs.

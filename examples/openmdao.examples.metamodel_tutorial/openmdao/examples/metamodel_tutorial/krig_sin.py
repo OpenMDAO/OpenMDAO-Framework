@@ -22,7 +22,6 @@ class Sin(Component):
 
     def execute(self):
         self.f_x = .5*sin(self.x)
-        print 'executed', self.x, self.f_x
 
 
 class Simulation(Assembly):
@@ -52,7 +51,7 @@ class Simulation(Assembly):
         self.connect('DOE_Trainer.case_inputs.sin_calc.x', 'sin_meta_model.params.x')
         self.connect('DOE_Trainer.case_outputs.sin_calc.f_x', 'sin_meta_model.responses.f_x')
 
-        # Craoss-validate the metamodel using random data
+        # Cross-validate the metamodel using random data
         self.add("DOE_Validate", DOEdriver())
         self.DOE_Validate.workflow = SequentialWorkflow()
         self.DOE_Validate.DOEgenerator = Uniform()
@@ -88,5 +87,5 @@ if __name__ == "__main__":
         p.legend()
         p.show()
 
-    for a,p in zip(actual,predicted):
+    for a,p in zip(actual, predicted):
         print "%1.3f, %1.3f"%(a,p)
