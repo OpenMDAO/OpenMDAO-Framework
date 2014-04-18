@@ -6,6 +6,8 @@ from selenium.webdriver.common.by import By
 
 from selenium.common.exceptions import StaleElementReferenceException
 
+from openmdao.gui.test.functional.util import Color, Style, str_to_color
+
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement
 
@@ -182,15 +184,22 @@ class WorkflowComponentFigure(BasePageObject):
     def state(self):
         """ Exec state of this component. """
         rect = self.root.find_element_by_css_selector('rect')
-        style = rect.get_attribute('style').lower()
-        if ('stroke: #ff0000' in style):
+        style = Style(rect.get_attribute('style'))
+        stroke = str_to_color(style.stroke)
+
+        #red stroke
+        if(stroke == Color(255, 0, 0)):
             return 'INVALID'
-        elif ('stroke: #00ff00' in style):
+
+        #green stroke
+        if(stroke == Color(0, 255, 0)):
             return 'VALID'
-        elif ('stroke: #0000ff' in style):
+
+        #blue stroke
+        if(stroke == Color(0, 0, 255)):
             return 'RUNNING'
-        else:
-            return 'UNKNOWN'
+
+        return 'UNKNOWN'
 
     def evaluate(self):
         """ Evaluate this component. (only available for ImplicitComponent) """

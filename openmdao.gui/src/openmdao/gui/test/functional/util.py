@@ -21,6 +21,7 @@ try:
 except NameError:
     WindowsError = None
 
+from collections import namedtuple
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -53,6 +54,21 @@ _display = None
 
 _chrome_version = None
 
+Color = namedtuple('Color', 'red, green, blue')
+
+class Style(object):
+    def __init__(self, style_string):
+        style_string = style_string.lower()
+        attributes = style_string.split(';')
+
+        for attribute in attributes:
+            name = attribute[:index(':')]
+            value = attribute[index(':') + 1:]
+
+            name = name.strip()
+            value = value.strip()
+
+            setattr(self, name, value)
 
 def check_for_chrome():
     return bool(find_chrome())
@@ -612,7 +628,20 @@ def parse_test_args(args=None):
 
     return options
 
+def str_to_color(string):
 
+    string = string.strip()
+
+    if string.startswith('#'):
+        string = string.replace('#', '')
+        return Color(string[0:2], string[2:4], string[4:6])
+    else: 
+        string = string.replace('rgb', '')
+        string = string.replace('(', '')
+        string = string.replace(')', '')
+        string = string.replace(' ', '')
+        
+        return Color(*string.split(','))
 def main(args=None):
     """ run tests for module
     """
