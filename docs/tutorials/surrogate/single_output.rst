@@ -144,11 +144,12 @@ execution order of this example. Remember that the top driver in any assembly mu
 `driver`.  The type of workflow being executed is a sequential workflow,
 meaning that is a simple sequence of components.
 
-The following figure visually shows the iteration hierarchy for this MetaModel.  Note that
-``sin_meta_model`` appears in two workflows. This is necessary since in the training workflow
-the MetaModel is trained, and within the prediction workflow, that data is used to run the
-MetaModel again in order to produce predictions.  Thus it must be added to each workflow
-separately.
+The following figure visually shows the iteration hierarchy for this
+MetaModel. Note that ``sin_calc`` appears in two workflows. This is necessary
+since in the training workflow it is executed to generate the data that the
+metamodel needs for training, and within the prediction workflow, it is run
+again for validation with the prediction inputs. Thus it must be added to
+each workflow separately.
 
 .. _`nn_metamodel iteration hierarchy`:
 
