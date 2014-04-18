@@ -241,7 +241,7 @@ class Assembly(Component):
         inputs and connections of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
-        
+
         if not tobj:
             self.add( target_name, newobj )
             return
@@ -1024,9 +1024,10 @@ class Assembly(Component):
         objectives  = []
 
         # list of components (name & type) in the assembly
-        g = self._depgraph.component_graph()
-        names = [name for name in nx.algorithms.dag.topological_sort(g)
-                               if not name.startswith('@')]
+        # g = self._depgraph.component_graph()
+        # names = [name for name in nx.algorithms.dag.topological_sort(g)
+        #                        if not name.startswith('@')]
+        names = self._depgraph.order_components(self._depgraph.all_comps())
 
         # Bubble-up drivers ahead of their parameter targets.
         sorted_names = []

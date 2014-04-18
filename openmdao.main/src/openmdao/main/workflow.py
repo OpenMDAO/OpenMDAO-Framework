@@ -98,7 +98,8 @@ class Workflow(object):
                 comp.run(ffd_order=ffd_order, case_id=case_id)
             else:
                 self._comp_count += 1
-                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+                # comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+                comp.set_itername('%s-%d-%s' % (iterbase, self._comp_count, comp.get_pathname()))
                 comp.run(ffd_order=ffd_order, case_id=case_id)
             if self._stop:
                 raise RunStopped('Stop requested')
