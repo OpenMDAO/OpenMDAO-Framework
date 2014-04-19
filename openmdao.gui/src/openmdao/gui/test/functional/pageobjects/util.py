@@ -32,9 +32,9 @@ class Color(namedtuple('Color', 'red, green, blue')):
     def _from_hex_string(cls, string):
         string = string.replace('#', '')
 
-	red   = int(string[0:2])
-	green = int(string[2:4])
-	blue  = int(string[4:6])
+	red   = int(string[0:2], 16)
+	green = int(string[2:4], 16)
+	blue  = int(string[4:6], 16)
 
         return cls(red, green, blue)
 
