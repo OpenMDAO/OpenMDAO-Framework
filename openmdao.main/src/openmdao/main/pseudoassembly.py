@@ -74,7 +74,10 @@ class PseudoAssembly(object):
             self.ffd_order = 0
 
         if fd:
-            self.itercomps = [c.name for c in wflow]
+            #self.itercomps = [c.name for c in wflow]
+            self.itercomps = [c.name for c in wflow if c.name in self.comps]
+            print [c.name for c in wflow]
+            print [c.name for c in wflow if c.name in self.comps]
         elif drv_name is not None:
             self.itercomps = [drv_name]
         else:
