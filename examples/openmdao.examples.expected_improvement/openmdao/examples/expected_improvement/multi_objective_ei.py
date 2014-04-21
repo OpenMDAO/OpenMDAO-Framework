@@ -7,7 +7,7 @@ from numpy import sin, cos, pi
 
 from openmdao.main.api import Assembly
 from openmdao.lib.components.api import MetaModel, ParetoFilter, \
-     MultiObjExpectedImprovement, Mux
+     MultiObjExpectedImprovement
 from openmdao.lib.doegenerators.api import OptLatinHypercube
 from openmdao.lib.drivers.adaptivesampledriver import AdaptiveSampleDriver
 from openmdao.lib.drivers.api import Genetic, FixedPointIterator
@@ -59,10 +59,7 @@ class Analysis(Assembly):
                                                             'pareto.responses.f2_xy'])
 
         #connect meta and pareto to ei
-        self.add('mux', Mux(2))
-        self.connect('meta.f1_xy', 'mux.input_1')
-        self.connect('meta.f2_xy', 'mux.input_2')
-        self.connect('mux.output', 'MOEI.current')
+        self.connect('[meta.f1_xy, meta.f2_xy]', 'MOEI.current')
         self.connect('pareto.pareto_outputs', 'MOEI.target')
 
         # MOEI optimization to find next point
@@ -86,7 +83,7 @@ class Analysis(Assembly):
         #Iteration Heirarchy
         driver.workflow.add(['adapt', 'pareto', 'MOEI_opt'])
         adapt.workflow.add(['spiral'])
-        MOEI_opt.workflow.add(['meta', 'mux', 'MOEI'])
+        MOEI_opt.workflow.add(['meta', 'MOEI'])
 
         #FPI now support stop conditions
         driver.add_stop_condition('MOEI.PI <= .0001')
