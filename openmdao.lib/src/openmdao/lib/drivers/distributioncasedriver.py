@@ -13,13 +13,10 @@ from zope.interface import Interface
 # E1101 - Used when a variable is accessed for an unexistent member
 from openmdao.main.numpy_fallback import zeros
 
-from openmdao.main.datatypes.api import List, Str, Slot, Int, Enum, Bool
-from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.main.api import Container
-from openmdao.main.case import Case
-from openmdao.util.decorators import add_delegate
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.interfaces import implements, IHasParameters
+from openmdao.main.datatypes.api import Slot, Int, Enum, Bool
+from openmdao.main.interfaces import implements
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 
 class IDistributionGenerator(Interface):
@@ -101,28 +98,15 @@ class FiniteDifferenceGenerator(Container):
                 mask[iparam] = 0.0
 
 
-@add_delegate(HasParameters)
-class DistributionCaseDriver(CaseIterDriverBase):
+class DistributionCaseDriver(CaseIteratorDriver):
     """ Driver for evaluating models at point distributions. """
-
-    implements(IHasParameters)
 
     distribution_generator = Slot(IDistributionGenerator,
                                   required=True,
                        desc='Iterator supplying values of point distribitions.')
 
-    case_outputs = List(Str, iotype='in',
-                        desc='A list of outputs to be saved with each case.')
+    def execute(self):
+        """Generate and evaluate cases."""
+        self.set_inputs(self.distribution_generator)
+        super(DistributionCaseDriver, self).execute()
 
-    def get_case_iterator(self):
-        """Returns a new iterator over the Case set."""
-        return self._get_cases()
-
-    def _get_cases(self):
-        """Iterator over the cases"""
-
-        for row in self.distribution_generator:
-            case = self.set_parameters(row, Case(parent_uuid=self._case_id))
-            case.add_outputs(self.case_outputs)
-
-            yield case

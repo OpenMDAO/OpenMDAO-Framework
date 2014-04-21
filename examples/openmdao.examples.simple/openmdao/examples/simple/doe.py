@@ -24,7 +24,7 @@ class Analysis(Assembly):
         self.driver.add_parameter('paraboloid.x',low=-50,high=50)
         self.driver.add_parameter('paraboloid.y',low=-50,high=50)
         #tell the DOEdriver to also record any other variables you want to know for each case
-        self.driver.case_outputs = ['paraboloid.f_xy',]
+        self.driver.add_response('paraboloid.f_xy')
         
         #Simple recorder which stores the cases in memory. 
         self.driver.recorders = [ListCaseRecorder(),]

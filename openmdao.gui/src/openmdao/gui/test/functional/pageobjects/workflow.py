@@ -90,7 +90,7 @@ class WorkflowFigure(BasePageObject):
     def highlighted(self):
         """ True if the flow div background is highlighted. """
         bg_image = self.flow.value_of_css_property('background-image')
-        return (bg_image.find('highlight') > 0)
+        return bg_image.find('highlight') > 0
 
     @property
     def horizontal(self):

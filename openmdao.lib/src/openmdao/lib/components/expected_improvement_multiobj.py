@@ -1,4 +1,4 @@
-"""Expected Improvement calculation for one or more objectives."""
+"""Expected Improvement calculation for multiple objectives."""
 
 import logging
 
@@ -6,7 +6,8 @@ try:
     from numpy import exp, pi, array, isnan, diag, random
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
-_check=['numpy']
+_check = ['numpy']
+
 try:
     from math import erf
 except ImportError as err:
@@ -17,24 +18,25 @@ except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
 
-from openmdao.main.datatypes.api import Slot, Enum, Float, Array, Event, Int, Instance
+from openmdao.main.datatypes.api import Enum, Float, Array, Int
 
 from openmdao.main.component import Component
 from openmdao.util.decorators import stub_if_missing_deps
 
-from openmdao.lib.casehandlers.api import CaseSet
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 @stub_if_missing_deps(*_check)
-class MultiObjExpectedImprovementBase(Component):
-    criteria = Array(iotype="in",
-                    desc="Names of responses to maximize expected improvement around. \
-                    Must be NormalDistribution type.")
+class MultiObjExpectedImprovement(Component):
+    """Expected Improvement calculation for multiple objectives."""
 
-    predicted_values = Array([0, 0], iotype="in", dtype=NormalDistribution,
-                        desc="CaseIterator which contains NormalDistributions for each \
-                        response at a location where you wish to calculate EI.")
+    # best_cases
+    target = Array(iotype="in", desc="Array of Pareto-optimal cases.")
+
+    # predicted_values
+    current = Array(iotype="in", dtype=NormalDistribution,
+                        desc="The NormalDistributions for each response " + \
+                        "at a location where you wish to calculate EI.")
 
     n = Int(1000, iotype="in", desc="Number of Monte Carlo Samples with \
                         which to calculate probability of improvement.")
@@ -42,33 +44,15 @@ class MultiObjExpectedImprovementBase(Component):
     calc_switch = Enum("PI", ["PI", "EI"], iotype="in", desc="Switch to use either \
                         probability (PI) or expected (EI) improvement.")
 
-    PI = Float(0.0, iotype="out", desc="The probability of improvement of the next_case.")
+    PI = Float(0.0, iotype="out", desc="The probability of improvement of " + \
+                                       "the next_case.")
 
-    EI = Float(0.0, iotype="out", desc="The expected improvement of the next_case.")
-
-    reset_y_star = Event(desc='Reset Y* on next execution')
+    EI = Float(0.0, iotype="out", desc="The expected improvement of the " + \
+                                       "next_case.")
 
     def __init__(self):
-        super(MultiObjExpectedImprovementBase, self).__init__()
+        super(MultiObjExpectedImprovement, self).__init__()
         self.y_star = None
-
-    def _reset_y_star_fired(self):
-        self.y_star = None
-
-    def get_y_star(self):
-        criteria_count = len(self.criteria)
-
-        flat_crit = self.criteria.ravel()
-
-        try:
-            y_star = zip(*[self.best_cases[crit] for crit in self.criteria])
-        except KeyError:
-            self.raise_exception('no cases in the provided case_set had output '
-                 'matching the provided criteria, %s' % self.criteria, ValueError)
-
-        #sort list on first objective
-        y_star = array(y_star)[array([i[0] for i in y_star]).argsort()]
-        return y_star
 
     def _2obj_PI(self, mu, sigma):
         """Calculates the multi-objective probability of improvement
@@ -82,9 +66,9 @@ class MultiObjExpectedImprovementBase(Component):
         *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
 
         PI2 = 0
-        if len(y_star)>1:
+        if len(y_star) > 1:
             for i in range(len(y_star) - 1):
-                PI2=PI2+((0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
+                PI2 = PI2+((0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
                 -(0.5+0.5*erf((1/(2**0.5))*((y_star[i][0]-mu[0])/sigma[0]))))\
                 *(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))
         mcpi = PI1 + PI2 + PI3
@@ -120,7 +104,7 @@ class MultiObjExpectedImprovementBase(Component):
         *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))
 
         ybar22 = 0
-        if len(y_star)>1:
+        if len(y_star) > 1:
             for i in range(len(y_star) - 1):
                 ybar22 = ybar22+((mu[1]*(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))\
                 -sigma[1]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[i+1][1]-mu[1])**2/sigma[1]**2)))\
@@ -140,11 +124,13 @@ class MultiObjExpectedImprovementBase(Component):
        returns True is if does
     """
         comp = [c1 < c2 for c1, c2 in zip(a, b)]
-        if sum(comp) == len(self.criteria):
+        if sum(comp) == self.target.shape[1]:
             return True
         return False
 
     def _nobj_PI(self, mu, sigma):
+        ''' n-objective probability of improvement.'''
+
         cov = diag(array(sigma)**2)
         rands = random.multivariate_normal(mu, cov, self.n)
         num = 0  # number of cases that dominate the current Pareto set
@@ -155,45 +141,32 @@ class MultiObjExpectedImprovementBase(Component):
                 if self._dom(par_point, random_sample):
                     num = num + 1
                     break
-        pi = (self.n-num)/float(self.n)
+        pi = (self.n - num)/float(self.n)
         return pi
 
     def execute(self):
-        """ Calculates the expected improvement or
-        probability of improvement of a candidate
-        point given by a normal distribution.
+        """ Calculates the expected improvement or probability of improvement
+        of a candidate point given by a normal distribution.
         """
-        mu = [objective.mu for objective in self.predicted_values]
-        sig = [objective.sigma for objective in self.predicted_values]
+        mu = [objective.mu for objective in self.current]
+        sig = [objective.sigma for objective in self.current]
 
-        if self.y_star == None:
-            self.y_star = self.get_y_star()
+        target = self.target
+        self.y_star = target[array([i[0] for i in target]).argsort()]
 
-        n_objs = len(self.criteria)
+        n_objs = target.shape[1]
 
         if n_objs == 2:
-            """biobjective optimization"""
+            # biobjective optimization
             self.PI = self._2obj_PI(mu, sig)
             if self.calc_switch == 'EI':
-                """execute EI calculations"""
+                # execute EI calculations
                 self.EI = self._2obj_EI(mu, sig)
+
         if n_objs > 2:
-            """n objective optimization"""
+            # n objective optimization
             self.PI = self._nobj_PI(mu, sig)
             if self.calc_switch == 'EI':
-                """execute EI calculations"""
+                # execute EI calculations
                 self.raise_exception("EI calculations not supported"
                                         " for more than 2 objectives", ValueError)
-
-class ConnectableMultiObjExpectedImprovement(MultiObjExpectedImprovementBase):
-    best_cases = Instance(CaseSet, iotype="in",
-                    desc="CaseIterator which contains only Pareto optimal cases \
-                    according to criteria.")
-    pass
-
-
-class MultiObjExpectedImprovement(MultiObjExpectedImprovementBase):
-    best_cases = Slot(CaseSet,
-                    desc="CaseIterator which contains only Pareto optimal cases \
-                    according to criteria.")
-    pass

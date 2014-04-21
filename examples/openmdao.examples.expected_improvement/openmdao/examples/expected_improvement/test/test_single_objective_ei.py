@@ -22,15 +22,15 @@ from openmdao.lib.casehandlers.api import case_db_to_dict
 
 class SingleObjectiveEITest(unittest.TestCase):
     """Test to make sure the EI sample problem works as it should"""
-    
-    def tearDown(self):
-        if os.path.exists('DOE_trainer.csv'):
-            os.remove('DOE_trainer.csv')
 
-    def test_EI(self): 
+    def tearDown(self):
+        if os.path.exists('adapt.csv'):
+            os.remove('adapt.csv')
+
+    def test_EI(self):
 
         random.seed(0)
-                
+
         # pyevolve does some caching that causes failures during our
         # complete unit tests due to stale values in the cache attributes
         # below, so reset them here
@@ -43,28 +43,28 @@ class SingleObjectiveEITest(unittest.TestCase):
         analysis = Analysis()
         set_as_top(analysis)
         #analysis.DOE_trainer.DOEgenerator = FullFactorial(num_levels=10)
-        
+
         analysis.run()
         # This test looks for the presence of at least one point close to
         # each optimum.
-        
-        #print analysis.EI.EI
-        #print analysis.branin_meta_model.x
-        #print analysis.branin_meta_model.y
-        
+
+        print analysis.ei.EI
+        print analysis.meta.x
+        print analysis.meta.y
+
         points = [(-pi,12.275,.39789),(pi,2.275,.39789),(9.42478,2.745,.39789)]
         errors = []
-        for x,y,z in points: 
-            analysis.branin_meta_model.x = x
-            analysis.branin_meta_model.y = y
-            analysis.branin_meta_model.execute()
-            
-            errors.append(abs((analysis.branin_meta_model.f_xy.mu - z)/z*100))
+        for x,y,z in points:
+            analysis.meta.x = x
+            analysis.meta.y = y
+            analysis.meta.execute()
+
+            errors.append(abs((analysis.meta.f_xy.mu - z)/z*100))
         avg_error = sum(errors)/float(len(errors))
         logging.info('#errors %s, sum(errors) %s, avg_error %s',
                      len(errors), sum(errors), avg_error)
         self.assertTrue(avg_error <= 35)
-        
+
 if __name__=="__main__": #pragma: no cover
     unittest.main()
 
