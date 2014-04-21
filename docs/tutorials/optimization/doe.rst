@@ -103,9 +103,9 @@ if you notice, we specified a ListCaseRecorder as part of a list.
             self.driver.add_parameter('paraboloid.x', low=-50, high=50)
             self.driver.add_parameter('paraboloid.y', low=-50, high=50)
             #tell the DOEdriver to also record any other variables you want to know for each case
-            self.driver.add_response('paraboloid.f_xy')
     
     self = Analysis()
+    self.configure()
    
 .. testcode:: simple_model_doe_pieces
     

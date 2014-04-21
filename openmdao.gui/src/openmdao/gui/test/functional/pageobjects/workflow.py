@@ -9,6 +9,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 from basepageobject import BasePageObject, TMO
 from elements import ButtonElement
 
+from util import Color, Style
 
 class WorkflowFigure(BasePageObject):
     """ Represents elements within a workflow figure. """
@@ -182,15 +183,22 @@ class WorkflowComponentFigure(BasePageObject):
     def state(self):
         """ Exec state of this component. """
         rect = self.root.find_element_by_css_selector('rect')
-        style = rect.get_attribute('style').lower()
-        if ('stroke: #ff0000' in style) or ('stroke: rgb(255, 0, 0)' in style):
+        style = Style(rect.get_attribute('style'))
+        stroke = Color.from_string(style.stroke)
+
+        #red stroke
+        if(stroke == Color(255, 0, 0)):
             return 'INVALID'
-        elif ('stroke: #00ff00' in style) or ('stroke: rgb(0, 255, 0)' in style):
+
+        #green stroke
+        if(stroke == Color(0, 255, 0)):
             return 'VALID'
-        elif ('stroke: #0000ff' in style) or ('stroke: rgb(0, 0, 255)' in style):
+
+        #blue stroke
+        if(stroke == Color(0, 0, 255)):
             return 'RUNNING'
-        else:
-            return 'UNKNOWN'
+
+        return 'UNKNOWN'
 
     def evaluate(self):
         """ Evaluate this component. (only available for ImplicitComponent) """

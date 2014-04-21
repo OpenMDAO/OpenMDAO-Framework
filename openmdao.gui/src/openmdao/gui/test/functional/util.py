@@ -21,6 +21,7 @@ try:
 except NameError:
     WindowsError = None
 
+from collections import namedtuple
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -52,7 +53,6 @@ _display = None
 
 
 _chrome_version = None
-
 
 def check_for_chrome():
     return bool(find_chrome())
@@ -611,7 +611,6 @@ def parse_test_args(args=None):
         sys.exit(-1)
 
     return options
-
 
 def main(args=None):
     """ run tests for module

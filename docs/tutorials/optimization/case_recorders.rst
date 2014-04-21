@@ -30,7 +30,7 @@ In the previous example, the DOEdriver saves each point in the DOE as a
 case. However, a single-objective optimizer, such as the SLSQPdriver, saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
-you choose to include by listing them in the ``printvars`` variable.
+you choose to include by listing them in the top-level assembly's ``printvars`` variable.
 
 The CSVCaseRecorder outputs the selected variables into a file in the csv
 (Comma Separated Value) format. The DBCaseRecorder stores the selected
@@ -137,7 +137,7 @@ rerunning the model.
 
 ::
 
-      opt_problem.driver.printvars = ['*']
+      opt_problem.printvars = ['*']
       opt_problem.run()
 
 The output produced is more detailed:
@@ -154,7 +154,6 @@ The output produced is more detailed:
          driver.iprint: 0
          driver.maxiter: 50
          driver.output_filename: slsqp.out
-         driver.printvars: ['*']
          paraboloid.directory: 
          paraboloid.force_execute: False
          paraboloid.x: 7.16666667003
@@ -170,7 +169,7 @@ You can also use partial wildcard matches and include multiple wildcards in the
 
 ::
 
-      opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
+      opt_problem.printvars = ['comp1.*', 'comp2.*', *error*]
 
 are possible. This will return a set of cases with all variables from ``comp1,
 comp2`` as well as any variable with "error" in its name.
@@ -180,5 +179,5 @@ rewrite the previous line like this:
 
 ::
 
-      opt_problem.driver.printvars = ['comp?.*', *error*]
+      opt_problem.printvars = ['comp?.*', *error*]
 
