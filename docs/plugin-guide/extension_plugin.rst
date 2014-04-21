@@ -228,18 +228,11 @@ side.
 F2PY automatically generates a docstring for this function. This can be examined by
 opening OpenMDAO's local Python environment:
 
-.. testcode:: bar3_wrap
-    
+.. doctest:: bar3_wrap
+
     from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
     print runbar3truss.__doc__
-
-The docstring is slightly different depending on your version of numpy.
-If numpy is older than version 1.8.0, you'll see docstrings in
-the following format:
-
-::
-
-    runbar3truss - Function signature:
+    ... runbar3truss - Function signature:
       s1,s2,s3,u,v,ff,obj = runbar3truss(pvec,m0,a1,a2,a3,e,el,rho)
     Required arguments:
       pvec : input rank-1 array('d') with bounds (2)
@@ -258,35 +251,6 @@ the following format:
       v : float
       ff : float
       obj : float
-
-Otherwise, f2py generates docstrings like the following:
-
-::
-
-    s1,s2,s3,u,v,ff,obj = runbar3truss(pvec,m0,a1,a2,a3,e,el,rho)
-
-    Wrapper for ``runbar3truss``.
-
-    Parameters
-    ----------
-    pvec : input rank-1 array('d') with bounds (2)
-    m0 : input float
-    a1 : input float
-    a2 : input float
-    a3 : input float
-    e : input float
-    el : input float
-    rho : input float
-
-    Returns
-    -------
-    s1 : float
-    s2 : float
-    s3 : float
-    u : float
-    v : float
-    ff : float
-    obj : float
 
 The docstring can be useful for figuring out the arguments and returns for the
 generated function. Most of the values passed here are floats, which
