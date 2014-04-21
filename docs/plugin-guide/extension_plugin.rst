@@ -241,7 +241,6 @@ opening OpenMDAO's local Python environment:
 The auto generated docstring slightly differs depending on your version of numpy.
 
 Auto-generated docstring if Numpy older than 1.8.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :: 
 
@@ -265,8 +264,7 @@ Auto-generated docstring if Numpy older than 1.8.0
       ff : float
       obj : float
 
-Auto-generated docstring if Numpy at or newer than 1.8.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Auto-generated docstring starting with Numpy 1.8.0
 
 ::
 
