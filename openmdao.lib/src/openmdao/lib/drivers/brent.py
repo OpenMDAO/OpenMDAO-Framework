@@ -94,7 +94,7 @@ class Brent(Driver):
                 brent_iterations = 'valid bracket not found.  returning user specified value'
 
             else:
-                self.raise_exception('brounds (low=%s, high=%s) do not bracket a root' %
+                self.raise_exception('bounds (low=%s, high=%s) do not bracket a root' %
                                  (self.lower_bound, self.upper_bound))
 
         else:
