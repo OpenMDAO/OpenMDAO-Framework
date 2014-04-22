@@ -303,7 +303,7 @@ class TestCase(unittest.TestCase):
         self.model = None
         for path in glob.glob('Egg_TestModel*.egg'):
             os.remove(path)
-            
+
         if os.path.exists('Egg'):
             # Wonderful Windows sometimes doesn't remove...
             shutil.rmtree('Egg', onerror=self.onerror)
@@ -626,7 +626,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_function')
 
         # Set reference to function defined in __main__.
-        self.model.Oddball.function_socket = local_getpid 
+        self.model.Oddball.function_socket = local_getpid
         self.save_load()
 
     def test_save_bad_method(self):

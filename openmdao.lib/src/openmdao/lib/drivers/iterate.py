@@ -23,7 +23,7 @@ from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 
 @stub_if_missing_deps('numpy')
-@add_delegate(HasParameters, HasEqConstraints)
+@add_delegate(HasParameters, HasEqConstraints, HasStopConditions)
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes
     the value from the output to the input for the next iteration. Relative
@@ -100,7 +100,7 @@ class FixedPointIterator(Driver):
             delta[:] = self.workflow.get_dependents(fixed_point=True)
             res = delta
 
-            if norm(delta, order) < self.tolerance:
+            if norm(delta, order) < self.tolerance or self.should_stop():
                 break
             # relative tolerance -- problematic around 0
             #if abs( (val1-val0)/val0 ) < self.tolerance:

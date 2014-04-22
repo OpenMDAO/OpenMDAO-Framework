@@ -209,7 +209,6 @@ class Component(Container):
         self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
-        self._recorders = None
         self._case_id = ''
         self._case_uuid = ''
 
@@ -804,7 +803,6 @@ class Component(Container):
         self._call_check_config = True
         self._call_execute = True
         self._provideJ_bounds = None
-        self._recorders = None
 
     @rbac(('owner', 'user'))
     def list_inputs(self, connected=None):
