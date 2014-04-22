@@ -647,7 +647,7 @@ class SequentialWorkflow(Workflow):
         return result
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
-                         severed=None, group_nondif=True):
+                         severed=None, group_nondif=True, add_implicit=True):
         """Returns the local graph that we use for derivatives.
 
         inputs: list of strings or tuples of strings
@@ -674,12 +674,15 @@ class SequentialWorkflow(Workflow):
         group_nondif: bool
             If True, collapse parts of the graph into PseudoAssemblies when
             necessary.
+
+        add_implicit: bool
+            Used by mod_for_derivs to test whether a subworkflow is relevant.
         """
 
         if self._derivative_graph is None or group_nondif is False:
             # when we call with group_nondif = False, we want the union of the
             # passed inputs/outputs plus the inputs/outputs from the solver
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 tmp_inputs = [] if inputs is None else inputs
                 tmp_outputs = [] if outputs is None else outputs
                 inputs = None
@@ -696,7 +699,7 @@ class SequentialWorkflow(Workflow):
                     msg = "No inputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
 
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 inputs = list(set(tmp_inputs).union(inputs))
 
             # If outputs aren't specified, use the objectives and constraints
@@ -709,7 +712,7 @@ class SequentialWorkflow(Workflow):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in
                                     self._parent.get_constraints().values()])
 
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 outputs = list(set(tmp_outputs).union(outputs))
 
             if len(outputs) == 0:
@@ -727,7 +730,7 @@ class SequentialWorkflow(Workflow):
             dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd,
                                     group_nondif)
 
-            if group_nondif:
+            if group_nondif is True:
                 self._derivative_graph = dgraph
                 self._group_nondifferentiables(fd, severed)
             else:
@@ -930,9 +933,13 @@ class SequentialWorkflow(Workflow):
                         else:
                             value_target.append(state)
 
-                    value.append(tuple(value_target))
+                    if len(value_target) > 0:
+                        value.append(tuple(value_target))
 
-                info[key] = value
+                # Note: if both state and residual aren't in graph, then it
+                # has been determined not to be relevant, so don't include.
+                if len(value) > 0:
+                    info[key] = value
 
         return info
 

@@ -700,7 +700,8 @@ class ExprEvaluator(object):
         elif not isinstance(yp, complex):
             return None
         else:
-            return imag(yp/stepsize)[0]
+            # note, imag returns a 0-d array, Don't know why.
+            return imag(yp/stepsize).reshape(1, )[0]
 
         return imag(yp/stepsize)
 
