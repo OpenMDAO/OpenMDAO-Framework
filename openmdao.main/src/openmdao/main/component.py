@@ -20,8 +20,6 @@ except ImportError as err:
     logging.warn("In %s: %r", __file__, err)
     from openmdao.main.numpy_fallback import ndarray
 
-from openmdao.main.mpiwrap import MPI_info
-
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
@@ -47,13 +45,12 @@ from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
                                         FileRef, Enum, VarTree
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
+from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
-from openmdao.main.array_helpers import flattened_size, get_flattened_index, \
-                                        get_var_shape, flattened_size_info, \
-                                        get_val_and_index
+from openmdao.main.array_helpers import flattened_size_info
 
 import openmdao.util.log as tracing
 
@@ -174,7 +171,6 @@ class Component(Container):
 
         # MPI stuff
         self.mpi = MPI_info()
-        self._total_var_size = 0
 
         self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
         self._invalidation_type = 'full'
@@ -2134,20 +2130,17 @@ class Component(Container):
         """Return requested_cpus"""
         return self.mpi.requested_cpus
 
-    def setup_communicators(self, comm, scope=None):
-        self.mpi.comm = comm
+    # def setup_communicators(self, comm, scope=None):
+    #     self.mpi.comm = comm
 
-    def setup_variables(self):
-        pass
+    # def setup_variables(self):
+    #     pass
 
-    def get_variables(self):
-        return {}
+    # def setup_sizes(self):
+    #     pass
 
-    def setup_sizes(self):
-        pass
-
-    def setup_vectors(self, arrays=None):
-        pass
+    # def setup_vectors(self, arrays=None):
+    #     pass
 
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info

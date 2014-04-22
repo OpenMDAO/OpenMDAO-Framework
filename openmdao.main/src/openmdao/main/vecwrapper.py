@@ -20,7 +20,6 @@ class VecWrapper(object):
         
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subvars = set()  # set of all names representing subviews of other views
-        #mpiprint("creating Vec in  %s, array size = %d" % (system.name, array.size))
 
         if inputs is None:
             vset = allvars
@@ -40,11 +39,11 @@ class VecWrapper(object):
             if sz > 0:
                 end += sz
                 if self.array.size < (end-start):
-                    raise RuntimeError("in subsystem %s, can't create a view of [%d,%d] from a %d size array" %
+                    raise RuntimeError("size mismatch: in system %s, can't create a view of [%d,%d] from a %d size array" %
                                          (system.name,start,end,self.array.size))
                 self._info[name] = (self.array[start:end], start)
                 if end-start > self.array[start:end].size:
-                    mpiprint("ERROR: size mismatch: %s: view for %s is %s, size=%d" % 
+                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" % 
                                  (system.name,name, [start,end],self._info[name][0].size))
                 start += sz
 
@@ -54,27 +53,24 @@ class VecWrapper(object):
             if name not in variables and name in vset:
                 sz = var['size']
                 if sz > 0:
-                    #mpiprint("FOUND A SUBVAR: %s, size=%d" % (name, sz))
                     idx = var['flat_idx']
                     basestart = self.start(var['basevar'])
                     sub_idx = offset_flat_index(idx, basestart)
                     substart = get_flat_index_start(sub_idx)
-                    #mpiprint("size,basestart,substart,sub_idx = (%d, %d, %d, %d)" % 
-                    #            (size,basestart, substart, sub_idx))
                     self._info[name] = (self.array[sub_idx], substart)
                     self._subvars.add(name)
                     if self.array[sub_idx].size != sz:
-                        mpiprint("ERROR: size mismatch: %s: view for %s is %s, idx=%s, size=%d" % (system.name, name, list(self.bounds(name)),sub_idx,self.array[sub_idx].size))
+                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" % 
+                                             (system.name, name, 
+                                             list(self.bounds(name)),
+                                             sub_idx,self.array[sub_idx].size))
 
         # create the PETSc vector
         self.petsc_vec = get_petsc_vec(system.mpi.comm, self.array)
 
-    def view(self, name):
-        """Return the array view into the larger array for the
-        given name.  name may contain array indexing.
-        """
+    def __getitem__(self, name):
         return self._info[name][0]
-
+        
     def list_views(self):
         """Return a list of names of subviews of our array."""
         return self._info.keys()
@@ -93,25 +89,23 @@ class VecWrapper(object):
         view, start = self._info[name]
         return (start, start + view.size)
 
-    def indices(self, name):
-        view, start = self._info[name]
-        return range(start, start + view.size)
-
     def set_from_scope(self, scope):
         """Get the named values from the given scope and set flattened
-        versions of them in our array.  All names must already exist
-        in our dict of views.
+        versions of them in our array.
         """
-        for name, (start, array_val) in self._info.items():
+        for name, (array_val, start) in self._info.items():
             if name not in self._subvars:
                 array_val[:] = scope.get_flattened_value(name)
 
     def set_to_scope(self, scope):
         """Pull values for the given set of names out of our array
-        and set them into the given scope. All names must already
-        exist in our dict of views.
+        and set them into the given scope.
         """
-        for name, (start, array_val) in self._info.items():
+        for name, (array_val, start) in self._info.items():
             if name not in self._subvars:
                 scope.set_flattened_value(name, array_val)
            
+    def dump(self, vname):
+        for name, (array_val, start) in self._info.items():
+            mpiprint("%s - %s: (%d,%d) %s" % (vname,name, start, start+len(array_val),array_val))
+        mpiprint("%s - petsc sizes: %s" % (vname,self.petsc_vec.sizes))

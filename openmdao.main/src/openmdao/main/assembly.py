@@ -1334,6 +1334,7 @@ class Assembly(Component):
         return self.driver.get_req_cpus()
 
     def setup_communicators(self, comm, scope=None):
+        Container._interactive = False
         self.driver.setup_communicators(comm)
         
     def setup_variables(self):

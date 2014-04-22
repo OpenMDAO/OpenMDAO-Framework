@@ -54,6 +54,8 @@ from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.main.array_helpers import flattened_value, get_val_and_index, \
                                         get_index
+from openmdao.main.pseudocomp import PseudoComponent
+
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -187,6 +189,8 @@ class Container(SafeHasTraits):
     to the framework"""
 
     implements(IContainer)
+
+    _interactive = True # if True, perform certain checks at runtime
 
     def __init__(self):
         self._parent = None  # Define these now for easier debugging during
@@ -1162,24 +1166,24 @@ class Container(SafeHasTraits):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
+            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
                 self.raise_exception("%s was not found" % path)
             return obj.get_flattened_value(restofpath)
         else:
             val, idx = get_val_and_index(self, path)
-            return flattened_value(val, path)
+            return flattened_value(path, val)
 
     @rbac(('owner', 'user'))
     def set_flattened_value(self, path, value):
         childname, _, restofpath = path.partition('.')
         if restofpath:
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
+            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
                 self.raise_exception("%s not found" % path)
-            obj.set(restofpath, value)
+            obj.set_flattened_value(restofpath, value)
         else:
             val = getattr(self, path.split('[',1)[0])
-            idx = get_index(self, path)
+            idx = get_index(path)
             if isinstance(val, int_types): 
                 pass  # fall through to exception
             if isinstance(val, real_types):
@@ -1192,6 +1196,7 @@ class Container(SafeHasTraits):
                     setattr(self, path, value)
                 else:
                     val[idx] = value
+                return
             elif IVariableTree.providedBy(val):
                 raise NotImplementedError("no support for setting flattened values into vartrees")
 
@@ -1265,7 +1270,7 @@ class Container(SafeHasTraits):
 
             if iotype == 'in' or src is not None:
                 # setting an input or a boundary output, so have to check source
-                if not force:
+                if not force and self._interactive:
                     self._check_source(path, src)
                 if index is None:
                     # bypass input source checking
@@ -1349,6 +1354,9 @@ class Container(SafeHasTraits):
         """This raises an exception if the specified input is attached
         to a source.
         """
+        if not self._interactive:
+            return
+
         preds = self._depgraph.pred.get(name)
         if preds:
             namedot = name+'.'

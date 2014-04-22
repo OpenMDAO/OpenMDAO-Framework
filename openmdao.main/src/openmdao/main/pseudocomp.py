@@ -2,14 +2,19 @@
 import ast
 from threading import RLock
 
+from numpy import ndarray
+
 from openmdao.main.array_helpers import flattened_size, flattened_size_info
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent
+from openmdao.main.interfaces import implements, IComponent, IVariableTree
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.numpy_fallback import zeros
+from openmdao.main.array_helpers import flattened_value, \
+                                        get_val_and_index, get_index
 from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
+from openmdao.util.typegroups import real_types, int_types
 
 _namelock = RLock()
 _count = 0
@@ -342,9 +347,6 @@ class PseudoComponent(object):
     def setup_variables(self):
         pass
 
-    def get_variables(self):
-        return {}
-
     def setup_vectors(self, arrays=None):
         pass
 
@@ -368,3 +370,33 @@ class PseudoComponent(object):
             self._var_sizes[name] = size
                 
             return size
+
+    def get_flattened_value(self, path):
+        """Return the named value, which may include
+        an array index, as a flattened array of floats.  If
+        the value is not flattenable into an array of floats,
+        raise a TypeError.
+        """
+        val, idx = get_val_and_index(self, path)
+        return flattened_value(path, val)
+
+    def set_flattened_value(self, path, value):
+        val = getattr(self, path.split('[',1)[0])
+        idx = get_index(path)
+        if isinstance(val, int_types): 
+            pass  # fall through to exception
+        if isinstance(val, real_types):
+            if idx is None:
+                setattr(self, path, value[0])
+                return
+            # else, fall through to error
+        elif isinstance(val, ndarray):
+            if idx is None:
+                setattr(self, path, value)
+            else:
+                val[idx] = value
+            return
+        elif IVariableTree.providedBy(val):
+            raise NotImplementedError("no support for setting flattened values into vartrees")
+
+        self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)

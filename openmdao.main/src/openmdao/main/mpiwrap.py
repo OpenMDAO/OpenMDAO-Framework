@@ -3,6 +3,10 @@ import sys
 
 from openmdao.main.interfaces import obj_has_interface, IAssembly
 
+# if this has a rank value, then all mpiprints, unless explicitly
+# specified in the call, will print results from that rank only
+MPI_PRINT_RANK = None
+
 def under_mpirun():
     """Return True if we're being executed under mpirun."""
     # TODO: this is a bit of a hack and there appears to be
@@ -24,8 +28,7 @@ if under_mpirun():
     COMM_NULL = MPI.COMM_NULL
 
     def MPI_run(top):
-        """Run a parallel version of the top object. comp_map
-        is a dict that maps component names (full pathname) to processes.
+        """Run a parallel version of the top object.
         """
         try:
             _setup_mpi(top)
@@ -37,10 +40,15 @@ if under_mpirun():
         return PETSc.Vec().createWithArray(arr, comm=comm) 
 
     def mpiprint(msg, rank=-1):
-        if rank < 0 or rank == MPI.COMM_WORLD.rank:
-            for part in str(msg).split('\n'):
-                print "{%d} %s" % (MPI.COMM_WORLD.rank, part)
-            sys.stdout.flush()
+        if rank < 0:
+            if MPI_PRINT_RANK is not None and MPI_PRINT_RANK != MPI.COMM_WORLD.rank:
+                return
+        elif rank != MPI.COMM_WORLD.rank:
+            return
+
+        for part in str(msg).split('\n'):
+            print "{%d} %s" % (MPI.COMM_WORLD.rank, part)
+        sys.stdout.flush()
 else:
     MPI = None
     PETSc = None
@@ -65,9 +73,15 @@ class MPI_info(object):
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
       
-def _setup_mpi(obj):
+def setup_mpi(obj):
     """This is called on the top Assembly in the hierarchy."""
 
+    try:
+        return _setup_mpi(obj)
+    except Exception:
+        mpiprint(traceback.format_exc())
+
+def _setup_mpi(obj):
     if not obj_has_interface(obj, IAssembly):
         raise RuntimeError("object passed to setup_mpi does not have "
                            "the IAssembly interface.")

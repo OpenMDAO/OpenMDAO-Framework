@@ -10,16 +10,16 @@ import numpy
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, get_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.array_helpers import offset_flat_index, \
-                                        get_flat_index_start
 from openmdao.main.vecwrapper import VecWrapper
+from openmdao.util.typegroups import int_types, real_types
 
 class System(object):
-    def __init__(self, graph):
+    def __init__(self, graph, scope):
         self.graph = graph
+        self.scope = scope
         if len(graph) > 1:
             self.name = str(tuple(sorted(graph.nodes())))
         else:
@@ -30,13 +30,26 @@ class System(object):
         self.all_variables = OrderedDict()
         self.vec = {}
         self.app_ordering = None
+        self.scatter_full = None
+        self.scatter_partial = None
         #self._dump_graph()
 
-    def get_inputs(self):
+    def get_inputs(self, local=True):
         # the full set of inputs is stored in the 
         # metadata of this System's graph.
-        return self.graph.graph.get('inputs',set())
-        
+        # data = self.graph.graph
+        # return data.get('inputs',set()).union(data.get('drv_inputs',set()))
+        inputs = set()
+        #import pdb;pdb.set_trace()
+        for sub in self.subsystems:
+            inputs.update(sub.graph.graph.get('inputs',()))
+            inputs.update(sub.graph.graph.get('drv_inputs',()))
+
+        if local:
+            inputs = [i for i in inputs if i in self.variables and self.variables[i]['size']]
+
+        return inputs
+
     def get_outputs(self):
         # the full set of outputs is stored in the 
         # metadata of this System's graph.
@@ -55,7 +68,7 @@ class System(object):
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
 
-        for vname in chain(sorted(self.get_inputs()), 
+        for vname in chain(sorted(self.get_inputs(local=False)), 
                            sorted(self.get_outputs())):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
@@ -108,7 +121,7 @@ class System(object):
         #for name, sz in zip(self.variables.keys(), self.local_var_sizes[rank, :]):
         #    mpiprint("%s ( %d )" % (name, sz))
 
-        mpiprint("%s local_var_sizes:\n %s" % (self.name, self.local_var_sizes))
+        #mpiprint("%s local_var_sizes:\n %s" % (self.name, self.local_var_sizes))
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
@@ -120,16 +133,9 @@ class System(object):
                                         for n,v in self.variables.items() 
                                            if n in inputs])
 
-        #mpiprint("%s before ALLGATHER: input_sizes[%d] = %s" % (self.name,rank,self.input_sizes[rank]))
         comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
-        #mpiprint("inputs = %s for %s" % ([(n,v['size'])
-        #                                     for n,v in self.variables.items() 
-        #                                   if n in inputs], self.name))
-        #mpiprint("input sizes for %s = %s" % (self.name,self.input_sizes[rank]))
-
-        #mpiprint("AFTER setup_sizes in %s, variables=%s" % (self.name, self.variables.keys()))
-        #mpiprint("AFTER setup_sizes in %s, local_sizes=%s" % (self.name, self.local_var_sizes[rank]))
+        #mpiprint("%s input_sizes: %s" % (self.name, self.input_sizes))
             
     def setup_vectors(self, arrays):
         """Creates vector wrapper objects to manage local and
@@ -137,36 +143,29 @@ class System(object):
         """
         rank = self.mpi.comm.rank
         if arrays is None:  # we're the top level System in our Assembly
-            insize = 0
-            inputs = []
             arrays = {}
             # create top level vectors            
-            #mpiprint("**** setting up vectors for %s" % self.name)
             size = numpy.sum(self.local_var_sizes[rank, :])
-            #mpiprint("TOTAL LOCAL SIZE for %s (rank=%d) = %d" % (self.name, rank,size))
             for name in ['u']: #, 'f', 'du', 'df']:
-                #mpiprint("creating top level Vec in %s, size=%d" % (self.name,size))
                 arrays[name] = numpy.zeros(size)
-        else: # if we're the top level, we don't need input arrays
-            insize = self.input_sizes[rank]
-            inputs = self.get_inputs()
+
+        insize = self.input_sizes[rank]
+        inputs = self.get_inputs()
 
         for name in ['u']: #, 'f', 'du', 'df']:
-            #mpiprint("ARRAY %s.%s is size %d" % (self.name, name, arr.size))
-            #mpiprint("creating Vec %s in %s, size=%d" % (name, self.name,arrays[name].size))
             self.vec[name] = VecWrapper(self, arrays[name])
 
+        # if insize == 0 or len(inputs) == 0:
+        #     mpiprint("ERROR: empty 'p' vector in %s: insize=%d, inputs=%s" % (self.name,insize,inputs))
         for name in ['p']:#, 'dp']:
-            #mpiprint("creating input Vec %s in %s, size=%d" % (name, self.name,insize))
             self.vec[name] = VecWrapper(self, numpy.zeros(insize), inputs=inputs)
 
         start, end = 0, 0
         for sub in self.subsystems:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.comm.rank, :])
-            #mpiprint("SUB %s says it has size %d" % (sub.name,sz))
             end += sz
             if end-start > arrays['u'][start:end].size:
-                mpiprint("PASSING [%d,%d] view of size %d array from %s to %s" % 
+                raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
                             (start,end,arrays['u'][start:end].size,self.name,sub.name))
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
                                         ['u']])) #, 'f', 'du', 'df']]))
@@ -212,11 +211,13 @@ class System(object):
         for v, (arr, start) in self.vec['u']._info.items():
             stream.write(" "*(nest+2))
             if v in inputs:
-                stream.write("%s (%s) *input*\n" % (v, list(self.vec['u'].bounds(v))))
+                stream.write("u['%s'] (%s)   p['%s'] (%s)\n" % 
+                                 (v, list(self.vec['u'].bounds(v)),
+                                  v, list(self.vec['p'].bounds(v))))
             else:
-                stream.write("%s (%s)\n" % (v, list(self.vec['u'].bounds(v))))
+                stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds(v))))
 
-        nest += 3
+        nest += 4
         for sub in self.subsystems:
             sub.dump_subsystem_tree(nest, stream)
 
@@ -225,34 +226,98 @@ class System(object):
 
     def create_scatter(self, var_idxs, input_idxs):
         """ Concatenates lists of indices and creates a PETSc Scatter """
-        #mpiprint("src_idxs = %s, dest_idxs = %s" % (var_idxs,input_idxs))
-        merge = lambda x: numpy.concatenate(x) if len(x) > 0 else []
-        var_idx_set = PETSc.IS().createGeneral(merge(var_idxs), comm=self.mpi.comm)
-        input_idx_set = PETSc.IS().createGeneral(merge(input_idxs), comm=self.mpi.comm)
+        # mpiprint("%s\nvar_idxs = %s\ninput_idxs = %s\nsizes: %s" % 
+        #             (self.name, merge(var_idxs), merge(input_idxs),
+        #              list(self.vec['u'].petsc_vec.sizes)))
+        # mpiprint("CREATING SCATTER: %s\nu vector" % self.name)
+        # self.vec['u'].dump('u')
+        # mpiprint('p vector')
+        # self.vec['p'].dump('p')
+        var_idx_set = PETSc.IS().createGeneral(merge(var_idxs), 
+                                               comm=self.mpi.comm)
+        input_idx_set = PETSc.IS().createGeneral(merge(input_idxs), 
+                                                 comm=self.mpi.comm)
+        #mpiprint("BEFORE APP: var_idx_set: %s" % var_idx_set.getIndices())
         if self.app_ordering is not None:
             var_idx_set = self.app_ordering.app2petsc(var_idx_set)
+        #else:
+        #    mpiprint("APP ORDERING is NONE")
+        #mpiprint("AFTER APP: var_idx_set: %s" % var_idx_set.getIndices())
+        #mpiprint("input_idx_set: %s" % input_idx_set.getIndices())
 
         if len(merge(var_idxs)) != len(merge(input_idxs)):
-            mpiprint("creating scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(merge(var_idxs)),len(merge(input_idxs)),merge(var_idxs),merge(input_idxs),self.name))
+            mpiprint("ERROR: creating scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(merge(var_idxs)),len(merge(input_idxs)),merge(var_idxs),merge(input_idxs),self.name))
+
         return PETSc.Scatter().create(self.vec['u'].petsc_vec, var_idx_set,
                                       self.vec['p'].petsc_vec, input_idx_set)
+
+    def scatter(self, srcvecname, destvecname, subsystem=None):
+        """ Perform partial or full scatter """
+        if subsystem is None:
+            scatter = self.scatter_full
+            mpiprint("FULL scatter for %s" % self.name)
+        else:
+            scatter = subsystem.scatter_partial
+            mpiprint("PARTIAL scatter  %s --> %s" % (self.name, subsystem.name))
+
+        if not scatter is None:
+            srcvec = self.vec[srcvecname]
+            src_petsc = srcvec.petsc_vec
+            #src_arr = srcvec.array
+            destvec = self.vec[destvecname]
+            dest_petsc = destvec.petsc_vec
+            #dest_arr = destvec.array
+
+            mpiprint("vector %s pre-set_from_scope: %s" % 
+                       (srcvecname,self.vec[srcvecname].array))
+            self.vec[srcvecname].set_from_scope(self.scope)
+            mpiprint("vector %s post-set_from_scope: %s" % 
+                       (srcvecname,self.vec[srcvecname].array))
+
+            mpiprint("vector %s pre-scatter: %s" % 
+                       (destvecname,self.vec[destvecname].array))
+            #srcarr *= self.vec['u0'].array
+            #if self.mode == 'fwd':
+            scatter.scatter(src_petsc, dest_petsc, addv=False, mode=False)
+            #elif self.mode == 'rev':
+            #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
+            #else:
+            #    raise Exception('mode type not recognized')
+            #srcarr /= self.vec['u0'].array
+            mpiprint("vector %s post-scatter: %s" % 
+                         (destvecname,self.vec[destvecname].array))
+
+            self.vec[destvecname].set_to_scope(self.scope)
+
 
     def _dump_graph(self):
         mpiprint("GRAPH DUMP for %s" % self.name)
         for node, data in self.graph.nodes_iter(data=True):
-            mpiprint("%s: %s" % (str(node), {'inputs':data['inputs'],'outputs':data['outputs']}))
+            mpiprint("%s: %s" % (str(node), {'inputs':data['inputs'],'outputs':data['outputs'],'drv_inputs':data.get('drv_inputs',())}))
         for u,v,data in self.graph.edges_iter(data=True):
             mpiprint("(%s,%s): %s" % (u,v,{'var_edges':data['var_edges']}))
 
 class SimpleSystem(System):
     """A System for a single Component."""
-    def __init__(self, graph, scope):
-        super(SimpleSystem, self).__init__(graph)
-        self.graph.graph.setdefault('inputs',set()).update(self.graph.node[self.name]['inputs'])
-        self.graph.graph.setdefault('outputs',set()).update(self.graph.node[self.name]['outputs'])
-        self._comp = getattr(scope, graph.nodes()[0])
+    def __init__(self, graph, scope, comp):
+        super(SimpleSystem, self).__init__(graph, scope)
+        #data = self.graph.node[self.name]
+        # self.graph.graph.setdefault('inputs', set()).update(data['inputs'])
+        # self.graph.graph.setdefault('drv_inputs',set()).update(data.get('drv_inputs',()))
+        # self.graph.graph.setdefault('outputs', set()).update(data['outputs'])
+        self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
-        mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
+        #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
+
+    def get_inputs(self, local=True):
+        # the full set of inputs is stored in the 
+        # metadata of this System's graph.
+        # data = self.graph.graph
+        # return data.get('inputs',set()).union(data.get('drv_inputs',set()))
+        inputs = set()
+        inputs.update(self.graph.graph.get('inputs',()))
+        inputs.update(self.graph.graph.get('drv_inputs',()))
+        return inputs
 
     def run(self, scope, ffd_order, case_id, iterbase):
         comp = self._comp
@@ -264,7 +329,7 @@ class SimpleSystem(System):
         comp.run(ffd_order=ffd_order, case_id=case_id)
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = []
 
@@ -294,19 +359,23 @@ class SimpleSystem(System):
                 ivar = varkeys.index(dest)
                 # FIXME: currently just using the local var size for input size
                 src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + # ??? args[arg] - user really needs to be able to define size for multi-proc comps
-                                      numpy.arange(0, self.local_var_sizes[rank,ivar], dtype='i'))
-        # if len(src_idxs) != len(dest_idxs):
-        #     mpiprint("setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(src_idxs),len(dest_idxs),src_idxs,dest_idxs,self.name))
+                                      petsc_linspace(0, self.local_var_sizes[rank,ivar]))
+        if len(merge(src_idxs)) != len(merge(dest_idxs)):
+            mpiprint("ERROR: setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" % (len(src_idxs),len(dest_idxs),src_idxs,dest_idxs,self.name))
         self.scatter_full = self.create_scatter(src_idxs, dest_idxs)
+
+        #mpiprint("%s" % dir(self.scatter_full))
+
+
 
 
 class DriverSystem(SimpleSystem):
     """A System for a Driver component."""
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
-        self.subsystems = [self._comp.workflow.get_subsystem()]
+        self._comp.workflow.get_subsystem().setup_communicators(comm, scope)
 
 
 class AssemblySystem(SimpleSystem):
@@ -330,9 +399,11 @@ class AssemblySystem(SimpleSystem):
 
 
 class CompoundSystem(System):
+    """A System that has subsystems."""
+
     def __init__(self, graph, scope):
-        super(CompoundSystem, self).__init__(graph)
-        for node, data in self.graph.nodes_iter(data=True):
+        super(CompoundSystem, self).__init__(graph, scope)
+        for node in self.graph.nodes_iter():
             if isinstance(node, basestring):
                 _create_simple_sys(graph, scope, node)
 
@@ -342,50 +413,59 @@ class CompoundSystem(System):
         input_sizes = self.input_sizes
         rank = self.mpi.comm.rank
 
-        app_indices = []
+        app_idxs = []
         for ivar in xrange(len(self.variables)):
             start = numpy.sum(var_sizes[:, :ivar]) + numpy.sum(var_sizes[:rank, ivar])
             end = start + var_sizes[rank, ivar]
-            app_indices.append(petsc_linspace(start, end))
-        app_indices = numpy.concatenate(app_indices)
+            app_idxs.append(petsc_linspace(start, end))
+        app_idxs = numpy.concatenate(app_idxs)
 
         start = numpy.sum(var_sizes[:rank, :])
         end = numpy.sum(var_sizes[:rank+1, :])
-        petsc_indices = petsc_linspace(start, end)
+        petsc_idxs = petsc_linspace(start, end)
 
-        app_ind_set = PETSc.IS().createGeneral(app_indices, comm=self.mpi.comm)
-        petsc_ind_set = PETSc.IS().createGeneral(petsc_indices, comm=self.mpi.comm)
+        app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
+        petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
         self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set, 
                                                    comm=self.mpi.comm)
 
+        mpiprint("app indices:   %s\npetsc indices: %s" %
+                  (app_ind_set.getIndices(), petsc_ind_set.getIndices()))
         src_full = []
         dest_full = []
         start = end = numpy.sum(input_sizes[:rank])
         varkeys = self.variables.keys()
 
-        #for subsystem in self.get_all_subsystems():
-        for subsystem in self.subsystems:
+        mpiprint("INITIAL START/END = %d, %d" % (start, end))
+        mpiprint("INPUT SIZES: %s" % input_sizes)
+        for subsystem in self.get_all_subsystems():
+        #for subsystem in self.subsystems:
             src_partial = []
             dest_partial = []
+            #mpiprint("subsystem: %s\n  inputs: %s" % 
+            #            (subsystem.name, subsystem.get_inputs()))
             for inp in subsystem.get_inputs():
-                if not hasattr(subsystem, 'variables'):
-                    mpiprint("****** %s HAS NO VARIABLES" % subsystem.name)
-                    continue
-                if inp not in subsystem.all_variables and inp in self.variables:
-                    ivar = varkeys.index(inp)
-                    dest_size = self.local_var_sizes[rank, ivar]
-                    src_idxs = numpy.sum(var_sizes[:, :ivar]) + numpy.arange(0, dest_size) #args[arg]
+                ivar = varkeys.index(inp)
+                mpiprint("INP = %s" % inp)
+                dest_size = var_sizes[rank, ivar]
+                src_idxs = numpy.sum(var_sizes[:, :ivar]) + \
+                              petsc_linspace(0, dest_size) #args[arg]
 
-                    end += dest_size #args[arg].shape[0]
-                    dest_idxs = petsc_linspace(start, end)
-                    start += dest_size #args[arg].shape[0]
+                end += dest_size #args[arg].shape[0]
+                dest_idxs = petsc_linspace(start, end)
+                mpiprint("START/END = %d, %d" % (start, end))
+                start += dest_size #args[arg].shape[0]
 
-                    src_partial.append(src_idxs)
-                    dest_partial.append(dest_idxs)
-                    src_full.append(src_idxs)
-                    dest_full.append(dest_idxs)
+                src_partial.append(src_idxs)
+                dest_partial.append(dest_idxs)
+                src_full.append(src_idxs)
+                dest_full.append(dest_idxs)
 
-            subsystem.scatter_partial = subsystem.create_scatter(src_partial, dest_partial)
+            src_partial = merge(src_partial)
+            dest_partial = merge(dest_partial)
+            #import pdb; pdb.set_trace()
+            subsystem.scatter_partial = self.create_scatter(src_partial, 
+                                                            dest_partial)
 
         self.scatter_full = self.create_scatter(src_full, dest_full)
 
@@ -404,20 +484,12 @@ class SerialSystem(CompoundSystem):
 
     def run(self, scope, ffd_order, case_id, iterbase):
         #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.subsystems]))
-        for i, comp in enumerate(self.subsystems):
-            # scatter(...)
-            if isinstance(comp, System):
-                comp.run(scope, ffd_order, case_id, iterbase)
-            elif isinstance(comp, PseudoComponent):
-                mpiprint("seq running %s" % comp.name)
-                comp.run(ffd_order=ffd_order, case_id=case_id)
-            else:
-                comp.set_itername('%s-%d' % (iterbase, i))
-                mpiprint("seq running %s" % comp.name)
-                comp.run(ffd_order=ffd_order, case_id=case_id)
+        for i, sub in enumerate(self.subsystems):
+            self.scatter('u', 'p', sub)
+            sub.run(scope, ffd_order, case_id, iterbase)
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = []
 
@@ -445,13 +517,13 @@ class ParallelSystem(CompoundSystem):
         if not self.subsystems:
             return
 
-        # scatter(...)
+        self.scatter('u', 'p')
 
         for i, sub in enumerate(self.subsystems):
             sub.run(scope, ffd_order, case_id, iterbase)
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
@@ -486,8 +558,8 @@ class ParallelSystem(CompoundSystem):
 
         #mpiprint("comm size = %d" % comm.size)
         #mpiprint("subsystems: %s" % [c.name for c in subsystems])
-        mpiprint("requested_procs: %s" % requested_procs)
-        mpiprint("assigned_procs: %s" % assigned_procs)
+        #mpiprint("requested_procs: %s" % requested_procs)
+        #mpiprint("assigned_procs: %s" % assigned_procs)
 
         self.subsystems = []
 
@@ -544,21 +616,32 @@ class ParallelSystem(CompoundSystem):
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
 
+def merge(idxs):
+    if len(idxs) > 0:
+        idxs = [i for i in idxs if isinstance(i, int_types) or
+                           len(i)>0]
+        if len(idxs) > 0:
+            if isinstance(idxs[0], int_types):
+                return idxs
+            else:
+                return numpy.concatenate(idxs)
+    return idxs
 
-   
 def _create_simple_sys(g, scope, name):
     comp = getattr(scope, name)
     subg = _precollapse(scope, g, (name,), newname=name)
     if has_interface(comp, IDriver):
-        g.node[name]['system'] = DriverSystem(subg, scope)
+        g.node[name]['system'] = DriverSystem(subg, scope, comp)
     elif has_interface(comp, IAssembly):
-        g.node[name]['system'] = AssemblySystem(subg, scope)
+        g.node[name]['system'] = AssemblySystem(subg, scope, comp)
     else:
-        g.node[name]['system'] = SimpleSystem(subg, scope)
+        g.node[name]['system'] = SimpleSystem(subg, scope, comp)
 
 def partition_subsystems(g, scope):
     """Return a nested graph with metadata for parallel
-    and serial subworkflows.  Graph must acyclic.
+    and serial subworkflows.  Graph must acyclic. All subdriver
+    iterations sets must have already been collapsed.
+    
     """
     if len(g) < 2:
         return g
@@ -632,6 +715,36 @@ def _expand_tuples(nodes):
             lst.append(node)
     return lst
 
+def _get_boundary_io(g, nodes, newname):
+    """Return xfers, inputs, and outputs for the
+    combined node composed of all of the given nodes.
+    """
+    inputs = set()
+    outputs = set()
+    xfers = {}
+
+    # the component graph connection edges contain 'var_edges' metadata
+    # that contains all variable connections that were collapsed into
+    # each component connection.
+    nset = set(nodes)
+    opp = set(g.nodes_iter())-nset
+
+    # get all incoming and outgoing boundary edges
+    out_edges = edge_boundary(g, nodes)
+    in_edges = edge_boundary(g, opp)
+
+    for u,v in out_edges:
+        var_edges = g.edge[u][v].get('var_edges', ())
+        xfers.setdefault((newname, v), set()).update(var_edges)
+        outputs.update([u for u,v in var_edges])
+
+    for u,v in in_edges:
+        var_edges = g.edge[u][v].get('var_edges', ())
+        xfers.setdefault((u, newname), set()).update(var_edges)
+        inputs.update([v for u,v in var_edges])
+
+    return xfers, inputs, outputs
+
 def _precollapse(scope, g, nodes, newname=None):
     """Update all metadata and create new combined nodes based
     on the named nodes, but don't actually remove the old nodes.
@@ -647,51 +760,29 @@ def _precollapse(scope, g, nodes, newname=None):
 
     #mpiprint("collapsing %s" % list(nodes))
 
-    # the component graph connection edges contain 'var_edges' metadata
-    # that contains all variable connections that were collapsed into
-    # each component connection.
-    nset = set(nodes)
-    opp = set(g.nodes_iter())-nset
-
-    # get all incoming and outgoing boundary edges
-    out_edges = edge_boundary(g, nodes)
-    in_edges = edge_boundary(g, opp)
-
     g.add_node(newname)
 
-    #mpiprint("collapsing edges: %s" % collapsing_edges)
-    xfers = {}
-    subg.graph['inputs'] = inputs = set()
-    subg.graph['outputs'] = outputs = set()
-    for u,v in out_edges:
-        var_edges = g.edge[u][v].get('var_edges', ())
-        #mpiprint("adding edge (%s,%s)" % (newname, v))
-        g.add_edge(newname, v)
-        xfers.setdefault((newname, v), []).extend(var_edges)
-        #outputs.update([u for u,v in var_edges])
+    xfers, inputs, outputs = _get_boundary_io(g, nodes, newname)
 
-    for u,v in in_edges:
-        var_edges = g.edge[u][v].get('var_edges', ())
-        #mpiprint("adding edge (%s,%s)" % (u, newname))
-        g.add_edge(u, newname)
-        xfers.setdefault((u, newname), []).extend(var_edges)
-        #inputs.update([v for u,v in var_edges])
+    g.add_edges_from(xfers.keys())
 
     # save the collapsed edges in the metadata of the new edges
     # so each subsystem knows what its inputs and outputs are
     for edge, var_edges in xfers.items():
         g[edge[0]][edge[1]]['var_edges'] = var_edges
 
-    # update our inputs/outputs with inputs/outputs from child nodes
+    # update our driver inputs with driver inputs from child nodes
+    drv_inputs = set()
     for node, data in subg.nodes_iter(data=True):
-        inputs.update(data['inputs'])
-        outputs.update(data['outputs'])
+        drv_inputs.update(data.get('drv_inputs',()))
 
-    g.node[newname]['inputs'] = inputs
-    g.node[newname]['outputs'] = outputs
+    subg.graph['inputs'] = inputs.copy()
+    subg.graph['outputs'] = outputs.copy()
+    subg.graph['drv_inputs'] = drv_inputs.copy()
 
-    inputs.update(inputs)
-    outputs.update(outputs)
+    g.node[newname]['inputs'] = inputs.copy()
+    g.node[newname]['drv_inputs'] = drv_inputs.copy()
+    g.node[newname]['outputs'] = outputs.copy()
 
     return subg
 
@@ -748,5 +839,7 @@ def _partition_subvars(names, vardict):
 
 def petsc_linspace(start, end):
     """ Return a linspace vector of the right int type for PETSc """
-    return numpy.arange(start, end, dtype='i')
+    #return numpy.arange(start, end, dtype=PETSc.IntType)
+    return numpy.array(numpy.linspace(start, end-1, end-start), 
+                       dtype=PETSc.IntType)
 

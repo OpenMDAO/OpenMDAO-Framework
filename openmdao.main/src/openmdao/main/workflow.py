@@ -236,7 +236,7 @@ class Workflow(object):
             comp_outs = partition_names_by_comp(srcs)
             for cname, inputs in comp_ins.items():
                 if cname in wfnames:
-                    drvins = wfgraph.node[cname].setdefault('inputs',set())
+                    drvins = wfgraph.node[cname].setdefault('drv_inputs',set())
                     for inp in inputs:
                         drvins.add('.'.join((cname,inp)))
             for cname, outputs in comp_outs.items():
@@ -280,6 +280,7 @@ class Workflow(object):
 
             #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
             #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
+            
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())

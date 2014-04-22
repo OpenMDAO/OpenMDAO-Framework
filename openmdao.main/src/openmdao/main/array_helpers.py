@@ -34,13 +34,13 @@ def get_index(name):
     having to parse the index more than once.
     """
     global _idx_getter, _idx_cache
-    brack = name.index('[')
-    if brack < 0:
+    if '[' not in name:
         return None
-    idxstr = name[brack:]
+    idxstr = name[name.index('['):]
     idx = _idx_cache.get(idxstr)
     if idx is None:
         commas = idxstr.replace('][',',')
+        # FIXME: we should only cache an index if it's constant!!!!
         _idx_cache[idxstr] = idx = eval('_idx_getter'+commas)
     return idx
     
