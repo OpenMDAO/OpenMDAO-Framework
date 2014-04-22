@@ -82,7 +82,7 @@ class PseudoAssembly(object):
             itercomps = set([c.name for c in wflow])
             comps = set(self.comps)
             if comps.issubset(itercomps):
-                self.itercomps = comps
+                self.itercomps = self.comps
             else:
                 self.itercomps = [c.name for c in wflow]
 
