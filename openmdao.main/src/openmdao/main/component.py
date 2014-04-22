@@ -26,7 +26,7 @@ from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IHasParameters, IHasResponses, \
                                      IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, ICaseIterator, ICaseRecorder, \
+                                     IHasEvents, ICaseIterator, \
                                      IImplicitComponent
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \

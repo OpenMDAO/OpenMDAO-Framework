@@ -126,10 +126,11 @@ if __name__ == "__main__":
                                              prob.dis1.z2,
                                              prob.dis1.x1)
     print "Minimum target was at (%f, %f, %f)" % (prob.global_des_var_targets[0],
-                                             prob.global_des_var_targets[1],
-                                             prob.local_des_var_targets[0])
+                                                  prob.global_des_var_targets[1],
+                                                  prob.local_des_var_targets[0])
     print "Coupling vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
-    print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0], prob.coupling_var_targets[1])
+    print "Coupling var targets: %f, %f" % (prob.coupling_var_targets[0],
+                                            prob.coupling_var_targets[1])
     print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
 

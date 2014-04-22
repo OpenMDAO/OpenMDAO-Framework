@@ -3,7 +3,6 @@ Test DOEdriver.
 """
 
 import logging
-import math
 import nose
 import os.path
 import pkg_resources

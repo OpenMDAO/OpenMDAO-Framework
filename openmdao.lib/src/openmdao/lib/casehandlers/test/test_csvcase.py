@@ -79,7 +79,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
-            #"      comp1.a_list: [1, 'one', 1.0]",
             "      Response_0: 5.5",
             "      Response_1: Hello',;','",
             '      Response_2: 24.2',

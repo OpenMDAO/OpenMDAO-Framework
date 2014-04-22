@@ -23,7 +23,6 @@ class IDF(Architecture):
         self.parent.add("driver", SLSQPdriver())
         self.parent.driver.iprint = 0
         self.parent.recorders = self.data_recorders
-        params = self.parent.get_parameters()
         global_dvs = []
         local_dvs = []
 

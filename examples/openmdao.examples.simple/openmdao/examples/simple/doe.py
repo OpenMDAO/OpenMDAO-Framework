@@ -13,7 +13,6 @@ from openmdao.examples.simple.paraboloid import Paraboloid
 class Analysis(Assembly):
 
     def configure(self):
-<<<<<<< HEAD
 
         self.add('paraboloid', Paraboloid())
 

@@ -20,7 +20,6 @@ from util import main, setup_server, teardown_server, generate, \
                  startup, closeout, broken_chrome
 
 from pageobjects.basepageobject import TMO
-from pageobjects.slot import find_slot_figure
 from pageobjects.util import NotifierPage
 from pageobjects.workspace import WorkspacePage
 

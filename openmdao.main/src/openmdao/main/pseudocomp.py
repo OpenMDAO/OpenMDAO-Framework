@@ -279,7 +279,7 @@ class PseudoComponent(object):
     def connect(self, src, dest):
         self._valid = False
 
-    def run(self, ffd_order=0, case_uuid=''):
+    def run(self, ffd_order=0):
         self.update_inputs()
 
         src = self._srcexpr.evaluate()

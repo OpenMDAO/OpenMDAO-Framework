@@ -60,9 +60,9 @@ class Brent(Driver):
             self.raise_exception('bounds (low=%s, high=%s) do not bracket a root' %
                                  (self.lower_bound, self.upper_bound))
 
-        kwargs = {'maxiter':self.maxiter, 'a':self.lower_bound, 
+        kwargs = {'maxiter':self.maxiter, 'a':self.lower_bound,
                   'b':self.upper_bound, 'full_output': True}
-        
+
         if self.xtol > 0:
             kwargs['xtol'] = self.xtol
         if self.rtol > 0:
@@ -70,18 +70,18 @@ class Brent(Driver):
 
         # Brent's method
         xstar, r = brentq(self._eval, **kwargs)
-        
+
         # Propagate solution back into the model
         self._param.set(xstar)
         self.run_iteration()
-        
+
         if self.iprint == 1:
             print 'iterations:', r.iterations
             print 'residual:', self.eval_eq_constraints()
 
     def check_config(self):
         '''Make sure we have 1 parameter and 1 constraint'''
-        
+
         params = self.get_parameters().values()
         if len(params) != 1:
             self.raise_exception("Brent driver must have 1 parameter, "

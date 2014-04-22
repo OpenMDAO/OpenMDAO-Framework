@@ -327,7 +327,7 @@ class CaseIteratorDriver(Driver):
 
         outputs = self.get_responses().keys()
 
-        length = len(inp_values[0])
+        length = len(inp_values[0]) if inp_values else 0
         cases = []
         for i in range(length):
             inputs = []

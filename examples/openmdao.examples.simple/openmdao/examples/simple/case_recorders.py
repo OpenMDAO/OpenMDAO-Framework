@@ -63,5 +63,5 @@ if __name__ == "__main__": # pragma: no cover
         print case
 
     print "\n"
-    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x, \
+    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x,
                                          opt_problem.paraboloid.y)

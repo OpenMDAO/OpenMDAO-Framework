@@ -28,7 +28,7 @@ class ScalingPreProc(PreProc):
 
 
 class OptRosenSuzukiComponent(Component):
-
+    """ From CONMIN tests. """
     x = Array(iotype='in', low=-10, high=99)
     result = Float(iotype='out')
     opt_objective = Float(iotype='out')

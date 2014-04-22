@@ -3,8 +3,6 @@
 #public symbols
 __all__ = ["Driver"]
 
-import fnmatch
-
 from zope.interface import implementedBy
 
 # pylint: disable-msg=E0611,F0401

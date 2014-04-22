@@ -123,8 +123,8 @@ class FixedPointIterator(Driver):
         if n_dep == 0:
             self.workflow._get_topsort()
             if len(self.workflow._severed_edges) == 0:
-                msg = "FixedPointIterator requires a cyclic workflow, or a " + \
-                "parameter/constraint pair."
+                msg = "FixedPointIterator requires a cyclic workflow, or a " \
+                      "parameter/constraint pair."
                 self.raise_exception(msg, RuntimeError)
 
         # Check the eq constraints to make sure they look ok.

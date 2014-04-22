@@ -494,7 +494,7 @@ class NEWSUMTdriver(Driver):
             else:
                 self.ilin = zeros(1, dtype=int)
         elif len(self.ilin) != ncon:
-            msg = "Dimension of NEWSUMT setting 'ilin' should be equal to " + \
+            msg = "Dimension of NEWSUMT setting 'ilin' should be equal to " \
                   "the number of constraints."
             self.raise_exception(msg, RuntimeError)
 

@@ -11,7 +11,7 @@ from openmdao.examples.mdao.sellar_IDF import SellarIDF
 from openmdao.examples.mdao.sellar_CO import SellarCO
 from openmdao.examples.mdao.sellar_BLISS import SellarBLISS
 
-from openmdao.lib.drivers.api import CONMINdriver, SLSQPdriver
+from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar
 
 from openmdao.main.api import Assembly, Component, set_as_top
@@ -146,10 +146,10 @@ class SellarCO_Multi(Assembly):
         self.driver.ctlmin = 0.0008
 
         #Parameters - Local Optimization 1
-        self.localopt1.add_objective('(z1-dis1.z1)**2 + ' \
-                                     '(z2-dis1.z2)**2 + ' \
-                                     '(x1-dis1.x1)**2 + ' \
-                                     '(y1-dis1.y1)**2 + ' \
+        self.localopt1.add_objective('(z1-dis1.z1)**2 + '
+                                     '(z2-dis1.z2)**2 + '
+                                     '(x1-dis1.x1)**2 + '
+                                     '(y1-dis1.y1)**2 + '
                                      '(y2-dis1.y2)**2')
 
         for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
@@ -165,9 +165,9 @@ class SellarCO_Multi(Assembly):
         self.localopt1.dabfun = .000001
 
         #Parameters - Local Optimization 2
-        self.localopt2.add_objective('(z1-dis2b.z1)**2 + ' \
-                                     '(z2-dis2c.z2)**2 + ' \
-                                     '(y1-dis2a.y1)**2 + ' \
+        self.localopt2.add_objective('(z1-dis2b.z1)**2 + '
+                                     '(z2-dis2c.z2)**2 + '
+                                     '(y1-dis2a.y1)**2 + '
                                      '(y2-dis2c.y2)**2')
 
         for param, low, high in zip(['dis2b.z1', 'dis2c.z2', 'dis2a.y1'],
@@ -297,8 +297,10 @@ class TestCase(unittest.TestCase):
         prob.sa_dis1.workflow.initialize_residual()
 
         edges = prob.sa_dis1.workflow._edges
-        self.assertEqual(set(edges['@in0']), set(['_pseudo_7.in3', '~0.dis1|x1']))
-        self.assertEqual(set(edges['~0.dis1|y1']), set(['_pseudo_5.in0', '_pseudo_7.in0']))
+        self.assertEqual(set(edges['@in0']),
+                         set(['_pseudo_7.in3', '~0.dis1|x1']))
+        self.assertEqual(set(edges['~0.dis1|y1']),
+                         set(['_pseudo_5.in0', '_pseudo_7.in0']))
         self.assertEqual(set(edges['_pseudo_5.out0']), set(['@out1']))
         #self.assertEqual(set(edges['@source0']), set(['@out1']))
         self.assertEqual(set(edges['_pseudo_7.out0']), set(['@out0']))
@@ -312,27 +314,30 @@ class TestCase(unittest.TestCase):
         # TODO - These tested behavior that has nothing to do with BLISS. Need
         # new test for them -- KTM
         #self.assertEqual(prob.check_gradient()[3], [])
-        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_1.out0'])[3], [])
-        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'], outputs=['_pseudo_2.out0'])[3], [])
         #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
-        #                                     outputs=['_pseudo_2.out0', '_pseudo_2.out0'])[3], [])
-
-
+        #                                     outputs=['_pseudo_1.out0'])[3], [])
+        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
+        #                                     outputs=['_pseudo_2.out0'])[3], [])
+        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
+        #                                     outputs=['_pseudo_2.out0',
+        #                                              '_pseudo_2.out0'])[3], [])
 
 
 class TestCon(Component):
     """ test con constraint """
+
     x1 = Float(default_value=0,
               iotype='in', desc='test x')
     g1 = Float(iotype='out', desc='test g')
+
     def execute(self):
         self.g1 = self.x1
+
 
 class SolverCO(Assembly):
     """ solver using assmebly """
 
-    x = Float(default_value=0,
-              iotype='in', desc='test x')
+    x = Float(default_value=0, iotype='in', desc='test x')
 
     def configure(self):
         """config"""
@@ -345,24 +350,24 @@ class SolverCO(Assembly):
         self.testdrv.workflow.add(['con'])
 
         self.driver.add_parameter('x', low=-10, high=10)
-        self.driver.add_constraint(
-            '(con.x1-x)**2 < 1e-3')
+        self.driver.add_constraint('(con.x1-x)**2 < 1e-3')
         self.driver.add_objective('x**2')
 
-        self.testdrv.add_parameter('con.x1',
-                                    low=-10, high=10)
-        self.testdrv.add_objective(
-            '(con.x1-x)**2')
+        self.testdrv.add_parameter('con.x1', low=-10, high=10)
+        self.testdrv.add_objective('(con.x1-x)**2')
         self.testdrv.add_constraint('con.g1>=0')
 
 
-class SolverCO(Assembly):
+class SolverCO2(Assembly):
+
     x = Array(default_value=[0.0, 0.0], iotype='in', desc='test x')
+
     def configure(self):
         self.add('driver', SLSQPdriver())
         self.driver.gradient_options.force_fd = True
         self.driver.add_parameter('x', low=array([-10, -10]), high=array([10, 10]))
         self.driver.add_objective('(x[0]-1)**2 + (x[1]-1)**2')
+
 
 class TestSubOptInclusion(unittest.TestCase):
 
@@ -370,20 +375,21 @@ class TestSubOptInclusion(unittest.TestCase):
         pcompmod._count = 0
 
     def test_basic_CO(self):
-        # Our CO model failed if our submodels didn't have outputs in the graph. This
-        # test covers the fix.
+        # Our CO model failed if our submodels didn't have outputs in the graph.
+        # This test covers the fix.
 
         sim = set_as_top(SolverCO())
         sim.run()
 
-    def test_SolverCO(self):
+    def test_SolverCO2(self):
         # Fix for a bug reported on the forum
-        sim = set_as_top(SolverCO())
+        sim = set_as_top(SolverCO2())
         sim.driver.workflow.run()
         J = sim.driver.workflow.calc_gradient()
 
         assert_rel_error(self, J[0, 0], -2.0, .001)
         assert_rel_error(self, J[0, 1], -2.0, .001)
+
 
 if __name__ == '__main__':
     import nose

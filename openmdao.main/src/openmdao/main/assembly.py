@@ -253,7 +253,7 @@ class Assembly(Component):
         tobj = getattr(self, target_name)
         
         if not tobj:
-            self.add( target_name, newobj )
+            self.add(target_name, newobj)
             return
 
         # Save existing driver references.
