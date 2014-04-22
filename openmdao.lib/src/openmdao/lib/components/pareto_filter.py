@@ -45,19 +45,19 @@ class ParetoFilter(Component):
             constraints = tuple()
 
 
-        if not isinstance(params, tuple):
+        if not isinstance(params, (tuple, list)):
             msg = "ParetoFilter optional params argument needs to be a " + \
-                  "tuple of variable names."
+                  "tuple or list of variable names."
             self.raise_exception(msg, ValueError)
 
-        if not isinstance(constraints, tuple):
+        if not isinstance(constraints, (list, tuple)):
             msg = 'ParetoFilterWithConstraints optional constraints argument '\
-                  'needs to be a tuple of variable names.'
+                  'needs to be a tuple or list of variable names.'
             self.raise_exception(msg, ValueError)
 
-        if responses is None or not isinstance(responses, tuple):
-            msg = "ParetoFilter responses argument needs to be a tuple of " + \
-                  "variable names."
+        if responses is None or not isinstance(responses, (list, tuple)):
+            msg = "ParetoFilter responses argument needs to be a tuple or"+\
+                "list of variable names."
             self.raise_exception(msg, ValueError)
 
         # Add our inputs and outputs to the vartrees.
