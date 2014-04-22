@@ -129,7 +129,7 @@ class PseudoAssembly(object):
         components."""
         self.itername = name
 
-    def run(self, ffd_order=0, case_id='', case_uuid=''):
+    def run(self, ffd_order=0, case_uuid=''):
         """Run all components contained in this assy. Used by finite
         difference."""
 
@@ -141,7 +141,7 @@ class PseudoAssembly(object):
         for name in self.itercomps:
             comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+            comp.run(ffd_order=ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
                          required_inputs=None, required_outputs=None):

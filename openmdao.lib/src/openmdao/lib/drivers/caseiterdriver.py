@@ -333,7 +333,7 @@ class CaseIteratorDriver(Driver):
             inputs = []
             for j in range(len(inp_paths)):
                 inputs.append((inp_paths[j], inp_values[j][i]))
-            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_id))
+            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_uuid))
         self.init_responses(length)
 
         self._iter = iter(cases)
@@ -669,7 +669,7 @@ class CaseIteratorDriver(Driver):
             case.retries = 0
         case.msg = None
 
-        # We record the case and are responsible for unique case_ids.
+        # We record the case and are responsible for unique case ids.
         case.uuid = _Case.next_uuid()
         case.parent_uuid = self._case_uuid
 
@@ -819,8 +819,7 @@ class CaseIteratorDriver(Driver):
         if server.queue is None:
             try:
 #                self.workflow._parent.update_parameters()
-                self.workflow.run(case_id=self._case_id,
-                                  case_uuid=server.case.uuid)
+                self.workflow.run(case_uuid=server.case.uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -832,7 +831,7 @@ class CaseIteratorDriver(Driver):
         case = server.case
         try:
             server.top.set_itername(self.get_itername(), case.index+1)
-            server.top.run(case_id=self._case_id, case_uuid=case.uuid)
+            server.top.run(case_uuid=case.uuid)
         except Exception as exc:
             server.exception = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r,'

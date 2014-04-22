@@ -295,7 +295,7 @@ class Driver(Component):
             inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_id='', case_uuid=''):
+    def run(self, force=False, ffd_order=0, case_uuid=''):
         """Run this object. This should include fetching input variables if
         necessary, executing, and updating output variables. Do not override
         this function.
@@ -309,10 +309,8 @@ class Driver(Component):
             for first derivatives, 2 for second derivatives). During regular
             execution, ffd_order should be 0. (Default is 0)
 
-        case_id: str
+        case_uuid: str
             Identifier for the Case that is associated with this run.
-            If applied to the top-level assembly, this will be prepended to
-            all iteration coordinates. (Default is '')
         """
 
         # (Re)configure parameters.
@@ -325,7 +323,7 @@ class Driver(Component):
 
         # Reset the workflow.
         self.workflow.reset()
-        super(Driver, self).run(force, ffd_order, case_id, case_uuid)
+        super(Driver, self).run(force, ffd_order, case_uuid)
         self._invalidated = False
 
     def update_parameters(self):
@@ -408,7 +406,7 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        wf.run(ffd_order=self.ffd_order, case_id=self._case_id)
+        wf.run(ffd_order=self.ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):

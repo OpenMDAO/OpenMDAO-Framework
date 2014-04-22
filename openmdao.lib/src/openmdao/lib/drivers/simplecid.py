@@ -65,7 +65,7 @@ class SimpleCaseIterDriver(Driver):
                     self.parent.set(path, value)
 
             # Run workflow.
-            self.workflow.run(case_id=self._case_id)
+            self.workflow.run()
 
             # Get outputs.
             for path in self.get_responses():

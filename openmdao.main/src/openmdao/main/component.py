@@ -209,7 +209,6 @@ class Component(Container):
         self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
-        self._case_id = ''
         self._case_uuid = ''
 
     @property
@@ -577,7 +576,7 @@ class Component(Container):
         pass
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_id='', case_uuid=''):
+    def run(self, force=False, ffd_order=0, case_uuid=''):
         """Run this object. This should include fetching input variables
         (if necessary), executing, and updating output variables.
         Do not override this function.
@@ -591,10 +590,8 @@ class Component(Container):
             Finite Difference (typically 1 or 2). During regular execution,
             ffd_order should be 0. (Default is 0.)
 
-        case_id: str
+        case_uuid: str
             Identifier for the Case that is associated with this run.
-            (Default is ''.) If applied to the top-level assembly, this will be
-            prepended to all iteration coordinates.
         """
 
         if self.directory:
@@ -605,7 +602,6 @@ class Component(Container):
 
         self._stop = False
         self.ffd_order = ffd_order
-        self._case_id = case_id
         self._case_uuid = case_uuid
 
         try:

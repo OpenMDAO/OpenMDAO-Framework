@@ -62,7 +62,7 @@ class Workflow(object):
 
     @property
     def itername(self):
-        return self._iterbase('')
+        return self._iterbase()
 
     def check_config(self):
         """Perform any checks that we need prior to run. Specific workflows
@@ -83,7 +83,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_id='', case_label='', case_uuid=None):
+    def run(self, ffd_order=0, case_label='', case_uuid=None):
         """ Run the Components in this Workflow. """
 
         self._stop = False
@@ -91,10 +91,10 @@ class Workflow(object):
         self._exec_count += 1
         self._comp_count = 0
 
-        iterbase = self._iterbase(case_id)
+        iterbase = self._iterbase()
 
         if case_uuid is None:
-            # We record the case and are responsible for unique case_ids.
+            # We record the case and are responsible for unique case ids.
             record_case = True
             case_uuid = Case.next_uuid()
         else:
@@ -102,13 +102,11 @@ class Workflow(object):
 
         for comp in self._iterator:
             if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order, case_id=case_id,
-                         case_uuid=case_uuid)
+                comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             else:
                 self._comp_count += 1
                 comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-                comp.run(ffd_order=ffd_order, case_id=case_id,
-                         case_uuid=case_uuid)
+                comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             if self._stop:
                 raise RunStopped('Stop requested')
         self._iterator = None
@@ -176,19 +174,17 @@ class Workflow(object):
         for recorder in recorders:
             recorder.record(case)
 
-    def _iterbase(self, case_id):
+    def _iterbase(self):
         """ Return base for 'iteration coordinates'. """
         if self._parent is None:
             return str(self._exec_count)  # An unusual case.
         else:
             prefix = self._parent.get_itername()
-            if not prefix:
-                prefix = case_id
             if prefix:
                 prefix += '.'
             return '%s%d' % (prefix, self._exec_count)
 
-    def step(self, ffd_order=0, case_id=''):
+    def step(self, ffd_order=0):
         """Run a single component in this Workflow."""
         if self._iterator is None:
             self._iterator = self.__iter__()
@@ -197,10 +193,10 @@ class Workflow(object):
 
         comp = self._iterator.next()
         self._comp_count += 1
-        iterbase = self._iterbase(case_id)
+        iterbase = self._iterbase()
         comp.set_itername('%s-%d' % (iterbase, self._comp_count))
         try:
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+            comp.run(ffd_order=ffd_order)
         except StopIteration, err:
             self._iterator = None
             raise err
