@@ -72,7 +72,7 @@ openmdao.WorkflowComponentFigure=function(elm, project, driver, comp) {
     }));
     if (jQuery.inArray('IImplicitComponent', comp.interfaces) >= 0) {
         contextMenu.append(jQuery('<li>Evaluate</li>').click(function(e) {
-            var cmd = comp.pathname + '.evaluate();';
+            var cmd = comp.pathname + '.evaluate()';
             project.issueCommand(cmd);
         }));
     }

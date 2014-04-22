@@ -47,19 +47,20 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
         parms.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
             // TODO: check type and behave appropriately (quotes around strings?)
-            cmd = pathname+'.'+args.item.name+'='+args.item.value;
+            cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
-   }
+    }
     parms.onClick.subscribe(function (e) {
-        var cell = parms.getCellFromEvent(e);
+        var cmd,
+            cell = parms.getCellFromEvent(e);
         if (cell.cell === 0) {
             var delname = parms.getData()[cell.row].name;
             if (delname.split(",").length>1) {
-                cmd = pathname+'.remove_parameter('+delname+');';
+                cmd = pathname+'.remove_parameter('+delname+')';
             }
             else {
-                cmd = pathname+'.remove_parameter("'+delname+'");';
+                cmd = pathname+'.remove_parameter("'+delname+'")';
             }
             project.issueCommand(cmd);
         }
@@ -74,7 +75,8 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
     function addParameter(target,low,high,scaler,adder,name) {
 
         // Supports parameter groups
-        var targets = target.split(",");
+        var cmd,
+            targets = target.split(",");
         if (targets.length>1) {
             cmd = pathname+".add_parameter((";
             for(var i = 0; i < targets.length; i++) {
@@ -87,21 +89,21 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
         }
 
         if (low) {
-            cmd = cmd + ",low="+low;
+            cmd = cmd + ", low="+low;
         }
         if (high) {
-            cmd = cmd + ",high="+high;
+            cmd = cmd + ", high="+high;
         }
         if (scaler) {
-            cmd = cmd + ",scaler="+scaler;
+            cmd = cmd + ", scaler="+scaler;
         }
         if (adder) {
-            cmd = cmd + ",adder="+adder;
+            cmd = cmd + ", adder="+adder;
         }
         if (name) {
-            cmd = cmd + ",name='"+name+"'";
+            cmd = cmd + ", name='"+name+"'";
         }
-        cmd = cmd + ");";
+        cmd = cmd + ")";
         project.issueCommand(cmd);
     }
 
@@ -276,7 +278,7 @@ openmdao.ParametersPane = function(elm, project, pathname, name, editable) {
 
     /** clear all parameters */
     function clearParameters() {
-        cmd = pathname+".clear_parameters();";
+        cmd = pathname+".clear_parameters()";
         project.issueCommand(cmd);
     }
 

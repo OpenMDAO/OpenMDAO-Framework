@@ -1,6 +1,9 @@
 import ordereddict
 
+from openmdao.main.vartree import VariableTree
+from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.variable import make_legal_path
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -150,7 +153,7 @@ class Parameter(ParameterBase):
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None,
-                 _expreval=None, _val=None):
+                 _expreval=None, _val=None, _allowed_types=None):
         """If scaler and/or adder are not None, then high, low, and start, if
         not None, are assumed to be expressed in unscaled form. If high and low
         are not supplied, then their values will be pulled from the target
@@ -186,10 +189,12 @@ class Parameter(ParameterBase):
         if self.vartypename == 'Enum':
             return    # it's an Enum, so no need to set high or low
 
-        if not isinstance(_val, real_types) and not isinstance(_val, int_types):
-            raise ValueError("The value of parameter '%s' must be a real or"
-                             " integral type, but its type is '%s'." %
-                             (target, type(_val).__name__))
+        if _allowed_types is None or 'any' not in _allowed_types:
+            if not isinstance(_val, real_types) and \
+               not isinstance(_val, int_types):
+                raise ValueError("The value of parameter '%s' must be a real or"
+                                 " integral type, but its type is '%s'." %
+                                 (target, type(_val).__name__))
 
         # metadata is in the form (varname, metadata), so use [1] to get
         # the actual metadata dict
@@ -203,7 +208,8 @@ class Parameter(ParameterBase):
                 raise ValueError("Trying to add parameter '%s', but the lower"
                                  " limit supplied (%s) exceeds the built-in"
                                  " lower limit (%s)." % (target, low, meta_low))
-        else:
+
+        elif _allowed_types is None or 'any' not in _allowed_types:
             if low is None:
                 raise ValueError("Trying to add parameter '%s', "
                                  "but no lower limit was found and no "
@@ -219,7 +225,8 @@ class Parameter(ParameterBase):
                                  " limit supplied (%s) exceeds the built-in"
                                  " upper limit (%s)."
                                  % (target, high, meta_high))
-        else:
+
+        elif _allowed_types is None or 'any' not in _allowed_types:
             if high is None:
                 raise ValueError("Trying to add parameter '%s', "
                                  "but no upper limit was found and no "
@@ -488,7 +495,7 @@ class ArrayParameter(ParameterBase):
     def __init__(self, target, high=None, low=None,
                  scaler=None, adder=None, start=None,
                  fd_step=None, scope=None, name=None,
-                 _expreval=None, _val=None):
+                 _expreval=None, _val=None, _allowed_types=None):
         super(ArrayParameter, self).__init__(target, high, low,
                                              scaler, adder, start,
                                              fd_step, scope, name,
@@ -553,12 +560,13 @@ class ArrayParameter(ParameterBase):
                                      " lower limit supplied (%s) exceeds the"
                                      " built-in lower limit (%s)."
                                      % (target, _low, _meta_low))
-            else:
+
+            elif _allowed_types is None or 'any' not in _allowed_types:
                 if _low is None:
-                    raise ValueError("Trying to add parameter '%s',"
-                                     " but no lower limit was found and no"
-                                     " 'low' argument was given. One or the"
-                                     " other must be specified." % target)
+                    raise ValueError("Trying to add parameter '%s', "
+                                     "but no lower limit was found and no "
+                                     "'low' argument was given. One or the "
+                                     "other must be specified." % target)
 
             if meta_high is not None:
                 _meta_high = self._fetch('meta_high', meta_high, i)
@@ -569,12 +577,13 @@ class ArrayParameter(ParameterBase):
                                      " upper limit supplied (%s) exceeds the"
                                      " built-in upper limit (%s)."
                                      % (target, _high, _meta_high))
-            else:
-                if _high is None:
-                    raise ValueError("Trying to add parameter '%s',"
-                                     " but no upper limit was found and no"
-                                     " 'high' argument was given. One or the"
-                                     " other must be specified." % target)
+
+            elif _allowed_types is None or 'any' not in _allowed_types:
+                if high is None:
+                    raise ValueError("Trying to add parameter '%s', "
+                                     "but no upper limit was found and no "
+                                     "'high' argument was given. One or the "
+                                     "other must be specified." % target)
 
             if _low > _high:
                 raise ValueError("Parameter '%s' has a lower bound (%s) that"
@@ -817,8 +826,7 @@ class HasParameters(object):
 
         If neither "low" nor "high" is specified, the min and max will
         default to the values in the metadata of the variable being
-        referenced. If they are not specified in the metadata and not provided
-        as arguments, a ValueError is raised.
+        referenced.
         """
 
         if self._parent.parent:
@@ -898,13 +906,15 @@ class HasParameters(object):
                                   scaler=scaler, adder=adder,
                                   start=start, fd_step=fd_step,
                                   name=name, scope=scope,
-                                  _expreval=expreval, _val=val)
+                                  _expreval=expreval, _val=val,
+                                  _allowed_types=self._allowed_types)
         else:
             return Parameter(target, low=low, high=high,
                              scaler=scaler, adder=adder,
                              start=start, fd_step=fd_step,
                              name=name, scope=scope,
-                             _expreval=expreval, _val=val)
+                             _expreval=expreval, _val=val,
+                             _allowed_types=self._allowed_types)
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
@@ -1177,3 +1187,58 @@ class HasParameters(object):
         except Exception:
             self._parameters = old
             raise
+
+
+class HasVarTreeParameters(HasParameters):
+    """ Parameters associated with a case driver which has VarTree inputs. """
+
+    def __init__(self, parent):
+        super(HasVarTreeParameters, self).__init__(parent)
+        self._allowed_types = ['any']
+
+    def add_parameter(self, target, low=None, high=None,
+                      scaler=None, adder=None, start=None,
+                      fd_step=None, name=None, scope=None):
+        """Adds a parameter or group of parameters to the driver."""
+        super(HasVarTreeParameters, self).add_parameter(
+                  target, low, high, scaler, adder, start, fd_step, name, scope)
+
+        if name is not None:
+            path = name
+        elif isinstance(target, basestring):
+            path = target
+        else:
+            path = target[0]
+
+        path = make_legal_path(path)
+        obj = self._parent
+        names = ['case_inputs'] + path.split('.')
+        for name in names[:-1]:
+            if obj.get_trait(name):
+                val = obj.get(name)
+            else:
+                val = VariableTree()
+                obj.add_trait(name, VarTree(val, iotype='in'))
+            obj = val
+
+        name = names[-1]
+        obj.add_trait(name, List(iotype='in'))
+
+    def remove_parameter(self, name):
+        """Removes the parameter with the given name."""
+        super(HasVarTreeParameters, self).remove_parameter(name)
+
+        if isinstance(name, basestring):
+            path = name
+        else:
+            path = name[0]
+
+        path = make_legal_path(name)
+        obj = self._parent
+        names = ['case_inputs'] + path.split('.')
+        for name in names[:-1]:
+            obj = obj.get(name)
+
+        name = names[-1]
+        obj.remove_trait(name)
+

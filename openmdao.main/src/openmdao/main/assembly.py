@@ -27,6 +27,7 @@ from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
+from openmdao.main.hasresponses import HasResponses
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
@@ -1022,6 +1023,7 @@ class Assembly(Component):
         parameters  = []
         constraints = []
         objectives  = []
+        responses   = []
 
         # list of components (name & type) in the assembly
         # g = self._depgraph.component_graph()
@@ -1035,7 +1037,7 @@ class Assembly(Component):
             comp = self.get(name)
             if is_instance(comp, Driver) and hasattr(comp, '_delegates_'):
                 driver_index = len(sorted_names)
-                for dname, dclass in comp._delegates_.items():
+                for dname in comp._delegates_:
                     inst = getattr(comp, dname)
                     if isinstance(inst, HasParameters):
                         refs = inst.get_referenced_compnames()
@@ -1090,6 +1092,11 @@ class Assembly(Component):
                                 name, _, rest = path.partition('.')
                                 objectives.append([path,
                                                    comp.name + '.' + name])
+                        elif isinstance(inst, HasResponses):
+                            for path in inst.get_referenced_varpaths():
+                                name, _, rest = path.partition('.')
+                                responses.append([path,
+                                                  comp.name + '.' + name])
 
         # list of connections (convert tuples to lists)
         conntuples = self.list_connections(show_passthrough=True,
@@ -1099,7 +1106,7 @@ class Assembly(Component):
 
         return {'components': components, 'connections': connections,
                 'parameters': parameters, 'constraints': constraints,
-                'objectives': objectives}
+                'objectives': objectives, 'responses': responses}
 
     def get_connectivity(self):
         ''' Get a list of all the inputs and outputs that can be
