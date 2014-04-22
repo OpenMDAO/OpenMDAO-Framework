@@ -22,27 +22,42 @@ class ParetoFilter(Component):
 
     responses = VarTree(VariableTree(), iotype='in')
 
+    constraints = VarTree(VariableTree(), iotype='in')
+
     pareto_inputs = Array(iotype='out', desc='Array of input values in the '
                           'Pareto frontier')
 
     pareto_outputs = Array(iotype='out', desc='Array of response values in the '
                           'Pareto frontier')
 
-    def __init__(self, params=None, responses=None):
+    pareto_outcons = Array(
+        iotype='out', desc='Array of constraints values in the Pareto frontier')
+
+    def __init__(self, params=None, responses=None, constraints=None):
         super(ParetoFilter, self).__init__()
 
         # Make params optional.
         if params is None:
             params = tuple()
 
-        if not isinstance(params, tuple):
+        # Make constraints optional.
+        if constraints is None:
+            constraints = tuple()
+
+
+        if not isinstance(params, (tuple, list)):
             msg = "ParetoFilter optional params argument needs to be a " + \
-                  "tuple of variable names."
+                  "tuple or list of variable names."
             self.raise_exception(msg, ValueError)
 
-        if responses is None or not isinstance(responses, tuple):
-            msg = "ParetoFilter responses argument needs to be a tuple of " + \
-                  "variable names."
+        if not isinstance(constraints, (list, tuple)):
+            msg = 'ParetoFilterWithConstraints optional constraints argument '\
+                  'needs to be a tuple or list of variable names.'
+            self.raise_exception(msg, ValueError)
+
+        if responses is None or not isinstance(responses, (list, tuple)):
+            msg = "ParetoFilter responses argument needs to be a tuple or"+\
+                "list of variable names."
             self.raise_exception(msg, ValueError)
 
         # Add our inputs and outputs to the vartrees.
@@ -57,11 +72,18 @@ class ParetoFilter(Component):
         for name in responses:
             output_tree.add(name, List([], desc='ParetoFilter response'))
 
+        constraint_tree = self.get('constraints')
+        self._constraint_data= []
+        for name in constraints:
+            constraint_tree.add(name, List([], desc='ParetoFilter constraint'))
+
         self._param_names = params
         self._response_names = responses
+        self._constraint_names = constraints
 
         self.pareto_inputs = zeros((1, len(params)))
         self.pareto_outputs = zeros((1, len(responses)))
+        self.pareto_outcons = zeros((1, len(constraints)))
 
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2.
@@ -70,10 +92,48 @@ class ParetoFilter(Component):
         if y1 == y2:
             return False
         for a, b in zip(y1, y2):
+            if a is None:
+                return True
+            if b is None:
+                return False
             if a < b:
                 return False
 
         return True
+
+    def _is_constrained(self, c1, c2):
+        """ Tests to see if the point c1 is more or less constrained than
+        the point c2.
+        Constrained means value <= 0.0
+        return:
+            isLessConstrained,
+                True if some constraint values are more than c2
+                while the other same, False Otherwise
+            NeedCompareDominating
+                True if need furthermore comparison of dominating
+                False otherwise
+        """
+        c1 = array(c1)
+        c2 = array(c2)
+        b1 = (c1 <= 0).all()
+        b2 = (c2 <= 0).all()
+
+        if b1 and b2:
+            return False, True
+        if b1 and not b2:
+            return False, False
+        if not b1 and b2:
+            return True, False
+        if not b2 and not b1:
+            c1[c1<=0] = 0
+            c2[c2<=0] = 0
+            if (c1 == c2).all():
+                return False, True
+
+            if (c1 >= c2).all():
+                return True, False
+            else:
+                return False, False
 
     def execute(self):
         """Returns an araray of pareto optimal points and their response values.
@@ -82,6 +142,7 @@ class ParetoFilter(Component):
         first_name = "responses.%s" % self._response_names[0]
         n_param = len(self._param_names)
         n_response = len(self._response_names)
+        n_constraint = len(self._constraint_names)
         n_points = len(self.get(first_name))
 
         # Get our output data once, then rearrange it after.
@@ -116,14 +177,45 @@ class ParetoFilter(Component):
                     point.append(data[i][j])
                 nondominated_input.append(point)
 
-        # Find non-dominated points
+        # Optionally, get our constraint data once, then rearrange it after.
+        if n_constraint > 0:
+
+            data = []
+            for varname in self._constraint_names:
+                name = "constraints.%s" % varname
+                val = self.get(name)
+                data.append(val)
+
+            all_cons = []
+            for j in xrange(0, n_points):
+                point = []
+                for i in xrange(0, n_constraint):
+                    point.append(data[i][j])
+                all_cons.append(point)
+            nondominated_constraint = list(all_cons)
+
+
         nd_input_list = []
-        for j, point1 in enumerate(all_points):
-            for point2 in nondominated_output:
-                if self._is_dominated(point1, point2):
-                    nondominated_output.remove(point1)
-                    nd_input_list.append(j)
-                    break
+        if n_constraint > 0:
+        # Find non-dominated points with constraint filtering
+            for j, (point1, cons1) in enumerate(zip(all_points, all_cons)):
+                for point2, cons2 in zip(nondominated_output,
+                                  nondominated_constraint):
+                    is_less_cons, need_comp = self._is_constrained(cons1, cons2)
+                    if is_less_cons or \
+                       (need_comp and self._is_dominated(point1, point2)):
+                        nondominated_output.remove(point1)
+                        nondominated_constraint.remove(cons1)
+                        nd_input_list.append(j)
+                        break
+        else:
+        # Find non-dominated points directly
+            for j, point1 in enumerate(all_points):
+                for point2 in nondominated_output:
+                    if self._is_dominated(point1, point2):
+                        nondominated_output.remove(point1)
+                        nd_input_list.append(j)
+                        break
 
         self.pareto_outputs = array(nondominated_output)
 
@@ -131,4 +223,7 @@ class ParetoFilter(Component):
             data = [nondominated_input[j] for j in xrange(0, n_points) \
                     if j not in nd_input_list]
             self.pareto_inputs = array(data)
+        if n_constraint > 0:
+            self.pareto_outcons = array(nondominated_constraint)
+
 
