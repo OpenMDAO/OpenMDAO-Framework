@@ -70,6 +70,10 @@ class ParetoFilter(Component):
         if y1 == y2:
             return False
         for a, b in zip(y1, y2):
+            if a is None:
+                return True
+            if b is None:
+                return False
             if a < b:
                 return False
 
