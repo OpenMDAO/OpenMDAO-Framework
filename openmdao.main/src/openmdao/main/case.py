@@ -59,7 +59,7 @@ def flatten_obj(name, obj):
     if obj is not None:
         return [(name, '{%s}' % str(obj))]
     else:
-        return []
+        return [(name, '')]
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e.,
