@@ -3,11 +3,10 @@
 import unittest
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Component, Assembly, set_as_top
+from openmdao.main.api import Assembly, set_as_top
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-from openmdao.main.datatypes.api import Float
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.surrogatemodels.api import ResponseSurface, \
                   KrigingSurrogate, FloatKrigingSurrogate, LogisticRegression
@@ -132,13 +131,15 @@ class MetaModelTestCase(unittest.TestCase):
         model.meta.responses.y1 = [3.0, 1.0]
         model.meta.responses.y2 = [1.0, 7.0]
 
-        model.meta.surrogates[ 'y1' ] = KrigingSurrogate()
+        model.meta.surrogates['y1'] = KrigingSurrogate()
         try:
             model.meta.run()
-        except RuntimeError, err:
-            self.assertEqual("meta: No default surrogate model is defined and the following outputs do not have a surrogate model: ['y2']. "
-            "Either specify default_surrogate, or specify a surrogate model for all "
-            "outputs.",str(err))
+        except RuntimeError as err:
+            self.assertEqual("meta: No default surrogate model is defined and "
+                             "the following outputs do not have a surrogate "
+                             "model: ['y2']. Either specify default_surrogate, "
+                             "or specify a surrogate model for all outputs.",
+                             str(err))
         else:
             self.fail('ValueError expected')
 

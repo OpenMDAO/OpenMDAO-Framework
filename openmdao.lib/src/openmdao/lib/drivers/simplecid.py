@@ -1,7 +1,7 @@
 """ A simple driver that runs cases from a CaseIterator and records them
 with a CaseRecorder. """
 
-from openmdao.main.api import Driver, Case
+from openmdao.main.api import Driver
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
@@ -9,7 +9,6 @@ from openmdao.main.interfaces import IHasResponses, IHasParameters, implements
 from openmdao.main.variable import is_legal_name, make_legal_path
 
 from openmdao.util.decorators import add_delegate
-
 
 
 @add_delegate(HasVarTreeParameters, HasVarTreeResponses)
@@ -24,6 +23,8 @@ class SimpleCaseIterDriver(Driver):
 
     def execute(self):
         """ Run each parameter set. """
+
+        # Prepare parameters and responses.
         exprs = {}
         case_paths = {}
         inputs = []
@@ -51,7 +52,10 @@ class SimpleCaseIterDriver(Driver):
         length = len(values[0]) if values else 0
         self.init_responses(length)
 
+        # Run each parameter set.
         for i in range(length):
+
+            # Set inputs.
             for j, path in enumerate(inputs):
                 value = values[j][i]
                 expr = exprs.get(path)
@@ -60,18 +64,16 @@ class SimpleCaseIterDriver(Driver):
                 else:
                     self.parent.set(path, value)
 
-            case_uuid = Case.next_uuid()
-            self.workflow.run(case_id=case_uuid)
+            # Run workflow.
+            self.workflow.run()
 
+            # Get outputs.
             for path in self.get_responses():
                 expr = exprs.get(path)
                 if expr:
                     value = expr.evaluate(self.parent)
                 else:
                     value = self.parent.get(path)
-
                 path = case_paths[path]
                 self.set('case_outputs.'+path, value, index=(i,), force=True)
-
-            self.record_case(case_uuid)
 

@@ -221,7 +221,8 @@ class TestCase(unittest.TestCase):
         model.add('driver', DistributionCaseDriver())
         model.add('driven', SimpleComponent())
         model.driver.workflow.add('driven')
-        model.driver.distribution_generator = FiniteDifferenceGenerator(model.driver)
+        model.driver.distribution_generator = \
+            FiniteDifferenceGenerator(model.driver)
 
         try:
             model.driver.add_parameter("driven.invalid", low=-10., high=10., fd_step=0.1)
