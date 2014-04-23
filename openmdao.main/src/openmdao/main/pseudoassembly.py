@@ -74,7 +74,18 @@ class PseudoAssembly(object):
             self.ffd_order = 0
 
         if fd:
-            self.itercomps = [c.name for c in wflow]
+
+            # Support for taking the deriative of a subset of our
+            # workflow. This breaks down if we have subdrivers,
+            # so we have to revert back to full workflow if any
+            # are relevant.
+            itercomps = set([c.name for c in wflow])
+            comps = set(self.comps)
+            if comps.issubset(itercomps):
+                self.itercomps = self.comps
+            else:
+                self.itercomps = [c.name for c in wflow]
+
         elif drv_name is not None:
             self.itercomps = [drv_name]
         else:
