@@ -1,7 +1,7 @@
 """ Some functions for dealing with array bookkeeping. Mostly flatteners. """
 
 import itertools
-
+from traits.trait_handlers import TraitListObject
 from openmdao.main.vartree import VariableTree
 from openmdao.util.typegroups import real_types, int_types
 
@@ -51,7 +51,8 @@ def flattened_size(name, val, scope=None):
         for key in sorted(val.list_vars()):  # Force repeatable order.
             size += flattened_size('.'.join((name, key)), getattr(val, key))
         return size
-
+    elif isinstance(val, TraitListObject):
+        return len(val)
     else:
         dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
 
@@ -74,6 +75,8 @@ def flattened_value(name, val):
             value = getattr(val, key)
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
+    elif isinstance(val, TraitListObject):
+        return array(list(val))
     else:
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
