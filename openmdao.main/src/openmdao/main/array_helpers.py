@@ -76,7 +76,7 @@ def flattened_value(name, val):
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
     elif isinstance(val, TraitListObject):
-        return array(list(val))
+        return array(val)
     else:
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
