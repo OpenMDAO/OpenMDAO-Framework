@@ -67,9 +67,9 @@ class GPOptimization(Assembly):
         doe.add_parameter('gp_fun.x1', low=-1.5, high=1.5, start=1)
         doe.add_parameter('gp_fun.x2', low=-1.5, high=1.5, start=1)
         doe.DOEgenerator = FullFactorial(5)
-        doe.case_outputs = ['gp_fun.f', 'gp_fun.x1', 'gp_fun.x2',
-                            'gp_fun.exec_count']
-        doe.recorders = [CSVCaseRecorder(), DumpCaseRecorder()]
+        doe.add_responses(['gp_fun.f', 'gp_fun.x1', 'gp_fun.x2',
+                           'gp_fun.exec_count'])
+        self.recorders = [CSVCaseRecorder(), DumpCaseRecorder()]
 
 
 def main():

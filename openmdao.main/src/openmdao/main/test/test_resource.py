@@ -616,7 +616,7 @@ max_load: 100
         assert_raises(self, 'RAM.total_request(assembly)',
                       globals(), locals(), ValueError,
                       "Incompatible settings for 'accounting_id':"
-                      " 'xyzzy' vs. 'frobozz'")
+                      " 'frobozz' vs. 'xyzzy'")
 
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ class ScalingPreProc(PreProc):
 
 
 class OptRosenSuzukiComponent(Component):
-
+    """ From CONMIN tests. """
     x = Array(iotype='in', low=-10, high=99)
     result = Float(iotype='out')
     opt_objective = Float(iotype='out')
@@ -86,8 +86,8 @@ class Simulation(Assembly):
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
-        self.driver.recorders = [ListCaseRecorder()]
-        self.driver.printvars = ['comp.opt_objective']
+        self.recorders = [ListCaseRecorder()]
+        self.printvars = ['comp.opt_objective']
 
 
 class NestedSimulation(Assembly):
