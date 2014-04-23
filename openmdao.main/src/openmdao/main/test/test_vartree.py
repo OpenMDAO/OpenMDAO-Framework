@@ -196,7 +196,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv1', 
+                         'desc': 'vv1',
                          'assumed_default': False} in attrs['Inputs'])
         self.assertTrue({'name': 'v2',
                          'id': '.v2',
@@ -207,7 +207,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv2', 
+                         'desc': 'vv2',
                          'assumed_default': False} in attrs['Inputs'])
         # The number shall be 11 becuase of recursion, and also including
         # file variables
@@ -223,7 +223,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv1', 
+                         'desc': 'vv1',
                          'assumed_default': False} in attrs['Outputs'])
         self.assertTrue({'name': 'v2',
                          'id': '.v2',
@@ -234,7 +234,7 @@ class NamespaceTestCase(unittest.TestCase):
                          'valid': 'false',
                          'low': None,
                          'type': 'float',
-                         'desc': 'vv2', 
+                         'desc': 'vv2',
                          'assumed_default': False} in attrs['Outputs'])
         self.assertEqual(len(attrs['Outputs']), 11)
 
@@ -373,7 +373,9 @@ class NamespaceTestCase(unittest.TestCase):
         self.assertEqual(set(flatten_obj('foo', dvt)),
                          set([('foo.vt2.vt3.a', 1.), ('foo.vt2.vt3.b', 12.),
                               ('foo.vt2.x', -1.), ('foo.vt2.y', -2.),
-                              ('foo.v1', 1.), ('foo.v2', 2.)]))
+                              ('foo.v1', 1.), ('foo.v2', 2.),
+                              ('foo.vt2.vt3.data', ''),
+                              ('foo.vt2.data', ''), ('foo.data', '')]))
 
     def test_nesting(self):
         # Check direct nesting in class definition.
