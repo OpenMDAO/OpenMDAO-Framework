@@ -23,19 +23,6 @@ class BraninConstraintComponent(BraninComponent):
 
 
 
-
-class EIMux(Component):
-    EI_obj = Float(iotype='in')
-    PI_obj = Float(iotype='in')
-    PI_cons = Float(iotype='in')
-
-    EI = Float(iotype='out')
-    PI = Float(iotype='out')
-
-    def execute(self):
-        self.EI = self.EI_obj * self.PI_cons
-        self.PI = self.PI_obj * self.PI_cons
-
 class Analysis(Assembly):
     '''Top level assembly for the Single Ojective EI Example.'''
 
@@ -64,7 +51,6 @@ class Analysis(Assembly):
 
         ei_obj = self.add('ei_obj', ExpectedImprovement())
         ei_cons = self.add('ei_cons', ExpectedImprovement())
-        ei_mux = self.add('ei_mux', EIMux())
 
         #initial training DOE
         adapt.DOEgenerator = OptLatinHypercube(num_samples=15)
@@ -90,11 +76,6 @@ class Analysis(Assembly):
         self.connect('meta.g_xy', 'ei_cons.current') #this passes a normal distribution variable
         self.connect('pareto.pareto_outputs[0, 0]', 'ei_obj.target') #for single objective, frontier is just a scalar value that is the minimum of the set
         ei_cons.target = 0.0
-        self.connect('ei_obj.EI', 'ei_mux.EI_obj') # multiple constraint PI with objective PI and EI
-        self.connect('ei_obj.PI', 'ei_mux.PI_obj')
-        self.connect('ei_cons.PI', 'ei_mux.PI_cons')
-
-
 
 
         #EI optimization to find next point
@@ -103,7 +84,7 @@ class Analysis(Assembly):
         ei_opt.generations = 10
         ei_opt.add_parameter('meta.x', low=-5, high=10)
         ei_opt.add_parameter('meta.y', low=0, high=15)
-        ei_opt.add_objective('ei_mux.PI') #could use ei.EI too
+        ei_opt.add_objective('ei_obj.PI * ei_cons.PI') #could use ei.EI too
 
         #Iterative sampling process
         # TODO: Note, soon low and high will not be needed.
@@ -118,10 +99,10 @@ class Analysis(Assembly):
         #Iteration Heirarchy
         driver.workflow.add(['adapt', 'pareto', 'ei_opt'])
         adapt.workflow.add(['branin'])
-        ei_opt.workflow.add(['meta', 'ei_obj', 'ei_cons', 'ei_mux'])
+        ei_opt.workflow.add(['meta', 'ei_obj', 'ei_cons'])
 
         #FPI now support stop conditions
-        driver.add_stop_condition('ei_mux.EI <= .0001')
+        driver.add_stop_condition('ei_obj.EI * ei_cons.PI <= .0001')
 
     def cleanup(self):
         shutil.rmtree(self._tdir, ignore_errors=True)

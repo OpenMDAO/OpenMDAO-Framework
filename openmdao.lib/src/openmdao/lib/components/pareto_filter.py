@@ -22,7 +22,14 @@ class ParetoFilter(Component):
 
     responses = VarTree(VariableTree(), iotype='in')
 
-    constraints = VarTree(VariableTree(), iotype='in')
+    constraints = VarTree(
+        VariableTree(), iotype='in',
+        desc='VarTree of minus-definition constraints '
+        '(<=0 means constaint satisfied) used to filter cases following '
+        'the rule that satifisfied is better than unsatisfied and small '
+        'unstatisfied constraint value is better than greater one, '
+        'regardless of objective function values.'
+        'Optional if None')
 
     pareto_inputs = Array(iotype='out', desc='Array of input values in the '
                           'Pareto frontier')
@@ -51,8 +58,8 @@ class ParetoFilter(Component):
             self.raise_exception(msg, ValueError)
 
         if not isinstance(constraints, tuple):
-            msg = 'ParetoFilterWithConstraints optional constraints argument '\
-                  'needs to be a tuple of variable names.'
+            msg = 'ParetoFilter optional constraints argument '\
+                  'needs to be a tuple of constraint variable names.'
             self.raise_exception(msg, ValueError)
 
         if responses is None or not isinstance(responses, tuple):
@@ -195,9 +202,8 @@ class ParetoFilter(Component):
             nondominated_constraint = list(all_cons)
 
 
-        nd_input_list = []
-        if n_constraint > 0:
-        # Find non-dominated points with constraint filtering
+            # Find non-dominated points with constraint filtering
+            nd_input_list = []
             for j, (point1, cons1) in enumerate(zip(all_points, all_cons)):
                 for point2, cons2 in zip(nondominated_output,
                                   nondominated_constraint):
@@ -209,7 +215,8 @@ class ParetoFilter(Component):
                         nd_input_list.append(j)
                         break
         else:
-        # Find non-dominated points directly
+            # Find non-dominated points directly
+            nd_input_list = []
             for j, point1 in enumerate(all_points):
                 for point2 in nondominated_output:
                     if self._is_dominated(point1, point2):
