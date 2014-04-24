@@ -111,7 +111,7 @@ class Brent(Driver):
         # Propagate solution back into the model
         self._param.set(xstar)
         self.run_iteration()
-
+  
         if self.iprint == 1:
             print 'iterations:', brent_iterations
             print 'residual:', self.eval_eq_constraints()
