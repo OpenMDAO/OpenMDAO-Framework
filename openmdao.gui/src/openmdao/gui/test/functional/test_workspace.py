@@ -889,7 +889,7 @@ def _test_logviewer(browser):
                                              'files/logger.py')
     workspace_page.add_file(logger)
     msgs = viewer.get_messages()
-    # Remove any spurious errors and drop timestamp.
+    # Remove any spurious messages and drop timestamp.
     initial = [msg[16:] for msg in msgs
                         if "Shouldn't have handled a send event" not in msg and
                            'Connection reset by peer' not in msg]
@@ -910,7 +910,9 @@ def _test_logviewer(browser):
     dialog('ok_button').click()
 
     msgs = viewer.get_messages()
-    filtered = [msg[16:] for msg in msgs]  # Drop timestamp.
+    # Remove any spurious messages and drop timestamp.
+    filtered = [msg[16:] for msg in msgs
+                         if 'Connection reset by peer' not in msg]
     eq(filtered,
        [u'W root: warning 1',
         u'C root: critical 1',
