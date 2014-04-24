@@ -98,9 +98,7 @@ class Workflow(object):
     def run(self, ffd_order=0, case_id=''):
         """ Run the Components in this Workflow. """
         if self._subsystem is not None:
-            return self._subsystem.run(self.scope, 
-                                       ffd_order, 
-                                       case_id, self._iterbase(case_id))
+            return self._subsystem.run(self.scope)#, ffd_order, case_id, self._iterbase(case_id))
 
         self._stop = False
         self._iterator = self.__iter__()

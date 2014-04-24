@@ -5,7 +5,7 @@ from threading import RLock
 from numpy import ndarray
 
 from openmdao.main.array_helpers import flattened_size, flattened_size_info
-from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent, IVariableTree
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.numpy_fallback import zeros
@@ -111,7 +111,10 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[ref] = in_name
             rvarmap.setdefault(_get_varname(ref), set()).add(ref)
-            setattr(self, in_name, None)
+            # set the current value of the connected variable
+            # into our input
+            setattr(self, in_name, 
+                    ExprEvaluator(ref).evaluate(self._parent))
 
         refs = list(destexpr.refs())
         if refs:
@@ -164,7 +167,8 @@ class PseudoComponent(object):
         else:
             self._srcunits = None
 
-        self._srcexpr = ConnectedExprEvaluator(xformed_src, scope=self)
+        self._srcexpr = ConnectedExprEvaluator(xformed_src, 
+                                               scope=self)
 
         # this is just the equation string (for debugging)
         if self._orig_dest:
@@ -335,16 +339,16 @@ class PseudoComponent(object):
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
-    def setup_sizes(self):
-        pass
-
     def get_req_cpus(self):
-        return 0
+        return 1
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
 
     def setup_variables(self):
+        pass
+
+    def setup_sizes(self):
         pass
 
     def setup_vectors(self, arrays=None):

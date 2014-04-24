@@ -7,6 +7,10 @@ from openmdao.main.interfaces import obj_has_interface, IAssembly
 # specified in the call, will print results from that rank only
 MPI_PRINT_RANK = None
 
+def set_print_rank(rank):
+    global MPI_PRINT_RANK
+    MPI_PRINT_RANK = rank
+
 def under_mpirun():
     """Return True if we're being executed under mpirun."""
     # TODO: this is a bit of a hack and there appears to be

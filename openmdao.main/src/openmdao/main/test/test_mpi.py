@@ -8,34 +8,39 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.mpiwrap import mpiprint
+from openmdao.main.mpiwrap import mpiprint, set_print_rank
 from openmdao.util.decorators import add_delegate
+from openmdao.main.distsolve import MPINonlinearGS
 
-@add_delegate(HasObjectives, HasParameters, HasConstraints)
-class NTimes(Driver):
-    def __init__(self, n=1):
-        super(NTimes, self).__init__()
-        self.n = n 
-        self._count = 0
+# @add_delegate(HasObjectives, HasParameters, HasConstraints)
+# class NTimes(Driver):
+#     def __init__(self, n=1):
+#         super(NTimes, self).__init__()
+#         self.n = n 
+#         self._count = 0
 
-    def run(self, force=False, ffd_order=0, case_id=''):
-        self.execute()
+#     def run(self, force=False, ffd_order=0, case_id=''):
+#         self.execute()
         
-    def continue_iteration(self):
-        return self._count < self.n
+#     def continue_iteration(self):
+#         return self._count < self.n
 
-    def start_iteration(self):
-        self._count = 0
-        self._paramvals = np.array(self.eval_parameters())
+#     def start_iteration(self):
+#         self._count = 0
+#         self._paramvals = np.array(self.eval_parameters())
 
-    def pre_iteration(self):
-        if self._count > 0:
-            self.set_parameters(self._paramvals)
+#     def pre_iteration(self):
+#         if self._count > 0:
+#             self.set_parameters(self._paramvals)
 
-    def post_iteration(self):
-        self._count += 1
-        self._paramvals += 1.0
+#     def post_iteration(self):
+#         self._count += 1
+#         self._paramvals += 1.0
 
+class NTimes(MPINonlinearGS):
+    def __init__(self, maxiter=1):
+        super(NTimes, self).__init__()
+        self.max_iteration = maxiter
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
@@ -53,7 +58,8 @@ class ABCDArrayComp(Component):
         self.d = self.a - self.b
         #mpiprint("%s: c = %s" % (self.name, self.c))
         
-def _get_model_simple():
+def _get_model():
+    """1 component"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(3))
     name = 'C1'
@@ -62,10 +68,11 @@ def _get_model_simple():
     getattr(top, name).mpi.requested_cpus = 1
 
     top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C1.d[0]>0')
+    top.driver.add_constraint('C1.d[0]=0')
     return top
     
-def _get_model():
+def _get_model1():
+    """2 comps, not connected"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(3))
     for i in range(1,3):
@@ -75,11 +82,12 @@ def _get_model():
         getattr(top, name).mpi.requested_cpus = 1
 
     top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C1.d[0]>C2.d[0]') 
+    top.driver.add_constraint('C2.d[0]=0') 
     
     return top
 
-def _get_model1():
+def _get_model2():
+    """3 comps, not connected"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(3))
     for i in range(1,4):
@@ -89,11 +97,12 @@ def _get_model1():
         getattr(top, name).mpi.requested_cpus = 1
 
     top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C1.d[0]>C2.d[0]') 
+    top.driver.add_constraint('C2.d[0]=0') 
     
     return top
 
-def _get_model2():
+def _get_model3():
+    """5 comps, connected"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(1))
     for i in range(1,6):
@@ -103,21 +112,22 @@ def _get_model2():
         getattr(top, name).mpi.requested_cpus = 1
 
     conns = [
-        ('C1.c','C3.a'),
-        ('C3.c','C5.a'),
-        ('C2.c','C4.a'),
-        ('C4.d','C5.b'),
+        ('C1.c','C2.a'),
+        ('C2.c','C3.a'),
+        ('C3.c','C4.a'),
+        ('C4.c','C5.a'),
     ]
 
     for u,v in conns:
         top.connect(u, v)
 
-    top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C5.d[0]>0.') 
+    # top.driver.add_parameter('C3.b[1]', high=100.0, low=0.0)
+    # top.driver.add_constraint('C5.d[0]=0') 
     
     return top
 
-def _get_model_nested_drivers():
+def _get_model4():
+    """3 comps with nested drivers"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(2))
     for i in range(1,4):
@@ -138,14 +148,15 @@ def _get_model_nested_drivers():
         top.connect(u, v)
 
     top.driver.add_parameter('C3.b[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C3.d[0]>0.') 
+    top.driver.add_constraint('C3.d[0]=0') 
     
     top.subdriver.add_parameter('C1.b[0]', high=100.0, low=0.0)
-    top.subdriver.add_constraint('C2.d[0]>0.') 
+    top.subdriver.add_constraint('C2.d[0]=0') 
     
     return top
 
-def _get_model_layers():
+def _get_model5():
+    """8 comps, several layers of subsystems"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(1))
     for i in range(1,9):
@@ -169,15 +180,44 @@ def _get_model_layers():
         top.connect(u, v)
 
     top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C6.d[0]>C8.d[0]') 
+    top.driver.add_constraint('C8.d[0]=0') 
     
     return top
 
+class Eq1(Component):
+    x = Float(1.0, iotype='in')
+    f = Float(0.0, iotype='out')
+    
+    def execute(self):
+        self.f = 10./(self.x**3-1.)
+
+def _get_model6():
+    """an actual FPI"""
+    top = set_as_top(Assembly())
+    top.add('driver', NTimes(3))
+    top.add("C1", Eq1())
+
+    
+
+    return top
+    
 
 if __name__ == '__main__':
-    from openmdao.main.mpiwrap import MPI_run, under_mpirun, setup_mpi
+    import sys
+    from openmdao.main.mpiwrap import under_mpirun, setup_mpi
 
-    top = _get_model2()
+    run = False
+    mname = ''
+
+    for arg in sys.argv[1:]:
+        if arg.startswith('--run'):
+            run = True
+        elif arg.startswith('--rank'):
+            set_print_rank(int(arg.split('=',1)[1]))
+        elif not arg.startswith('-'):
+            mname = arg
+
+    top = globals().get('_get_model%s' % mname)()
 
     if under_mpirun():
         setup_mpi(top)
@@ -186,14 +226,15 @@ if __name__ == '__main__':
         #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
         #mpiprint(top.subdriver.workflow._subsystem.dump_subsystem_tree(stream=None))
 
-    mpiprint('-'*50)
-    top.run()
+    if run:
+        mpiprint('-'*50)
+        top.run()
 
-    for i in range(9):
-        for v in ['a','b','c','d']:
-            name = "C%d.%s" % (i+1,v)
-            if top.contains(name):
-                mpiprint("%s = %s" % (name,top.get(name)))
+        for i in range(9):
+            for v in ['a','b','c','d']:
+                name = "C%d.%s" % (i+1,v)
+                if top.contains(name):
+                    mpiprint("%s = %s" % (name,top.get(name)))
 
 
 

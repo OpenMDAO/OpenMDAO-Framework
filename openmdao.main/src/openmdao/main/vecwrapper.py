@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-import numpy
-
 from openmdao.main.mpiwrap import mpiprint, get_petsc_vec
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
@@ -54,7 +52,12 @@ class VecWrapper(object):
                 sz = var['size']
                 if sz > 0:
                     idx = var['flat_idx']
-                    basestart = self.start(var['basevar'])
+                    try:
+                        basestart = self.start(var['basevar'])
+                    except KeyError:
+                        mpiprint("name: %s, base: %s, vars: %s" %
+                                 (name, var['basevar'], self._info.keys()))
+                        raise
                     sub_idx = offset_flat_index(idx, basestart)
                     substart = get_flat_index_start(sub_idx)
                     self._info[name] = (self.array[sub_idx], substart)
@@ -109,3 +112,17 @@ class VecWrapper(object):
         for name, (array_val, start) in self._info.items():
             mpiprint("%s - %s: (%d,%d) %s" % (vname,name, start, start+len(array_val),array_val))
         mpiprint("%s - petsc sizes: %s" % (vname,self.petsc_vec.sizes))
+
+
+class DataPasser(object):
+    """A wrapper object that manages data transfer between
+    MPI processes via scatters (and possibly send/receive for 
+    non-array values)
+    """
+    def __init__(self):
+        self.srcvec = None
+        self.destvec = None
+
+    def transfer(self, reverse=False):
+        pass
+
