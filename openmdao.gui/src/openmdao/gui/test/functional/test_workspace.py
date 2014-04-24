@@ -891,7 +891,8 @@ def _test_logviewer(browser):
     msgs = viewer.get_messages()
     # Remove any spurious errors and drop timestamp.
     initial = [msg[16:] for msg in msgs
-                        if "Shouldn't have handled a send event" not in msg]
+                        if "Shouldn't have handled a send event" not in msg and
+                           'Connection reset by peer' not in msg]
     eq(initial,
        [u'W root: warning 1',
         u'E root: error 1',
