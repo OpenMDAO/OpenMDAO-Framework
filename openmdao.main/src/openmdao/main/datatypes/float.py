@@ -26,7 +26,7 @@ class Float(Variable):
 
     def __init__(self, default_value=None, iotype=None, desc=None,
                  low=None, high=None, exclude_low=False, exclude_high=False,
-                 units=None, **metadata):
+                 units=None, valid_high=None, valid_low=None, **metadata):
 
         _default_set = False
 
@@ -50,6 +50,8 @@ class Float(Variable):
         self.exclude_low = exclude_low
         self.exclude_high = exclude_high
 
+
+
         # Put iotype in the metadata dictionary
         if iotype is not None:
             metadata['iotype'] = iotype
@@ -62,31 +64,57 @@ class Float(Variable):
         if units is not None:
             metadata['units'] = units
 
-        # The Range trait must be used if High or Low is set
-        if low is None and high is None:
+        # if valid_high and valid_low does not set using high and low
+        # and avoid only having valid_high without high or having valid_low without low
+        if valid_high is None:
+            valid_high = high
+        elif high is None:
+            raise ValueError('Higher bound should be specified '
+                             'before validation higher bound.')
+
+        if valid_low is None:
+            valid_low = low
+        elif low is None:
+            raise ValueError('Lower bound should be specified '
+                             'before validation lower bound.')
+
+        # Normalize high and low
+        if high is None:
+            high = float_info.max
+        else:
+            high = float(high)
+
+        if low is None:
+            low = -float_info.max
+        else:
+            low = float(low)
+
+
+        # The Range trait must be used if valid_high or valid_low is set
+        if valid_low is None and valid_high is None:
             self._validator = TraitFloat(default_value, **metadata)
         else:
-            if low is None:
-                low = -float_info.max
+            if valid_low is None:
+                valid_low = -float_info.max
             else:
-                low = float(low)
+                valid_low = float(low)
 
-            if high is None:
-                high = float_info.max
+            if valid_high is None:
+                valid_high = float_info.max
             else:
-                high = float(high)
+                valid_high = float(valid_high)
 
-            if low > high:
+            if valid_low > valid_high or low > high:
                 raise ValueError("Lower bound is greater than upper bound.")
 
-            if default_value > high or default_value < low:
+            if default_value > valid_high or default_value < valid_low:
                 raise ValueError("Default value is outside of bounds [%s, %s]."
-                                 % (str(low), str(high)))
+                                 % (str(valid_low), str(valid_high)))
 
             # Range can be float or int, so we need to force these to be float.
             default_value = float(default_value)
 
-            self._validator = Range(low=low, high=high, value=default_value,
+            self._validator = Range(low=valid_low, high=valid_high, value=default_value,
                                           exclude_low=exclude_low,
                                           exclude_high=exclude_high,
                                           **metadata)
@@ -99,9 +127,11 @@ class Float(Variable):
                 raise ValueError("Units of '%s' are invalid" %
                                  metadata['units'])
 
-        # Add low and high to the trait's dictionary so they can be accessed
+        # Add low , high, valid_low, valid_high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
+        metadata['valid_low'] = valid_low
+        metadata['valid_high'] = valid_high
 
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
@@ -167,12 +197,12 @@ class Float(Variable):
         """Returns a descriptive error string."""
 
         # pylint: disable-msg=E1101
-        if self.low is None and self.high is None:
+        if self.valid_low is None and self.valid_high is None:
             if self.units:
                 info = "a float having units compatible with '%s'" % self.units
             else:
                 info = "a float"
-        elif self.low is not None and self.high is not None:
+        elif self.valid_low is not None and self.valid_high is not None:
             right = ']'
             left = '['
             if self.exclude_high is True:
@@ -180,11 +210,11 @@ class Float(Variable):
             if self.exclude_low is True:
                 left = '('
             info = "a float in the range %s%s, %s%s" % \
-                   (left, self.low, self.high, right)
-        elif self.low is not None:
-            info = "a float with a value > %s" % self.low
-        else:  # self.high is not None
-            info = "a float with a value < %s" % self.high
+                   (left, self.valid_low, self.valid_high, right)
+        elif self.valid_low is not None:
+            info = "a float with a value > %s" % self.valid_low
+        else:  # self.valid_high is not None
+            info = "a float with a value < %s" % self.valid_high
 
         vtype = type(value)
         msg = "Variable '%s' must be %s, but a value of %s %s was specified." \
