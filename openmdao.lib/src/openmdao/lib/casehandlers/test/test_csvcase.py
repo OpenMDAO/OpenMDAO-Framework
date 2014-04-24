@@ -46,7 +46,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.filename = "openmdao_test_csv_case_iterator.csv"
 
     def tearDown(self):
-        for recorder in self.top.driver.recorders:
+        for recorder in self.top.recorders:
             recorder.close()
         if os.path.exists(self.filename):
             os.remove(self.filename)
@@ -58,16 +58,16 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         #pulled out of the CSV file by a CSVCaseIterator.  Finally the cases
         #are dumped to a string after being run for the second time.
 
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
 
         # now use the CSV recorder as source of Cases
-        cases = [case for case in self.top.driver.recorders[0].get_iterator()]
+        cases = [case for case in self.top.recorders[0].get_iterator()]
         Case.set_vartree_inputs(self.top.driver, cases)
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: ',
@@ -79,7 +79,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
-            #"      comp1.a_list: [1, 'one', 1.0]",
             "      Response_0: 5.5",
             "      Response_1: Hello',;','",
             '      Response_2: 24.2',
@@ -107,13 +106,12 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
         #Repeat test above using semicolon delimiter and ' as quote char.
 
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename,
-                                                     delimiter=';',
-                                                     quotechar="'")]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename,
+                                              delimiter=';', quotechar="'")]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
 
-        attrs = self.top.driver.recorders[0].get_attributes()
+        attrs = self.top.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'filename',
                          'id': 'filename',
@@ -136,10 +134,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
 
         # now use the DB as source of Cases
-        self.top.driver.iterator = self.top.driver.recorders[0].get_iterator()
+        self.top.driver.iterator = self.top.recorders[0].get_iterator()
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: ',
@@ -195,7 +193,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         cases = [case for case in CSVCaseIterator(filename=self.filename)]
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
 
         self.assertEqual(self.top.comp1.x, 3.14159)
@@ -230,10 +228,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
         cases = [case for case in CSVCaseIterator(filename=self.filename)]
         Case.set_vartree_inputs(self.top.driver, cases)
-        self.top.driver.recorders = [ListCaseRecorder()]
+        self.top.recorders = [ListCaseRecorder()]
         self.top.run()
 
-        it = self.top.driver.recorders[0].get_iterator()
+        it = self.top.recorders[0].get_iterator()
         case1 = it[0]
         self.assertEqual(case1.get_input('comp1.x'), 33.5)
 
@@ -261,7 +259,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                                                   headers=header_dict)]
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
 
         self.assertEqual(self.top.comp1.x, 3.14159)
@@ -284,10 +282,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         cases = [case for case in CSVCaseIterator(filename=self.filename,
                                                   headers=header_dict)]
         Case.set_vartree_inputs(self.top.driver, cases)
-        self.top.driver.recorders = [ListCaseRecorder()]
+        self.top.recorders = [ListCaseRecorder()]
         self.top.run()
 
-        it = self.top.driver.recorders[0].get_iterator()
+        it = self.top.recorders[0].get_iterator()
         case1 = it[0]
         self.assertEqual(case1.get_input('comp1.x'), 33.5)
 
@@ -305,16 +303,16 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.clear_responses()
         self.top.driver.add_responses(outputs)
 
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
 
         # now use the CSV recorder as source of Cases
-        cases = [case for case in self.top.driver.recorders[0].get_iterator()]
+        cases = [case for case in self.top.recorders[0].get_iterator()]
         Case.set_vartree_inputs(self.top.driver, cases)
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: ',
@@ -322,6 +320,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '   timestamp: 1383239019.152071',
             '   outputs:',
             '      Response_0: 0.0',
+            '      driver.workflow.itername: 9',
             ]
         lines = sout.getvalue().split('\n')
         count = 0
@@ -355,7 +354,9 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         csv_data = outfile.readlines()
         outfile.close()
 
-        line = '"timestamp","label","/INPUTS","comp1.x","comp1.y","comp2.x","/OUTPUTS","/METADATA","retries","max_retries","parent_uuid","msg"\r\n'
+        line = '"timestamp","label","/INPUTS","comp1.x","comp1.y","comp2.x",' \
+               '"/OUTPUTS","/METADATA","retries","max_retries","parent_uuid",' \
+               '"msg"\r\n'
         self.assertEqual(csv_data[0], line)
         line = '"","",2.0,4.3,1.9,"","","","","",""\r\n'
         self.assertTrue(csv_data[1].endswith(line))
@@ -370,17 +371,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         Case.set_vartree_inputs(self.top.driver, cases)
         self.top.driver.clear_responses()
         self.top.driver.add_responses(outputs)
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
 
         # now use the CSV recorder as source of Cases
-        cases = [case for case in self.top.driver.recorders[0].get_iterator()]
+        cases = [case for case in self.top.recorders[0].get_iterator()]
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: ',
@@ -439,25 +440,29 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         ##       be seen by the CSVCaseRecorder at all.  Need to discuss with
         ##       users (and Ken) to see if this is reasonable.
         #self.top.comp2.add('a_slot', Slot(object, iotype='in'))
-        #self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        #self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
 
         #case = Case(inputs=[('comp2.a_slot', None)])
         #try:
-            #self.top.driver.recorders[0].record(case)
+            #self.top.recorders[0].record(case)
         #except ValueError, err:
             #msg = "CSV format does not support variables of type <type 'NoneType'>"
-            #self.top.driver.recorders[0].close()
+            #self.top.recorders[0].close()
             #self.assertEqual(msg, str(err))
         #else:
-            #self.top.driver.recorders[0].close()
+            #self.top.recorders[0].close()
             #self.fail('ValueError Expected')
 
     def test_close(self):
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
-        case = Case(inputs=[('comp2.a_slot', None)])
-        assert_raises(self, 'self.top.driver.recorders[0].record(case)',
+        outputs = [('comp1.z', 0), ('comp2.z', 0), ('comp1.a_string', 'world'),
+                   ('comp1.a_array[2]', 0), ('driver.workflow.itername', '1')]
+        inputs = [('comp1.x', 0.1), ('comp1.y', 2 + .1),
+                  ('comp1.x_array[1]', 99.88), ('comp1.b_bool', True)]
+        case = Case(inputs=inputs, outputs=outputs)
+        assert_raises(self, 'self.top.recorders[0].record(case)',
                       globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
 
@@ -469,10 +474,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         for item in backups:
             os.remove(item)
 
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
 
         # Run twice, two backups.
-        self.top.driver.recorders[0].num_backups = 2
+        self.top.recorders[0].num_backups = 2
         self.top.run()
         # Granularity on timestamp is 1 second.
         time.sleep(1)
@@ -481,7 +486,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(len(backups), 2)
 
         # Set backups to 1 and rerun. Should delete down to 1 backup.
-        self.top.driver.recorders[0].num_backups = 1
+        self.top.recorders[0].num_backups = 1
         self.top.run()
         backups = glob.glob(''.join(parts[:-1]) + '_*')
         self.assertEqual(len(backups), 1)
@@ -490,15 +495,15 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             os.remove(item)
         backups = glob.glob(''.join(parts[:-1]) + '_*')
 
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders[0].num_backups = 0
 
     def test_iterate_twice(self):
 
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
         self.top.run()
 
-        data = self.top.driver.recorders[0].get_iterator()
+        data = self.top.recorders[0].get_iterator()
 
         for case in data:
             keys1 = case.keys()
@@ -510,11 +515,11 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
 
     def test_save(self):
         # Check that a recorder can be saved to an egg.
-        self.top.driver.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.driver.recorders[0].num_backups = 0
-        self.top.driver.recorders[0].startup()
+        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
+        self.top.recorders[0].startup()
         try:
-            egg_info = self.top.save_to_egg('top', '1')
+            self.top.save_to_egg('top', '1')
         finally:
             for name in glob.glob('top*.egg'):
                 os.remove(name)

@@ -43,12 +43,9 @@ class FixedPointIterator(Driver):
                        desc='For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
-
     def __init__(self):
         super(FixedPointIterator, self).__init__()
-
         self.current_iteration = 0
-
         self.workflow = CyclicWorkflow()
 
     def execute(self):
@@ -84,10 +81,8 @@ class FixedPointIterator(Driver):
 
             # check max iteration
             if self.current_iteration >= self.max_iteration-1:
-
                 self._logger.warning('Max iterations exceeded without '
                                      'convergence.')
-                self.record_case()
                 return
 
             # Pass output to input
@@ -98,8 +93,6 @@ class FixedPointIterator(Driver):
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
-
-            self.record_case()
 
             self.current_iteration += 1
 
@@ -127,11 +120,11 @@ class FixedPointIterator(Driver):
             self.raise_exception(msg, RuntimeError)
 
         # Check to make sure we don't have a null problem.
-        if n_dep==0:
+        if n_dep == 0:
             self.workflow._get_topsort()
             if len(self.workflow._severed_edges) == 0:
-                msg = "FixedPointIterator requires a cyclic workflow, or a " + \
-                "parameter/constraint pair."
+                msg = "FixedPointIterator requires a cyclic workflow, or a " \
+                      "parameter/constraint pair."
                 self.raise_exception(msg, RuntimeError)
 
         # Check the eq constraints to make sure they look ok.
@@ -146,7 +139,6 @@ class FixedPointIterator(Driver):
                 msg = "Please specify constraints in the form 'A=B'"
                 msg += ': %s = %s' % (eqcon.lhs.text, eqcon.rhs.text)
                 self.raise_exception(msg, RuntimeError)
-
 
 
 @add_delegate(HasStopConditions)
@@ -164,9 +156,6 @@ class IterateUntil(Driver):
         self.iteration = 0
 
     def continue_iteration(self):
-
-        self.record_case()
-
         if self.iteration < 1 and self.run_at_least_once:
             self.iteration += 1
             return True

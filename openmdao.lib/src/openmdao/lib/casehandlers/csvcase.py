@@ -8,6 +8,7 @@ import cStringIO, StringIO
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
+
 class CSVCaseIterator(object):
     """An iterator that returns :class:`Case` objects from a passed-in iterator
     of cases. This can be useful for runtime-generated cases from an
@@ -133,11 +134,11 @@ class CSVCaseIterator(object):
                 if row[i] in ['True', 'False']:
                     row[i] = bool(row[i])
 
-                inputs.append( (field, row[i]) )
+                inputs.append((field, row[i]))
 
             outputs = []
             for i, field in output_fields.iteritems():
-                outputs.append( (field, row[i]) )
+                outputs.append((field, row[i]))
 
             yield Case(inputs=inputs, outputs=outputs, label=label,
                        retries=retries, max_retries=max_retries,
@@ -195,7 +196,8 @@ class CSVCaseIterator(object):
         attr['type'] = type(self.headers).__name__
         attr['value'] = str(self.headers)
         attr['connected'] = ''
-        attr['desc'] = 'Optional dictionary of header labels, where the key is the column number.'
+        attr['desc'] = 'Optional dictionary of header labels,'\
+                       ' where the key is the column number.'
         variables.append(attr)
 
         attrs["Inputs"] = variables
@@ -209,7 +211,7 @@ class CSVCaseRecorder(object):
     implements(ICaseRecorder)
 
     def __init__(self, filename='cases.csv', append=False, delimiter=',',
-                 quotechar = '"'):
+                 quotechar='"'):
 
         self.delimiter = delimiter
         self.quotechar = quotechar

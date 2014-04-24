@@ -46,7 +46,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
             self.driver.add_response('paraboloid.f_xy')
 
             #Simple recorder which stores the cases in memory.
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
 
             self.driver.workflow.add('paraboloid')
 
@@ -108,7 +108,7 @@ if you notice, we specified a ListCaseRecorder as part of a list.
 .. testcode:: simple_model_doe_pieces
 
             #Simple recorder which stores the cases in memory.
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
 
 You can add as many CaseRecorders to that list as you want, and each one will record every case separately. This
 enables you to save information to more than one place at the same time.
@@ -155,7 +155,7 @@ To run this analysis, you would do the following:
             self.driver.add_response('paraboloid.f_xy')
 
             #Simple recorder which stores the cases in memory.
-            self.driver.recorders = [ListCaseRecorder(),]
+            self.recorders = [ListCaseRecorder(),]
 
             self.driver.workflow.add('paraboloid')
 
@@ -173,7 +173,7 @@ To run this analysis, you would do the following:
         print "Elapsed time: ", time.time()-tt, "seconds"
 
         #write the case output to the screen
-        for c in analysis.driver.recorders[0].get_iterator():
+        for c in analysis.recorders[0].get_iterator():
             print "x: %f, y: %f, z: %f"%(c['paraboloid.x'],c['paraboloid.y'],c['paraboloid.f_xy'])
 
 The only new stuff here is the bit at the end where we loop over all the cases that were run. To keep
@@ -205,7 +205,7 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
         raw_data = {}
         X=set()
         Y=set()
-        for c in analysis.driver.recorders[0].get_iterator():
+        for c in analysis.recorders[0].get_iterator():
             raw_data[(c['paraboloid.x'],c['paraboloid.y'])] = c['paraboloid.f_xy']
             X.add(c['paraboloid.x'])
             Y.add(c['paraboloid.y'])
@@ -288,6 +288,7 @@ the cases previously generated.
 
 
 ..
+
   Since DOEdriver is derived from :ref:`CaseIteratorDriver <caseiterdriver.py>`,
   it's possible to run the various cases concurrently.  If evaluating a case
   takes considerable time and you have a multiprocessor machine, setting

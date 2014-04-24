@@ -134,7 +134,7 @@ class _Case(object):
 
     def __str__(self):
         stream = StringIO()
-        stream.write("Case: %s\n", self.index)
+        stream.write("Case: %s\n" % self.index)
         stream.write("   uuid: %s\n" % self.uuid)
         stream.write("   parent_uuid: %s\n" % self.parent_uuid)
         stream.write("   inputs:\n")
@@ -327,13 +327,13 @@ class CaseIteratorDriver(Driver):
 
         outputs = self.get_responses().keys()
 
-        length = len(inp_values[0])
+        length = len(inp_values[0]) if inp_values else 0
         cases = []
         for i in range(length):
             inputs = []
             for j in range(len(inp_paths)):
                 inputs.append((inp_paths[j], inp_values[j][i]))
-            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_id))
+            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_uuid))
         self.init_responses(length)
 
         self._iter = iter(cases)
@@ -547,16 +547,25 @@ class CaseIteratorDriver(Driver):
                 except Exception as exc:
                     msg = 'Exception getting case outputs: %s' % exc
                     self._logger.debug('    %s', msg)
+                    self._logger.debug('%s', case)
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
                 case.msg = str(exc)
                 case.exc = exc
 
-            if case.msg is not None and self.error_policy == 'ABORT':
-                if self._abort_exc is None:
-                    self._abort_exc = exc
-                self._stop = True
+            if case.msg is not None:
+                if self.error_policy == 'ABORT':
+                    if self._abort_exc is None:
+                        self._abort_exc = exc
+                    self._stop = True
+                elif case.retries < self.max_retries:
+                    case.msg = None
+                    case.retries += 1
+                    self._rerun.append(case)
+                else:
+                    self._logger.error('Too many retries for %s', case)
+                    self._stop = True
 
             # Set up for next case.
             in_use = self._start_processing(server, stepping, reload=True)
@@ -659,7 +668,22 @@ class CaseIteratorDriver(Driver):
         if not rerun:
             case.retries = 0
         case.msg = None
-        case.parent_uuid = self._case_id
+
+        # We record the case and are responsible for unique case ids.
+        case.uuid = _Case.next_uuid()
+        case.parent_uuid = self._case_uuid
+
+        # Additional user-requested variables.
+        # These must be added here so that the outputs are in the cases
+        # before they are in the server list.
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        inputs, outputs = top.get_case_variables()
+        outputs.append(('%s.workflow.itername' % self.name,
+                        '%s.%s' % (self.itername, case.index+1)))
+        case.extra_inputs = inputs
+        case.extra_outputs = outputs
 
         try:
             try:
@@ -681,19 +705,25 @@ class CaseIteratorDriver(Driver):
 
     def _record_case(self, scope, case):
         """ Record case data from `scope` in ``case_outputs``. """
-        for path, value in case.fetch_outputs(scope):
+        outputs = case.fetch_outputs(scope)
+        for path, value in outputs:
             path = make_legal_path(path)
             self.set('case_outputs.'+path, value,
                      index=(case.index,), force=True)
 
         # Record regular case in recorders.
-        inputs = case._inputs.items()
-        outputs = case.fetch_outputs(scope)
-        from openmdao.main.case import Case
-        recorded = Case(inputs, outputs, retries=case.retries,
-                        case_uuid=case.uuid, parent_uuid=case.parent_uuid)
-        for recorder in self.recorders:
-            recorder.record(recorded)
+        top = self.parent
+        while top.parent:
+            top = top.parent
+        if top.recorders:
+            inputs = case._inputs.items()
+            inputs.extend(case.extra_inputs)
+            outputs.extend(case.extra_outputs)
+            from openmdao.main.case import Case
+            recorded = Case(inputs, outputs, retries=case.retries,
+                            case_uuid=case.uuid, parent_uuid=case.parent_uuid)
+            for recorder in top.recorders:
+                recorder.record(recorded)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -789,7 +819,7 @@ class CaseIteratorDriver(Driver):
         if server.queue is None:
             try:
 #                self.workflow._parent.update_parameters()
-                self.workflow.run(case_id=server.case.uuid)
+                self.workflow.run(case_uuid=server.case.uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
@@ -801,7 +831,7 @@ class CaseIteratorDriver(Driver):
         case = server.case
         try:
             server.top.set_itername(self.get_itername(), case.index+1)
-            server.top.run(case_id=case.uuid)
+            server.top.run(case_uuid=case.uuid)
         except Exception as exc:
             server.exception = TracedError(exc, traceback.format_exc())
             self._logger.error('Caught exception from server %r,'

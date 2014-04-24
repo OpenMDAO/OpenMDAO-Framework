@@ -20,17 +20,18 @@ Name                  Output Type
 ``ListCaseRecorder``  Python List
 ==================== ====================================================================
 
-The recorders are interchangeable, so you can use any of them in a :term:`Slot` that can accept them. All
-drivers contain a Slot that can accept a list of case recorders. Why a list? It's so you can have the same
-case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
+The recorders are interchangeable, so you can use any of them in a :term:`Slot` that can accept them.
+All assemblies contain a Slot that can accept a list of case recorders.
+However, only the top-level assembly's recorders are used.
+Why a list? It's so you can have the same case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
 output data to the screen and use the DBCaseRecorder to save the same data to a database. 
 
-Each driver determines what it needs to write to the recorders in its list. 
+Each driver determines what it needs to write to the recorders. 
 In the previous example, the DOEdriver saves each point in the DOE as a
 case. However, a single-objective optimizer, such as the SLSQPdriver, saves the state of the model
 at each iteration in the optimization so that the convergence history can be observed. The
 state of the model includes the parameters, objective, constraints, and any other data that
-you choose to include by listing them in the ``printvars`` variable.
+you choose to include by listing them in the top-level assembly's ``printvars`` variable.
 
 The CSVCaseRecorder outputs the selected variables into a file in the csv
 (Comma Separated Value) format. The DBCaseRecorder stores the selected
@@ -57,7 +58,7 @@ SQLite database for future use. The code for this should look like:
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
-Here, we set ``opt_problem.driver.recorders`` to be a list that contains the csv and db case
+Here, we set ``opt_problem.recorders`` to be a list that contains the csv and db case
 recorders. The CSVCaseRecorder takes a filename as an argument, as does the DBCaseRecorder.
 These files will be written in the directory where you execute this Python file.
 
@@ -95,7 +96,7 @@ to keep for each CSVCaseRecorder object by adding the following line to the abov
 
 ::
 
-   opt_problem.driver.recorders[0].num_backups = 3
+   opt_problem.recorders[0].num_backups = 3
 
 If you set the number of backups to 0, no backup files are saved. The default number of backup
 files is 5. Note that it is a rolling save, so the oldest files are deleted as the newest ones 
@@ -113,7 +114,7 @@ of our parameters, constraints, and objectives to a file named ``'data.txt'``.
     opt_problem = OptimizationConstrained()
     
     outfile = open('data.txt', 'w')
-    opt_problem.driver.recorders = [DumpCaseRecorder(outfile)]
+    opt_problem.recorders = [DumpCaseRecorder(outfile)]
     opt_problem.run()
 
             
@@ -137,7 +138,7 @@ rerunning the model.
 
 ::
 
-      opt_problem.driver.printvars = ['*']
+      opt_problem.printvars = ['*']
       opt_problem.run()
 
 The output produced is more detailed:
@@ -154,7 +155,6 @@ The output produced is more detailed:
          driver.iprint: 0
          driver.maxiter: 50
          driver.output_filename: slsqp.out
-         driver.printvars: ['*']
          paraboloid.directory: 
          paraboloid.force_execute: False
          paraboloid.x: 7.16666667003
@@ -170,7 +170,7 @@ You can also use partial wildcard matches and include multiple wildcards in the
 
 ::
 
-      opt_problem.driver.printvars = ['comp1.*', 'comp2.*', *error*]
+      opt_problem.printvars = ['comp1.*', 'comp2.*', *error*]
 
 are possible. This will return a set of cases with all variables from ``comp1,
 comp2`` as well as any variable with "error" in its name.
@@ -180,5 +180,5 @@ rewrite the previous line like this:
 
 ::
 
-      opt_problem.driver.printvars = ['comp?.*', *error*]
+      opt_problem.printvars = ['comp?.*', *error*]
 
