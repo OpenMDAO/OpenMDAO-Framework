@@ -10,7 +10,7 @@ from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
-    assert(not name.startswith('~'))
+    assert not name.startswith('~')
     return pa_name + '.' + name.replace('.', '|')
 
 
@@ -74,7 +74,18 @@ class PseudoAssembly(object):
             self.ffd_order = 0
 
         if fd:
-            self.itercomps = [c.name for c in wflow]
+
+            # Support for taking the deriative of a subset of our
+            # workflow. This breaks down if we have subdrivers,
+            # so we have to revert back to full workflow if any
+            # are relevant.
+            itercomps = set([c.name for c in wflow])
+            comps = set(self.comps)
+            if comps.issubset(itercomps):
+                self.itercomps = self.comps
+            else:
+                self.itercomps = [c.name for c in wflow]
+
         elif drv_name is not None:
             self.itercomps = [drv_name]
         else:
@@ -129,7 +140,7 @@ class PseudoAssembly(object):
         components."""
         self.itername = name
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0):
         """Run all components contained in this assy. Used by finite
         difference."""
 
@@ -141,7 +152,7 @@ class PseudoAssembly(object):
         for name in self.itercomps:
             comp = self.wflow.scope.get(name)
             comp.set_itername(self.itername+'-fd')
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+            comp.run(ffd_order=ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
                          required_inputs=None, required_outputs=None):

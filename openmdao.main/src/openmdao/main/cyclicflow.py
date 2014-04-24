@@ -61,7 +61,7 @@ class CyclicWorkflow(SequentialWorkflow):
 
         if self._topsort is None:
             self._severed_edges = set()
-            
+
             graph = nx.DiGraph(self._get_collapsed_graph())
 
             cyclic = True
@@ -190,7 +190,7 @@ class CyclicWorkflow(SequentialWorkflow):
         self._workflow_graph = collapsed_graph
 
         return self._workflow_graph
-    
+
     def initialize_residual(self):
         """Creates the array that stores the residual. Also returns the
         number of edges.
@@ -229,7 +229,7 @@ class CyclicWorkflow(SequentialWorkflow):
         return super(CyclicWorkflow, self).initialize_residual()
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
-                         group_nondif=True):
+                         group_nondif=True, add_implicit=True):
         """Returns the local graph that we use for derivatives. For cyclic flows,
         we need to sever edges and use them as inputs/outputs.
         """
@@ -242,14 +242,16 @@ class CyclicWorkflow(SequentialWorkflow):
             if outputs is None:
                 outputs = []
 
-            # Solver can specify parameters
-            if hasattr(self._parent, 'list_param_group_targets'):
-                inputs = self._parent.list_param_group_targets()
+            if add_implicit is True:
 
-            # Solver can specify equality constraints
-            if hasattr(self._parent, 'get_eq_constraints'):
-                outputs = ["%s.out0" % item.pcomp_name for item in
-                               self._parent.get_constraints().values()]
+                # Solver can specify parameters
+                if hasattr(self._parent, 'list_param_group_targets'):
+                    inputs.extend(self._parent.list_param_group_targets())
+
+                # Solver can specify equality constraints
+                if hasattr(self._parent, 'get_eq_constraints'):
+                    outputs.extend(["%s.out0" % item.pcomp_name for item in
+                                   self._parent.get_constraints().values()])
 
             # Cyclic flows need to be severed before derivatives are calculated.
             self._get_topsort()
@@ -258,8 +260,9 @@ class CyclicWorkflow(SequentialWorkflow):
                 inputs.append(target)
                 outputs.append(src)
 
-            dgraph = super(CyclicWorkflow, self).derivative_graph(inputs,
-                            outputs, fd, self._severed_edges, group_nondif)
+            dgraph = super(CyclicWorkflow, self).derivative_graph(inputs=inputs,
+                            outputs=outputs, fd=fd, severed=self._severed_edges,
+                            group_nondif=group_nondif, add_implicit=add_implicit)
 
             if group_nondif is False:
                 return dgraph

@@ -163,8 +163,5 @@ class COBYLAdriver(Driver):
         vals = self.eval_parameters(self.parent)
         g = hstack([cons, (vals - self.lower), (self.upper - vals)])
 
-        # Write out some relevant information to the recorder
-        self.record_case()
-
         return f, g
 

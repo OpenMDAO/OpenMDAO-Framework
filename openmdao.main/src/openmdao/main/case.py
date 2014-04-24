@@ -4,6 +4,7 @@ from array import array
 import traceback
 from StringIO import StringIO
 from inspect import getmro
+import weakref
 
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError, traceback_str
@@ -18,6 +19,7 @@ class MissingValue(object):
         return "'MissingValue'"
 
 _Missing = MissingValue()
+
 
 def _simpleflatten(name, obj):
     return [(name, obj)]
@@ -59,7 +61,8 @@ def flatten_obj(name, obj):
     if obj is not None:
         return [(name, '{%s}' % str(obj))]
     else:
-        return []
+        return [(name, '')]
+
 
 class Case(object):
     """Contains all information necessary to specify an input *case*, i.e.,
@@ -281,7 +284,7 @@ class Case(object):
         """Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
-        scope._case_id = self.uuid
+        scope._case_uuid = self.uuid
         if self._exprs:
             for name, value in self._inputs.items():
                 expr = self._exprs.get(name)
@@ -423,4 +426,98 @@ class Case(object):
             for path, value in case.get_inputs():
                 path = make_legal_path(path)
                 driver.set('case_inputs.'+path, value, index=(i,))
+
+
+class CaseTreeNode(object):
+    """ Represents a node in a tree of cases. Currently just for testing. """
+
+    def __init__(self, case, parent):
+        self.case = case
+        self._parent = None
+        self.parent = parent
+        self.children = []
+
+    @property
+    def parent(self):
+        return None if self._parent is None else self._parent()
+
+    @parent.setter
+    def parent(self, node):
+        self._parent = None if node is None else weakref.ref(node)
+
+    @staticmethod
+    def sort(cases):
+        """ Return forest populated from `cases`. """
+        # Handles cases from tests, but not proven to handle an arbitrary
+        # collection of cases.
+        uuids = set()
+        roots = []
+        for case in cases:
+            if case.uuid in uuids:
+                raise RuntimeError('Duplicate uuid! %s' % case.uuid)
+            uuids.add(case.uuid)
+
+            node = CaseTreeNode(case, None)
+            for root in list(roots):
+                if case.uuid == root.case.parent_uuid:
+                    root.parent = node
+                    node.children.append(root)
+                    roots.remove(root)
+                else:
+                    if root._insert(node):
+                        break
+            else:
+                roots.append(node)
+
+        # Rescan roots trying to consolidate the forest.
+        old_len = len(roots)
+        new_len = 0
+        while new_len < old_len:
+            old_len = len(roots)
+            for node in list(roots):
+                for root in list(roots):
+                    if node is root:
+                        continue
+                    elif node.case.uuid == root.case.parent_uuid:
+                        root.parent = node
+                        node.children.append(root)
+                        roots.remove(root)
+                    elif root._insert(node):
+                        roots.remove(node)
+            new_len = len(roots)
+
+        return roots
+
+    def _insert(self, node):
+        """ Return True if `node` has been inserted into tree. """
+        if node.case.parent_uuid == self.case.uuid:
+            self.children.append(node)
+            return True
+        else:
+            for child in self.children:
+                if child._insert(node):
+                    return True
+        return False
+
+    def dump(self, level=0):
+        """ Recursively display the tree. """
+        prefix = '    '*level
+        print '%suuid %s' % (prefix, self.case.uuid)
+        print '%sparent uuid %s' % (prefix, self.case.parent_uuid)
+        for name, value in self.case.get_outputs():
+            if name.endswith('workflow.itername'):
+                print '%sitername %s' % (prefix, value)
+        print '%s#children %s' % (prefix, len(self.children))
+        for child in self.children:
+            child.dump(level+1)
+
+    def iternames(self):
+        """ Recursively scan for `workflow.itername`. """
+        iternames = []
+        for name, value in self.case.get_outputs():
+            if name.endswith('workflow.itername'):
+                iternames.append(value)
+        for child in self.children:
+            iternames.extend(child.iternames())
+        return iternames
 

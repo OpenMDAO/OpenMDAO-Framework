@@ -353,6 +353,7 @@ class ComponentWhichRaisesException(Component):
         self.f_x = sqrt(self.x)
 
 
+
 class ModelWithException(Assembly):
     """ Use DOEdriver with Component which throws exception. """
 

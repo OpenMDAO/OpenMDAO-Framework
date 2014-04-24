@@ -6,9 +6,9 @@ sort.
 import unittest
 
 try:
-    from numpy import zeros, array
+    from numpy import array
 except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array
+    from openmdao.main.numpy_fallback import array
 
 from openmdao.main.api import Assembly, Component, Driver, CyclicWorkflow, VariableTree
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -18,6 +18,10 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.util.decorators import add_delegate
+
+# to keep pseudocomp names consistent in tests
+import openmdao.main.pseudocomp as pcompmod
+
 
 class MyComp(Component):
 
@@ -66,9 +70,9 @@ class MultiPath(Assembly):
         self.connect('c3.yy', 'c1.xx')
 
 @add_delegate(HasParameters, HasEqConstraints)
-class MySolver(Driver): 
+class MySolver(Driver):
     implements(ISolver)
-    
+
     def __init__(self):
         super(MySolver, self).__init__()
         self.workflow = CyclicWorkflow()
@@ -88,7 +92,7 @@ class TestCom(Component):
               iotype='in')
     y = Float(iotype='out')
 
-    ratio = Float(default_value=0.0, iotype = 'in')
+    ratio = Float(default_value=0.0, iotype='in')
 
     def execute(self):
         self.y = self.x**2. + self.ratio
@@ -118,6 +122,7 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         self.model = None
+        pcompmod._count = 0  # make sure pseudocomp names are consistent
 
     def tearDown(self):
         """ Called after each test. """

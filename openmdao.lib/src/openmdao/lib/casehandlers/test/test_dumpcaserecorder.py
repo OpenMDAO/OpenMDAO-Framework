@@ -34,20 +34,19 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_bad_recorder(self):
         try:
-            self.top.driver.recorders = DumpCaseRecorder()
+            self.top.recorders = DumpCaseRecorder()
         except Exception as err:
-            self.assertTrue(str(err).startswith("The 'recorders' trait of a SimpleCaseIterDriver"))
+            self.assertTrue(str(err).startswith("The 'recorders' trait of an Assembly"))
             self.assertTrue(str(err).endswith(" was specified."))
         else:
             self.fail("Exception expected")
 
-
     def test_dumprecorder(self):
         sout1 = StringIO.StringIO()
         sout2 = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout1),
-                                     DumpCaseRecorder(sout2)]
+        self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
         self.top.run()
+
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -58,6 +57,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             '   outputs:',
             '      Response_0: 24.0',
             '      Response_1: 25.0',
+            '      driver.workflow.itername: 9',
             ]
 
         for sout in [sout1, sout2]:
@@ -82,8 +82,9 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.add_objective('comp1.z')
         self.top.driver.add_objective('comp2.z')
 
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
+
         expected = [
             'Case: ',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -108,8 +109,8 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
     def test_close(self):
         sout1 = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout1)]
-        self.top.driver.recorders[0].close()
+        self.top.recorders = [DumpCaseRecorder(sout1)]
+        self.top.recorders[0].close()
         self.top.run()
         self.assertEqual(sout1.getvalue(), '')
 

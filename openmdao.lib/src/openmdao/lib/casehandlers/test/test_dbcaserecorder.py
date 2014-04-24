@@ -59,12 +59,12 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         # by a DBCaseIterator.  Finally the cases are dumped to a string after
         # being run for the second time.
 
-        self.top.driver.recorders = [DBCaseRecorder()]
+        self.top.recorders = [DBCaseRecorder()]
         self.top.run()
 
         # Gui pane stuff
 
-        attrs = self.top.driver.recorders[0].get_attributes()
+        attrs = self.top.recorders[0].get_attributes()
         self.assertTrue("Inputs" in attrs.keys())
         self.assertTrue({'name': 'dbfile',
                          'id': 'dbfile',
@@ -75,11 +75,11 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                        'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
 
         # now use the DB as source of Cases
-        cases = [case for case in self.top.driver.recorders[0].get_iterator()]
+        cases = [case for case in self.top.recorders[0].get_iterator()]
         Case.set_vartree_inputs(self.top.driver, cases)
 
         sout = StringIO.StringIO()
-        self.top.driver.recorders = [DumpCaseRecorder(sout)]
+        self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
             'Case: ',
@@ -215,13 +215,15 @@ class DBCaseRecorderTestCase(unittest.TestCase):
                          'type': 'str',
                          'connected': '',
                          'value': ':memory:',
-                         'desc': 'Name of the database file to be iterated. Default ' +
-                       'is ":memory:", which reads the database from memory.'} in attrs['Inputs'])
+                         'desc': 'Name of the database file to be iterated.'
+                                 ' Default is ":memory:", which reads the'
+                                 ' database from memory.'} in attrs['Inputs'])
         self.assertTrue({'name': 'selectors',
                          'type': 'NoneType',
                          'connected': '',
                          'value': 'None',
-                         'desc': 'String of additional SQL queries to apply to the case selection.'} in attrs['Inputs'])
+                         'desc': 'String of additional SQL queries to apply to'
+                                 ' the case selection.'} in attrs['Inputs'])
 
     def test_string(self):
         recorder = DBCaseRecorder()
@@ -280,7 +282,7 @@ class NestedCaseTestCase(unittest.TestCase):
         asm.add('comp2', TracedExecComp(exprs=['z=x+y']))
         asm.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
-        driver.recorders = [DBCaseRecorder(dbname, append=True)]
+        asm.recorders = [DBCaseRecorder(dbname, append=True)]
         return asm
 
     def _create_nested_assemblies(self, dbname, drivertype):
@@ -290,12 +292,10 @@ class NestedCaseTestCase(unittest.TestCase):
         top.asm.add('asm', self._create_assembly(dbname, drivertype))
         top.asm.driver.workflow.add('asm')
 
+        top.recorders = [DBCaseRecorder(dbname, append=True)]
         Case.set_vartree_inputs(top.driver, self._create_cases(1))
-        top.driver.recorders = [DBCaseRecorder(dbname, append=True)]
         Case.set_vartree_inputs(top.asm.driver, self._create_cases(2))
-        top.asm.driver.recorders = [DBCaseRecorder(dbname, append=True)]
         Case.set_vartree_inputs(top.asm.asm.driver, self._create_cases(3))
-        top.asm.asm.driver.recorder = DBCaseRecorder(dbname, append=True)
 
         return top
 
@@ -306,10 +306,8 @@ class NestedCaseTestCase(unittest.TestCase):
         # Case hierarchy is structured properly
         top = set_as_top(self._create_assembly(dbname, drivertype))
         driver2 = top.add('driver2', drivertype())
-        driver2.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver.workflow.add(['driver2'])
         driver3 = top.add('driver3', drivertype())
-        driver3.recorders = [DBCaseRecorder(dbname, append=True)]
         top.driver2.workflow.add(['driver3'])
         top.driver3.workflow.add(['comp1', 'comp2'])
 

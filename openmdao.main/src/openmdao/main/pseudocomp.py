@@ -54,7 +54,8 @@ def unit_xform(node, in_units, out_units):
     try:
         scaler, adder = inpq.unit.conversion_tuple_to(outpq.unit)
     except TypeError:
-        raise TypeError("units '%s' are incompatible with assigning units of '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
+        raise TypeError("units '%s' are incompatible with assigning units of"
+                        " '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
     return scaler_adder_xform(node, scaler, adder)
 
 
@@ -83,7 +84,8 @@ class PseudoComponent(object):
     """
     implements(IComponent)
 
-    def __init__(self, parent, srcexpr, destexpr=None, translate=True, pseudo_type=None):
+    def __init__(self, parent, srcexpr, destexpr=None, translate=True,
+                 pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
@@ -120,7 +122,8 @@ class PseudoComponent(object):
             if len(refs) == 1:
                 setattr(self, 'out0', None)
             else:
-                raise RuntimeError("output of PseudoComponent must reference only one variable")
+                raise RuntimeError("output of PseudoComponent must reference"
+                                   " only one variable")
         varmap[refs[0]] = 'out0'
         rvarmap.setdefault(_get_varname(refs[0]), set()).add(refs[0])
 
@@ -159,8 +162,8 @@ class PseudoComponent(object):
             try:
                 unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
-                raise TypeError("Incompatible units for '%s' and '%s': %s" % (srcexpr.text,
-                                                                    destexpr.text, err))
+                raise TypeError("Incompatible units for '%s' and '%s': %s"
+                                % (srcexpr.text, destexpr.text, err))
             unit_src = print_node(unitxform)
             xformed_src = unit_src
         else:
@@ -276,7 +279,7 @@ class PseudoComponent(object):
     def connect(self, src, dest):
         self._valid = False
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0):
         self.update_inputs()
 
         src = self._srcexpr.evaluate()
