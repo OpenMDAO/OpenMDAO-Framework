@@ -28,7 +28,6 @@ from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.mpiwrap import MPI, PETSc, COMM_NULL, mpiprint
 
 from openmdao.util.decorators import add_delegate
 

@@ -222,10 +222,10 @@ class PseudoComponent(object):
                                            for dest in self._outdests])
         return conns
 
-    def list_inputs(self):
+    def list_inputs(self, connected=True):
         return self._inputs[:]
 
-    def list_outputs(self):
+    def list_outputs(self, connected=True):
         return ['out0']
 
     def list_comp_connections(self):

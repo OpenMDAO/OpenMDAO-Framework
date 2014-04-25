@@ -192,24 +192,6 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    # def get_driver_graph(self):
-    #     """Returns the subgraph of the full depgraph that is
-    #     relevant to this workflow and this workflow's driver (and
-    #     all subdrivers).
-    #     """
-    #     if self._drv_graph is None:
-    #         # make a copy of the depgraph we can modify
-    #         depgraph = self.scope._depgraph
-    #         graph = depgraph.subgraph(depgraph.nodes_iter())
-    #         # add all driver related 'connections'
-    #         self._parent.add_driver_connections(graph, recurse=True)
-
-    #         # remove all unconnected variables and components, 
-    #         # and only what's relevant remains
-    #         graph.prune_unconnected()
-    #         self._drv_graph = graph
-    #     return self._drv_graph
-
     def get_comp_graph(self):
         """Returns the subgraph of the component graph that contains
         the components in this workflow, including additional connections

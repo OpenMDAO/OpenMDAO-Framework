@@ -189,13 +189,15 @@ def _get_model5():
 def _get_model6():
     """a simple FPI"""
     top = set_as_top(Assembly())
-    top.add('driver', NTimes(3))
+    top.add('driver', NTimes(99))
     top.add("C1", ExecComp(['f_x=x**3']))
     top.add("C2", ExecComp(['f_x=sin(x)']))
     top.driver.workflow.add(['C1','C2'])
 
     top.connect('C1.f_x', 'C2.x')
     top.driver.add_constraint('C2.f_x=C1.x')
+
+    top.C1.x = 1.5
 
     # should converge to 0.92862630873173
 
@@ -223,21 +225,21 @@ if __name__ == '__main__':
 
     if under_mpirun():
         setup_mpi(top)
-        mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
+        #mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
         #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
         #mpiprint(top.subdriver.workflow._subsystem.dump_subsystem_tree(stream=None))
 
-        top.driver.workflow.get_subsystem()._dump_graph(recurse=True)
+        #top.driver.workflow.get_subsystem()._dump_graph(recurse=True)
 
     if run:
         mpiprint('-'*50)
         top.run()
 
-        for i in range(9):
-            for v in ['a','b','c','d']:
-                name = "C%d.%s" % (i+1,v)
-                if top.contains(name):
-                    mpiprint("%s = %s" % (name,top.get(name)))
+        # for i in range(9):
+        #     for v in ['a','b','c','d']:
+        #         name = "C%d.%s" % (i+1,v)
+        #         if top.contains(name):
+        #             mpiprint("%s = %s" % (name,top.get(name)))
 
 
 

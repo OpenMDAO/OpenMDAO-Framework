@@ -25,7 +25,7 @@ class VecWrapper(object):
             vset = allvars
         else:
             vset = inputs
-            mpiprint("SCATTER_INPUTS: %s" % inputs)
+            #mpiprint("SCATTER_INPUTS: %s" % inputs)
             notfound = [n for n in inputs if n not in variables]
             if notfound:
                 mpiprint("SCATTER for %s: inputs %s\nnot in variables %s" %
@@ -39,7 +39,7 @@ class VecWrapper(object):
                 continue
             sz = var['size']
             if sz != system.local_var_sizes[system.mpi.comm.rank,i]:
-                mpiprint("ERROR: sz (%d) != local_var_sizes (%d) in %s" % 
+                raise RuntimeError("ERROR: sz (%d) != local_var_sizes (%d) in %s" % 
                           (sz,system.local_var_sizes[system.mpi.comm.rank,i],system.name))
             if sz > 0:
                 end += sz
@@ -78,10 +78,13 @@ class VecWrapper(object):
         # create the PETSc vector
         self.petsc_vec = get_petsc_vec(system.mpi.comm, self.array)
 
-        mpiprint("SCATTER VEC: %s" % self._info.keys())
+        #mpiprint("SCATTER VEC: %s" % self._info.keys())
 
     def __getitem__(self, name):
         return self._info[name][0]
+
+    def __contains__(self, name):
+        return name in self._info
         
     def list_views(self):
         """Return a list of names of subviews of our array."""
@@ -101,14 +104,24 @@ class VecWrapper(object):
         view, start = self._info[name]
         return (start, start + view.size)
 
-    def set_from_scope(self, scope, vnames):
+    def indices(self, name):
+        """Return the set of indices corresponding to name
+        as an index array.
+        """
+        view, start = self._info[name]
+        return petsc_linspace(start, start+view.size)
+
+    def set_from_scope(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
         versions of them in our array.
         """
+        if vnames is None:
+            vnames = self._info.keys()
+
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("getting %s from scope" % name)
+                #mpiprint("getting %s from scope" % name)
                 array_val[:] = scope.get_flattened_value(name)
 
     def set_to_scope(self, scope, vnames):
@@ -118,7 +131,7 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("setting %s to scope" % name)
+                #mpiprint("setting %s to scope" % name)
                 scope.set_flattened_value(name, array_val)
            
     def dump(self, vname):
@@ -135,7 +148,7 @@ class DataTransfer(object):
     def __init__(self, system, var_idxs, input_idxs, scatter_vars):
         self.scatter_vars = scatter_vars[:]
 
-        mpiprint("SCATTER_VARS: %s" % scatter_vars)
+        #mpiprint("SCATTER_VARS: %s" % scatter_vars)
         merged_vars = idx_merge(var_idxs)
         merged_inputs = idx_merge(input_idxs)
 
@@ -166,11 +179,13 @@ class DataTransfer(object):
         src_petsc = srcvec.petsc_vec
         dest_petsc = destvec.petsc_vec
 
-        mpiprint("src vector pre-set_from_scope: %s" % srcvec.array)
-        srcvec.set_from_scope(system.scope, self.scatter_vars)
-        mpiprint("src vector post-set_from_scope: %s" % srcvec.array)
+        #mpiprint("src vector pre-set_from_scope: %s" % srcvec._info.items())
+        
+        scatter_vars = [v[0] for v in self.scatter_vars]
+        srcvec.set_from_scope(system.scope, scatter_vars)
+        #mpiprint("src vector post-set_from_scope: %s" % srcvec._info.items())
 
-        mpiprint("dest vector pre-scatter: %s" % destvec.array)
+        #mpiprint("dest vector pre-scatter: %s" % destvec._info.items())
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
         self.scatter.scatter(src_petsc, dest_petsc, addv=False, mode=False)
@@ -179,9 +194,10 @@ class DataTransfer(object):
         #else:
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
-        mpiprint("dest vector post-scatter: %s" % destvec.array)
+        #mpiprint("dest vector post-scatter: %s" % destvec._info.items())
 
-        destvec.set_to_scope(system.scope, self.scatter_vars)
+        scatter_vars = [v[1] for v in self.scatter_vars]
+        destvec.set_to_scope(system.scope, scatter_vars)
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
@@ -196,4 +212,10 @@ def idx_merge(idxs):
             else:
                 return numpy.concatenate(idxs)
     return idxs
+
+def petsc_linspace(start, end):
+    """ Return a linspace vector of the right int type for PETSc """
+    #return numpy.arange(start, end, dtype=PETSc.IntType)
+    return numpy.array(numpy.linspace(start, end-1, end-start), 
+                       dtype=PETSc.IntType)
 

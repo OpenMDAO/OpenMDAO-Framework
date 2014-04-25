@@ -12,7 +12,7 @@ import numpy
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge
+from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
 
 class System(object):
     def __init__(self, graph, scope, parent_node):
@@ -31,7 +31,6 @@ class System(object):
         self.app_ordering = None
         self.scatter_full = None
         self.scatter_partial = None
-        #self._dump_graph()
 
     def get_inputs(self, local=False):
         # the full set of inputs is stored in the 
@@ -73,9 +72,6 @@ class System(object):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
                 self.all_variables[vname] = { 'size': 0 }
-
-        #mpiprint("AFTER setup_variables, %s has %s" % (self.name,
-        #                                               self.all_variables.keys()))
         
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for 
@@ -108,7 +104,6 @@ class System(object):
         for i, (name, var) in enumerate(self.variables.items()):
             self.local_var_sizes[rank, i] = var['size']
 
-        #mpiprint("%s before ALLGATHER: local_var_sizes[%d] = %s" % (self.name,rank,self.local_var_sizes[rank]))
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
@@ -116,12 +111,6 @@ class System(object):
         # only have a slice of each of the component's variables.
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
-
-        #mpiprint("vars and local sizes for %s " % self.name)
-        #for name, sz in zip(self.variables.keys(), self.local_var_sizes[rank, :]):
-        #    mpiprint("%s ( %d )" % (name, sz))
-
-        #mpiprint("%s local_var_sizes:\n %s" % (self.name, self.local_var_sizes))
 
         # create a (1 x nproc) vector for the sizes of all of our 
         # local inputs
@@ -155,8 +144,6 @@ class System(object):
         for name in ['u', 'f']: #, 'du', 'df']:
             self.vec[name] = VecWrapper(self, arrays[name])
 
-        # if insize == 0 or len(inputs) == 0:
-        #     mpiprint("ERROR: empty 'p' vector in %s: insize=%d, inputs=%s" % (self.name,insize,inputs))
         for name in ['p']:#, 'dp']:
             self.vec[name] = VecWrapper(self, numpy.zeros(insize), 
                                         inputs=inputs)
@@ -271,16 +258,12 @@ class SimpleSystem(System):
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
 
     def get_inputs(self, local=False):
-        # the full set of inputs is stored in the 
-        # metadata of this System's graph.
-        # data = self.graph.graph
-        # return data.get('inputs',set()).union(data.get('drv_inputs',set()))
         inputs = set()
         inputs.update(self.graph.graph.get('inputs',()))
         inputs.update(self.graph.graph.get('drv_inputs',()))
         return inputs
 
-    def run(self, scope):
+    def run(self):
         comp = self._comp
         #mpiprint("running simple system %s: %s" % (self.name, self._comp.name))
         # if not isinstance(comp, PseudoComponent):
@@ -288,9 +271,12 @@ class SimpleSystem(System):
 
         mpiprint("simple running %s" % comp.name)
         comp.run()
+        if self._comp.parent is not None:
+            self.vec['u'].set_from_scope(self._comp.parent)
+        for vname in chain(comp.list_inputs(connected=True), comp.list_outputs(connected=True)):
+            mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
     def setup_communicators(self, comm, scope):
-        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         self.subsystems = []
 
@@ -319,7 +305,7 @@ class SimpleSystem(System):
         for dest in self.get_inputs():
             if dest in self.variables:
                 ivar = varkeys.index(dest)
-                scatter_vars.append(dest)
+                scatter_vars.append((dest,dest))
                 # FIXME: currently just using the local var size for input size
                 src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + # ??? args[arg] - user really needs to be able to define size for multi-proc comps
                                       petsc_linspace(0, self.local_var_sizes[rank,ivar]))
@@ -335,18 +321,21 @@ class SimpleSystem(System):
         vec = self.vec
         self.scatter('u','p')
         vec['f'].array[:] = vec['u'].array[:]
-        self.run(self.scope)
+        self.run()
         vec['f'].array[:] -= vec['u'].array[:]
         vec['u'].array[:] += vec['f'].array[:]
+
+    def solve_F(self):  # FIXME (see above)
+        self.scatter('u','p')
+        self._comp.run()
 
 
 class DriverSystem(SimpleSystem):
     """A System for a Driver component."""
 
     def setup_communicators(self, comm, scope):
-        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
-        self.mpi.comm = comm
-        self._comp.workflow.get_subsystem().setup_communicators(comm, scope)
+        self._comp.workflow.get_subsystem().setup_communicators(self.mpi.comm, 
+                                                                scope)
 
 
 class AssemblySystem(SimpleSystem):
@@ -409,56 +398,71 @@ class CompoundSystem(System):
         start = end = numpy.sum(input_sizes[:rank])
         varkeys = self.variables.keys()
 
-        mpiprint("INITIAL START/END = %d, %d" % (start, end))
-        mpiprint("INPUT SIZES: %s" % input_sizes)
-        mpiprint("comm size: %d" % self.mpi.comm.size)
-        mpiprint("my inputs: %s" % self.get_inputs())
-        mpiprint("my local inputs: %s" % self.get_inputs(local=True))
+        # mpiprint("INITIAL START/END = %d, %d" % (start, end))
+        # mpiprint("INPUT SIZES: %s" % input_sizes)
+        # mpiprint("comm size: %d" % self.mpi.comm.size)
+        # mpiprint("my inputs: %s" % self.get_inputs())
+        # mpiprint("my local inputs: %s" % self.get_inputs(local=True))
 
-        my_inputs = set(self.get_inputs())
+        #my_inputs = set(self.get_inputs())
 
         # since scatters must be called in ALL processes in the
         # communicator, we need to call scatter even in non-local
         # subsystems.
-        for subsystem in self.get_all_subsystems():
-        #for subsystem in self.subsystems:
+        #for subsystem in self.get_all_subsystems():
+        for node, data in self.graph.nodes_iter(data=True):
+            subsystem = data['system']
+
             src_partial = []
             dest_partial = []
             scatter_vars = []
+            for u,v,edata in self.graph.in_edges_iter(node, data=True):
+                var_edges = edata['var_edges']
+                
+                for src, dest in var_edges:
+                    if dest not in self.vec['p']:
+                        dest_idxs = numpy.array([],'i')
+                        src_idxs = numpy.array([], 'i')
+                    else:
+                        dest_idxs = self.vec['p'].indices(dest)
+                        isrc = varkeys.index(src)
+                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
+                                      petsc_linspace(0, dest_idxs.shape[0]) #args[arg]
+
             #mpiprint("subsystem: %s\n  inputs: %s" % 
             #            (subsystem.name, subsystem.get_inputs()))
-            for inp in subsystem.get_inputs():
-                if inp not in my_inputs:
-                    continue
-                ivar = varkeys.index(inp)
-                mpiprint("INP = %s" % inp)
-                dest_size = var_sizes[rank, ivar]
-                src_idxs = numpy.sum(var_sizes[:, :ivar]) + \
-                              petsc_linspace(0, dest_size) #args[arg]
+            # for inp in subsystem.get_inputs():
+            #     if inp not in my_inputs:
+            #         continue
+            #     ivar = varkeys.index(inp)
+            #     mpiprint("INP = %s" % inp)
+            #     dest_size = var_sizes[rank, ivar]
+            #     src_idxs = numpy.sum(var_sizes[:, :ivar]) + \
+            #                   petsc_linspace(0, dest_size) #args[arg]
 
-                end += dest_size #args[arg].shape[0]
-                dest_idxs = petsc_linspace(start, end)
-                mpiprint("START/END = %d, %d" % (start, end))
-                start += dest_size #args[arg].shape[0]
+            #     end += dest_size #args[arg].shape[0]
+            #     dest_idxs = petsc_linspace(start, end)
+            #     mpiprint("START/END = %d, %d" % (start, end))
+            #     start += dest_size #args[arg].shape[0]
 
-                src_partial.append(src_idxs)
-                dest_partial.append(dest_idxs)
-                src_full.append(src_idxs)
-                dest_full.append(dest_idxs)
-                scatter_vars.append(inp)
-                full_scatter_vars.append(inp)
+                    src_partial.append(src_idxs)
+                    dest_partial.append(dest_idxs)
+                    src_full.append(src_idxs)
+                    dest_full.append(dest_idxs)
+                    scatter_vars.append((src,dest))
+                    full_scatter_vars.append((src,dest))
 
             src_partial = idx_merge(src_partial)
             dest_partial = idx_merge(dest_partial)
 
-            mpiprint("%s var_edges: %s" % 
-                      (subsystem.name, [d['var_edges'] 
-                            for u,v,d in subsystem.graph.edges(data=True)]))
-            mpiprint("%s inputs (from graph): %s" % 
-                      (subsystem.name, [d['inputs'] 
-                            for n,d in subsystem.graph.nodes(data=True)]))
-            mpiprint("%s inputs: %s" % (subsystem.name, subsystem.get_inputs()))
-            mpiprint("%s local inputs: %s" % (subsystem.name, subsystem.get_inputs(local=True)))
+            # mpiprint("%s var_edges: %s" % 
+            #           (subsystem.name, [d['var_edges'] 
+            #                 for u,v,d in subsystem.graph.edges(data=True)]))
+            # mpiprint("%s inputs (from graph): %s" % 
+            #           (subsystem.name, [d['inputs'] 
+            #                 for n,d in subsystem.graph.nodes(data=True)]))
+            # mpiprint("%s inputs: %s" % (subsystem.name, subsystem.get_inputs()))
+            # mpiprint("%s local inputs: %s" % (subsystem.name, subsystem.get_inputs(local=True)))
 
             subsystem.scatter_partial = self.create_scatter(src_partial, 
                                                             dest_partial, scatter_vars)
@@ -474,6 +478,11 @@ class CompoundSystem(System):
         for subsystem in self.subsystems:
             subsystem.apply_F()
 
+    def solver_F(self):
+        if self.solver is not None:
+            self.solver.run()
+
+
 class SerialSystem(CompoundSystem):
 
     def get_req_cpus(self):
@@ -483,11 +492,11 @@ class SerialSystem(CompoundSystem):
         self.mpi.requested_cpus = max(cpus)
         return self.mpi.requested_cpus
 
-    def run(self, scope):
-        #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.subsystems]))
+    def run(self):
+        mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.subsystems]))
         for i, sub in enumerate(self.subsystems):
             self.scatter('u', 'p', sub)
-            sub.run(scope)
+            sub.run()
 
     def setup_communicators(self, comm, scope):
         #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
@@ -502,6 +511,9 @@ class SerialSystem(CompoundSystem):
 
 class ParallelSystem(CompoundSystem):
 
+    def __init__(self, graph, scope, pnode):
+        super(ParallelSystem, self).__init__(graph, scope, pnode)
+
     def get_req_cpus(self):
         cpus = 0
         # in a parallel system, the required cpus is the sum of
@@ -511,8 +523,8 @@ class ParallelSystem(CompoundSystem):
         self.mpi.requested_cpus = cpus
         return cpus
  
-    def run(self, scope):
-        #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.subsystems]))
+    def run(self):
+        mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.subsystems]))
         # don't scatter unless we contain something that's actually 
         # going to run
         if not self.subsystems:
@@ -521,7 +533,7 @@ class ParallelSystem(CompoundSystem):
         self.scatter('u', 'p')
 
         for i, sub in enumerate(self.subsystems):
-            sub.run(scope)
+            sub.run()
 
     def setup_communicators(self, comm, scope):
         #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
@@ -834,10 +846,4 @@ def _partition_subvars(names, vardict):
 
     return (sizes, nosizes)
 
-
-def petsc_linspace(start, end):
-    """ Return a linspace vector of the right int type for PETSc """
-    #return numpy.arange(start, end, dtype=PETSc.IntType)
-    return numpy.array(numpy.linspace(start, end-1, end-start), 
-                       dtype=PETSc.IntType)
 

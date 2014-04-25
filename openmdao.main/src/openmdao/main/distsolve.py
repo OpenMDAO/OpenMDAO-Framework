@@ -3,7 +3,7 @@ This is a simple iteration driver that basically runs a workflow, passing the
 output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
-from openmdao.main.api import Driver
+from openmdao.main.driver import Driver
 from openmdao.main.datatypes.api import Float, Int, Enum
 from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.hasparameters import HasParameters
@@ -45,10 +45,14 @@ class MPISolver(Driver):
         """ Executes an iterative solver """
         norm0, norm = self._initialize()
         counter = 0
+        mpiprint("IN ITERATOR: maxiter = %s" % self.max_iteration)
+        mpiprint("IN ITERATOR: norm = %s" % norm)
+        mpiprint("IN ITERATOR: toler = %s" % self.tolerance)
         #self.print_info(counter, norm/norm0)
         while counter < self.max_iteration and norm > self.tolerance: # and norm/norm0 > rtol:
             self._operation()
             norm = self._norm()
+            mpiprint("norm = %s" % norm)
             counter += 1
             #self.print_info(counter, norm/norm0)
 
@@ -96,8 +100,18 @@ class MPINonlinearGS(MPINonlinearSolver):
         system = self.workflow.get_subsystem()
         for subsystem in system.subsystems:
             system.scatter('u','p', subsystem)
-            subsystem.solve_F()
+            subsystem.run()
 
+
+class MPINonlinearJacobi(MPINonlinearSolver):
+    """ Nonlinear block Jacobi """
+
+    def _operation(self):
+        """ Solve each subsystem in parallel """
+        system = self._system
+        system.scatter('u','p')
+        for subsystem in system.subsystems:
+            subsystem.run()
 
 
 # @add_delegate(HasParameters, HasEqConstraints)
