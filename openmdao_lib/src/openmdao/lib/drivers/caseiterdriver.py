@@ -565,7 +565,6 @@ class CaseIteratorDriver(Driver):
                     self._rerun.append(case)
                 else:
                     self._logger.error('Too many retries for %s', case)
-                    self._stop = True
 
             # Set up for next case.
             in_use = self._start_processing(server, stepping, reload=True)
