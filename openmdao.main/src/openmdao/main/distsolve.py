@@ -3,17 +3,16 @@ This is a simple iteration driver that basically runs a workflow, passing the
 output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
-from numpy.linalg import norm as npnorm
-
-from openmdao.main.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.api import Driver, CyclicWorkflow
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
-from openmdao.main.hasstopcond import HasStopConditions
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.api import Driver
+from openmdao.main.datatypes.api import Float, Int, Enum
+from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
+from openmdao.util.decorators import add_delegate
+
+from openmdao.main.mpiwrap import mpiprint
 
 @add_delegate(HasParameters, HasEqConstraints)
 class MPISolver(Driver):
@@ -34,6 +33,9 @@ class MPISolver(Driver):
                        desc='For multivariable iteration, type of norm '
                                    'to use to test convergence.')
 
+    def __init__(self):
+        super(MPISolver, self).__init__()
+        self.workflow = CyclicWorkflow()
 
     def run(self, force=False, ffd_order=0, case_id=''):
         """ Runs the iterator; overwritten for some solvers """
@@ -90,6 +92,7 @@ class MPINonlinearGS(MPINonlinearSolver):
 
     def _operation(self):
         """ Solve each subsystem in series """
+        mpiprint("NLGS running")
         system = self.workflow.get_subsystem()
         for subsystem in system.subsystems:
             system.scatter('u','p', subsystem)

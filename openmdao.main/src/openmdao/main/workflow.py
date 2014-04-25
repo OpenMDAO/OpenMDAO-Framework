@@ -282,10 +282,10 @@ class Workflow(object):
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(cgraph, scope)
+                    self._subsystem = SerialSystem(cgraph, scope, tuple(sorted(cgraph.nodes())))
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(cgraph, scope)
+                    self._subsystem = ParallelSystem(cgraph, scope, tuple(sorted(cgraph.nodes())))
             else:
                 self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
 

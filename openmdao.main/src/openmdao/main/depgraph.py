@@ -15,7 +15,8 @@ from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
-from openmdao.main.mpiwrap import mpiprint
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -1483,6 +1484,39 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     # replaced with PAs, along with any subsolver states/resids
     return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
+    def break_cycles(self):
+        """Breaks up a cyclic graph and returns a list of severed
+        edges. Also sets that list of edges into the top level
+        graph metadata as 'severed_edges'.
+        """
+        severed_edges = []
+
+        conns = set(self.list_connections())
+
+        while not is_directed_acyclic_graph(self):
+            strong = strongly_connected_components(self)
+            if not strong or len(strong[0]) == 1:
+                return []
+
+            # look at only one component at a time
+            strong = strong[0]
+
+            # Break one edge of the loop.
+            # For now, just break the first edge.
+            # TODO: smarter ways to choose edge to break.
+            for i in range(1,len(strong)):
+                u,v = strong[i-1], strong[i]
+                if (u,v) in conns:
+                    self.remove_edge(u, v)
+                    severed_edges.append((u,v))
+                    break
+
+        self.graph['severed_edges'] = severed_edges[:]
+
+        return severed_edges
+
+
+
 def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
                       wflow, ancestor_using):
     """Creates a PsuedoAssembly in the given graph for the specified
@@ -1883,8 +1917,8 @@ def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
 
 
 def get_missing_derivs(obj, recurse=True):
-    """Return a list of missing derivatives found in the given object.
-
+    """Return a list of missing derivatives found in the given 
+    object.
     """
     if not has_interface(obj, IComponent):
         raise RuntimeError("Given object is not a Component")
@@ -1967,8 +2001,6 @@ def get_missing_derivs(obj, recurse=True):
 
             if name not in dins and name not in douts and is_differentiable_var(name, comp):
                 missing.append('.'.join([comp.get_pathname(), name]))
-
-
 
     missing = []
     finite_diffs = []

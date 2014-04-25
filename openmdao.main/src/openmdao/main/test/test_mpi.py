@@ -3,7 +3,7 @@ import time
 
 import numpy as np 
 
-from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.api import Assembly, dump_iteration_tree, Component, Driver, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasconstraints import HasConstraints
@@ -11,6 +11,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.mpiwrap import mpiprint, set_print_rank
 from openmdao.util.decorators import add_delegate
 from openmdao.main.distsolve import MPINonlinearGS
+from openmdao.test.execcomp import ExecComp
 
 # @add_delegate(HasObjectives, HasParameters, HasConstraints)
 # class NTimes(Driver):
@@ -184,20 +185,19 @@ def _get_model5():
     
     return top
 
-class Eq1(Component):
-    x = Float(1.0, iotype='in')
-    f = Float(0.0, iotype='out')
-    
-    def execute(self):
-        self.f = 10./(self.x**3-1.)
 
 def _get_model6():
-    """an actual FPI"""
+    """a simple FPI"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(3))
-    top.add("C1", Eq1())
+    top.add("C1", ExecComp(['f_x=x**3']))
+    top.add("C2", ExecComp(['f_x=sin(x)']))
+    top.driver.workflow.add(['C1','C2'])
 
-    
+    top.connect('C1.f_x', 'C2.x')
+    top.driver.add_constraint('C2.f_x=C1.x')
+
+    # should converge to 0.92862630873173
 
     return top
     
@@ -219,12 +219,15 @@ if __name__ == '__main__':
 
     top = globals().get('_get_model%s' % mname)()
 
+    dump_iteration_tree(top)
+
     if under_mpirun():
         setup_mpi(top)
-
         mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
         #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
         #mpiprint(top.subdriver.workflow._subsystem.dump_subsystem_tree(stream=None))
+
+        top.driver.workflow.get_subsystem()._dump_graph(recurse=True)
 
     if run:
         mpiprint('-'*50)
