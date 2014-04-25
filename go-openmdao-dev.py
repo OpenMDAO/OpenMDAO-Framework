@@ -2276,19 +2276,19 @@ def after_install(options, home_dir, activated=False):
         topdir = os.path.abspath(os.path.dirname(__file__))
         startdir = os.getcwd()
         absbin = os.path.abspath(bin_dir)
-        openmdao_packages = [('openmdao.util', '', 'sdist'),
- ('openmdao.units', '', 'sdist'),
- ('openmdao.main', '', 'sdist'),
- ('openmdao.lib', '', 'sdist'),
- ('openmdao.test', '', 'sdist'),
- ('openmdao.gui', '', 'sdist'),
- ('openmdao.examples.simple', 'examples', 'sdist'),
- ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
- ('openmdao.examples.enginedesign', 'examples', 'bdist_egg'),
- ('openmdao.examples.mdao', 'examples', 'sdist'),
- ('openmdao.examples.expected_improvement', 'examples', 'sdist'),
- ('openmdao.examples.nozzle_geometry_doe', 'examples', 'sdist'),
- ('openmdao.devtools', '', 'sdist')]
+        openmdao_packages = [('openmdao_util', '', 'sdist'),
+ ('openmdao_units', '', 'sdist'),
+ ('openmdao_main', '', 'sdist'),
+ ('openmdao_lib', '', 'sdist'),
+ ('openmdao_test', '', 'sdist'),
+ ('openmdao_gui', '', 'sdist'),
+ ('openmdao_examples_simple', 'examples', 'sdist'),
+ ('openmdao_examples_bar3simulation', 'examples', 'bdist_egg'),
+ ('openmdao_examples_enginedesign', 'examples', 'bdist_egg'),
+ ('openmdao_examples_mdao', 'examples', 'sdist'),
+ ('openmdao_examples_expected_improvement', 'examples', 'sdist'),
+ ('openmdao_examples_nozzle_geometry_doe', 'examples', 'sdist'),
+ ('openmdao_devtools', '', 'sdist')]
 
         try:
             #Fix for newer 10.9 compiler errors, switching them to warnings.
