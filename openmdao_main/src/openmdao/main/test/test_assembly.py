@@ -808,7 +808,8 @@ class AssemblyTestCase(unittest.TestCase):
         top.driverB.workflow.add(('comp2', 'subassy'))
 
         top.run()
-        top.run(case_id='ReRun')
+        top.set_itername('ReRun')
+        top.run()
 
         expected = """\
 :
@@ -851,8 +852,8 @@ subassy: 2-3.2-2
 subassy.driver: 2-3.2-2
 subassy.comp3: 2-3.2-2.1-1
 subassy.comp3: 2-3.2-2.2-1
-:
-driver:
+: ReRun
+driver: ReRun
 comp1: ReRun.1-1
 driverA: ReRun.1-2
 comp1: ReRun.1-2.1-1

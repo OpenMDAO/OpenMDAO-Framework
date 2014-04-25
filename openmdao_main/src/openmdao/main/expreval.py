@@ -557,6 +557,7 @@ class ExprEvaluator(object):
         # remove weakref to scope because it won't pickle
         state['_scope'] = self.scope
         state['_code'] = None  # <type 'code'> won't pickle either.
+        state['cached_grad_eq'] = None
         if state.get('_assignment_code'):
             state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
@@ -700,7 +701,8 @@ class ExprEvaluator(object):
         elif not isinstance(yp, complex):
             return None
         else:
-            return imag(yp/stepsize)[0]
+            # note, imag returns a 0-d array, Don't know why.
+            return imag(yp/stepsize).reshape(1, )[0]
 
         return imag(yp/stepsize)
 

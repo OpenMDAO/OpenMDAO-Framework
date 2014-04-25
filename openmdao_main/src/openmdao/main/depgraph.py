@@ -1402,9 +1402,32 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
         if has_interface(comp, IDriver):
             # Solvers are absorbed into the top graph
             if has_interface(comp, ISolver):
+
+                # All this stuff here is so that we can exclude irrelevant
+                # solvers (i.e., they don't show up between our inputs
+                # and outputs.)
+
+                dg_exp = comp.workflow.derivative_graph(inputs=inputs,
+                                                        outputs=outputs,
+                                                        group_nondif=False,
+                                                        add_implicit=False)
+
+                dg_base = comp.workflow.derivative_graph(inputs=None,
+                                                         outputs=None,
+                                                         group_nondif=False,
+                                                         add_implicit=True)
+
+                subcomps = set([key.partition('.')[0] for key in dg_base.node])
+                combocomps = set([key.partition('.')[0] for key in dg_exp.node])
+
+                if len(subcomps.intersection(combocomps)) < 1:
+                    continue
+
                 dg = comp.workflow.derivative_graph(inputs=inputs,
                                                     outputs=outputs,
-                                                    group_nondif=False)
+                                                    group_nondif=False,
+                                                    add_implicit=True)
+
                 xtra_inputs.update(flatten_list_of_iters(dg.graph['inputs']))
                 xtra_outputs.update(flatten_list_of_iters(dg.graph['outputs']))
                 for u,v,data in dg.edges_iter(data=True):
@@ -1427,6 +1450,9 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
             pa_list.append(_create_driver_PA(drv, startgraph,
                                              graph, inputs, outputs,
                                              wflow, using))
+
+            if not hasattr(drv, 'list_param_targets'):
+                continue
 
             # The parameters of other drivers can propagate to our expressions
             # via input-input connections. These are relevant, so save them.
