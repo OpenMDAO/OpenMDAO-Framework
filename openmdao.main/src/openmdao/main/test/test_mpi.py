@@ -195,7 +195,7 @@ def _get_model6():
     top.driver.workflow.add(['C1','C2'])
 
     top.connect('C1.f_x', 'C2.x')
-    top.driver.add_constraint('C2.f_x=C1.x')
+    top.connect('C2.f_x', 'C1.x')
 
     top.C1.x = 1.5
 
