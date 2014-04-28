@@ -97,7 +97,7 @@ class Float(Variable):
             if valid_low is None:
                 valid_low = -float_info.max
             else:
-                valid_low = float(low)
+                valid_low = float(valid_low)
 
             if valid_high is None:
                 valid_high = float_info.max
