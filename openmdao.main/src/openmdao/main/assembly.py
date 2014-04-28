@@ -1034,6 +1034,7 @@ class Assembly(Component):
 
         depgraph = self._depgraph
 
+        # HACK for some special CADRE runs. Remove when done.
         for item in self.list_inputs():
             meta = self.get_metadata(item)
             if 'framework_var' in meta:
