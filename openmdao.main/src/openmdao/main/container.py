@@ -198,6 +198,9 @@ class Container(SafeHasTraits):
         self._cached_traits_ = None
         self._repair_trait_info = None
 
+        # Locally set metadata, overrides trait metadata.
+        self._trait_metadata = {}
+
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
         # order to avoid the extra layer of function calls when logging
@@ -440,13 +443,16 @@ class Container(SafeHasTraits):
 
         saved_p = self._parent
         saved_c = self._cached_traits_
+        saved_m = self._trait_metadata
         self._parent = None
         self._cached_traits_ = None
+        self._trait_metadata = {}
         try:
             result = super(Container, self).__deepcopy__(memo)
         finally:
             self._parent = saved_p
             self._cached_traits_ = saved_c
+            self._trait_metadata = saved_m
 
         # Instance traits are not created properly by deepcopy, so we need
         # to manually recreate them. Note, self._added_traits is the most
@@ -475,6 +481,7 @@ class Container(SafeHasTraits):
 
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
+        state['_trait_metadata'] = {}
         return state
 
     def __setstate__(self, state):
@@ -591,6 +598,9 @@ class Container(SafeHasTraits):
             _check_bad_default(name, t)
             break  # just check the first arg in the list
 
+        if name in self._trait_metadata:
+            del self._trait_metadata[name]  # Invalidate.
+
         return super(Container, cls).add_class_trait(name, *trait)
 
     def add_trait(self, name, trait, refresh=True):
@@ -620,6 +630,9 @@ class Container(SafeHasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
 
+        if name in self._trait_metadata:
+            del self._trait_metadata[name]  # Invalidate.
+
         if refresh:
             getattr(self, name)  # For VariableTree subtree/leaf update in GUI.
 
@@ -634,6 +647,10 @@ class Container(SafeHasTraits):
         try:
             del self._cached_traits_[name]
         except (KeyError, TypeError):
+            pass
+        try:
+            del self._trait_metadata[name]
+        except KeyError:
             pass
 
         super(Container, self).remove_trait(name)
@@ -1048,23 +1065,30 @@ class Container(SafeHasTraits):
                     self._get_metadata_failed(traitpath, metaname)
 
         varname, _, _ = traitpath.partition('[')
-        t = self.get_trait(varname)
-        if not t:
-            return self._get_metadata_failed(traitpath, metaname)
-        t = t.trait_type
+        try:
+            mdict = self._trait_metadata[varname]
+        except KeyError:
+            t = self.get_trait(varname)
+            if t:
+                t = t.trait_type
+                mdict = t._metadata.copy()
+                # vartypename isn't present in the metadata of traits
+                # that don't inherit from Variable, so fake it out here
+                # so we'll be consistent across all traits
+                mdict.setdefault('vartypename', t.__class__.__name__)
+            else:
+                mdict = self._get_metadata_failed(traitpath, None)
+            self._trait_metadata[varname] = mdict
+
         if metaname is None:
-            mdict = t._metadata.copy()
-            mdict.setdefault('vartypename', t.__class__.__name__)
             return mdict
         else:
-            val = t._metadata.get(metaname, None)
-            # vartypename isn't present in the metadata of traits
-            # that don't inherit from Variable, so fake it out here
-            # so we'll be consistent across all traits
-            if val is None:
-                if metaname == 'vartypename':
-                    return t.__class__.__name__
-            return val
+            return mdict.get(metaname, None)
+
+    @rbac(('owner', 'user'))
+    def set_metadata(self, traitpath, metaname, value):
+        """Set the metadata associated with the trait found using traitpath."""
+        self.get_metadata(traitpath)[metaname] = value
 
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given

@@ -1,4 +1,4 @@
-# pylint: disable-msg=C0111,C0103
+# pylint: disable=C0111,C0103
 
 import os.path
 import sys
@@ -16,7 +16,7 @@ from openmdao.main.container import Container, deep_hasattr, \
                                     create_io_traits
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.api import Instance, Slot, Float, Int, Bool, List, Dict
+from openmdao.main.datatypes.api import Instance, Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir, assert_raises
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -481,6 +481,17 @@ class ContainerTestCase(unittest.TestCase):
                          'type': 'float', 'desc': 'Stuff'}
         for key in check.keys():
             self.assertEqual(check[key], attrs["Inputs"][0][key])
+
+    def test_set_metadata(self):
+        c = Container()
+        c.add_trait('inp', List(range(1000), ddcomp_start=0, ddcomp_end=-1))
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_start'), 0)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_end'), -1)
+
+        c.set_metadata('inp', 'ddcomp_start', 10)
+        c.set_metadata('inp', 'ddcomp_end', 20)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_start'), 10)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_end'), 20)
 
 
 if __name__ == "__main__":
