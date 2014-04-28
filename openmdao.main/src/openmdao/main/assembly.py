@@ -251,7 +251,7 @@ class Assembly(Component):
         inputs and connections of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
-        
+
         if not tobj:
             self.add(target_name, newobj)
             return
@@ -1033,6 +1033,13 @@ class Assembly(Component):
         self._provideJ_bounds = None
 
         depgraph = self._depgraph
+
+        for item in self.list_inputs():
+            meta = self.get_metadata(item)
+            if 'framework_var' in meta:
+                continue
+            if item not in required_inputs:
+                required_inputs.append(item)
 
         for src in required_inputs:
             varname = depgraph.base_var(src)
