@@ -1034,14 +1034,6 @@ class Assembly(Component):
 
         depgraph = self._depgraph
 
-        # HACK for some special CADRE runs. Remove when done.
-        for item in self.list_inputs():
-            meta = self.get_metadata(item)
-            if 'framework_var' in meta:
-                continue
-            if item not in required_inputs:
-                required_inputs.append(item)
-
         for src in required_inputs:
             varname = depgraph.base_var(src)
             target1 = [n for n in depgraph.successors(varname)
@@ -1077,7 +1069,7 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
 
-        if check_only:
+        if check_only or len(self.J_input_keys)==0 or len(output_keys)==0:
             return None
 
         return self.driver.calc_gradient(self.J_input_keys, output_keys)
