@@ -443,16 +443,13 @@ class Container(SafeHasTraits):
 
         saved_p = self._parent
         saved_c = self._cached_traits_
-        saved_m = self._trait_metadata
         self._parent = None
         self._cached_traits_ = None
-        self._trait_metadata = {}
         try:
             result = super(Container, self).__deepcopy__(memo)
         finally:
             self._parent = saved_p
             self._cached_traits_ = saved_c
-            self._trait_metadata = saved_m
 
         # Instance traits are not created properly by deepcopy, so we need
         # to manually recreate them. Note, self._added_traits is the most
@@ -481,7 +478,6 @@ class Container(SafeHasTraits):
 
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
-        state['_trait_metadata'] = {}
         return state
 
     def __setstate__(self, state):
@@ -1088,6 +1084,9 @@ class Container(SafeHasTraits):
     @rbac(('owner', 'user'))
     def set_metadata(self, traitpath, metaname, value):
         """Set the metadata associated with the trait found using traitpath."""
+        if metaname in ('iotype',):
+            self.raise_exception("Can't set %s on %s, read-only"
+                                 % (metaname, traitpath), TypeError)
         self.get_metadata(traitpath)[metaname] = value
 
     def _get_failed(self, path, index=None):

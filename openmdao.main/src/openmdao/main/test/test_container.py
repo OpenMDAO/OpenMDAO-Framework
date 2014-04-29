@@ -493,6 +493,10 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(c.get_metadata('inp', 'ddcomp_start'), 10)
         self.assertEqual(c.get_metadata('inp', 'ddcomp_end'), 20)
 
+        assert_raises(self, "c.set_metadata('inp', 'iotype', 'out')",
+                      globals(), locals(), TypeError,
+                      ": Can't set iotype on inp, read-only")
+
 
 if __name__ == "__main__":
     sys.argv.append('--cover-package=openmdao.main')
