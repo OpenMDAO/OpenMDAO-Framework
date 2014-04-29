@@ -121,17 +121,20 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                #mpiprint("getting %s from scope" % name)
                 array_val[:] = scope.get_flattened_value(name)
+                mpiprint("getting %s (%s) from scope" % (name, array_val))
 
-    def set_to_scope(self, scope, vnames):
+    def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given scope.
         """
+        if vnames is None:
+            vnames = self._info.keys()
+
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                #mpiprint("setting %s to scope" % name)
+                mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
            
     def dump(self, vname):
@@ -139,6 +142,14 @@ class VecWrapper(object):
             mpiprint("%s - %s: (%d,%d) %s" % (vname,name, start, start+len(array_val),array_val))
         mpiprint("%s - petsc sizes: %s" % (vname,self.petsc_vec.sizes))
 
+    def items(self):
+        lst = []
+        for name, (array_val, start) in self._info.items():
+            if len(array_val) == 1:
+                lst.append((name, array_val[0]))
+            else:
+                lst.append((name, array_val))
+        return lst
 
 class DataTransfer(object):
     """A wrapper object that manages data transfer between
@@ -147,6 +158,10 @@ class DataTransfer(object):
     """
     def __init__(self, system, var_idxs, input_idxs, scatter_vars):
         self.scatter_vars = scatter_vars[:]
+
+        # TODO: remove the following attrs (used for debugging only)
+        self.var_idxs = var_idxs[:]
+        self.input_idxs = input_idxs[:]
 
         #mpiprint("SCATTER_VARS: %s" % scatter_vars)
         merged_vars = idx_merge(var_idxs)
@@ -176,16 +191,18 @@ class DataTransfer(object):
 
     def __call__(self, system, srcvec, destvec, reverse=False):
 
+        #mpiprint("scatter for %s" % self.scatter_vars)
+
         src_petsc = srcvec.petsc_vec
         dest_petsc = destvec.petsc_vec
 
-        #mpiprint("src vector pre-set_from_scope: %s" % srcvec._info.items())
-        
-        scatter_vars = [v[0] for v in self.scatter_vars]
-        srcvec.set_from_scope(system.scope, scatter_vars)
-        #mpiprint("src vector post-set_from_scope: %s" % srcvec._info.items())
+        #mpiprint("src vector pre-set_from_scope: %s" % srcvec.items())
+    #    scatter_vars = [v[0] for v in self.scatter_vars]
+    #    srcvec.set_from_scope(system.scope, scatter_vars)
+        #mpiprint("src vector post-set_from_scope: %s" % srcvec.items())
 
-        #mpiprint("dest vector pre-scatter: %s" % destvec._info.items())
+        mpiprint("src vector pre-SCATTER: %s" % srcvec.items())
+        mpiprint("dest vector pre-SCATTER: %s" % destvec.items())
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
         self.scatter.scatter(src_petsc, dest_petsc, addv=False, mode=False)
@@ -194,10 +211,11 @@ class DataTransfer(object):
         #else:
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
-        #mpiprint("dest vector post-scatter: %s" % destvec._info.items())
+        mpiprint("src_idx --> dest_idx: %s --> %s" % (self.var_idxs, self.input_idxs))
+        mpiprint("dest vector post-SCATTER: %s" % destvec.items())
 
-        scatter_vars = [v[1] for v in self.scatter_vars]
-        destvec.set_to_scope(system.scope, scatter_vars)
+    #    scatter_vars = [v[1] for v in self.scatter_vars]
+    #    destvec.set_to_scope(system.scope, scatter_vars)
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an

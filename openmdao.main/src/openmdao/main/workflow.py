@@ -237,6 +237,7 @@ class Workflow(object):
         if self._subsystem is None:
             scope = self.scope
 
+            #mpiprint("depgraph = %s" % self._parent.parent._depgraph.edges())
             #drvgraph = self.get_driver_graph()
 
             # first, get the component subgraph that is limited to 
@@ -244,6 +245,7 @@ class Workflow(object):
             # due to driver dependencies.
             cgraph = self.get_comp_graph().copy()
 
+            #mpiprint("cgraph1 = %s" % cgraph.edges())
             # collapse driver iteration sets into a single node for
             # the driver, except for nodes from their iteration set
             # that are in the iteration set of their parent.
@@ -252,6 +254,7 @@ class Workflow(object):
             collapse_subdrivers(cgraph, self._parent)
             #cgraph.remove_node(self._parent.name)
 
+            #mpiprint("cgraph2 = %s" % cgraph.edges())
             #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
             # collapse the graph (recursively) into nodes representing
@@ -261,6 +264,8 @@ class Workflow(object):
             #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
             #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
             
+            #mpiprint("cgraph3 = %s" % cgraph.edges())
+
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
@@ -268,8 +273,11 @@ class Workflow(object):
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
                     self._subsystem = ParallelSystem(cgraph, scope, tuple(sorted(cgraph.nodes())))
-            else:
+            elif len(cgraph) == 1:
                 self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
+            else:
+                raise RuntimeError("get_subsystem called on %s.workflow but component graph is empty!" %
+                                    self._parent.get_pathname())
 
         return self._subsystem
 

@@ -26,7 +26,7 @@ class MPISolver(Driver):
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
 
-    tolerance = Float(1.0e-3, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-6, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
 
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'],
@@ -50,10 +50,11 @@ class MPISolver(Driver):
         mpiprint("IN ITERATOR: toler = %s" % self.tolerance)
         #self.print_info(counter, norm/norm0)
         while counter < self.max_iteration and norm > self.tolerance: # and norm/norm0 > rtol:
+            mpiprint('---------------- start iteration -----------')
             self._operation()
             norm = self._norm()
-            mpiprint("norm = %s" % norm)
             counter += 1
+            mpiprint("iter %d, norm = %s" % (counter, norm))
             #self.print_info(counter, norm/norm0)
 
     def _norm(self):
@@ -66,6 +67,9 @@ class MPISolver(Driver):
 
     def _initialize(self):
         """ Commands run before iteration """
+        system = self.workflow.get_subsystem()
+        system.vec['u'].set_from_scope(self.parent)
+        mpiprint("initial u vector: %s" % system.vec['u'].items())
         norm = self._norm()
         norm0 = norm if norm != 0.0 else 1.0
         return norm0, norm
@@ -99,8 +103,10 @@ class MPINonlinearGS(MPINonlinearSolver):
         mpiprint("NLGS running")
         system = self.workflow.get_subsystem()
         for subsystem in system.subsystems:
+            mpiprint("=== system U vector before %s run: %s" % (subsystem.name, system.vec['u'].items()))
             system.scatter('u','p', subsystem)
             subsystem.run()
+            mpiprint("=== system U vector after %s run: %s" % (subsystem.name, system.vec['u'].items()))
 
 
 class MPINonlinearJacobi(MPINonlinearSolver):

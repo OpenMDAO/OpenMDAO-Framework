@@ -663,10 +663,11 @@ class Assembly(Component):
         """Transfer input data to connected input variables on 
         the specified component.
         """
-        invalid_ins = self._depgraph.list_inputs(compname,
-                                                 invalid=True)
-        if invalid_ins:
-            self._update_invalid_dests(compname, invalid_ins)
+        if Container._interactive:
+            invalid_ins = self._depgraph.list_inputs(compname,
+                                                     invalid=True)
+            if invalid_ins:
+                self._update_invalid_dests(compname, invalid_ins)
 
     def update_outputs(self, outnames):
         """Execute any necessary internal or predecessor

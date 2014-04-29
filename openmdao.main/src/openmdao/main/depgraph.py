@@ -1484,38 +1484,6 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     # replaced with PAs, along with any subsolver states/resids
     return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
-    def break_cycles(self):
-        """Breaks up a cyclic graph and returns a list of severed
-        edges. Also sets that list of edges into the top level
-        graph metadata as 'severed_edges'.
-        """
-        severed_edges = []
-
-        conns = set(self.list_connections())
-
-        while not is_directed_acyclic_graph(self):
-            strong = strongly_connected_components(self)
-            if not strong or len(strong[0]) == 1:
-                return []
-
-            # look at only one component at a time
-            strong = strong[0]
-
-            # Break one edge of the loop.
-            # For now, just break the first edge.
-            # TODO: smarter ways to choose edge to break.
-            for i in range(1,len(strong)):
-                u,v = strong[i-1], strong[i]
-                if (u,v) in conns:
-                    self.remove_edge(u, v)
-                    severed_edges.append((u,v))
-                    break
-
-        self.graph['severed_edges'] = severed_edges[:]
-
-        return severed_edges
-
-
 
 def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
                       wflow, ancestor_using):
@@ -2008,4 +1976,40 @@ def get_missing_derivs(obj, recurse=True):
     _get_missing_derivs(obj, missing, finite_diffs, recurse)
 
     return missing, finite_diffs
+
+def break_cycles(graph):
+    """Breaks up a cyclic graph and returns a list of severed
+    edges. Also sets that list of edges into the top level
+    graph metadata as 'severed_edges'. The severed edges list
+    is a list of tuples of the form [(u,v,metadata), ...]
+    """
+    severed_edges = []
+
+    if hasattr(graph, 'list_connections'):
+        conns = set(graph.list_connections())
+    else:
+        conns = graph.edges()
+
+    while not is_directed_acyclic_graph(graph):
+        strong = strongly_connected_components(graph)
+        if not strong or len(strong[0]) == 1:
+            return []
+
+        # look at only one component at a time
+        strong = strong[0]
+
+        # Break one edge of the loop.
+        # For now, just break the first edge.
+        # TODO: smarter ways to choose edge to break.
+        for i in range(1,len(strong)):
+            u,v = strong[i-1], strong[i]
+            if (u,v) in conns:
+                meta = graph[u][v].copy()
+                graph.remove_edge(u, v)
+                severed_edges.append((u,v,meta))
+                break
+
+    graph.graph['severed_edges'] = severed_edges[:]
+
+    return severed_edges
 

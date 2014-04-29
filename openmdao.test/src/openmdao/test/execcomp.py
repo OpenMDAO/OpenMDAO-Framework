@@ -6,6 +6,7 @@ import re, time
 from openmdao.main.api import Component
 from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator, _expr_dict
+from openmdao.main.mpiwrap import mpiprint
 
 try:
     from numpy import zeros
@@ -27,13 +28,14 @@ class ExecComp(Component):
         Time (in seconds) to sleep during execute.
     """
     
-    def __init__(self, exprs=(), sleep=0):
+    def __init__(self, exprs=(), sleep=0, trace=False):
         super(ExecComp, self).__init__()
         outs = set()
         allvars = set()
         self.exprs = exprs
         self.codes = [compile(expr,'<string>','exec') for expr in exprs]
         self.sleep = sleep
+        self.trace = trace
         for expr in exprs:
             lhs,rhs = expr.split('=')
             lhs = lhs.strip()
@@ -70,11 +72,22 @@ class ExecComp(Component):
     def execute(self):
         ''' ExecComp execute function '''
         global _expr_dict
+        if self.trace:
+            for var in self.list_inputs(connected=True):
+                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+            for var in self.list_outputs(connected=True):
+                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
         for expr in self.codes:
             exec(expr, _expr_dict, self.__dict__ )
             
         if self.sleep:
             time.sleep(self.sleep)
+
+        if self.trace:
+            for var in self.list_inputs(connected=True):
+                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
+            for var in self.list_outputs(connected=True):
+                mpiprint("%s.%s = %s" % (self.name,var,getattr(self,var)))
 
 
 class ExecCompWithDerivatives(Component):

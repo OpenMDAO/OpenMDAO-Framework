@@ -13,30 +13,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.distsolve import MPINonlinearGS
 from openmdao.test.execcomp import ExecComp
 
-# @add_delegate(HasObjectives, HasParameters, HasConstraints)
-# class NTimes(Driver):
-#     def __init__(self, n=1):
-#         super(NTimes, self).__init__()
-#         self.n = n 
-#         self._count = 0
-
-#     def run(self, force=False, ffd_order=0, case_id=''):
-#         self.execute()
-        
-#     def continue_iteration(self):
-#         return self._count < self.n
-
-#     def start_iteration(self):
-#         self._count = 0
-#         self._paramvals = np.array(self.eval_parameters())
-
-#     def pre_iteration(self):
-#         if self._count > 0:
-#             self.set_parameters(self._paramvals)
-
-#     def post_iteration(self):
-#         self._count += 1
-#         self._paramvals += 1.0
+from openmdao.lib.optproblems import sellar
 
 class NTimes(MPINonlinearGS):
     def __init__(self, maxiter=1):
@@ -190,19 +167,72 @@ def _get_model6():
     """a simple FPI"""
     top = set_as_top(Assembly())
     top.add('driver', NTimes(99))
-    top.add("C1", ExecComp(['f_x=x**3']))
-    top.add("C2", ExecComp(['f_x=sin(x)']))
+    top.add("C1", ExecComp(['f_x=(2.*f_x**2 - 2.*y**3 + 1)/4.'], trace=True))
+    top.add("C2", ExecComp(['f_x=(-f_x**4-4*y**4+8*y+4)/12.'], trace=True))
     top.driver.workflow.add(['C1','C2'])
 
-    top.connect('C1.f_x', 'C2.x')
-    top.connect('C2.f_x', 'C1.x')
-
     top.C1.x = 1.5
+    top.C2.x = 1.5
+    top.C1.run()
 
-    # should converge to 0.92862630873173
+    mpiprint("top.C1.x = %s" % top.C1.x)
 
-    return top
+    top.connect('C1.f_x', 'C2.y')
+    top.connect('C2.f_x', 'C1.y')
+
+    # converges to 0.0617701263386, 0.724490515347
+
+    return top, {'C1.y': 0.475372010329, 'C2.y': 0.220625971211 }
     
+def _get_modelsellar():
+    """Sellar (serial)"""
+    prob = set_as_top(SellarMDF())
+    return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+class SellarMDF(Assembly):
+    """ Optimization of the Sellar problem using MDF
+    Disciplines coupled with FixedPointIterator.
+    """
+    
+    def configure(self):
+        """ Creates a new Assembly with this problem
+        
+        Optimal Design at (1.9776, 0, 0)
+        
+        Optimal Objective = 3.18339"""
+        
+        #self.add('driver', FixedPointIterator())
+        self.add('driver', NTimes(99))
+
+        # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
+        C1 = self.add('C1', sellar.Discipline1())
+        C2 = self.add('C2', sellar.Discipline2())
+
+        self.driver.workflow.add(['C1','C2'])
+
+        #not relevant to the iteration. Just fixed constants
+        C1.z1 = C2.z1 = 1.9776
+        C1.z2 = C2.z2 = 0
+        C1.x1 = 0
+
+        # Iteration loop
+        #self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        #self.driver.add_constraint('C2.y2 = C1.y2')
+
+        # Make connection for serial
+        self.connect('C1.y1','C2.y1')
+        self.connect('C2.y2', 'C1.y2')
+
+        # Use connections for Parallel
+        #self.driver.add_parameter('C1.y1', low==-1e99, high=1e99)
+        #self.driver.add_constraint('C1.y1 = C2.y1')
+
+        
+        # Solver settings
+        self.driver.max_iteration = 100
+        self.driver.tolerance = .00001
+        self.driver.print_convergence = False
+        
 
 if __name__ == '__main__':
     import sys
@@ -219,15 +249,18 @@ if __name__ == '__main__':
         elif not arg.startswith('-'):
             mname = arg
 
-    top = globals().get('_get_model%s' % mname)()
+    ret = globals().get('_get_model%s' % mname)()
+    if isinstance(ret, tuple):
+        top, expected = ret
+    else:
+        top = ret
+        expected = None
 
     dump_iteration_tree(top)
 
     if under_mpirun():
         setup_mpi(top)
-        #mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
-        #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
-        #mpiprint(top.subdriver.workflow._subsystem.dump_subsystem_tree(stream=None))
+        mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
 
         #top.driver.workflow.get_subsystem()._dump_graph(recurse=True)
 
@@ -235,12 +268,17 @@ if __name__ == '__main__':
         mpiprint('-'*50)
         top.run()
 
-        # for i in range(9):
-        #     for v in ['a','b','c','d']:
-        #         name = "C%d.%s" % (i+1,v)
-        #         if top.contains(name):
-        #             mpiprint("%s = %s" % (name,top.get(name)))
+        if expected:
+            print "{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
+                                                           "Expected",
+                                                           "Actual",
+                                                           "Error")
+            for name, expval in expected.items():
+                val = top.get(name)
+                err = expval - val
+                print "{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err)
 
+                
 
 
         

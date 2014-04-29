@@ -650,12 +650,12 @@ class Component(Container):
                         tracing.TRACER.debug(self.get_itername())
                         #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
 
-                    #print "executing %s in rank %d" % (self.get_pathname(), MPI.COMM_WORLD.rank)
+                    print "executing %s" % self.get_pathname()
                     self.execute()
 
                 self._post_execute()
-            #else:
-            #    print 'skipping: %s' % self.get_pathname()
+            else:
+                print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except:
             self._set_exec_state('INVALID')
