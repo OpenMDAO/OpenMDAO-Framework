@@ -318,8 +318,8 @@ class CaseIteratorDriver(Driver):
 
         inp_paths = []
         inp_values = []
-        for path in self.get_parameters():
-            inp_paths.append(path)
+        for path, param in self.get_parameters().items():
+            inp_paths.append(param.target)
             if isinstance(path, tuple):
                 path = path[0]  # Use first target of ParameterGroup.
             path = make_legal_path(path)
