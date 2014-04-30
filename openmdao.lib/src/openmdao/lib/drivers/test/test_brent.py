@@ -49,7 +49,7 @@ class TestBrentDriver(unittest.TestCase):
         a = set_as_top(Assembly())
         comp = a.add('comp', ExecComp(exprs=["f=x"]))
         driver = a.add('driver', Brent())
-        driver.add_parameter('comp.x', -1e99, 1e99)
+        driver.add_parameter('comp.x')
         driver.add_constraint('comp.f=0')
         comp.n = 1.0
         comp.c = 0
@@ -153,7 +153,7 @@ class TestBrentResizeBracket(unittest.TestCase):
                 eps = 1e-6
                 self.brent.lower_bound = eps
                 self.brent.upper_bound = pi/2 - eps
-                self.brent.add_parameter('comp.phi', low=-1e-15, high=1e15)
+                self.brent.add_parameter('comp.phi')
                 self.brent.add_constraint('comp.residual = 0')
 
                 def resize(lower, upper, iter):
@@ -272,7 +272,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
                 # setup Brent
                 self.connect('Vin', 'brent.lower_bound')
                 self.connect('Vout', 'brent.upper_bound')
-                self.brent.add_parameter('comp.Vrated', low=-1e-15, high=1e15)
+                self.brent.add_parameter('comp.Vrated')
                 self.brent.add_constraint('comp.residual = 0')
                 self.connect('invalid_bracket_return', 'brent.invalid_bracket_return')
 
