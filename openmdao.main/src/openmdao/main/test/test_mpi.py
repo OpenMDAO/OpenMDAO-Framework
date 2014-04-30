@@ -161,33 +161,12 @@ def _get_model5():
     top.driver.add_constraint('C8.d[0]=0') 
     
     return top
-
-
-def _get_model6():
-    """a simple FPI"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(99))
-    top.add("C1", ExecComp(['f_x=(2.*f_x**2 - 2.*y**3 + 1)/4.'], trace=True))
-    top.add("C2", ExecComp(['f_x=(-f_x**4-4*y**4+8*y+4)/12.'], trace=True))
-    top.driver.workflow.add(['C1','C2'])
-
-    top.C1.x = 1.5
-    top.C2.x = 1.5
-    top.C1.run()
-
-    mpiprint("top.C1.x = %s" % top.C1.x)
-
-    top.connect('C1.f_x', 'C2.y')
-    top.connect('C2.f_x', 'C1.y')
-
-    # converges to 0.0617701263386, 0.724490515347
-
-    return top, {'C1.y': 0.475372010329, 'C2.y': 0.220625971211 }
     
 def _get_modelsellar():
     """Sellar (serial)"""
     prob = set_as_top(SellarMDF())
     return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -279,9 +258,4 @@ if __name__ == '__main__':
                 val = top.get(name)
                 err = expval - val
                 print "{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err)
-
-                
-
-
-        
 
