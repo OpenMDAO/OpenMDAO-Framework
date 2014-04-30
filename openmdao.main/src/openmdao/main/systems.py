@@ -60,6 +60,8 @@ class System(object):
         return self.mpi.requested_cpus
 
     def setup_variables(self):
+        mpiprint("setup_variables: %s" % self.name)
+
         self.all_variables = OrderedDict()
 
         for sub in self.subsystems:
@@ -79,7 +81,10 @@ class System(object):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
+        mpiprint("setup_sizes: %s" % self.name)
         comm = self.mpi.comm
+        if comm == MPI.COMM_NULL:
+            return
 
         # pass the call down to any subdrivers/subsystems
         # and subassemblies. 
@@ -111,6 +116,7 @@ class System(object):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
+        mpiprint("setup_sizes Allgather (var sizes) %s: %d" % (self.name,comm.size))
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
@@ -124,6 +130,7 @@ class System(object):
                                         for n,v in self.variables.items() 
                                            if n in inputs])
 
+        mpiprint("setup_sizes Allgather (input sizes)")
         comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
         #mpiprint("%s input_sizes: %s" % (self.name, self.input_sizes))
@@ -132,6 +139,10 @@ class System(object):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
+        mpiprint("setup_vectors: %s" % self.name)
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
+
         rank = self.mpi.comm.rank
         if arrays is None:  # we're the top level System in our Assembly
             arrays = {}
@@ -180,11 +191,16 @@ class System(object):
         into SerialSystems and ParallelSystems).  It shows which
         components run on the current processor.
         """
+        mpiprint("dump_subsystem_tree: %s" % self.name)
         if stream is None:
             getval = True
             stream = StringIO()
         else:
             getval = False
+
+        if self.mpi.comm == MPI.COMM_NULL:
+            mpiprint("returning early for %s" % self.name)
+            return stream.getvalue() if getval else None
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'DriverSystem': 'drv',
@@ -213,30 +229,31 @@ class System(object):
         for sub in self.subsystems:
             sub.dump_subsystem_tree(nest, stream)
 
-        if getval:
-            return stream.getvalue()
+        return stream.getvalue() if getval else None
 
     def create_scatter(self, var_idxs, input_idxs, scatter_vars):
         """ Concatenates lists of indices and creates a PETSc Scatter """
+        mpiprint("create_scatter: %s" % self.name)
         return DataTransfer(self, var_idxs, input_idxs, scatter_vars)
 
     def scatter(self, srcvecname, destvecname, subsystem=None):
         """ Perform partial or full scatter """
+        mpiprint("scatter: %s" % self.name)
         if subsystem is None:
             scatter = self.scatter_full
-            mpiprint("FULL scatter for %s" % self.name)
+            #mpiprint("FULL scatter for %s" % self.name)
         else:
             scatter = subsystem.scatter_partial
-            if scatter:
-                mpiprint("PARTIAL scatter  %s --> %s" % (self.name, subsystem.name))
-            else:
-                mpiprint("PARTIAL scatter MISSING (%s --> %s)" % (self.name, subsystem.name))
+            #if scatter:
+            #    mpiprint("PARTIAL scatter  %s --> %s" % (self.name, subsystem.name))
+            #else:
+            #    mpiprint("PARTIAL scatter MISSING (%s --> %s)" % (self.name, subsystem.name))
 
         if not scatter is None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            mpiprint("scatter_vars = %s" % scatter.scatter_vars)
+            #mpiprint("scatter_vars = %s" % scatter.scatter_vars)
             scatter(self, srcvec, destvec) #, reverse=??)
 
         return scatter
@@ -272,6 +289,7 @@ class SimpleSystem(System):
         return inputs
 
     def run(self):
+        mpiprint("run: %s" % self.name)
         comp = self._comp
         #mpiprint("running simple system %s: %s" % (self.name, self._comp.name))
         # if not isinstance(comp, PseudoComponent):
@@ -290,11 +308,12 @@ class SimpleSystem(System):
         #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
     def setup_communicators(self, comm, scope):
+        mpiprint("setup_communicators (size=%d): %s" % (comm.size,self.name))
         self.mpi.comm = comm
         self.subsystems = []
-        self.simple_subs = [self]
 
     def setup_variables(self):
+        mpiprint("setup_variables: %s" % self.name)
         super(SimpleSystem, self).setup_variables()
         comp = self._comp
         for name, vdict in self.all_variables.items():
@@ -309,6 +328,9 @@ class SimpleSystem(System):
                     vdict['basevar'] = '.'.join((cname, base))
 
     def setup_scatters(self):
+        mpiprint("setup_scatters: %s" % self.name)
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         rank = self.mpi.comm.rank
         start = numpy.sum(self.input_sizes[:rank])
         end = numpy.sum(self.input_sizes[:rank+1])
@@ -389,6 +411,9 @@ class CompoundSystem(System):
 
     def setup_scatters(self):
         """ Defines a scatter for args at this system's level """
+        mpiprint("setup_scatters: %s" % self.name)
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         var_sizes = self.local_var_sizes
         input_sizes = self.input_sizes
         rank = self.mpi.comm.rank
@@ -424,24 +449,30 @@ class CompoundSystem(System):
         #for subsystem in self.get_all_subsystems():
         for node, data in self.graph.nodes_iter(data=True):
             subsystem = data['system']
-            mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
+            if subsystem.mpi.comm == MPI.COMM_NULL:
+                continue
+            #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
             src_partial = []
             dest_partial = []
             scatter_vars = []
             if subsystem in self.subsystems:
                 for u,v,edata in self.graph.in_edges_iter(node, data=True):
                     var_edges = edata['var_edges']
-                    mpiprint("var_edges = %s" % var_edges)
-                    mpiprint("%s.uvec = %s" % (self.name,self.vec['u'].items()))
-                    mpiprint("%s.pvec = %s" % (subsystem.name, subsystem.vec['p'].items()))
+                    #mpiprint("var_edges = %s" % var_edges)
+                    #mpiprint("%s.uvec = %s" % (self.name,self.vec['u'].items()))
+                    #mpiprint("%s.pvec = %s" % (subsystem.name, subsystem.vec['p'].items()))
                     
                     for src, dest in var_edges:
                         dest_idxs = self.vec['p'].indices(dest)
-                        mpiprint("dest indices of %s = %s" % (dest, dest_idxs))
+                        #mpiprint("dest indices of %s = %s" % (dest, dest_idxs))
                         isrc = varkeys.index(src)
                         src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
                                           petsc_linspace(0, dest_idxs.shape[0]) #args[arg]
-                        mpiprint("src indices of %s = %s" % (src, src_idxs))
+                        #mpiprint("src indices of %s = %s" % (src, src_idxs))
+                        scatter_vars.append((src,dest))
+                        full_scatter_vars.append((src,dest))
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
 
                 # Now add scatters for driver inputs
                 for drv_input in data.get('drv_inputs',[]):
@@ -450,21 +481,18 @@ class CompoundSystem(System):
                         isrc = varkeys.index(drv_input)
                         src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
                                           petsc_linspace(0, dest_idxs.shape[0])
+                        scatter_vars.append((drv_input,drv_input))
+                        full_scatter_vars.append((drv_input,drv_input))
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
 
-                src_partial.append(src_idxs)
-                dest_partial.append(dest_idxs)
-                src_full.append(src_idxs)
-                dest_full.append(dest_idxs)
-                scatter_vars.append((src,dest))
-                full_scatter_vars.append((src,dest))
+                src_full.extend(src_partial)
+                dest_full.extend(dest_partial)
             else:
                 mpiprint("%s is not a subsystem!" % subsystem.name)
 
-            src_partial = idx_merge(src_partial)
-            dest_partial = idx_merge(dest_partial)
-
-            mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
-                                                              src_partial, dest_partial))
+            #mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
+            #                                                  src_partial, dest_partial))
             subsystem.scatter_partial = self.create_scatter(src_partial, 
                                                             dest_partial, scatter_vars)
 
@@ -507,7 +535,7 @@ class SerialSystem(CompoundSystem):
         cpus = []
         for node, data in self.graph.nodes_iter(data=True):
             cpus.append(data['system'].get_req_cpus())
-        self.mpi.requested_cpus = max(cpus)
+        self.mpi.requested_cpus = max(cpus+[1])
         return self.mpi.requested_cpus
 
     # def run(self):
@@ -517,10 +545,13 @@ class SerialSystem(CompoundSystem):
     #         sub.run()
 
     def setup_communicators(self, comm, scope):
-        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
-        self.mpi.comm = comm
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.subsystems = []
-        self.simple_subs = []
+
+        mpiprint("setup_comms Split (serial)")
+        self.mpi.comm = comm #get_comm_if_active(self, comm)
+        #if self.mpi.comm == MPI.COMM_NULL:
+        #    return
 
         if not is_directed_acyclic_graph(self.graph):
             severed = break_cycles(self.graph)
@@ -530,9 +561,7 @@ class SerialSystem(CompoundSystem):
         for name in topological_sort(self.graph):
             sub = self.graph.node[name]['system']
             self.subsystems.append(sub)
-            sub.setup_communicators(comm, scope)
-            if isinstance(sub, SimpleSystem):
-                self.simple_subs.append(sub)
+            sub.setup_communicators(self.mpi.comm, scope)
 
         if severed:
             for u,v,meta in severed:
@@ -566,7 +595,7 @@ class ParallelSystem(CompoundSystem):
     #         sub.run()
 
     def setup_communicators(self, comm, scope):
-        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
@@ -605,7 +634,6 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("assigned_procs: %s" % assigned_procs)
 
         self.subsystems = []
-        self.simple_subs = []
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > 0 and assigned_procs[i] == 0:
@@ -620,6 +648,7 @@ class ParallelSystem(CompoundSystem):
             color.extend([MPI.UNDEFINED]*(size-assigned))
 
         rank_color = color[rank]
+        mpiprint("setup_comms Split (par)")
         sub_comm = comm.Split(rank_color)
 
         if sub_comm == MPI.COMM_NULL:
@@ -628,19 +657,19 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("RANKCOLOR: %d,  COLOR: %s, comm.size: %d, subcomm.size: %d" % (rank_color, color,comm.size,sub_comm.size))
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                sub.mpi.cpus = assigned_procs[i]
                 self.subsystems.append(sub)
             elif requested_procs[i] == 0:  # sub is duplicated everywhere
                 self.subsystems.append(sub)
 
         for sub in self.subsystems:
-            if isinstance(sub, SimpleSystem):
-                self.simple_subs.append(sub)
             sub.setup_communicators(sub_comm, scope)
              
     def setup_variables(self):
         """ Determine variables from local subsystems """
+        mpiprint("setup_variables: %s" % self.name)
         self.all_variables = OrderedDict()
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
 
         for sub in self.subsystems:
             sub.setup_variables()
@@ -652,6 +681,7 @@ class ParallelSystem(CompoundSystem):
             sub = None
             names = []
         #mpiprint("%s before ALLGATHER, varkeys=%s" % (self.name, names))
+        mpiprint("setup_variables Allgather")
         varkeys_list = self.mpi.comm.allgather(names)
         #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
@@ -885,3 +915,25 @@ def _partition_subvars(names, vardict):
     return (sizes, nosizes)
 
 
+def get_comm_if_active(obj, comm):
+    if comm == MPI.COMM_NULL:
+        return comm
+
+    if isinstance(obj, System):
+        name = obj.name
+    else:
+        name = obj._parent.name
+
+    req = obj.get_req_cpus()
+    mpiprint("rank+1: %d,  req: %d" % (comm.rank+1,req))
+    if comm.rank+1 > req:
+        color = MPI.UNDEFINED
+    else:
+        color = 1
+
+    newcomm = comm.Split(color)
+    if newcomm == MPI.COMM_NULL:
+        mpiprint("NULL COMM for %s" % name)
+    else:
+        mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
+    return newcomm

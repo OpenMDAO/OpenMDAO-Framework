@@ -3,6 +3,8 @@ This is a simple iteration driver that basically runs a workflow, passing the
 output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
+import numpy
+
 from openmdao.main.driver import Driver
 from openmdao.main.datatypes.api import Float, Int, Enum
 from openmdao.main.cyclicflow import CyclicWorkflow
@@ -12,7 +14,7 @@ from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 from openmdao.util.decorators import add_delegate
 
-from openmdao.main.mpiwrap import mpiprint
+from openmdao.main.mpiwrap import mpiprint, MPI
 
 @add_delegate(HasParameters, HasEqConstraints)
 class MPISolver(Driver):
@@ -39,6 +41,9 @@ class MPISolver(Driver):
 
     def run(self, force=False, ffd_order=0, case_id=''):
         """ Runs the iterator; overwritten for some solvers """
+        system = self.workflow.get_subsystem()
+        if system.mpi.comm == MPI.COMM_NULL:
+            return
         self._iterator()
 
     def _iterator(self):
@@ -90,9 +95,27 @@ class MPINonlinearSolver(MPISolver):
     def _norm(self):
         """ Computes the norm of the f Vec """
         system = self.workflow.get_subsystem()
+        mpiprint("@@@ NORM for %s" % system.name)
+        for n in ['block_size','local_size','owner_range','owner_ranges','size','sizes']:
+            mpiprint("@@@ f.%s = %s" % (n,getattr(system.vec['f'].petsc_vec,n)))
+        mpiprint("@@@ f vector (pre-apply_F): %s" % system.vec['f'].items())
         system.apply_F()
+        mpiprint("@@@ f vector (post-apply_F): %s" % system.vec['f'].items())
+
+        # account for duplication of the same values in the global
+        # f vector
+        # if system.mpi.comm.size > system.mpi.comm.rank+1:
+        #     mpiprint("@@@ size = %d,  rank = %d" % (system.mpi.comm.size,system.mpi.comm.rank))
+        #     temp = system.vec['f'].array.copy()
+        #     system.vec['f'].array[:] = numpy.zeros(system.vec['f'].array.size)
         system.vec['f'].petsc_vec.assemble()
-        return system.vec['f'].petsc_vec.norm()
+        mpiprint("@@@ f vector (post-assemble): %s" % system.vec['f'].items())
+        val = system.vec['f'].petsc_vec.norm()
+        # if system.mpi.comm.size > system.mpi.comm.rank+1:
+        #     system.vec['f'].array[:] = temp
+        mpiprint("@@@ norm = %s" % val)
+        system.vec['f'].petsc_vec.assemble()
+        return val
 
 
 class MPINonlinearGS(MPINonlinearSolver):

@@ -7,9 +7,10 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 #from openmdao.main.interfaces import IDriver
 #from openmdao.main.mp_support import has_interface
-from openmdao.main.mpiwrap import MPI_info, mpiprint
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  partition_subsystems, collapse_subdrivers
+                                  partition_subsystems, collapse_subdrivers, \
+                                  get_comm_if_active
 from openmdao.util.nameutil import partition_names_by_comp
 
 __all__ = ['Workflow']
@@ -269,10 +270,12 @@ class Workflow(object):
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(cgraph, scope, tuple(sorted(cgraph.nodes())))
+                    self._subsystem = SerialSystem(cgraph, scope, 
+                                                   tuple(sorted(cgraph.nodes())))
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(cgraph, scope, tuple(sorted(cgraph.nodes())))
+                    self._subsystem = ParallelSystem(cgraph, scope, 
+                                                     tuple(sorted(cgraph.nodes())))
             elif len(cgraph) == 1:
                 self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
             else:
@@ -289,17 +292,27 @@ class Workflow(object):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self.mpi.comm = comm
-        self.get_subsystem().setup_communicators(comm, scope)
+        self.mpi.comm = get_comm_if_active(self, comm)
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
+        self.get_subsystem().setup_communicators(self.mpi.comm, scope)
 
     def setup_variables(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         return self.get_subsystem().setup_variables()
 
     def setup_sizes(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         return self.get_subsystem().setup_sizes()
 
     def setup_vectors(self, arrays=None):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         self.get_subsystem().setup_vectors(arrays)
 
     def setup_scatters(self):
+        if self.mpi.comm == MPI.COMM_NULL:
+            return
         self.get_subsystem().setup_scatters()

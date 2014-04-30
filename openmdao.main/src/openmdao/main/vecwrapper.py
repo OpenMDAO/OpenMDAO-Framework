@@ -122,7 +122,7 @@ class VecWrapper(object):
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
                 array_val[:] = scope.get_flattened_value(name)
-                mpiprint("getting %s (%s) from scope" % (name, array_val))
+                #mpiprint("getting %s (%s) from scope" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -134,7 +134,7 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
+                #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
            
     def dump(self, vname):
@@ -201,8 +201,8 @@ class DataTransfer(object):
     #    srcvec.set_from_scope(system.scope, scatter_vars)
         #mpiprint("src vector post-set_from_scope: %s" % srcvec.items())
 
-        mpiprint("src vector pre-SCATTER: %s" % srcvec.items())
-        mpiprint("dest vector pre-SCATTER: %s" % destvec.items())
+        #mpiprint("src vector pre-SCATTER: %s" % srcvec.items())
+        #mpiprint("dest vector pre-SCATTER: %s" % destvec.items())
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
         self.scatter.scatter(src_petsc, dest_petsc, addv=False, mode=False)
@@ -211,8 +211,8 @@ class DataTransfer(object):
         #else:
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
-        mpiprint("src_idx --> dest_idx: %s --> %s" % (self.var_idxs, self.input_idxs))
-        mpiprint("dest vector post-SCATTER: %s" % destvec.items())
+        #mpiprint("src_idx --> dest_idx: %s --> %s" % (self.var_idxs, self.input_idxs))
+        #mpiprint("dest vector post-SCATTER: %s" % destvec.items())
 
     #    scatter_vars = [v[1] for v in self.scatter_vars]
     #    destvec.set_to_scope(system.scope, scatter_vars)

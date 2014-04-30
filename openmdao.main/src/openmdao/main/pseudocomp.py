@@ -169,6 +169,8 @@ class PseudoComponent(object):
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, 
                                                scope=self)
+        # set the initial value of the output
+        setattr(self, 'out0', self._srcexpr.evaluate())
 
         # this is just the equation string (for debugging)
         if self._orig_dest:
@@ -266,7 +268,7 @@ class PseudoComponent(object):
     def connect(self, src, dest):
         self._valid = False
 
-    def run(self, ffd_order=0, case_id='', notify_parent=True):
+    def run(self, force=False, ffd_order=0, case_id='', notify_parent=True):
         self._parent.update_inputs(self.name)
 
         src = self._srcexpr.evaluate()

@@ -579,9 +579,6 @@ class Component(Container):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
-    # def _shadow_run(self):
-    #     pass
-
     @rbac('*', 'owner')
     def run(self, force=False, ffd_order=0, case_id=''):
         """Run this object. This should include fetching input variables

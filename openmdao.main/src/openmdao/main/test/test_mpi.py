@@ -202,7 +202,7 @@ class SellarMDF(Assembly):
         Optimal Objective = 3.18339"""
         
         #self.add('driver', FixedPointIterator())
-        self.add('driver', NTimes(99))
+        self.add('driver', NTimes(9))
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         C1 = self.add('C1', sellar.Discipline1())
@@ -263,6 +263,8 @@ if __name__ == '__main__':
         mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
 
         #top.driver.workflow.get_subsystem()._dump_graph(recurse=True)
+
+        mpiprint("setup DONE")
 
     if run:
         mpiprint('-'*50)
