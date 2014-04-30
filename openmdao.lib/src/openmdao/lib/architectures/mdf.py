@@ -53,8 +53,7 @@ class MDF(Architecture):
 
         #add the coupling vars parameters/constraints to the solver
         for key, couple in self.parent.list_coupling_vars().iteritems():
-            self.parent.solver.add_parameter(couple.indep.target, low=-1.e99,
-                                             high=1.e99, name=key)
+            self.parent.solver.add_parameter(couple.indep.target, name=key)
             self.parent.solver.add_constraint("%s=%s"
                                               % (couple.indep.target,
                                                  couple.dep.target))
