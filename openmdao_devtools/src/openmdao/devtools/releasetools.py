@@ -92,7 +92,6 @@ def _get_releaseinfo_str(version):
 
 def _create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
-    import pdb;pdb.set_trace()
     dirs = projname.split('.')
     os.chdir(os.path.join(*dirs))
     print 'updating releaseinfo.py for %s' % projname
@@ -211,6 +210,7 @@ def _update_releaseinfo_files(version):
 
     pkgs = openmdao_release_packages
     try:
+        import pdb;pdb.set_trace()
         for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
