@@ -1068,95 +1068,88 @@ class DirectionalFD(FiniteDifference):
         options = self.pa.wflow._parent.gradient_options
         fd_step = options.fd_step
 
-        # Set inputs
+        # Perturb input vector along the incoming direction
         for j, src, in enumerate(self.inputs):
 
-            if isinstance(src, basestring):
-                i1, i2 = self.in_bounds[src]
-            else:
-                i1, i2 = self.in_bounds[src[0]]
+            self.set_value(src, fd_step, arg)
 
-            for i in range(i1, i2):
+            #--------------------
+            # Forward difference
+            #--------------------
+            if form == 'forward':
 
+                # Step
                 self.set_value(src, fd_step, i1, i2, i)
 
-                #--------------------
+                self.pa.run(ffd_order=1)
+                self.get_outputs(self.y)
+
                 # Forward difference
-                #--------------------
-                if form == 'forward':
+                self.J[:, i] = (self.y - self.y_base)/fd_step
 
-                    # Step
-                    self.set_value(src, fd_step, i1, i2, i)
+                # Undo step
+                self.set_value(src, -fd_step, i1, i2, i)
 
-                    self.pa.run(ffd_order=1)
-                    self.get_outputs(self.y)
+            #--------------------
+            # Backward difference
+            #--------------------
+            elif form == 'backward':
 
-                    # Forward difference
-                    self.J[:, i] = (self.y - self.y_base)/fd_step
+                # Step
+                self.set_value(src, -fd_step, i1, i2, i)
 
-                    # Undo step
-                    self.set_value(src, -fd_step, i1, i2, i)
+                self.pa.run(ffd_order=1)
+                self.get_outputs(self.y)
 
-                #--------------------
                 # Backward difference
-                #--------------------
-                elif form == 'backward':
+                self.J[:, i] = (self.y_base - self.y)/fd_step
 
-                    # Step
-                    self.set_value(src, -fd_step, i1, i2, i)
+                # Undo step
+                self.set_value(src, fd_step, i1, i2, i)
 
-                    self.pa.run(ffd_order=1)
-                    self.get_outputs(self.y)
+            #--------------------
+            # Central difference
+            #--------------------
+            elif form == 'central':
 
-                    # Backward difference
-                    self.J[:, i] = (self.y_base - self.y)/fd_step
+                # Forward Step
+                self.set_value(src, fd_step, i1, i2, i)
 
-                    # Undo step
-                    self.set_value(src, fd_step, i1, i2, i)
+                self.pa.run(ffd_order=1)
+                self.get_outputs(self.y)
 
-                #--------------------
+                # Backward Step
+                self.set_value(src, -2.0*fd_step, i1, i2, i)
+
+                self.pa.run(ffd_order=1)
+                self.get_outputs(self.y2)
+
                 # Central difference
-                #--------------------
-                elif form == 'central':
+                self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
 
-                    # Forward Step
-                    self.set_value(src, fd_step, i1, i2, i)
+                # Undo step
+                self.set_value(src, fd_step, i1, i2, i)
 
-                    self.pa.run(ffd_order=1)
-                    self.get_outputs(self.y)
+            #--------------------
+            # Complex Step
+            #--------------------
+            elif form == 'complex_step':
 
-                    # Backward Step
-                    self.set_value(src, -2.0*fd_step, i1, i2, i)
+                complex_step = fd_step*1j
+                self.pa.set_complex_step()
+                yc = zeros(len(self.y), dtype=complex128)
 
-                    self.pa.run(ffd_order=1)
-                    self.get_outputs(self.y2)
+                # Step
+                self.set_value(src, complex_step, i1, i2, i)
 
-                    # Central difference
-                    self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
+                self.pa.run(ffd_order=1)
+                self.get_outputs(yc)
 
-                    # Undo step
-                    self.set_value(src, fd_step, i1, i2, i)
+                # Forward difference
+                self.J[:, i] = (yc/fd_step).imag
 
-                #--------------------
-                # Complex Step
-                #--------------------
-                elif form == 'complex_step':
-
-                    complex_step = fd_step*1j
-                    self.pa.set_complex_step()
-                    yc = zeros(len(self.y), dtype=complex128)
-
-                    # Step
-                    self.set_value(src, complex_step, i1, i2, i)
-
-                    self.pa.run(ffd_order=1)
-                    self.get_outputs(yc)
-
-                    # Forward difference
-                    self.J[:, i] = (yc/fd_step).imag
-
-                    # Undo step
-                    self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
+                # Undo step
+                self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -1195,7 +1188,7 @@ class DirectionalFD(FiniteDifference):
         #print 'after FD', self.pa.name, self.J
         return self.J
 
-    def set_value(self, srcs, val, i1, i2, index, undo_complex=False):
+    def set_value(self, srcs, fdstep, arg, undo_complex=False):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -1205,6 +1198,8 @@ class DirectionalFD(FiniteDifference):
         # For keeping track of arrays that share the same memory.
         array_base_val = None
         index_base_val = None
+
+        direction = arg[srcs]*fdstep
 
         for src in srcs:
             comp_name, _, var_name = src.partition('.')
