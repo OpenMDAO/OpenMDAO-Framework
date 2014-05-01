@@ -92,7 +92,7 @@ def _get_releaseinfo_str(version):
 
 def _create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
-    os.chdir(os.path.join(*dirs))
+    os.chdir(projname)
     print 'updating releaseinfo.py for %s' % projname
     with open('releaseinfo.py', 'w') as f:
         f.write(relinfo_str)
