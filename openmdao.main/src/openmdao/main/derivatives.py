@@ -732,13 +732,11 @@ class FiniteDifference(object):
 
         self.J = zeros((out_size, in_size))
         self.y_base = zeros((out_size,))
-        self.x = zeros((in_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
 
     def calculate(self):
         """Return Jacobian for all inputs and outputs."""
-        self.get_inputs(self.x)
         self.get_outputs(self.y_base)
 
         for j, src, in enumerate(self.inputs):
@@ -1055,4 +1053,238 @@ class FiniteDifference(object):
                 old_val = old_val[unravelled]
 
         return old_val
+
+
+class DirectionalFD(FiniteDifference):
+    """ Helper object for performing a finite difference in a single direction.
+    """
+
+    def calculate(self, arg):
+        """Return Jacobian of all outputs with respect to a given direction in
+        the input space."""
+
+        self.get_outputs(self.y_base)
+
+        options = self.pa.wflow._parent.gradient_options
+        fd_step = options.fd_step
+
+        # Set inputs
+        for j, src, in enumerate(self.inputs):
+
+            if isinstance(src, basestring):
+                i1, i2 = self.in_bounds[src]
+            else:
+                i1, i2 = self.in_bounds[src[0]]
+
+            for i in range(i1, i2):
+
+                self.set_value(src, fd_step, i1, i2, i)
+
+                #--------------------
+                # Forward difference
+                #--------------------
+                if form == 'forward':
+
+                    # Step
+                    self.set_value(src, fd_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+
+                    # Forward difference
+                    self.J[:, i] = (self.y - self.y_base)/fd_step
+
+                    # Undo step
+                    self.set_value(src, -fd_step, i1, i2, i)
+
+                #--------------------
+                # Backward difference
+                #--------------------
+                elif form == 'backward':
+
+                    # Step
+                    self.set_value(src, -fd_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+
+                    # Backward difference
+                    self.J[:, i] = (self.y_base - self.y)/fd_step
+
+                    # Undo step
+                    self.set_value(src, fd_step, i1, i2, i)
+
+                #--------------------
+                # Central difference
+                #--------------------
+                elif form == 'central':
+
+                    # Forward Step
+                    self.set_value(src, fd_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y)
+
+                    # Backward Step
+                    self.set_value(src, -2.0*fd_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(self.y2)
+
+                    # Central difference
+                    self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
+
+                    # Undo step
+                    self.set_value(src, fd_step, i1, i2, i)
+
+                #--------------------
+                # Complex Step
+                #--------------------
+                elif form == 'complex_step':
+
+                    complex_step = fd_step*1j
+                    self.pa.set_complex_step()
+                    yc = zeros(len(self.y), dtype=complex128)
+
+                    # Step
+                    self.set_value(src, complex_step, i1, i2, i)
+
+                    self.pa.run(ffd_order=1)
+                    self.get_outputs(yc)
+
+                    # Forward difference
+                    self.J[:, i] = (yc/fd_step).imag
+
+                    # Undo step
+                    self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
+
+        # Return outputs to a clean state.
+        for src in self.outputs:
+            i1, i2 = self.out_bounds[src]
+            old_val = self.scope.get(src)
+
+            if isinstance(old_val, (float, complex)):
+                new_val = float(self.y_base[i1:i2])
+            elif isinstance(old_val, ndarray):
+                shape = old_val.shape
+                if len(shape) > 1:
+                    new_val = self.y_base[i1:i2]
+                    new_val = new_val.reshape(shape)
+                else:
+                    new_val = self.y_base[i1:i2]
+            elif has_interface(old_val, IVariableTree):
+                new_val = old_val.copy()
+                self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
+            else:
+                continue
+
+            src, _, idx = src.partition('[')
+            if idx:
+                old_val = self.scope.get(src)
+                if isinstance(new_val, ndarray):
+                    exec('old_val[%s = new_val.copy()' % idx)
+                else:
+                    exec('old_val[%s = new_val' % idx)
+                self.scope.set(src, old_val, force=True)
+            else:
+                if isinstance(new_val, ndarray):
+                    self.scope.set(src, new_val.copy(), force=True)
+                else:
+                    self.scope.set(src, new_val, force=True)
+
+        #print 'after FD', self.pa.name, self.J
+        return self.J
+
+    def set_value(self, srcs, val, i1, i2, index, undo_complex=False):
+        """Set a value in the model"""
+
+        # Support for Parameter Groups:
+        if isinstance(srcs, basestring):
+            srcs = [srcs]
+
+        # For keeping track of arrays that share the same memory.
+        array_base_val = None
+        index_base_val = None
+
+        for src in srcs:
+            comp_name, _, var_name = src.partition('.')
+            comp = self.scope.get(comp_name)
+
+            if i2-i1 == 1:
+
+                # Indexed array
+                src, _, idx = src.partition('[')
+                if idx:
+                    old_val = self.scope.get(src)
+                    if old_val is not array_base_val or \
+                       idx != index_base_val:
+                        exec('old_val[%s += val' % idx)
+                        array_base_val = old_val
+                        index_base_val = idx
+
+                    # In-place array editing doesn't activate callback, so we
+                    # must do it manually.
+                    if var_name:
+                        base = self.scope._depgraph.base_var(src)
+                        comp._input_updated(base.split('.')[-1],
+                                            src.split('[')[0].partition('.')[2])
+                    else:
+                        self.scope._input_updated(comp_name.split('[')[0])
+
+                # Scalar
+                else:
+                    old_val = self.scope.get(src)
+                    if undo_complex is True:
+                        self.scope.set(src, (old_val+val).real, force=True)
+                    else:
+                        self.scope.set(src, old_val+val, force=True)
+
+            # Full vector
+            else:
+                idx = index - i1
+
+                # Indexed array
+                if '[' in src:
+                    base_src, _, base_idx = src.partition('[')
+                    base_val = self.scope.get(base_src)
+                    if base_val is not array_base_val or \
+                       base_idx != index_base_val:
+                        # Note: could speed this up with an eval
+                        # (until Bret looks into the expression speed)
+                        sliced_src = self.scope.get(src)
+                        sliced_shape = sliced_src.shape
+                        flattened_src = sliced_src.flatten()
+                        flattened_src[idx] += val
+                        sliced_src = flattened_src.reshape(sliced_shape)
+                        exec('self.scope.%s = sliced_src') % src
+                        array_base_val = base_val
+                        index_base_val = base_idx
+
+                else:
+
+                    old_val = self.scope.get(src)
+                    if old_val is not array_base_val:
+                        unravelled = unravel_index(idx, old_val.shape)
+                        old_val[unravelled] += val
+                        array_base_val = old_val
+
+                # In-place array editing doesn't activate callback, so we must
+                # do it manually.
+                if var_name:
+                    base = self.scope._depgraph.base_var(src)
+                    comp._input_updated(base.split('.')[-1],
+                                        src.split('[')[0].partition('.')[2])
+                else:
+                    self.scope._input_updated(comp_name.split('[', 1)[0])
+
+            # Prevent OpenMDAO from stomping on our poked input.
+            if var_name:
+                self.scope.set_valid([self.scope._depgraph.base_var(src)],
+                                    True)
+
+                # Make sure we execute!
+                comp._call_execute = True
+
+            else:
+                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
 
