@@ -2282,12 +2282,12 @@ def after_install(options, home_dir, activated=False):
  ('openmdao_lib', '', 'sdist'),
  ('openmdao_test', '', 'sdist'),
  ('openmdao_gui', '', 'sdist'),
- ('openmdao_examples.simple', 'examples', 'sdist'),
- ('openmdao_examples.bar3simulation', 'examples', 'bdist_egg'),
- ('openmdao_examples.enginedesign', 'examples', 'bdist_egg'),
- ('openmdao_examples.mdao', 'examples', 'sdist'),
- ('openmdao_examples.expected_improvement', 'examples', 'sdist'),
- ('openmdao_examples.nozzle_geometry_doe', 'examples', 'sdist'),
+ ('openmdao_examples_simple', 'examples', 'sdist'),
+ ('openmdao_examples_bar3simulation', 'examples', 'bdist_egg'),
+ ('openmdao_examples_enginedesign', 'examples', 'bdist_egg'),
+ ('openmdao_examples_mdao', 'examples', 'sdist'),
+ ('openmdao_examples_expected_improvement', 'examples', 'sdist'),
+ ('openmdao_examples_nozzle_geometry_doe', 'examples', 'sdist'),
  ('openmdao_devtools', '', 'sdist')]
 
         try:
