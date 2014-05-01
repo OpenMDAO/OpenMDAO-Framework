@@ -1055,11 +1055,49 @@ class FiniteDifference(object):
         return old_val
 
 
-class DirectionalFD(FiniteDifference):
+class DirectionalFD(object):
     """ Helper object for performing a finite difference in a single direction.
     """
 
-    def calculate(self, arg):
+    def __init__(self, pa):
+        """ Performs finite difference on the components in a given
+        pseudo_assembly. """
+
+        self.inputs = pa.inputs
+        self.outputs = pa.outputs
+        self.in_bounds = {}
+        self.out_bounds = {}
+        self.pa = pa
+        self.scope = pa.wflow.scope
+
+        options = pa.wflow._parent.gradient_options
+
+        in_size = 0
+        for j, srcs in enumerate(self.inputs):
+
+            # Support for parameter groups
+            if isinstance(srcs, basestring):
+                srcs = [srcs]
+
+            val = self.scope.get(srcs[0])
+            width = flattened_size(srcs[0], val, self.scope)
+
+            for src in srcs:
+                self.in_bounds[src] = (in_size, in_size+width)
+            in_size += width
+
+        out_size = 0
+        for src in self.outputs:
+            val = self.scope.get(src)
+            width = flattened_size(src, val)
+            self.out_bounds[src] = (out_size, out_size+width)
+            out_size += width
+
+        self.y_base = zeros((out_size,))
+        self.y = zeros((out_size,))
+        self.y2 = zeros((out_size,))
+
+    def calculate(self, arg, result):
         """Return Jacobian of all outputs with respect to a given direction in
         the input space."""
 
@@ -1067,89 +1105,85 @@ class DirectionalFD(FiniteDifference):
 
         options = self.pa.wflow._parent.gradient_options
         fd_step = options.fd_step
+        form = options.form
 
-        # Perturb input vector along the incoming direction
-        for j, src, in enumerate(self.inputs):
+        #--------------------
+        # Forward difference
+        #--------------------
+        if form == 'forward':
 
-            self.set_value(src, fd_step, arg)
+            # Step
+            self.set_value(fd_step, arg)
 
-            #--------------------
+            self.pa.run(ffd_order=1)
+            self.get_outputs(self.y)
+
             # Forward difference
-            #--------------------
-            if form == 'forward':
+            J = (self.y - self.y_base)/fd_step
 
-                # Step
-                self.set_value(src, fd_step, i1, i2, i)
+            # Undo step
+            self.set_value(-fd_step, arg)
 
-                self.pa.run(ffd_order=1)
-                self.get_outputs(self.y)
+        #--------------------
+        # Backward difference
+        #--------------------
+        elif form == 'backward':
 
-                # Forward difference
-                self.J[:, i] = (self.y - self.y_base)/fd_step
+            # Step
+            self.set_value(-fd_step, arg)
 
-                # Undo step
-                self.set_value(src, -fd_step, i1, i2, i)
+            self.pa.run(ffd_order=1)
+            self.get_outputs(self.y)
 
-            #--------------------
             # Backward difference
-            #--------------------
-            elif form == 'backward':
+            J = (self.y_base - self.y)/fd_step
 
-                # Step
-                self.set_value(src, -fd_step, i1, i2, i)
+            # Undo step
+            self.set_value(fd_step, arg)
 
-                self.pa.run(ffd_order=1)
-                self.get_outputs(self.y)
+        #--------------------
+        # Central difference
+        #--------------------
+        elif form == 'central':
 
-                # Backward difference
-                self.J[:, i] = (self.y_base - self.y)/fd_step
+            # Forward Step
+            self.set_value(fd_step, arg)
 
-                # Undo step
-                self.set_value(src, fd_step, i1, i2, i)
+            self.pa.run(ffd_order=1)
+            self.get_outputs(self.y)
 
-            #--------------------
+            # Backward Step
+            self.set_value(-2.0*fd_step, arg)
+
+            self.pa.run(ffd_order=1)
+            self.get_outputs(self.y2)
+
             # Central difference
-            #--------------------
-            elif form == 'central':
+            J = (self.y - self.y2)/(2.0*fd_step)
 
-                # Forward Step
-                self.set_value(src, fd_step, i1, i2, i)
+            # Undo step
+            self.set_value(fd_step, arg)
 
-                self.pa.run(ffd_order=1)
-                self.get_outputs(self.y)
+        #--------------------
+        # Complex Step
+        #--------------------
+        elif form == 'complex_step':
 
-                # Backward Step
-                self.set_value(src, -2.0*fd_step, i1, i2, i)
+            complex_step = fd_step*1j
+            self.pa.set_complex_step()
+            yc = zeros(len(self.y), dtype=complex128)
 
-                self.pa.run(ffd_order=1)
-                self.get_outputs(self.y2)
+            # Step
+            self.set_value(complex_step, arg)
 
-                # Central difference
-                self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
+            self.pa.run(ffd_order=1)
+            self.get_outputs(yc)
 
-                # Undo step
-                self.set_value(src, fd_step, i1, i2, i)
+            # Forward difference
+            J = (yc/fd_step).imag
 
-            #--------------------
-            # Complex Step
-            #--------------------
-            elif form == 'complex_step':
-
-                complex_step = fd_step*1j
-                self.pa.set_complex_step()
-                yc = zeros(len(self.y), dtype=complex128)
-
-                # Step
-                self.set_value(src, complex_step, i1, i2, i)
-
-                self.pa.run(ffd_order=1)
-                self.get_outputs(yc)
-
-                # Forward difference
-                self.J[:, i] = (yc/fd_step).imag
-
-                # Undo step
-                self.set_value(src, -fd_step, i1, i2, i, undo_complex=True)
+            # Undo step
+            self.set_value(-fd_step, arg, undo_complex=True)
 
         # Return outputs to a clean state.
         for src in self.outputs:
@@ -1191,21 +1225,22 @@ class DirectionalFD(FiniteDifference):
     def set_value(self, srcs, fdstep, arg, undo_complex=False):
         """Set a value in the model"""
 
-        # Support for Parameter Groups:
-        if isinstance(srcs, basestring):
-            srcs = [srcs]
+        for src_tuple in srcs:
 
-        # For keeping track of arrays that share the same memory.
-        array_base_val = None
-        index_base_val = None
+            # Support for Parameter Groups:
+            if isinstance(src_tuple, basestring):
+                srcs = [src_tuple]
 
-        direction = arg[srcs]*fdstep
+            # For keeping track of arrays that share the same memory.
+            array_base_val = None
+            index_base_val = None
 
-        for src in srcs:
-            comp_name, _, var_name = src.partition('.')
-            comp = self.scope.get(comp_name)
+            direction = arg[src_tuple]*fdstep
 
-            if i2-i1 == 1:
+            for src in src_tuple:
+
+                comp_name, _, var_name = src.partition('.')
+                comp = self.scope.get(comp_name)
 
                 # Indexed array
                 src, _, idx = src.partition('[')
@@ -1226,60 +1261,22 @@ class DirectionalFD(FiniteDifference):
                     else:
                         self.scope._input_updated(comp_name.split('[')[0])
 
-                # Scalar
+                # Whole Variable
                 else:
                     old_val = self.scope.get(src)
                     if undo_complex is True:
-                        self.scope.set(src, (old_val+val).real, force=True)
+                        self.scope.set(src, (old_val+direction).real, force=True)
                     else:
-                        self.scope.set(src, old_val+val, force=True)
+                        self.scope.set(src, old_val+direction, force=True)
 
-            # Full vector
-            else:
-                idx = index - i1
-
-                # Indexed array
-                if '[' in src:
-                    base_src, _, base_idx = src.partition('[')
-                    base_val = self.scope.get(base_src)
-                    if base_val is not array_base_val or \
-                       base_idx != index_base_val:
-                        # Note: could speed this up with an eval
-                        # (until Bret looks into the expression speed)
-                        sliced_src = self.scope.get(src)
-                        sliced_shape = sliced_src.shape
-                        flattened_src = sliced_src.flatten()
-                        flattened_src[idx] += val
-                        sliced_src = flattened_src.reshape(sliced_shape)
-                        exec('self.scope.%s = sliced_src') % src
-                        array_base_val = base_val
-                        index_base_val = base_idx
-
-                else:
-
-                    old_val = self.scope.get(src)
-                    if old_val is not array_base_val:
-                        unravelled = unravel_index(idx, old_val.shape)
-                        old_val[unravelled] += val
-                        array_base_val = old_val
-
-                # In-place array editing doesn't activate callback, so we must
-                # do it manually.
+                # Prevent OpenMDAO from stomping on our poked input.
                 if var_name:
-                    base = self.scope._depgraph.base_var(src)
-                    comp._input_updated(base.split('.')[-1],
-                                        src.split('[')[0].partition('.')[2])
+                    self.scope.set_valid([self.scope._depgraph.base_var(src)],
+                                        True)
+
+                    # Make sure we execute!
+                    comp._call_execute = True
+
                 else:
-                    self.scope._input_updated(comp_name.split('[', 1)[0])
-
-            # Prevent OpenMDAO from stomping on our poked input.
-            if var_name:
-                self.scope.set_valid([self.scope._depgraph.base_var(src)],
-                                    True)
-
-                # Make sure we execute!
-                comp._call_execute = True
-
-            else:
-                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
+                    self.scope.set_valid([comp_name.split('[', 1)[0]], True)
 

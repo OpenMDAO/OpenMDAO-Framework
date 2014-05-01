@@ -158,6 +158,15 @@ class PseudoAssembly(object):
                          required_inputs=None, required_outputs=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
+
+        # Directional finite difference doesn't pre-generate a Jacobian
+        if self.wflow._parent.gradient_options.directional_fd == True:
+            if self.fd is None:
+                from openmdao.main.derivatives import DirectionalFD
+                self.fd = DirectionalFD(self)
+                self.apply_deriv == self._apply_deriv
+            return None
+
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
@@ -239,8 +248,13 @@ class PseudoAssembly(object):
         return self.J
 
     def provideJ(self):
-        """Jacobian for this block"""
+        """Return Jacobian for this block"""
         return self.J
+
+    def _apply_deriv(self, arg, result):
+        """Matrix vector product only used if we are doing a directional
+        derivative."""
+        self.fd.calculate(arg, result)
 
     def list_deriv_vars(self):
         """Derivative inputs and outputs for this block"""
