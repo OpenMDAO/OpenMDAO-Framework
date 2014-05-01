@@ -15,7 +15,7 @@ import zipfile
 import re
 
 # get the list of openmdao subpackages from mkinstaller.py
-from openmdao.devtools.mkinstaller import openmdao_dev_packages
+from openmdao.devtools.mkinstaller import openmdao_release_packages
 from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import get_git_branch, get_git_branches, \
                                     get_git_log_info, repo_top
@@ -93,7 +93,8 @@ def _get_releaseinfo_str(version):
 def _create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
     import pdb;pdb.set_trace()
-    os.chdir(projname)
+    dirs = projname.split('.')
+    os.chdir(os.path.join(*dirs))
     print 'updating releaseinfo.py for %s' % projname
     with open('releaseinfo.py', 'w') as f:
         f.write(relinfo_str)
@@ -208,7 +209,7 @@ def _update_releaseinfo_files(version):
 
     releaseinfo_str = _get_releaseinfo_str(version)
 
-    pkgs = openmdao_dev_packages
+    pkgs = openmdao_release_packages
     try:
         for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
@@ -225,7 +226,7 @@ def _rollback_releaseinfo_files():
     startdir = os.getcwd()
     topdir = repo_top()
 
-    pkgs = openmdao_dev_packages
+    pkgs = openmdao_release_packages
     try:
         for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
@@ -424,7 +425,7 @@ def build_release(parser, options):
 
         # build openmdao package distributions
         proj_dirs = []
-        for project_name, pdir, pkgtype in openmdao_dev_packages:
+        for project_name, pdir, pkgtype in openmdao_release_packages:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))
