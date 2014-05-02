@@ -164,7 +164,7 @@ class PseudoAssembly(object):
             if self.fd is None:
                 from openmdao.main.derivatives import DirectionalFD
                 self.fd = DirectionalFD(self)
-                self.apply_deriv == self._apply_deriv
+                self.apply_deriv = self._apply_deriv
             return None
 
         # We don't do this in __init__ because some inputs and outputs

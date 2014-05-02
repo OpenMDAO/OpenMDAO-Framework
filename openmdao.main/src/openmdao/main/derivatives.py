@@ -1055,7 +1055,7 @@ class FiniteDifference(object):
         return old_val
 
 
-class DirectionalFD(object):
+class DirectionalFD(FiniteDifference):
     """ Helper object for performing a finite difference in a single direction.
     """
 
@@ -1105,7 +1105,7 @@ class DirectionalFD(object):
 
         options = self.pa.wflow._parent.gradient_options
         fd_step = options.fd_step
-        form = options.form
+        form = options.fd_form
 
         #--------------------
         # Forward difference
@@ -1186,9 +1186,13 @@ class DirectionalFD(object):
             self.set_value(-fd_step, arg, undo_complex=True)
 
         # Return outputs to a clean state.
-        for src in self.outputs:
+        for j, src in enumerate(self.outputs):
             i1, i2 = self.out_bounds[src]
             old_val = self.scope.get(src)
+
+            # Put answer into the right spot in result.
+            key = self.pa.mapped_outputs[j]
+            result[key] += J[i1:i2]
 
             if isinstance(old_val, (float, complex)):
                 new_val = float(self.y_base[i1:i2])
@@ -1219,23 +1223,26 @@ class DirectionalFD(object):
                 else:
                     self.scope.set(src, new_val, force=True)
 
-        #print 'after FD', self.pa.name, self.J
-        return self.J
-
-    def set_value(self, srcs, fdstep, arg, undo_complex=False):
+    def set_value(self, fdstep, arg, undo_complex=False):
         """Set a value in the model"""
 
-        for src_tuple in srcs:
+        for j, src_tuple in enumerate(self.inputs):
 
             # Support for Parameter Groups:
             if isinstance(src_tuple, basestring):
-                srcs = [src_tuple]
+                src_tuple = [src_tuple]
+
+            i1, i2 = self.in_bounds[src_tuple[0]]
 
             # For keeping track of arrays that share the same memory.
             array_base_val = None
             index_base_val = None
 
-            direction = arg[src_tuple]*fdstep
+            key = self.pa.mapped_inputs[j][0]
+            direction = arg[key]*fdstep
+
+            if i2-i1 == 1:
+                direction = direction[0]
 
             for src in src_tuple:
 
