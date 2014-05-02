@@ -90,18 +90,20 @@ def main():
     else:
         def isasm(obj):
             try:
-                return issubclass(obj, Assembly)
+                return issubclass(obj, Assembly) and obj is not Assembly
             except:
                 return False
 
         klasses = inspect.getmembers(mod, isasm)
         if len(klasses) > 1:
             print "found %d Assembly classes. you must specify 1" % len(klasses)
-            # for i, klass in enumerate(klasses):
-            #     print "%d) %s" % (i, klass.__name__)
-            # var = raw_input("\nEnter a number: ")
-            # obj = klasses[int(var)]
+            for i, (cname, klass) in enumerate(klasses):
+                print "%d) %s" % (i, cname)
+            var = raw_input("\nEnter a number: ")
+            obj = klasses[int(var)][1]()
             sys.exit(-1)
+        else:
+            obj = klasses[0][1]()
 
     set_as_top(obj)
     if not obj.get_pathname():
