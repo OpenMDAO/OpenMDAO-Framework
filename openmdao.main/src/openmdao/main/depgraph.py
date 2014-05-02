@@ -1270,20 +1270,30 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
 
-def find_related_pseudos(compgraph, nodes):
+def find_related_pseudos(depgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
     attached to the given set of component nodes.
     """
 
     pseudos = set()
-
+    compgraph = depgraph.component_graph()
+    
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
             if is_non_driver_pseudo_node(compgraph, upcomp):
                 pseudos.add(upcomp)
         for dwncomp in compgraph.successors_iter(node):
             if is_non_driver_pseudo_node(compgraph, dwncomp):
-                pseudos.add(dwncomp)
+                # FIXME: normally successor pseudocomps are ignored, but
+                # if they connect to a boundary variable on the Assembly,
+                # they'll never get evaluated unless they're in a workflow somewhere.
+                # It may be better to leave them out of the workflow and just
+                # add something to Assembly to have it evaluate them when updating
+                # its boundary vars
+                for dnode in depgraph.successors_iter(dwncomp+'.out0'):
+                    if is_boundary_node(depgraph, dnode):
+                        pseudos.add(dwncomp)
+                        break
 
     return list(pseudos)
 

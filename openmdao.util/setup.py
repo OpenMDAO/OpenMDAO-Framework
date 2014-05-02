@@ -45,6 +45,7 @@ setup(name='openmdao.util',
       [console_scripts]
       xyplot=openmdao.util.casedb:cmdlineXYplot
       plotgraph=openmdao.util.graphplot:main
+      dotgraph=openmdao.util.dotgraph:main
       add_reqs=openmdao.util.addreqs:add_reqs
       mkpseudo=openmdao.util.mkpseudo:mkpseudo
       envdump=openmdao.util.envirodump:envdump
