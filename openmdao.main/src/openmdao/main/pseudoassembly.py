@@ -3,6 +3,7 @@ provide derivatives, and thus must be finite differenced.'''
 
 import networkx as nx
 
+from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
@@ -162,7 +163,6 @@ class PseudoAssembly(object):
         # Directional finite difference doesn't pre-generate a Jacobian
         if self.wflow._parent.gradient_options.directional_fd == True:
             if self.fd is None:
-                from openmdao.main.derivatives import DirectionalFD
                 self.fd = DirectionalFD(self)
                 self.apply_deriv = self._apply_deriv
             return None
@@ -170,7 +170,6 @@ class PseudoAssembly(object):
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
-            from openmdao.main.derivatives import FiniteDifference
             self.fd = FiniteDifference(self)
 
         if hasattr(self.wflow, '_severed_edges'):
