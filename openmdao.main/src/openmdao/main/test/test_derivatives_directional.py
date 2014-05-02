@@ -3,8 +3,8 @@ Unit testing for directional derivatives.
 """
 
 import unittest
+
 from openmdao.main.api import Assembly, set_as_top
-from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 
