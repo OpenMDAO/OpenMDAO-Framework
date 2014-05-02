@@ -2,7 +2,7 @@
 differentiation capability.
 """
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.graph import list_deriv_vars

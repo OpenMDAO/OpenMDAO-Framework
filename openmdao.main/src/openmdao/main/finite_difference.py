@@ -1,7 +1,7 @@
 """ Finite Difference helper objects.
 """
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from sys import float_info
 
 from openmdao.main.array_helpers import flattened_size, flattened_value
@@ -618,6 +618,8 @@ class DirectionalFD(object):
                     self.scope.set(src, new_val.copy(), force=True)
                 else:
                     self.scope.set(src, new_val, force=True)
+
+        #print mv_prod, arg, result
 
     def set_value(self, fdstep, arg, undo_complex=False):
         """Set a value in the model"""

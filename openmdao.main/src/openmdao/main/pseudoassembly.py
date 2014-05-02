@@ -1,6 +1,7 @@
 '''The PseudoAssembly is used to aggregate blocks of components that cannot
 provide derivatives, and thus must be finite differenced.'''
 
+# pylint: disable=E0611,F0401
 import networkx as nx
 
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
@@ -117,7 +118,7 @@ class PseudoAssembly(object):
 
         pa_inputs = edges_to_dict(in_edges).values()
         pa_inputs.extend(solver_states)
-        pa_outputs = set([a for a, b in out_edges])
+        pa_outputs = set([a[0] for a in out_edges])
 
         renames = {}
 
