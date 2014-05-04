@@ -131,3 +131,4 @@ if __name__ == "__main__": # pragma: no cover
     print "Minimum objective: ", (prob.dis1.x1)**2 + prob.dis1.z2 + \
                                   prob.dis1.y1 + math.exp(-prob.dis2.y2)
     print "Elapsed time: ", time.time()-tt, "seconds"
+    print 'Execution Count: %d %d' % (prob.dis1.exec_count, prob.dis2.exec_count)
