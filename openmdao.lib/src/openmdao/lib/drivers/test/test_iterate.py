@@ -4,7 +4,7 @@ Test the FixedPointIterator component
 
 import unittest
 
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline2_WithDerivatives
@@ -114,7 +114,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.outvar = simple.invar')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
         self.top.run()
 
         self.assertAlmostEqual(self.top.simple.invar,
@@ -127,7 +127,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.invar - simple.outvar = 0')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
 
         try:
             self.top.run()
@@ -156,8 +156,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out1 = simple.in1')
         self.top.driver.add_constraint('simple.out2 = simple.in2')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -172,8 +172,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out2 = simple.in2')
         self.top.driver.add_constraint('simple.out1 = simple.in1')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -188,8 +188,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out2 = simple.in2')
         self.top.driver.add_constraint('simple.in1 = simple.out1')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -203,7 +203,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.out = simple.arr')
-        self.top.driver.add_parameter('simple.arr', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.arr')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -218,8 +218,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out1 = simple.arr1')
         self.top.driver.add_constraint('simple.out2 = simple.arr2')
-        self.top.driver.add_parameter('simple.arr1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.arr2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.arr2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -238,7 +238,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.add("simple", Simple1())
         self.top.driver.workflow.add('simple')
         self.top.driver.add_constraint('simple.outvar = simple.invar')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
         self.top.driver.max_iteration = 3
 
         self.top.run()
@@ -269,8 +269,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
 
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
 
         try:
             self.top.run()

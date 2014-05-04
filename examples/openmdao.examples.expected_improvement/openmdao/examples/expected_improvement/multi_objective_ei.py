@@ -37,9 +37,9 @@ class Analysis(Assembly):
 
         meta = self.add('meta', MetaModel(**kwargs))
         meta.default_surrogate = KrigingSurrogate()
-        pareto = self.add('pareto', ParetoFilter(**kwargs))
+        self.add('pareto', ParetoFilter(**kwargs))
 
-        MOEI = self.add('MOEI', MultiObjExpectedImprovement())
+        self.add('MOEI', MultiObjExpectedImprovement())
 
         #initial training DOE
         adapt.DOEgenerator = OptLatinHypercube(num_samples=25)
@@ -72,10 +72,8 @@ class Analysis(Assembly):
         MOEI_opt.add_objective("MOEI.PI")
 
         #Iterative sampling process
-        driver.add_parameter('adapt.adaptive_inputs.spiral.x[0]',
-                             low=-1e99, high=1e99)
-        driver.add_parameter('adapt.adaptive_inputs.spiral.y[0]',
-                             low=-1e99, high=1e99)
+        driver.add_parameter('adapt.adaptive_inputs.spiral.x[0]')
+        driver.add_parameter('adapt.adaptive_inputs.spiral.y[0]')
         driver.add_constraint('adapt.adaptive_inputs.spiral.x[0] = meta.x')
         driver.add_constraint('adapt.adaptive_inputs.spiral.y[0] = meta.y')
         driver.max_iterations = 30
@@ -130,37 +128,37 @@ if __name__ == "__main__": #pragma: no cover
 
 
     #plot the samples points, along with the data from the function
-    def f1(x,y):
+    def f1(x, y):
         return cos(x)/x+sin(y)/y
 
-    def f2(x,y):
+    def f2(x, y):
         return sin(x)/x+cos(y)/y
 
     X_range = arange(0.75, 5.*pi, 0.5)
     Y_range = arange(0.75, 5.*pi, 0.5)
 
-    X , Y = meshgrid(X_range,Y_range)
-    Z1,Z2 = f1(X, Y),f2(X, Y)
+    X,   Y = meshgrid(X_range, Y_range)
+    Z1, Z2 = f1(X, Y), f2(X, Y)
 
     plt.figure()
     plt.subplot(121)
-    plt.contour(X, Y, Z1,50)
-    plt.axis([0.75,5*pi,0.75,5*pi])
+    plt.contour(X, Y, Z1, 50)
+    plt.axis([0.75, 5*pi, 0.75, 5*pi])
 
     plt.subplot(122)
-    plt.contour(X,Y,Z2,50)
+    plt.contour(X, Y, Z2, 50)
     cb = plt.colorbar(shrink=.6)
-    plt.axis([0.75,5*pi,0.75,5*pi])
+    plt.axis([0.75, 5*pi, 0.75, 5*pi])
 
     plt.figure()
 
     Z1_pred = []
     Z2_pred = []
 
-    for x_row,y_row in zip(X,Y):
+    for x_row, y_row in zip(X, Y):
         row1 = []
         row2 = []
-        for x,y in zip(x_row, y_row):
+        for x, y in zip(x_row, y_row):
             analysis.meta.x = x
             analysis.meta.y = y
             analysis.meta.execute()
@@ -179,7 +177,7 @@ if __name__ == "__main__": #pragma: no cover
     data_train['meta.f2_xy'] = analysis.adapt.DOE_outputs.spiral.f2_xy
 
     plt.scatter(data_train['meta.x'],
-                data_train['meta.y'],s=30,c='#572E07',zorder=10)
+                data_train['meta.y'], s=30, c='#572E07', zorder=10)
 
     n_train = len(data_train['meta.y'])
     data_EI = {}
@@ -189,7 +187,7 @@ if __name__ == "__main__": #pragma: no cover
     data_EI['meta.f2_xy'] = analysis.adapt.all_case_outputs.spiral.f2_xy[n_train:]
 
     count = len(data_EI['meta.x'])
-    colors = arange(0,count)/float(count)
+    colors = arange(0, count)/float(count)
     color_map = get_cmap('spring')
 
     f1_train = [case for case in data_train['meta.f1_xy']]
@@ -198,7 +196,7 @@ if __name__ == "__main__": #pragma: no cover
     f2_iter = [case for case in data_EI['meta.f2_xy']]
 
     plt.subplot(121)
-    plt.contour(X, Y, Z1_pred,50)
+    plt.contour(X, Y, Z1_pred, 50)
     plt.scatter(data_train['meta.x'],
                 data_train['meta.y'], s=30, c='#572E07', zorder=10)
     plt.scatter(data_EI['meta.x'], data_EI['meta.y'],
@@ -206,10 +204,10 @@ if __name__ == "__main__": #pragma: no cover
                 c=colors,
                 zorder=11,
                 cmap=color_map)
-    plt.axis([0.75,5*pi,0.75,5*pi])
+    plt.axis([0.75, 5*pi, 0.75, 5*pi])
 
     plt.subplot(122)
-    plt.contour(X, Y, Z2_pred,50)
+    plt.contour(X, Y, Z2_pred, 50)
     cb = plt.colorbar(shrink=.6)
     plt.scatter(data_train['meta.x'],
                 data_train['meta.y'], s=30, c='#572E07', zorder=10)
@@ -219,12 +217,12 @@ if __name__ == "__main__": #pragma: no cover
                 zorder=11,
                 cmap=color_map)
 
-    plt.axis([0.75,5*pi, 0.75, 5*pi])
+    plt.axis([0.75, 5*pi, 0.75, 5*pi])
 
     plt.figure()
-    plt.scatter(Z1,Z2)
+    plt.scatter(Z1, Z2)
     plt.scatter(f1_train, f2_train, s=30, c='#572E07', zorder=10)
-    plt.scatter(f1_iter, f2_iter, s=30, c=colors,zorder=11, cmap=color_map)
+    plt.scatter(f1_iter, f2_iter, s=30, c=colors, zorder=11, cmap=color_map)
 
     plt.show()
     analysis.cleanup()

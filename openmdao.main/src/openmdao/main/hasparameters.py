@@ -1,9 +1,11 @@
 import ordereddict
 
-from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.interfaces import obj_has_interface, ISolver
 from openmdao.main.variable import make_legal_path
+from openmdao.main.vartree import VariableTree
+
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -209,7 +211,8 @@ class Parameter(ParameterBase):
                                  " limit supplied (%s) exceeds the built-in"
                                  " lower limit (%s)." % (target, low, meta_low))
 
-        elif _allowed_types is None or 'any' not in _allowed_types:
+        elif _allowed_types is None or \
+             'unbounded' not in _allowed_types and 'any' not in _allowed_types:
             if low is None:
                 raise ValueError("Trying to add parameter '%s', "
                                  "but no lower limit was found and no "
@@ -226,7 +229,8 @@ class Parameter(ParameterBase):
                                  " upper limit (%s)."
                                  % (target, high, meta_high))
 
-        elif _allowed_types is None or 'any' not in _allowed_types:
+        elif _allowed_types is None or \
+             'unbounded' not in _allowed_types and 'any' not in _allowed_types:
             if high is None:
                 raise ValueError("Trying to add parameter '%s', "
                                  "but no upper limit was found and no "
@@ -561,7 +565,8 @@ class ArrayParameter(ParameterBase):
                                      " built-in lower limit (%s)."
                                      % (target, _low, _meta_low))
 
-            elif _allowed_types is None or 'any' not in _allowed_types:
+            elif _allowed_types is None or \
+                 'unbounded' not in _allowed_types and 'any' not in _allowed_types:
                 if _low is None:
                     raise ValueError("Trying to add parameter '%s', "
                                      "but no lower limit was found and no "
@@ -578,7 +583,8 @@ class ArrayParameter(ParameterBase):
                                      " built-in upper limit (%s)."
                                      % (target, _high, _meta_high))
 
-            elif _allowed_types is None or 'any' not in _allowed_types:
+            elif _allowed_types is None or \
+                 'unbounded' not in _allowed_types and 'any' not in _allowed_types:
                 if high is None:
                     raise ValueError("Trying to add parameter '%s', "
                                      "but no upper limit was found and no "
@@ -762,6 +768,8 @@ class HasParameters(object):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
         self._allowed_types = ['continuous']
+        if obj_has_interface(parent, ISolver):
+            self._allowed_types.append('unbounded')
 
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from

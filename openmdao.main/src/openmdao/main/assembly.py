@@ -251,7 +251,7 @@ class Assembly(Component):
         inputs and connections of the replaced object as much as possible.
         """
         tobj = getattr(self, target_name)
-        
+
         if not tobj:
             self.add(target_name, newobj)
             return
@@ -1069,7 +1069,7 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
 
-        if check_only:
+        if check_only or len(self.J_input_keys)==0 or len(output_keys)==0:
             return None
 
         return self.driver.calc_gradient(self.J_input_keys, output_keys)

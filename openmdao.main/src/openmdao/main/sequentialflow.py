@@ -134,7 +134,7 @@ class SequentialWorkflow(Workflow):
 
             self._fullnames = self._names[:]
             fullset = set(self._parent.list_pseudocomps())
-            fullset.update(find_related_pseudos(self.scope._depgraph.component_graph(),
+            fullset.update(find_related_pseudos(self.scope._depgraph,
                                                 self._names))
             self._fullnames.extend(fullset - set(self._names))
 
@@ -1118,7 +1118,7 @@ class SequentialWorkflow(Workflow):
 
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
-        print 'edges:', self._edges
+        #print 'edges:', self._edges
         if not hasattr(self._parent, 'get_parameters'):
             return J
 

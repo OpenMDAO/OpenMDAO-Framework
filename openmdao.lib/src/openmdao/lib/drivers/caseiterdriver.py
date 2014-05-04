@@ -318,12 +318,14 @@ class CaseIteratorDriver(Driver):
 
         inp_paths = []
         inp_values = []
-        for path in self.get_parameters():
-            inp_paths.append(path)
+        for path, param in self.get_parameters().items():
             if isinstance(path, tuple):
                 path = path[0]  # Use first target of ParameterGroup.
             path = make_legal_path(path)
-            inp_values.append(self.get('case_inputs.'+path))
+            value = self.get('case_inputs.'+path)
+            for target in param.targets:
+                inp_paths.append(target)
+                inp_values.append(value)
 
         outputs = self.get_responses().keys()
 
@@ -565,7 +567,6 @@ class CaseIteratorDriver(Driver):
                     self._rerun.append(case)
                 else:
                     self._logger.error('Too many retries for %s', case)
-                    self._stop = True
 
             # Set up for next case.
             in_use = self._start_processing(server, stepping, reload=True)

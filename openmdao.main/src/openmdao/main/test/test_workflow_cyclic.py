@@ -108,7 +108,7 @@ class TestOptSubToSolver(Assembly):
         self.add('opt', MyDriver())
 
         self.connect('com.y', 'ratio.y')
-        self.driver.add_parameter('com.ratio', low=1e-99, high=1e99)
+        self.driver.add_parameter('com.ratio')
         self.driver.add_constraint('ratio.ratio=com.ratio')
 
         self.opt.add_parameter('com.x', low=0, high=1)
@@ -147,7 +147,8 @@ class TestCase(unittest.TestCase):
     def test_opt_nested_in_solver(self):
         sim = TestOptSubToSolver()
         sim.run()
-        self.assertEqual([c.name for c in sim.driver.workflow], ['opt','ratio','_pseudo_0'])
+        self.assertEqual([c.name for c in sim.driver.workflow],
+                         ['opt', 'ratio', '_pseudo_0'])
 
 
 class Tree2(VariableTree):

@@ -1060,6 +1060,16 @@ class LocalAllocator(FactoryAllocator):
         If True, :meth:`execute_command` and :meth:`load_model` are allowed
         in created servers. Use with caution!
 
+    server_limit: int
+        If 0, limit :meth:`max_servers` result to `total_cpus`.
+        If >0, limit to `server_limit`, if <0, no limit to normal calculation.
+
+    The `max_load` argument is typically used to work around limitations
+    on the number of servers based on system load.  The `server_limit`
+    argument can be used to avoid overcommiting memory, especially if
+    `max_load` has been used to reduce the effect of system load on server
+    count.
+    
     Resource configuration file entry equivalent to the default
     `LocalHost` allocator::
 
@@ -1067,13 +1077,14 @@ class LocalAllocator(FactoryAllocator):
         classname: openmdao.main.resource.LocalAllocator
         total_cpus: 1
         max_load: 1.0
+        server_limit: 0
         authkey: PublicKey
         allow_shell: True
 
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0,
-                 authkey=None, allow_shell=False):
+                 authkey=None, allow_shell=False, server_limit=0):
         super(LocalAllocator, self).__init__(name, authkey, allow_shell)
         if total_cpus > 0:
             self.total_cpus = total_cpus
@@ -1088,6 +1099,8 @@ class LocalAllocator(FactoryAllocator):
         else:
             raise ValueError('%s: max_load must be > 0, got %g'
                              % (name, max_load))
+        self.server_limit = server_limit
+
     @property
     def host(self):
         """ Allocator hostname. """
@@ -1129,11 +1142,16 @@ class LocalAllocator(FactoryAllocator):
                 raise ValueError('%s: max_load must be > 0, got %g'
                                  % (self.name, value))
 
+        if cfg.has_option(self.name, 'server_limit'):
+            value = cfg.getint(self.name, 'server_limit')
+            self._logger.debug('    server_limit: %s', value)
+            self.server_limit = value
+
     @rbac('*')
     def max_servers(self, resource_desc, load_adjusted=False):
         """
         Returns `total_cpus` * `max_load` if `resource_desc` is supported;
-        otherwise, zero.
+        otherwise, zero. The return value may be limited by `server_limit`.
 
         resource_desc: dict
             Description of required resources.
@@ -1159,6 +1177,11 @@ class LocalAllocator(FactoryAllocator):
                                    self.max_load * self.total_cpus)
                 avail_cpus -= int(loadavgs[0])
         avail_cpus = max(int(avail_cpus), 1)
+        if self.server_limit == 0:
+            avail_cpus = min(avail_cpus, self.total_cpus)
+        elif self.server_limit > 0:
+            avail_cpus = min(avail_cpus, self.server_limit)
+        # else no special limiting.
 
         if 'min_cpus' in resource_desc:
             req_cpus = resource_desc['min_cpus']

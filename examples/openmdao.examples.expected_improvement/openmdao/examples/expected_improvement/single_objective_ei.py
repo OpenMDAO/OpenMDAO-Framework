@@ -1,7 +1,6 @@
 '''Single Ojective EI Example'''
 
 from tempfile import mkdtemp
-import os.path
 import shutil
 
 from openmdao.lib.components.api import MetaModel, ExpectedImprovement, \
@@ -66,11 +65,8 @@ class Analysis(Assembly):
         ei_opt.add_objective('ei.PI') #could use ei.EI too
 
         #Iterative sampling process
-        # TODO: Note, soon low and high will not be needed.
-        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]',
-                             low=-1e99, high=1e99)
-        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]',
-                             low=-1e99, high=1e99)
+        driver.add_parameter('adapt.adaptive_inputs.branin.x[0]')
+        driver.add_parameter('adapt.adaptive_inputs.branin.y[0]')
         driver.add_constraint('adapt.adaptive_inputs.branin.x[0] = meta.x')
         driver.add_constraint('adapt.adaptive_inputs.branin.y[0] = meta.y')
         driver.max_iterations = 30
@@ -94,7 +90,7 @@ if __name__ == "__main__": #pragma: no cover
     import matplotlib
     from matplotlib import pyplot as plt
     from matplotlib.pylab import get_cmap
-    from numpy import meshgrid, array, pi,arange,cos
+    from numpy import meshgrid, array, pi, arange, cos
 
     seed = None
     backend = None
@@ -127,21 +123,21 @@ if __name__ == "__main__": #pragma: no cover
         analysis.meta.x = x
         analysis.meta.y = y
         analysis.meta.execute()
-        print "f_xy: ",analysis.meta.f_xy, " % error: ", \
+        print "f_xy: ", analysis.meta.f_xy, " % error: ", \
               (analysis.meta.f_xy.mu - z)/z*100
 
     #Generate the Contour plot to show the function
-    def branin(x,y):
-        return (y-(5.1/(4.*pi**2.))*x**2.+5.*x/pi-6.)**2.+\
+    def branin(x, y):
+        return (y-(5.1/(4.*pi**2.))*x**2.+5.*x/pi-6.)**2.+ \
                10.*(1.-1./(8.*pi))*cos(x)+10.
 
     X_range = arange(-5, 10.2, .25)
     Y_range = arange(0, 15.2, .25)
 
-    X,Y = meshgrid(X_range, Y_range)
+    X, Y = meshgrid(X_range, Y_range)
     Z = branin(X, Y)
 
-    plt.contour(X, Y, Z, arange(1,200,2), zorder=1)
+    plt.contour(X, Y, Z, arange(1, 200, 2), zorder=1)
 
     cb = plt.colorbar(shrink=.45)
 
@@ -154,7 +150,6 @@ if __name__ == "__main__": #pragma: no cover
     plt.scatter(data_train['meta.x'],
                 data_train['meta.y'], s=30, c='#572E07', zorder=10)
 
-
     n_train = len(data_train['meta.y'])
     data_EI = {}
     data_EI['meta.y'] = analysis.adapt.all_case_inputs.branin.y[n_train:]
@@ -162,7 +157,7 @@ if __name__ == "__main__": #pragma: no cover
     data_EI['meta.f_xy'] = analysis.adapt.all_case_outputs.branin.f_xy[n_train:]
 
     count = len(data_EI['meta.x'])
-    colors = arange(0,count)/float(count)
+    colors = arange(0, count)/float(count)
 
     color_map = get_cmap('spring')
 
@@ -172,7 +167,7 @@ if __name__ == "__main__": #pragma: no cover
     distance = [10000., 10000., 10000.]
     closest_points = [(), (), ()]
     for x,y,z in zip(data_EI['meta.x'], data_EI['meta.y'], data_EI['meta.f_xy']):
-        for i,p in enumerate(points):
+        for i, p in enumerate(points):
             d = ((p[0]-x)**2 + (p[1]-y)**2)**.5
             if d < distance[i]:
                 distance[i] = d
@@ -190,7 +185,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Branin Function Contours and EI Sample Points")
-    plt.text(10.9,11, "Branin\nFunction\nValue")
+    plt.text(10.9, 11, "Branin\nFunction\nValue")
 
     if figname is not None:
         matplotlib.pylab.savefig(figname)
@@ -198,9 +193,9 @@ if __name__ == "__main__": #pragma: no cover
     plt.figure()
     Z2 = []
 
-    for x_row,y_row in zip(X, Y):
+    for x_row, y_row in zip(X, Y):
         row = []
-        for x,y in zip(x_row, y_row):
+        for x, y in zip(x_row, y_row):
             analysis.meta.x = x
             analysis.meta.y = y
             analysis.meta.execute()
@@ -214,7 +209,7 @@ if __name__ == "__main__": #pragma: no cover
     plt.xlabel("x")
     plt.ylabel("y")
     plt.title("Branin Meta Model Contours")
-    plt.text(10.9,11, "Meta Model\nFunction\nValue")
+    plt.text(10.9, 11, "Meta Model\nFunction\nValue")
 
     plt.show()
 

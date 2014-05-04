@@ -21,7 +21,7 @@ from openmdao.util.testutil import assert_rel_error, assert_raises
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
-# pylint: disable-msg=E1101
+# pylint: disable=E1101
 
 
 def replace_uuid(msg):
@@ -64,9 +64,11 @@ class MyModel(Assembly):
         self.driver.DOEgenerator = OptLatinHypercube(num_samples=10)
         self.driver.add_parameter(('driven.x0', 'driven.y0'),
                                   low=-10., high=10., scaler=20., adder=10.)
-        for name in ['x1', 'x2', 'x3']:
+        for name in ('x1', 'x2'):
             self.driver.add_parameter("driven.%s" % name,
                                       low=-10., high=10., scaler=20., adder=10.)
+        self.driver.add_parameter("driven.x3", name='x3',
+                                  low=-10., high=10., scaler=20., adder=10.)
         self.driver.add_response('driven.rosen_suzuki')
 
 
@@ -167,7 +169,7 @@ class TestCaseDOE(unittest.TestCase):
                 x0 = doe.case_inputs.driven.x0[i]
                 x1 = doe.case_inputs.driven.x1[i]
                 x2 = doe.case_inputs.driven.x2[i]
-                x3 = doe.case_inputs.driven.x3[i]
+                x3 = doe.case_inputs.x3[i]
                 assert_rel_error(self, result, rosen_suzuki(x0, x1, x2, x3),
                                  0.0001)
 
