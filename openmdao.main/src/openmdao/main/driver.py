@@ -350,9 +350,6 @@ class Driver(Component):
         case_uuid: str
             Identifier for the Case that is associated with this run.
         """
-        # if not is_active(self):
-        #     return self._shadow_run()
-
         # (Re)configure parameters.
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
@@ -384,8 +381,6 @@ class Driver(Component):
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
-
-        #self._bcast_iteration(None, None) # tell shadow copies we're done
 
     def step(self):
         """Similar to the 'execute' function, but this one only

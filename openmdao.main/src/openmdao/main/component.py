@@ -608,9 +608,6 @@ class Component(Container):
             Identifier for the Case that is associated with this run.
         """
 
-        # if not is_active(self):
-        #     return self._shadow_run()
-
         if self.directory:
             self.push_dir()
 
