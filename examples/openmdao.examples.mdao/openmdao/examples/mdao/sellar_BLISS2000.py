@@ -1,11 +1,9 @@
 """
     Solution of the Sellar analytical problem using BLISS2000.
 
-    -MDA solved with a Broyden solver.
-
     -The metamodels for the two disciplines are constructed using response surfaces.
 
-    -Both the discipline and system level optimizations are performed using CONMIN
+    -Both the discipline and system level optimizations are performed using SLSQP
 """
 
 
