@@ -172,9 +172,9 @@ component just runs the `eval` statement we defined in the class definition.
             self.comp.eval_only = True
             self.add('driver', BroydenSolver())
             self.driver.workflow.add('comp')
-            self.driver.add_parameter('comp.x', low=-100, high=100)
-            self.driver.add_parameter('comp.y', low=-100, high=100)
-            self.driver.add_parameter('comp.z', low=-100, high=100)
+            self.driver.add_parameter('comp.x')
+            self.driver.add_parameter('comp.y')
+            self.driver.add_parameter('comp.z')
             self.driver.add_constraint('comp.res[0] = 0')
             self.driver.add_constraint('comp.res[1] = 0')
             self.driver.add_constraint('comp.res[2] = 0')
