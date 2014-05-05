@@ -15,7 +15,7 @@ try:
 
 except ImportError as err:
     logger.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros, vstack, hstack
+    from openmdao.main.numpy_fallback import ndarray, zeros, vstack, hstack, any
 
 
 # pylint: disable-msg=C0103
@@ -289,6 +289,16 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
         if key not in residual:
             result[key] = -arg[key]
 
+    # Speedhack, don't call component's derivatives if incoming vector is zero.
+    nonzero = False
+    for key, value in arg.iteritems():
+        if key not in result and any(value != 0):
+            nonzero = True
+            break
+
+    if nonzero is False:
+        return
+
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.
     if J is None and hasattr(obj, 'apply_deriv'):
@@ -380,6 +390,16 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
     for key in arg:
         if key not in residual:
             result[key] = -arg[key]
+
+    # Speedhack, don't call component's derivatives if incoming vector is zero.
+    nonzero = False
+    for key, value in arg.iteritems():
+        if any(value != 0):
+            nonzero = True
+            break
+
+    if nonzero is False:
+        return
 
     # If storage of the local Jacobian is a problem, the user can
     # specify the 'apply_derivT' function instead of provideJ.

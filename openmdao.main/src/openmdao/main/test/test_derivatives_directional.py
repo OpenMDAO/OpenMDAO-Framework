@@ -76,8 +76,8 @@ class TestDirectionalFD(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'])
 
-        # Ran 3 times, not 4.
-        self.assertEqual(top.comp2.exec_count, 4)
+        # Ran 1 times, not 4.
+        self.assertEqual(top.comp2.exec_count, 2)
         assert_rel_error(self, J[0, 0], 16.0, 0.0001)
 
         top.driver.gradient_options.directional_fd = False
@@ -87,7 +87,7 @@ class TestDirectionalFD(unittest.TestCase):
                                               outputs=['comp2.y'])
 
         # Ran 4 times (4 fd steps).
-        self.assertEqual(top.comp2.exec_count, 8)
+        self.assertEqual(top.comp2.exec_count, 6)
         assert_rel_error(self, J[0, 0], 16.0, 0.0001)
 
         # Next, test param / obj
@@ -96,22 +96,22 @@ class TestDirectionalFD(unittest.TestCase):
         top.driver.add_parameter('comp1.x', low=-1000, high=1000)
         top.driver.add_objective('comp2.y')
         top.run()
-        self.assertEqual(top.comp2.exec_count, 9)
+        self.assertEqual(top.comp2.exec_count, 7)
 
         top.driver.gradient_options.directional_fd = True
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient()
 
-        # Ran 3 more times.
-        self.assertEqual(top.comp2.exec_count, 13)
+        # Ran 1 more times.
+        self.assertEqual(top.comp2.exec_count, 8)
         assert_rel_error(self, J[0, 0], 16.0, 0.0001)
 
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='fd')
 
         # Ran 1 more times (full model fd, 2 edges).
-        self.assertEqual(top.comp2.exec_count, 15)
+        self.assertEqual(top.comp2.exec_count, 9)
         assert_rel_error(self, J[0, 0], 16.0, 0.0001)
 
     def test_paramgroup(self):
