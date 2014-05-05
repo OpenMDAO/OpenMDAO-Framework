@@ -75,7 +75,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         child = assembly['children'][0]
         self.assertEqual(child['pathname'], 'prob.driver')
-        self.assertEqual(child['type'], 'Run_Once')
+        self.assertEqual(child['type'], 'Driver')
         self.assertEqual(child['interfaces'],
             ['IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
 
@@ -110,7 +110,6 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Objectives' in attributes)
         self.assertTrue('Parameters' in attributes)
         self.assertTrue('Constraints' in attributes)
-        self.assertTrue('Slots' in attributes)
         self.assertTrue('Workflow' in attributes)
 
         self.assertEqual(attributes['Workflow']['pathname'],
@@ -171,7 +170,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         # DATAFLOW
         dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(dataflow), 5)
+        self.assertEqual(len(dataflow), 6)
 
         self.assertTrue('components' in dataflow)
         components = dataflow['components']
@@ -207,6 +206,10 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('objectives' in dataflow)
         objectives = dataflow['objectives']
         self.assertEqual(len(objectives), 0)
+
+        self.assertTrue('responses' in dataflow)
+        responses = dataflow['responses']
+        self.assertEqual(len(responses), 0)
 
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')

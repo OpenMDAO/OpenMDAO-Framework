@@ -8,16 +8,12 @@ import unittest
 import numpy as np
 
 from openmdao.lib.components.geomcomp import GeomComponent
-from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Array
 from openmdao.main.interfaces import IParametricGeometry, implements, \
                                      IStaticGeometry
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
-
-from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
-
 
 #not a working geometry, but pretends to be! only useful for this test
 class DummyGeometry(object): 

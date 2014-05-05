@@ -12,7 +12,7 @@ from openmdao.main.variable import Variable
 
 class Str(Variable):
     """A variable wrapper for a string variable.
-       """
+    """
 
     def __init__(self, default_value='', iotype=None, desc=None,
                  **metadata):
@@ -35,9 +35,4 @@ class Str(Variable):
         """ Use the Enthought trait's validate.
         """
         return self._validator.validate(obj, name, value)
-
-    def create_editor(self):
-        """ User the one in the Enthought trait.
-        """
-        return self._validator.create_editor()
 

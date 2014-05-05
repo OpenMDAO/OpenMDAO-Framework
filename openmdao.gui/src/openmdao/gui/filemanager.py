@@ -4,6 +4,7 @@ import traceback
 import zipfile
 import re
 import mimetypes
+import logging
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -117,11 +118,17 @@ class FileManager(object):
         '''
         filepath = self._get_abs_path(filename)
         if os.path.exists(filepath):
-            (mimetype, encoding) = mimetypes.guess_type(filepath)
-            if mimetype and mimetype.lower() == 'image/x-png':
-                # image/x-png is a legacy MIME type from the days before
-                # it got its official name, image/png, in 1996.
-                mimetype = 'image/png'
+            try:
+                (mimetype, encoding) = mimetypes.guess_type(filepath)
+            except Exception, err:
+                logging.warn("In %s: %r", __file__, err)
+                mimetype = 'application/octet-stream'
+                encoding = 'binary'
+            else:
+                if mimetype and mimetype.lower() == 'image/x-png':
+                    # image/x-png is a legacy MIME type from the days before
+                    # it got its official name, image/png, in 1996.
+                    mimetype = 'image/png'
             contents = open(filepath, 'rb').read()
             return (contents, mimetype, encoding)
         else:

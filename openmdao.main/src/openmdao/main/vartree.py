@@ -14,7 +14,7 @@ from openmdao.main.datatypes.str import Str
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
-from openmdao.main.array_helpers import get_val_and_index
+from openmdao.main.array_helpers import flattened_size
 
 
 class VariableTree(Container):
@@ -107,7 +107,11 @@ class VariableTree(Container):
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
-        for name in self._alltraits():
+        # _alltraits() is missing some traits after a deepcopy, so use the
+        # union of _alltraits() and everything in self.__dict__
+        allset = set(self._alltraits().keys())
+        allset.update(self.__dict__.keys())
+        for name in allset:
             if name not in ('trait_added', 'trait_modified') \
                and not name.startswith('_') and hasattr(self, name):
                 self.on_trait_change(self._trait_modified, name)
@@ -172,7 +176,7 @@ class VariableTree(Container):
                     # modify the arglist of _input_trait_modified, so instead
                     # call _input_check (assuming source checking hasn't been
                     # turned off at the calling level) and _input_updated explicitly
-                    if self._input_check != self._input_nocheck:
+                    if self._input_check is not None:
                         p._input_check(vt.name, vt)
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
@@ -216,7 +220,7 @@ class VariableTree(Container):
                        id(obj) not in visited:
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
-                            yield ('.'.join([name, chname]), child)
+                            yield ('.'.join((name, chname)), child)
 
     def _check_req_traits(self, comp):
         """Raise an exception if any child traits with required=True have not
@@ -329,6 +333,19 @@ class VariableTree(Container):
 
         return attrs
 
+    def get_flattened_size(self):
+        """Return the size of a flattened float array containing
+        all values in the vartree that are flattenable to float
+        arrays.  Any values not flattenable to float arrays will
+        raise an exception. 
+        """
+        # FIXME: maybe all non float flattenable vals should
+        #        just return 0 size, and when asked for their
+        #        flattened float array val should just return []?
+        size = 0
+        for key in self.list_vars():
+            size += flattened_size(key, getattr(self, key), scope=self)
+        return size
 
     def get_flattened_index(self, name):
         """Return the slice within the flattened array of the 
@@ -345,7 +362,7 @@ from openmdao.main.case import flatteners, flatten_obj
 def _flatten_vartree(name, vt):
     ret = []
     for n, v in vt._items(set()):
-        ret.extend([('.'.join([name, k]), v) for k, v in flatten_obj(n, v)])
+        ret.extend([('.'.join((name, k)), v) for k, v in flatten_obj(n, v)])
     return ret
 
 flatteners[VariableTree] = _flatten_vartree

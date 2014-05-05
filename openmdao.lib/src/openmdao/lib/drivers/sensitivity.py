@@ -32,10 +32,10 @@ class SensitivityDriver(Driver):
 
     implements(IHasParameters, IHasObjectives, IHasConstraints)
 
-    dF = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
+    dF = Array(zeros((0, 0), 'd'), iotype='out', desc='Sensitivity of the '
                'objectives with respect to the parameters. Index 1 is the '
                'objective output, while index 2 is the parameter input.')
-    dG = Array(zeros((0, 0),'d'), iotype='out', desc='Sensitivity of the '
+    dG = Array(zeros((0, 0), 'd'), iotype='out', desc='Sensitivity of the '
                'constraints with respect to the parameters. Index 1 is the '
                'constraint output, while index 2 is the parameter input.')
 
@@ -46,11 +46,11 @@ class SensitivityDriver(Driver):
     dx_names = List([], iotype='out', desc='Parameter names that '
                      'correspond to our array indices.')
 
-    F = Array(zeros(0,'d'), iotype='out', desc='Objective baseline values '
+    F = Array(zeros(0, 'd'), iotype='out', desc='Objective baseline values '
                         'where sensitivity is evaluated.')
-    G = Array(zeros(0,'d'), iotype='out', desc='Constraint baseline values '
+    G = Array(zeros(0, 'd'), iotype='out', desc='Constraint baseline values '
                         'where sensitivity is evaluated.')
-    x = Array(zeros(0,'d'), iotype='out', desc='Parameter baseline values '
+    x = Array(zeros(0, 'd'), iotype='out', desc='Parameter baseline values '
                         'where sensitivity is evaluated.')
 
     def execute(self):
@@ -81,9 +81,6 @@ class SensitivityDriver(Driver):
 
         self.dF = J[:nobj, :]
         self.dG = J[nobj:nobj+ncon, :]
-
-        self.record_case()
-
 
     def _check(self):
         """Make sure we aren't missing inputs or outputs."""

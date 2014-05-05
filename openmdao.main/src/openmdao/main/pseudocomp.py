@@ -19,8 +19,10 @@ from openmdao.util.typegroups import real_types, int_types
 _namelock = RLock()
 _count = 0
 
+
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
+
 
 def _get_new_name():
     global _count
@@ -29,11 +31,14 @@ def _get_new_name():
         _count += 1
     return name
 
+
 def _get_varname(name):
     return name.split('[', 1)[0]
 
+
 def do_nothing_xform(node):
     return node
+
 
 def scaler_adder_xform(node, scaler, adder):
     """Returns an ast for the form (node+adder)*scaler"""
@@ -41,9 +46,10 @@ def scaler_adder_xform(node, scaler, adder):
         newnode = ast.BinOp(node, ast.Add(), ast.Num(adder))
     else:
         newnode = node
-    if scaler != 1.0: # do the add and the mult
+    if scaler != 1.0:  # do the add and the mult
         newnode = ast.BinOp(newnode, ast.Mult(), ast.Num(scaler))
     return ast.copy_location(newnode, node)
+
 
 def unit_xform(node, in_units, out_units):
     """Transforms an ast into expr*scaler+adder where scaler
@@ -54,7 +60,8 @@ def unit_xform(node, in_units, out_units):
     try:
         scaler, adder = inpq.unit.conversion_tuple_to(outpq.unit)
     except TypeError:
-        raise TypeError("units '%s' are incompatible with assigning units of '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
+        raise TypeError("units '%s' are incompatible with assigning units of"
+                        " '%s'" % (inpq.get_unit_name(), outpq.get_unit_name()))
     return scaler_adder_xform(node, scaler, adder)
 
 
@@ -68,9 +75,10 @@ class DummyExpr(object):
     def get_metadata(self):
         return [('', {})]
 
+
 def _invert_dict(dct):
     out = {}
-    for k,v in dct.items():
+    for k, v in dct.items():
         out[v] = k
     return out
 
@@ -87,16 +95,21 @@ class PseudoComponent(object):
         if destexpr is None:
             destexpr = DummyExpr()
         self.name = _get_new_name()
-        self._inmap = {} # mapping of component vars to our inputs
+        self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
         self._valid = False
         self._parent = parent
         self._inputs = []
+        self._initialized = False
+
+        # Flags and caching used by the derivatives calculation
         self.force_fd = False
         self._provideJ_bounds = None
-        self._pseudo_type = pseudo_type # a string indicating the type of pseudocomp
-                                        # this is, e.g., 'units', 'constraint', 'objective',
-                                        # or 'multi_var_expr'
+        self._complex_step = False
+
+        self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
+                                         # this is, e.g., 'units', 'constraint', 'objective',
+                                         # or 'multi_var_expr'
         self._orig_src = srcexpr.text
         self._orig_dest = destexpr.text
         self.Jsize = None
@@ -105,23 +118,21 @@ class PseudoComponent(object):
 
         varmap = {}
         rvarmap = {}
-        for i,ref in enumerate(srcexpr.refs()):
+        for i, ref in enumerate(srcexpr.refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
             self._inmap[ref] = in_name
             varmap[ref] = in_name
             rvarmap.setdefault(_get_varname(ref), set()).add(ref)
-            # set the current value of the connected variable
-            # into our input
-            setattr(self, in_name, 
-                    ExprEvaluator(ref).evaluate(self._parent))
+            setattr(self, in_name, None)
 
         refs = list(destexpr.refs())
         if refs:
             if len(refs) == 1:
                 setattr(self, 'out0', None)
             else:
-                raise RuntimeError("output of PseudoComponent must reference only one variable")
+                raise RuntimeError("output of PseudoComponent must reference"
+                                   " only one variable")
         varmap[refs[0]] = 'out0'
         rvarmap.setdefault(_get_varname(refs[0]), set()).add(refs[0])
 
@@ -160,8 +171,8 @@ class PseudoComponent(object):
             try:
                 unitxform = unit_xform(unitnode, self._srcunits, out_units)
             except Exception as err:
-                raise TypeError("Incompatible units for '%s' and '%s': %s" % (srcexpr.text,
-                                                                    destexpr.text, err))
+                raise TypeError("Incompatible units for '%s' and '%s': %s"
+                                % (srcexpr.text, destexpr.text, err))
             unit_src = print_node(unitxform)
             xformed_src = unit_src
         else:
@@ -169,8 +180,6 @@ class PseudoComponent(object):
 
         self._srcexpr = ConnectedExprEvaluator(xformed_src, 
                                                scope=self)
-        # set the initial value of the output
-        setattr(self, 'out0', self._srcexpr.evaluate())
 
         # this is just the equation string (for debugging)
         if self._orig_dest:
@@ -198,7 +207,7 @@ class PseudoComponent(object):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-        return '.'.join([self._parent.get_pathname(rel_to_scope), self.name])
+        return '.'.join((self._parent.get_pathname(rel_to_scope), self.name))
 
     def list_connections(self, is_hidden=False, show_expressions=False):
         """list all of the inputs and output connections of this PseudoComponent.
@@ -217,10 +226,10 @@ class PseudoComponent(object):
             else:
                 return []
         else:
-            conns = [(src, '.'.join([self.name, dest]))
+            conns = [(src, '.'.join((self.name, dest)))
                          for src, dest in self._inmap.items()]
             if self._outdests:
-                conns.extend([('.'.join([self.name, 'out0']), dest)
+                conns.extend([('.'.join((self.name, 'out0')), dest)
                                            for dest in self._outdests])
         return conns
 
@@ -234,15 +243,15 @@ class PseudoComponent(object):
         """Return a list of connections between our pseudocomp and
         parent components of our sources/destinations.
         """
-        conns = [(src.split('.',1)[0], self.name)
+        conns = [(src.split('.', 1)[0], self.name)
                      for src, dest in self._inmap.items()]
         if self._outdests:
-            conns.extend([(self.name, dest.split('.',1)[0])
+            conns.extend([(self.name, dest.split('.', 1)[0])
                                     for dest in self._outdests])
         return conns
 
     def contains(self, name):
-        return name=='out0' or name in self._inputs
+        return name == 'out0' or name in self._inputs
 
     def make_connections(self, scope):
         """Connect all of the inputs and outputs of this comp to
@@ -274,6 +283,7 @@ class PseudoComponent(object):
         src = self._srcexpr.evaluate()
         setattr(self, 'out0', src)
         self._valid = True
+        self._initialized = True
         if notify_parent:
             self._parent.child_run_finished(self.name)
 
@@ -338,6 +348,22 @@ class PseudoComponent(object):
 
         return J
 
+    def ensure_init(self):
+        """Make sure our inputs and outputs have been 
+        initialized.
+        """
+        if not self._initialized:
+            # set the current value of the connected variable
+            # into our input
+            for ref, in_name in self._inmap.items():
+                setattr(self, in_name, 
+                        ExprEvaluator(ref).evaluate(self._parent))
+
+            # set the initial value of the output
+            setattr(self, 'out0', self._srcexpr.evaluate())
+
+            self._initialized = True
+
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
 
@@ -365,17 +391,14 @@ class PseudoComponent(object):
         if name in self._var_sizes:
             return self._var_sizes[name]
         else:
-            # make sure we've executed so we have inputs of the
-            # correct type
-            if self.out0 is None:
-                self.run(notify_parent=False)
+            self.ensure_init()
             try:
-                size = flattened_size_info(name, self)
+                info = flattened_size_info(name, self)
             except TypeError:
-                size = None
-            self._var_sizes[name] = size
+                info = None
+            self._var_sizes[name] = info
                 
-            return size
+            return info
 
     def get_flattened_value(self, path):
         """Return the named value, which may include

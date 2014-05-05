@@ -174,7 +174,7 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required == True and \
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True and \
            not trait.assumed_default and trait._illegal_default_ is True:
 
         msg = "variable '%s' is required and cannot have a default value" % name
@@ -211,6 +211,9 @@ class Container(SafeHasTraits):
 
         self._cached_traits_ = None
         self._repair_trait_info = None
+
+        # Locally set metadata, overrides trait metadata.
+        self._trait_metadata = {}
 
         # TODO: see about turning this back into a regular logger and just
         # handling its unpickleability in __getstate__/__setstate__ in
@@ -605,6 +608,9 @@ class Container(SafeHasTraits):
             _check_bad_default(name, t)
             break  # just check the first arg in the list
 
+        if name in self._trait_metadata:
+            del self._trait_metadata[name]  # Invalidate.
+
         return super(Container, cls).add_class_trait(name, *trait)
 
     def add_trait(self, name, trait, refresh=True):
@@ -634,6 +640,9 @@ class Container(SafeHasTraits):
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
 
+        if name in self._trait_metadata:
+            del self._trait_metadata[name]  # Invalidate.
+
         if refresh:
             getattr(self, name)  # For VariableTree subtree/leaf update in GUI.
 
@@ -648,6 +657,10 @@ class Container(SafeHasTraits):
         try:
             del self._cached_traits_[name]
         except (KeyError, TypeError):
+            pass
+        try:
+            del self._trait_metadata[name]
+        except KeyError:
             pass
 
         super(Container, self).remove_trait(name)
@@ -682,7 +695,7 @@ class Container(SafeHasTraits):
                     obj = obj.copy()
                 else:
                     obj = _copydict[trait.copy](obj)
-        else: # index is not None
+        else:  # index is not None
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
@@ -902,7 +915,7 @@ class Container(SafeHasTraits):
                     if obj:
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
-                            yield ('.'.join([name, chname]), child)
+                            yield ('.'.join((name, chname)), child)
 
             for name, trait in match_dict.items():
                 obj = getattr(self, name, Missing)
@@ -1062,23 +1075,33 @@ class Container(SafeHasTraits):
                     self._get_metadata_failed(traitpath, metaname)
 
         varname, _, _ = traitpath.partition('[')
-        t = self.get_trait(varname)
-        if not t:
-            return self._get_metadata_failed(traitpath, metaname)
-        t = t.trait_type
+        try:
+            mdict = self._trait_metadata[varname]
+        except KeyError:
+            t = self.get_trait(varname)
+            if t:
+                t = t.trait_type
+                mdict = t._metadata.copy()
+                # vartypename isn't present in the metadata of traits
+                # that don't inherit from Variable, so fake it out here
+                # so we'll be consistent across all traits
+                mdict.setdefault('vartypename', t.__class__.__name__)
+            else:
+                mdict = self._get_metadata_failed(traitpath, None)
+            self._trait_metadata[varname] = mdict
+
         if metaname is None:
-            mdict = t._metadata.copy()
-            mdict.setdefault('vartypename', t.__class__.__name__)
             return mdict
         else:
-            val = t._metadata.get(metaname, None)
-            # vartypename isn't present in the metadata of traits
-            # that don't inherit from Variable, so fake it out here
-            # so we'll be consistent across all traits
-            if val is None:
-                if metaname == 'vartypename':
-                    return t.__class__.__name__
-            return val
+            return mdict.get(metaname, None)
+
+    @rbac(('owner', 'user'))
+    def set_metadata(self, traitpath, metaname, value):
+        """Set the metadata associated with the trait found using traitpath."""
+        if metaname in ('iotype',):
+            self.raise_exception("Can't set %s on %s, read-only"
+                                 % (metaname, traitpath), TypeError)
+        self.get_metadata(traitpath)[metaname] = value
 
     def _get_failed(self, path, index=None):
         """If get() cannot locate the variable specified by the given
@@ -1124,10 +1147,10 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple).
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
+        if '.' in path:
+            childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
+            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
                 return self._get_failed(path, index)
             return obj.get(restofpath, index)
 
@@ -1139,13 +1162,13 @@ class Container(SafeHasTraits):
                 if expr is None:
                     expr = ExprEvaluator(path, scope=self)
                     self._exprcache[path] = expr
-                obj = expr.evaluate()
+                return expr.evaluate()
             else:
                 obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            return obj
-        else: # has an index
+                if obj is Missing:
+                    return self._get_failed(path, index)
+                return obj
+        else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:
                 return self._get_failed(path, index)
@@ -1254,8 +1277,8 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple)
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
+        if '.' in path:
+            childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
             if obj is Missing or not is_instance(obj, Container):
                 return self._set_failed(path, value, index, src, force)
@@ -1275,23 +1298,11 @@ class Container(SafeHasTraits):
                     self._check_source(path, src)
                 if index is None:
                     # bypass input source checking
-                    chk = self._input_check
-                    self._input_check = self._input_nocheck
+                    self._input_check = None
                     try:
                         setattr(self, path, value)
                     finally:
-                        self._input_check = chk
-                    # Note: This was done to make foo.bar = 3 behave the
-                    # same as foo.set('bar', 3).
-                    # Without this, the output of the comp was
-                    # always invalidated when you call set_parameters.
-                    # This meant that component was always executed
-                    # even when the inputs were unchanged.
-                    # _call_execute is set in the on-trait-changed
-                    # callback, so it's a good test for whether the
-                    # value changed.
-                    if iotype == 'in' and getattr(self, "_call_execute", False):
-                        self._input_updated(path)
+                        self._input_check = self._real_input_check
                 else:  # array index specified
                     self._index_set(path, value, index)
             elif iotype == 'out' and not force:
@@ -1351,7 +1362,7 @@ class Container(SafeHasTraits):
                 full = '.'.join((path, full))
                 item = item.parent
 
-    def _input_check(self, name, old):
+    def _real_input_check(self, name, old):
         """This raises an exception if the specified input is attached
         to a source.
         """
@@ -1374,11 +1385,8 @@ class Container(SafeHasTraits):
                     "cannot be directly set" %
                     (name, preds[0]), RuntimeError)
 
-    def _input_nocheck(self, name, old):
-        """This method is substituted for `_input_check` to avoid source
-        checking during a set() call when we've already verified the source.
-        """
-        pass
+    # This gets set to None to disable checking, then reset to _real_input_check
+    _input_check = _real_input_check
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""

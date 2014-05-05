@@ -143,14 +143,14 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.add_objective('10*comp.result')
         # pylint: disable-msg=C0301
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
         map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
-        self.top.driver.recorders = [ListCaseRecorder()]
-        self.top.driver.printvars = ['comp.opt_objective']
+        self.top.recorders = [ListCaseRecorder()]
+        self.top.printvars = ['comp.opt_objective']
         self.top.driver.iprint = 0
         self.top.run()
 
@@ -166,7 +166,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.comp.opt_design_vars[3],
                          self.top.comp.x[3], 0.05)
 
-        cases = self.top.driver.recorders[0].get_iterator()
+        cases = self.top.recorders[0].get_iterator()
         end_case = cases[-1]
 
         self.assertEqual(self.top.comp.x[1],
@@ -179,7 +179,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.add_objective('10*comp.result')
         # pylint: disable-msg=C0301
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
         self.top.driver.add_constraint('comp.g <= 0')
         self.top.driver.iprint = 0
@@ -255,7 +255,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     def test_opt1_flippedconstraints(self):
         self.top.driver.add_objective('10*comp.result')
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
@@ -309,7 +309,7 @@ class CONMINdriverTestCase(unittest.TestCase):
 
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
         map(self.top.driver.add_constraint, ['comp.x[1] + 3.0*comp.x[2] > 3.0',
                                              'comp.x[2] + comp.x[3] > 13.0',
@@ -337,7 +337,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     def test_remove(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
         # pylint: disable-msg=C0301
         map(self.top.driver.add_constraint, [
@@ -414,7 +414,7 @@ class TestAssembly(Assembly):
         self.driver.workflow.add(['comp'])
         #self.driver.iprint = 4 #debug verbosity
         self.driver.add_objective('comp.x')
-        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0 , high=10.0)
+        self.driver.add_parameter('comp.dummy_data.dummy1', low=-10.0, high=10.0)
 
 class CONMINdriverTestCase2(unittest.TestCase):
 

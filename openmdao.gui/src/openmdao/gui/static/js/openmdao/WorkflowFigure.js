@@ -295,8 +295,8 @@ openmdao.WorkflowFigure = function(elm, project, driver, json) {
         layoutAll();
     }));
     contextMenu.append(jQuery('<li>Clear Workflow</li>').click(function(e) {
-        var cmd = pathname + '.workflow.clear();' +
-                  pathname + '.config_changed();';
+        var cmd = pathname + '.workflow.clear() ; ' +
+                  pathname + '.config_changed()';
         project.issueCommand(cmd);
     }));
     ContextMenu.set(contextMenu.attr('id'), flow_div.attr('id'));

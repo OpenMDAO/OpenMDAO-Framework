@@ -1,8 +1,8 @@
-"""Expected Improvement calculation for one or more objectives."""
+"""Expected Improvement calculation for single objective."""
 
 import logging
 try:
-    from numpy import exp, abs, pi
+    from numpy import exp, abs, pi, seterr
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
 _check = ['numpy']
@@ -16,70 +16,50 @@ except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
 
-from openmdao.main.datatypes.api import Slot, Str, Float, Instance
-from openmdao.lib.casehandlers.api import CaseSet
+from openmdao.main.datatypes.api import Float, Instance
 
 from openmdao.main.api import Component
 from openmdao.util.decorators import stub_if_missing_deps
 
 from openmdao.main.uncertain_distributions import NormalDistribution
 
-@stub_if_missing_deps(*_check)
-class ExpectedImprovementBase(Component):
-    criteria = Str(iotype="in",
-                   desc="Name of the variable to maximize the expected "
-                        "improvement around. Must be a NormalDistrubtion type.")
+class ExpectedImprovement(Component):
+    """Expected Improvement calculation for single objective."""
 
+    target = Float(0, iotype="in", desc="Current objective minimum.")
+
+    current = Instance(NormalDistribution, iotype="in",
+                       desc="The Normal Distribution of the predicted value "
+                            "for some function at some point where you wish to"
+                            " calculate the EI.")
 
     EI = Float(0.0, iotype="out",
-               desc="The expected improvement of the predicted_value.")
+               desc="The expected improvement of the predicted_value " + \
+                    "in current.")
 
     PI = Float(0.0, iotype="out",
-               desc="The probability of improvement of the predicted_value.")
+               desc="The probability of improvement of the predicted_value" + \
+                    " in current.")
 
     def execute(self):
         """ Calculates the expected improvement of the model at a given point.
         """
 
-        mu = self.predicted_value.mu
-        sigma = self.predicted_value.sigma
-        best_case = self.best_case[0]
-        try:
-            target = best_case[self.criteria]
-        except KeyError:
-            self.raise_exception("best_case did not have an output which "
-                                 "matched the criteria, '%s'"%self.criteria,
-                                 ValueError)
-        try:
+        mu = self.current.mu
+        sigma = self.current.sigma
+        target = self.target
 
-            self.PI = 0.5+0.5*erf((1/2**.5)*(target-mu/sigma))
+        try:
+            seterr(divide='raise')
+            self.PI = 0.5+0.5*erf((1/2**.5)*((target-mu)/sigma))
 
             T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
-            T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
+            T2 = sigma*((1./((2.*pi)**.5))*exp(-0.5*((target-mu)/sigma)**2.))
             self.EI = abs(T1+T2)
 
-        except (ValueError,ZeroDivisionError):
+        except (ValueError, ZeroDivisionError, FloatingPointError):
             self.EI = 0
             self.PI = 0
 
 
 
-class ConnectableExpectedImprovement(ExpectedImprovementBase):
-    best_case = Instance(CaseSet, iotype="in",
-                       desc="CaseSet which contains a single case "
-                            "representing the criteria value.")
-    
-    predicted_value = Instance(NormalDistribution, iotype="in",
-                             desc="The Normal Distribution of the predicted value "
-                                  "for some function at some point where you wish to"
-                                  " calculate the EI.")
-
-class ExpectedImprovement(ExpectedImprovementBase):
-    best_case = Slot(CaseSet,
-                       desc="CaseSet which contains a single case "
-                            "representing the criteria value.")
-    
-    predicted_value = Slot(NormalDistribution,
-                             desc="The Normal Distribution of the predicted value "
-                                  "for some function at some point where you wish to"
-                                  " calculate the EI.")

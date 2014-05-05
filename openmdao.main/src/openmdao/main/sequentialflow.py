@@ -7,6 +7,7 @@ import sys
 from math import isnan
 from StringIO import StringIO
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
                                         flatten_slice, is_differentiable_val
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
@@ -23,7 +24,8 @@ from openmdao.main.depgraph import find_related_pseudos, \
                                     find_all_connecting
 from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict, list_deriv_vars
+from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
+                                flatten_list_of_iters
 
 try:
     from numpy import ndarray, zeros
@@ -36,14 +38,15 @@ _missing = object()
 
 __all__ = ['SequentialWorkflow']
 
+
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
     def __init__(self, parent=None, scope=None, members=None):
         """ Create an empty flow. """
-        self._explicit_names = [] # names the user adds
-        self._names = None  # names the user adds plus names required
-                            # for params, objectives, and constraints
+        self._explicit_names = []  # names the user adds
+        self._names = None   # names the user adds plus names required
+                             # for params, objectives, and constraints
         super(SequentialWorkflow, self).__init__(parent, scope, members)
 
         # Bookkeeping
@@ -121,7 +124,7 @@ class SequentialWorkflow(Workflow):
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
 
-            if len(drivers) == len(comps): # all comps are drivers
+            if len(drivers) == len(comps):  # all comps are drivers
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
@@ -224,6 +227,11 @@ class SequentialWorkflow(Workflow):
         """Creates the array that stores the residual. Also returns the
         number of edges.
         """
+
+        # Cache this too
+        if self.res is not None:
+            return len(self.res)
+
         dgraph = self.derivative_graph()
         inputs = dgraph.graph['mapped_inputs']
 
@@ -247,7 +255,7 @@ class SequentialWorkflow(Workflow):
                 targets = [targets]
 
             # Implicit source edges are tuples.
-            if is_implicit == True:
+            if is_implicit is True:
                 impli_edge = nEdge
                 for resid in src:
                     unmap_src = from_PA_var(resid)
@@ -292,17 +300,40 @@ class SequentialWorkflow(Workflow):
 
                 src_noidx = src.split('[', 1)[0]
 
-                # Special poke for boundary node
+                # Poke our source data
+
+                # Special case for boundary node
                 if is_boundary_node(dgraph, measure_src) or \
                    is_boundary_node(dgraph, dgraph.base_var(measure_src)):
                     if src_noidx not in basevars:
+
                         bound = (nEdge, nEdge+width)
                         self.set_bounds(measure_src, bound)
+                        self.set_bounds(src_noidx, bound)
+                        basevars.add(src_noidx)
 
-                # Poke our source data
+                    # Special case: '@in' slices without base '@in'
+                    if src_noidx != src:
+                        _, _, idx = src.partition('[')
+                        unmap_src = from_PA_var(measure_src)
+                        base = self.scope.get(unmap_src)
+                        exec("src_val = base[%s" % idx)
+                        if isinstance(src_val, ndarray):
+                            shape = src_val.shape
+                            istring, ix = flatten_slice(idx, shape,
+                                                        offset=nEdge,
+                                                        name='ix')
+                            bound = (istring, ix)
+                            if isinstance(istring, list):
+                                width = len(istring)
+                            else:
+                                width = 1
+                        else:
+                            width = 1
+                            bound = (nEdge, nEdge+width)
 
                 # Array slice of src that is already allocated
-                if '[' in src and src_noidx in basevars:
+                elif '[' in src and src_noidx in basevars:
                     _, _, idx = src.partition('[')
                     basebound = self.get_bounds(src_noidx)
                     if not '@in' in src_noidx:
@@ -314,6 +345,11 @@ class SequentialWorkflow(Workflow):
                                                 name='ix')
                     bound = (istring, ix)
                     # Already allocated
+                    width = 0
+
+                # This happens for subdriver states that are array connections.
+                elif '[' in src and src in basevars:
+                    bound = self.get_bounds(src)
                     width = 0
 
                 # Input-input connection to implicit state
@@ -333,7 +369,7 @@ class SequentialWorkflow(Workflow):
             for target in targets:
 
                 # Handle States in implicit comps
-                if is_implicit == True:
+                if is_implicit is True:
 
                     if isinstance(target, str):
                         target = [target]
@@ -399,9 +435,8 @@ class SequentialWorkflow(Workflow):
         width = self._width_cache.get(attr, _missing)
         if width is _missing:
             param = from_PA_var(attr)
-            self._width_cache[attr] = width = flattened_size(param, 
-                                                             self.scope.get(param), 
-                                                             self.scope)
+            width = flattened_size(param, self.scope.get(param), self.scope)
+            self._width_cache[attr] = width
         return width
 
     def _update(self, name, vtree, dv, i1=0):
@@ -432,6 +467,7 @@ class SequentialWorkflow(Workflow):
         return i1
 
     def mimic(self, src):
+        '''Mimic capability'''
         self.clear()
         par = self._parent.parent
         if par is not None:
@@ -611,7 +647,7 @@ class SequentialWorkflow(Workflow):
         return result
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
-                         severed=None, group_nondif=True):
+                         severed=None, group_nondif=True, add_implicit=True):
         """Returns the local graph that we use for derivatives.
 
         inputs: list of strings or tuples of strings
@@ -638,17 +674,19 @@ class SequentialWorkflow(Workflow):
         group_nondif: bool
             If True, collapse parts of the graph into PseudoAssemblies when
             necessary.
+
+        add_implicit: bool
+            Used by mod_for_derivs to test whether a subworkflow is relevant.
         """
 
         if self._derivative_graph is None or group_nondif is False:
             # when we call with group_nondif = False, we want the union of the
             # passed inputs/outputs plus the inputs/outputs from the solver
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 tmp_inputs = [] if inputs is None else inputs
                 tmp_outputs = [] if outputs is None else outputs
                 inputs = None
                 outputs = None
-
 
             # If inputs aren't specified, use the parameters
             parent_deriv_vars = list_deriv_vars(self._parent.parent)
@@ -661,7 +699,7 @@ class SequentialWorkflow(Workflow):
                     msg = "No inputs given for derivatives."
                     self.scope.raise_exception(msg, RuntimeError)
 
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 inputs = list(set(tmp_inputs).union(inputs))
 
             # If outputs aren't specified, use the objectives and constraints
@@ -674,7 +712,7 @@ class SequentialWorkflow(Workflow):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in
                                     self._parent.get_constraints().values()])
 
-            if group_nondif is False:
+            if group_nondif is False and add_implicit is True:
                 outputs = list(set(tmp_outputs).union(outputs))
 
             if len(outputs) == 0:
@@ -689,16 +727,19 @@ class SequentialWorkflow(Workflow):
             # make a copy of the graph because it will be
             # modified by mod_for_derivs
             dgraph = graph.subgraph(graph.nodes())
-            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd)
+            dgraph = mod_for_derivs(dgraph, inputs, outputs, self, fd,
+                                    group_nondif)
 
-            if group_nondif:
+            if group_nondif is True:
                 self._derivative_graph = dgraph
                 self._group_nondifferentiables(fd, severed)
             else:
                 # we're being called to determine the deriv graph
                 # for a subsolver, so get rid of @in and @out nodes
-                dgraph.remove_nodes_from(['@in%d' % i for i in range(len(inputs))])
-                dgraph.remove_nodes_from(['@out%d' % i for i in range(len(outputs))])
+                dgraph.remove_nodes_from(['@in%d' % i \
+                                          for i in range(len(inputs))])
+                dgraph.remove_nodes_from(['@out%d' % i \
+                                          for i in range(len(outputs))])
                 dgraph.graph['inputs'] = inputs[:]
                 dgraph.graph['outputs'] = outputs[:]
                 return dgraph
@@ -740,7 +781,7 @@ class SequentialWorkflow(Workflow):
             pa_excludes.update(pa._removed_comps)
 
         # Full model finite-difference, so all components go in the PA
-        if fd == True:
+        if fd is True:
             nondiff_groups = [comps]
 
         # Find the non-differentiable components
@@ -805,7 +846,8 @@ class SequentialWorkflow(Workflow):
                 for src in inodes:
                     for targ in inodes:
                         if src != targ:
-                            nodeset.update(find_all_connecting(cgraph, src, targ))
+                            nodeset.update(find_all_connecting(cgraph, src,
+                                                               targ))
 
                 nondiff_groups.append(nodeset)
 
@@ -856,9 +898,9 @@ class SequentialWorkflow(Workflow):
 
             if has_interface(comp, IImplicitComponent):
                 if not comp.eval_only:
-                    key = tuple(['.'.join([cname, n])
+                    key = tuple(['.'.join((cname, n))
                                      for n in comp.list_residuals()])
-                    info[key] = ['.'.join([cname, n])
+                    info[key] = ['.'.join((cname, n))
                                      for n in comp.list_states()]
 
         # Nested solvers act implicitly.
@@ -883,16 +925,21 @@ class SequentialWorkflow(Workflow):
                     for state in state_tuple:
                         if state not in dgraph:
                             for pcomp in pa_comps:
-                                if state in pcomp.inputs:
+                                flat_inputs = flatten_list_of_iters(pcomp.inputs)
+                                if state in flat_inputs:
                                     value_target.append(to_PA_var(state,
                                                                   pcomp.name))
                                     break
                         else:
                             value_target.append(state)
 
-                    value.append(tuple(value_target))
+                    if len(value_target) > 0:
+                        value.append(tuple(value_target))
 
-                info[key] = value
+                # Note: if both state and residual aren't in graph, then it
+                # has been determined not to be relevant, so don't include.
+                if len(value) > 0:
+                    info[key] = value
 
         return info
 
@@ -957,7 +1004,7 @@ class SequentialWorkflow(Workflow):
         self._J_cache = {}
 
         # User may request full-model finite difference.
-        if self._parent.gradient_options.force_fd == True:
+        if self._parent.gradient_options.force_fd is True:
             mode = 'fd'
 
         # This function can be called from a parent driver's workflow for
@@ -967,7 +1014,7 @@ class SequentialWorkflow(Workflow):
             self._derivative_graph = None
             self._edges = None
             self._comp_edges = None
-
+            self.res = None
             self._upscoped = upscope
 
         dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
@@ -1011,15 +1058,54 @@ class SequentialWorkflow(Workflow):
 
         shape = (num_out, num_in)
 
-        # Auto-determine which mode to use based on Jacobian shape.
+        # Auto-determine which direction to use based on Jacobian shape.
         if mode == 'auto':
+
             # TODO - additional determination based on presence of
             # apply_derivT
 
-            if num_in > num_out:
+            # User-controlled setting in the driver. This takes precedence
+            # over OpenMDAO's automatic choice.
+            opt = self._parent.gradient_options
+
+            if opt.derivative_direction == 'forward':
+                mode = 'forward'
+            elif opt.derivative_direction == 'adjoint':
+                mode = 'adjoint'
+
+            # OpenMDAO's automatic direction determination
+            elif num_in > num_out:
                 mode = 'adjoint'
             else:
                 mode = 'forward'
+
+        # Make sure we have all the derivatives we are asking for.
+        if mode != 'fd':
+
+            comps = self._comp_edge_list()
+
+            for comp_name in comps:
+
+                if '~' in comp_name:
+                    continue
+
+                comp = self.scope.get(comp_name)
+
+                if mode == 'forward':
+                    if hasattr(comp, 'apply_derivT') and \
+                       not hasattr(comp, 'apply_deriv'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "forward mode, but component %s" % comp.name
+                        msg += " only has adjoint derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
+
+                elif mode == 'adjoint':
+                    if hasattr(comp, 'apply_deriv') and \
+                       not hasattr(comp, 'apply_derivT'):
+                        msg = "Attempting to calculate derivatives in " + \
+                              "adjoint mode, but component %s" % comp.name
+                        msg += " only has forward derivatives defined."
+                        self.scope.raise_exception(msg, RuntimeError)
 
         if mode == 'adjoint':
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
@@ -1071,7 +1157,6 @@ class SequentialWorkflow(Workflow):
             i += width
         #print J
         return J
-
 
     def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
         """Compare the OpenMDAO-calculated gradient with one calculated
@@ -1252,24 +1337,7 @@ class SequentialWorkflow(Workflow):
         # return arrays and suspects to make it easier to check from a test
         return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
-    ## MPI stuff ###
 
-    # def get_iter_const_inputs(self):
-    #     """Return list of input variables that are set 
-    #     into one of our components from outside of the scope 
-    #     of our iteration, i.e., they are constant during our 
-    #     iteration.
-    #     """
-    #     depgraph = self.scope._depgraph
-    #     wfgraph = self.get_graph()
-
-    #     ext_edges = edge_boundary(dapgraph, wfgraph.nodes_iter())
-
-    #     inputs = [v for u,v in ext_edges if v in wfgraph]
-    #     _, drvset = self._parent.get_expr_var_depends(recurse=True)
-        
-    #     return [v for v in inputs if v not in drvset]
- 
 def _flattened_names(name, val, names=None):
     """ Return list of names for values in `val`.
     Note that this expands arrays into an entry for each index!.
@@ -1290,5 +1358,3 @@ def _flattened_names(name, val, names=None):
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))
     return names
-
-

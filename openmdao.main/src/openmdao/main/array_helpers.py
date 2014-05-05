@@ -2,7 +2,10 @@
 
 import itertools
 
+
 from openmdao.main.interfaces import IVariableTree
+from traits.trait_handlers import TraitListObject
+
 from openmdao.util.typegroups import real_types, int_types
 
 try:
@@ -75,7 +78,7 @@ def get_flattened_index(index, shape):
     if fidx:
         return fidx
 
-    if not isinstance(index, (tuple, list)):
+    if not isinstance(index, (tuple, list, ndarray)):
         index = (index,)
 
     if len(index) < len(shape):
@@ -95,8 +98,10 @@ def get_flattened_index(index, shape):
 
     idxs = ravel_multi_index(indices, dims=shape)
     if len(idxs) == 1:
-        _flat_idx_cache[(sindex, shape)] = slice(idxs[0], idxs[0]+1)
-        return slice(idxs[0], idxs[0]+1)
+        # _flat_idx_cache[(sindex, shape)] = slice(idxs[0], idxs[0]+1)
+        # return slice(idxs[0], idxs[0]+1)
+        _flat_idx_cache[(sindex, shape)] = idxs[0]
+        return idxs[0]
 
     # see if we can convert the discrete list of indices 
     # into a single slice object
@@ -195,9 +200,7 @@ def is_differentiable_var(name, scope):
     if meta:
         return True
 
-    if is_differentiable_val(scope.get(name)):
-        return True
-    return False
+    return is_differentiable_val(scope.get(name))
 
 def is_differentiable_val(val):
     if isinstance(val, int_types):
@@ -226,27 +229,31 @@ def flattened_size(name, val, scope=None):
     elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
         return val.size
 
-    # Variable Trees
-    elif IVariableTree.providedBy(val):
-        size = 0
-        for key in val.list_vars():
-            size += flattened_size('.'.join((name, key)), 
-                                   getattr(val, key))
-        return size
+    elif isinstance(val, TraitListObject):
+        sz = len(val)
+        if sz == 0:
+            return 0
+        elif not isinstance(val[0], int_types) and isinstance(val[0], real_types):
+            return len(val)
+        # else fall through and exception
+    else:
+        getsize = getattr(val, 'get_flattened_size', None)
+        if getsize is not None:
+            return getsize()
+        
+        elif scope is not None:
+            dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
 
-    elif scope is not None:
-        dshape = scope.get_metadata(name,'data_shape')
-
-        # Custom data objects with data_shape in the metadata
-        if dshape:
-            return prod(dshape)
+            # Custom data objects with data_shape in the metadata
+            if dshape:
+                return prod(dshape)
 
     raise TypeError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
-    """ Return `val` as a 1D float array. An exception will be
-    raised if val is not completely flattenable to a float
+    """ Return `val` as a 1D float (or complex) array. An exception 
+    will be raised if val is not completely flattenable to a float
     array.  A VariableTree is not considered completely 
     flattenable unless all of its leaf nodes are flattenable.
     """
@@ -254,7 +261,9 @@ def flattened_value(name, val):
     # int_types are considered also to be real types
     if isinstance(val, int_types): 
         pass  # fall through to exception
-    if isinstance(val, real_types):
+    elif isinstance(val, real_types):
+        return array([val])
+    elif isinstance(val, complex):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
@@ -264,6 +273,8 @@ def flattened_value(name, val):
             value = getattr(val, key)
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
+    elif isinstance(val, TraitListObject): #FIXME: list must contain floats
+        return array(val)
 
     raise TypeError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))

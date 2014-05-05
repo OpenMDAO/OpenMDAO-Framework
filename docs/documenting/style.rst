@@ -10,7 +10,7 @@ This document provides some general guidelines for writing documentation, both c
 documents. It is by no means inclusive.
 
 For Python coding conventions, please refer to the `Python Style Guide
-<http://www.python.org/dev/peps/pep-0008/>`_.
+<http://legacy.python.org/dev/peps/pep-0008/>`_.
 
 .. index:: docstring standard
 

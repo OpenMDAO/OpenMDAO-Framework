@@ -22,16 +22,9 @@ class KrigingSurrogateTests(unittest.TestCase):
         krig1 = KrigingSurrogate()
         krig1.train(x,y)
         
-        self.assertAlmostEqual(1.18375,krig1.thetas,places=4)
+        self.assertAlmostEqual(.4771,krig1.thetas[0],places=4)
         
-    def test_1d_kriging2(self):
-        x = array([[0.05], [.25], [0.61], [0.95]])
-        y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
-        krig1 = KrigingSurrogate()
-        krig1.train(x,y)
 
-        self.assertAlmostEqual(1.18375,krig1.thetas,places=7)
-        
     def test_1d_kriging_predictor(self):
         x = array([[0.05], [.25], [0.61], [0.95]])
         y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
@@ -42,8 +35,8 @@ class KrigingSurrogateTests(unittest.TestCase):
         pred = krig1.predict(new_x)
         
         self.assertTrue(isinstance(pred,NormalDistribution))
-        self.assertAlmostEqual(2.5086,pred.sigma,places=3)
-        self.assertAlmostEqual(-1.37201,pred.mu,places=3)
+        self.assertAlmostEqual(.41552,pred.sigma,places=3)
+        self.assertAlmostEqual( -1.725,pred.mu,places=3)
     
     def test_1d_kriging3(self):
         # Test for least squares solver utilization when ill-conditioned
@@ -73,8 +66,8 @@ class KrigingSurrogateTests(unittest.TestCase):
         
         pred = krig1.predict([5.,5.])
         
-        self.assertAlmostEqual(14.513550,pred.sigma,places=2)
-        self.assertAlmostEqual(18.759264,pred.mu,places=2)
+        self.assertAlmostEqual(5.79,pred.sigma,places=0)
+        self.assertAlmostEqual(25.34,pred.mu,places=1)
         
     def test_get_uncertain_value(self): 
         x = array([[0.05], [.25], [0.61], [0.95]])

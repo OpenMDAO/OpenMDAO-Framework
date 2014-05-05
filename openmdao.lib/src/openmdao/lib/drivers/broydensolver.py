@@ -67,7 +67,7 @@ class BroydenSolver(Driver):
 
     # pylint: disable-msg=E1101
     algorithm = Enum('broyden2', ['broyden2', 'broyden3', 'excitingmixing'],
-                     iotype = 'in', desc='Algorithm to use. Choose from '
+                     iotype='in', desc='Algorithm to use. Choose from '
                      'broyden2, broyden3, and excitingmixing.')
 
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
@@ -147,9 +147,8 @@ class BroydenSolver(Driver):
             # get dependents
             self.F[:] = self.eval_eq_constraints()
 
-            self.record_case()
-
             # successful termination if independents are below tolerance
+            #print "iter", n, norm(self.F)
             if norm(self.F) < self.tol:
                 return
 
@@ -212,8 +211,6 @@ class BroydenSolver(Driver):
             # get dependents
             self.F[:] = self.eval_eq_constraints()
 
-            self.record_case()
-
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:
                 return
@@ -267,8 +264,6 @@ class BroydenSolver(Driver):
 
             # get dependents
             self.F[:] = self.eval_eq_constraints()
-
-            self.record_case()
 
             # successful termination if independents are below tolerance
             if norm(self.F) < self.tol:

@@ -13,9 +13,12 @@ needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
+.. note::  In some cases the examples are written from the Linux perspective. 
+   Windows users need to replace the ``/`` with a ``\``.
+
 ::
 
-  openmdao-0.8.1\lib\site-packages\openmdao.examples.enginedesign-0.8.1-py2.7-win-32.egg\openmdao\examples\enginedesign
+  openmdao-0.8.1/lib/site-packages/openmdao.examples.enginedesign-0.8.1-py2.7-win-32.egg/openmdao/examples/enginedesign
   
 
 If you are a developer and have a branch from the source repository, the files you need will be
@@ -78,7 +81,7 @@ valid variable name. Variables are also Python variables, so they must follow Py
 naming convention. They must begin with a letter or underscore and should consist of only
 alphanumeric characters and the underscore. Keep in mind that a leading underscore is generally used
 for private data or functions. **Spaces cannot be used in a variable name.** Generally, we've tried
-to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_  standard for component instance 
+to follow the `PEP 8 <http://legacy.python.org/dev/peps/pep-0008/>`_  standard for component instance 
 names as well as Python variable names. PEP 8 prescribes the use of lower case names with words
 separated by underscores.
 

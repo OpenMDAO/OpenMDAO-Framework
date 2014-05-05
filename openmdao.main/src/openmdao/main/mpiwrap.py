@@ -17,11 +17,7 @@ def under_mpirun():
     # no consistent set of environment vars between MPI implementations
     for name in os.environ.keys():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
-            from mpi4py import MPI
-            if MPI.COMM_WORLD.rank == 0:
-                print "running under mpirun"
             return True
-    print "NOT running under mpirun"
     return False
 
 if under_mpirun():

@@ -181,6 +181,16 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.comp.get_valid(['xout']), [True])
         self.comp.set('x', 99.999)
         self.assertEqual(self.comp.get_valid(['xout']), [False])
+        self.comp.run()
+        self.assertEqual(self.comp.get_valid(['xout']), [True])
+
+        # Assignment should invalidate like set().
+        self.comp.x = 42
+        self.assertEqual(self.comp.get_valid(['xout']), [False])
+        self.comp.run()
+        self.assertEqual(self.comp.get_valid(['xout']), [True])
+        self.comp.x = 42
+        self.assertEqual(self.comp.get_valid(['xout']), [True])
 
     def test_override(self):
         code = """\

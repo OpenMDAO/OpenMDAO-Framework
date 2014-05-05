@@ -46,6 +46,7 @@ build.out
 *.log
 *.sql
 *.sqlite
+*.csv
 
 # OS generated files #
 ######################
@@ -61,6 +62,9 @@ pyBspline_pkl
 gui-server
 junk.out
 test_report.out
-foo
-bar
 
+=======
+# Editor generated files #
+##########################
+*.swp
+*.bak

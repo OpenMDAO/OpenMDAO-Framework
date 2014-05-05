@@ -16,6 +16,7 @@ from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+import openmdao.main.pseudocomp as pcompmod
 
 exec_order = []
 
@@ -115,6 +116,7 @@ class MultiDriverTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
+        pcompmod._count = 0
 
     def tearDown(self):
         self.top = None
@@ -170,14 +172,15 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
-        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), 
+                         srcs)
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=False)
         self.assertEqual(set(), srcs)
         self.assertEqual(set(), dests)
         self.top.driver1.remove_parameter('comp2.x')
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
-        self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
+        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), srcs)
 
     def test_invalidation(self):
         global exec_order

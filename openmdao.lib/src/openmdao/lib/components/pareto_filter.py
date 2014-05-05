@@ -1,18 +1,67 @@
 """ Pareto Filter -- finds non-dominated cases. """
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.datatypes.api import Instance, Slot, List, Str
-from openmdao.lib.casehandlers.api import CaseSet, caseiter_to_caseset
+from numpy import array, zeros
 
-from openmdao.main.component import Component
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.datatypes.api import Array, List, VarTree
+from openmdao.main.api import Component
+from openmdao.main.vartree import VariableTree
 
+class ParetoFilter(Component):
+    """Takes a set of cases and filters out the subset of cases which are
+    pareto optimal. Assumes that smaller values for model responses are
+    better, so all problems must be posed as minimization problems.
 
-class ParetoFilterBase(Component):
+    You must pass a tuple of responses into the constructor. You can also
+    optionally pass a tuple of params if you want ParetoFilter to keep track
+    of the inputs for the nondominated responses.
     """
-    Base functionality for a pareto filter.
-    Not to be instantiated directly. Should be subclassed.
-    """
+
+    # pylint: disable-msg=E1101
+    params = VarTree(VariableTree(), iotype='in')
+
+    responses = VarTree(VariableTree(), iotype='in')
+
+    pareto_inputs = Array(iotype='out', desc='Array of input values in the '
+                          'Pareto frontier')
+
+    pareto_outputs = Array(iotype='out', desc='Array of response values in the '
+                          'Pareto frontier')
+
+    def __init__(self, params=None, responses=None):
+        super(ParetoFilter, self).__init__()
+
+        # Make params optional.
+        if params is None:
+            params = tuple()
+
+        if not isinstance(params, tuple):
+            msg = "ParetoFilter optional params argument needs to be a " + \
+                  "tuple of variable names."
+            self.raise_exception(msg, ValueError)
+
+        if responses is None or not isinstance(responses, tuple):
+            msg = "ParetoFilter responses argument needs to be a tuple of " + \
+                  "variable names."
+            self.raise_exception(msg, ValueError)
+
+        # Add our inputs and outputs to the vartrees.
+
+        input_tree = self.get('params')
+        self._param_data = []
+        for name in params:
+            input_tree.add(name, List([], desc='ParetoFilter input'))
+
+        output_tree = self.get('responses')
+        self._response_data = {}
+        for name in responses:
+            output_tree.add(name, List([], desc='ParetoFilter response'))
+
+        self._param_names = params
+        self._response_names = responses
+
+        self.pareto_inputs = zeros((1, len(params)))
+        self.pareto_outputs = zeros((1, len(responses)))
 
     def _is_dominated(self, y1, y2):
         """Tests to see if the point y1 is dominated by the point y2.
@@ -27,154 +76,59 @@ class ParetoFilterBase(Component):
         return True
 
     def execute(self):
-        """Finds and removes pareto optimal points in the given case set.
-        Returns a list of pareto optimal points. Smaller is better for all
-        criteria.
+        """Returns an araray of pareto optimal points and their response values.
         """
-        #convert stuff to caseSets if they are not
-        case_sets = []
-        for ci in self.case_sets:
-            if not isinstance(ci, CaseSet):
-                case_sets.append(caseiter_to_caseset(ci))
-            else:
-                case_sets.append(ci)
 
-        y_list = []
-        if len(case_sets) > 1:
-            case_set = case_sets[0].union(*case_sets[1:])
-        else:
-            case_set = case_sets[0]
-        criteria_count = len(self.criteria)
+        first_name = "responses.%s" % self._response_names[0]
+        n_param = len(self._param_names)
+        n_response = len(self._response_names)
+        n_points = len(self.get(first_name))
 
-        try:
-            # need to transpose the list of outputs
-            y_list = zip(*[case_set[crit] for crit in self.criteria])
-        except KeyError:
-            self.raise_exception('no cases provided had all of the outputs '
-                 'matching the provided criteria, %s' % self.criteria, ValueError)
+        # Get our output data once, then rearrange it after.
+        data = []
+        for varname in self._response_names:
+            name = "responses.%s" % varname
+            val = self.get(name)
+            data.append(val)
 
-        y_temp = list(y_list)
+        all_points = []
+        for j in xrange(0, n_points):
+            point = []
+            for i in xrange(0, n_response):
+                point.append(data[i][j])
+            all_points.append(point)
 
-        self.dominated_set = CaseSet()
-        self.pareto_set = CaseSet()  # TODO: need a way to copy casesets
+        nondominated_output = list(all_points)
 
-        for point1, case in zip(y_list, iter(case_set)):
-            dominated = False
-            for point2 in y_temp:
+        # Optionally, get our inputs data once, then rearrange it after.
+        if n_param > 0:
+
+            data = []
+            for varname in self._param_names:
+                name = "params.%s" % varname
+                val = self.get(name)
+                data.append(val)
+
+            nondominated_input = []
+            for j in xrange(0, n_points):
+                point = []
+                for i in xrange(0, n_param):
+                    point.append(data[i][j])
+                nondominated_input.append(point)
+
+        # Find non-dominated points
+        nd_input_list = []
+        for j, point1 in enumerate(all_points):
+            for point2 in nondominated_output:
                 if self._is_dominated(point1, point2):
-                    self.dominated_set.record(case)
-                    y_temp.remove(point1)
-                    dominated = True
+                    nondominated_output.remove(point1)
+                    nd_input_list.append(j)
                     break
-            if not dominated:
-                self.pareto_set.record(case)
 
-class ConnectableParetoFilter(ParetoFilterBase):
-    """
-    Same functionality as ParetoFilter but without slots.
-    Allows for issuing connections to pareto_set and dominated_set
-    """
+        self.pareto_outputs = array(nondominated_output)
 
-    criteria = List(Str, iotype="in",
-                    desc="List of outputs from the case to consider for "
-                         "filtering. Note that only case outputs are allowed as "
-                         "criteria.")
+        if n_param > 0:
+            data = [nondominated_input[j] for j in xrange(0, n_points) \
+                    if j not in nd_input_list]
+            self.pareto_inputs = array(data)
 
-    #case_set = Slot(ICaseIterator,
-    #                    desc="CaseIterator with the cases to be filtered to "
-    #                         "Find the pareto optimal subset.")
-
-    case_sets = List(Instance(ICaseIterator), value=[], iotype="in",
-                     desc="CaseSet with the cases to be filtered to "
-                     "find the pareto optimal subset.")
-
-    pareto_set = Instance(CaseSet, iotype="out",
-                        desc="Resulting collection of pareto optimal cases.", copy="shallow")
-
-    dominated_set = Instance(CaseSet, iotype="out",
-                           desc="Resulting collection of dominated cases.", copy="shallow")
-
-class ParetoFilter(ParetoFilterBase):
-    """Takes a set of cases and filters out the subset of cases which are
-    pareto optimal. Assumes that smaller values for model responses are
-    better, so all problems must be posed as minimization problems.
-    """
-
-    # pylint: disable-msg=E1101
-    criteria = List(Str, iotype="in",
-                    desc="List of outputs from the case to consider for "
-                         "filtering. Note that only case outputs are allowed as "
-                         "criteria.")
-
-    #case_set = Slot(ICaseIterator,
-    #                    desc="CaseIterator with the cases to be filtered to "
-    #                         "Find the pareto optimal subset.")
-
-    case_sets = List(Slot(ICaseIterator), value=[], iotype="in",
-                     desc="CaseSet with the cases to be filtered to "
-                     "find the pareto optimal subset.")
-
-    pareto_set = Slot(CaseSet,
-                        desc="Resulting collection of pareto optimal cases.", copy="shallow")
-
-    dominated_set = Slot(CaseSet,
-                           desc="Resulting collection of dominated cases.", copy="shallow")
-
-if __name__ == "__main__":  # pragma: no cover
-
-    # pylint: disable-msg=C0103, E1101
-
-    from matplotlib import pyplot as py
-    from mpl_toolkits.mplot3d import Axes3D
-    from numpy import random
-    random.seed(10)
-
-    from openmdao.main.case import Case
-    pf = ParetoFilter()
-
-    # 2D PARETO FILTERING EXAMPLE
-    n = 1000
-    x = random.uniform(-1, 0, n)
-    y = -(1 - x**2)**0.5 * random.random(n)
-    cases = CaseSet()
-    for x_0, y_0 in zip(x, y):
-        cases.record(Case(inputs=[("x", x_0), ("y", y_0)]))
-
-    pf.case_sets = [cases]
-    pf.criteria = ['x', 'y']
-    pf.execute()
-
-    x_p, y_p = pf.pareto_set['x'], pf.pareto_set['y']
-    x_dom, y_dom = pf.dominated_set['x'], pf.dominated_set['y']
-
-    py.figure()
-    py.scatter(x, y, s=5)
-    py.scatter(x_dom, y_dom, c='', edgecolor='b', s=80)
-    py.scatter(x_p, y_p, c='', edgecolors='r', s=80)
-
-    #3D PARETO FILTERING EXAMPLE
-    n = 1000
-    x = random.uniform(-1, 0, n)
-    y = -(1 - x**2)**0.5 * random.random(n)
-    z = -(1 - x**2 - y**2)**0.5 * random.random(n)
-    doe = zip(x, y, z)
-
-    pf.criteria = ['x', 'y', 'z']
-
-    cases = CaseSet()
-    for x_0, y_0, z_0 in zip(x, y, z):
-        cases.record(Case(inputs=[("x", x_0),
-                                   ("y", y_0),
-                                   ("z", z_0)]))
-
-    pf.case_sets = [cases]
-    pf.execute()
-
-    x_p, y_p, z_p = pf.pareto_set['x'], pf.pareto_set['y'], pf.pareto_set['z']
-    x_dom, y_dom, z_dom = pf.dominated_set['x'], pf.dominated_set['y'], pf.dominated_set['z']
-    fig1 = py.figure()
-    a1 = Axes3D(fig1)
-    a1.scatter(x_dom, y_dom, z_dom, c='b')
-    a1.scatter(x_p, y_p, z_p, c='r', edgecolor='r')
-
-    py.show()

@@ -557,6 +557,7 @@ class ExprEvaluator(object):
         # remove weakref to scope because it won't pickle
         state['_scope'] = self.scope
         state['_code'] = None  # <type 'code'> won't pickle either.
+        state['cached_grad_eq'] = None
         if state.get('_assignment_code'):
             state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
@@ -625,7 +626,11 @@ class ExprEvaluator(object):
         """Return the value of the scoped string, evaluated
         using the eval() function.
         """
-        scope = self._get_updated_scope(scope)
+        if scope is None:
+            scope = self.scope
+        else:
+            self.scope = scope
+
         try:
             if self._code is None:
                 self._parse()
@@ -696,7 +701,8 @@ class ExprEvaluator(object):
         elif not isinstance(yp, complex):
             return None
         else:
-            return imag(yp/stepsize)[0]
+            # note, imag returns a 0-d array, Don't know why.
+            return imag(yp/stepsize).reshape(1, )[0]
 
         return imag(yp/stepsize)
 
@@ -782,7 +788,7 @@ class ExprEvaluator(object):
 
                     if grad is None:
                         var_dict[var][index] = base
-                        grad = self._finite_difference(grad_code,var_dict, var,
+                        grad = self._finite_difference(grad_code, var_dict, var,
                                                        stepsize, index)
                     gradient[var][:, i] = grad
                     var_dict[var][index] = base
@@ -796,7 +802,7 @@ class ExprEvaluator(object):
 
                 if grad is None:
                     var_dict[var] = base
-                    grad = self._finite_difference(grad_code,var_dict, var,
+                    grad = self._finite_difference(grad_code, var_dict, var,
                                                    stepsize)
                 gradient[var] = grad
                 var_dict[var] = base

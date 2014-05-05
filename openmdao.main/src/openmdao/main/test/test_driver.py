@@ -9,11 +9,11 @@ from openmdao.main.driver import GradientOptions
 
 class EventComp(Component):
     doit = Event()
-    
+
     def __init__(self):
         super(EventComp, self).__init__()
         self.num_doits = 0
-        
+
     def _doit_fired(self):
         self.num_doits += 1
 
@@ -28,23 +28,23 @@ class DriverTestCase(unittest.TestCase):
     def setUp(self):
         top = self.asm = set_as_top(Assembly())
         top.add('evcomp', EventComp())
-            
+
         # driver process definition
         top.driver.workflow.add('evcomp')
-        
+
     def test_add_event(self):
         self.asm.evcomp.force_execute = True
         for i in range(3):
             self.asm.run()
             self.assertEqual(self.asm.evcomp.exec_count, i+1)
             self.assertEqual(self.asm.evcomp.num_doits, 0)
-        
+
         self.asm.driver.add_event('evcomp.doit')
         for i in range(3):
             self.asm.run()
             self.assertEqual(self.asm.evcomp.exec_count, i+4)
             self.assertEqual(self.asm.evcomp.num_doits, i+1)
-        
+
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Driver()), 'openmdao.driver')
 
@@ -54,7 +54,8 @@ class DriverTestCase(unittest.TestCase):
 
     def test_gradient_options(self):
         options = GradientOptions()
-        
+
+        assert(options.get_metadata("derivative_direction")["framework_var"])
         assert(options.get_metadata("fd_form")["framework_var"])
         assert(options.get_metadata("fd_step")["framework_var"])
         assert(options.get_metadata("fd_step_type")["framework_var"])
@@ -62,9 +63,9 @@ class DriverTestCase(unittest.TestCase):
         assert(options.get_metadata("gmres_tolerance")["framework_var"])
         assert(options.get_metadata("gmres_maxiter")["framework_var"])
 
-        assert(Driver().get_metadata("gradient_options")["framework_var"])        
-        
-        
+        assert(Driver().get_metadata("gradient_options")["framework_var"])
+
+
 if __name__ == "__main__":
     unittest.main()
 
