@@ -1107,6 +1107,8 @@ class SequentialWorkflow(Workflow):
                         msg += " only has forward derivatives defined."
                         self.scope.raise_exception(msg, RuntimeError)
 
+        #print len(self.res), len(self._edges), len(self._comp_edge_list())
+
         if mode == 'adjoint':
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         elif mode in ['forward', 'fd']:
