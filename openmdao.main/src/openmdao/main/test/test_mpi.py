@@ -209,7 +209,7 @@ class SellarMDF(Assembly):
         
         # Solver settings
         self.driver.max_iteration = 100
-        self.driver.tolerance = .00001
+        self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
         
 

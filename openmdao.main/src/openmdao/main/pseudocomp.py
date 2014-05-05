@@ -406,6 +406,7 @@ class PseudoComponent(object):
         the value is not flattenable into an array of floats,
         raise a TypeError.
         """
+        self.ensure_init()
         val, idx = get_val_and_index(self, path)
         return flattened_value(path, val)
 

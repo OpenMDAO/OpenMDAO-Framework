@@ -637,10 +637,6 @@ class Assembly(Component):
             if isinstance(obj, PseudoComponent):
                 obj.set(parts[1], value, index, src, force)
 
-    # def _shadow_run(self):
-    #     self.driver.run(ffd_order=self.ffd_order,
-    #                     case_id=self._case_id)
-
     def execute(self):
         """Runs driver and updates our boundary variables."""
         if self.parent is None:
