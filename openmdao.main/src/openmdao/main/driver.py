@@ -51,7 +51,8 @@ class GradientOptions(VariableTree):
     directional_fd = Bool(False, desc="Set to True to do a directional "
                                        "finite difference for each GMRES "
                                        "iteration instead of pre-computing "
-                                       "the full fd space.")
+                                       "the full fd space.",
+                                       framework_var=True)
 
     # KTM - story up for this one.
     #fd_blocks = List([], desc='User can specify nondifferentiable blocks '

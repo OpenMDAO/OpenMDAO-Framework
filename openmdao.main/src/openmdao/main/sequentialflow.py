@@ -535,7 +535,7 @@ class SequentialWorkflow(Workflow):
             # mode requires post multiplication of the result by the M after
             # you have the final gradient.
             #if hasattr(comp, 'applyMinv'):
-                #inputs = applyMinv(comp, inputs)
+                #inputs = applyMinv(comp, inputs, self._shape_cache)
 
             applyJ(comp, inputs, outputs, comp_residuals,
                    self._shape_cache.get(compname), self._J_cache.get(compname))
@@ -1106,6 +1106,8 @@ class SequentialWorkflow(Workflow):
                               "adjoint mode, but component %s" % comp.name
                         msg += " only has forward derivatives defined."
                         self.scope.raise_exception(msg, RuntimeError)
+
+        #print len(self.res), len(self._edges), len(self._comp_edge_list())
 
         if mode == 'adjoint':
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
