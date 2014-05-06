@@ -7,7 +7,7 @@ from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 try:
-    from numpy import ndarray, hstack, zeros, array
+    from numpy import ndarray, hstack, zeros, array, empty, arange, ones
 except ImportError as err:
     import logging
     logging.warn("In %s: %r", __file__, err)
@@ -315,24 +315,40 @@ class CyclicWorkflow(SequentialWorkflow):
 
         parent = self._parent
         deps = array(parent.eval_eq_constraints(self.scope))
-
         # Reorder for fixed point
         if fixed_point is True:
-            newdeps = zeros(len(deps))
             eqcons = parent.get_eq_constraints()
-            old_j = 0
-            for key, value in eqcons.iteritems():
-                con_targets = value.get_referenced_varpaths()
-                new_j = 0
-                width = value.size
-                for params in parent.list_param_group_targets():
-                    if params[0] == value.rhs.text:
-                        newdeps[new_j:new_j+width] = deps[old_j:old_j+width]
-                    elif params[0] == value.lhs.text:
-                        newdeps[new_j:new_j+width] = -deps[old_j:old_j+width]
-                    new_j += width
-                old_j += width
-            deps = newdeps
+
+            rhs = {}
+            lhs = {}
+            i = 0
+            for key, value in eqcons.iteritems(): #make a mapping of position of each constraint
+                rhs[value.rhs.text] = (i, value.size)
+                lhs[value.lhs.text] = (i, value.size)
+                i+=value.size
+
+
+            new_dep_index = empty(len(deps),dtype="int")
+            new_dep_sign = empty(len(deps),dtype="int")
+            k = 0
+            for params in parent.list_param_group_targets(): #for each param, grab the right map value and set the sign convention
+                try: 
+                    j,size = rhs[params[0]]
+                    new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
+                    new_dep_sign[k:k+size] = ones((size,))
+                    k+=size
+                except KeyError: #wasn't in the rhs dict, try the lhs
+                    try: 
+                        j,size = lhs[params[0]]
+                        new_dep_index[k:+size] = j+arange(0,size,dtype="int")
+                        new_dep_sign[k:k+size] = -1*ones(size)
+                        k+=size
+                    except: 
+                        pass #TODO: need to throw an error here. Why was there a param that didn't show up in the constraint
+            
+            #reset the deps array to the new order and sign 
+            deps = deps[new_dep_index]*new_dep_sign
+
 
         sev_deps = []
         for src, target in self._severed_edges:
