@@ -37,7 +37,7 @@ from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
-from openmdao.util.graph import list_deriv_vars  # , graph_to_svg
+from openmdao.util.graph import list_deriv_vars, graph_to_svg
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -1353,10 +1353,10 @@ class Assembly(Component):
 
         return connectivity
 
-    # def _repr_svg_(self):
-    #     """ Returns an SVG representation of this Assembly's dependency graph
-    #     """
-    #     return graph_to_svg(self._depgraph.component_graph())
+    def _repr_svg_(self):
+        """ Returns an SVG representation of this Assembly's dependency graph
+        """
+        return graph_to_svg(self._depgraph.component_graph())
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
