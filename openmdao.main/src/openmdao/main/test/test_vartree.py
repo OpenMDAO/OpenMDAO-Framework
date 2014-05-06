@@ -1,3 +1,4 @@
+import copy
 import glob
 import os
 import unittest
@@ -7,7 +8,8 @@ from traits.trait_base import not_none
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Array, Bool, Enum, Float, File, \
-                                        FileRef, Int, List, Str, VarTree
+                                        FileRef, Int, List, Str, VarTree, \
+                                        Instance
 from openmdao.main.case import flatten_obj
 
 from openmdao.util.testutil import assert_raises
@@ -438,7 +440,8 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         newvt = comp.top_tree_in.copy()
         newvt._iotype = 'out'
@@ -448,7 +451,8 @@ class NestedVTTestCase(unittest.TestCase):
         outputs = attr.get('Outputs', [])
         self.assertEqual(inputs, [])
         self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         self.assertEqual(newvt.lev1.lev2.iotype, 'out')
         newvt._iotype = 'in'
@@ -466,8 +470,8 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
-
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         newvt = asm.top_tree_in.copy()
         newvt._iotype = 'out'
@@ -477,14 +481,16 @@ class NestedVTTestCase(unittest.TestCase):
         outputs = attr.get('Outputs', [])
         self.assertEqual(inputs, [])
         self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         attr = comp.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
 
 class ListConnectTestCase(unittest.TestCase):
@@ -623,6 +629,29 @@ class DeepCopyTestCase(unittest.TestCase):
                 print '%s   ' % prefix, cont2.get_pathname(), 'is missing', name
                 errors += 1
         return errors
+
+    def test_2nd_copy(self):
+        # Test that copy of copy is valid (had 'lost' REGION00_v).
+
+        class Region(VariableTree):
+            thickness = Float()
+            angle = Float()
+
+        class StData(VariableTree):
+            s = Float()
+
+            def add_region(self, name):
+                self.add(name + '_i', Instance(Region()))
+                self.add(name + '_v', VarTree(Region()))
+                self.add(name + '_f', Float())
+
+        s1 = StData()
+        s1.add_region('REGION00')
+        s2 = copy.deepcopy(s1)
+        s3 = copy.deepcopy(s2)
+        keys = sorted([key for key in s3.__dict__ if not key.startswith('_')])
+        expected = ['REGION00_f', 'REGION00_i', 'REGION00_v', 's']
+        self.assertEqual(keys, expected)
 
 
 if __name__ == "__main__":
