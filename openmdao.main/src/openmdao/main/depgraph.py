@@ -1526,7 +1526,7 @@ def _prune_vartree_leaves(graph):
     for subvar in input_subvars:
 
         # Only prune vartree leaves, not arrays
-        if len(subvar.split('.')) < 2:
+        if len(subvar.split('.')) < 3:
             continue
 
         preds = graph.predecessors(subvar)
