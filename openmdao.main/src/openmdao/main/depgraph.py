@@ -1530,7 +1530,7 @@ def _prune_vartree_leaves(graph):
             continue
 
         preds = graph.predecessors(subvar)
-        if len(preds) == 1 and preds[0] == subvar:
+        if len(preds) == 1 and preds[0] == graph.node[subvar]['basevar']:
             to_remove.append(subvar)
 
     graph.remove_nodes_from(to_remove)
