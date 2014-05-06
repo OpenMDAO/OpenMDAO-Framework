@@ -106,9 +106,9 @@ If the driver uses gradients and can take advantage of the
 analytical ones you provide, then it will do so. Below is our model, using
 the new component with derivatives. We put this model in a file called
 :download:`optimization_constrained_derivative.py
-<../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
+<../../../examples/openmdao_examples_simple/openmdao/examples/simple/optimization_constrained_derivative.py>`.
 
-.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/optimization_constrained_derivative.py
+.. literalinclude:: ../../../examples/openmdao_examples_simple/openmdao/examples/simple/optimization_constrained_derivative.py
 
 .. [#] Martins, J. R. R. A., and Hwang, J. T., "Review and Unification of Methods for
        Computing Derivatives of Multidisciplinary Computational Models," `AIAA Journal,` 2013.

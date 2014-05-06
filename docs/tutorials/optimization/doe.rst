@@ -51,7 +51,7 @@ variable. Create a file called ``doe.py`` and copy the following into it:
             self.driver.workflow.add('paraboloid')
 
 Or download our version of the file
-:download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.
+:download:`here </../examples/openmdao_examples_simple/openmdao/examples/simple/doe.py>`.
 
 To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`, which serves as the
 driver any time you want to run any kind of DOE. To specify the particular type of DOE, you set the ``DOEgenerator``

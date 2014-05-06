@@ -164,7 +164,7 @@ Finally, we set up our local optimization loops.
 
 
 This problem is contained in 
-:download:`sellar_CO.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_CO.py>`. 
+:download:`sellar_CO.py </../examples/openmdao_examples_mdao/openmdao/examples/mdao/sellar_CO.py>`. 
 
 Executing it at the command line should produce
 output that resembles this:

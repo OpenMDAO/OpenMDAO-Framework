@@ -125,4 +125,4 @@ for a given input). However, here we have slotted the
             print "%1.3f, %1.3f, %1.3f, %1.3f"%(a, b, c, d)
 
 To view this example, and try running and modifying the code for yourself, you can download it here:
-:download:`multi_outs.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/multi_outs.py>`.
+:download:`multi_outs.py </../examples/openmdao_examples_metamodel_tutorial/openmdao/examples/metamodel_tutorial/multi_outs.py>`.
