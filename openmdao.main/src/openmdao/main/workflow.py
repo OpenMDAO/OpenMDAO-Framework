@@ -89,7 +89,6 @@ class Workflow(object):
         self._stop = False
         self._iterator = self.__iter__()
         self._exec_count += 1
-        self._comp_count = 0
 
         iterbase = self._iterbase()
 
@@ -104,9 +103,7 @@ class Workflow(object):
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order)
             else:
-                self._comp_count += 1
-                # comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-                comp.set_itername('%s-%d-%s' % (iterbase, self._comp_count, comp.get_pathname()))
+                comp.set_itername('%s-%s' % (iterbase, comp.name))
                 comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             if self._stop:
                 raise RunStopped('Stop requested')

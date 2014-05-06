@@ -306,14 +306,14 @@ class TestCase(unittest.TestCase):
 
         expected = [
             '1',
-            '1-1.1',
-            '1-1.1-2.1',
-            '1-1.1-2.2',
-            '1-1.1-2.3',
-            '1-1.2',
-            '1-1.2-2.1',
-            '1-1.2-2.2',
-            '1-1.2-2.3'
+            '1-driver1.1',
+            '1-driver1.1-driver2.1',
+            '1-driver1.1-driver2.2',
+            '1-driver1.1-driver2.3',
+            '1-driver1.2',
+            '1-driver1.2-driver2.1',
+            '1-driver1.2-driver2.2',
+            '1-driver1.2-driver2.3'
         ]
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
@@ -325,4 +325,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-
