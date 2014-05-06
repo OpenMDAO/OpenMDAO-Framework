@@ -16,17 +16,21 @@ def write_driver_cluster(f, G, driver, indent):
     _cluster_count += 1
     indent += 3
     tab = ' '*indent
-    #f.write('%slabel="%s";\n' % driver.name)
+    #f.write('%slabel="%s";\n' % (tab, driver.name))
 
-    f.write('%s{ rank=same; ' % tab)
-    for comp in comps:
-        f.write('%s; ' % comp.name)
-    f.write("}\n")
+    # f.write('%s{ rank=same; ' % tab)
+    # for comp in comps:
+    #     if not IDriver.providedBy(comp):
+    #         f.write('%s; ' % comp.name)
+    # f.write("}\n")
     f.write('%s%s [shape=box];\n' % (tab, driver.name))
     if len(comps) > 0:
+        dcount = 1
         for comp in comps:
             if IDriver.providedBy(comp):
                 write_driver_cluster(f, G, comp, indent)
+                f.write("%s%s -> %s [style=dashed, label=%d];\n" % (tab, driver.name, comp.name, dcount))
+                dcount += 1
 
         subG = G.subgraph([c.name for c in comps])
 
@@ -47,7 +51,7 @@ def write_dot(G, dotfile, scope=None):
 
     with open(dotfile, 'w') as f:
         f.write("strict digraph {\n")
-        f.write("rankdir=RL;\n")
+        #f.write("rankdir=RL;\n")
         driver = getattr(scope, 'driver')
         write_driver_cluster(f, G, driver, 3)
             
@@ -68,6 +72,9 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
     if workflow:
         write_dot(G, dotfile, scope)
     else: # just show data connections
+        for node, data in G.nodes_iter(data=True):
+            if 'driver' in data:
+                data['shape'] = 'box'
         nx.write_dot(G, dotfile)
 
     os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
