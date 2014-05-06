@@ -1519,14 +1519,20 @@ def _remove_ignored_derivs(graph):
     to_remove = [n for n, data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
     graph.remove_nodes_from(to_remove)
 
-def _remove_subvar_inputs(graph):
+def _prune_vartree_leaves(graph):
     input_subvars = [n for n in graph.nodes_iter() \
                      if is_subvar_node(graph, n) and is_input_node(graph, n)]
     to_remove = []
     for subvar in input_subvars:
+
+        # Only prune vartree leaves, not arrays
+        if len(subvar.split('.')) < 2:
+            continue
+
         preds = graph.predecessors(subvar)
-        if len(preds) == 1 and preds[0] == graph.node[subvar]['basevar']:
+        if len(preds) == 1 and preds[0] == subvar:
             to_remove.append(subvar)
+
     graph.remove_nodes_from(to_remove)
 
 
@@ -1692,8 +1698,8 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
 
     _explode_vartrees(graph, scope)
 
-    # Find and rmemove input-input subvar connections and prune.
-    _remove_subvar_inputs(graph)
+    # Find and rmemove input-input vartree connections and prune.
+    _prune_vartree_leaves(graph)
 
     # All inner edges that lie between our inputs and outputs.
     edges = _get_inner_edges(graph, inames, onames)
