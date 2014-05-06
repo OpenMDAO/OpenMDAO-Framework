@@ -63,10 +63,14 @@ class FixedPointIterator(Driver):
         # Get and save the intial value of the input parameters
         val0 = self.workflow.get_independents()
 
+
+
         nvar = len(val0)
         delta = zeros(nvar)
 
         res = self.workflow.get_dependents(fixed_point=True)
+
+
 
         if self.norm_order == 'Infinity':
             order = float('inf')
@@ -75,7 +79,6 @@ class FixedPointIterator(Driver):
 
         unconverged = True
         while unconverged:
-
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
