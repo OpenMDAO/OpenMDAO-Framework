@@ -4,8 +4,56 @@ import sys
 import webbrowser
 
 import networkx as nx
+from openmdao.main.interfaces import IDriver
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=False):
+_cluster_count = 0
+
+def write_driver_cluster(f, G, driver, indent):
+    global _cluster_count, IDriver
+    comps = list(driver.workflow)
+    tab = ' '*indent
+    f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
+    _cluster_count += 1
+    indent += 3
+    tab = ' '*indent
+    #f.write('%slabel="%s";\n' % driver.name)
+
+    f.write('%s{ rank=same; ' % tab)
+    for comp in comps:
+        f.write('%s; ' % comp.name)
+    f.write("}\n")
+    f.write('%s%s [shape=box];\n' % (tab, driver.name))
+    if len(comps) > 0:
+        for comp in comps:
+            if IDriver.providedBy(comp):
+                write_driver_cluster(f, G, comp, indent)
+
+        subG = G.subgraph([c.name for c in comps])
+
+        for u,v in subG.edges():
+            f.write('%s%s -> %s;\n' % (tab, u, v))
+
+        # f.write('%s%s' % (tab, driver.name))
+        # for comp in comps:
+        #     f.write(' -> %s' % comp.name)
+        # f.write(" [style=dashed];\n")  # dashed lines indicate workflow order
+    
+    f.write('%s}\n' % tab)
+    
+def write_dot(G, dotfile, scope=None):
+
+    if scope is None:
+        raise RuntimeError("if workflow is True, scope must be specified")
+
+    with open(dotfile, 'w') as f:
+        f.write("strict digraph {\n")
+        f.write("rankdir=RL;\n")
+        driver = getattr(scope, 'driver')
+        write_driver_cluster(f, G, driver, 3)
+            
+        f.write("}\n")
+
+def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=None):
     """Create a plot of the given graph"""
 
     if not pseudos:
@@ -17,13 +65,16 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False):
 
     dotfile = os.path.splitext(outfile)[0]+'.dot'
 
-    nx.write_dot(G, dotfile)
+    if workflow:
+        write_dot(G, dotfile, scope)
+    else: # just show data connections
+        nx.write_dot(G, dotfile)
 
     os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
 
     webbrowser.get().open(outfile)
 
-    os.remove(dotfile)
+    #os.remove(dotfile)
 
 
 def plot_graphs(obj, recurse=False, fmt='pdf', pseudos=False):
