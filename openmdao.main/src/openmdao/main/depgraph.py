@@ -379,11 +379,11 @@ class DependencyGraph(nx.DiGraph):
         kwargs['invalidation'] = obj.get_invalidation_type()
         kwargs['comp'] = True
         kwargs['valid'] = False
+        self.add_node(cname, **kwargs)
 
         inputs  = ['.'.join((cname, v)) for v in obj.list_inputs()]
         outputs = ['.'.join((cname, v)) for v in obj.list_outputs()]
 
-        self.add_node(cname, **kwargs)
         self.add_nodes_from(inputs, var=True, iotype='in', valid=True)
         self.add_nodes_from(outputs, var=True, iotype='out', valid=False)
 
@@ -836,8 +836,12 @@ class DependencyGraph(nx.DiGraph):
                     if indeg is None:
                         indeg = in_degree(src)
                         _indegs[src] = indeg
-                    if indeg:  # don't invalidate unconnected inputs
+                    if indeg > 1:
                         sdata['valid'] = False
+                    elif indeg:  # don't invalidate unconnected inputs
+                        base = self.base_var(src)
+                        if not (ndata[base].get('iotype') == 'in' and self.predecessors(src)[0] == self.base_var(src)):
+                            sdata['valid'] = False
                 if 'boundary' in sdata and sdata.get('iotype') == 'out':
                     outset.add(src)
 
