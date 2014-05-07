@@ -736,6 +736,63 @@ class MultiPoint(unittest.TestCase):
         self.assertEqual(list(top.d.in3), [14., 16., 16., 18., 18., 20.])
 
 
+class ConnectC(Component):
+    i1 = Float(0., iotype='in')
+    o1 = Float(iotype='out')
+
+    def execute(self):
+        self.o1 = self.i1 **2.
+
+class ConnectA(Assembly):
+    i1 = List([], iotype='in')
+    o1 = List(iotype='out')
+
+    def __init__(self, sequential):
+        self.sequential = sequential
+        super(ConnectA, self).__init__()
+
+    def configure(self):
+        self.add('c', ConnectC())
+        self.add('driver', CaseIteratorDriver())
+        self.driver.sequential = self.sequential
+        self.driver.workflow.add('c')
+        self.driver.add_parameter('c.i1')
+        self.driver.add_response('c.o1')
+        self.connect('i1', 'driver.case_inputs.c.i1')
+        self.connect('driver.case_outputs.c.o1', 'o1')
+
+
+class Connections(unittest.TestCase):
+
+    def test_connections(self):
+        print '---- sequential ----'
+        a1 = ConnectA(True)
+        a1.i1 = range(10)
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(10)])
+
+        print '\n---- par ----'
+        a1.i1 = range(5)
+        a1.driver.sequential = False
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(5)])
+
+        print '\n---- seq ----'
+        a1.i1 = range(3)
+        a1.driver.sequential = True
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(3)])
+
+
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')

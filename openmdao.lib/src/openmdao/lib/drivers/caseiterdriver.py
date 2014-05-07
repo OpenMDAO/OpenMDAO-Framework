@@ -300,17 +300,28 @@ class CaseIteratorDriver(Driver):
                         need_reqs = True
                         break
 
-            driver = self.parent.driver
-            self.parent.add('driver', Driver()) # execute the workflow once
-            self.parent.driver.workflow = self.workflow
+            # Get current connections.
+            parent = self.parent
+            c1 = [(src, dst) for src, dst in parent._exprmapper.list_connections()
+                              if '_pseudo_' not in src and '_pseudo_' not in dst]
+            # Modify existing assembly to just execute our workflow once.
+            driver = parent.driver
+            parent.add('driver', Driver())
+            parent.driver.workflow = self.workflow
+
             try:
                 #egg_info = self.model.save_to_egg(self.model.name, version)
                 # FIXME: what name should we give to the egg?
-                egg_info = self.parent.save_to_egg(self.name, version,
-                                                   need_requirements=need_reqs)
+                egg_info = parent.save_to_egg(self.name, version,
+                                              need_requirements=need_reqs)
             finally:
-                # need to do add here in order to update parent depgraph
-                self.parent.add('driver', driver)
+                # Restore to original assembly state.
+                parent.add('driver', driver)
+                c2 = [(src, dst) for src, dst in parent._exprmapper.list_connections()
+                                  if '_pseudo_' not in src and '_pseudo_' not in dst]
+                for src, dst in c1:
+                    if (src, dst) not in c2:
+                        parent.connect(src, dst)
 
             self._egg_file = egg_info[0]
             self._egg_required_distributions = egg_info[1]
