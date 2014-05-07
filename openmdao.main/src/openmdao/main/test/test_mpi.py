@@ -164,7 +164,12 @@ def _get_model5():
     
 def _get_modelsellar():
     """Sellar (serial)"""
-    prob = set_as_top(SellarMDF())
+    prob = set_as_top(SellarMDF(parallel=False, use_params=False))
+    return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+def _get_modelsellar2():
+    """Sellar (serial)"""
+    prob = set_as_top(SellarMDF(parallel=False, use_params=True))
     return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
 
@@ -172,7 +177,11 @@ class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with FixedPointIterator.
     """
-    
+    def __init__(self, parallel=False, use_params=True):
+        self.parallel = parallel
+        self.use_params = use_params
+        super(SellarMDF, self).__init__()
+
     def configure(self):
         """ Creates a new Assembly with this problem
         
@@ -194,18 +203,22 @@ class SellarMDF(Assembly):
         C1.z2 = C2.z2 = 0
         C1.x1 = 0
 
-        # Iteration loop
-        #self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-        #self.driver.add_constraint('C2.y2 = C1.y2')
+        if self.parallel:
+            # Use connections for Parallel
+            self.driver.add_parameter('C1.y1', low=-1e99, high=1e99)
+            self.driver.add_constraint('C1.y1 = C2.y1')
+            self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+            self.driver.add_constraint('C2.y2 = C1.y2')
+        else:
+            # Make connection for serial
+            self.connect('C1.y1','C2.y1')
 
-        # Make connection for serial
-        self.connect('C1.y1','C2.y1')
-        self.connect('C2.y2', 'C1.y2')
-
-        # Use connections for Parallel
-        #self.driver.add_parameter('C1.y1', low==-1e99, high=1e99)
-        #self.driver.add_constraint('C1.y1 = C2.y1')
-
+            # Iteration loop
+            if self.use_params:
+                self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+                self.driver.add_constraint('C2.y2 = C1.y2')
+            else:  # use circular connection
+                self.connect('C2.y2', 'C1.y2')
         
         # Solver settings
         self.driver.max_iteration = 100

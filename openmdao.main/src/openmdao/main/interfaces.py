@@ -5,7 +5,8 @@ Interfaces for the OpenMDAO project.
 
 # pylint: disable-msg=E0213,E0211,W0232
 
-from zope.interface import implements, classImplements, Attribute, Interface
+from zope.interface import implements, classImplements, Attribute, Interface,\
+                           directlyProvides
 
 from openmdao.main.constants import SAVE_CPICKLE
 

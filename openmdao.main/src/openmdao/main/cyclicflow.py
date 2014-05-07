@@ -351,7 +351,7 @@ class CyclicWorkflow(SequentialWorkflow):
         return hstack((deps, sev_deps))
 
     def get_independents(self):
-        """Returns a list of current values of the dependents. This includes
+        """Returns a list of current values of the independents. This includes
         both parameters and severed targets.
         """
 

@@ -381,6 +381,7 @@ class Driver(Component):
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
+        self.end_iteration()
 
     def step(self):
         """Similar to the 'execute' function, but this one only
@@ -426,6 +427,12 @@ class Driver(Component):
         necessary pre-iteration initialization.
         """
         self._continue = True
+
+    def end_iteration(self):
+        """Called at the end of the iteraton loop.  Override this in 
+        inherited classes to perform some action after iteration is complete.
+        """
+        pass
 
     def continue_iteration(self):
         """Return False to stop iterating."""

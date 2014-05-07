@@ -36,7 +36,7 @@ if under_mpirun():
         except Exception:
             mpiprint(traceback.format_exc())
 
-    def get_petsc_vec(comm, arr):
+    def create_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm) 
 
     def mpiprint(msg, rank=-1):
@@ -57,7 +57,7 @@ else:
     def MPI_run(top):
         return top.run()
 
-    def get_petsc_vec(comm, arr):
+    def create_petsc_vec(comm, arr):
         return None
 
     def mpiprint(msg, rank=-1):
@@ -82,7 +82,7 @@ def setup_mpi(obj):
         mpiprint(traceback.format_exc())
 
 def _setup_mpi(obj):
-    if not obj_has_interface(obj, IAssembly):
+    if not IAssembly.providedBy(obj):
         raise RuntimeError("object passed to setup_mpi does not have "
                            "the IAssembly interface.")
 

@@ -12,7 +12,7 @@ import numpy
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IAssembly
+from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles
 
@@ -116,7 +116,7 @@ class System(object):
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        mpiprint("setup_sizes Allgather (var sizes) %s: %d" % (self.name,comm.size))
+        #mpiprint("setup_sizes Allgather (var sizes) %s: %d" % (self.name,comm.size))
         comm.Allgather(self.local_var_sizes[rank,:], 
                        self.local_var_sizes)
 
@@ -130,7 +130,7 @@ class System(object):
                                         for n,v in self.variables.items() 
                                            if n in inputs])
 
-        mpiprint("setup_sizes Allgather (input sizes)")
+        #mpiprint("setup_sizes Allgather (input sizes)")
         comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
         #mpiprint("%s input_sizes: %s" % (self.name, self.input_sizes))
@@ -160,6 +160,11 @@ class System(object):
         for name in ['p']:#, 'dp']:
             self.vec[name] = VecWrapper(self, numpy.zeros(insize), 
                                         inputs=inputs)
+
+        mpiprint("UVEC for %s" % self.name)
+        self.vec['u'].dump('u')
+        mpiprint("PVEC for %s" % self.name)
+        self.vec['p'].dump('p')
 
         start, end = 0, 0
         for sub in self.subsystems:
@@ -204,7 +209,7 @@ class System(object):
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'DriverSystem': 'drv',
-                     'AssemblySystem': 'asm' }
+                     'AssemblySystem': 'asm', 'ExplicitSystem': 'exp' }
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" % 
@@ -233,28 +238,42 @@ class System(object):
 
     def create_scatter(self, var_idxs, input_idxs, scatter_vars):
         """ Concatenates lists of indices and creates a PETSc Scatter """
-        mpiprint("create_scatter: %s" % self.name)
+        #mpiprint("create_scatter: %s" % self.name)
         return DataTransfer(self, var_idxs, input_idxs, scatter_vars)
 
     def scatter(self, srcvecname, destvecname, subsystem=None):
         """ Perform partial or full scatter """
-        mpiprint("scatter: %s" % self.name)
         if subsystem is None:
             scatter = self.scatter_full
-            #mpiprint("FULL scatter for %s" % self.name)
         else:
             scatter = subsystem.scatter_partial
-            #if scatter:
-            #    mpiprint("PARTIAL scatter  %s --> %s" % (self.name, subsystem.name))
-            #else:
-            #    mpiprint("PARTIAL scatter MISSING (%s --> %s)" % (self.name, subsystem.name))
 
         if not scatter is None:
+            if subsystem is not None:
+                sub = "(sub=%s)" % subsystem.name
+            else:
+                sub = ''
+            mpiprint("scatter: %s %s  %s" % (self.name, sub,scatter.scatter_vars))
+
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
             #mpiprint("scatter_vars = %s" % scatter.scatter_vars)
             scatter(self, srcvec, destvec) #, reverse=??)
+
+            # copy dest vector values back into local src vector after
+            # scatter since other systems share parts of the src
+            # vector (via shared views) with this system.
+            # FIXME: make sure we're not duplicating copy operation because
+            #        in some cases we copy vector values back and forth from
+            #        scoping Assembly...
+            srcvec = self.vec[srcvecname]
+            destvec = self.vec[destvecname]
+            subvars = destvec._subvars
+            for name, (array, start) in destvec._info.items():
+                if name not in subvars:
+                    mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
+                    srcvec[name][:] = array
 
         return scatter
 
@@ -289,21 +308,20 @@ class SimpleSystem(System):
         return inputs
 
     def run(self):
-        mpiprint("run: %s" % self.name)
         comp = self._comp
         #mpiprint("running simple system %s: %s" % (self.name, self._comp.name))
         # if not isinstance(comp, PseudoComponent):
         #     comp.set_itername('%s-%d' % (iterbase, 1))
 
-        mpiprint("&&&& %s.run  (system)" % comp.name)
+        mpiprint("%s.run  (system)" % comp.name)
         self.scatter('u','p')
         if self._comp.parent is not None:
             self.vec['p'].set_to_scope(self._comp.parent)
-            mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+            #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
         comp.run(force=True)
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
-        mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
+        #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
         # for vname in chain(comp.list_inputs(connected=True), comp.list_outputs(connected=True)):
         #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
@@ -351,28 +369,59 @@ class SimpleSystem(System):
         self.scatter_full = self.create_scatter(src_idxs, dest_idxs, 
                                                 scatter_vars)
 
+    def apply_F(self):
+        self.scatter('u','p')
+        comp = self._comp
+        if self._comp.parent is not None:
+            self.vec['p'].set_to_scope(self._comp.parent)
+            #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+        comp.evaluate()
+        if self._comp.parent is not None:
+            self.vec['u'].set_from_scope(self._comp.parent)
+        #vec['f'].array[:] = vec['u'].array
 
-    # FIXME: this is really just for an explicit system...
+    # # FIXME: this is really just for an explicit system...
+    # def apply_F(self):
+    #     """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
+    #     mpiprint("%s.apply_F" % self.name)
+    #     vec = self.vec
+    #     self.scatter('u','p')
+    #     comp = self._comp
+    #     vec['f'].array[:] = vec['u'].array[:]
+    #     if self._comp.parent is not None:
+    #         self.vec['p'].set_to_scope(self._comp.parent)
+    #         #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+    #     comp.run(force=True)
+    #     if self._comp.parent is not None:
+    #         self.vec['u'].set_from_scope(self._comp.parent)
+    #     mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
+    #     mpiprint("=== F vector for %s after: %s" % (comp.name,self.vec['f'].items()))
+    #     vec['f'].array[:] -= vec['u'].array[:]
+    #     vec['u'].array[:] += vec['f'].array[:]
+    #     #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
+
+
+class ExplicitSystem(SimpleSystem):
     def apply_F(self):
         """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
-        mpiprint("&&&& %s.apply_F" % self.name)
+        mpiprint("%s.apply_F" % self.name)
         vec = self.vec
         self.scatter('u','p')
         comp = self._comp
         vec['f'].array[:] = vec['u'].array[:]
         if self._comp.parent is not None:
             self.vec['p'].set_to_scope(self._comp.parent)
-            mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+            #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
         comp.run(force=True)
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
         mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
+        mpiprint("=== F vector for %s after: %s" % (comp.name,self.vec['f'].items()))
         vec['f'].array[:] -= vec['u'].array[:]
         vec['u'].array[:] += vec['f'].array[:]
-        mpiprint("after apply_F, f = %s" % self.vec['f'].array)
+        #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
-
-class DriverSystem(SimpleSystem):
+class DriverSystem(ExplicitSystem):
     """A System for a Driver component."""
 
     def setup_communicators(self, comm, scope):
@@ -380,7 +429,7 @@ class DriverSystem(SimpleSystem):
                                                                 scope)
 
 
-class AssemblySystem(SimpleSystem):
+class AssemblySystem(ExplicitSystem):
     """A System to handle an Assembly."""
 
     def setup_communicators(self, comm, scope):
@@ -456,11 +505,9 @@ class CompoundSystem(System):
             dest_partial = []
             scatter_vars = []
             if subsystem in self.subsystems:
+                # Add scatters for data connections
                 for u,v,edata in self.graph.in_edges_iter(node, data=True):
                     var_edges = edata['var_edges']
-                    #mpiprint("var_edges = %s" % var_edges)
-                    #mpiprint("%s.uvec = %s" % (self.name,self.vec['u'].items()))
-                    #mpiprint("%s.pvec = %s" % (subsystem.name, subsystem.vec['p'].items()))
                     
                     for src, dest in var_edges:
                         dest_idxs = self.vec['p'].indices(dest)
@@ -503,30 +550,17 @@ class CompoundSystem(System):
 
     def apply_F(self):
         """ Delegate to subsystems """
-        mpiprint("&&&& %s.apply_F" % self.name)
+        mpiprint("%s.apply_F" % self.name)
         self.scatter('u','p')
         for subsystem in self.subsystems:
             subsystem.apply_F()
+        mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
+        mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))
 
     def run(self):
-        mpiprint("&&&& %s.run  (system)" % self.name)
+        mpiprint("%s.run  (system)" % self.name)
         if self.solver is not None:
             self.solver.run()
-
-    def scatter(self, srcvecname, destvecname, subsystem=None):
-        sfunct = super(CompoundSystem, self).scatter(srcvecname, 
-                                                     destvecname, 
-                                                     subsystem)
-        # copy dest vector values back into src vector after
-        # scatter since subsystems share parts of the src
-        # vector (via shared views) with this system.
-        if sfunct is not None:
-            srcvec = self.vec[srcvecname]
-            destvec = self.vec[destvecname]
-            subvars = destvec._subvars
-            for name, (array, start) in destvec._info.items():
-                if name not in subvars:
-                    srcvec[name][:] = array
         
 
 class SerialSystem(CompoundSystem):
@@ -681,7 +715,7 @@ class ParallelSystem(CompoundSystem):
             sub = None
             names = []
         #mpiprint("%s before ALLGATHER, varkeys=%s" % (self.name, names))
-        mpiprint("setup_variables Allgather")
+        #mpiprint("setup_variables Allgather")
         varkeys_list = self.mpi.comm.allgather(names)
         #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
@@ -700,8 +734,10 @@ def _create_simple_sys(g, scope, name):
         sub = DriverSystem(subg, scope, comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(subg, scope, comp)
-    else:
+    elif has_interface(comp, IImplicitComponent):
         sub = SimpleSystem(subg, scope, comp)
+    else:
+        sub = ExplicitSystem(subg, scope, comp)
     node = g.node[name]
     node['system'] = sub
     node['inputs'] = sub.get_inputs()
@@ -919,21 +955,20 @@ def get_comm_if_active(obj, comm):
     if comm == MPI.COMM_NULL:
         return comm
 
-    if isinstance(obj, System):
-        name = obj.name
-    else:
-        name = obj._parent.name
-
     req = obj.get_req_cpus()
-    mpiprint("rank+1: %d,  req: %d" % (comm.rank+1,req))
+    #mpiprint("rank+1: %d,  req: %d" % (comm.rank+1,req))
     if comm.rank+1 > req:
         color = MPI.UNDEFINED
     else:
         color = 1
 
     newcomm = comm.Split(color)
-    if newcomm == MPI.COMM_NULL:
-        mpiprint("NULL COMM for %s" % name)
-    else:
-        mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
+    # if isinstance(obj, System):
+    #     name = obj.name
+    # else:
+    #     name = obj._parent.name
+    # if newcomm == MPI.COMM_NULL:
+    #     mpiprint("NULL COMM for %s" % name)
+    # else:
+    #     mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
     return newcomm
