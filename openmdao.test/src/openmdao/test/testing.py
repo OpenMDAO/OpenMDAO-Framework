@@ -9,6 +9,7 @@ from pkg_resources import working_set, to_filename, get_distribution
 
 import atexit
 
+
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
     with the option ``--with-fail-summary`` to activate it.
@@ -96,6 +97,7 @@ def _run_exitfuncs():
     if exc_info is not None:
         raise exc_info[0], exc_info[1], exc_info[2]
 
+
 def _trace_atexit():
     """
     This code can be used to display atexit handlers as they are executed during
@@ -110,29 +112,30 @@ def _trace_atexit():
 def _get_openmdao_packages():
     # pkg_resources uses a 'safe' name for dists, which replaces all 'illegal' chars with '-'
     # '_' is an illegal char used in one of our packages
-    return [d for d in working_set 
+    return [d for d in working_set
             if d.project_name.startswith('openmdao.')]
+
 
 def read_config(options):
     """Reads the config file specified in options.cfg.
-    
+
     Returns a tuple of the form (hosts, config), where `hosts` is the list of
     host names and `config` is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
-    
+
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
-    
+
     hostlist = config.sections()
-    
+
     return (hostlist, config)
-    
+
 
 def filter_config(hostlist, config, options):
-    """Looks for sections in the config file that match the host names 
+    """Looks for sections in the config file that match the host names
     specified in options.hosts.
-    
+
     Returns a list of host names that match the given options.
     """
     hosts = []
@@ -141,7 +144,7 @@ def filter_config(hostlist, config, options):
             if host in hostlist:
                 hosts.append(host)
             else:
-                raise RuntimeError("host '%s' is not in config file %s" % 
+                raise RuntimeError("host '%s' is not in config file %s" %
                                    (host, options.cfg))
 
         if not hosts:
@@ -166,7 +169,7 @@ def filter_config(hostlist, config, options):
                 final_hosts.append(h)
     else:
         final_hosts = hosts
-    
+
     return final_hosts
 
 
@@ -178,14 +181,16 @@ def run_openmdao_suite_deprecated():
         print "'openmdao_test' is deprecated and will be removed in a later release."
         print "Please use 'openmdao test' instead"
         print '***'
-        
+
+
 def is_dev_install():
     return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
+
 
 def run_openmdao_suite(options=None, argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
-    
+
     This function wraps nosetests, so any valid nose args should also
     work here.
     """
@@ -194,41 +199,41 @@ def run_openmdao_suite(options=None, argv=None):
 
     # check for args not starting with '-'
     args = argv[:]
-        
+
     if options.packages:
         tlist = [get_distribution(package) for package in options.packages]
         test_packages = [distribution.location for distribution in tlist]
     else:
         #Add any default packages/directories to search for tests to tlist.
         tlist = _get_openmdao_packages()
-        
+
         # in a release install, default is the set of tests specified in release_tests.cfg
         if not is_dev_install() or options.small:
             args.extend(['-c', os.path.join(os.path.dirname(__file__), 'release_tests.cfg')])
             test_packages = []
 
-        else: # in a dev install, default is all tests
-            args.append('--all') 
+        else:  # in a dev install, default is all tests
+            args.append('--all')
             test_packages = [distribution.location for distribution in tlist]
 
     break_check = ['--help', '-h', '--all']
-    
-    covpkg = False # if True, --cover-package was specified by the user
-    
+
+    covpkg = False  # if True, --cover-package was specified by the user
+
     # check for --cover-package arg
     for i, arg in enumerate(args):
         if arg.startswith('--cover-package'):
             covpkg = True
             break
-   
+
     #stop nose from modifying sys.path
     args.append('--no-path-adjustment')
- 
-    args.append('--exe') # by default, nose will skip any .py files that are
-                         # executable. --exe prevents this behavior
-    
+
+    args.append('--exe')  # by default, nose will skip any .py files that are
+                          # executable. --exe prevents this behavior
+
     #disable nose from adjusting sys.path
-    #args.append('--no-path-adjustment')    
+    #args.append('--no-path-adjustment')
 
     # Clobber cached data in case Python environment has changed.
     base = os.path.expanduser(os.path.join('~', '.openmdao'))
@@ -254,21 +259,21 @@ def run_openmdao_suite(options=None, argv=None):
                 os.remove(path)
 
     # this tells it to enable the console in the environment so that
-    # the logger will print output to stdout. This helps greatly when 
+    # the logger will print output to stdout. This helps greatly when
     # debugging openmdao scripts running in separate processes.
     if '--enable_console' in args:
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
-        
+
     if '--all' in args:
         args.remove('--all')
- 
+
     if '--plugins' in args:
         args.remove('--plugins')
         from openmdao.main.plugin import plugin_install, _get_plugin_parser
         argv = ['install', '--all']
         parser = _get_plugin_parser()
-        options, argz = parser.parse_known_args(argv) 
+        options, argz = parser.parse_known_args(argv)
         plugin_install(parser, options, argz)
 
     # The default action should be to run the GUI functional tests.
@@ -299,7 +304,7 @@ def run_openmdao_suite(options=None, argv=None):
         pass
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
-   
+
     args.extend(test_packages)
 
 #    _trace_atexit()
