@@ -21,7 +21,6 @@ try:
 except NameError:
     WindowsError = None
 
-from collections import namedtuple
 from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
@@ -54,6 +53,7 @@ _display = None
 
 _chrome_version = None
 
+
 def check_for_chrome():
     return bool(find_chrome())
 
@@ -83,12 +83,20 @@ def setup_chrome():
     path = find_executable(exe)
     if not path:
         # Download, unpack, and install chromedriver into OpenMDAO 'bin'.
-        if _chrome_version > 29:
-            version = 2.8
+        # Note: As new versions of Chrome & chromedriver are released, the
+        #       following should be updated.  Refer to the following URL:
+        #       https://chromedriver.storage.googleapis.com/index.html
+        #       and see notes.txt for each version for Chrome compatibility
+        if _chrome_version > 32:
+            version = '2.10'
+        elif _chrome_version > 30:
+            version = '2.9'
+        elif _chrome_version > 29:
+            version = '2.8'
         elif _chrome_version > 28:
-            version = 2.6
+            version = '2.6'
         else:
-            version = 2.3
+            version = '2.3'
 
         if sys.platform == 'darwin':
             flavor = 'mac32'
@@ -105,7 +113,7 @@ def setup_chrome():
         os.chdir(os.path.dirname(sys.executable))
 
         prefix = 'http://chromedriver.storage.googleapis.com'
-        url = '/'.join([prefix, str(version), filename])
+        url = '/'.join([prefix, version, filename])
         logging.critical('Downloading %s for chrome version %d to %s',
                          url, _chrome_version, os.getcwd())
         try:
@@ -611,6 +619,7 @@ def parse_test_args(args=None):
         sys.exit(-1)
 
     return options
+
 
 def main(args=None):
     """ run tests for module
