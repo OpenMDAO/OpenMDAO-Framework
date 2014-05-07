@@ -340,10 +340,10 @@ class CyclicWorkflow(SequentialWorkflow):
                 except KeyError: #wasn't in the rhs dict, try the lhs
                     try: 
                         j,size = lhs[params[0]]
-                        new_dep_index[k:+size] = j+arange(0,size,dtype="int")
+                        new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
                         new_dep_sign[k:k+size] = -1*ones(size)
                         k+=size
-                    except: 
+                    except KeyError: 
                         pass #TODO: need to throw an error here. Why was there a param that didn't show up in the constraint
             
             #reset the deps array to the new order and sign 
