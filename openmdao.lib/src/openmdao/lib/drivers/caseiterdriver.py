@@ -282,6 +282,7 @@ class CaseIteratorDriver(Driver):
             self.raise_exception('Run aborted: %s'
                                  % traceback_str(self._abort_exc),
                                  RuntimeError)
+
     def _setup(self):
         """ Setup to begin new run. """
         if not self.sequential:
@@ -359,9 +360,10 @@ class CaseIteratorDriver(Driver):
 
         # Determine maximum number of servers available.
         resources = {
-            'required_distributions':self._egg_required_distributions,
-            'orphan_modules':self._egg_orphan_modules,
-            'python_version':sys.version[:3]}
+            'required_distributions': self._egg_required_distributions,
+            'orphan_modules': self._egg_orphan_modules,
+            'python_version': sys.version[:3]
+        }
         if self.extra_resources:
             resources.update(self.extra_resources)
         max_servers = RAM.max_servers(resources)
@@ -416,14 +418,14 @@ class CaseIteratorDriver(Driver):
                         break  # Timeout.
                     else:
                         # Difficult to force startup failure.
-                        if server.server is None:  #pragma nocover
+                        if server.server is None:  # pragma nocover
                             self._logger.debug('server startup failed for %r',
                                                name)
                             server.in_use = False
                         else:
                             server.in_use = self._server_ready(server)
 
-        if sys.platform == 'win32':  #pragma no cover
+        if sys.platform == 'win32':  # pragma no cover
             # Don't start server processing until all servers are started,
             # otherwise we have egg removal issues.
             for i in self._servers:
@@ -450,7 +452,7 @@ class CaseIteratorDriver(Driver):
             try:
                 name, result, exc = self._reply_q.get(timeout=timeout)
             # Hard to force worker to hang, which is handled here.
-            except Queue.Empty:  #pragma no cover
+            except Queue.Empty:  # pragma no cover
                 msgs = []
                 for name, server in self._servers.items():
                     if server.in_use:
@@ -483,7 +485,7 @@ class CaseIteratorDriver(Driver):
             try:
                 name, status, exc = self._reply_q.get(True, 60)
             # Hard to force worker to hang, which is handled here.
-            except Queue.Empty:  #pragma no cover
+            except Queue.Empty:  # pragma no cover
                 pass
             else:
                 self._servers[name].queue = None
@@ -492,6 +494,7 @@ class CaseIteratorDriver(Driver):
             if server.queue is not None:
                 self._logger.warning('Timeout waiting for %r to shut-down.',
                                      server.name)
+
     def _busy(self):
         """ Return True while at least one server is in use. """
         for server in self._servers.values():
@@ -594,11 +597,11 @@ class CaseIteratorDriver(Driver):
                     self._logger.debug('    no more cases')
                     in_use = False
             # Difficult to force startup failure.
-            else:  #pragma nocover
+            else:  # pragma nocover
                 in_use = False  # Never started.
 
         # Just being defensive, should never happen.
-        else:  #pragma no cover
+        else:  # pragma no cover
             msg = 'unexpected state %r for server %r' % (state, server.name)
             self._logger.error(msg)
             if self.error_policy == 'ABORT':
@@ -743,7 +746,7 @@ class CaseIteratorDriver(Driver):
 
         server, server_info = RAM.allocate(resource_desc)
         # Just being defensive, this should never happen.
-        if server is None:  #pragma no cover
+        if server is None:  # pragma no cover
             self._logger.error('Server allocation for %r failed :-(', name)
             reply_q.put((name, False, None))
             return
@@ -806,7 +809,7 @@ class CaseIteratorDriver(Driver):
                 filexfer(None, self._egg_file,
                          server.server, self._egg_file, 'b')
             # Difficult to force model file transfer error.
-            except Exception as exc:  #pragma nocover
+            except Exception as exc:  # pragma nocover
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server.name, self._egg_file, exc)
                 server.top = None
@@ -817,7 +820,7 @@ class CaseIteratorDriver(Driver):
         try:
             tlo = server.server.load_model(self._egg_file)
         # Difficult to force load error.
-        except Exception as exc:  #pragma nocover
+        except Exception as exc:  # pragma nocover
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             server.top = None
@@ -850,4 +853,3 @@ class CaseIteratorDriver(Driver):
                                ' PID %d on %s: %r',
                                server.info['name'], server.info['pid'],
                                server.info['host'], exc)
-
