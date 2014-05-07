@@ -133,6 +133,6 @@ if __name__ == "__main__":
                                             prob.coupling_var_targets[1])
     print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", time.time()-tt, "seconds"
-
+    print 'Execution Count: %d %d' % (prob.dis1.exec_count, prob.dis2.exec_count)
 
 # End sellar_CO.py

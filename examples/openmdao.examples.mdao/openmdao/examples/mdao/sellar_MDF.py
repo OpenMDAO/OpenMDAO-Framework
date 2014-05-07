@@ -85,6 +85,6 @@ if __name__ == "__main__": # pragma: no cover
     print "Couping vars: %f, %f" % (prob.dis1.y1, prob.dis2.y2)
     print "Minimum objective: ", prob.driver.eval_objective()
     print "Elapsed time: ", ttot, "seconds"
-
+    print 'Execution Count: %d %d' % (prob.dis1.exec_count, prob.dis2.exec_count)
 
 # End sellar_MDF.py
