@@ -1353,10 +1353,13 @@ class Assembly(Component):
 
         return connectivity
 
-    def _repr_svg_(self):
-        """ Returns an SVG representation of this Assembly's dependency graph
-        """
-        return graph_to_svg(self._depgraph.component_graph())
+    # def _repr_svg_(self):
+    #     """ Returns an SVG representation of this Assembly's dependency graph
+    #         Note: the graph_to_svg() function currently uses tkinter which
+    #               requires a display and thus will cause an exception when
+    #               running headless (e.g. during non-interactive testing)
+    #     """
+    #     return graph_to_svg(self._depgraph.component_graph())
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
