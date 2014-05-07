@@ -193,7 +193,7 @@ class TestCase(unittest.TestCase):
         driver.case_inputs.driven.y = \
             [numpy_random.normal(size=10) for i in range(10)]
         driver.case_inputs.driven.raise_error = \
-            [force_errors and i%4 == 3 for i in range(10)]
+            [force_errors and i % 4 == 3 for i in range(10)]
 
     def tearDown(self):
         self.model.pre_delete()
@@ -260,10 +260,10 @@ class TestCase(unittest.TestCase):
                 self.model.run()
             except Exception as err:
                 err = replace_uuid(str(err))
-                if not sequential: # RemoteError has different format.
+                if not sequential:  # RemoteError has different format.
                     err = err[:-76]
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven (4-1): Forced error'
+                endmsg = 'driven (4-driven): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)
                 self.assertEqual(err[-len(endmsg):], endmsg)
             else:
@@ -273,7 +273,7 @@ class TestCase(unittest.TestCase):
         """ Verify recorded results match expectations. """
         driver = self.model.driver
         for i in range(len(driver.case_inputs.driven.x)):
-            error_expected = forced_errors and i%4 == 3
+            error_expected = forced_errors and i % 4 == 3
             if error_expected:
                 rs = driver.case_outputs.driven.rosen_suzuki[i]
                 sy = driver.case_outputs.driven.sum_y[i]
@@ -393,16 +393,16 @@ class TestCase(unittest.TestCase):
 
     def verify_itername(self, cid, subassembly=False):
         # These iternames will have the case's uuid prepended.
-        expected = (('1-1', '1-2'),
-                    ('2-1', '2-2'),
-                    ('3-1', '3-2'))
+        expected = (('1-comp1', '1-comp2'),
+                    ('2-comp1', '2-comp2'),
+                    ('3-comp1', '3-comp2'))
 
         outs = cid.case_outputs
         for i in range(3):
             logging.debug('%s: %r %r', i,
                           outs.comp1.itername, outs.comp2.itername)
             if subassembly:
-                prefix = '1-1'
+                prefix = '1-sub'
                 prefix1, _, iter1 = outs.comp1.itername[i].partition('.')
                 prefix2, _, iter2 = outs.comp2.itername[i].partition('.')
                 self.assertEqual(prefix1, prefix)
@@ -476,14 +476,14 @@ class TestCase(unittest.TestCase):
         top.run()
         expected = [
             '1',
-            '1-1.1',
-            '1-1.1-2.1',
-            '1-1.1-2.2',
-            '1-1.1-2.3',
-            '1-1.2',
-            '1-1.2-2.1',
-            '1-1.2-2.2',
-            '1-1.2-2.3'
+            '1-driver1.1',
+            '1-driver1.1-driver2.1',
+            '1-driver1.1-driver2.2',
+            '1-driver1.1-driver2.3',
+            '1-driver1.2',
+            '1-driver1.2-driver2.1',
+            '1-driver1.2-driver2.2',
+            '1-driver1.2-driver2.3'
         ]
         self.verify_tree(top, expected)
 
@@ -498,8 +498,8 @@ class TestCase(unittest.TestCase):
         top.run()
         expected = [
             '1',
-            '1-1.1',
-            '1-1.2',
+            '1-driver1.1',
+            '1-driver1.2'
         ]
         self.verify_tree(top, expected)
 
@@ -529,6 +529,7 @@ class C0_l(Component):
     def execute(self):
         self.l = range(self.N)
 
+
 class C1_l(Component):
     l = List([], iotype='in')
     i = Int(0, iotype='in')
@@ -536,6 +537,7 @@ class C1_l(Component):
 
     def execute(self):
         self.val = self.l[self.i]
+
 
 class A_l(Assembly):
     def configure(self):
@@ -559,12 +561,14 @@ class A_l(Assembly):
 class V(VariableTree):
     l = List([])
 
+
 class C0_vt(Component):
     vt = VarTree(V(), iotype='out')
     N = Int(10, iotype='in')
 
     def execute(self):
         self.vt.l = range(self.N)
+
 
 class C1_vt(Component):
     vt = VarTree(V(), iotype='in')
@@ -573,6 +577,7 @@ class C1_vt(Component):
 
     def execute(self):
         self.val = self.vt.l[self.i]
+
 
 class A_vt(Assembly):
     def configure(self):
@@ -740,4 +745,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-
