@@ -146,7 +146,6 @@ class Comp_Receive_ApplyDeriv(Comp_Receive):
             result['data'] += self.J.T[2, :]*arg['q3']
 
 class TestcaseDerivObj(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """

@@ -117,7 +117,6 @@ class TestOptSubToSolver(Assembly):
         self.driver.workflow.add(['opt', 'ratio'])
 
 class TestCase(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """
@@ -166,7 +165,6 @@ class Tree1(VariableTree):
 
 
 class TestCase_Residuals(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """
