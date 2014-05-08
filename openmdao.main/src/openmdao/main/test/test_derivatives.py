@@ -114,7 +114,6 @@ class BadListDerivsComp(Component):
 
 
 class Testcase_provideJ(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """

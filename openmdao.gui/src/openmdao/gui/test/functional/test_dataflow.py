@@ -188,7 +188,7 @@ def _test_connect(browser):
          "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count', '1', '',
          'Number of times this Component has been executed.'],
-        ['', 'itername', '1-2', '', 'Iteration coordinates.'],
+        ['', 'itername', '1-comp2', '', 'Iteration coordinates.'],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
