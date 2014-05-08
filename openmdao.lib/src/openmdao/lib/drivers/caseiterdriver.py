@@ -266,7 +266,7 @@ class CaseIteratorDriver(Driver):
                         server.exception = None
                         server.case = None
                         server.state = _LOADING  # 'server' already loaded.
-                        while self._server_ready(server, stepping=True):
+                        while self._server_ready(server):
                             pass
                     except StopIteration:
                         if not self._rerun:
@@ -520,11 +520,10 @@ class CaseIteratorDriver(Driver):
             os.remove(self._egg_file)
             self._egg_file = None
 
-    def _server_ready(self, server, stepping=False):
+    def _server_ready(self, server):
         """
         Responds to asynchronous callbacks during :meth:`execute` to run cases
         retrieved from `self._iter`.  Results are processed by `recorder`.
-        If `stepping`, then we don't grab any new cases.
         Returns True if this server is still in use.
         """
         state = server.state
@@ -534,7 +533,7 @@ class CaseIteratorDriver(Driver):
         if state == _LOADING:
             exc = server.exception
             if exc is None:
-                in_use = self._start_next_case(server, stepping)
+                in_use = self._start_next_case(server)
             else:
                 self._logger.debug('    exception while loading: %r', exc)
                 if self.error_policy == 'ABORT':
@@ -546,7 +545,7 @@ class CaseIteratorDriver(Driver):
                 else:
                     server.load_failures += 1
                     if server.load_failures < 3:
-                        in_use = self._start_processing(server, stepping)
+                        in_use = self._start_processing(server)
                     else:
                         self._logger.debug('    too many load failures')
                         server.state = _EMPTY
@@ -583,11 +582,11 @@ class CaseIteratorDriver(Driver):
                     self._logger.error('Too many retries for %s', case)
 
             # Set up for next case.
-            in_use = self._start_processing(server, stepping, reload=True)
+            in_use = self._start_processing(server, reload=True)
 
         elif state == _EMPTY:
             if server.name is None or server.queue is not None:
-                if self._more_to_go(stepping):
+                if self._more_to_go():
                     if server.queue is not None:
                         self._logger.debug('    load_model')
                         server.load_failures = 0
@@ -612,22 +611,22 @@ class CaseIteratorDriver(Driver):
 
         return in_use
 
-    def _more_to_go(self, stepping=False):
+    def _more_to_go(self):
         """ Return True if there's more work to do. """
         if self._stop:
             return False
         if self._todo or self._rerun:
             return True
-        if not stepping and self._iter is not None:
+        if self._iter is not None:
             return True
         return False
 
-    def _start_processing(self, server, stepping, reload=False):
+    def _start_processing(self, server, reload=False):
         """
         If there's something to do, start processing by either loading
         the model, or going straight to running it.
         """
-        if self._more_to_go(stepping):
+        if self._more_to_go():
             if server.name is None:
                 in_use = self._start_next_case(server)
             elif reload:
@@ -649,7 +648,7 @@ class CaseIteratorDriver(Driver):
             in_use = False
         return in_use
 
-    def _start_next_case(self, server, stepping=False):
+    def _start_next_case(self, server):
         """ Look for the next case and start it. """
 
         if self._todo:
@@ -662,8 +661,6 @@ class CaseIteratorDriver(Driver):
             in_use = self._run_case(case, server, rerun=True)
         elif self._iter is None:
             self._logger.debug('    no more cases')
-            in_use = False
-        elif stepping:
             in_use = False
         else:
             try:
@@ -714,7 +711,7 @@ class CaseIteratorDriver(Driver):
             if case.retries < self.max_retries:
                 case.retries += 1
                 self._rerun.append(case)
-            return self._start_processing(server, stepping=False)
+            return self._start_processing(server)
         else:
             return True
 
