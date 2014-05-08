@@ -220,7 +220,6 @@ class System(object):
                                            self.input_sizes[self.mpi.comm.rank]))
         inputs = self.get_inputs(local=True)
 
-        #for v, data in self.all_variables.items():
         for v, (arr, start) in self.vec['u']._info.items():
             stream.write(" "*(nest+2))
             if v in inputs:

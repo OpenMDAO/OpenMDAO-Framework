@@ -125,6 +125,11 @@ class MPINonlinearGS(MPINonlinearSolver):
             system.scatter('u','p', subsystem)
             subsystem.run()
             #mpiprint("=== system U vector after %s run: %s" % (subsystem.name, system.vec['u'].items()))
+
+        # TODO: look at collecting params into contiguous view and
+        # constraints as well so we can do a fast numpy update with no
+        # copying.
+
         # add current value of constraint residual to params
         uvec = system.vec['u']
         for param, cnst, sign in self.pairs:
