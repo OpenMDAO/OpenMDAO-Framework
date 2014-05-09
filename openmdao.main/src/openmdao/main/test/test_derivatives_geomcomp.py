@@ -144,7 +144,6 @@ class GeomRecieveDerivApplyDeriv(GeomRecieve):
             result['geom_in'] += self.J.T.dot(arg['out'])
     
 class Testcase_deriv_obj(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def _check_J(self, J): 
         assert_rel_error(self, J[0, 0], 2.0, .00001)

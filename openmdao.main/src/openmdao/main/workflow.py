@@ -31,7 +31,6 @@ class Workflow(object):
         members: list of str (optional)
             A list of names of Components to add to this workflow.
         """
-        self._iterator = None
         self._stop = False
         self._parent = parent
         self._scope = scope
@@ -87,9 +86,7 @@ class Workflow(object):
         """ Run the Components in this Workflow. """
 
         self._stop = False
-        self._iterator = self.__iter__()
         self._exec_count += 1
-        self._comp_count = 0
 
         iterbase = self._iterbase()
 
@@ -100,16 +97,14 @@ class Workflow(object):
         else:
             record_case = False
 
-        for comp in self._iterator:
+        for comp in self:
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order)
             else:
-                self._comp_count += 1
-                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
+                comp.set_itername('%s-%s' % (iterbase, comp.name))
                 comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             if self._stop:
                 raise RunStopped('Stop requested')
-        self._iterator = None
 
         if record_case:
             self._record_case(label=case_label, case_uuid=case_uuid)
@@ -183,24 +178,6 @@ class Workflow(object):
             if prefix:
                 prefix += '.'
             return '%s%d' % (prefix, self._exec_count)
-
-    def step(self, ffd_order=0):
-        """Run a single component in this Workflow."""
-        if self._iterator is None:
-            self._iterator = self.__iter__()
-            self._exec_count += 1
-            self._comp_count = 0
-
-        comp = self._iterator.next()
-        self._comp_count += 1
-        iterbase = self._iterbase()
-        comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-        try:
-            comp.run(ffd_order=ffd_order)
-        except StopIteration, err:
-            self._iterator = None
-            raise err
-        raise RunStopped('Step complete')
 
     def stop(self):
         """
