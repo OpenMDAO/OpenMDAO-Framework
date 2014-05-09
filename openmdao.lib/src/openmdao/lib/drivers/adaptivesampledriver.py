@@ -130,13 +130,13 @@ class AdaptiveSampleDriver(DOEdriver):
         path = make_legal_path(target)
 
         desc = 'Input for adding new points during parent iteration.'
-        self._add_vartrees('adaptive_inputs', target, desc)
+        self._add_vartrees('adaptive_inputs', path, desc)
 
         desc = 'Holds all inputs processed by this driver.'
-        self._add_vartrees('all_case_inputs', target, desc)
+        self._add_vartrees('all_case_inputs', path, desc)
 
         desc = 'Holds just the DOE inputs.'
-        self._add_vartrees('DOE_inputs', target, desc)
+        self._add_vartrees('DOE_inputs', path, desc)
 
 
     def add_response(self, expr, name=None, scope=None):
