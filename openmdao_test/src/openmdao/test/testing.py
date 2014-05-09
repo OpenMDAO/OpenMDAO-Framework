@@ -9,6 +9,7 @@ from pkg_resources import working_set, to_filename
 
 import atexit
 
+
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
     with the option ``--with-fail-summary`` to activate it.
@@ -96,6 +97,7 @@ def _run_exitfuncs():
     if exc_info is not None:
         raise exc_info[0], exc_info[1], exc_info[2]
 
+
 def _trace_atexit():
     """
     This code can be used to display atexit handlers as they are executed during
@@ -113,26 +115,27 @@ def _get_openmdao_packages():
     return [to_filename(d.project_name) for d in working_set 
             if d.project_name.startswith('openmdao.')]
 
+
 def read_config(options):
     """Reads the config file specified in options.cfg.
-    
+
     Returns a tuple of the form (hosts, config), where `hosts` is the list of
     host names and `config` is the ConfigParser object for the config file.
     """
     options.cfg = os.path.expanduser(options.cfg)
-    
+
     config = ConfigParser.ConfigParser()
     config.readfp(open(options.cfg))
-    
+
     hostlist = config.sections()
-    
+
     return (hostlist, config)
-    
+
 
 def filter_config(hostlist, config, options):
-    """Looks for sections in the config file that match the host names 
+    """Looks for sections in the config file that match the host names
     specified in options.hosts.
-    
+
     Returns a list of host names that match the given options.
     """
     hosts = []
@@ -141,7 +144,7 @@ def filter_config(hostlist, config, options):
             if host in hostlist:
                 hosts.append(host)
             else:
-                raise RuntimeError("host '%s' is not in config file %s" % 
+                raise RuntimeError("host '%s' is not in config file %s" %
                                    (host, options.cfg))
 
         if not hosts:
@@ -166,7 +169,7 @@ def filter_config(hostlist, config, options):
                 final_hosts.append(h)
     else:
         final_hosts = hosts
-    
+
     return final_hosts
 
 
@@ -178,14 +181,15 @@ def run_openmdao_suite_deprecated():
         print "'openmdao_test' is deprecated and will be removed in a later release."
         print "Please use 'openmdao test' instead"
         print '***'
-        
+
+
 def is_dev_install():
     return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
 
 def run_openmdao_suite(argv=None):
     """This function is exported as a script that is runnable as part of
     an OpenMDAO virtual environment as openmdao test.
-    
+
     This function wraps nosetests, so any valid nose args should also
     work here.
     """
@@ -242,12 +246,12 @@ def run_openmdao_suite(argv=None):
                 os.remove(path)
 
     # this tells it to enable the console in the environment so that
-    # the logger will print output to stdout. This helps greatly when 
+    # the logger will print output to stdout. This helps greatly when
     # debugging openmdao scripts running in separate processes.
     if '--enable_console' in args:
         args.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = '1'
-        
+
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
@@ -257,7 +261,7 @@ def run_openmdao_suite(argv=None):
         from openmdao.main.plugin import plugin_install, _get_plugin_parser
         argv = ['install', '--all']
         parser = _get_plugin_parser()
-        options, argz = parser.parse_known_args(argv) 
+        options, argz = parser.parse_known_args(argv)
         plugin_install(parser, options, argz)
 
     # The default action should be to run the GUI functional tests.
@@ -290,7 +294,7 @@ def run_openmdao_suite(argv=None):
         pass
     except NotImplementedError:
         multiprocessing.cpu_count = lambda: 1
-    
+
 #    _trace_atexit()
     nose.run_exit(argv=args)
 

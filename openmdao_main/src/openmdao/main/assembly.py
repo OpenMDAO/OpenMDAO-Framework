@@ -37,7 +37,7 @@ from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
 
-from openmdao.util.graph import list_deriv_vars  # , graph_to_svg
+from openmdao.util.graph import list_deriv_vars, graph_to_svg
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
 
@@ -702,10 +702,6 @@ class Assembly(Component):
 
         return matched_vars
 
-    def step(self):
-        """Execute a single child component and return."""
-        self.driver.step()
-
     def stop(self):
         """Stop the calculation."""
         self.driver.stop()
@@ -1097,9 +1093,10 @@ class Assembly(Component):
         responses   = []
 
         # list of components (name & type) in the assembly
-        g = self._depgraph.component_graph()
-        names = [name for name in nx.algorithms.dag.topological_sort(g)
-                               if not name.startswith('@')]
+        # g = self._depgraph.component_graph()
+        # names = [name for name in nx.algorithms.dag.topological_sort(g)
+        #                        if not name.startswith('@')]
+        names = self._depgraph.order_components(self._depgraph.all_comps())
 
         # Bubble-up drivers ahead of their parameter targets.
         sorted_names = []
@@ -1354,6 +1351,9 @@ class Assembly(Component):
 
     # def _repr_svg_(self):
     #     """ Returns an SVG representation of this Assembly's dependency graph
+    #         Note: the graph_to_svg() function currently uses tkinter which
+    #               requires a display and thus will cause an exception when
+    #               running headless (e.g. during non-interactive testing)
     #     """
     #     return graph_to_svg(self._depgraph.component_graph())
 
