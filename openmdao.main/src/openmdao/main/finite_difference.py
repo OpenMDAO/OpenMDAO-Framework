@@ -653,7 +653,7 @@ class DirectionalFD(object):
                     old_val = self.scope.get(src)
                     if old_val is not array_base_val or \
                        idx != index_base_val:
-                        exec('old_val[%s += val' % idx)
+                        exec('old_val[%s += direction' % idx)
                         array_base_val = old_val
                         index_base_val = idx
 

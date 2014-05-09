@@ -784,6 +784,10 @@ class SequentialWorkflow(Workflow):
         if fd is True:
             nondiff_groups = [comps]
 
+        # User specification of the blocks.
+        elif len(self._parent.gradient_options.fd_blocks) > 0:
+            nondiff_groups = self._parent.gradient_options.fd_blocks
+
         # Find the non-differentiable components
         else:
 
@@ -799,10 +803,13 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(name)
+                    print "No derivatives defined:", name
                 elif comp.force_fd is True:
                     nondiff.add(name)
+                    print "Force_fd set to True:", name
                 elif not dgraph.node[name].get('differentiable', True):
                     nondiff.add(name)
+                    print "Graphs says nondifferentiable:", name
 
             # If a connection is non-differentiable, so are its src and
             # target components.
@@ -830,7 +837,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
-                    #print "non-differentiable connection: ", src, target
+                    print "Non-differentiable connection: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:
