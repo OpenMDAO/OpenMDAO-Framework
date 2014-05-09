@@ -27,13 +27,8 @@ class Adder(Component):
     x2 = Float(0., iotype='in')
     sum = Float(0., iotype='out')
 
-    def __init__(self):
-        super(Adder, self).__init__()
-        self.runcount = 0
-
     def execute(self):
         self.sum = self.x1 + self.x2
-        self.runcount += 1
 
 @add_delegate(HasObjective, HasParameters)
 class Summer(Driver):
@@ -45,7 +40,6 @@ class Summer(Driver):
 
     def __init__(self):
         super(Summer, self).__init__()
-        self.runcount = 0
         self.itercount = 0
 
     def continue_iteration(self):
@@ -66,7 +60,6 @@ class Summer(Driver):
         global exec_order
         exec_order.append(self.name)
         super(Summer, self).execute()
-        self.runcount += 1
 
 
 class ExprComp(Component):
@@ -78,7 +71,6 @@ class ExprComp(Component):
 
     def __init__(self, expr='x'):
         super(ExprComp, self).__init__()
-        self.runcount = 0
         self.expr = expr
 
     def execute(self):
@@ -86,7 +78,6 @@ class ExprComp(Component):
         exec_order.append(self.name)
         x = self.x
         self.f_x = eval(self.expr)
-        self.runcount += 1
 
 
 class ExprComp2(Component):
@@ -99,7 +90,6 @@ class ExprComp2(Component):
 
     def __init__(self, expr='x'):
         super(ExprComp2, self).__init__()
-        self.runcount = 0
         self.expr = expr
 
     def execute(self):
@@ -108,7 +98,6 @@ class ExprComp2(Component):
         x = self.x
         y = self.y
         self.f_xy = eval(self.expr)
-        self.runcount += 1
 
 class MultiDriverTestCase(unittest.TestCase):
 
@@ -179,18 +168,6 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertEqual(set(['comp1.x', 'comp3.x', 'comp4.x']), dests)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x', 'adder3.sum']), srcs)
 
-    def test_invalidation(self):
-        global exec_order
-        print "*** test_invalidation ***"
-        self.rosen_setUp()
-        self.top.run()
-        self.top.comp1.x = 12.3
-        self.assertEqual([False, True, False],
-                         self.top.adder1.get_valid(['x1','x2','sum']))
-        self.top.comp2.x = 32.1
-        self.assertEqual([False, False, False],
-                         self.top.adder1.get_valid(['x1','x2','sum']))
-
     def test_one_driver(self):
         global exec_order
         print "*** test_one_driver ***"
@@ -204,12 +181,12 @@ class MultiDriverTestCase(unittest.TestCase):
         assert_rel_error(self, self.opt_design_vars[2], self.top.comp3.x, 0.01)
         self.assertAlmostEqual(self.opt_design_vars[3],
                                self.top.comp4.x, places=1)
-        runcount = self.top.adder3.runcount
+        runcount = self.top.adder3.exec_count
 
         # verify that driver will run if any of its referenced variables are invalid
         self.top.comp1.x = 99
         self.top.run()
-        self.assertTrue(runcount+2 <= self.top.adder3.runcount)
+        self.assertTrue(runcount+2 <= self.top.adder3.exec_count)
 
     def test_2_drivers(self):
         print "*** test_2_drivers ***"
@@ -465,9 +442,9 @@ class MultiDriverTestCase(unittest.TestCase):
 
         top.run()
 
-        self.assertEqual(top.D2.runcount, 1)
-        self.assertEqual(top.D1.runcount, 1)
-        self.assertEqual(top.C1.runcount,
+        self.assertEqual(top.D2.exec_count, 1)
+        self.assertEqual(top.D1.exec_count, 1)
+        self.assertEqual(top.C1.exec_count,
                          top.D1.max_iterations+top.D2.max_iterations)
         self.assertEqual(exec_order,
                          ['D1', 'C1', 'C1', 'C1',
@@ -503,18 +480,18 @@ class MultiDriverTestCase(unittest.TestCase):
 
         top.run()
 
-        self.assertEqual(top.D2.runcount, 1)
-        self.assertEqual(top.D1.runcount, 1)
-        self.assertEqual(top.C1.runcount,
-                         top.D1.max_iterations)
-        self.assertEqual(top.C2.runcount,
-                         top.D2.max_iterations+1)
+        self.assertEqual(top.D2.exec_count, 1)
+        self.assertEqual(top.D1.exec_count, 1)
+        self.assertEqual(top.C1.exec_count,
+                         top.D1.max_iterations+top.D2.max_iterations)
+        self.assertEqual(top.C2.exec_count,
+                         top.D1.max_iterations+top.D2.max_iterations)
 
         # since C1 and C2 are not dependent on each other, they could
         # execute in any order (depending on dict hash value which can differ per platform)
         # so need two possible exec orders
-        order1 = ['D1', 'C1', 'C2', 'C1', 'D2', 'C2', 'C2', 'C2']
-        order2 = ['D1', 'C2', 'C1', 'C1', 'D2', 'C2', 'C2', 'C2']
+        order1 = ['D1', 'C1', 'C2', 'C1', 'C2', 'D2', 'C1', 'C2', 'C1', 'C2', 'C1', 'C2']
+        order2 = ['D1', 'C2', 'C1', 'C2', 'C1', 'D2', 'C1', 'C2', 'C1', 'C2', 'C1', 'C2']
         self.assertTrue(exec_order==order1 or exec_order==order2)
 
 
@@ -548,26 +525,26 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.workflow = SequentialWorkflow(top.D1, members=['C2'])
 
         top.run()
-        self.assertEqual(top.D2.runcount, 1)
-        self.assertEqual(top.D1.runcount, 1)
-        self.assertEqual(top.C1.runcount, top.D1.max_iterations)
-        self.assertEqual(top.C2.runcount, top.D2.max_iterations)
+        self.assertEqual(top.D2.exec_count, 1)
+        self.assertEqual(top.D1.exec_count, 1)
+        self.assertEqual(top.C1.exec_count, top.D1.max_iterations)
+        self.assertEqual(top.C2.exec_count, top.D2.max_iterations)
         self.assertEqual(exec_order,
                          ['D1', 'C1', 'C1',
                           'D2', 'C2', 'C2', 'C2'])
 
-        top.C1.runcount = 0
-        top.C2.runcount = 0
-        top.D1.runcount = 0
-        top.D2.runcount = 0
+        top.C1.exec_count = 0
+        top.C2.exec_count = 0
+        top.D1.exec_count = 0
+        top.D2.exec_count = 0
         top.D1.set('max_iterations', 5)
         top.D2.set('max_iterations', 4)
         exec_order = []
         top.run()
-        self.assertEqual(top.D2.runcount, 1)
-        self.assertEqual(top.D1.runcount, 1)
-        self.assertEqual(top.C1.runcount, top.D1.max_iterations)
-        self.assertEqual(top.C2.runcount, top.D2.max_iterations)
+        self.assertEqual(top.D2.exec_count, 1)
+        self.assertEqual(top.D1.exec_count, 1)
+        self.assertEqual(top.C1.exec_count, top.D1.max_iterations)
+        self.assertEqual(top.C2.exec_count, top.D2.max_iterations)
         self.assertEqual(exec_order,
                          ['D1', 'C1', 'C1', 'C1', 'C1', 'C1',
                           'D2', 'C2', 'C2', 'C2', 'C2'])

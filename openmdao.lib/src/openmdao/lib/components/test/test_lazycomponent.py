@@ -60,9 +60,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 4)
 
-        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
-                         [True,True,True])
-
     def test_partial_connected(self): 
         self.top.connect('t.x', 's.i1')
         self.top.connect('t.y', 's.i2')
@@ -72,9 +69,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.x, 2)
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 0)
-
-        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
-                         [True,True,False])
 
         #now try re-running with a different configuration to test the validy reseting
         self.top.disconnect('t')
@@ -87,8 +81,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3) #this value is carried over from the first run call, but it's wrong... so not valid
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
-                         [True,False,False])
 
     #not needed right now, since we're not checking for this 
     #on regular component. 
@@ -125,9 +117,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 0)
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
-                         [True,False,False])
-
         #new connection is made, but no inputs are invalid. Still need to run!
         self.top.connect('t.y', 's.i2')
 
@@ -137,9 +126,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.y, 3)
         self.assertEqual(self.top.t.z, 0)
 
-        self.assertEqual(self.top.get_valid(['t.x','t.y','t.z']),
-                         [True,True,False])
-
     def test_dynamic_trait(self): 
         self.top.connect('t.x', 's.i1')
         self.top.connect('t.y', 's.i2')
@@ -147,18 +133,7 @@ class TestLazyComponent(unittest.TestCase):
         self.top.t.add('w', Float(0.0, iotype="out"))
         self.top.connect('t.w', 's.i3')
 
-        #not checking for this yet
-        #try:
-        #    self.top.run()
-        #except RuntimeError as err: 
-        #    msg = str(err)
-        #    self.assertEqual(msg, "t (1-1): output 'w' is connected to something in your model, but was not calculated during execution")
-        #else: 
-        #    self.fail("RuntimeError Expected")
-
         self.top.run()
-        self.assertEqual(self.top.get_valid(['t.w','t.x','t.y','t.z']),
-                         [True,True,True,False])
 
     def test_output_stays_at_default(self): 
         # check that validity is managed properly if outputs are calcualted, 
@@ -175,9 +150,6 @@ class TestLazyComponent(unittest.TestCase):
         self.assertEqual(self.top.t.x, 0)
         self.assertEqual(self.top.t.y, 0)
         self.assertEqual(self.top.t.z, 0)
-
-        self.assertEqual(self.top.t.get_valid(['x','y','z']),
-                         [True,False,False])
         
 
 if __name__ == "__main__": 

@@ -51,7 +51,13 @@ class SimpleComp(Component):
     cont_in = VarTree(DumbVT(), iotype='in')
     cont_out = VarTree(DumbVT(), iotype='out')
 
+    def __init__(self):
+        super(SimpleComp, self).__init__()
+        self._dirty = True
+        self._set_input_callback('cont_in')
+
     def execute(self):
+        self._dirty = False
         self.cont_out.v1 = self.cont_in.v1 + 1.0
         self.cont_out.v2 = self.cont_in.v2 + 1.0
         self.cont_out.vt2.x = self.cont_in.vt2.x + 1.0
@@ -104,6 +110,10 @@ class SimpleComp(Component):
             cont.vt2.data,
             cont.vt2.vt3.data,
         ]
+
+    def _input_updated(self, *args, **kwargs):
+        super(SimpleComp, self)._input_updated(*args, **kwargs)
+        self._dirty = True
 
 
 class NamespaceTestCase(unittest.TestCase):
@@ -195,7 +205,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 1.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1',
@@ -206,7 +215,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2',
@@ -222,7 +230,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1',
@@ -233,7 +240,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 3.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2',
@@ -314,18 +320,18 @@ class NamespaceTestCase(unittest.TestCase):
         # verify that setting a var nested down in a VariableTree hierarchy will
         # notify the parent Component that an input has changed
         self.asm.run()
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
         self.asm.scomp1.cont_in.vt2.vt3.a = 5.0
-        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.assertEqual(self.asm.scomp1._dirty, True)
         self.asm.run()
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
         self.asm.scomp1.cont_in.vt2.x = -5.0
-        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.assertEqual(self.asm.scomp1._dirty, True)
         self.asm.run()
 
         # setting something in an output VariableTree should NOT set _call_execute
         self.asm.scomp1.cont_out.vt2.vt3.a = 55.0
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
 
     def test_pathname(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3

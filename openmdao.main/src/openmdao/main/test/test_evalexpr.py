@@ -140,7 +140,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.f/a.a1d[int(a.f)]',
              "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
             ('a.f = a.a1d[int(a.f)]',
-             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_,force=_local_force_)"),
+             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
         ]
         self._do_tests(tests, self.top)
 
@@ -156,7 +156,7 @@ class ExprEvalTestCase(unittest.TestCase):
         tests = [
             ("comp.indct['foo.bar']", "scope.get('comp.indct',[(0,'foo.bar')])"),
             ("comp.indct['foo.bar']=comp.cont.f",
-             "scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')],src=_local_src_,force=_local_force_)"),
+             "scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')])"),
         ]
         self._do_tests(tests, self.top)
 
@@ -173,17 +173,17 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.a2d[-a.a1d[2]][foo.bar]',
              "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
             ('a.a2d[-a.a1d[2]]=a.f',
-             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))],src=_local_src_,force=_local_force_)"),
+             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))])"),
             ('a.f/a.a1d[int(a.f)]',
              "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
             ('a.f = a.a1d[int(a.f)]',
-             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]),src=_local_src_,force=_local_force_)"),
+             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
             ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[(0,1+3**4*1)])"),
             ('a.b[1][2]', "scope.get('a.b',[(0,1),(0,2)])"),
             ('abs(a.b[1][2])', "abs(scope.get('a.b',[(0,1),(0,2)]))"),
             ('a.b[1][x.y]', "scope.get('a.b',[(0,1),(0,scope.get('x.y'))])"),
             ('comp.x=a.b[1]',
-             "scope.set('comp.x',scope.get('a.b',[(0,1)]),src=_local_src_,force=_local_force_)"),
+             "scope.set('comp.x',scope.get('a.b',[(0,1)]))"),
             ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[(0,-3)])"),
         ]
         self._do_tests(tests, self.top)

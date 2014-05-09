@@ -53,12 +53,6 @@ class DumbClass(object):
     def get(self, name):
         return getattr(self, name, None)
     
-    def run(self, *args, **kwargs):
-        self._depgraph.child_run_finished(self.name)
-        
-    def get_invalidation_type(self):
-        return 'full'
-
     def list_inputs(self):
         return self._inputs
 
@@ -73,9 +67,6 @@ class DumbClass(object):
 
     def contains(self, name):
         return name in self._inputs or name in self._outputs or hasattr(self, name)
-    
-    def invalidate_deps(self, vnames=None):
-        return None
     
     def _get_required_compnames(self):
         return []
@@ -139,16 +130,6 @@ def _make_graph(comps=(), variables=(), connections=(), inputs=('a','b'), output
         
     return dep, scope
 
-def _get_valids_dict(dep):
-    dct = {}
-    for n,data in dep.nodes(data=True):
-        dct[n] = data['valid']
-    return dct
-
-def _set_all_valid(dep):
-    for node, data in dep.nodes(data=True):
-        data['valid'] = True
-            
 
 class DepGraphTestCase(unittest.TestCase):
 
@@ -487,69 +468,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(edges_matching_some(g, foo=False, baz=False)),
                          set())
 
-
-
-    def test_invalidate(self):
-        dep, scope = _make_graph(comps=['A','B'],
-                                 connections=[('A.out1','B.in1')],
-                                 inputs=['in1','in2'],
-                                 outputs=['out1','out2'])
-        
-        _set_all_valid(dep)
-        
-        self.assertEqual(set(dep.nodes()), set(nodes_matching_all(dep, valid=True)))
-        self.assertEqual(set(), set(nodes_matching_all(dep, valid=False)))
-        
-        dep.invalidate_deps(scope, ['A.out2'])
-        self.assertEqual(set(['A.out2']), set(nodes_matching_all(dep, valid=False)))
-            
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.in1'])
-        self.assertEqual(set(['A.in1','A.in2','B.in2']), 
-                         set(nodes_matching_all(dep, valid=True)))
-        
-        _set_all_valid(dep)
-            
-        dep.connect(scope, 'B.out1', 'A.in1') # make a cycle
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-        
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-         
-        _set_all_valid(dep)
-
-        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A','A.in1','A.in2','A.out2','B.in2']), 
-                         set(nodes_matching_all(dep, valid=True)))
-
-        dep.unsever_edges(self.scope) # put cycle back
-        _set_all_valid(dep)
-
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-        
-
-        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
-        try:
-            dep.sever_edges([('A.out1','B.in1')])
-        except Exception as err:
-            self.assertEqual("only one set of severed edges is permitted", str(err))
-        else:
-            self.fail("Exception expected")
-
-    def test_invalidate_input_as_output(self):
-        dep, scope = _make_graph(comps=['A','B'],
-                                 connections=[('A.in1','B.in1')],
-                                 inputs=['in1','in2'],
-                                 outputs=['out1','out2'])
-        
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.in1'])
-        self.assertEqual(set(['A','A.out1','A.out2','B.in1','B','B.out1','B.out2']), 
-                         set(nodes_matching_all(dep, valid=False)))
-
     def test_var_edge_iter(self):
         # basevar to basevar connection
         dep, scope = _make_graph(comps=['A','B'],
@@ -782,20 +700,7 @@ class DepGraphStateTestCase1(unittest.TestCase):
                                            self.boundary_conns,
                                            states=self.states,
                                            resids=self.resids)
-        
-    def test_invalidation(self):
-        dep, scope = self.dep, self.scope
-        
-        _set_all_valid(dep)
-        
-        self.assertEqual(set(dep.nodes()), set(nodes_matching_all(dep, valid=True)))
-        self.assertEqual(set(), set(nodes_matching_all(dep, valid=False)))
-        
-        dep.invalidate_deps(scope, ['C1.s1'])
-        self.assertEqual(set(['C2.a','C2.c','C2.d','c','C2.s1','C2.s2','C2.r1','C2.r2',
-                              'C1.c','C1.d','C1.s1','C1.s2','C1.r1','C1.r2','C1','C2']), 
-                         set(nodes_matching_all(dep, valid=False)))
-            
+                    
     def test_inner_connections(self):
         edges = _get_inner_connections(self.dep, ['a'], ['c'])
         self.assertEqual(set(edges), set([('C2.s2', 'c'), ('C1.s1', 'C2.a'), ('a', 'C1.s1')]))

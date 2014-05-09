@@ -174,17 +174,9 @@ class ExprTransformer(ast.NodeTransformer):
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
             args.append(self.rhs)
-            keywords = [ast.keyword('src', ast.Name(id='_local_src_',
-                                                    lineno=node.lineno,
-                                                    col_offset=1,
-                                                    ctx=ast.Load())),
-                        ast.keyword('force', ast.Name(id='_local_force_',
-                                                      lineno=node.lineno,
-                                                      col_offset=1,
-                                                      ctx=ast.Load()))]
         else:
             fname = self.getter
-            keywords = []
+        keywords = []
         names.append(fname)
 
         called_obj = _get_attr_node(names)
@@ -811,7 +803,7 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, src=None, force=False):
+    def set(self, val, scope=None, force=False):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
@@ -822,12 +814,8 @@ class ExprEvaluator(object):
             # self.assignment_code is a compiled version of an assignment
             # statement of the form 'somevar = _local_setter_', so we set
             # _local_setter_ here and the exec call will pull it out of the
-            # locals dict. _local_src_ is another local variable corresponding
-            # to the 'src' arg which is used to determine if a connected
-            # expression is being set by the source it's
-            # connected to.
+            # locals dict.
             _local_setter_ = val
-            _local_src_ = src
             _local_force_ = force
             if self._assignment_code is None:
                 _, self._assignment_code = self._parse_set()

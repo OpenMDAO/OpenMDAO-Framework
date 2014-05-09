@@ -271,21 +271,18 @@ class GeomComponent(Component):
         #     return False
         return True
 
-    def _input_updated(self, name, fullpath=None):
-        if fullpath is None:
-            attr = getattr(self, name)
-        else:
-            name = fullpath
-            attr = self
-            for part in fullpath.split('.'):
-                attr = getattr(attr, part)
-        if self.parametric_geometry is not None and name in self._input_var_names:
-            self.parametric_geometry.set_parameter(name, attr)
-        
-        super(GeomComponent, self)._input_updated(name.split('.',1)[0])
+    # def _input_updated(self, name, fullpath=None):
+    #     if fullpath is None:
+    #         attr = getattr(self, name)
+    #     else:
+    #         name = fullpath
+    #         attr = self
+    #         for part in fullpath.split('.'):
+    #             attr = getattr(attr, part)
+    #     if self.parametric_geometry is not None and name in self._input_var_names:
+    #         self.parametric_geometry.set_parameter(name, attr)
 
-
-    def _set_failed(self, path, value, index=None, src=None, force=False):
+    def _set_failed(self, path, value, index=None):
         # check to see if dest attribute is inside of our parametric_geometry
         # object
         obj = self
@@ -299,7 +296,7 @@ class GeomComponent(Component):
             else:
                 raise RuntimeError('index not supported')
         except AttributeError:
-            super(GeomComponent, self)._set_failed(path, value, index, src, force)
+            super(GeomComponent, self)._set_failed(path, value, index)
 
     def _update_deriv_functs(self, geom):
         functs = ['apply_deriv','apply_derivT','provideJ']

@@ -1020,16 +1020,12 @@ class FiniteDifference(object):
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
 
-            # Prevent OpenMDAO from stomping on our poked input.
-            if var_name:
-                self.scope.set_valid([self.scope._depgraph.base_var(src)],
-                                    True)
-
-                # Make sure we execute!
-                comp._call_execute = True
-
-            else:
-                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
+            # # Prevent OpenMDAO from stomping on our poked input.
+            # if var_name:
+            #     self.scope.set_valid([self.scope._depgraph.base_var(src)],
+            #                         True)
+            # else:
+            #     self.scope.set_valid([comp_name.split('[', 1)[0]], True)
 
     def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for

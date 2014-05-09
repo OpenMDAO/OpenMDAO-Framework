@@ -106,7 +106,6 @@ class TestCaseDOE(unittest.TestCase):
     def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
 
     def test_sequential_errors_abort(self):
@@ -228,7 +227,6 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
     def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
 
     def test_sequential_errors_abort(self):

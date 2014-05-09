@@ -99,17 +99,6 @@ class IContainer(Interface):
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
 
-    # def get_wrapped_attr(name, index=None):
-    #     """If the named Variable can return an AttrWrapper, then this
-    #     function will return that, with the value set to the current value of
-    #     the variable. Otherwise, it functions like *getattr*, just
-    #     returning the value of the variable. Raises an exception if the
-    #     variable cannot be found. The value will be copied if the variable has
-    #     a 'copy' metadata attribute that is not None. Possible values for
-    #     'copy' are 'shallow' and 'deep'.  index, if not None, should be of
-    #     the same form as described in the get() function.
-    #     """
-
     def items(recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
         trait of this Container that matches the given metadata. If recurse is
@@ -205,9 +194,6 @@ class IComponent(IContainer):
         executing, and updating output variables. Do not override this function.
         """
 
-    def is_valid():
-        """Return False if any of our variables is invalid."""
-
     def list_inputs(valid=None):
         """Return a list of names of input values. If valid is not None,
         the the list will contain names of inputs with matching validity.
@@ -265,26 +251,6 @@ class IComponent(IContainer):
 
     def stop():
         """Stop this component."""
-
-    def get_valid(names):
-        """Get the value of the validity flag for each of the named io traits."""
-
-    def set_valid(names, valid):
-        """Mark the io traits with the given names as valid or invalid."""
-
-    def invalidate_deps(varnames=None, force=False):
-        """Invalidate all of our outputs if they're not invalid already.
-        For a typical Component, this will always be all or nothing, meaning
-        there will never be partial validation of outputs.  Components
-        supporting partial output validation must override this function.
-
-        Returns None, indicating that all outputs are invalidated.
-        """
-
-    def update_outputs(outnames):
-        """Do what is necessary to make the specified output Variables valid.
-        For a simple Component, this will result in a *run()*.
-        """
 
 
 class IImplicitComponent(IComponent):

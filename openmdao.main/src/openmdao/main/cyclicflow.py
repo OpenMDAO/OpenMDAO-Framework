@@ -436,8 +436,8 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Poke new value into the input end of the edge.
                     self.scope.set(target, new_val, force=True)
 
-                    # Prevent OpenMDAO from stomping on our poked input.
-                    self.scope.set_valid([target.split('[', 1)[0]], True)
+                    # # Prevent OpenMDAO from stomping on our poked input.
+                    # self.scope.set_valid([target.split('[', 1)[0]], True)
 
     def _vtree_set(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """

@@ -438,7 +438,6 @@ def _test_properties(browser):
     eq(header, 'Driver: top.driver')
     eq(inputs.value, [
         ['directory',         ''],
-        ['force_execute',     'True'],
         ['force_fd',          'False'],
         [' gradient_options', ''],  # vartree, has leading space after the [+]
     ])
@@ -1018,8 +1017,6 @@ def _test_sorting(browser):
         ['', 'stress_i10', '0', '', ''],
         ['', 'directory',  '',  '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',

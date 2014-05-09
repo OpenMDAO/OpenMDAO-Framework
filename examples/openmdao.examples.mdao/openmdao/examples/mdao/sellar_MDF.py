@@ -29,7 +29,6 @@ class SellarMDF(Assembly):
 
         # Outer Loop - Global Optimization
         self.add('dummy', Dummy())
-        self.dummy.force_execute = True
         self.add('solver', FixedPointIterator())
         self.driver.workflow.add(['dummy', 'solver'])
 

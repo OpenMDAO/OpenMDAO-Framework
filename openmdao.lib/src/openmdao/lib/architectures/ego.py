@@ -57,7 +57,6 @@ class EGO(Architecture):
         
         meta_model_recorder = DBCaseRecorder(os.path.join(self._tdir,'trainer.db'))
         meta_model.recorder = meta_model_recorder
-        meta_model.force_execute = True
         
         EI = self.parent.add("EI",ExpectedImprovement())
         self.objective = self.parent.get_objectives().keys()[0]
@@ -66,7 +65,6 @@ class EGO(Architecture):
         pfilter = self.parent.add("filter",ParetoFilter())
         pfilter.criteria = [self.objective]
         pfilter.case_sets = [meta_model_recorder.get_iterator(),]
-        pfilter.force_execute = True
         
         #Driver Configuration
         DOE_trainer = self.parent.add("DOE_trainer",DOEdriver())

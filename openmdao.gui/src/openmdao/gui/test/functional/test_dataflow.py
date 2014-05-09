@@ -512,8 +512,6 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -535,8 +533,6 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -556,8 +552,6 @@ def _test_replace(browser):
         ['', 'result_in', '0', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -579,8 +573,6 @@ def _test_replace(browser):
         ['', 'scaler', '1', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -620,8 +612,6 @@ def _test_replace(browser):
         ['', 'x', '[]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -646,8 +636,6 @@ def _test_replace(browser):
     expected = [
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -729,7 +717,6 @@ def _test_parameter_autocomplete(browser):
         'p1.cont_in.vt2.vt3.a',
         'p1.cont_in.vt2.vt3.b',
         'p1.directory',
-        'p1.force_execute',
         'p1.force_fd',
         'p1.missing_deriv_policy',
     ])
@@ -956,13 +943,13 @@ def _test_column_sorting(browser):
 
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
-         "output_filename", "directory", "force_execute", "force_fd",
+         "output_filename", "directory", "force_fd",
          " gradient_options", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        [" gradient_options", "force_fd", "force_execute",
+        [" gradient_options", "force_fd",
          "directory", "output_filename", "maxiter", "iprint", "iout",
          "accuracy"], "inputs",
         SortOrder.DESCENDING
@@ -972,7 +959,7 @@ def _test_column_sorting(browser):
 
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
-         "output_filename", "directory", "force_execute", "force_fd",
+         "output_filename", "directory", "force_fd",
          " gradient_options", "derivative_direction", "fd_form", "fd_step", "fd_step_type",
          "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
         SortOrder.ASCENDING
@@ -981,7 +968,7 @@ def _test_column_sorting(browser):
     test_sorting(
          [" gradient_options", "gmres_tolerance", "gmres_maxiter",
          "force_fd", "fd_step_type", "fd_step", "fd_form", "derivative_direction",
-         "force_fd", "force_execute", "directory",
+         "force_fd", "directory",
          "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
@@ -1022,13 +1009,13 @@ def _test_column_sorting(browser):
     editor.get_input("missing_deriv_policy")
     test_sorting(
         [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
-         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
+         "directory", "force_fd", "missing_deriv_policy"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["missing_deriv_policy", "force_fd", "force_execute", "directory",
+        ["missing_deriv_policy", "force_fd", "directory",
          " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING

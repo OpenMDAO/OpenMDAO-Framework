@@ -61,15 +61,12 @@ class SellarBLISS2000(Assembly):
         self.meta_model_dis1.surrogates = {"y1":ResponseSurface()}
         self.meta_model_dis1.model = SellarDiscipline1()
         self.meta_model_dis1.recorder = DBCaseRecorder()
-        self.meta_model_dis1.force_execute = True
         
         # Metamodel for sellar discipline 2
         self.add("meta_model_dis2",MetaModel())
         self.meta_model_dis2.surrogates = {"y2":ResponseSurface()}
         self.meta_model_dis2.model = SellarDiscipline2()
-        self.meta_model_dis2.recorder = DBCaseRecorder()
-        self.meta_model_dis2.force_execute = True
-           
+        self.meta_model_dis2.recorder = DBCaseRecorder()           
         
         #training metalmodel for disc1
         
@@ -79,9 +76,7 @@ class SellarBLISS2000(Assembly):
         # self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.z1",low=-10,high=10,start=5.0)        
         # self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.z2",low=0,high=10,start=2.0)   
         # self.DOE_Trainer_dis2.add_parameter("meta_model_dis2.y1",low=0,high=20)   
-        # self.DOE_Trainer_dis2.add_event("meta_model_dis2.train_next")
-        # self.DOE_Trainer_dis2.force_execute = True               
-        
+        # self.DOE_Trainer_dis2.add_event("meta_model_dis2.train_next")       
         
         #optimization of global objective function
 
@@ -106,7 +101,6 @@ class SellarBLISS2000(Assembly):
         
         self.sysopt.add_constraint('3.16 < meta_model_dis1.y1')
         self.sysopt.add_constraint('meta_model_dis2.y2 < 24.0')
-        self.sysopt.force_execute=True
         
         
         #optimization of discipline 1 (discipline 2 of the sellar problem has no local variables)
@@ -116,7 +110,6 @@ class SellarBLISS2000(Assembly):
         self.local_opt_dis1.add_parameter('meta_model_dis1.x1', low=0, high=10.0) 
         self.local_opt_dis1.add_constraint('3.16 < meta_model_dis1.y1')
         self.local_opt_dis1.add_event('meta_model_dis1.train_next')
-        self.local_opt_dis1.force_execute=True
         
         self.local_opt_dis1.workflow.add(['meta_model_dis1'])
 
@@ -129,14 +122,12 @@ class SellarBLISS2000(Assembly):
         self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.z2",low=0,high=10,start=2.0)   
         self.DOE_Trainer_dis1.add_parameter("meta_model_dis1.y2",low=-100,high=100)   
         self.DOE_Trainer_dis1.add_event("meta_model_dis1.train_next")
-        self.DOE_Trainer_dis1.force_execute = True 
         self.DOE_Trainer_dis1.workflow.add("local_opt_dis1")     
         
         self.add('reset_train',Driver())
         self.reset_train.add_event('meta_model_dis1.reset_training_data')
         self.reset_train.add_event('meta_model_dis2.reset_training_data')
         self.reset_train.workflow.add(['meta_model_dis1','meta_model_dis2'])
-        self.reset_train.force_execute = True
         
         #build workflow for bliss2000
         

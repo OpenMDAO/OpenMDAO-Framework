@@ -61,19 +61,11 @@ class HasParametersTestCase(unittest.TestCase):
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
 
         self.top.run()
-        self.assertEqual(self.top.driver.is_valid(), True)
-        self.assertEqual(self.top.driver._exec_state, 'VALID')
         self.top.driver.add_parameter(p)
-        self.assertEqual(self.top.driver.is_valid(), False)
-        self.assertEqual(self.top.driver._exec_state, 'INVALID')
         self.assertEqual({'comp.x':p}, self.top.driver.get_parameters())
 
         self.top.run()
-        self.assertEqual(self.top.driver.is_valid(), True)
-        self.assertEqual(self.top.driver._exec_state, 'VALID')
         self.top.driver.remove_parameter('comp.x')
-        self.assertEqual(self.top.driver.is_valid(), False)
-        self.assertEqual(self.top.driver._exec_state, 'INVALID')
 
         self.top.driver.add_parameter(p, low=10.0)
         self.assertEqual({'comp.x':p}, self.top.driver.get_parameters())

@@ -395,7 +395,6 @@ class ConsoleServer(cmd.Cmd):
                         'name': k,
                         'pathname': k,
                         'type': type(v).__name__,
-                        'valid': v.is_valid(),
                         'interfaces': inames,
                         'python_id': id(v)
                     })
