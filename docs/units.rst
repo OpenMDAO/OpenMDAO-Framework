@@ -17,4 +17,4 @@ See the source documentation for the :ref:`units package<openmdao.units.units.py
 
 The following units are defined in the OpenMDAO units package:
 
-.. literalinclude:: ../openmdao.units/openmdao/units/unitLibdefault.ini
+.. literalinclude:: ../openmdao_units/openmdao/units/unitLibdefault.ini

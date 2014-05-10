@@ -31,7 +31,7 @@ control has only a single dimension. Overall, there are 27 design variables for 
 
 .. note:: This tutorial will be done in the OpenMDAO GUI. In addition, a 
    script version of this tutorial is available in the file :download:`test_nozzle_geometry_doe.py
-   </../examples/openmdao.examples.nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/test/test_nozzle_geometry_doe.py>`.
+   </../examples/openmdao_examples_nozzle_geometry_doe/openmdao/examples/nozzle_geometry_doe/test/test_nozzle_geometry_doe.py>`.
 
 Start by creating a new project in the GUI. We'll name it `DOE Geometry Tutorial`.  As in the overview
 tutorial, first you should create an instance of an assembly to work in. On the right-hand side, there is a

@@ -113,7 +113,7 @@ occasionally force *y1* to go slightly negative while trying to converge the two
 of the absolute value solves the problem without impacting the final converged solution.
 
 These two components are contained in the file :download:`sellar.py 
-</../openmdao.lib/src/openmdao/lib/optproblems/sellar.py>` in the  ``openmdao.lib.optproblems`` sub-package.
+</../openmdao_lib/src/openmdao/lib/optproblems/sellar.py>` in the  ``openmdao.lib.optproblems`` sub-package.
 This part of the standard library contains a number of common optimization problems which you can use to test
 your own optimization algorithms. 
 

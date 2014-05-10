@@ -36,7 +36,7 @@ openmdao_prereqs = ['numpy', 'scipy']
 # a dev install and is ignored in the user install. '' should be used instead
 # of '.' to indicate that the parent dir is the top of the repository. The
 # package type should be 'sdist' or 'bdist_egg' for binary packages
-openmdao_packages = [
+openmdao_release_packages = [
     ('openmdao.util',  '', 'sdist'),
     ('openmdao.units', '', 'sdist'),
     ('openmdao.main',  '', 'sdist'),
@@ -54,9 +54,20 @@ openmdao_packages = [
 
 # if it's a dev installer, these packages will also be included
 openmdao_dev_packages = [
-    ('openmdao.devtools', '', 'sdist'),
+    ('openmdao_util',  '', 'sdist'),
+    ('openmdao_units', '', 'sdist'),
+    ('openmdao_main',  '', 'sdist'),
+    ('openmdao_lib',   '', 'sdist'),
+    ('openmdao_test',  '', 'sdist'),
+    ('openmdao_gui',   '', 'sdist'),
+    ('openmdao_examples_simple',               'examples', 'sdist'),
+    ('openmdao_examples_bar3simulation',       'examples', 'bdist_egg'),
+    ('openmdao_examples_enginedesign',         'examples', 'bdist_egg'),
+    ('openmdao_examples_mdao',                 'examples', 'sdist'),
+    ('openmdao_examples_expected_improvement', 'examples', 'sdist'),
+    ('openmdao_examples_nozzle_geometry_doe',  'examples', 'sdist'),
+    ('openmdao_devtools', '', 'sdist'),
 ]
-
 
 def _get_adjust_options(options, version, setuptools_url, setuptools_version):
     """Return a string containing the definition of the adjust_options function
@@ -220,9 +231,8 @@ def main(args=None):
         sys.exit(-1)
 
     if options.dev:
-        openmdao_packages.extend(openmdao_dev_packages)
         sout = StringIO.StringIO()
-        pprint.pprint(openmdao_packages, sout)
+        pprint.pprint(openmdao_dev_packages, sout)
         pkgstr = sout.getvalue()
         make_dev_eggs = """
         # now install dev eggs for all of the openmdao packages
@@ -603,7 +613,7 @@ def after_install(options, home_dir, activated=False):
     version = '?.?.?'
     excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
     dists = working_set.resolve([Requirement.parse(r[0])
-                                   for r in openmdao_packages if r[0] != 'openmdao.gui'])
+                                   for r in openmdao_release_packages if r[0] != 'openmdao.gui'])
 
     distnames = set([d.project_name for d in dists])-excludes
     gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])

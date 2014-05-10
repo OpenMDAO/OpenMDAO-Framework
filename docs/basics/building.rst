@@ -220,7 +220,7 @@ If you have done everything correctly, you should also get ``-17.0`` as the solu
 
 The Paraboloid component is now built and ready for inclusion in a larger model. If you want to download
 our version of this file, you can find it 
-:download:`here <../../examples/openmdao.examples.simple/openmdao/examples/simple/paraboloid.py>`
+:download:`here <../../examples/openmdao_examples_simple/openmdao/examples/simple/paraboloid.py>`
 
 OpenMDAO Package Hierarchy
 ---------------------------

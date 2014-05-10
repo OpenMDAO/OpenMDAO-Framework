@@ -256,7 +256,7 @@ Finally, putting it all together gives:
         # End sellar_MDF.py
 
 This problem is contained in
-:download:`sellar_MDF.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF.py>`.
+:download:`sellar_MDF.py </../examples/openmdao_examples_mdao/openmdao/examples/mdao/sellar_MDF.py>`.
 We added just a few lines at the end to instantiate the assembly class we defined and then run it and
 print out some useful information. Executing it at the command line should produce
 output that resembles this:
@@ -303,4 +303,4 @@ We just change some of solver specific settings.
 
 The rest of the file does not change at all either. So you can see that it's pretty easy to reconfigure drivers
 using this setup. Here is the new file, with the modifications:
-:download:`sellar_MDF_solver.py </../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_MDF_solver.py>`.
+:download:`sellar_MDF_solver.py </../examples/openmdao_examples_mdao/openmdao/examples/mdao/sellar_MDF_solver.py>`.

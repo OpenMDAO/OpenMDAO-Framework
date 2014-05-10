@@ -15,7 +15,7 @@ import zipfile
 import re
 
 # get the list of openmdao subpackages from mkinstaller.py
-from openmdao.devtools.mkinstaller import openmdao_packages, openmdao_dev_packages
+from openmdao.devtools.mkinstaller import openmdao_dev_packages
 from openmdao.devtools.build_docs import build_docs
 from openmdao.devtools.utils import get_git_branch, get_git_branches, \
                                     get_git_log_info, repo_top
@@ -92,7 +92,7 @@ def _get_releaseinfo_str(version):
 
 def _create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
-    dirs = projname.split('.')
+    dirs = projname.split('_', 2)
     os.chdir(os.path.join(*dirs))
     print 'updating releaseinfo.py for %s' % projname
     with open('releaseinfo.py', 'w') as f:
@@ -101,7 +101,7 @@ def _create_releaseinfo_file(projname, relinfo_str):
 
 def _rollback_releaseinfo_file(projname):
     """Creates a releaseinfo.py file in the current directory"""
-    dirs = projname.split('.')
+    dirs = projname.split('_', 2)
     os.chdir(os.path.join(*dirs))
     print 'rolling back releaseinfo.py for %s' % projname
     os.system('git checkout -- releaseinfo.py')
@@ -208,7 +208,8 @@ def _update_releaseinfo_files(version):
 
     releaseinfo_str = _get_releaseinfo_str(version)
 
-    pkgs = openmdao_packages + openmdao_dev_packages
+    pkgs = openmdao_dev_packages
+
     try:
         for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
@@ -224,8 +225,9 @@ def _update_releaseinfo_files(version):
 def _rollback_releaseinfo_files():
     startdir = os.getcwd()
     topdir = repo_top()
+    
+    pkgs = openmdao_dev_packages
 
-    pkgs = openmdao_packages + openmdao_dev_packages
     try:
         for project_name, pdir, pkgtype in pkgs:
             pdir = os.path.join(topdir, pdir, project_name)
@@ -413,7 +415,7 @@ def build_release(parser, options):
                     os.path.join(destdir, 'docs'))
 
         shutil.copytree(os.path.join(topdir, 'docs', '_build', 'html'),
-                    os.path.join(topdir, 'openmdao.main', 'src', 'openmdao', 'main', 'docs'))
+                    os.path.join(topdir, 'openmdao_main', 'src', 'openmdao', 'main', 'docs'))
 
         if not options.test:
             # commit the changes to the release branch
@@ -424,7 +426,7 @@ def build_release(parser, options):
 
         # build openmdao package distributions
         proj_dirs = []
-        for project_name, pdir, pkgtype in openmdao_packages:
+        for project_name, pdir, pkgtype in openmdao_dev_packages[:-1]:
             pdir = os.path.join(topdir, pdir, project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))
@@ -464,7 +466,7 @@ def build_release(parser, options):
             _rollback_releaseinfo_files()
         #Cleanup
         try:
-            shutil.rmtree(os.path.join(topdir, "openmdao.main", 'src', 'openmdao', 'main', "docs"))
+            shutil.rmtree(os.path.join(topdir, "openmdao_main", 'src', 'openmdao', 'main', "docs"))
         except:
             pass
         os.chdir(startdir)

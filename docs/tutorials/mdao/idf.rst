@@ -104,7 +104,7 @@ very hard for some optimizers to converge. Use the squared form of the constrain
 sample code, instead. 
 
 When we put it all together, we get :download:`sellar_IDF.py
-</../examples/openmdao.examples.mdao/openmdao/examples/mdao/sellar_IDF.py>`.  Once again, we added a
+</../examples/openmdao_examples_mdao/openmdao/examples/mdao/sellar_IDF.py>`.  Once again, we added a
 small amount of code at the end to execute and then print the results of the IDF optimization. 
 
 .. testcode:: IDF_full

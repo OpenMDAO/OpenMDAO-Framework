@@ -190,4 +190,4 @@ data.
             print "%1.3f, %1.3f"%(a,p)
 
 To view this example, and try running and modifying the code for yourself, you can download it here:
-:download:`krig_sin.py </../examples/openmdao.examples.metamodel_tutorial/openmdao/examples/metamodel_tutorial/krig_sin.py>`.
+:download:`krig_sin.py </../examples/openmdao_examples_metamodel_tutorial/openmdao/examples/metamodel_tutorial/krig_sin.py>`.
