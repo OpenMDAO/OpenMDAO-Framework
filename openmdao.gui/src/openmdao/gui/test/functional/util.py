@@ -84,9 +84,9 @@ def setup_chrome():
     if not path:
         # Download, unpack, and install chromedriver into OpenMDAO 'bin'.
         # Note: As new versions of Chrome & chromedriver are released, the
-        #       following should be updated.  Refer to the following URL:
+        #       following should be updated.  Refer to the URL:
         #       https://chromedriver.storage.googleapis.com/index.html
-        #       and see notes.txt for each version for Chrome compatibility
+        #       and see notes.txt of the latest version for Chrome compatibility
         if _chrome_version > 32:
             version = '2.10'
         elif _chrome_version > 30:
