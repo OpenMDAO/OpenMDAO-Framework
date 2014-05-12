@@ -1022,7 +1022,6 @@ class HasParameters(object):
         for param in self._parameters.itervalues():
             if param.start is not None:
                 param.set(param.start, scope)
-        self._parent._invalidate()
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.

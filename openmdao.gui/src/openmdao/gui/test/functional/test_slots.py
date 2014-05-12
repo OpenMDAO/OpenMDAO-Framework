@@ -148,8 +148,6 @@ def _test_slot_subclass(browser):
         ['', 'input',              '0', '', ''],
         ['', 'directory',           '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute',  'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'assume_zero', '',

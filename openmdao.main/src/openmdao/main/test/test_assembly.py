@@ -223,7 +223,6 @@ class TracedAssembly(Assembly):
 
     def __init__(self, trace_buf):
         super(TracedAssembly, self).__init__()
-        self.force_execute = True
         self.trace_buf = trace_buf
 
     def execute(self):
@@ -252,7 +251,6 @@ class TracedComponent(Component):
 
     def __init__(self, trace_buf):
         super(TracedComponent, self).__init__()
-        self.force_execute = True
         self.trace_buf = trace_buf
 
     def execute(self):
@@ -288,34 +286,6 @@ class AssemblyTestCase(unittest.TestCase):
         top.driver.workflow.add(['comp1', 'nested', 'comp2', 'comp3'])
         nested.driver.workflow.add('comp1')
 
-    def test_lazy_eval(self):
-        top = set_as_top(Assembly())
-        comp1 = top.add('comp1', Multiplier())
-        comp2 = top.add('comp2', Multiplier())
-
-        top.driver.workflow.add(['comp1', 'comp2'])
-
-        top.comp1.mult = 2.0
-        top.comp2.mult = 4.0
-        top.connect('comp1.rval_out', 'comp2.rval_in')
-        top.comp1.rval_in = 5.0
-        top.run()
-        self.assertEqual(top.get('comp1.rval_out'), 10.)
-        self.assertEqual(top.get('comp2.rval_in'), 10.)
-        self.assertEqual(top.get('comp2.rval_out'), 40.)
-        self.assertEqual(top.comp1.exec_count, 1)
-        self.assertEqual(top.comp2.exec_count, 1)
-
-        # now change an input (mult) on comp2. This should only
-        # cause comp2 to execute when we run next time.
-        top.set('comp2.mult', 3.0)
-        top.run()
-        self.assertEqual(top.get('comp1.rval_out'), 10.)
-        self.assertEqual(top.get('comp2.rval_in'), 10.)
-        self.assertEqual(top.get('comp2.rval_out'), 30.)
-        self.assertEqual(top.comp1.exec_count, 1)
-        self.assertEqual(top.comp2.exec_count, 2)
-
     def test_data_passing(self):
         comp1 = self.asm.comp1
         comp2 = self.asm.comp2
@@ -327,20 +297,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.get('s'), 'once upon a time')
         self.assertEqual(comp1.r, 3.0)
         self.assertEqual(comp1.s, 'once upon a time')
-
-        # also, test that we can't do a direct set of a connected input
-        oldval = self.asm.comp2.r
-        try:
-            self.asm.comp2.r = 44
-        except Exception, err:
-            self.assertEqual(str(err),
-                             "comp2: 'r' is already connected to source"
-                             " 'parent.comp1.rout' and cannot be directly set")
-        else:
-            self.fail("Expected an Exception when setting a connected input")
-
-        # verify that old value of connected input hasn't changed
-        self.assertEqual(oldval, self.asm.comp2.r)
 
         self.asm.run()
 
@@ -365,20 +321,6 @@ class AssemblyTestCase(unittest.TestCase):
         comp2 = self.asm.comp2
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp1.sout', 'comp2.s')
-
-        # test that we can't do a direct set of a connected input
-        oldval = self.asm.comp2.r
-        try:
-            self.asm.comp2.r = 44
-        except Exception, err:
-            self.assertEqual(str(err),
-                             "comp2: 'r' is already connected to source"
-                             " 'parent.comp1.rout' and cannot be directly set")
-        else:
-            self.fail("Expected an Exception when setting a connected input")
-
-        # verify that old value of connected input hasn't changed
-        self.assertEqual(oldval, self.asm.comp2.r)
 
         # now test removal of the error callback when a connected input is disconnected
         self.asm.disconnect('comp1.rout', 'comp2.r')
@@ -551,17 +493,14 @@ class AssemblyTestCase(unittest.TestCase):
         asm.driver.workflow.add(sequence)
         self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
         asm.run()
-        self.assertEqual(dup1.exec_count, 1)
-        self.assertEqual(dup2.exec_count, 1)
+        self.assertEqual(dup1.exec_count, 3)
+        self.assertEqual(dup2.exec_count, 2)
 
-        # With force_execute True, all executions are run.
         asm = Assembly()
         asm.add('a', Simple())
         asm.add('b', Simple())
         dup1 = asm.add('dup1', Simple())
-        dup1.force_execute = True
         dup2 = asm.add('dup2', Simple())
-        dup2.force_execute = True
         self.assertEqual(dup1.exec_count, 0)
         self.assertEqual(dup2.exec_count, 0)
         sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
@@ -613,16 +552,10 @@ class AssemblyTestCase(unittest.TestCase):
         # until we run, the values of comp1.a and comp2.b won't change
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
-        self.assertEqual(asm.nested.get_valid(['comp2.b']), [False])
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
-        self.assertEqual(asm.nested.comp1.get_valid(['a']), [True])
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [True])
         asm.nested.a = 999.
-        self.assertEqual(asm.nested.comp1.get_valid(['a']), [False])
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
         asm.run()
@@ -918,22 +851,18 @@ subassy.comp3: ReRun.2-driverB.2-subassy.2-comp3"""
                 self.add('d', Dummy())
                 self.connect('x', 'd.z[0][0]')
 
-        t = set_as_top(TestA())
+        set_as_top(TestA())
 
     def test_tracing(self):
         # Check tracing of iteration coordinates.
         top = Assembly()
         comp = top.add('comp1', Dummy())
-        comp.force_execute = True
         top.add('driverA', Driver())
         comp = top.add('comp2', Dummy())
-        comp.force_execute = True
         top.add('driverB', Driver())
 
         sub = top.add('subassy', Assembly())
-        sub.force_execute = True
         comp = sub.add('comp3', Dummy())
-        comp.force_execute = True
         sub.driver.workflow.add('comp3')
 
         top.driver.workflow = SequentialWorkflow()

@@ -91,7 +91,6 @@ class PseudoComponent(object):
         self.name = _get_new_name()
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
-        self._valid = False
         self._parent = parent
         self._inputs = []
 
@@ -185,18 +184,6 @@ class PseudoComponent(object):
             self._outdests = []
             self._orig_expr = self._orig_src
 
-        #if destexpr and destexpr.text:
-            #out = destexpr.text
-        #else:
-            #out = 'out0'
-        #if translate:
-            #src = transform_expression(self._srcexpr.text,
-                                       #_invert_dict(self._inmap))
-        #else:
-            #src = self._srcexpr.text
-
-        #self._expr_conn = (src, out)  # the actual expression connection
-
         self.missing_deriv_policy = 'error'
 
     def check_configuration(self):
@@ -241,6 +228,9 @@ class PseudoComponent(object):
     def list_outputs(self):
         return ['out0']
 
+    def config_changed(self, update_parent=True):
+        pass
+
     def list_comp_connections(self):
         """Return a list of connections between our pseudocomp and
         parent components of our sources/destinations.
@@ -269,48 +259,27 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.disconnect(src, dest)
 
-    def invalidate_deps(self, varnames=None, force=False):
-        self._valid = False
-        return None
-
-    def get_invalidation_type(self):
-        return 'full'
-
-    def connect(self, src, dest):
-        self._valid = False
-
     def run(self, ffd_order=0):
         self.update_inputs()
-
-        src = self._srcexpr.evaluate()
-        setattr(self, 'out0', src)
-        self._valid = True
-        self._parent.child_run_finished(self.name)
+        setattr(self, 'out0', self._srcexpr.evaluate())
 
     def update_inputs(self, inputs=None):
         self._parent.update_inputs(self.name)
-
-    def update_outputs(self, names):
-        self.run()
 
     def get(self, name, index=None):
         if index is not None:
             raise RuntimeError("index not supported in PseudoComponent.get")
         return getattr(self, name)
 
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        self.invalidate_deps()
         setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
             return self._meta[traitpath]
         return self._meta[traitpath].get(metaname)
-
-    def is_valid(self):
-        return self._valid
 
     def set_itername(self, itername):
         self._itername = itername
@@ -353,3 +322,7 @@ class PseudoComponent(object):
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
+
+    def get_req_default(self, self_reqired=None):
+        return []
+

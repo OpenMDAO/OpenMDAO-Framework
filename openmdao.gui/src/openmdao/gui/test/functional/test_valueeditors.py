@@ -267,7 +267,6 @@ def _test_value_editors(browser):
     #check that all values were set correctly by the editors
     commands = ["top.p1.d['pi']",
                 "top.p1.d['phi']",
-                "top.p1.force_execute",
                 "top.p1.e",
                 "top.p1.x",
                 "top.p1.X",
@@ -326,8 +325,6 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-            'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -347,8 +344,6 @@ def _test_Avartrees(browser):
         ['', ' vt2', '',  '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -390,8 +385,6 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-            'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -413,7 +406,6 @@ def _test_Avartrees(browser):
     expected = [
         [' cont_in',      ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]
@@ -430,7 +422,6 @@ def _test_Avartrees(browser):
         ['v2', '2'],
         [' vt2', ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]
@@ -457,7 +448,6 @@ def _test_Avartrees(browser):
     expected = [
         [' cont_in',      ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]

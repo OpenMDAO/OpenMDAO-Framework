@@ -53,10 +53,6 @@ class Simple4(Component):
     invar = Float(1, iotype="in")
     outvar = Float(0, iotype="out")
 
-    def __init__(self):
-        super(Simple4, self).__init__()
-        self.force_execute = True
-
     def execute(self):
         self.outvar = self.outvar + self.invar
 

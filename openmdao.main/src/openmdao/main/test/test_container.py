@@ -149,14 +149,6 @@ class ContainerTestCase(unittest.TestCase):
         msg = ": build_trait()"
         assert_raises(self, code, globals(), locals(), NotImplementedError, msg)
 
-    def test_connect(self):
-        cont = MyContainer()
-        cont.connect('parent.foo', 'dyntrait')
-        self.assertEqual(cont._depgraph.get_source('dyntrait'), 'parent.foo')
-
-        cont.disconnect('parent.foo', 'dyntrait')
-        self.assertEqual(cont._depgraph.get_source('dyntrait'), None)
-
     def test_find_trait_and_value(self):
         class MyClass(object):
             pass
@@ -462,14 +454,6 @@ class ContainerTestCase(unittest.TestCase):
         assert_raises(self, "b.add('a', a)",
                       globals(), locals(), ValueError,
                       "b: add would cause container recursion")
-
-    def test_set_output(self):
-        c = Container()
-        c.add_trait('inp', Float(iotype='in'))
-        c.add_trait('out', Float(iotype='out'))
-        c.set('inp', 42)
-        assert_raises(self, "c.set('out', 666)", globals(), locals(),
-                      RuntimeError, ": Cannot set output 'out'")
 
     def test_get_attributes(self):
         c = Container()

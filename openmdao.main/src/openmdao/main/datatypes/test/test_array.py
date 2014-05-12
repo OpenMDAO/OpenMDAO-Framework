@@ -144,7 +144,7 @@ class ArrayTestCase(unittest.TestCase):
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
 
-        self.assertEqual(len(input_attrs), 8)
+        self.assertEqual(len(input_attrs), 7)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
                          'dim': '3',
@@ -154,7 +154,6 @@ class ArrayTestCase(unittest.TestCase):
                          'implicit': '',
                          'connected': '',
                          'connection_types' : 0,
-                         'valid': True,
                          'units': 'ft',
                          'array': True,
                          'type': 'ndarray',
@@ -169,7 +168,6 @@ class ArrayTestCase(unittest.TestCase):
                          'implicit': '',
                          'connected': '',
                          'connection_types' : 0,
-                         'valid': True,
                          'units': 'kg',
                          'array': True,
                          'type': 'ndarray',
@@ -185,7 +183,6 @@ class ArrayTestCase(unittest.TestCase):
                          'value': arr99,
                          'implicit': '',
                          'connected': '',
-                         'valid': True,
                          'array': True,
                          'type': 'ndarray',
                          'indent': 0, 
@@ -199,7 +196,6 @@ class ArrayTestCase(unittest.TestCase):
                          'value': arr98,
                          'implicit': '',
                          'connected': '',
-                         'valid': True,
                          'array': True,
                          'type': 'ndarray',
                          'indent': 0, 
@@ -216,7 +212,6 @@ class ArrayTestCase(unittest.TestCase):
                          'value': '[[1.0, 2.0], [3.0, 4.0]]',
                          'implicit': '',
                          'connected': '',
-                         'valid': False,
                          'units': 'inch',
                          'array': True,
                          'type': 'ndarray',
