@@ -8,41 +8,46 @@ from openmdao.main.interfaces import IDriver
 
 _cluster_count = 0
 
-def write_driver_cluster(f, G, driver, indent):
+def write_driver_cluster(f, G, driver, indent, excludes=()):
     global _cluster_count, IDriver
+    show = driver.name not in excludes
     comps = list(driver.workflow)
+    subG = G.subgraph([c.name for c in comps])
     tab = ' '*indent
-    f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
-    _cluster_count += 1
-    indent += 3
-    tab = ' '*indent
-
-    f.write('%s%s [shape=box];\n' % (tab, driver.name))
-    if len(comps) > 0:
-        dcount = 1
-        for comp in comps:
-            if IDriver.providedBy(comp):
-                write_driver_cluster(f, G, comp, indent)
-                f.write("%s%s -> %s [style=dashed, label=%d];\n" % (tab, driver.name, comp.name, dcount))
-                dcount += 1
-
-        subG = G.subgraph([c.name for c in comps])
-
-        for u,v in subG.edges():
-            f.write('%s%s -> %s;\n' % (tab, u, v))
     
-    f.write('%s}\n' % tab)
+    if show:
+        f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
+        _cluster_count += 1
+        indent += 3
+        tab = ' '*indent
+
+        f.write('%s%s [shape=box];\n' % (tab, driver.name))
+
+    dcount = 1
+    for comp in comps:
+        if IDriver.providedBy(comp):
+            write_driver_cluster(f, G, comp, indent=indent, excludes=excludes)
+            if show:
+                f.write("%s%s -> %s [style=dashed, label=%d];\n" % 
+                               (tab, driver.name, comp.name, dcount))
+            dcount += 1
+
+    if show:
+        for c in comps:
+            if c.name in subG:
+                f.write("%s%s;\n" % (tab, c.name))
+        f.write('%s}\n' % tab)
     
-def write_dot(G, dotfile, scope=None):
+def write_dot(G, dotfile, scope=None, excludes=()):
 
     if scope is None:
         raise RuntimeError("if workflow is True, scope must be specified")
 
     with open(dotfile, 'w') as f:
         f.write("strict digraph {\n")
-        #f.write("rankdir=RL;\n")
+
         driver = getattr(scope, 'driver')
-        write_driver_cluster(f, G, driver, 3)
+        write_driver_cluster(f, G, driver, 3, excludes=excludes)
 
         # now include any cross workflow connections
         for u,v in G.edges_iter():
@@ -50,7 +55,8 @@ def write_dot(G, dotfile, scope=None):
             
         f.write("}\n")
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=None):
+def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=None,
+               excludes=()):
     """Create a plot of the given graph"""
 
     if not pseudos:
@@ -63,7 +69,7 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
     dotfile = os.path.splitext(outfile)[0]+'.dot'
 
     if workflow:
-        write_dot(G, dotfile, scope)
+        write_dot(G, dotfile, scope, excludes)
     else: # just show data connections
         for node, data in G.nodes_iter(data=True):
             if 'driver' in data:
@@ -91,13 +97,14 @@ def plot_graphs(obj, recurse=False, fmt='pdf', pseudos=False, workflow=False):
         if obj.name == '':
             obj.name = 'top'
         try:
-            plot_graph(prune(obj._depgraph), fmt=fmt, outfile=obj.name+'_depgraph', pseudos=pseudos)
+            plot_graph(prune(obj._depgraph), fmt=fmt, outfile=obj.name+'_depgraph', 
+                             pseudos=pseudos)
         except Exception as err:
             print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         try:
             plot_graph(obj._depgraph.component_graph(), 
                        fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt, 
-                       pseudos=pseudos, workflow=workflow)
+                       pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
             print "Can't plot component_graph of '%s': %s" % (obj.name, str(err))
         if recurse:
@@ -106,7 +113,7 @@ def plot_graphs(obj, recurse=False, fmt='pdf', pseudos=False, workflow=False):
         try:
             plot_graph(obj.workflow.derivative_graph(), 
                        fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
-                       pseudos=pseudos, workflow=workflow)
+                       pseudos=pseudos, workflow=workflow, scope=obj.parent)
         except Exception as err:
             print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
         if recurse:
