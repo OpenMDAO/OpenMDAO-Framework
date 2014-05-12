@@ -959,7 +959,8 @@ class SequentialWorkflow(Workflow):
         self._stop = False
 
         dgraph = self.derivative_graph(required_inputs, required_outputs)
-        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()))
+        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()),
+                                              self.get_implicit_info())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
