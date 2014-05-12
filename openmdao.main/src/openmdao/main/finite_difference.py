@@ -588,20 +588,28 @@ class DirectionalFD(object):
 
             # Put answer into the right spot in result.
             key = self.pa.mapped_outputs[j]
-            result[key] += mv_prod[i1:i2]
+
+            # This happens if an array is connected in full and in slice.
+            # Only need to handle it in full.
+            if key not in result:
+                continue
 
             if isinstance(old_val, (float, complex)):
                 new_val = float(self.y_base[i1:i2])
+                result[key] += mv_prod[i1:i2]
             elif isinstance(old_val, ndarray):
                 shape = old_val.shape
                 if len(shape) > 1:
                     new_val = self.y_base[i1:i2]
                     new_val = new_val.reshape(shape)
+                    result[key] += mv_prod[i1:i2].reshape(shape)
                 else:
+                    result[key] += mv_prod[i1:i2]
                     new_val = self.y_base[i1:i2]
             elif has_interface(old_val, IVariableTree):
                 new_val = old_val.copy()
                 self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
+                result[key] += mv_prod[i1:i2]
             else:
                 continue
 
@@ -636,7 +644,10 @@ class DirectionalFD(object):
             array_base_val = None
             index_base_val = None
 
-            key = self.pa.mapped_inputs[j][0]
+            key = self.pa.mapped_inputs[j]
+            if not isinstance(key, basestring):
+                key = key[0]
+
             direction = arg[key]*fdstep
 
             if i2-i1 == 1:
