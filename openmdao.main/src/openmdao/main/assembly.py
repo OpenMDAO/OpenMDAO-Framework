@@ -702,10 +702,6 @@ class Assembly(Component):
 
         return matched_vars
 
-    def step(self):
-        """Execute a single child component and return."""
-        self.driver.step()
-
     def stop(self):
         """Stop the calculation."""
         self.driver.stop()

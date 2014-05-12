@@ -343,39 +343,6 @@ class Driver(Component):
             self.run_iteration()
             self.post_iteration()
 
-    def step(self):
-        """Similar to the 'execute' function, but this one only
-        executes a single Component from the workflow each time
-        it's called.
-        """
-        if self._iter is None:
-            self.start_iteration()
-            self._iter = self._step()
-        try:
-            self._iter.next()
-        except StopIteration:
-            self._iter = None
-            raise
-        raise RunStopped('Step complete')
-
-    def _step(self):
-        '''Step through a single workflow comp and then return control'''
-        while self.continue_iteration():
-            self.pre_iteration()
-            for _ in self._step_workflow():
-                yield
-            self.post_iteration()
-        self._iter = None
-        raise StopIteration()
-
-    def _step_workflow(self):
-        while True:
-            try:
-                self.workflow.step()
-            except RunStopped:
-                pass
-            yield
-
     def stop(self):
         """Stop the workflow."""
         self._stop = True
