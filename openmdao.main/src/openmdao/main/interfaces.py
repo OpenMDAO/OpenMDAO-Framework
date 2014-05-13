@@ -263,12 +263,6 @@ class IComponent(IContainer):
         """Return list of (filevarname, filevarvalue, file trait) owned by this
         component."""
 
-    def step():
-        """For Components that run other components (e.g., Assembly or Drivers),
-        this will run one Component and return. For simple components, it is
-        the same as *run()*.
-        """
-
     def stop():
         """Stop this component."""
 

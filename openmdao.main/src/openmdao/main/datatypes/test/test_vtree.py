@@ -8,8 +8,10 @@ from openmdao.util.testutil import assert_raises
 class InputTree(VariableTree):
     pass
 
+
 class OutputTree(VariableTree):
     pass
+
 
 class TestComponent(Component):
     input = VarTree(InputTree(), iotype='in')
@@ -34,4 +36,3 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

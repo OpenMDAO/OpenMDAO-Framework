@@ -4,7 +4,7 @@ import weakref
 
 from zope.interface import implements
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.has_traits import FunctionType
 from traits.trait_base import not_event
 
@@ -46,7 +46,7 @@ class VariableTree(Container):
 
     @property
     def _parent(self):
-        """ Return dereferened weakref to parent. """
+        """ Return dereferenced weakref to parent. """
         return None if self._parent_ref is None else self._parent_ref()
 
     @_parent.setter
@@ -100,6 +100,15 @@ class VariableTree(Container):
         parent.  Also installs necessary trait callbacks.
         """
         cp = super(VariableTree, self).copy()
+        cp.install_callbacks()
+        return cp
+
+    def __deepcopy__(self, memo):
+        id_self = id(self)
+        if id_self in memo:
+            return memo[id_self]
+
+        cp = super(VariableTree, self).__deepcopy__(memo)
         cp.install_callbacks()
         return cp
 
@@ -308,10 +317,10 @@ class VariableTree(Container):
                 if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
-                                            connections])#.replace('@xin.', '')
+                                             connections])#.replace('@xin.', '')
                 else:
                     attr['connected'] = str([dst for src, dst in
-                                            connections])#.replace('@xout.', '')
+                                             connections])#.replace('@xout.', '')
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs

@@ -814,84 +814,84 @@ class AssemblyTestCase(unittest.TestCase):
         expected = """\
 :
 driver:
-comp1: 1-1
-driverA: 1-2
-comp1: 1-2.1-1
-comp2: 1-2.1-2
-comp1: 1-2.2-1
-comp2: 1-2.2-2
-comp1: 1-2.3-1
-comp2: 1-2.3-2
-driverB: 1-3
-comp2: 1-3.1-1
-subassy: 1-3.1-2
-subassy.driver: 1-3.1-2
-subassy.comp3: 1-3.1-2.1-1
-subassy.comp3: 1-3.1-2.2-1
-comp2: 1-3.2-1
-subassy: 1-3.2-2
-subassy.driver: 1-3.2-2
-subassy.comp3: 1-3.2-2.1-1
-subassy.comp3: 1-3.2-2.2-1
-comp1: 2-1
-driverA: 2-2
-comp1: 2-2.1-1
-comp2: 2-2.1-2
-comp1: 2-2.2-1
-comp2: 2-2.2-2
-comp1: 2-2.3-1
-comp2: 2-2.3-2
-driverB: 2-3
-comp2: 2-3.1-1
-subassy: 2-3.1-2
-subassy.driver: 2-3.1-2
-subassy.comp3: 2-3.1-2.1-1
-subassy.comp3: 2-3.1-2.2-1
-comp2: 2-3.2-1
-subassy: 2-3.2-2
-subassy.driver: 2-3.2-2
-subassy.comp3: 2-3.2-2.1-1
-subassy.comp3: 2-3.2-2.2-1
+comp1: 1-comp1
+driverA: 1-driverA
+comp1: 1-driverA.1-comp1
+comp2: 1-driverA.1-comp2
+comp1: 1-driverA.2-comp1
+comp2: 1-driverA.2-comp2
+comp1: 1-driverA.3-comp1
+comp2: 1-driverA.3-comp2
+driverB: 1-driverB
+comp2: 1-driverB.1-comp2
+subassy: 1-driverB.1-subassy
+subassy.driver: 1-driverB.1-subassy
+subassy.comp3: 1-driverB.1-subassy.1-comp3
+subassy.comp3: 1-driverB.1-subassy.2-comp3
+comp2: 1-driverB.2-comp2
+subassy: 1-driverB.2-subassy
+subassy.driver: 1-driverB.2-subassy
+subassy.comp3: 1-driverB.2-subassy.1-comp3
+subassy.comp3: 1-driverB.2-subassy.2-comp3
+comp1: 2-comp1
+driverA: 2-driverA
+comp1: 2-driverA.1-comp1
+comp2: 2-driverA.1-comp2
+comp1: 2-driverA.2-comp1
+comp2: 2-driverA.2-comp2
+comp1: 2-driverA.3-comp1
+comp2: 2-driverA.3-comp2
+driverB: 2-driverB
+comp2: 2-driverB.1-comp2
+subassy: 2-driverB.1-subassy
+subassy.driver: 2-driverB.1-subassy
+subassy.comp3: 2-driverB.1-subassy.1-comp3
+subassy.comp3: 2-driverB.1-subassy.2-comp3
+comp2: 2-driverB.2-comp2
+subassy: 2-driverB.2-subassy
+subassy.driver: 2-driverB.2-subassy
+subassy.comp3: 2-driverB.2-subassy.1-comp3
+subassy.comp3: 2-driverB.2-subassy.2-comp3
 : ReRun
 driver: ReRun
-comp1: ReRun.1-1
-driverA: ReRun.1-2
-comp1: ReRun.1-2.1-1
-comp2: ReRun.1-2.1-2
-comp1: ReRun.1-2.2-1
-comp2: ReRun.1-2.2-2
-comp1: ReRun.1-2.3-1
-comp2: ReRun.1-2.3-2
-driverB: ReRun.1-3
-comp2: ReRun.1-3.1-1
-subassy: ReRun.1-3.1-2
-subassy.driver: ReRun.1-3.1-2
-subassy.comp3: ReRun.1-3.1-2.1-1
-subassy.comp3: ReRun.1-3.1-2.2-1
-comp2: ReRun.1-3.2-1
-subassy: ReRun.1-3.2-2
-subassy.driver: ReRun.1-3.2-2
-subassy.comp3: ReRun.1-3.2-2.1-1
-subassy.comp3: ReRun.1-3.2-2.2-1
-comp1: ReRun.2-1
-driverA: ReRun.2-2
-comp1: ReRun.2-2.1-1
-comp2: ReRun.2-2.1-2
-comp1: ReRun.2-2.2-1
-comp2: ReRun.2-2.2-2
-comp1: ReRun.2-2.3-1
-comp2: ReRun.2-2.3-2
-driverB: ReRun.2-3
-comp2: ReRun.2-3.1-1
-subassy: ReRun.2-3.1-2
-subassy.driver: ReRun.2-3.1-2
-subassy.comp3: ReRun.2-3.1-2.1-1
-subassy.comp3: ReRun.2-3.1-2.2-1
-comp2: ReRun.2-3.2-1
-subassy: ReRun.2-3.2-2
-subassy.driver: ReRun.2-3.2-2
-subassy.comp3: ReRun.2-3.2-2.1-1
-subassy.comp3: ReRun.2-3.2-2.2-1"""
+comp1: ReRun.1-comp1
+driverA: ReRun.1-driverA
+comp1: ReRun.1-driverA.1-comp1
+comp2: ReRun.1-driverA.1-comp2
+comp1: ReRun.1-driverA.2-comp1
+comp2: ReRun.1-driverA.2-comp2
+comp1: ReRun.1-driverA.3-comp1
+comp2: ReRun.1-driverA.3-comp2
+driverB: ReRun.1-driverB
+comp2: ReRun.1-driverB.1-comp2
+subassy: ReRun.1-driverB.1-subassy
+subassy.driver: ReRun.1-driverB.1-subassy
+subassy.comp3: ReRun.1-driverB.1-subassy.1-comp3
+subassy.comp3: ReRun.1-driverB.1-subassy.2-comp3
+comp2: ReRun.1-driverB.2-comp2
+subassy: ReRun.1-driverB.2-subassy
+subassy.driver: ReRun.1-driverB.2-subassy
+subassy.comp3: ReRun.1-driverB.2-subassy.1-comp3
+subassy.comp3: ReRun.1-driverB.2-subassy.2-comp3
+comp1: ReRun.2-comp1
+driverA: ReRun.2-driverA
+comp1: ReRun.2-driverA.1-comp1
+comp2: ReRun.2-driverA.1-comp2
+comp1: ReRun.2-driverA.2-comp1
+comp2: ReRun.2-driverA.2-comp2
+comp1: ReRun.2-driverA.3-comp1
+comp2: ReRun.2-driverA.3-comp2
+driverB: ReRun.2-driverB
+comp2: ReRun.2-driverB.1-comp2
+subassy: ReRun.2-driverB.1-subassy
+subassy.driver: ReRun.2-driverB.1-subassy
+subassy.comp3: ReRun.2-driverB.1-subassy.1-comp3
+subassy.comp3: ReRun.2-driverB.1-subassy.2-comp3
+comp2: ReRun.2-driverB.2-comp2
+subassy: ReRun.2-driverB.2-subassy
+subassy.driver: ReRun.2-driverB.2-subassy
+subassy.comp3: ReRun.2-driverB.2-subassy.1-comp3
+subassy.comp3: ReRun.2-driverB.2-subassy.2-comp3"""
         expected = expected.split('\n')
         errors = 0
 
@@ -945,11 +945,11 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         enable_trace(trace_out)
         top.run()
         expected = """\
-1-1
-1-2.1-1
-1-2.1-2
-1-3.1-1
-1-3.1-2.1-1
+1-comp1
+1-driverA.1-comp1
+1-driverA.1-comp2
+1-driverB.1-comp2
+1-driverB.1-subassy.1-comp3
 """
         self.assertEqual(trace_out.getvalue(), expected)
 
@@ -977,8 +977,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         #asm.connect('sub.comp3.d', 'comp4.b')  # autopassthrough
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.comp2.b'),
-                              #('sub.comp3.d', 'comp4.b'),
+                         set([('comp1.c', 'sub.a2'),
+                              # ('comp1.d', 'sub.comp2.b'),
+                              # ('sub.comp3.d', 'comp4.b'),
                               ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),
@@ -995,8 +996,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         asm.rename('sub', 'nested')
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'nested.a2'), #('comp1.d', 'nested.comp2.b'),
-                              #('nested.comp3.d', 'comp4.b'),
+                         set([('comp1.c', 'nested.a2'),
+                              # ('comp1.d', 'nested.comp2.b'),
+                              # ('nested.comp3.d', 'comp4.b'),
                               ('nested.c3', 'comp4.a')]))
         sub_connections = asm.nested.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),
@@ -1021,8 +1023,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
 
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.newcomp2.b'),
-                              #('sub.newcomp3.d', 'comp4.b'),
+                         set([('comp1.c', 'sub.a2'),
+                              # ('comp1.d', 'sub.newcomp2.b'),
+                              # ('sub.newcomp3.d', 'comp4.b'),
                               ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),

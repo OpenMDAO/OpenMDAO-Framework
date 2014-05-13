@@ -1,5 +1,5 @@
 """
-Test run/step/stop aspects of a simple workflow.
+Test run/stop aspects of a simple workflow.
 """
 
 import unittest
@@ -111,7 +111,7 @@ class DumbRecorder(object):
 
 
 class TestCase(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
+    """ Test run/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """
@@ -146,47 +146,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_b.total_executions, 2)
         self.assertEqual(self.model.comp_c.total_executions, 2)
 
-    def test_stepping(self):
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 0)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 1)
-
-        try:
-            self.model.step()
-        except StopIteration, exc:
-            self.assertEqual(str(exc), '')
-        else:
-            self.fail('Expected StopIteration')
-
     def test_run_stop_run(self):
         self.model.comp_b.set_stop = True
         try:
@@ -205,37 +164,6 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_a.total_executions, 2)
         self.assertEqual(self.model.comp_b.total_executions, 2)
         self.assertEqual(self.model.comp_c.total_executions, 1)
-
-    def test_run_stop_step(self):
-        self.model.comp_b.set_stop = True
-        try:
-            self.model.run()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Stop requested')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 1)
-
-        try:
-            self.model.step()
-        except StopIteration, exc:
-            self.assertEqual(str(exc), '')
-        else:
-            self.fail('Expected StopIteration')
 
     def test_checks(self):
         # Tests out the validity checks.
@@ -314,14 +242,14 @@ class TestCase(unittest.TestCase):
 
         expected = [
             '1',
-            '1-1.1',
-            '1-1.1-2.1',
-            '1-1.1-2.2',
-            '1-1.1-2.3',
-            '1-1.2',
-            '1-1.2-2.1',
-            '1-1.2-2.2',
-            '1-1.2-2.3'
+            '1-driver1.1',
+            '1-driver1.1-driver2.1',
+            '1-driver1.1-driver2.2',
+            '1-driver1.1-driver2.3',
+            '1-driver1.2',
+            '1-driver1.2-driver2.1',
+            '1-driver1.2-driver2.2',
+            '1-driver1.2-driver2.3'
         ]
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
@@ -333,4 +261,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

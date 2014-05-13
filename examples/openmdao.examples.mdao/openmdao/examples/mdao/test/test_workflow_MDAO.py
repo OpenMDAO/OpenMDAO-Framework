@@ -1,6 +1,3 @@
-"""
-Test run/step/stop aspects of a simple workflow.
-"""
 
 import unittest
 

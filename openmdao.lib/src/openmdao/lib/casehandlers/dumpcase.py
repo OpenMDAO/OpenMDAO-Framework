@@ -1,4 +1,5 @@
-import cStringIO, StringIO
+import cStringIO
+import StringIO
 import sys
 import time
 
