@@ -11,7 +11,7 @@ import threading
 
 from zope.interface import implementedBy
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
@@ -645,10 +645,20 @@ class Assembly(Component):
 
         self._depgraph.update_boundary_outputs(self)
 
+    def configure_recording(self, includes=None, excludes=None):
+        """ Called at start of top-level run to configure case recording. """
+        includes = includes or ['*']
+        excludes = excludes or []
+        for name in self.list_containers():
+            obj = getattr(self, name)
+            if has_interface(obj, IDriver, IAssembly):
+                obj.configure_recording(includes, excludes)
+
     def get_case_variables(self):
         """Collect variables to be recorded by workflows."""
         inputs = []
         outputs = []
+        processed = set()
         for printvar in self.printvars:
             if '*' in printvar:
                 printvars = self._get_all_varpaths(printvar)
@@ -656,6 +666,9 @@ class Assembly(Component):
                 printvars = [printvar]
 
             for var in printvars:
+                if var in processed:
+                    continue
+                processed.add(var)
                 iotype = self.get_metadata(var, 'iotype')
                 if iotype == 'in':
                     val = ExprEvaluator(var, scope=self).evaluate()
@@ -709,15 +722,6 @@ class Assembly(Component):
     def stop(self):
         """Stop the calculation."""
         self.driver.stop()
-
-    @rbac(('owner', 'user'))
-    def _run_terminated(self):
-        """ Executed at end of top-level run. """
-        super(Assembly, self)._run_terminated()
-        for name in self.list_containers():
-            obj = getattr(self, name)
-            if has_interface(obj, IComponent):
-                obj._run_terminated()
 
     def list_connections(self, show_passthrough=True,
                                visible_only=False,
@@ -1069,7 +1073,7 @@ class Assembly(Component):
             output_keys.append(src)
             self.J_output_keys.append(target)
 
-        if check_only or len(self.J_input_keys)==0 or len(output_keys)==0:
+        if check_only or len(self.J_input_keys) == 0 or len(output_keys) == 0:
             return None
 
         return self.driver.calc_gradient(self.J_input_keys, output_keys)

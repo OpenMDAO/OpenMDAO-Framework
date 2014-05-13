@@ -7,7 +7,7 @@ from inspect import getmro
 import weakref
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError, traceback_str
+from openmdao.main.exceptions import TracedError
 from openmdao.main.variable import is_legal_name, make_legal_path
 
 __all__ = ["Case"]
@@ -87,9 +87,8 @@ class Case(object):
         Case._uuid_seq += 1
         return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
 
-    def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, label='', case_uuid=None, parent_uuid='',
-                 msg=None):
+    def __init__(self, inputs=None, outputs=None, case_uuid=None,
+                 parent_uuid=''):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. Outputs must be
@@ -100,12 +99,6 @@ class Case(object):
         self._outputs = None
         self._inputs = {}
 
-        self.max_retries = max_retries  # times to retry after error(s)
-        self.retries = retries          # times case was retried
-        self.msg = msg                  # If non-null, error message.
-                                        # Implies outputs are invalid.
-        self.exc = None                 # Exception during execution.
-        self.label = label              # Optional label.
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
@@ -128,7 +121,7 @@ class Case(object):
         ins = self._inputs.items()
         ins.sort()
         stream = StringIO()
-        stream.write("Case: %s\n" % self.label)
+        stream.write("Case:\n")
         stream.write("   uuid: %s\n" % self.uuid)
         stream.write("   timestamp: %15f\n" % self.timestamp)
         if self.parent_uuid:
@@ -142,22 +135,12 @@ class Case(object):
             stream.write("   outputs:\n")
             for name, val in outs:
                 stream.write("      %s: %s\n" % (name, val))
-        if self.max_retries is not None:
-            stream.write("   max_retries: %s\n" % self.max_retries)
-        if self.retries is not None:
-            stream.write("   retries: %s\n" % self.retries)
-        if self.msg:
-            stream.write("   msg: %s\n" % self.msg)
-        if self.exc is not None:
-            stream.write("   exc: %s\n" % traceback_str(self.exc))
         return stream.getvalue()
 
     def __eq__(self, other):
         if self is other:
             return True
         try:
-            if self.msg != other.msg or self.label != other.label:
-                return False
             if len(self) != len(other):
                 return False
             for selftup, othertup in zip(self.items(flatten=True),
@@ -269,14 +252,12 @@ class Case(object):
         return [v for k, v in self.items(iotype, flatten=flatten)]
 
     def reset(self):
-        """Remove any saved output values, set retries to None, get a new uuid
-        and reset the parent_uuid.  Essentially this Case becomes like a new
-        Case with the same set of inputs and outputs that hasn't been executed
-        yet.
+        """Remove any saved output values, get a new uuid and reset the
+        parent_uuid.  Essentially this Case becomes like a new Case with the
+        same set of inputs and outputs that hasn't been executed yet.
         """
         self.parent_uuid = ''
         self.uuid = str(uuid1())
-        self.retries = None
         for key in self._outputs.keys():
             self._outputs[key] = _Missing
 
@@ -296,10 +277,9 @@ class Case(object):
             for name, value in self._inputs.items():
                 scope.set(name, value)
 
-    def update_outputs(self, scope, msg=None):
+    def update_outputs(self, scope):
         """Update the value of all outputs in this Case, using the given scope.
         """
-        self.msg = msg
         last_excpt = None
         outputs = self._outputs
         if outputs is not None:
@@ -315,10 +295,6 @@ class Case(object):
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
                         outputs[name] = _Missing
-                        if self.msg is None:
-                            self.msg = str(err)
-                        else:
-                            self.msg = self.msg + " %s" % err
             else:
                 for name in outputs.keys():
                     try:
@@ -326,10 +302,6 @@ class Case(object):
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
                         outputs[name] = _Missing
-                        if self.msg is None:
-                            self.msg = str(err)
-                        else:
-                            self.msg = self.msg + " %s" % err
 
         self.timestamp = time.time()
 
@@ -396,8 +368,7 @@ class Case(object):
                 outs.append((name, self._outputs[name]))
             else:
                 raise KeyError("'%s' is not part of this Case" % name)
-        sc = Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
-                  max_retries=self.max_retries)
+        sc = Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid)
         sc.timestamp = self.timestamp
         return sc
 

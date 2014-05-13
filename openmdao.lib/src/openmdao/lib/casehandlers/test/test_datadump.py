@@ -83,7 +83,7 @@ class Data_Dump_TestCase(unittest.TestCase):
         self.top.run()
 
         expected = """\
-Case: 
+Case:
    uuid: 8db9ce52-a558-11e3-ba23-005056000100
    timestamp: 1393444821.630434
    parent_uuid: 8db41386-a558-11e3-ba23-005056000100
@@ -198,7 +198,7 @@ Case:
       nested.driver.itername: 1-1
       nested.exec_count: 1
       nested.itername: 1-1
-Case: 
+Case:
    uuid: 8db41386-a558-11e3-ba23-005056000100
    timestamp: 1393444821.687524
    parent_uuid: 8daf3a3c-a558-11e3-ba23-005056000100
@@ -313,7 +313,7 @@ Case:
       nested.driver.workflow.itername: 1-1.1
       nested.exec_count: 1
       nested.itername: 1-1
-Case: 
+Case:
    uuid: 8daf3a3c-a558-11e3-ba23-005056000100
    timestamp: 1393444821.738698
    inputs:
@@ -456,7 +456,7 @@ Case:
         self.top.run()
 
         expected = """\
-Case: 
+Case:
    uuid: 22ce64a8-a559-11e3-8a62-005056000100
    timestamp: 1393446403.352580
    parent_uuid: 22cdf59a-a559-11e3-8a62-005056000100
@@ -490,7 +490,7 @@ Case:
       nested.doublenest.comp1.itername: 1-1.1-4.1-1
       nested.doublenest.comp1.y1: 1.0
       nested.doublenest.driver.workflow.itername: 1-1.1-4.1
-Case: 
+Case:
    uuid: 22cdf59a-a559-11e3-8a62-005056000100
    timestamp: 1393446403.358414
    parent_uuid: 22cdedc0-a559-11e3-8a62-005056000100
@@ -524,7 +524,7 @@ Case:
       nested.doublenest.comp1.itername: 1-1.1-4.1-1
       nested.doublenest.comp1.y1: 1.0
       nested.driver.workflow.itername: 1-1.1
-Case: 
+Case:
    uuid: 22cdedc0-a559-11e3-8a62-005056000100
    timestamp: 1393446403.364069
    inputs:
@@ -585,7 +585,7 @@ Case:
         self.top.run()
 
         expected = """\
-Case: 
+Case:
    uuid: c06b420c-9f24-11e3-b076-005056000100
    timestamp: 1393446594.716126
    inputs:
@@ -648,7 +648,7 @@ Case:
         self.top.run()
 
         expected = """\
-Case: 
+Case:
    uuid: fdcac244-9f24-11e3-83f2-005056000100
    timestamp: 1393446697.681743
    inputs:

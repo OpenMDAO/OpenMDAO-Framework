@@ -1,6 +1,8 @@
 """ Base class for all workflows. """
 
-# pylint: disable-msg=E0611,F0401
+from fnmatch import fnmatch
+
+# pylint: disable=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
@@ -38,6 +40,15 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+
+        self._rec_required = None  # Case recording configuration.
+        self._rec_parameters = None
+        self._rec_objectives = None
+        self._rec_responses = None
+        self._rec_constraints = None
+        self._rec_inputs = None
+        self._rec_outputs = None
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -83,7 +94,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, ffd_order=0, case_uuid=None):
         """ Run the Components in this Workflow. """
 
         self._stop = False
@@ -111,68 +122,164 @@ class Workflow(object):
                 raise RunStopped('Stop requested')
         self._iterator = None
 
-        if record_case:
-            self._record_case(label=case_label, case_uuid=case_uuid)
+        if record_case and self._rec_required:
+            self._record_case(case_uuid=case_uuid)
 
-    def _record_case(self, label, case_uuid):
-        """ Record case in all recorders. """
-        top = self._parent
+    def configure_recording(self, includes, excludes):
+        """ Called at start of top-level run to configure case recording. """
+        driver = self._parent
+        scope = driver.parent
+        top = scope
         while top.parent is not None:
             top = top.parent
-        recorders = top.recorders
-        if not recorders:
+        if not top.recorders:
+            self._rec_required = False
             return
+
+        prefix = scope.get_pathname()
+        if prefix:
+            prefix += '.'
+        inputs = []
+        outputs = []
+
+        # Parameters
+        self._rec_parameters = []
+        if hasattr(driver, 'get_parameters'):
+            for name, param in driver.get_parameters().items():
+                if isinstance(name, tuple):
+                    name = name[0]
+                path = prefix+name
+                if self._check_path(path, includes, excludes):
+                    self._rec_parameters.append(param)
+                    inputs.append(path)
+
+        # Objectives
+        self._rec_objectives = []
+        if hasattr(driver, 'eval_objective'):
+            key = driver.get_objectives().keys()[0]
+            name = 'Objective'
+            path = prefix+name
+            if self._check_path(path, includes, excludes):
+                self._rec_objectives.append(key)
+                outputs.append(path)
+        elif hasattr(driver, 'eval_objectives'):
+            for j, key in enumerate(driver.get_objectives()):
+                name = 'Objective_%d' % j
+                path = prefix+name
+                if self._check_path(path, includes, excludes):
+                    self._rec_objectives.append(key)
+                    outputs.append(path)
+
+        # Responses
+        self._rec_responses = []
+        if hasattr(driver, 'eval_responses'):
+            for j, key in enumerate(driver.get_responses()):
+                name = 'Response_%d' % j
+                path = prefix+name
+                if self._check_path(path, includes, excludes):
+                    self._rec_responses.append(key)
+                    outputs.append(path)
+
+        # Constraints
+        self._rec_constraints = []
+        if hasattr(driver, 'get_ineq_constraints'):
+            for name, con in driver.get_ineq_constraints().items():
+                name = 'Constraint ( %s )' % name
+                path = prefix+name
+                if self._check_path(path, includes, excludes):
+                    self._rec_constraints.append(con)
+                    outputs.append(path)
+
+        if hasattr(driver, 'get_eq_constraints'):
+            for name, con in driver.get_eq_constraints().items():
+                name = 'Constraint ( %s )' % name
+                path = prefix+name
+                if self._check_path(path, includes, excludes):
+                    self._rec_constraints.append(con)
+                    outputs.append(path)
+
+        # Variables
+        case_inputs, case_outputs = top.get_case_variables()
+
+        self._rec_inputs = []
+        for path, value in case_inputs:
+            if self._check_path(path, includes, excludes):
+                self._rec_inputs.append(path)
+                inputs.append(path)
+
+        self._rec_outputs = []
+        for path, value in case_outputs:
+            if self._check_path(path, includes, excludes):
+                self._rec_outputs.append(path)
+                outputs.append(path)
+
+        path = '%s.workflow.itername' % driver.get_pathname()
+        if self._check_path(path, includes, excludes):
+            self._rec_outputs.append(path)
+            outputs.append(path)
+
+        self._rec_required = bool(inputs or outputs)
+        if self._rec_required:
+            # Register paths in recorders.
+            for recorder in top.recorders:
+                recorder.register(id(self), inputs, outputs)
+
+    @staticmethod
+    def _check_path(path, includes, excludes):
+        """ Return True if `path` should be recorded. """
+        for pattern in includes:
+            if fnmatch(path, pattern):
+                break
+        else:
+            return False
+
+        for pattern in excludes:
+            if fnmatch(path, pattern):
+                return False
+        return True
+
+    def _record_case(self, case_uuid):
+        """ Record case in all recorders. """
+        driver = self._parent
+        scope = driver.parent
+        top = scope
+        while top.parent is not None:
+            top = top.parent
 
         inputs = []
         outputs = []
-        driver = self._parent
-        scope = driver.parent
 
-        # Parameters
-        if hasattr(driver, 'get_parameters'):
-            for name, param in driver.get_parameters().iteritems():
-                if isinstance(name, tuple):
-                    name = name[0]
-                value = param.evaluate(scope)
-                if param.size == 1:  # evaluate() always returns list.
-                    value = value[0]
-                inputs.append((name, value))
+        # Parameters.
+        for param in self._rec_parameters:
+            value = param.evaluate(scope)
+            if param.size == 1:  # evaluate() always returns list.
+                value = value[0]
+            inputs.append(value)
 
-        # Objectives
-        if hasattr(driver, 'eval_objective'):
-            outputs.append(('Objective', driver.eval_objective()))
-        elif hasattr(driver, 'eval_objectives'):
-            for j, obj in enumerate(driver.eval_objectives()):
-                outputs.append(('Objective_%d' % j, obj))
+        # Objectives.
+        outputs.extend(driver.eval_named_objective(key)
+                       for key in self._rec_objectives)
+        # Responses.
+        outputs.extend(driver.eval_response(key)
+                       for key in self._rec_responses)
+        # Constraints.
+        outputs.extend(con.evaluate(scope)
+                       for con in self._rec_constraints)
+        # Variables.
+        if self._rec_inputs or self._rec_outputs:
+            case_inputs, case_outputs = top.get_case_variables()
+            inputs.extend(val for name, val in case_inputs
+                                            if name in self._rec_inputs)
+            outputs.extend(val for name, val in case_outputs
+                                             if name in self._rec_outputs)
+            name = '%s.workflow.itername' % driver.get_pathname()
+            if name in self._rec_outputs:
+                outputs.append(self.itername)
 
-        # Responses
-        if hasattr(driver, 'eval_responses'):
-            for j, response in enumerate(driver.eval_responses()):
-                outputs.append(("Response_%d" % j, response))
-
-        # Constraints
-        if hasattr(driver, 'get_ineq_constraints'):
-            for name, con in driver.get_ineq_constraints().iteritems():
-                val = con.evaluate(scope)
-                outputs.append(('Constraint ( %s )' % name, val))
-
-        if hasattr(driver, 'get_eq_constraints'):
-            for name, con in driver.get_eq_constraints().iteritems():
-                val = con.evaluate(scope)
-                outputs.append(('Constraint ( %s )' % name, val))
-
-        # Other
-        case_inputs, case_outputs = top.get_case_variables()
-        inputs.extend(case_inputs)
-        outputs.extend(case_outputs)
-        outputs.append(('%s.workflow.itername' % driver.get_pathname(),
-                        self.itername))
-
-        case = Case(inputs, outputs, label=label,
-                    case_uuid=case_uuid, parent_uuid=self._parent._case_uuid)
-
-        for recorder in recorders:
-            recorder.record(case)
+        # Record.
+        for recorder in top.recorders:
+            recorder.record(id(self), inputs, outputs,
+                            case_uuid, self._parent._case_uuid)
 
     def _iterbase(self):
         """ Return base for 'iteration coordinates'. """

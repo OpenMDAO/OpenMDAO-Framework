@@ -49,7 +49,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             inputs = [('comp1.x', i), ('comp1.y', i*2),
                       ('comp1.a_dict', {'a': 'b'}),
                       ('comp1.a_list', ['a', 'b'])]
-            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s' % i))
+            cases.append(Case(inputs=inputs, outputs=outputs))
         Case.set_vartree_inputs(driver, cases)
         driver.add_responses(outputs)
 
@@ -82,7 +82,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
         expected = [
-            'Case: ',
+            'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',
@@ -97,7 +97,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
-            if line.startswith('Case: '):
+            if line.startswith('Case:'):
                 count += 1
                 if count != 9:
                     continue
@@ -114,12 +114,13 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_pickle_conversion(self):
         recorder = DBCaseRecorder()
+        inputs = ['comp1.x', 'comp1.y']
+        outputs = ['comp1.z', 'comp2.normal']
+        recorder.register(id(self), inputs, outputs)
         for i in range(10):
-            inputs = [('comp1.x', i), ('comp1.y', i*2.)]
-            outputs = [('comp1.z', i*1.5),
-                       ('comp2.normal', NormalDistribution(float(i), 0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs,
-                                 label='case%s' % i))
+            inputs = [i, i*2.]
+            outputs = [i*1.5, NormalDistribution(float(i), 0.5)]
+            recorder.record(id(self), inputs, outputs, '', '')
         iterator = recorder.get_iterator()
         for i, case in enumerate(iterator):
             self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
@@ -131,19 +132,20 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_query(self):
         recorder = DBCaseRecorder()
+        inputs = ['comp1.x', 'comp1.y']
+        outputs = ['comp1.z', 'comp2.normal']
+        recorder.register(id(self), inputs, outputs)
         for i in range(10):
-            inputs = [('comp1.x', i), ('comp1.y', i*2.)]
-            outputs = [('comp1.z', i*1.5),
-                       ('comp2.normal', NormalDistribution(float(i), 0.5))]
-            recorder.record(Case(inputs=inputs, outputs=outputs,
-                                 label='case%s' % i))
+            inputs = [i, i*2.]
+            outputs = [i*1.5, NormalDistribution(float(i), 0.5)]
+            recorder.record(id(self), inputs, outputs, '', '')
         iterator = recorder.get_iterator()
         iterator.selectors = ["value>=0", "value<3"]
 
         count = 0
         for i, case in enumerate(iterator):
             count += 1
-            for name, value in case.items():
+            for value in case.values():
                 self.assertTrue(value >= 0 and value < 3)
         self.assertEqual(count, 3)
 
@@ -174,32 +176,26 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
         # create some Cases where some are missing a variable
         outputs = ['comp1.z', 'comp2.z']
+        inputs = ['comp1.x', 'comp1.y', 'comp1.y2']
+        recorder.register(id(self), inputs, outputs)
         for i in range(10):
-            if i > 1:
-                msg = ''
-            else:
-                msg = 'an error occurred'
-            if i < 5:
-                inputs = [('comp1.x', i), ('comp1.y', i*2), ('comp1.y2', i*3)]
-            else:
-                inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            recorder.record(Case(inputs=inputs, outputs=outputs, msg=msg))
+            inputs = [i, i*2, i*3]
+            outputs = [i*i, float('NaN')]
+            recorder.record(id(self), inputs, outputs, '', '')
 
         varnames = ['comp1.x', 'comp1.y', 'comp1.y2']
         varinfo = case_db_to_dict(dfile, varnames)
 
         self.assertEqual(len(varinfo), 3)
-        # each var list should have 3 data values in it
-        # (5 with the required variables minus 2 with errors)
-        for name, lst in varinfo.items():
-            self.assertEqual(len(lst), 3)
+        # each var list should have 10 data values in it
+        for lst in varinfo.values():
+            self.assertEqual(len(lst), 10)
 
         # now use caseiter_to_dict to grab the same data
         varinfo = caseiter_to_dict(recorder.get_iterator(), varnames)
-        # each var list should have 3 data values in it
-        # (5 with the required variables minus 2 with errors)
-        for name, lst in varinfo.items():
-            self.assertEqual(len(lst), 3)
+        # each var list should have 10 data values in it
+        for lst in varinfo.values():
+            self.assertEqual(len(lst), 10)
 
         try:
             shutil.rmtree(tmpdir, onerror=onerror)
@@ -227,10 +223,10 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_string(self):
         recorder = DBCaseRecorder()
-        case = Case(inputs=[('str', 'Normal String'),
-                            ('unicode', u'Unicode String'),
-                            ('list', ['Hello', 'world'])])  # Check pickling.
-        recorder.record(case)
+        inputs = ['str', 'unicode', 'list']  # Check pickling.
+        recorder.register(id(self), inputs, [])
+        inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
+        recorder.record(id(self), inputs, [], '', '')
         for case in recorder.get_iterator():
             self.assertEqual(case['str'], 'Normal String')
             self.assertEqual(case['unicode'], u'Unicode String')
@@ -239,22 +235,23 @@ class DBCaseRecorderTestCase(unittest.TestCase):
     def test_close(self):
         # :memory: can be used after close.
         recorder = DBCaseRecorder()
-        case = Case(inputs=[('str', 'Normal String'),
-                            ('unicode', u'Unicode String'),
-                            ('list', ['Hello', 'world'])])  # Check pickling.
-        recorder.record(case)
+        inps = ['str', 'unicode', 'list']
+        recorder.register(id(self), inps, [])
+        inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
+        recorder.record(id(self), inputs, [], '', '')
         recorder.close()
-        recorder.record(case)
+        recorder.record(id(self), inputs, [], '', '')
 
         # File-based DB recorder can not be used after close.
         tmpdir = tempfile.mkdtemp()
         try:
             dfile = os.path.join(tmpdir, 'junk.db')
             recorder = DBCaseRecorder(dfile)
-            recorder.record(case)
+            recorder.register(id(self), inps, [])
+            recorder.record(id(self), inputs, [], '', '')
             recorder.close()
-            assert_raises(self, 'recorder.record(case)',
-                          globals(), locals(), RuntimeError,
+            code = "recorder.record(id(self), inputs, [], '', '')"
+            assert_raises(self, code, globals(), locals(), RuntimeError,
                           'Attempt to record on closed recorder')
         finally:
             try:
@@ -329,11 +326,14 @@ class NestedCaseTestCase(unittest.TestCase):
     def _get_level_cases(self, caseiter):
         levels = [[], [], []]
         for case in caseiter:
-            if case['comp1.label'].startswith('L1_'):
+            if 'comp1.label' in case and \
+               case['comp1.label'].startswith('L1_'):
                 levels[0].append(case)
-            elif case['comp1.label'].startswith('L2_'):
+            elif 'asm.comp1.label' in case and \
+               case['asm.comp1.label'].startswith('L2_'):
                 levels[1].append(case)
-            elif case['comp1.label'].startswith('L3_'):
+            elif 'asm.asm.comp1.label' in case and \
+               case['asm.asm.comp1.label'].startswith('L3_'):
                 levels[2].append(case)
             else:
                 raise RuntimeError("case label doesn't start with 'L?_'")

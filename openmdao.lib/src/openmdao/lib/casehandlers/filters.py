@@ -117,7 +117,6 @@ class ExprCaseFilter(object):
         Boolean expression referring to the case data or ``seqno``.
 
     Examples:
-        - Select failed cases ``'case.msg'``.
         - Select first 3 cases: ``'seqno < 3'``.
         - Select case with 'param' between 2 and 2.5: \
         ``'case["param"] > 2 and case["param"] < 2.5'``.

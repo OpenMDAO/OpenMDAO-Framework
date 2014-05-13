@@ -706,25 +706,52 @@ class CaseIteratorDriver(Driver):
 
     def _record_case(self, scope, case):
         """ Record case data from `scope` in ``case_outputs``. """
-        outputs = case.fetch_outputs(scope)
-        for path, value in outputs:
+        case_outputs = case.fetch_outputs(scope)
+        for path, value in case_outputs:
             path = make_legal_path(path)
             self.set('case_outputs.'+path, value,
                      index=(case.index,), force=True)
 
-        # Record regular case in recorders.
-        top = self.parent
+        if not self.workflow._rec_required:
+            return
+
+        # Record workflow data in recorders.
+        # Names of recorded data already registered by our workflow.
+        top = scope
         while top.parent:
             top = top.parent
-        if top.recorders:
-            inputs = case._inputs.items()
-            inputs.extend(case.extra_inputs)
-            outputs.extend(case.extra_outputs)
-            from openmdao.main.case import Case
-            recorded = Case(inputs, outputs, retries=case.retries,
-                            case_uuid=case.uuid, parent_uuid=case.parent_uuid)
-            for recorder in top.recorders:
-                recorder.record(recorded)
+
+        inputs = []
+        outputs = []
+
+        # Parameters.
+        for name, param in self.get_parameters().items():
+            if param in self.workflow._rec_parameters:
+                if isinstance(name, tuple):  # Use first target.
+                    name = name[0]
+                inputs.append(case._inputs[name])
+
+        # No Objectives.
+
+        # Responses.
+        outputs.extend(value for path, value in case_outputs)
+
+        # No Constraints.
+
+        # Variables.
+        if self.workflow._rec_inputs or self.workflow._rec_outputs:
+            inputs.extend(val for name, val in case.extra_inputs
+                               if name in self.workflow._rec_inputs)
+            outputs.extend(val for name, val in case.extra_outputs
+                                if name in self.workflow._rec_outputs)
+            name = '%s.workflow.itername' % self.get_pathname()
+            if name in self.workflow._rec_outputs:
+                outputs.append(self.workflow.itername)
+
+        # Record.
+        for recorder in top.recorders:
+            recorder.record(id(self.workflow), inputs, outputs,
+                            case.uuid, self._case_uuid)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """

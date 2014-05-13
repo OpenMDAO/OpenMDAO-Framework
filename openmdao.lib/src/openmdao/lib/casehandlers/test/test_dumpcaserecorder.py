@@ -27,7 +27,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         cases = []
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
+            cases.append(Case(inputs=inputs, outputs=outputs))
 
         Case.set_vartree_inputs(driver, cases)
         driver.add_responses(outputs)
@@ -48,7 +48,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
 
         expected = [
-            'Case: ',
+            'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',
@@ -64,7 +64,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
             lines = sout.getvalue().split('\n')
             start = 0
             for i in range(9):
-                index = start + lines[start:].index('Case: ')
+                index = start + lines[start:].index('Case:')
                 start = index + 1
             for i in range(len(expected)):
                 if expected[i].startswith('   uuid:'):
@@ -86,7 +86,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.run()
 
         expected = [
-            'Case: ',
+            'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383239074.309192',
             '   inputs:',

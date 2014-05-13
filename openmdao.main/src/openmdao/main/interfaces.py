@@ -439,8 +439,11 @@ class ICaseRecorder(Interface):
     def startup():
         """Perform any operations required to start-up this recorder."""
 
-    def record(case):
-        """Record the given Case."""
+    def register(src, inputs, outputs):
+        """Register names for input and output data coming from `src`."""
+
+    def record(src, inputs, outputs, case_uuid, parent_uuid):
+        """Record inputs and outputs data from `src`."""
 
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""

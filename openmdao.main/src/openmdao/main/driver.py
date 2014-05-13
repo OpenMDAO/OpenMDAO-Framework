@@ -5,7 +5,7 @@ __all__ = ["Driver"]
 
 from zope.interface import implementedBy
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
@@ -323,6 +323,11 @@ class Driver(Component):
         self.workflow.reset()
         super(Driver, self).run(force, ffd_order, case_uuid)
         self._invalidated = False
+
+    @rbac(('owner', 'user'))
+    def configure_recording(self, includes, excludes):
+        """ Called at start of top-level run to configure case recording. """
+        self.workflow.configure_recording(includes, excludes)
 
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):
