@@ -403,9 +403,6 @@ class Component(Container):
         if self._call_cpath_updated:
             self.cpath_updated()
 
-        if self.parent:
-            self.parent.update_inputs(self.name)
-
         if self._call_check_config:
             self.check_configuration()
 

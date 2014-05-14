@@ -5,6 +5,7 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver
+from openmdao.main.depgraph import is_var_node
 
 _cluster_count = 0
 
@@ -78,9 +79,14 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
 
 def prune(G):
     """Remove unwanted stuff from the graph. e.g., unconnected nodes."""
-    to_remove = []
-    # for node, data in G.nodes_iter(data=True):
-    #     # do stuff
+    conns = G.list_connections()
+    allvars = set([u for u,v in conns])
+    allvars.update([v for u,v in conns])
+    allvars.update([G.base_var(v) for v in allvars])
+    print "conns: %s" % conns
+    to_remove = [v for v in G.nodes_iter() if is_var_node(G,v) and v not in allvars]
+    print "removing: %s" % to_remove
+    G.remove_nodes_from(to_remove)
     return G
 
 def plot_graphs(obj, recurse=False, fmt='pdf', pseudos=False, workflow=False):

@@ -42,12 +42,12 @@ __all__ = ['SequentialWorkflow']
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
         self._explicit_names = []  # names the user adds
         self._names = None   # names the user adds plus names required
                              # for params, objectives, and constraints
-        super(SequentialWorkflow, self).__init__(parent, scope, members)
+        super(SequentialWorkflow, self).__init__(parent, members)
 
         # Bookkeeping
         self._edges = None

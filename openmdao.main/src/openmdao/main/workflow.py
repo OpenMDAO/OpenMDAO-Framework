@@ -14,29 +14,26 @@ class Workflow(object):
     in some order.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent, members=None):
         """Create a Workflow.
 
-        parent: Driver (optional)
+        parent: Driver
             The Driver that contains this Workflow.  This option is normally
             passed instead of scope because scope usually isn't known at
             initialization time.  If scope is not provided, it will be
             set to parent.parent, which should be the Assembly that contains
             the parent Driver.
 
-        scope: Component (optional)
-            The scope can be explicitly specified here, but this is not
-            typically known at initialization time.
-
         members: list of str (optional)
             A list of names of Components to add to this workflow.
         """
         self._stop = False
         self._parent = parent
-        self._scope = scope
+        self._scope = None
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -97,7 +94,12 @@ class Workflow(object):
         else:
             record_case = False
 
+        scope = self.scope
+
         for comp in self:
+            # before the workflow runs each component, update that
+            # component's inputs based on the graph
+            scope.update_inputs(comp.name)
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order)
             else:

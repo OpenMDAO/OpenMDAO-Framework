@@ -31,10 +31,10 @@ class CyclicWorkflow(SequentialWorkflow):
     loops in the graph.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
 
-        super(CyclicWorkflow, self).__init__(parent, scope, members)
+        super(CyclicWorkflow, self).__init__(parent, members)
         self.config_changed()
 
     def config_changed(self):
