@@ -1118,6 +1118,11 @@ class SequentialWorkflow(Workflow):
         #print len(self.res), len(self._edges), len(self._comp_edge_list())
 
         if mode == 'adjoint':
+            if self._parent.gradient_options.directional_fd is True:
+                msg = "Directional derivatives can only be used with forward "
+                msg += "mode."
+                self.scope.raise_exception(msg, RuntimeError)
+
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         elif mode in ['forward', 'fd']:
             J = calc_gradient(self, inputs, outputs, n_edge, shape)

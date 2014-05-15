@@ -50,6 +50,20 @@ class TestDirectionalFD(unittest.TestCase):
 
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
+        top.driver.gradient_options.directional_fd = True
+        top.driver.workflow.config_changed()
+        try:
+            J = top.driver.workflow.calc_gradient(inputs=['comp.x'],
+                                                  outputs=['comp.y'],
+                                                  mode = 'adjoint')
+        except RuntimeError, err:
+            msg = ": Directional derivatives can only be used with forward "
+            msg += "mode."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('RuntimeError expected')
+
+
     def test_baseline_case(self):
 
         top = set_as_top(Assembly())
