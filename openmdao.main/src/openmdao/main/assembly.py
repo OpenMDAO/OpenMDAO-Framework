@@ -738,6 +738,7 @@ class Assembly(Component):
             for recorder in self.recorders:
                 recorder.startup()
 
+        self.update_inputs('driver')
         self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
         self._depgraph.update_boundary_outputs(self)
@@ -846,13 +847,14 @@ class Assembly(Component):
         return conns
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname):
+    def update_inputs(self, compname, graph=None):
         """Transfer input data to input expressions on the specified component.
         The inputs iterator is assumed to contain strings that reference
         component variables relative to the component, e.g., 'abc[3][1]' rather
         than 'comp1.abc[3][1]'.
         """
-        graph = self._depgraph
+        if graph is None:
+            graph = self._depgraph
         try:
             for vname in graph.list_inputs(compname, connected=True):
                 graph.update_destvar(self, vname)

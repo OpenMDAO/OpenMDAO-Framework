@@ -674,18 +674,21 @@ Case:
         top.run()
 
         expected = [
-            'driverA.workflow.itername: 1-driverA.1',
-            'driverA.workflow.itername: 1-driverA.2',
-            'driverA.workflow.itername: 1-driverA.3',
-            'driverA.workflow.itername: 1-driverA.4',
-            'driverA.workflow.itername: 1-driverA.5',
-            'subassy.driver.workflow.itername: 1-driverB.1-subassy.1',
-            'driverB.workflow.itername: 1-driverB.1',
-            'driverB.workflow.itername: 1-driverB.2',
-            'driverB.workflow.itername: 1-driverB.3',
-            'driverB.workflow.itername: 1-driverB.4',
-            'driver.workflow.itername: 1'
-        ]
+         'driverA.workflow.itername: 1-driverA.1',
+         'driverA.workflow.itername: 1-driverA.2',
+         'driverA.workflow.itername: 1-driverA.3',
+         'driverA.workflow.itername: 1-driverA.4',
+         'driverA.workflow.itername: 1-driverA.5',
+         'subassy.driver.workflow.itername: 1-driverB.1-subassy.1',
+         'driverB.workflow.itername: 1-driverB.1',
+         'subassy.driver.workflow.itername: 1-driverB.2-subassy.1',
+         'driverB.workflow.itername: 1-driverB.2',
+         'subassy.driver.workflow.itername: 1-driverB.3-subassy.1',
+         'driverB.workflow.itername: 1-driverB.3',
+         'subassy.driver.workflow.itername: 1-driverB.4-subassy.1',
+         'driverB.workflow.itername: 1-driverB.4',
+         'driver.workflow.itername: 1'
+         ]
         lines = [l.strip() for l in sout.getvalue().split('\n') if 'itername' in l]
         for i, line in enumerate(lines):
             self.assertEqual(line, expected[i])

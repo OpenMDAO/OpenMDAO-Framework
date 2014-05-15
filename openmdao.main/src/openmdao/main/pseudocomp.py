@@ -260,11 +260,7 @@ class PseudoComponent(object):
             scope.disconnect(src, dest)
 
     def run(self, ffd_order=0):
-        self.update_inputs()
         setattr(self, 'out0', self._srcexpr.evaluate())
-
-    def update_inputs(self, inputs=None):
-        self._parent.update_inputs(self.name)
 
     def get(self, name, index=None):
         if index is not None:

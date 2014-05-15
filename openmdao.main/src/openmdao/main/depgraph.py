@@ -799,13 +799,16 @@ class DependencyGraph(nx.DiGraph):
         """Return a list of names of input nodes to a component.
         If connected is True, return only connected inputs.
         """
-        if connected:
-            return [n for n in self.pred[cname] if self.in_degree(n)]
-        elif connected is False:
-            return [n for n in self.pred[cname]
-                                            if self.in_degree(n)==0]
+        if cname in self:
+            if connected:
+                return [n for n in self.pred[cname] if self.in_degree(n)]
+            elif connected is False:
+                return [n for n in self.pred[cname]
+                                                if self.in_degree(n)==0]
+            else:
+                return self.pred[cname].keys()
         else:
-            return self.pred[cname].keys()
+            return []
 
     def list_input_outputs(self, cname):
         """Return a list of names of input or state nodes that are used

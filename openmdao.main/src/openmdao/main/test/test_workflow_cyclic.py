@@ -192,18 +192,16 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
         self.model.run()
 
-        indep = self.model.driver.workflow.get_independents()
-        self.assertEqual(indep[0], 1.0)
-        self.assertEqual(indep[1], 2.0)
-        dep = self.model.driver.workflow.get_dependents()
-        self.assertEqual(dep[0], 0.0)
-        self.assertEqual(dep[1], 0.0)
-
         dv = array([3.0, 5.0])
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 3.0)
         self.assertEqual(indep[1], 5.0)
+
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -2.0)
+        self.assertEqual(dep[1], -3.0)
+
 
     def test_row_vector(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -218,18 +216,15 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
         self.model.run()
 
-        indep = self.model.driver.workflow.get_independents()
-        self.assertEqual(indep[0], 1.0)
-        self.assertEqual(indep[1], 2.0)
-        dep = self.model.driver.workflow.get_dependents()
-        self.assertEqual(dep[0], 0.0)
-        self.assertEqual(dep[1], 0.0)
-
         dv = array([3.0, 5.0])
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 3.0)
         self.assertEqual(indep[1], 5.0)
+        
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -2.0)
+        self.assertEqual(dep[1], -3.0)
 
     def test_array_1D(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -244,18 +239,16 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
         self.model.run()
 
-        indep = self.model.driver.workflow.get_independents()
-        self.assertEqual(indep[0], 1.0)
-        self.assertEqual(indep[1], 2.0)
-        dep = self.model.driver.workflow.get_dependents()
-        self.assertEqual(dep[0], 0.0)
-        self.assertEqual(dep[1], 0.0)
-
         dv = array([3.0, 5.0])
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 3.0)
         self.assertEqual(indep[1], 5.0)
+
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -2.0)
+        self.assertEqual(dep[1], -3.0)
+
 
     def test_full_matrix(self):
         self.model.c1.add('y_a', Array(iotype='out'))
@@ -270,17 +263,6 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
         self.model.run()
 
-        indep = self.model.driver.workflow.get_independents()
-        self.assertEqual(indep[0], 1.0)
-        self.assertEqual(indep[1], 2.0)
-        self.assertEqual(indep[2], 3.0)
-        self.assertEqual(indep[3], 4.0)
-        dep = self.model.driver.workflow.get_dependents()
-        self.assertEqual(dep[0], 0.0)
-        self.assertEqual(dep[1], 0.0)
-        self.assertEqual(dep[2], 0.0)
-        self.assertEqual(dep[3], 0.0)
-
         dv = array([3.0, 5.0, -8.0, -13.0])
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
@@ -288,6 +270,13 @@ class TestCase_Residuals(unittest.TestCase):
         self.assertEqual(indep[1], 5.0)
         self.assertEqual(indep[2], -8.0)
         self.assertEqual(indep[3], -13.0)
+        
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -2.0)
+        self.assertEqual(dep[1], -3.0)
+        self.assertEqual(dep[2], 11.0)
+        self.assertEqual(dep[3], 17.0)
+
 
     def test_matrix_element(self):
         # Array element to scalar.
@@ -302,15 +291,13 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.initialize_residual()
         self.model.run()
 
-        indep = self.model.driver.workflow.get_independents()
-        self.assertEqual(indep[0], 1.0)
-        dep = self.model.driver.workflow.get_dependents()
-        self.assertEqual(dep[0], 0.0)
-
         dv = array([35.0])
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 35.0)
+        
+        dep = self.model.driver.workflow.get_dependents()
+        self.assertEqual(dep[0], -34.0)
 
     def test_vtree(self):
         self.model.c1.add('vt_out', VarTree(Tree1(), iotype='out'))

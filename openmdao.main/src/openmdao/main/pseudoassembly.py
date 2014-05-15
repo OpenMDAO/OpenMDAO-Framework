@@ -40,6 +40,7 @@ class PseudoAssembly(object):
                                                   boundary_params)
 
         self.comps = wflow.scope._depgraph.order_components(set(comps))
+        self._depgraph = wflow.scope._depgraph.full_subgraph(self.comps)
 
         self.name = name
         self.boundary_params = list(boundary_params)
@@ -142,16 +143,20 @@ class PseudoAssembly(object):
 
     def run(self, ffd_order=0):
         """Run all components contained in this assy. Used by finite
-        difference."""
+        difference.
+        """
 
         # Override fake finite difference if requested. This enables a pure
         # finite-differences for check_derivatives.
         if self.ffd_order == 0:
             ffd_order = 0
 
+        scope = self.wflow.scope
+
         for name in self.itercomps:
-            comp = self.wflow.scope.get(name)
+            comp = scope.get(name)
             comp.set_itername(self.itername+'-fd')
+            scope.update_inputs(name, graph=self._depgraph)
             comp.run(ffd_order=ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,

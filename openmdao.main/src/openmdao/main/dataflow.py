@@ -17,9 +17,9 @@ class Dataflow(SequentialWorkflow):
     A Dataflow consists of a collection of Components which are executed in
     data flow order.
     """
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(parent, scope, members)
+        super(Dataflow, self).__init__(parent, members)
         self.config_changed()
 
     def __iter__(self):

@@ -31,10 +31,10 @@ class CyclicWorkflow(SequentialWorkflow):
     loops in the graph.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
 
-        super(CyclicWorkflow, self).__init__(parent, scope, members)
+        super(CyclicWorkflow, self).__init__(parent, members)
         self.config_changed()
 
     def config_changed(self):
@@ -92,6 +92,10 @@ class CyclicWorkflow(SequentialWorkflow):
                                                                             strong[0]))
 
                     self._severed_edges.update(edge_set)
+                    
+            if self._severed_edges:
+                self._var_graph = self.scope._depgraph.copy()
+                self._var_graph.remove_edges_from(self._severed_edges)
 
         return self._topsort
 
