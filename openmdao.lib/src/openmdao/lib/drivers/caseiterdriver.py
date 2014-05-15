@@ -305,10 +305,11 @@ class CaseIteratorDriver(Driver):
             # Replicate and mutate model to run our workflow once.
             # Originally this was done in-place, but that 'invalidated'
             # various workflow quantities.
-            replicant = deepcopy(self.parent)
+            replicant = self.parent.copy()
             workflow = replicant.get(self.name+'.workflow')
             driver = replicant.add('driver', Driver())
             workflow._parent = driver
+            workflow._scope = None
             replicant.driver.workflow = workflow
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)

@@ -800,6 +800,8 @@ class Connections(unittest.TestCase):
         self.assertEqual(a1.o1, [v**2 for v in range(3)])
 
 
+# Test bug reported by Frederik Zahle.
+
 class Builder(Component):
 
     x0 = Float(iotype='in')
