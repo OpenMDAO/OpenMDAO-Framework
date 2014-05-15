@@ -353,3 +353,6 @@ class PseudoComponent(object):
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
+
+    def _input_updated(self, name, fullpath=None):
+        pass

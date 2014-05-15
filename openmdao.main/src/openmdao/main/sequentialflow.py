@@ -535,7 +535,7 @@ class SequentialWorkflow(Workflow):
             # mode requires post multiplication of the result by the M after
             # you have the final gradient.
             #if hasattr(comp, 'applyMinv'):
-                #inputs = applyMinv(comp, inputs)
+                #inputs = applyMinv(comp, inputs, self._shape_cache)
 
             applyJ(comp, inputs, outputs, comp_residuals,
                    self._shape_cache.get(compname), self._J_cache.get(compname))
@@ -784,6 +784,10 @@ class SequentialWorkflow(Workflow):
         if fd is True:
             nondiff_groups = [comps]
 
+        # User specification of the blocks.
+        elif len(self._parent.gradient_options.fd_blocks) > 0:
+            nondiff_groups = self._parent.gradient_options.fd_blocks
+
         # Find the non-differentiable components
         else:
 
@@ -799,10 +803,13 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(name)
+                    #print "No derivatives defined:", name
                 elif comp.force_fd is True:
                     nondiff.add(name)
+                    #print "Force_fd set to True:", name
                 elif not dgraph.node[name].get('differentiable', True):
                     nondiff.add(name)
+                    #print "Graphs says nondifferentiable:", name
 
             # If a connection is non-differentiable, so are its src and
             # target components.
@@ -830,7 +837,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
-                    #print "non-differentiable connection: ", src, target
+                    #print "Non-differentiable connection: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:
@@ -952,7 +959,8 @@ class SequentialWorkflow(Workflow):
         self._stop = False
 
         dgraph = self.derivative_graph(required_inputs, required_outputs)
-        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()))
+        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()),
+                                              self.get_implicit_info())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -1107,7 +1115,14 @@ class SequentialWorkflow(Workflow):
                         msg += " only has forward derivatives defined."
                         self.scope.raise_exception(msg, RuntimeError)
 
+        #print len(self.res), len(self._edges), len(self._comp_edge_list())
+
         if mode == 'adjoint':
+            if self._parent.gradient_options.directional_fd is True:
+                msg = "Directional derivatives can only be used with forward "
+                msg += "mode."
+                self.scope.raise_exception(msg, RuntimeError)
+
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         elif mode in ['forward', 'fd']:
             J = calc_gradient(self, inputs, outputs, n_edge, shape)

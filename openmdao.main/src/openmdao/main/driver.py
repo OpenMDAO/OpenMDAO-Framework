@@ -9,7 +9,8 @@ from zope.interface import implementedBy
 
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, VarTree
+from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
+                                        List, VarTree
 from openmdao.main.depgraph import find_all_connecting
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
@@ -47,6 +48,16 @@ class GradientOptions(VariableTree):
                                 "of this driver's entire workflow in a"
                                 "single block.",
                            framework_var=True)
+
+    directional_fd = Bool(False, desc="Set to True to do a directional "
+                                       "finite difference for each GMRES "
+                                       "iteration instead of pre-computing "
+                                       "the full fd space.",
+                                       framework_var=True)
+
+    fd_blocks = List([], desc="List of lists that contain comps which "
+                              "should be finite-differenced together.",
+                              framework_var=True)
 
     # KTM - story up for this one.
     #fd_blocks = List([], desc='User can specify nondifferentiable blocks '

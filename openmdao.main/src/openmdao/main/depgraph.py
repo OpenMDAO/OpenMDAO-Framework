@@ -1281,7 +1281,7 @@ def find_related_pseudos(depgraph, nodes):
 
     pseudos = set()
     compgraph = depgraph.component_graph()
-    
+
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
             if is_non_driver_pseudo_node(compgraph, upcomp):
@@ -1520,8 +1520,25 @@ def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
     return pa
 
 def _remove_ignored_derivs(graph):
-    to_remove = [n for n,data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
+    to_remove = [n for n, data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
     graph.remove_nodes_from(to_remove)
+
+def _prune_vartree_leaves(graph):
+    input_subvars = [n for n in graph.nodes_iter() \
+                     if is_subvar_node(graph, n) and is_input_node(graph, n)]
+    to_remove = []
+    for subvar in input_subvars:
+
+        # Only prune vartree leaves, not arrays
+        if len(subvar.split('.')) < 3:
+            continue
+
+        preds = graph.predecessors(subvar)
+        if len(preds) == 1 and preds[0] == graph.node[subvar]['basevar']:
+            to_remove.append(subvar)
+
+    graph.remove_nodes_from(to_remove)
+
 
 def _is_false(item):
     return not item
@@ -1685,7 +1702,12 @@ def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=T
 
     _explode_vartrees(graph, scope)
 
+    # Find and rmemove input-input vartree connections and prune.
+    _prune_vartree_leaves(graph)
+
+    # All inner edges that lie between our inputs and outputs.
     edges = _get_inner_edges(graph, inames, onames)
+
     edict = graph.edge
     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
     relevant.update([u for u,v in edges])
