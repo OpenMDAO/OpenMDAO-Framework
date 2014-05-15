@@ -803,13 +803,13 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(name)
-                    print "No derivatives defined:", name
+                    #print "No derivatives defined:", name
                 elif comp.force_fd is True:
                     nondiff.add(name)
-                    print "Force_fd set to True:", name
+                    #print "Force_fd set to True:", name
                 elif not dgraph.node[name].get('differentiable', True):
                     nondiff.add(name)
-                    print "Graphs says nondifferentiable:", name
+                    #print "Graphs says nondifferentiable:", name
 
             # If a connection is non-differentiable, so are its src and
             # target components.
@@ -837,7 +837,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
-                    print "Non-differentiable connection: ", src, target
+                    #print "Non-differentiable connection: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:
