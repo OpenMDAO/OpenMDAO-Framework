@@ -1,13 +1,15 @@
 
 import unittest
 from inspect import getmembers, ismethod
+from types import NoneType
 
 from traits.api import HasTraits, Float
 from zope.interface import Interface, implements, implementedBy
 
 from openmdao.main.interfaces import obj_has_interface
 
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate, \
+     stub_if_missing_deps, method_accepts, function_accepts
 
 
 class GoodDelegate(object):
@@ -253,6 +255,66 @@ class StubIfMissingTestCase(unittest.TestCase):
         else:
             self.fail("expected RuntimeError")
 
+
+class AcceptsTestCase(unittest.TestCase):
+
+    def test_method_accepts(self):
+
+        class Foo(object):
+            @method_accepts(TypeError,
+                            compnames=(str,list,tuple),
+                            index=(int,NoneType),
+                            check=bool)
+            def add(self, compnames, index=None, check=False):
+                print 'ok'
+
+        f = Foo()
+        try:
+            f.add( 'comp1', 'comp2' )
+        except TypeError as err:
+            self.assertEqual(str(err), "method argument 'index' with "
+                                       "a value of 'comp2' does "
+                                       "not match the allowed types "
+                                       "(<type 'int'>, <type 'NoneType'>)")
+        else:
+            self.fail("expected TypeError")
+
+        try:
+            f.add( 'comp1',  check = 1.0 )
+        except TypeError as err:
+            self.assertEqual(str(err), "method argument 'check' with a "
+                             "value of 1.0 does not match one "
+                             "of the allowed types <type 'bool'>" )
+        else:
+            self.fail("expected TypeError")
+
+    def test_function_accepts(self):
+
+        @function_accepts(TypeError,
+                        compnames=(str,list,tuple),
+                        index=(int,NoneType),
+                        check=bool)
+        def add(compnames, index=None, check=False):
+                print 'ok'
+
+        try:
+            add( 'comp1', 'comp2' )
+        except TypeError as err:
+            self.assertEqual(str(err), "function argument 'index' with "
+                                       "a value of 'comp2' does "
+                                       "not match the allowed types "
+                                       "(<type 'int'>, <type 'NoneType'>)")
+        else:
+            self.fail("expected TypeError")
+
+        try:
+            add( 'comp1',  check = 1.0 )
+        except TypeError as err:
+            self.assertEqual(str(err), "function argument 'check' with a "
+                             "value of 1.0 does not match one "
+                             "of the allowed types <type 'bool'>" )
+        else:
+            self.fail("expected TypeError")
 
 if __name__ == '__main__':
     unittest.main()
