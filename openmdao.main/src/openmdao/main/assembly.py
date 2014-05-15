@@ -334,12 +334,11 @@ class Assembly(Component):
         or pseudo component.
         """
         obj = getattr(self, name)
-        if has_interface(obj, IComponent) or \
-           isinstance(obj, PseudoComponent):
+        if has_interface(obj, IComponent) or isinstance(obj, PseudoComponent):
             for cname in self.list_containers():
-                obj = getattr(self, cname)
-                if isinstance(obj, Driver):
-                    obj.remove_references(name)
+                cobj = getattr(self, cname)
+                if isinstance(cobj, Driver) and cobj is not obj:
+                    cobj.remove_references(name)
             self.disconnect(name)
         elif name in self.list_inputs() or name in self.list_outputs():
             self.disconnect(name)
@@ -360,8 +359,7 @@ class Assembly(Component):
             newname = parts[-1]
 
         if newname in self.__dict__:
-            self.raise_exception("'%s' already exists" %
-                                 newname, KeyError)
+            self.raise_exception("'%s' already exists" % newname, KeyError)
         if len(parts) < 2:
             self.raise_exception('destination of passthrough must be a dotted'
                                  ' path', NameError)

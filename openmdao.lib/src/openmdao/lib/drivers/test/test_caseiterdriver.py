@@ -16,6 +16,7 @@ import random
 import numpy.random as numpy_random
 
 from math import isnan
+from numpy import asarray, linspace, mean
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.eggchecker import check_save_load
@@ -23,13 +24,14 @@ from openmdao.main.eggchecker import check_save_load
 from openmdao.main.datatypes.api import Float, Bool, Array, Int, Str, \
                                         List, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.drivers.api import CaseIteratorDriver, SimpleCaseIterDriver
+from openmdao.lib.drivers.api import CaseIteratorDriver, SimpleCaseIterDriver, \
+                                     SLSQPdriver
 
 from openmdao.main.case import Case, CaseTreeNode
 
 from openmdao.test.cluster import init_cluster
 
-from openmdao.util.testutil import assert_raises
+from openmdao.util.testutil import assert_raises, assert_rel_error
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -796,6 +798,106 @@ class Connections(unittest.TestCase):
         print a1.driver.case_outputs.c.o1
         print a1.o1
         self.assertEqual(a1.o1, [v**2 for v in range(3)])
+
+
+class Builder(Component):
+
+    x0 = Float(iotype='in')
+    y0 = Float(iotype='in')
+    x = List(iotype='out')
+    y = List(iotype='out')
+
+    def execute(self):
+        self.x = list(linspace(self.x0 - 2, self.x0 + 2, 5))
+        self.y = list(linspace(self.y0 - 2, self.y0 + 2, 5))
+
+
+class DummyComp(Component):
+
+    x_in = Float(float('NaN'), iotype='in')
+    x_out = Float(float('NaN'), iotype='out')
+    y_in = Float(float('NaN'), iotype='in')
+    y_out = Float(float('NaN'), iotype='out')
+
+    def execute(self):
+        self.x_out = self.x_in
+        self.y_out = self.y_in
+
+
+class Paraboloidish(Component):
+
+    x = List(iotype='in')
+    y = List(iotype='in')
+    f_xy = Float(iotype='out')
+
+    def execute(self):
+        x_mean = mean(asarray(self.x))
+        y_mean = mean(asarray(self.y))
+        self.f_xy = (x_mean-3.0)**2 + x_mean*y_mean + (y_mean+4.0)**2 - 3.0
+        print self.name, x_mean, y_mean, self.f_xy
+
+
+class CIDAssembly(Assembly):
+
+    def configure(self):
+        self.add('p', DummyComp())
+
+        cid = self.add('cid', CaseIteratorDriver())
+        self.driver.workflow.add('cid')
+        cid.workflow.add('p')
+
+        cid.sequential = False
+        cid.reload_model = False
+
+        cid.add_parameter('p.x_in')
+        cid.add_parameter('p.y_in')
+        cid.add_response('p.x_out')
+        cid.add_response('p.y_out')
+
+        self.add('parab', Paraboloidish())
+        self.driver.workflow.add('parab')
+
+        self.create_passthrough('cid.case_inputs.p.x_in')
+        self.create_passthrough('cid.case_inputs.p.y_in')
+
+        self.connect('cid.case_outputs.p.x_out', 'parab.x')
+        self.connect('cid.case_outputs.p.y_out', 'parab.y')
+
+        self.create_passthrough('parab.f_xy')
+
+
+class OptAssembly(Assembly):
+
+    def configure(self):
+        self.add('driver', SLSQPdriver())
+        self.driver.gradient_options.force_fd = True
+        self.driver.iout = 1
+        self.driver.iprint = 3
+        self.driver.maxiter = 100
+
+        self.add('builder', Builder())
+        self.driver.workflow.add('builder')
+
+        self.add('cid', CIDAssembly())
+        self.driver.workflow.add('cid')
+
+        self.connect('builder.x', 'cid.x_in')
+        self.connect('builder.y', 'cid.y_in')
+
+        self.driver.add_parameter('builder.x0', low=-50, high=50)
+        self.driver.add_parameter('builder.y0', low=-50, high=50)
+        self.driver.add_constraint('builder.x0-builder.y0 >= 15.0')
+        self.driver.add_objective('cid.f_xy')
+
+
+class Optimization(unittest.TestCase):
+
+    def test_optimization(self):
+        # Test that CID within an optimization works.
+        top = OptAssembly()
+        top.run()
+        print 'objective', top.cid.f_xy
+        assert_rel_error(self, top.cid.f_xy, -27.0833328304, 0.001)
 
 
 if __name__ == '__main__':
