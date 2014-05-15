@@ -474,7 +474,8 @@ class ExprEvaluator(object):
 
     @scope.setter
     def scope(self, value):
-        if value is not self.scope:
+        scp = None if self._scope is None else self._scope()
+        if scp is None or value is not scp:
             self._code = self._assignment_code = None
             self._examiner = self.cached_grad_eq = None
             if value is not None:

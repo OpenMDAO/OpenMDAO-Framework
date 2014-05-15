@@ -5,8 +5,7 @@ derivatives solve.
 
 import unittest
 import numpy as np
-from mock import patch, Mock
-import scipy.sparse.linalg
+from mock import Mock
 
 import openmdao.main.implicitcomp
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver

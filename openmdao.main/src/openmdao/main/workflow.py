@@ -33,6 +33,7 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+        self._var_graph = None
 
         if members:
             for member in members:
@@ -99,7 +100,7 @@ class Workflow(object):
         for comp in self:
             # before the workflow runs each component, update that
             # component's inputs based on the graph
-            scope.update_inputs(comp.name)
+            scope.update_inputs(comp.name, graph=self._var_graph)
             if isinstance(comp, PseudoComponent):
                 comp.run(ffd_order=ffd_order)
             else:
@@ -198,7 +199,7 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        pass
+        self._var_graph = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""

@@ -92,6 +92,10 @@ class CyclicWorkflow(SequentialWorkflow):
                                                                             strong[0]))
 
                     self._severed_edges.update(edge_set)
+                    
+            if self._severed_edges:
+                self._var_graph = self.scope._depgraph.copy()
+                self._var_graph.remove_edges_from(self._severed_edges)
 
         return self._topsort
 

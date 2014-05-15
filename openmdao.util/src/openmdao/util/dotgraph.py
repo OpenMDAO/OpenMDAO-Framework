@@ -5,7 +5,7 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver
-from openmdao.main.depgraph import is_var_node
+from openmdao.main.depgraph import DependencyGraph, is_var_node
 
 _cluster_count = 0
 
@@ -18,7 +18,7 @@ def write_driver_cluster(f, G, driver, indent):
     indent += 3
     tab = ' '*indent
 
-    f.write('%s%s [shape=box];\n' % (tab, driver.name))
+    f.write('%s%s;\n' % (tab, driver.name))
     if len(comps) > 0:
         dcount = 1
         for comp in comps:
@@ -29,11 +29,38 @@ def write_driver_cluster(f, G, driver, indent):
 
         subG = G.subgraph([c.name for c in comps])
 
+        write_nodes(f, subG, indent)
+
         for u,v in subG.edges():
             f.write('%s%s -> %s;\n' % (tab, u, v))
     
     f.write('%s}\n' % tab)
     
+def write_nodes(f, G, indent):
+    tab = ' '*indent
+    for node, data in G.nodes_iter(data=True):
+        if 'driver' in data:
+            data['shape'] = 'invhouse'
+        elif 'pseudo' in data:
+            data['shape'] = 'diamond'
+            data['label'] = node.replace('_pseudo_', '_p_')
+        elif 'comp' in data:
+            data['shape'] = 'box'
+        else: # var node
+            data['shape'] = 'ellipse'
+            parts = node.split('.', 1)
+            if len(parts) > 1 and not is_var_node(G, parts[0]):
+                data['label'] = parts[1]
+            base = G.base_var(node)
+            if G.node[base]['iotype'] == 'state':
+                data['shape'] = 'doubleoctagon'
+        f.write("%s%s [" % (tab, node))
+        for i,(key,val) in enumerate(data.items()):
+            if i > 0:
+                f.write(", ")
+            f.write("%s=%s" % (key,val))
+        f.write("];\n")
+        
 def write_dot(G, dotfile, scope=None):
 
     if scope is None:
@@ -45,6 +72,8 @@ def write_dot(G, dotfile, scope=None):
         driver = getattr(scope, 'driver')
         write_driver_cluster(f, G, driver, 3)
 
+        write_nodes(f, G, 3)
+
         # now include any cross workflow connections
         for u,v in G.edges_iter():
             f.write("   %s -> %s;\n" % (u, v))
@@ -53,6 +82,11 @@ def write_dot(G, dotfile, scope=None):
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=None):
     """Create a plot of the given graph"""
+
+    G = G.copy()
+
+    if isinstance(G, DependencyGraph):
+        prune(G)
 
     if not pseudos:
         nodes = [n for n in G.nodes() if '_pseudo_' in n]
@@ -68,14 +102,27 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
     else: # just show data connections
         for node, data in G.nodes_iter(data=True):
             if 'driver' in data:
+                data['shape'] = 'invhouse'
+            elif 'pseudo' in data:
+                data['shape'] = 'diamond'
+                data['label'] = node.replace('_pseudo_', '_p_')
+            elif 'comp' in data:
                 data['shape'] = 'box'
+            else: # var node
+                data['shape'] = 'ellipse'
+                parts = node.split('.', 1)
+                if len(parts) > 1 and not is_var_node(G, parts[0]):
+                    data['label'] = parts[1]
+                base = G.base_var(node)
+                if G.node[base]['iotype'] == 'state':
+                    data['shape'] = 'doubleoctagon'
         nx.write_dot(G, dotfile)
 
     os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
 
     webbrowser.get().open(outfile)
 
-    os.remove(dotfile)
+    #os.remove(dotfile)
 
 def prune(G):
     """Remove unwanted stuff from the graph. e.g., unconnected nodes."""
@@ -89,32 +136,35 @@ def prune(G):
     G.remove_nodes_from(to_remove)
     return G
 
-def plot_graphs(obj, recurse=False, fmt='pdf', pseudos=False, workflow=False):
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
     from openmdao.main.assembly import Assembly
     from openmdao.main.driver import Driver
+
+    print "plot_graphs for %s" % obj.name
 
     if isinstance(obj, Assembly):
         if obj.name == '':
             obj.name = 'top'
         try:
-            plot_graph(prune(obj._depgraph), fmt=fmt, outfile=obj.name+'_depgraph', pseudos=pseudos)
+            plot_graph(obj._depgraph, fmt=fmt, outfile=obj.name+'_depgraph'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
             print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         try:
             plot_graph(obj._depgraph.component_graph(), 
                        fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt, 
-                       pseudos=pseudos, workflow=workflow)
+                       pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
             print "Can't plot component_graph of '%s': %s" % (obj.name, str(err))
         if recurse:
             plot_graphs(obj.driver, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
     elif isinstance(obj, Driver):
-        try:
-            plot_graph(obj.workflow.derivative_graph(), 
-                       fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
-                       pseudos=pseudos, workflow=workflow)
-        except Exception as err:
-            print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
+        # try:
+        #     plot_graph(obj.workflow.derivative_graph(), 
+        #                fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
+        #                pseudos=pseudos, workflow=workflow, scope=obj.parent)
+        # except Exception as err:
+        #     print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
+        print "iterset = %s" % [c.name for c in obj.iteration_set()]
         if recurse:
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
