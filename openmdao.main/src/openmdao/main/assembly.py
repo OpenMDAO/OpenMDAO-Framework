@@ -738,6 +738,7 @@ class Assembly(Component):
             for recorder in self.recorders:
                 recorder.startup()
 
+        self.update_inputs('driver')
         self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
         self._depgraph.update_boundary_outputs(self)
