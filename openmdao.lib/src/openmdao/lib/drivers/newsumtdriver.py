@@ -22,13 +22,9 @@
 #public symbols
 __all__ = ['NEWSUMTdriver']
 
-import logging
-try:
-    from numpy import zeros, ones, putmask
-    from numpy import int as numpy_int
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    numpy_int = int
+from numpy import zeros, ones, putmask
+from numpy import int as numpy_int
+
 
 from openmdao.main.datatypes.api import Array, Float, Int, Bool
 from openmdao.main.exceptions import RunStopped
@@ -36,7 +32,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.driver_uses_derivatives import Driver
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
                                      IHasObjective, implements, IOptimizer
 
@@ -260,7 +256,6 @@ class _countr(object):
 
 
 # pylint: disable-msg=R0913,R0902
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class NEWSUMTdriver(Driver):
     """ Driver wrapper of Fortran version of NEWSUMT.

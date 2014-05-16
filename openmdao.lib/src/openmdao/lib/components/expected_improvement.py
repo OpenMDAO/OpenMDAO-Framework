@@ -17,10 +17,7 @@ except ImportError as err:
         _check.append('scipy')
 
 from openmdao.main.datatypes.api import Float, Instance
-
 from openmdao.main.api import Component
-from openmdao.util.decorators import stub_if_missing_deps
-
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class ExpectedImprovement(Component):

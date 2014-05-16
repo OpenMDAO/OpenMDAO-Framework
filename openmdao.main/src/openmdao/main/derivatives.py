@@ -967,12 +967,12 @@ class FiniteDifference(object):
 
                     ## In-place array editing doesn't activate callback, so we
                     ## must do it manually.
-                    #if var_name:
-                        #base = self.scope._depgraph.base_var(src)
-                        #comp._input_updated(base.split('.')[-1],
-                                            #src.split('[')[0].partition('.')[2])
-                    #else:
-                        #self.scope._input_updated(comp_name.split('[')[0])
+                    if var_name:
+                        base = self.scope._depgraph.base_var(src)
+                        comp._input_updated(base.split('.')[-1],
+                                            src.split('[')[0].partition('.')[2])
+                    else:
+                        self.scope._input_updated(comp_name.split('[')[0])
 
                 # Scalar
                 else:
@@ -1011,14 +1011,14 @@ class FiniteDifference(object):
                         old_val[unravelled] += val
                         array_base_val = old_val
 
-                ## In-place array editing doesn't activate callback, so we must
-                ## do it manually.
-                #if var_name:
-                    #base = self.scope._depgraph.base_var(src)
-                    #comp._input_updated(base.split('.')[-1],
-                                        #src.split('[')[0].partition('.')[2])
-                #else:
-                    #self.scope._input_updated(comp_name.split('[', 1)[0])
+                # In-place array editing doesn't activate callback, so we must
+                # do it manually.
+                if var_name:
+                    base = self.scope._depgraph.base_var(src)
+                    comp._input_updated(base.split('.')[-1],
+                                        src.split('[')[0].partition('.')[2])
+                else:
+                    self.scope._input_updated(comp_name.split('[', 1)[0])
 
             # # Prevent OpenMDAO from stomping on our poked input.
             # if var_name:

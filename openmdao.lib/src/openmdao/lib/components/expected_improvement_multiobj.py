@@ -2,31 +2,19 @@
 
 import logging
 
-try:
-    from numpy import exp, pi, array, isnan, diag, random
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-_check = ['numpy']
+from numpy import exp, pi, array, isnan, diag, random
 
 try:
     from math import erf
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
-    try:
-        from scipy.special import erf
-    except ImportError as err:
-        logging.warn("In %s: %r" % (__file__, err))
-        _check.append('scipy')
-
+    from scipy.special import erf
+    
 from openmdao.main.datatypes.api import Enum, Float, Array, Int
-
 from openmdao.main.component import Component
-from openmdao.util.decorators import stub_if_missing_deps
-
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 
-@stub_if_missing_deps(*_check)
 class MultiObjExpectedImprovement(Component):
     """Expected Improvement calculation for multiple objectives."""
 

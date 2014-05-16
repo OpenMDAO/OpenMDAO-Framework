@@ -280,7 +280,7 @@ class DependsTestCase(unittest.TestCase):
         sub.driver.add_objective('comp6.c')
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set([]))
+                         set(['comp5', 'comp6']))
         sub.driver.add_parameter('comp2.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
                          set(['comp2', 'comp5', 'comp1', 'comp4', 'comp6']))
