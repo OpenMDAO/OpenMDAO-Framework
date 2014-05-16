@@ -269,22 +269,31 @@ class AcceptsTestCase(unittest.TestCase):
                 print 'ok'
 
         f = Foo()
-        try:
+        try: 
             f.add( 'comp1', 'comp2' )
         except TypeError as err:
-            self.assertEqual(str(err), "method argument 'index' with "
+            self.assertEqual(str(err), "Method argument 'index' with "
                                        "a value of 'comp2' does "
                                        "not match the allowed types "
-                                       "(<type 'int'>, <type 'NoneType'>)")
+                                       "(<type 'int'>, <type 'NoneType'>). \n"
+                                       "           The arguments of this method have allowed "
+                                       "types of index=(<type 'int'>, <type 'NoneType'>), "
+                                       "check=<type 'bool'>, "
+                                       "compnames=(<type 'str'>, <type 'list'>, <type 'tuple'>)")
         else:
             self.fail("expected TypeError")
 
         try:
             f.add( 'comp1',  check = 1.0 )
         except TypeError as err:
-            self.assertEqual(str(err), "method argument 'check' with a "
+            self.assertEqual(str(err), "Method argument 'check' with a "
                              "value of 1.0 does not match one "
-                             "of the allowed types <type 'bool'>" )
+                             "of the allowed types <type 'bool'>. \n"
+                             "           The arguments of this method "
+                             "have allowed types of "
+                             "index=(<type 'int'>, "
+                             "<type 'NoneType'>), check=<type 'bool'>, "
+                             "compnames=(<type 'str'>, <type 'list'>, <type 'tuple'>)" )
         else:
             self.fail("expected TypeError")
 
@@ -300,19 +309,29 @@ class AcceptsTestCase(unittest.TestCase):
         try:
             add( 'comp1', 'comp2' )
         except TypeError as err:
-            self.assertEqual(str(err), "function argument 'index' with "
+            self.assertEqual(str(err), "Function argument 'index' with "
                                        "a value of 'comp2' does "
                                        "not match the allowed types "
-                                       "(<type 'int'>, <type 'NoneType'>)")
+                                       "(<type 'int'>, <type 'NoneType'>). \n"
+                                       "           The arguments of this function "
+                                       "have allowed types of "
+                                       "index=(<type 'int'>, "
+                                       "<type 'NoneType'>), check=<type 'bool'>, "
+                                       "compnames=(<type 'str'>, <type 'list'>, <type 'tuple'>)")
         else:
             self.fail("expected TypeError")
 
         try:
             add( 'comp1',  check = 1.0 )
         except TypeError as err:
-            self.assertEqual(str(err), "function argument 'check' with a "
+            self.assertEqual(str(err), "Function argument 'check' with a "
                              "value of 1.0 does not match one "
-                             "of the allowed types <type 'bool'>" )
+                             "of the allowed types <type 'bool'>. \n"
+                             "           The arguments of this function have "
+                             "allowed types of "
+                             "index=(<type 'int'>, <type 'NoneType'>), "
+                             "check=<type 'bool'>, "
+                             "compnames=(<type 'str'>, <type 'list'>, <type 'tuple'>)" )
         else:
             self.fail("expected TypeError")
 

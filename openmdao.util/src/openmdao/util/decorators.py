@@ -174,19 +174,28 @@ def function_accepts(exception,**types):
     
     def check_accepts(f):
         assert len(types) == f.func_code.co_argcount, \
-        'accept number of arguments not equal with function number of arguments in "%s"' % f.func_name
+        "accept number of arguments not equal with function "
+        "number of arguments in '%s'" % f.func_name
         def new_f(*args, **kwds):
+            argument_types = ", ".join( "%s=%s" %(v,t) for v,t in types.items() )
             for i,v in enumerate(args):
                 if types.has_key(f.func_code.co_varnames[i]) and \
                     not isinstance(v, types[f.func_code.co_varnames[i]]):
-                    raise exception("function argument '%s' with a value of %r does not match the allowed types %s" % \
-                        (f.func_code.co_varnames[i],v,types[f.func_code.co_varnames[i]]))
+                    raise exception("Function argument '%s' with a "
+                                    "value of %r does not match the allowed "
+                                    "types %s. \n           The arguments "
+                                    "of this function have allowed types of %s" % \
+                        (f.func_code.co_varnames[i],v,
+                         types[f.func_code.co_varnames[i]],argument_types))
                     del types[f.func_code.co_varnames[i]]
 
             for k,v in kwds.iteritems():
                 if types.has_key(k) and not isinstance(v, types[k]):
-                    raise exception("function argument '%s' with a value of %r does not match one of the allowed types %s" % \
-                        (k,v,types[k]))
+                    raise exception("Function argument '%s' with a "
+                                    "value of %r does not match one of the allowed "
+                                    "types %s. \n           The arguments "
+                                    "of this function have allowed types of %s" % \
+                        (k,v,types[k],argument_types))
 
             return f(*args, **kwds)
         new_f.func_name = f.func_name
@@ -201,21 +210,30 @@ def method_accepts(exception,**types):
     """
     def check_accepts(f):
         assert ( len(types) + 1 ) == f.func_code.co_argcount, \
-        'method_accept number of arguments not equal with function number of arguments in "%s"' % f.func_name
+        "method_accept number of arguments not equal with "
+        "function number of arguments in '%s'" % f.func_name
         @wraps(f)
         def new_f(*args, **kwds):
+            argument_types = ", ".join( "%s=%s" %(v,t) for v,t in types.items() )
             for i,v in enumerate(args): # no need to check self argument
                 if i == 0 : continue
                 if types.has_key(f.func_code.co_varnames[i]) and \
                     not isinstance(v, types[f.func_code.co_varnames[i]]):
-                    raise exception("method argument '%s' with a value of %r does not match the allowed types %s" % \
-                        (f.func_code.co_varnames[i],v,types[f.func_code.co_varnames[i]]))
+                    raise exception("Method argument '%s' with a "
+                                    "value of %r does not match the "
+                                    "allowed types %s. \n           The "
+                                    "arguments of this method have "
+                                    "allowed types of %s" % \
+                        (f.func_code.co_varnames[i],v,types[f.func_code.co_varnames[i]],argument_types))
                     del types[f.func_code.co_varnames[i]]
 
             for k,v in kwds.iteritems():
                 if types.has_key(k) and not isinstance(v, types[k]):
-                    raise exception("method argument '%s' with a value of %r does not match one of the allowed types %s" % \
-                        (k,v,types[k]))
+                    raise exception("Method argument '%s' with a "
+                                    "value of %r does not match one "
+                                    "of the allowed types %s. \n           The "
+                                    "arguments of this method have allowed types of %s" % \
+                        (k,v,types[k],argument_types))
 
             return f(*args, **kwds)
         new_f.func_name = f.func_name
