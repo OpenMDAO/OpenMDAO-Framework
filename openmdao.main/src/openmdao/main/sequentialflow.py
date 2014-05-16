@@ -6,6 +6,7 @@ import networkx as nx
 import sys
 from math import isnan
 from StringIO import StringIO
+from types import NoneType
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
@@ -26,6 +27,7 @@ from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
 from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
                                 flatten_list_of_iters
+from openmdao.util.decorators import method_accepts
 
 try:
     from numpy import ndarray, zeros
@@ -143,8 +145,16 @@ class SequentialWorkflow(Workflow):
         else:
             return self._names[:]
 
+    @method_accepts(TypeError,
+                     compnames=(str,list,tuple),
+                     index=(int,NoneType),
+                     check=bool)
     def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the end of the workflow by name. """
+        """
+        add(self, compnames, index=None, check=False)
+        Add new component(s) to the end of the workflow by name.
+        """
+
         if isinstance(compnames, basestring):
             nodes = [compnames]
         else:
