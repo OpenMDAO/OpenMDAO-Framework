@@ -113,6 +113,12 @@ class Driver(Component):
 
         self._evaluators = {}  # Used to evaluate variables to e recorded.
 
+    def __deepcopy__(self, memo):
+        """For some reason `missing_deriv_policy` gets resurrected."""
+        result = super(Driver, self).__deepcopy__(memo)
+        result.remove_trait('missing_deriv_policy')
+        return result
+
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
         if newwf is not None:
