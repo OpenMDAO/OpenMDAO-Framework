@@ -105,11 +105,11 @@ class Driver(Component):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent
 
-    def check_config(self):
+    def check_configuration(self):
         """Verify that our workflow is able to resolve all of its components."""
 
         # workflow will raise an exception if it can't resolve a Component
-        super(Driver, self).check_config()
+        super(Driver, self).check_configuration()
         self.workflow.check_config()
 
     def iteration_set(self, solver_only=False):
@@ -192,6 +192,7 @@ class Driver(Component):
             setcomps = set([v for u, v in conns if v != self.name])
 
             full = set(setcomps)
+            full.update(getcomps)
 
             compgraph = self.parent._depgraph.component_graph()
 

@@ -551,10 +551,12 @@ class Assembly(Component):
         self._check_unexecuted_comps()
                 
     def _check_unexecuted_comps(self):
-        # FIXME: add checks for comps not included in workflows. 
-        # because now, without lazy evaluation, components not
-        # included in a workflow will never execute.
-        pass 
+        wfcomps = set([c.name for c in self.driver.iteration_set()])
+        wfcomps.add('driver')
+        diff = set(self._depgraph.component_graph().nodes()) - wfcomps
+        if diff:
+            self._logger.warning("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
+                                   % list(diff))
 
     def _check_unset_req_vars(self):
         graph = self._depgraph

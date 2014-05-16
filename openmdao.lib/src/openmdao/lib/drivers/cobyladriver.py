@@ -8,15 +8,9 @@ Approximation (COBYLA) method.
 COBYLA is gradient-free and can handle inequality constraints.
 """
 
-import logging
 from math import isnan
 
-try:
-    from numpy import zeros, array, hstack
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    # to keep class decl from barfing before being stubbed out
-    zeros = lambda *args, **kwargs: None
+from numpy import zeros, array, hstack
 
 from cobyla.cobyla import cobyla, closeunit
 
@@ -27,10 +21,9 @@ from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
                                      IHasObjective, implements, IOptimizer
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 
 
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class COBYLAdriver(Driver):
     """Minimize a function using the Constrained Optimization BY Linear

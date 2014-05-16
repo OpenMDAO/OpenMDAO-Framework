@@ -26,12 +26,11 @@ from openmdao.main.api import Driver, CyclicWorkflow
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 
 
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints)
 class BroydenSolver(Driver):
     """ :term:`MIMO` Newton-Raphson Solver with Broyden approximation to the

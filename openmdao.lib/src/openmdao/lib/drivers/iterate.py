@@ -14,7 +14,7 @@ except ImportError as err:
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
 from openmdao.main.api import Driver, CyclicWorkflow
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
@@ -22,7 +22,6 @@ from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints, HasStopConditions)
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes

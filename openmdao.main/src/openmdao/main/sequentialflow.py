@@ -53,24 +53,20 @@ class SequentialWorkflow(Workflow):
         self._edges = None
         self._comp_edges = None
         self._derivative_graph = None
-        self.res = None
         self._upscoped = False
         self._J_cache = {}
         self._bounds_cache = {}
         self._shape_cache = {}
         self._width_cache = {}
+        self._iternames = None
+        self._initnames = None
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter(self.get_components(full=True))
 
     def __len__(self):
-        if self._names is None:
-            self.get_names()
-        if self._names:
-            return len(self._names)
-        else:
-            return len(self._explicit_names)
+        return len(self.get_names(full=True))
 
     def __contains__(self, comp):
         return comp in self.get_names(full=True)
@@ -101,6 +97,15 @@ class SequentialWorkflow(Workflow):
         self._bounds_cache = {}
         self._shape_cache = {}
         self._width_cache = {}
+        self._iternames = None
+        self._initnames = None
+
+    def check_config(self):
+        super(SequentialWorkflow, self).check_config()
+        self.get_names()
+        if self._initnames:
+            self._parent._logger.warning("The following components will execute EVERY iteration of this workflow (unnecessarily): %s" %
+                                          list(self._initnames))
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -123,13 +128,13 @@ class SequentialWorkflow(Workflow):
             comps = [getattr(self.scope, n) for n in self._explicit_names]
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
+            self._iternames = self._parent._get_required_compnames()
 
             if len(drivers) == len(comps):  # all comps are drivers
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in self._parent._get_required_compnames()
-                                if n not in iterset]) - set(self._names)
+                added = set([n for n in self._iternames if n not in iterset]) - set(self._names)
                 self._names.extend(added)
 
             self._fullnames = self._names[:]
@@ -137,6 +142,8 @@ class SequentialWorkflow(Workflow):
             fullset.update(find_related_pseudos(self.scope._depgraph,
                                                 self._names))
             self._fullnames.extend(fullset - set(self._names))
+
+            self._initnames = set(self._fullnames) - self._iternames
 
         if full:
             return self._fullnames[:]

@@ -282,8 +282,7 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
     def test_BLISS(self):
-        prob = SellarBLISS()
-        set_as_top(prob)
+        prob = set_as_top(SellarBLISS())
 
         prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
         prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0

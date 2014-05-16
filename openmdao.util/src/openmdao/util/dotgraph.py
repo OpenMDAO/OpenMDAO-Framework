@@ -52,9 +52,10 @@ def write_nodes(f, G, indent):
             if len(parts) > 1 and not is_var_node(G, parts[0]):
                 data['label'] = parts[1]
             base = G.base_var(node)
-            if G.node[base]['iotype'] == 'state':
+            if G.node[base].get('iotype') == 'state':
                 data['shape'] = 'doubleoctagon'
-        f.write("%s%s [" % (tab, node))
+        data['margin'] = '0.0,0.0'
+        f.write('%s"%s" [' % (tab, node))
         for i,(key,val) in enumerate(data.items()):
             if i > 0:
                 f.write(", ")
@@ -114,8 +115,9 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
                 if len(parts) > 1 and not is_var_node(G, parts[0]):
                     data['label'] = parts[1]
                 base = G.base_var(node)
-                if G.node[base]['iotype'] == 'state':
+                if G.node[base].get('iotype') == 'state':
                     data['shape'] = 'doubleoctagon'
+            data['margin'] = '0.0,0.0'
         nx.write_dot(G, dotfile)
 
     os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
@@ -158,13 +160,13 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
         if recurse:
             plot_graphs(obj.driver, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
     elif isinstance(obj, Driver):
-        # try:
-        #     plot_graph(obj.workflow.derivative_graph(), 
-        #                fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
-        #                pseudos=pseudos, workflow=workflow, scope=obj.parent)
-        # except Exception as err:
-        #     print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
-        print "iterset = %s" % [c.name for c in obj.iteration_set()]
+        try:
+            plot_graph(obj.workflow.derivative_graph(), 
+                       fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
+                       pseudos=pseudos, workflow=workflow, scope=obj.parent)
+        except Exception as err:
+            print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))
+
         if recurse:
             for comp in obj.iteration_set():
                 if isinstance(comp, Assembly) or isinstance(comp, Driver):
