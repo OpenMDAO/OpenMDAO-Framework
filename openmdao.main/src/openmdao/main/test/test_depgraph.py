@@ -493,22 +493,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual([('A.out1','B.in1[1]'),('B.in1[1]','B.in1')], list(dep.var_edge_iter('A.out1')))
         self.assertEqual([('B.in1[1]','B.in1'),('A.out1','B.in1[1]')], list(dep.var_edge_iter('B.in1', reverse=True)))
         
-    def test_basevar_iter(self):
-        dep = self.dep
-        self.assertEqual(set(dep.basevar_iter('a')), set(['A.a']))
-        self.assertEqual(set(dep.basevar_iter(['a'])), set(['A.a']))
-        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
-        self.assertEqual(set(dep.basevar_iter(['B.d'])), set(['C.b']))
-        self.assertEqual(set(dep.basevar_iter(['C.c'])), set(['c']))
-        self.assertEqual(list(dep.basevar_iter(['D.b'])), [])
-        self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set())
-        self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 0)
-
-        dep, scope = _make_xgraph()
-        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['C.a','D.a']))
-        self.assertEqual(set(dep.basevar_iter(['C.a','C.b'], reverse=True)), 
-                         set(['A.d','B.c']))
-
     def test_input_as_output(self):
         dep, scope = _make_graph(['A','B','C'], [],
                                  [('A.c','B.a'),('B.d','C.b')])

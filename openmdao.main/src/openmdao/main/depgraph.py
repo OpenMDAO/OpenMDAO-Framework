@@ -886,21 +886,6 @@ class DependencyGraph(nx.DiGraph):
             except StopIteration:
                 queue.popleft()
 
-    def basevar_iter(self, nodes, reverse=False):
-        """Given a group of nodes, return an iterator
-        over all base variable nodes that are nearest in one
-        direction.
-        """
-        if reverse:
-            idx = 0
-        else:
-            idx = 1
-
-        for node in nodes:
-            for edge in self.var_edge_iter(node, reverse=reverse):
-                if is_basevar_node(self, edge[idx]):
-                    yield edge[idx]
-
     def update_boundary_outputs(self, scope):
         """Update destination vars on our boundary."""
         for out in self.get_boundary_outputs():
@@ -1710,7 +1695,7 @@ def get_missing_derivs(obj, recurse=True):
 
         for i,cin in enumerate(cins[:]):
             obj = comp.get(cin)
-            meta = comp.get_metadata(cin, 'framework_var')
+            #meta = comp.get_metadata(cin, 'framework_var')
             if has_interface(obj, IVariableTree):
                 cins.extend([n for n,v in vt_flattener(cin, obj)])
 
