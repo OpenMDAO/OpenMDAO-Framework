@@ -960,14 +960,14 @@ def _test_column_sorting(browser):
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
          "output_filename", "directory", "force_fd",
-         " gradient_options", "derivative_direction", "fd_form", "fd_step", "fd_step_type",
+         " gradient_options", "derivative_direction", "directional_fd", "fd_blocks", "fd_form", "fd_step", "fd_step_type",
          "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
          [" gradient_options", "gmres_tolerance", "gmres_maxiter",
-         "force_fd", "fd_step_type", "fd_step", "fd_form", "derivative_direction",
+         "force_fd", "fd_step_type", "fd_step", "fd_form", "fd_blocks", "directional_fd", "derivative_direction",
          "force_fd", "directory",
          "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING

@@ -322,3 +322,5 @@ class PseudoComponent(object):
     def get_req_default(self, self_reqired=None):
         return []
 
+    def _input_updated(self, name, fullpath=None):
+        pass

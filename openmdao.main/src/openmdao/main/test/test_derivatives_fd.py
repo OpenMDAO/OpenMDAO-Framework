@@ -8,7 +8,7 @@ import numpy as np
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.test_derivatives import SimpleDriver, ArrayComp2D
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.testutil import assert_rel_error
 
@@ -328,6 +328,27 @@ class TestFiniteDifference(unittest.TestCase):
         top.run()
         J = top.driver.workflow.calc_gradient()
         assert_rel_error(self, J[0, 0], 3.6, 0.001)
+
+    def test_PA_slices(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp2D())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.comp.force_fd = True
+        top.driver.gradient_options.directional_fd = True
+
+        top.driver.add_parameter('comp.x', low=-100, high=100)
+        top.driver.add_constraint('comp.y[0][-1] < 1.0')
+        top.driver.add_constraint('sum(comp.y) < 4.0')
+
+        top.run()
+        J = top.driver.workflow.calc_gradient(mode='forward')
+
+        assert_rel_error(self, J[0, 0], 4.0, 0.001)
+        assert_rel_error(self, J[0, 1], 2.0, 0.001)
+        assert_rel_error(self, J[0, 2], 6.0, 0.001)
+        assert_rel_error(self, J[0, 3], 5.0, 0.001)
 
 if __name__ == '__main__':
     import nose

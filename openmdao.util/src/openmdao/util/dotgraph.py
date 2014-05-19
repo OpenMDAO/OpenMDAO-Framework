@@ -9,16 +9,21 @@ from openmdao.main.depgraph import DependencyGraph, is_var_node
 
 _cluster_count = 0
 
-def write_driver_cluster(f, G, driver, indent, counts, alledges):
+def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
     global _cluster_count, IDriver
+    show = driver.name not in excludes
     comps = list(driver.workflow)
+    subG = G.subgraph([c.name for c in comps])
     tab = ' '*indent
-    f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
-    _cluster_count += 1
-    indent += 3
-    tab = ' '*indent
+    
+    if show:
+        f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
+        _cluster_count += 1
+        indent += 3
+        tab = ' '*indent
 
-    f.write('%s%s;\n' % (tab, driver.name))
+        f.write('%s%s [shape=box];\n' % (tab, driver.name))
+
     if len(comps) > 0:
         dcount = 1
         for comp in comps:
@@ -83,14 +88,14 @@ def _get_comp_counts(drv, counts):
         if IDriver.providedBy(comp):
             _get_comp_counts(comp, counts)
 
-def write_dot(G, dotfile, scope=None):
+def write_dot(G, dotfile, scope=None, excludes=()):
 
     if scope is None:
         raise RuntimeError("if workflow is True, scope must be specified")
 
     with open(dotfile, 'w') as f:
         f.write("strict digraph {\n")
-        #f.write("rankdir=RL;\n")
+
         driver = getattr(scope, 'driver')
 
         f.write("   driver [shape=invhouse, margin=0.0];\n")
@@ -100,7 +105,7 @@ def write_dot(G, dotfile, scope=None):
         _get_comp_counts(driver, counts)
 
         alledges = set()
-        write_driver_cluster(f, G, driver, 3, counts, alledges)
+        write_driver_cluster(f, G, driver, 3, counts, alledges, excludes=excludes)
 
         #write_nodes(f, G, 3, counts, 'driver')
 
@@ -111,7 +116,8 @@ def write_dot(G, dotfile, scope=None):
 
         f.write("}\n")
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None):
+def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
+               excludes=()):
     """Create a plot of the given graph"""
 
     G = G.copy()
@@ -132,7 +138,7 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
     dotfile = os.path.splitext(outfile)[0]+'.dot'
 
     if workflow:
-        write_dot(G, dotfile, scope)
+        write_dot(G, dotfile, scope, excludes)
     else: # just show data connections
         for node, data in G.nodes_iter(data=True):
             if 'driver' in data:
