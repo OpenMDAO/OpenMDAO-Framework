@@ -1098,6 +1098,16 @@ class DependencyGraph(nx.DiGraph):
         super(DependencyGraph, self).remove_edges_from(ebunch)
         self.config_changed()
 
+    def prune_unconnected_vars(self):
+        """Remove unconnected variable nodes"""
+        conns = self.list_connections()
+        convars = set([u for u,v in conns])
+        convars.update([v for u,v in conns])
+        convars.update([self.base_var(v) for v in convars])
+        to_remove = [v for v in self.nodes_iter()
+                         if is_var_node(self,v) and v not in convars]
+        self.remove_nodes_from(to_remove)
+
 
 def find_related_pseudos(depgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
@@ -1106,7 +1116,7 @@ def find_related_pseudos(depgraph, nodes):
 
     pseudos = set()
     compgraph = depgraph.component_graph()
-    
+
     for node in nodes:
         for upcomp in compgraph.predecessors_iter(node):
             if is_non_driver_pseudo_node(compgraph, upcomp):

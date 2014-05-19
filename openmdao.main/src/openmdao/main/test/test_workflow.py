@@ -49,14 +49,6 @@ class Model(Assembly):
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
 
-    def rerun(self):
-        """ Called to force the model to run. """
-        global dummyval
-        dummyval += 1  # force dummyval to be different than last time so
-                       # comp1 will be invalidated
-        self.comp_a.set('dummy_input', dummyval)
-        self.run()
-
 
 @add_delegate(HasParameters, HasObjective)
 class CaseDriver(Driver):
@@ -132,7 +124,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_b.total_executions, 1)
         self.assertEqual(self.model.comp_c.total_executions, 1)
 
-        self.model.rerun()
+        self.model.run()
 
         self.assertEqual(self.model.comp_a.total_executions, 2)
         self.assertEqual(self.model.comp_b.total_executions, 2)
@@ -152,7 +144,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_c.total_executions, 0)
 
         self.model.comp_b.set_stop = False
-        self.model.rerun()
+        self.model.run()
         self.assertEqual(self.model.comp_a.total_executions, 2)
         self.assertEqual(self.model.comp_b.total_executions, 2)
         self.assertEqual(self.model.comp_c.total_executions, 1)

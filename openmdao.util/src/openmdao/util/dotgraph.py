@@ -33,9 +33,9 @@ def write_driver_cluster(f, G, driver, indent):
 
         for u,v in subG.edges():
             f.write('%s%s -> %s;\n' % (tab, u, v))
-    
+
     f.write('%s}\n' % tab)
-    
+
 def write_nodes(f, G, indent):
     tab = ' '*indent
     for node, data in G.nodes_iter(data=True):
@@ -61,7 +61,7 @@ def write_nodes(f, G, indent):
                 f.write(", ")
             f.write("%s=%s" % (key,val))
         f.write("];\n")
-        
+
 def write_dot(G, dotfile, scope=None):
 
     if scope is None:
@@ -78,16 +78,17 @@ def write_dot(G, dotfile, scope=None):
         # now include any cross workflow connections
         for u,v in G.edges_iter():
             f.write("   %s -> %s;\n" % (u, v))
-            
+
         f.write("}\n")
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=None):
+def plot_graph(G, fmt='pdf', outfile=None, pseudos=False,
+               workflow=False, scope=None):
     """Create a plot of the given graph"""
 
     G = G.copy()
 
     if isinstance(G, DependencyGraph):
-        prune(G)
+        G.prune_unconnected_vars()
 
     if not pseudos:
         nodes = [n for n in G.nodes() if '_pseudo_' in n]
@@ -126,18 +127,6 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False, workflow=False, scope=
 
     #os.remove(dotfile)
 
-def prune(G):
-    """Remove unwanted stuff from the graph. e.g., unconnected nodes."""
-    conns = G.list_connections()
-    allvars = set([u for u,v in conns])
-    allvars.update([v for u,v in conns])
-    allvars.update([G.base_var(v) for v in allvars])
-    print "conns: %s" % conns
-    to_remove = [v for v in G.nodes_iter() if is_var_node(G,v) and v not in allvars]
-    print "removing: %s" % to_remove
-    G.remove_nodes_from(to_remove)
-    return G
-
 def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
     from openmdao.main.assembly import Assembly
     from openmdao.main.driver import Driver
@@ -152,8 +141,8 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
         except Exception as err:
             print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         try:
-            plot_graph(obj._depgraph.component_graph(), 
-                       fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt, 
+            plot_graph(obj._depgraph.component_graph(),
+                       fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
             print "Can't plot component_graph of '%s': %s" % (obj.name, str(err))
@@ -161,8 +150,8 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
             plot_graphs(obj.driver, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
     elif isinstance(obj, Driver):
         try:
-            plot_graph(obj.workflow.derivative_graph(), 
-                       fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt, 
+            plot_graph(obj.workflow.derivative_graph(),
+                       fmt=fmt, outfile=obj.name+"_derivgraph"+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj.parent)
         except Exception as err:
             print "Can't plot deriv graph of '%s': %s" % (obj.name, str(err))

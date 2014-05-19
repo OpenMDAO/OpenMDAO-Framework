@@ -184,7 +184,7 @@ def _test_value_editors(browser):
     #bool editor - set to true
     inputs = props.inputs
     inputs.rows[10].cells[1].click()
-    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
+    selection_path = '//*[@id="bool-editor-force_fd"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
@@ -274,7 +274,6 @@ def _test_value_editors(browser):
                 "top.p1.Z"]
     values = ["3.0",
               "1.61",
-              "True",
               "3",
               "2.71",
               "[ 0.  1.  2.  3.  4.]",
