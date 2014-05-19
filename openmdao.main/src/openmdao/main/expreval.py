@@ -842,7 +842,7 @@ class ExprEvaluator(object):
         for name in self.get_referenced_varpaths(copy=False):
             try:
                 metadata.append((name, scope.get_metadata(name, metaname)))
-            except AttributeError as error:
+            except AttributeError:
                 invalid_variables.append(name)
 
         if invalid_variables:
@@ -879,15 +879,6 @@ class ExprEvaluator(object):
             if len(parts) > 1:
                 nameset.add(parts[0])
         return nameset
-
-    def refs_parent(self):
-        """Return True if this expression references a variable in parent."""
-        if self._code is None:
-            self._parse()
-        for name in self.var_names:
-            if name.startswith('parent.'):
-                return True
-        return False
 
     def check_resolve(self):
         """Return True if all variables referenced by our expression can

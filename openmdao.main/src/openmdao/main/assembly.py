@@ -17,7 +17,8 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator
+                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
+                                     IHasParameters
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -181,8 +182,7 @@ class Assembly(Component):
         """
         exprset = set(self._exprmapper.find_referring_exprs(name))
         return [(u, v) for u, v
-                       in self._depgraph.list_connections(show_passthrough=True,
-                                                          show_external=True)
+                       in self._depgraph.list_connections(show_passthrough=True)
                                         if u in exprset or v in exprset]
 
     def find_in_workflows(self, name):
@@ -198,26 +198,6 @@ class Assembly(Component):
                     wflows.append((obj.workflow, obj.workflow.index(name)))
         return wflows
 
-    def _cleanup_autopassthroughs(self, name):
-        """Clean up any autopassthrough connections involving the given name.
-        Returns a list containing a tuple for each removed connection.
-        """
-        old_autos = []
-        if self.parent:
-            old_rgx = re.compile(r'(\W?)%s.' % name)
-            par_rgx = re.compile(r'(\W?)parent.')
-
-            pattern = r'\g<1>%s.' % '.'.join((self.name, name))
-            for u, v in self._depgraph.list_autopassthroughs():
-                newu = re.sub(old_rgx, pattern, u)
-                newv = re.sub(old_rgx, pattern, v)
-                if newu != u or newv != v:
-                    old_autos.append((u, v))
-                    u = re.sub(par_rgx, r'\g<1>', newu)
-                    v = re.sub(par_rgx, r'\g<1>', newv)
-                    self.parent.disconnect(u, v)
-        return old_autos
-
     def _add_after_parent_set(self, name, obj):
         if has_interface(obj, IComponent):
             self._depgraph.add_component(name, obj)
@@ -230,19 +210,6 @@ class Assembly(Component):
                     # being used as an io variable, we need to put
                     # it back in the dep graph
                     self._depgraph.add_boundary_var(self, name, iotype=io)
-        
-    #def _post_container_add(self, name, obj, removed):
-        #"""Called after a new child Container has been
-        #added to self.
-        #"""
-        #if removed:
-            #if has_interface(obj, IContainer):
-                #io = self._cached_traits_[name].iotype
-                #if io:
-                    ## since we just removed this container and it was
-                    ## being used as an io variable, we need to put
-                    ## it back in the dep graph
-                    #self._depgraph.add_boundary_var(self, name, iotype=io)
 
     def add_trait(self, name, trait, refresh=True):
         """Overrides base definition of *add_trait* in order to
@@ -258,7 +225,6 @@ class Assembly(Component):
         self._check_rename(oldname, newname)
         conns = self.find_referring_connections(oldname)
         wflows = self.find_in_workflows(oldname)
-        old_autos = self._cleanup_autopassthroughs(oldname)
 
         obj = self.remove(oldname)
         obj.name = newname
@@ -271,23 +237,12 @@ class Assembly(Component):
             wflow.add(newname, idx)
 
         old_rgx = re.compile(r'(\W?)%s.' % oldname)
-        par_rgx = re.compile(r'(\W?)parent.')
 
         # recreate all of the broken connections after translating
         # oldname to newname
         for u, v in conns:
             self.connect(re.sub(old_rgx, r'\g<1>%s.' % newname, u),
                          re.sub(old_rgx, r'\g<1>%s.' % newname, v))
-
-        # recreate autopassthroughs
-        if self.parent:
-            pattern = r'\g<1>%s.' % '.'.join((self.name, newname))
-            for u, v in old_autos:
-                u = re.sub(old_rgx, pattern, u)
-                v = re.sub(old_rgx, pattern, v)
-                u = re.sub(par_rgx, r'\g<1>', u)
-                v = re.sub(par_rgx, r'\g<1>', v)
-                self.parent.connect(u, v)
 
     def replace(self, target_name, newobj):
         """Replace one object with another, attempting to mimic the
@@ -545,9 +500,33 @@ class Assembly(Component):
         inheriting classes to perform more specific configuration checks.
         """
         super(Assembly, self).check_configuration()
+        self._check_input_collisions()
         self._check_unset_req_vars()
         self._check_unexecuted_comps()
                 
+    def _check_input_collisions(self):
+        graph = self._depgraph
+        dests = set([v for u,v in self.list_connections()])
+        allbases = set([graph.base_var(v) for v in dests])
+        unconnected_bases = allbases - dests
+        connected_bases = allbases - unconnected_bases
+
+        collisions = []
+        for drv in chain([self.driver], self.driver.subdrivers()):
+            if has_interface(drv, IHasParameters):
+                for target in drv.list_param_targets():
+                    tbase = graph.base_var(target)
+                    if target == tbase:  # target is a base var
+                        if target in allbases:
+                            collisions.append("%s in %s" % (target, drv.get_pathname()))
+                    else:  # target is a sub var
+                        if target in dests or tbase in connected_bases:
+                            collisions.append("%s in %s" % (target, drv.get_pathname()))
+                    
+        if collisions:
+            self.raise_exception("The following parameters collide with connected inputs: %s" %
+                                 ','.join(collisions), RuntimeError)
+
     def _check_unexecuted_comps(self):
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
@@ -589,8 +568,6 @@ class Assembly(Component):
         """
         src = eliminate_expr_ws(src)
 
-        #self.config_changed(update_parent=False)
-
         if isinstance(dest, basestring):
             dest = (dest,)
         for dst in dest:
@@ -609,19 +586,11 @@ class Assembly(Component):
         srcexpr, destexpr, pcomp_type = \
                    self._exprmapper.check_connect(src, dest, self)
 
-        # Check if dest is declared as a parameter in any driver in the assembly
-        for item in self.list_containers():
-            comp = self.get(item)
-            if isinstance(comp, Driver) and hasattr(comp, 'list_param_targets'):
-                if dest in comp.list_param_targets():
-                    msg = "destination '%s' is a Parameter in " % dest
-                    msg += "driver '%s'." % comp.name
-                    self.raise_exception(msg, RuntimeError)
-
         if pcomp_type is not None:
             pseudocomp = PseudoComponent(self, srcexpr, destexpr,
                                          pseudo_type=pcomp_type)
             self.add(pseudocomp.name, pseudocomp)
+            pseudocomp.make_connections(self)
         else:
             pseudocomp = None
             self._depgraph.check_connect(src, dest)
@@ -643,18 +612,11 @@ class Assembly(Component):
                     self.raise_exception("Can't find '%s'" % vname,
                                          AttributeError)
 
-        if pseudocomp is None:
             self._depgraph.connect(self, src, dest)
-        else:
-            pseudocomp.make_connections(self)
 
         self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
 
-        if not srcexpr.refs_parent():
-            if not destexpr.refs_parent():
-                # if it's an internal connection, could change dependencies,
-                # so we have to call config_changed to notify our driver
-                self.config_changed(update_parent=False)
+        self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
     def disconnect(self, varpath, varpath2=None):
@@ -676,12 +638,7 @@ class Assembly(Component):
             graph = self._depgraph
 
             if to_remove:
-                for u, v in graph.list_connections(show_external=True):
-                    if (u, v) in to_remove:
-                        graph.disconnect(u, v)
-                        to_remove.remove((u, v))
-
-                for u, v in graph.list_autopassthroughs():
+                for u, v in graph.list_connections():
                     if (u, v) in to_remove:
                         graph.disconnect(u, v)
                         to_remove.remove((u, v))

@@ -149,12 +149,6 @@ class DepGraphTestCase(unittest.TestCase):
             ('b[3]', 'A.b'),
             ('D.d', 'd.x'),
         ]
-        self.ext_conns = [
-            ('parent.C1.d', 'a'),
-            ('parent.C0.c', 'D.b'),
-            ('c', 'parent.C2.a'),
-            ('D.d', 'parent.C3.a'),
-        ]
         self.comps = ['A','B','C','D']
         self.bvariables = [('a','in'), ('b','in'),
                           ('c','out'), ('d','out')]
@@ -162,7 +156,7 @@ class DepGraphTestCase(unittest.TestCase):
                                            self.bvariables,
                                            self.conns +
                                            self.boundary_conns +
-                                           self.ext_conns)
+                                           [])
         
     def test_add(self):
         for name in self.comps:
@@ -191,7 +185,6 @@ class DepGraphTestCase(unittest.TestCase):
     def test_get_source(self):
         self.assertEqual(self.dep.get_sources('B.a'), ['A.c[2]'])
         self.assertEqual(self.dep.get_sources('A.a'), ['a'])
-        self.assertEqual(self.dep.get_sources('a'), ['parent.C1.d'])
         self.assertEqual(self.dep.get_sources('c'), ['C.c'])
         self.assertEqual(self.dep.get_sources('A.c'), [])
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
@@ -234,17 +227,12 @@ class DepGraphTestCase(unittest.TestCase):
         self.dep.connect(self.scope, 'D.c', 'B.b[5]')
     
     def test_get_boundary_inputs(self):
-        self.assertEqual(set(self.dep.get_boundary_inputs(connected=True)), 
-                         set(['a']))
+        self.assertEqual(self.dep.get_boundary_inputs(connected=True), [])
         self.assertEqual(set(self.dep.get_boundary_inputs()), 
                          set(['a','b']))
     
     def test_get_boundar_outputs(self):
-        self.assertEqual(set(self.dep.get_boundary_outputs(connected=True)), 
-                         set(['c']))
-        self.dep.connect(self.scope, 'D.a', 'parent.foo.bar')
-        self.assertEqual(set(self.dep.get_boundary_outputs(connected=True)), 
-                         set(['c']))
+        self.assertEqual(self.dep.get_boundary_outputs(connected=True), [])
         self.assertEqual(set(self.dep.get_boundary_outputs()), 
                          set(['c','d']))
     
@@ -396,11 +384,9 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_connections_to(self):
         self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('c', 'parent.C2.a'),
-                              ('C.c', 'c')]))
+                         set([('C.c', 'c')]))
         self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('parent.C1.d', 'a'),
-                              ('a', 'A.a')]))
+                         set([('a', 'A.a')]))
         
         # unconnected var should return an empty list
         self.assertEqual(self.dep.connections_to('D.a'),[])
@@ -413,9 +399,7 @@ class DepGraphTestCase(unittest.TestCase):
                               ('A.d.z','B.b[4]')]))
 
         self.assertEqual(set(self.dep.connections_to('D')),
-                         set([('parent.C0.c', 'D.b'),
-                              ('D.d', 'parent.C3.a'),
-                              ('D.d', 'd.x')]))
+                         set([('D.d', 'd.x')]))
         
     def test_find_all_connecting(self):
         self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())
@@ -513,11 +497,9 @@ class DepGraphTestCase(unittest.TestCase):
         dep = self.dep
         self.assertEqual(set(dep.basevar_iter('a')), set(['A.a']))
         self.assertEqual(set(dep.basevar_iter(['a'])), set(['A.a']))
-        self.assertEqual(set(dep.basevar_iter(['parent.C1.d'])), set(['a']))
         self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
         self.assertEqual(set(dep.basevar_iter(['B.d'])), set(['C.b']))
         self.assertEqual(set(dep.basevar_iter(['C.c'])), set(['c']))
-        self.assertEqual(list(dep.basevar_iter(['parent.C2.a'])), [])
         self.assertEqual(list(dep.basevar_iter(['D.b'])), [])
         self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set())
         self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 0)

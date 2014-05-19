@@ -837,14 +837,6 @@ class HasParameters(object):
         referenced.
         """
 
-        if self._parent.parent:
-            parent_cnns = self._parent.parent.list_connections()
-            for lhs, rhs in parent_cnns:
-                if rhs == target:
-                    self._parent.raise_exception("'%s' is already connected"
-                                                 " to '%s'" % (target, lhs),
-                                                 RuntimeError)
-
         if isinstance(target, (ParameterBase, ParameterGroup)):
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)

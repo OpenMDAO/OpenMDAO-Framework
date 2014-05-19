@@ -365,14 +365,6 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('expected Exception')
 
-    #def test_autopassthrough_nested(self):
-        #self.asm.set('comp1.r', 8.)
-        #self.asm.connect('comp1.rout', 'nested.comp1.r')
-        #self.asm.connect('nested.comp1.rout', 'comp2.r')
-        #self.asm.run()
-        #self.assertEqual(self.asm.get('comp1.rout'), 12.)
-        #self.assertEqual(self.asm.get('comp2.rout'), 27.)
-
     def test_create_passthrough_alias(self):
         self.asm.nested.set('comp1.r', 75.4)
         self.asm.nested.create_passthrough('comp1.r', 'foobar')

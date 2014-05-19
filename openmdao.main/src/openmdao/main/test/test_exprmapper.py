@@ -5,8 +5,7 @@ from openmdao.main.component import Component
 from openmdao.main.datatypes.int import Int
 from openmdao.main.expreval import ExprEvaluator
 
-_fakes = ['@xin', '@bin', '@bout', '@xout']
-nodes = ['A', 'B', 'C', 'D', 'parent.X', 'parent.Y']
+nodes = ['A', 'B', 'C', 'D']
 
 
 class Simple(Component):
@@ -64,29 +63,20 @@ class ExprMapperTestCase(unittest.TestCase):
             ('C.c', 'D.b'),
         ]
         self.boundary_conns = [
-            ('parent.X.c', 'a'),
             ('a', 'B.a'),
             ('D.c', 'c'),
-            ('c', 'parent.Y.a'),
-        ]
-        self.cross_conns = [
-            ('parent.X.d', 'A.b'),
-            ('C.d', 'parent.Y.b'),
         ]
         self.dep, self.scope = make_graph(nodes,
                                           self.internal_conns +
-                                          self.boundary_conns +
-                                          self.cross_conns)
+                                          self.boundary_conns)
 
     def test_get_source(self):
         dep, scope = make_graph(nodes,
                                 self.internal_conns +
-                                self.boundary_conns +
-                                self.cross_conns)
+                                self.boundary_conns)
 
         self.assertEqual(dep.get_source('B.a'), 'a')
         self.assertEqual(dep.get_source('A.a'), None)
-        self.assertEqual(dep.get_source('a'), 'parent.X.c')
         self.assertEqual(dep.get_source('c'), 'D.c')
 
     def test_list_connections(self):
@@ -106,9 +96,9 @@ class ExprMapperTestCase(unittest.TestCase):
 
         # input boundary connection
         try:
-            self.dep.check_connect('parent.foo.bar', 'a', self.scope)
+            self.dep.check_connect('a', 'B.b', self.scope)
         except Exception as err:
-            self.assertEqual(str(err), "sub: 'a' is already connected to source 'parent.X.c'")
+            self.assertEqual(str(err), "sub: 'B.b' is already connected to source 'A.c'")
         else:
             self.fail('Exception expected')
 
@@ -121,25 +111,12 @@ class ExprMapperTestCase(unittest.TestCase):
             self.fail('Exception expected')
 
     def test_disconnect(self):
-        self.dep.disconnect('a')  # this should disconnect extern to a and
-                                  # a to B.a, completely removing the
-                                  # link between @bin and B.
-
-        # now if we delete the auto passthrough from parent.X.d to A.b,
-        # there should be no link at all between @xin and @bin, or between
-        # @bin and A.
-        self.dep.disconnect('parent.X.d', 'A.b')
-
-        # now test a similar situation on the output side
+        self.dep.disconnect('a') 
         self.dep.disconnect('c')
-
-        self.dep.disconnect('C.d', 'parent.Y.b')
 
     def test_find_referring_exprs(self):
         self.assertEqual(set(self.dep.find_referring_exprs('A')),
-                         set(['A.c', 'A.b']))
-        self.assertEqual(set(self.dep.find_referring_exprs('parent')),
-                         set(['parent.X.c', 'parent.X.d', 'parent.Y.a', 'parent.Y.b']))
+                         set(['A.c']))
 
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,7 @@ except ImportError as err:
     from openmdao.main.numpy_fallback import array
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
+from openmdao.main.interfaces import implements, IHasParameters
 from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.datatypes.api import Array, Int, Float, List, Enum, Str
 from openmdao.test.execcomp import ExecComp
@@ -31,6 +32,8 @@ class Dummy(Component):
 
 @add_delegate(HasParameters)
 class MyDriver(Driver):
+    
+    implements(IHasParameters)
 
     def start_iteration(self):
         self.iter_count = 0
@@ -129,10 +132,9 @@ class HasParametersTestCase(unittest.TestCase):
 
     def test_add_connected_param(self):
         self.top.create_passthrough('comp.x')
-        code = "self.top.driver.add_parameter('comp.x', 0., 1.e99)"
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      "driver: 'comp.x' is already connected to 'x'")
-        self.top.remove("x")
+        self.top.driver.add_parameter('comp.x', 0., 1.e99)
+        assert_raises(self, "self.top.run()", globals(), locals(), RuntimeError,
+                      ": The following parameters collide with connected inputs: comp.x in driver")
 
     def test_set_param_by_name(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99, name='abc')
@@ -298,19 +300,19 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.add('comp2', ExecComp(exprs=['c=x+y', 'd=x-y']))
         self.top.driver.add_parameter('comp2.x', low=-99.0, high=99.9)
 
-        code = "self.top.connect('comp.c', 'comp2.x')"
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      ": Can't connect 'comp.c' to 'comp2.x': : destination"
-                      " 'comp2.x' is a Parameter in driver 'driver'.")
+        self.top.connect('comp.c', 'comp2.x')
+        assert_raises(self, "self.top.run()", globals(), locals(), RuntimeError,
+                      ": The following parameters collide with connected inputs: comp2.x in driver")
 
+        self.top.disconnect('comp.c', 'comp2.x')
+        
         # try with parameter group
         self.top.driver.clear_parameters()
         self.top.driver.add_parameter(('comp2.x', 'comp2.y'),
                                        low=-99.0, high=99.9)
-        code = "self.top.connect('comp.c', 'comp2.x')"
-        assert_raises(self, code, globals(), locals(), RuntimeError,
-                      ": Can't connect 'comp.c' to 'comp2.x': : destination"
-                      " 'comp2.x' is a Parameter in driver 'driver'.")
+        self.top.connect('comp.c', 'comp2.x')
+        assert_raises(self, "self.top.run()", globals(), locals(), RuntimeError,
+                      ": The following parameters collide with connected inputs: comp2.x in driver")
 
 
 class ParametersTestCase(unittest.TestCase):

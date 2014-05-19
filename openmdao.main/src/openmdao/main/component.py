@@ -803,17 +803,6 @@ class Component(Container):
                     conn_list.extend(delegate.get_expr_depends())
         return conn_list
 
-    @rbac(('owner', 'user'))
-    def get_expr_sources(self):
-        """Return a list of tuples containing the names of all upstream
-        components that are referenced in any of our ExprEvaluators, along with
-        an initial exec_count of 0.
-        """
-        if self._expr_sources is None:
-            self._expr_sources = [(u, 0)
-                for u, v in self.get_expr_depends() if v == self.name]
-        return self._expr_sources
-
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).

@@ -163,15 +163,6 @@ def is_non_driver_pseudo_node(graph, node):
     pseudo = graph.node[node].get('pseudo')
     return pseudo == 'units' or pseudo == 'multi_var_expr'
 
-def is_extern_node(graph, node):
-    return node.startswith('parent.')
-
-def is_extern_src(graph, node):
-    return node.startswith('parent.') and graph.out_degree(node) > 0
-
-def is_extern_dest(graph, node):
-    return node.startswith('parent.') and graph.in_degree(node) > 0
-
 def is_nested_node(graph, node):
     """Returns True if the given node refers to an attribute that
     is nested within the child of a Component in our scope, or
@@ -222,11 +213,6 @@ class DependencyGraph(nx.DiGraph):
                 return node
 
         parts = node.split('[', 1)[0].split('.')
-        # for external connections, we don't do the error checking at
-        # this level so ambiguity in actual base varname doesn't
-        # matter.  So just return the full name and be done with it.
-        if parts[0] == 'parent':
-            return node
 
         base = parts[0]
         if base in self and 'var' in self.node[base]:
@@ -440,14 +426,10 @@ class DependencyGraph(nx.DiGraph):
         if nodes:
             self.remove_nodes_from(nodes)
 
-
     def check_connect(self, srcpath, destpath):
         """Raise an exception if the specified destination is already
         connected.
         """
-        if is_extern_node(self, destpath):  # error will be caught at parent level
-            return
-
         dpbase = self.base_var(destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
@@ -490,11 +472,10 @@ class DependencyGraph(nx.DiGraph):
         base_dest = self.base_var(destpath)
 
         for v in [base_src, base_dest]:
-            if not v.startswith('parent.'):
-                if v not in self:
-                    raise RuntimeError("Can't find variable '%s' in graph." % v)
-                elif not is_var_node(self, v):
-                    raise RuntimeError("'%s' is not a variable node" % v)
+            if v not in self:
+                raise RuntimeError("Can't find variable '%s' in graph." % v)
+            elif not is_var_node(self, v):
+                raise RuntimeError("'%s' is not a variable node" % v)
 
         # path is a list of tuples of the form (var, basevar)
         path = [(base_src, base_src)]
@@ -619,9 +600,8 @@ class DependencyGraph(nx.DiGraph):
         else:
             return self._var_connections(path, direction)
 
-    def list_connections(self, show_passthrough=True,
-                               show_external=False):
-        conns = self._conns.get((show_passthrough, show_external))
+    def list_connections(self, show_passthrough=True):
+        conns = self._conns.get(show_passthrough)
         if conns is None:
             conns = [(u,v) for u,v in self.edges_iter()
                               if is_connection(self, u, v)]
@@ -629,12 +609,7 @@ class DependencyGraph(nx.DiGraph):
             if show_passthrough is False:
                 conns = [(u,v) for u,v in conns if not ('.' in u or '.' in v)]
 
-            if show_external is False:
-                conns = [(u,v) for u,v in conns
-                              if not (u.startswith('parent.')
-                                   or v.startswith('parent.'))]
-
-            self._conns[(show_passthrough, show_external)] = conns
+            self._conns[show_passthrough] = conns
         return conns[:]
 
     def get_sources(self, name):
@@ -777,24 +752,6 @@ class DependencyGraph(nx.DiGraph):
         self._bndryouts[connected] = outs
         return outs[:]
 
-    def get_extern_srcs(self):
-        """Returns sources from external to our parent
-        component that are connected to our boundary inputs.
-        """
-        if self._extrnsrcs is None:
-            self._extrnsrcs = [n for n in self.nodes_iter()
-                                      if is_extern_src(self, n)]
-        return self._extrnsrcs[:]
-
-    def get_extern_dests(self):
-        """Returns destinations that are external to our parent
-        component that are connected to our boundary outputs.
-        """
-        if self._extrndsts is None:
-            self._extrndsts = [n for n in self.nodes_iter()
-                                   if is_extern_dest(self, n)]
-        return self._extrndsts[:]
-
     def list_inputs(self, cname, connected=None):
         """Return a list of names of input nodes to a component.
         If connected is True, return only connected inputs.
@@ -829,24 +786,6 @@ class DependencyGraph(nx.DiGraph):
             return [n for n in outs if not self._var_connections(n, 'out')]
         else:
             return self.succ[cname].keys()
-
-    def list_autopassthroughs(self):
-        """Returns a list of autopassthrough connections as (src, dest)
-        tuples.  Autopassthroughs are connections directly from a
-        variable external to this graph to an internal (non-boundary)
-        variable.
-        """
-        conns = []
-        for n in self.nodes_iter():
-            if is_extern_node(self, n):
-                for p in self.predecessors_iter(n):
-                    if self.has_edge(p, n) and '.' in p:
-                        conns.append((p, n))
-                for s in self.successors_iter(n):
-                    if self.has_edge(n, s) and '.' in s:
-                        conns.append((n, s))
-
-        return conns
 
     def component_graph(self):
         """Return a subgraph containing only Components

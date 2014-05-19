@@ -46,26 +46,9 @@ class IContainer(Interface):
         Returns the added Container object.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
     def contains(path):
         """Return True if the child specified by the given dotted path
         name is contained in this Container.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
         """
 
     def get_dyn_trait(pathname, iotype=None, trait=None):
@@ -204,31 +187,9 @@ class IComponent(IContainer):
         the the list will contain names of outputs with matching validity.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
-        """
-
     def get_expr_depends():
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
-        """
-
-    def get_expr_sources():
-        """Return a list of tuples containing the names of all upstream components that are
-        referenced in any of our objectives, along with an initial exec_count of 0.
         """
 
     def get_abs_directory():
@@ -305,6 +266,21 @@ class IAssembly(IComponent):
     """An interface for objects that contain a driver and its workflow components."""
 
     driver = Attribute("object that manage's the iteration of a workflow")
+
+    def connect(srcpath, destpath):
+        """Connects one source variable to one destination variable.
+
+        srcpath: str
+            Name of source variable.
+
+        destpath: str
+            Name of destination variable.
+        """
+
+    def disconnect(srcpath, destpath):
+        """Removes the connection between one source variable and one
+        destination variable.
+        """
 
     def get_dataflow(self):
         """ Get a dictionary of components and the connections between them
