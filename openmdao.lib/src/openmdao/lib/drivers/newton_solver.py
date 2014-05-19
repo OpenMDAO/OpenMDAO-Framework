@@ -7,12 +7,7 @@ Newton solver based around Scipy's fsolve method. More methods can be added.
 #public symbols
 __all__ = ['NewtonSolver']
 
-import logging
-
-try:
-    from scipy.optimize import fsolve
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
+from scipy.optimize import fsolve
 
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow
@@ -21,10 +16,9 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 
 
-@stub_if_missing_deps('scipy')
 @add_delegate(HasParameters, HasEqConstraints)
 class NewtonSolver(Driver):
     ''' Wrapper for some Newton style solvers. Currently supports

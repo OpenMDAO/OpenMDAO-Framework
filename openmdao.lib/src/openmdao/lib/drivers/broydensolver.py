@@ -7,17 +7,11 @@ Solver based on the nonlinear solvers found in ``Scipy.Optimize``.
 #public symbols
 __all__ = ['BroydenSolver']
 
-import logging
-
-try:
-    import numpy
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-else:
-    # this little funct replaces a dependency on scipy
-    npnorm = numpy.linalg.norm
-    def norm(a, ord=None):
-        return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+import numpy
+# this little funct replaces a dependency on scipy
+npnorm = numpy.linalg.norm
+def norm(a, ord=None):
+    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.datatypes.api import Float, Int, Enum

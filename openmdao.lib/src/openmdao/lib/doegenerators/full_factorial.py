@@ -6,11 +6,10 @@ The FullFactorial DOEgenerator implements a full factorial Design of Experiments
 generates a set of design points that fully span the range of the parameters at the requested
 resolution. It plugs into the DOEgenerator socket on a DOEdriver."""
 
-import logging
 from itertools import product
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.numpy_fallback import linspace
+from numpy import linspace
 
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.main.datatypes.api import Int

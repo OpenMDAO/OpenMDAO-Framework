@@ -8,15 +8,8 @@ from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
-try:
-    from numpy import ndarray, zeros, vstack, hstack
-    # Can't solve derivatives without these
-    from scipy.sparse.linalg import gmres, LinearOperator
-
-except ImportError as err:
-    logger.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros, vstack, hstack, any
-
+from numpy import zeros, vstack, hstack
+from scipy.sparse.linalg import gmres, LinearOperator
 
 # pylint: disable-msg=C0103
 

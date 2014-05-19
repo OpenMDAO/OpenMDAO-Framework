@@ -1,20 +1,11 @@
 """Expected Improvement calculation for single objective."""
 
-import logging
+from numpy import exp, abs, pi, seterr
+
 try:
-    from numpy import exp, abs, pi, seterr
+    from math import erfc   # py27 and later has erfc in the math module
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-_check = ['numpy']
-try:
-    from math import erfc   # py27 and later has erf in the math module
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-    try:
-        from scipy.special import erfc
-    except ImportError as err:
-        logging.warn("In %s: %r" % (__file__, err))
-        _check.append('scipy')
+    from scipy.special import erfc
 
 from openmdao.main.datatypes.api import Float, Instance
 from openmdao.main.api import Component

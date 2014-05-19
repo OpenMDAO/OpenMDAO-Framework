@@ -1,13 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 import unittest
-import logging
-import StringIO
 
-try:
-    from numpy import array
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array
+from numpy import array
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.interfaces import implements, IHasParameters
@@ -15,7 +9,6 @@ from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.datatypes.api import Array, Int, Float, List, Enum, Str
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
-from openmdao.util.log import logger
 from openmdao.util.testutil import assert_raises
 
 

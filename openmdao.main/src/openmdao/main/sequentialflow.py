@@ -29,12 +29,7 @@ from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
                                 flatten_list_of_iters
 from openmdao.util.decorators import method_accepts
 
-try:
-    from numpy import ndarray, zeros
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros
+from numpy import ndarray, zeros
 
 _missing = object()
 

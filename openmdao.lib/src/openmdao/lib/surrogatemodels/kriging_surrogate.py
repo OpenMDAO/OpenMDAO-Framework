@@ -1,25 +1,18 @@
 """ Surrogate model based on Kriging. """
 from math import log, e, sqrt
-import logging
-
 
 # pylint: disable-msg=E0611,F0401
-try:
-    from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, \
-         sum, log10
-    from numpy.linalg import det, linalg, lstsq
-    from scipy.linalg import cho_factor, cho_solve
-    from scipy.optimize import minimize
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, \
+                  sum, log10
+from numpy.linalg import det, linalg, lstsq
+from scipy.linalg import cho_factor, cho_solve
+from scipy.optimize import minimize
 
 from openmdao.main.api import Container
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.util.decorators import stub_if_missing_deps
 
 
-@stub_if_missing_deps('numpy', 'scipy')
 class KrigingSurrogate(Container):
     """Surrogate Modeling method based on the simple Kriging interpolation.
     Predictions are returned as a NormalDistribution instance."""

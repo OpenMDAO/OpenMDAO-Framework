@@ -5,10 +5,7 @@ sort.
 
 import unittest
 
-try:
-    from numpy import array
-except ImportError as err:
-    from openmdao.main.numpy_fallback import array
+from numpy import array
 
 from openmdao.main.api import Assembly, Component, Driver, CyclicWorkflow, VariableTree
 from openmdao.main.datatypes.api import Array, Float, VarTree

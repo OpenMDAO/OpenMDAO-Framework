@@ -7,15 +7,8 @@ from sys import float_info
 from openmdao.main.array_helpers import flattened_size, flattened_value
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
-from openmdao.util.log import logger
 
-try:
-    from numpy import ndarray, zeros, ones, unravel_index, complex128
-
-except ImportError as err:
-    logger.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros, \
-                                    ones, unravel_index, complex128
+from numpy import ndarray, zeros, ones, unravel_index, complex128
 
 
 class FiniteDifference(object):

@@ -2,7 +2,7 @@ import unittest
 import math
 import ast
 
-from openmdao.main.numpy_fallback import array
+from numpy import array
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, \
                                    ExprExaminer
@@ -18,12 +18,7 @@ try:
     # (even though docs say it's new as of 3.2)
     from math import gamma
 except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    try:
-        from scipy.special import gamma
-    except ImportError as err:
-        logging.warn("In %s: %r", __file__, err)
+    from scipy.special import gamma
 
 class A(Component):
     f = Float(iotype='in')

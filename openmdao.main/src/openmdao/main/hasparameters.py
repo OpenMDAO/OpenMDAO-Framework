@@ -8,12 +8,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.typegroups import real_types, int_types
 
-try:
-    from numpy import array, ndarray, ndindex, ones
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, ones
+from numpy import array, ndarray, ndindex, ones
 
 __missing = object()
 

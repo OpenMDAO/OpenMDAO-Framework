@@ -18,13 +18,9 @@ _EXPR_DICT = {'math': math}
 for name in dir(math):
     if not name.startswith('_'):
         _EXPR_DICT[name] = getattr(math, name)
-# Make numpy functions available if possible.
-try:
-    import numpy
-except ImportError:
-    pass
-else:
-    _EXPR_DICT['numpy'] = numpy
+
+import numpy
+_EXPR_DICT['numpy'] = numpy
 
 
 class IteratorCaseFilter(object):

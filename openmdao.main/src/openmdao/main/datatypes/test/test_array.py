@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.main.numpy_fallback import array
+from numpy import array
 
 from openmdao.main.api import Component
 from openmdao.main.datatypes.array import Array

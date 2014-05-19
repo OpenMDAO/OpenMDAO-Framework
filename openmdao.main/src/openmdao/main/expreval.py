@@ -13,8 +13,6 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
-from openmdao.main.printexpr import transform_expression
-
 def _import_functs(mod, dct, names=None):
     if names is None:
         names = dir(mod)
@@ -31,26 +29,20 @@ _expr_dict = {
 
 
 # make numpy functions available if possible
-try:
-    import numpy
-    names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
-    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
-    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
-    'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
-    _import_functs(numpy, _expr_dict, names=names)
+import numpy
+names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
+'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
+'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
+_import_functs(numpy, _expr_dict, names=names)
 
-    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
+_expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
 
+math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
+'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
+_import_functs(math, _expr_dict, names=math_names)
 
-    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
-    'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
-    _import_functs(math, _expr_dict, names=math_names)
-
-except ImportError:
-    _import_functs(math, _expr_dict)
-else:
-    _expr_dict['numpy'] = numpy
-    #_import_functs(numpy, _expr_dict, names=[])
+_expr_dict['numpy'] = numpy
 
 # if scipy is available, add some functions
 try:
@@ -61,8 +53,7 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
-import numpy
+from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
 
 
 _Missing = object()

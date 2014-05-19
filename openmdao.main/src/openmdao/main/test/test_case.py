@@ -4,7 +4,7 @@ import array
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.datatypes.api import Int, List
-from openmdao.main.numpy_fallback import array as nparray
+from numpy import array
 
 from openmdao.main.test.test_vartree import DumbVT
 
@@ -148,7 +148,7 @@ class CaseTestCase(unittest.TestCase):
         dvt = DumbVT()
         inputs = [('comp1.a_lst', [1,2,3,[7,8,9]]),
                   ('comp1.a_arr', array.array('d',[4,5,6])),
-                  ('comp1.np_arr', nparray([[1,2],[3,4],[5,6]])),
+                  ('comp1.np_arr', array([[1,2],[3,4],[5,6]])),
                   ('comp1.vt', dvt),
                   ]
         case = Case(inputs=inputs)

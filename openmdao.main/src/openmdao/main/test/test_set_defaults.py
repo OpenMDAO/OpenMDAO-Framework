@@ -6,7 +6,7 @@ import unittest
 
 from openmdao.main.api import Component, Assembly
 from openmdao.main.datatypes.api import Float, List, Array
-from openmdao.main.numpy_fallback import array, zeros
+from numpy import array, zeros
     
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')

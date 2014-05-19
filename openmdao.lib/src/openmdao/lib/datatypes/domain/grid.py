@@ -1,10 +1,7 @@
 import copy
 from math import atan2, cos, hypot, sin
-import logging
-try:
-    import numpy
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+
+import numpy
 
 from openmdao.lib.datatypes.domain.vector import Vector
 

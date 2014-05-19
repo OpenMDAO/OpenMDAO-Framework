@@ -6,7 +6,7 @@ from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.numpy_fallback import zeros
+from numpy import zeros
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 

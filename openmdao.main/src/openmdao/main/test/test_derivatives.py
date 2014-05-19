@@ -8,14 +8,10 @@ import re
 import unittest
 from mock import Mock
 
-try:
-    from numpy import zeros, array, identity, random
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random
+from numpy import zeros, array, identity, random
 
 from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
-from openmdao.lib.optproblems.scalable import Discipline_No_Deriv
 
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
