@@ -9,7 +9,7 @@ from openmdao.main.depgraph import DependencyGraph, is_var_node
 
 _cluster_count = 0
 
-def write_driver_cluster(f, G, driver, indent):
+def write_driver_cluster(f, G, driver, indent, counts, alledges):
     global _cluster_count, IDriver
     comps = list(driver.workflow)
     tab = ' '*indent
@@ -23,22 +23,37 @@ def write_driver_cluster(f, G, driver, indent):
         dcount = 1
         for comp in comps:
             if IDriver.providedBy(comp):
-                write_driver_cluster(f, G, comp, indent)
+                write_driver_cluster(f, G, comp, indent, counts, alledges)
                 f.write("%s%s -> %s [style=dashed, label=%d];\n" % (tab, driver.name, comp.name, dcount))
                 dcount += 1
 
         subG = G.subgraph([c.name for c in comps])
 
-        write_nodes(f, subG, indent)
+        write_nodes(f, subG, indent, counts, driver.name)
 
         for u,v in subG.edges():
+            alledges.add((u,v))
+            if counts[u] > 0:
+                u = '"%s@%s"' % (u, driver.name)
+            if counts[v] > 0:
+                v = '"%s@%s"' % (v, driver.name)
             f.write('%s%s -> %s;\n' % (tab, u, v))
+
+        for pname in driver.list_pseudocomps():
+            f.write('%s%s -> %s [style=dotted];\n' % (tab, pname, driver.name))
 
     f.write('%s}\n' % tab)
 
-def write_nodes(f, G, indent):
+def write_nodes(f, G, indent, counts, parent):
     tab = ' '*indent
     for node, data in G.nodes_iter(data=True):
+        counts[node] -= 1
+        if counts[node] > 0:
+            data = data.copy() # don't corrupt metadata of other subgraphs/parent graphs
+            data['label'] = node
+            node = '%s@%s' % (node, parent)
+            data['style'] = 'filled'
+            data['fillcolor'] = 'gray'
         if 'driver' in data:
             data['shape'] = 'invhouse'
         elif 'pseudo' in data:
@@ -54,13 +69,19 @@ def write_nodes(f, G, indent):
             base = G.base_var(node)
             if G.node[base].get('iotype') == 'state':
                 data['shape'] = 'doubleoctagon'
-        data['margin'] = '0.0,0.0'
+        data['margin'] = '0.0'
         f.write('%s"%s" [' % (tab, node))
         for i,(key,val) in enumerate(data.items()):
             if i > 0:
                 f.write(", ")
             f.write("%s=%s" % (key,val))
         f.write("];\n")
+
+def _get_comp_counts(drv, counts):
+    for comp in drv.workflow:
+        counts[comp.name] += 1
+        if IDriver.providedBy(comp):
+            _get_comp_counts(comp, counts)
 
 def write_dot(G, dotfile, scope=None):
 
@@ -71,24 +92,35 @@ def write_dot(G, dotfile, scope=None):
         f.write("strict digraph {\n")
         #f.write("rankdir=RL;\n")
         driver = getattr(scope, 'driver')
-        write_driver_cluster(f, G, driver, 3)
 
-        write_nodes(f, G, 3)
+        f.write("   driver [shape=invhouse, margin=0.0];\n")
+
+        # find any components that appear in multiple workflows
+        counts = dict([(n,0) for n in G.nodes()])
+        _get_comp_counts(driver, counts)
+
+        alledges = set()
+        write_driver_cluster(f, G, driver, 3, counts, alledges)
+
+        #write_nodes(f, G, 3, counts, 'driver')
 
         # now include any cross workflow connections
         for u,v in G.edges_iter():
-            f.write("   %s -> %s;\n" % (u, v))
+            if (u,v) not in alledges:
+                f.write("   %s -> %s;\n" % (u, v))
 
         f.write("}\n")
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=False,
-               workflow=False, scope=None):
+def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None):
     """Create a plot of the given graph"""
 
     G = G.copy()
 
     if isinstance(G, DependencyGraph):
-        G.prune_unconnected_vars()
+        if workflow:
+            G = G.component_graph()
+        else:
+            G.prune_unconnected_vars()
 
     if not pseudos:
         nodes = [n for n in G.nodes() if '_pseudo_' in n]
@@ -118,12 +150,15 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=False,
                 base = G.base_var(node)
                 if G.node[base].get('iotype') == 'state':
                     data['shape'] = 'doubleoctagon'
-            data['margin'] = '0.0,0.0'
+            data['margin'] = '0.0'
         nx.write_dot(G, dotfile)
 
     os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
 
-    webbrowser.get().open(outfile)
+    if sys.platform == 'darwin':
+        os.system('open %s' % outfile)
+    else:
+        webbrowser.get().open(outfile)
 
     #os.remove(dotfile)
 
