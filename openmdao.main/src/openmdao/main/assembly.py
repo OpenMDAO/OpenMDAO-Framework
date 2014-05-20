@@ -133,6 +133,7 @@ class Assembly(Component):
         super(Assembly, self).__init__()
 
         self._pseudo_count = 0  # counter for naming pseudocomps
+        self._init_driver = None
 
         # data dependency graph
         self._depgraph = DependencyGraph()
@@ -531,12 +532,29 @@ class Assembly(Component):
                                  ','.join(collisions), RuntimeError)
 
     def _check_unexecuted_comps(self):
+        cgraph = self._depgraph.component_graph()
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
-        diff = set(self._depgraph.component_graph().nodes()) - wfcomps
+        diff = set(cgraph.nodes()) - wfcomps
         if diff:
-            self._logger.warning("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
-                                   % list(diff))
+            out_edges = nx.edge_boundary(cgraph, diff)
+            in_edges = nx.edge_boundary(cgraph, wfcomps)
+            pre = [u for u,v in out_edges]
+            post = [v for u,v in in_edges]
+            
+            if pre:
+                self._logger.warning("The following components are not in any workflow but "
+                                     "are needed by other workflows, so they will be executed "
+                                     "once per execution of this Assembly: %s" % pre)
+
+                # can't call add here for _init_driver because that calls
+                # config_changed...
+                self._init_driver = Driver()
+                self._init_driver.parent = self
+                self._init_driver.workflow.add(pre)
+            if post:
+                self._logger.warning("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
+                                      % list(diff))
 
     def _check_unset_req_vars(self):
         graph = self._depgraph
@@ -682,6 +700,7 @@ class Assembly(Component):
             if isinstance(cont, Driver):
                 cont.config_changed(update_parent=False)
 
+        self._init_driver = None
         self._graph_loops = None
         self.J_input_keys = self.J_output_keys = None
 
@@ -697,6 +716,9 @@ class Assembly(Component):
         if self.parent is None:
             for recorder in self.recorders:
                 recorder.startup()
+
+        if self._init_driver is not None:
+            self._init_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
         self.update_inputs('driver')
         self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)

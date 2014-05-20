@@ -53,18 +53,32 @@ class Model(Assembly):
 class LazyModel(Assembly):
     
     def configure(self):
-        self.add('driver', CaseDriver(2))
+        self.add('driver', NTimes(1))
 
-        self.add('D2', CaseDriver(2))
+        self.add('D2', NTimes(1))
 
         self.add('C1', Simple())
         self.add('C2', Simple())
         self.add('C3', Simple())
+        self.add('C4', Simple())
         
-        # C1 --> C2 --> C3
+        # C1 --> C2 --> C3 --> C4
         self.connect('C1.c', 'C2.a')
         self.connect('C2.c', 'C3.a')
+        self.connect('C3.c', 'C4.a')
 
+@add_delegate(HasParameters, HasObjective)
+class NTimes(Driver):
+
+    def __init__(self, max_iterations):
+        super(NTimes, self).__init__()
+        self.max_iterations = max_iterations
+
+    def execute(self):
+        for i in range(self.max_iterations):
+            super(NTimes, self).execute()
+
+            
 @add_delegate(HasParameters, HasObjective)
 class CaseDriver(Driver):
 
@@ -261,9 +275,9 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
-        self.assertEqual(top.C2.exec_count, 2)
-        self.assertEqual(top.C3.exec_count, 2)
         
     def test_lazy_auto_nested(self):
         # lazy evaluation with auto determination of D2 workflow
@@ -274,19 +288,20 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
-        self.assertEqual(top.C2.exec_count, 2)
-        self.assertEqual(top.C3.exec_count, 2)
         
     def test_lazy_manual_top(self):
         # manual top level workflow
         top = set_as_top(LazyModel())
         top.driver.add_parameter('C2.a', low=-99, high=99)
         top.driver.add_objective('C3.d')
+        top.driver.workflow.add(['C2', 'C3'])
         top.run()
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
-        self.assertEqual(top.C2.exec_count, 2)
-        self.assertEqual(top.C3.exec_count, 2)
         
 
 
