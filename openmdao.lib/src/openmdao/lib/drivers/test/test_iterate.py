@@ -11,7 +11,6 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod
 
 class Simple1(Component):
     """ Testing convergence failure"""
@@ -110,8 +109,6 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
-        pcompmod._count = 0 # keep pseudocomp names consistent for each test
-                            # to avoid weird stuff like hash order changes
 
     def tearDown(self):
         self.top = None

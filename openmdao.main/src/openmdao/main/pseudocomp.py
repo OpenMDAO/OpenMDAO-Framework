@@ -1,30 +1,24 @@
 
 import ast
-from threading import RLock
 
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent
+from openmdao.main.interfaces import implements, IComponent, IAssembly
 from openmdao.main.printexpr import transform_expression, print_node
+from openmdao.main.mp_support import has_interface
+
 from numpy import zeros
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 
-_namelock = RLock()
-_count = 0
-
-
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
+def _get_new_name(parent):
+    while not has_interface(parent, IAssembly):
+        parent = parent.parent
 
-def _get_new_name():
-    global _count
-    with _namelock:
-        name = "_pseudo_%d" % _count
-        _count += 1
-    return name
-
+    return parent.new_pseudo_name()
 
 def _get_varname(name):
     return name.split('[', 1)[0]
@@ -88,10 +82,10 @@ class PseudoComponent(object):
                  pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
-        self.name = _get_new_name()
+        self._parent = parent
+        self.name = _get_new_name(parent)
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
-        self._parent = parent
         self._inputs = []
 
         # Flags and caching used by the derivatives calculation

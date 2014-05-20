@@ -16,9 +16,6 @@ from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.util.decorators import add_delegate
 
-# to keep pseudocomp names consistent in tests
-import openmdao.main.pseudocomp as pcompmod
-
 
 class MyComp(Component):
 
@@ -118,11 +115,6 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         self.model = None
-        pcompmod._count = 0  # make sure pseudocomp names are consistent
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
 
     def test_simple_flow(self):
         # Simple Case

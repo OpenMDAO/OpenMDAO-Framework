@@ -15,7 +15,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 
 @add_delegate(HasParameters, HasConstraints, HasObjective)
@@ -969,7 +968,6 @@ def pseudo_edges(index, num_inputs):
 class AssemblyTestCase2(unittest.TestCase):
 
     def setUp(self):
-        pcompmod._count = 0
         self.top = top = set_as_top(Assembly())
         self.top.add('driver', DumbDriver())
         top.add('C1', SimpleUnits())

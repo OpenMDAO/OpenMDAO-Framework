@@ -132,6 +132,8 @@ class Assembly(Component):
 
         super(Assembly, self).__init__()
 
+        self._pseudo_count = 0  # counter for naming pseudocomps
+
         # data dependency graph
         self._depgraph = DependencyGraph()
 
@@ -156,6 +158,7 @@ class Assembly(Component):
         # Assemblies automatically figure out their own derivatives, so
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
+
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -1030,6 +1033,30 @@ class Assembly(Component):
         names = [name for name in self.list_containers()
                      if isinstance(self.get(name), Component)]
         return names
+
+    def all_wflows_iter(self):
+        """An iterator of component names over all workflows in an iteration
+        hierarchy.  Shows the actual Assembly-wide order of execution of components
+        in the Assembly.  Note that a given component will appear multiple times if
+        that component is a member of multiple workflows.
+        """
+
+        def _all_wflows_iter(drv):
+            comps = [drv.name]
+            for comp in drv.workflow:
+                if has_interface(comp, IDriver):
+                    comps.extend(_all_wflows_iter(comp))
+                else:
+                    comps.append(comp.name)
+            return comps
+
+        return _all_wflows_iter(self.driver)
+
+    @rbac(('owner', 'user'))
+    def new_pseudo_name(self):
+        name = "_pseudo_%d" % self._pseudo_count
+        self._pseudo_count += 1
+        return name
 
     def get_dataflow(self):
         ''' Get a dictionary of components and the connections between them

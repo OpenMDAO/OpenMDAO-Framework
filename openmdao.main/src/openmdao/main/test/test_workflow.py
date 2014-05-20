@@ -9,6 +9,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.datatypes.api import Int, Bool, Float
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.test.test_assembly import Simple
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.util.decorators import add_delegate
 
@@ -49,6 +50,20 @@ class Model(Assembly):
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
 
+class LazyModel(Assembly):
+    
+    def configure(self):
+        self.add('driver', CaseDriver(2))
+
+        self.add('D2', CaseDriver(2))
+
+        self.add('C1', Simple())
+        self.add('C2', Simple())
+        self.add('C3', Simple())
+        
+        # C1 --> C2 --> C3
+        self.connect('C1.c', 'C2.a')
+        self.connect('C2.c', 'C3.a')
 
 @add_delegate(HasParameters, HasObjective)
 class CaseDriver(Driver):
@@ -61,7 +76,7 @@ class CaseDriver(Driver):
         for i in range(self.max_iterations):
             self.set_parameters([i])
             super(CaseDriver, self).execute()
-            obj = self.eval_objective()
+            self.eval_objective()
 
 
 class CaseComponent(Component):
@@ -237,6 +252,42 @@ class TestCase(unittest.TestCase):
         ]
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
+
+    def test_lazy_auto_top(self):
+        # lazy evaluation with auto determination of top level workflow
+        top = set_as_top(LazyModel())
+        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_objective('C3.d')
+
+        top.run()
+
+        self.assertEqual(top.C1.exec_count, 1)
+        self.assertEqual(top.C2.exec_count, 2)
+        self.assertEqual(top.C3.exec_count, 2)
+        
+    def test_lazy_auto_nested(self):
+        # lazy evaluation with auto determination of D2 workflow
+        top = set_as_top(LazyModel())
+        top.driver.workflow.add(['C1', 'D2'])
+        top.D2.add_parameter('C2.a', low=-99, high=99)
+        top.D2.add_objective('C3.d')
+
+        top.run()
+
+        self.assertEqual(top.C1.exec_count, 1)
+        self.assertEqual(top.C2.exec_count, 2)
+        self.assertEqual(top.C3.exec_count, 2)
+        
+    def test_lazy_manual_top(self):
+        # manual top level workflow
+        top = set_as_top(LazyModel())
+        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_objective('C3.d')
+        top.run()
+        self.assertEqual(top.C1.exec_count, 1)
+        self.assertEqual(top.C2.exec_count, 2)
+        self.assertEqual(top.C3.exec_count, 2)
+        
 
 
 if __name__ == '__main__':

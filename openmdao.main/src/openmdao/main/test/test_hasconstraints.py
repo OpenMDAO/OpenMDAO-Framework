@@ -8,7 +8,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
-import openmdao.main.pseudocomp as pcompmod
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -62,7 +61,6 @@ class Simple(Component):
 class HasConstraintsTestCase(unittest.TestCase):
 
     def setUp(self):
-        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.asm = set_as_top(Assembly())
         self.asm.add('comp1', Simple())
         self.asm.add('comp2', Simple())

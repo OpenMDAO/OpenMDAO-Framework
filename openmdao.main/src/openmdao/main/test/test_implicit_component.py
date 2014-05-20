@@ -15,8 +15,6 @@ from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
-import openmdao.main.pseudocomp as pcompmod  # used to keep pseudocomp names consistent in tests
-
 
 class MyComp_No_Deriv(ImplicitComponent):
     ''' Single implicit component with 3 states and residuals.
@@ -359,9 +357,6 @@ class Coupled2(ImplicitComponent):
 
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
-
-    def setUp(self):
-        pcompmod._count = 0  # reset pseudocomp numbering
 
     def test_error_logging1(self):
 

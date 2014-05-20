@@ -10,7 +10,6 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 exec_order = []
 
@@ -114,7 +113,6 @@ class DependsTestCase(unittest.TestCase):
 
         
     def setUp(self):
-        pcompmod._count = 0
         top = self.top = _nested_model()
         sub = top.sub
         sub.connect('comp1.c', 'comp4.a')
@@ -508,7 +506,6 @@ class DependsTestCase2(unittest.TestCase):
 class DependsTestCase3(unittest.TestCase):
 
     def test_input_pseudocomp(self):
-        pcompmod._count = 0  # keeps names of pseudocomps consistent
         top = set_as_top(Assembly())
         top.add('comp', ArrayComp())
         top.add('driver', DumbDriver())
@@ -541,7 +538,6 @@ class ExprDependsTestCase(unittest.TestCase):
     def setUp(self):
         global exec_order
         exec_order = []
-        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.top = set_as_top(Assembly())
         self.top.add('c2', ArrayComp())
         self.top.add('c1', ArrayComp())

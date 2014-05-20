@@ -9,7 +9,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import ISolver
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod
 from numpy.testing import assert_almost_equal
 from math import sin, cos, pi
 from scipy.optimize import brentq
@@ -20,10 +19,6 @@ from openmdao.lib.drivers.brent import Brent
 
 
 class TestBrentDriver(unittest.TestCase):
-
-    def setUp(self):
-        pcompmod._count = 0 # keep pseudocomp names consistent for each test
-                            # to avoid weird stuff like hash order changes
 
     def test_brent_converge(self):
 
