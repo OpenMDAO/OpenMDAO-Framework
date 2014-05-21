@@ -2,13 +2,74 @@ import sys
 import os
 
 import ConfigParser
-
+from inspect import isfunction
 import nose
+
 from nose.plugins.base import Plugin
+
+from nose.util import isclass, func_lineno
+from nose.suite import ContextList
+from nose.pyversion import sort_list
+from nose.loader import log, TestLoader
+
 from pkg_resources import working_set, to_filename
 
 import atexit
 
+def loadTestsFromModule(self, module, path=None, discovered=False):
+        """Load all tests from module and return a suite containing
+        them. If the module has been discovered and is not test-like,
+        the suite will be empty by default, though plugins may add
+        their own tests.
+        """
+        log.debug("Load from module %s", module)
+        tests = []
+        test_classes = []
+        test_funcs = []
+        # For *discovered* modules, we only load tests when the module looks
+        # testlike. For modules we've been directed to load, we always
+        # look for tests. (discovered is set to True by loadTestsFromDir)
+        if not discovered or self.selector.wantModule(module):
+            for item in dir(module):
+                test = getattr(module, item, None)
+                # print "Check %s (%s) in %s" % (item, test, module.__name__)
+                if isclass(test):
+                    if self.selector.wantClass(test):
+                        test_classes.append(test)
+                elif isfunction(test) and self.selector.wantFunction(test):
+                    test_funcs.append(test)
+            sort_list(test_classes, lambda x: x.__name__)
+            sort_list(test_funcs, func_lineno)
+            tests = map(lambda t: self.makeTest(t, parent=module),
+                        test_classes + test_funcs)
+
+        # Now, descend into packages
+        # FIXME can or should this be lazy?
+        # is this syntax 2.2 compatible?
+        module_paths = getattr(module, '__path__', [])
+        if path:
+            path = os.path.realpath(path)
+        for module_path in module_paths:
+            log.debug("Load tests from module path %s?", module_path)
+            log.debug("path: %s os.path.realpath(%s): %s",
+                      path, module_path, os.path.realpath(module_path))
+            
+            if path:
+                norm_module_path = os.path.normcase(module_path)
+                norm_path = os.path.normcase(path)
+            
+            if (self.config.traverseNamespace or not path) or \
+                    os.path.realpath(norm_module_path).startswith(norm_path):
+                # Egg files can be on sys.path, so make sure the path is a
+                # directory before trying to load from it.
+                if os.path.isdir(module_path):
+                    tests.extend(self.loadTestsFromDir(module_path))
+            
+        for test in self.config.plugins.loadTestsFromModule(module, path):
+            tests.append(test)
+
+        return self.suiteClass(ContextList(tests, context=module))
+        
 class TestFailureSummary(Plugin):
     """This plugin lists the names of the failed tests. Run nose
     with the option ``--with-fail-summary`` to activate it.
@@ -293,6 +354,9 @@ def run_openmdao_suite(argv=None):
     
 #    _trace_atexit()
     nose.run_exit(argv=args)
+
+
+setattr(nose.loader.TestLoader, 'loadTestsFromModule', loadTestsFromModule)
 
 if __name__ == '__main__':
     run_openmdao_suite()
