@@ -17,14 +17,14 @@ import openmdao.main.pseudocomp as pcompmod
 
 from openmdao.util.testutil import assert_rel_error
 
-# pylint: disable-msg=E1101,E1103
+# pylint: disable=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
 
 class SellarDiscipline2a(Component):
     """Component containing Discipline 2a"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
 
     temp1 = Float(iotype='out', desc='Output of this Discipline')
@@ -44,7 +44,7 @@ class SellarDiscipline2a(Component):
 class SellarDiscipline2b(Component):
     """Component containing Discipline 2b"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     temp1 = Float(0.0, iotype='in', desc='Intermediate Variable')
 
@@ -62,7 +62,7 @@ class SellarDiscipline2b(Component):
 class SellarDiscipline2c(Component):
     """Component containing Discipline 2c"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
     temp2 = Float(0.0, iotype='in', desc='Intermediate Variable')
 
@@ -132,7 +132,6 @@ class SellarCO_Multi(Assembly):
             '(z1-dis2b.z1)**2 + (z2-dis2c.z2)**2 + (y1-dis2a.y1)**2 + '
             '(y2-dis2c.y2)**2 < 0'])
 
-        self.printvars = ['dis1.y1', 'dis2c.y2']
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003

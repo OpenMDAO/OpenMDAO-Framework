@@ -3,7 +3,8 @@
 from fnmatch import fnmatch
 
 # pylint: disable=E0611,F0401
-from openmdao.main.case import Case
+from openmdao.main.case import Case, flatten_obj
+from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 
@@ -45,7 +46,6 @@ class Workflow(object):
         self._rec_objectives = None
         self._rec_responses = None
         self._rec_constraints = None
-        self._rec_inputs = None
         self._rec_outputs = None
 
         if members:
@@ -121,7 +121,8 @@ class Workflow(object):
             self._record_case(case_uuid=case_uuid)
 
     def configure_recording(self, includes, excludes):
-        """ Called at start of top-level run to configure case recording. """
+        """Called at start of top-level run to configure case recording.
+        Returns set of paths for changing inputs."""
         driver = self._parent
         scope = driver.parent
         top = scope
@@ -129,7 +130,7 @@ class Workflow(object):
             top = top.parent
         if not top.recorders:
             self._rec_required = False
-            return
+            return (set(), dict())
 
         prefix = scope.get_pathname()
         if prefix:
@@ -146,7 +147,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
-                    inputs.append(path)
+                    inputs.append((path, param.size))
 
         # Objectives
         self._rec_objectives = []
@@ -156,14 +157,24 @@ class Workflow(object):
             path = prefix+name
             if self._check_path(path, includes, excludes):
                 self._rec_objectives.append(key)
-                outputs.append(path)
+                try:
+                    val = driver.eval_named_objective(key)
+                    size = len(flatten_obj(name, val))
+                except Exception:
+                    size = 1
+                outputs.append((path, size))
         elif hasattr(driver, 'eval_objectives'):
             for j, key in enumerate(driver.get_objectives()):
                 name = 'Objective_%d' % j
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    outputs.append(path)
+                    try:
+                        val = driver.eval_named_objective(key)
+                        size = len(flatten_obj(name, val))
+                    except Exception:
+                        size = 1
+                    outputs.append((path, size))
 
         # Responses
         self._rec_responses = []
@@ -173,7 +184,12 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    outputs.append(path)
+                    try:
+                        val = driver.eval_response(key)
+                        size = len(flatten_obj(name, val))
+                    except Exception:
+                        size = 1
+                    outputs.append((path, 1))
 
         # Constraints
         self._rec_constraints = []
@@ -183,7 +199,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(path)
+                    outputs.append((path, con.size))
 
         if hasattr(driver, 'get_eq_constraints'):
             for name, con in driver.get_eq_constraints().items():
@@ -191,33 +207,54 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(path)
+                    outputs.append((path, con.size))
 
-        # Variables
-        case_inputs, case_outputs = top.get_case_variables()
-
-        self._rec_inputs = []
-        for path, value in case_inputs:
-            if self._check_path(path, includes, excludes):
-                self._rec_inputs.append(path)
-                inputs.append(path)
-
+        # Other outputs.
         self._rec_outputs = []
-        for path, value in case_outputs:
-            if self._check_path(path, includes, excludes):
-                self._rec_outputs.append(path)
-                outputs.append(path)
+        srcs = []
+        if hasattr(driver, 'get_parameters'):
+            srcs.extend(param.target
+                        for param in driver.get_parameters().values())
+        dsts = []
+        if hasattr(driver, 'eval_objective') or \
+           hasattr(driver, 'eval_objectives'):
+            dsts.extend(objective.pcomp_name+'.out0'
+                        for objective in driver.get_objectives().values())
+        if hasattr(driver, 'eval_responses'):
+            dsts.extend(response.pcomp_name+'.out0'
+                        for response in driver.get_responses().values())
+        if hasattr(driver, 'get_ineq_constraints'):
+            dsts.extend(constraint.pcomp_name+'.out0'
+                        for constraint in driver.get_ineq_constraints().values())
+        if hasattr(driver, 'get_eq_constraints'):
+            dsts.extend(constraint.pcomp_name+'.out0'
+                        for constraint in driver.get_eq_constraints().values())
+        for src, dst in _get_inner_connections(scope._depgraph, srcs, dsts):
+            path = prefix+src
+            try:
+                val = scope.get(name)
+                size = len(flatten_obj(name, val))
+            except Exception:
+                size = 1
+            cfg = (path, size)
+            if cfg not in inputs and cfg not in outputs and \
+               self._check_path(path, includes, excludes):
+                self._rec_outputs.append(src)
+                outputs.append(cfg)
 
-        path = '%s.workflow.itername' % driver.get_pathname()
+        name = '%s.workflow.itername' % driver.name
+        path = prefix+name
         if self._check_path(path, includes, excludes):
-            self._rec_outputs.append(path)
-            outputs.append(path)
+            self._rec_outputs.append(name)
+            outputs.append((path, 1))
 
+        # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
-            # Register paths in recorders.
             for recorder in top.recorders:
                 recorder.register(id(self), inputs, outputs)
+
+        return (set(path for path, width in inputs), dict())
 
     @staticmethod
     def _check_path(path, includes, excludes):
@@ -260,17 +297,9 @@ class Workflow(object):
         # Constraints.
         outputs.extend(con.evaluate(scope)
                        for con in self._rec_constraints)
-        # Variables.
-        if self._rec_inputs or self._rec_outputs:
-            case_inputs, case_outputs = top.get_case_variables()
-            inputs.extend(val for name, val in case_inputs
-                                            if name in self._rec_inputs)
-            outputs.extend(val for name, val in case_outputs
-                                             if name in self._rec_outputs)
-            name = '%s.workflow.itername' % driver.get_pathname()
-            if name in self._rec_outputs:
-                outputs.append(self.itername)
-
+        # Other outputs.
+        outputs.extend(scope.get(name)
+                       for name in self._rec_outputs)
         # Record.
         for recorder in top.recorders:
             recorder.record(id(self), inputs, outputs,

@@ -95,7 +95,11 @@ class DumbRecorder(object):
         pass
 
     def register(self, src, inputs, outputs):
-        self._name_map[src] = (inputs, outputs)
+        self._name_map[src] = ([name for name, width in inputs],
+                               [name for name, width in outputs])
+
+    def record_constants(self, constants):
+        pass
 
     def record(self, src, inputs, outputs, case_uuid, parent_uuid):
         in_names, out_names = self._name_map[src]

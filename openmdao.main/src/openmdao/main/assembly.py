@@ -4,7 +4,7 @@
 #public symbols
 __all__ = ['Assembly', 'set_as_top']
 
-import fnmatch
+from fnmatch import fnmatch
 import re
 import sys
 import threading
@@ -32,7 +32,6 @@ from openmdao.main.hasresponses import HasResponses
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import is_comp_node, is_boundary_node
@@ -120,11 +119,16 @@ class Assembly(Component):
                     "this Assembly.")
 
     recorders = List(Slot(ICaseRecorder, required=False),
-                     desc='Case recorders for iteration data.')
+                     desc='Case recorders for iteration data'
+                          ' (only valid at top level).')
 
-    # Extra variables for adding to CaseRecorders
-    printvars = List(Str, iotype='in', framework_var=True,
-                     desc='List of extra variables to output in the recorders.')
+    includes = List(Str, iotype='in', framework_var=True,
+                    desc='Patterns for variables to include in the recorders'
+                         ' (only valid at top level).')
+
+    excludes = List(Str, iotype='in', framework_var=True,
+                    desc='Patterns for variables to exclude from the recorders'
+                         ' (only valid at top level).')
 
     def __init__(self):
 
@@ -147,6 +151,9 @@ class Assembly(Component):
         # Assemblies automatically figure out their own derivatives, so
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
+
+        self.includes = ['*']
+        self.excludes = []
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -637,83 +644,74 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
+        self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        self._depgraph.update_boundary_outputs(self)
+
+    def configure_recording(self, includes=None, excludes=None, inputs=None):
+        """Called at start of top-level run to configure case recording.
+        Returns set of paths for changing inputs."""
         if self.parent is None:
             for recorder in self.recorders:
                 recorder.startup()
 
-        self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
-
-        self._depgraph.update_boundary_outputs(self)
-
-    def configure_recording(self, includes=None, excludes=None):
-        """ Called at start of top-level run to configure case recording. """
-        includes = includes or ['*']
-        excludes = excludes or []
+        # Determine (changing) inputs and outputs to record
+        inputs = set()
+        constants = {}
+        includes = self.includes if self.parent is None else includes
+        excludes = self.excludes if self.parent is None else excludes
         for name in self.list_containers():
             obj = getattr(self, name)
             if has_interface(obj, IDriver, IAssembly):
-                obj.configure_recording(includes, excludes)
+                inps, consts = obj.configure_recording(includes, excludes)
+                inputs.update(inps)
+                constants.update(consts)
 
-    def get_case_variables(self):
-        """Collect variables to be recorded by workflows."""
-        inputs = []
-        outputs = []
-        processed = set()
-        for printvar in self.printvars:
-            if '*' in printvar:
-                printvars = self._get_all_varpaths(printvar)
+        # Determine constant inputs.
+        objs = [self]
+        objs.extend(getattr(self, name) for name in self.list_containers())
+        for obj in objs:
+            if has_interface(obj, IComponent):
+                prefix = obj.get_pathname()
+                if prefix:
+                    prefix += '.'
+                for name in obj.list_inputs(connected=False):
+                    path = prefix+name
+                    if path in inputs:
+                        continue  # Changing input.
+                    for pattern in includes:
+                        if fnmatch(path, pattern):
+                            break
+                    else:
+                        continue  # Not to be included.
+                    for pattern in excludes:
+                        if fnmatch(path, pattern):
+                            break # Excluded.
+                    else:
+                        val = getattr(obj, name)
+                        if isinstance(val, VariableTree):
+                            for path, val in self._expand_tree(path, val):
+                                constants[path] = val
+                        else:
+                            constants[path] = val
+
+        # Record constant inputs.
+        if self.parent is None:
+            for recorder in self.recorders:
+                recorder.record_constants(constants)
+
+        return (inputs, constants)
+
+    def _expand_tree(self, path, tree):
+        """Return list of ``(path, value)`` with :class:`VariableTree`
+        expanded."""
+        path += '.'
+        result = []
+        for name, val in tree._items(set()):
+            if isinstance(val, VariableTree):
+                result.extend(self._expand_tree(path+name, val))
             else:
-                printvars = [printvar]
-
-            for var in printvars:
-                if var in processed:
-                    continue
-                processed.add(var)
-                iotype = self.get_metadata(var, 'iotype')
-                if iotype == 'in':
-                    val = ExprEvaluator(var, scope=self).evaluate()
-                    inputs.append((var, val))
-                elif iotype == 'out':
-                    val = ExprEvaluator(var, scope=self).evaluate()
-                    outputs.append((var, val))
-                else:
-                    msg = "%s is not an input or output" % var
-                    self.raise_exception(msg, ValueError)
-        return (inputs, outputs)
-
-    def _get_all_varpaths(self, pattern):
-        """Return a list of all varpaths that match the specified pattern."""
-        prefix = self.get_pathname()
-        if prefix:
-            prefix += '.'
-
-        # Start with our settings.
-        all_vars = []
-        for var in self.list_vars():
-            all_vars.append('%s%s' % (prefix, var))
-
-        # Now all components.
-        for name in self.list_containers():
-            obj = getattr(self, name)
-            if isinstance(obj, Component) and \
-               not isinstance(obj, PseudoComponent):
-
-                for var in obj.list_vars():
-                    all_vars.append('%s%s.%s' % (prefix, name, var))
-
-                # Recurse into assemblies
-                if isinstance(obj, Assembly):
-                    assy_vars = obj._get_all_varpaths(pattern)
-                    all_vars = all_vars + assy_vars
-
-        # Match pattern in our var names
-        matched_vars = []
-        if pattern == '*':
-            matched_vars = all_vars
-        else:
-            matched_vars = fnmatch.filter(all_vars, pattern)
-
-        return matched_vars
+                result.append((path+name, val))
+        return result
 
     def stop(self):
         """Stop the calculation."""

@@ -7,7 +7,7 @@ import unittest
 
 
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
-                                          ListCaseRecorder, DumpCaseRecorder
+                                          DumpCaseRecorder
 from openmdao.main.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver
 from openmdao.main.api import Assembly, Case, set_as_top
@@ -300,7 +300,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.num_backups = 0
         rec.startup()
-        rec.register(id(self), ['comp1.x', 'comp1.y', 'comp2.x'], [])
+        rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
         rec.record(id(self), [2.0, 4.3, 1.9], [], '', '')
         rec.close()
 
@@ -354,8 +354,21 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      Response_1.vt2.vt3.data: ',
             '      Response_1.vt2.x: -1.0',
             '      Response_1.vt2.y: -2.0',
+            '      comp1.a_array[0]: 1.0',
+            '      comp1.a_array[1]: 3.0',
+            '      comp1.a_array[2]: 5.5',
+            '      comp1.vt.data: ',
+            '      comp1.vt.v1: 1.0',
+            '      comp1.vt.v2: 2.0',
+            '      comp1.vt.vt2.data: ',
+            '      comp1.vt.vt2.vt3.a: 1.0',
+            '      comp1.vt.vt2.vt3.b: 12.0',
+            '      comp1.vt.vt2.vt3.data: ',
+            '      comp1.vt.vt2.x: -1.0',
+            '      comp1.vt.vt2.y: -2.0',
             '      driver.workflow.itername: 1',
             ]
+
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case:'):
@@ -408,7 +421,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.startup()
-        rec.register(id(self), ['comp1.x', 'comp1.y', 'comp2.x'], [])
+        rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
         rec.record(id(self), [2.0, 4.3, 1.9], [], '', '')
         try:
             rec.record(id(self), [2.0, 1.9], [], '', '')
@@ -443,9 +456,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.recorders[0].num_backups = 0
         self.top.run()
-        outputs = ['comp1.z', 'comp2.z', 'comp1.a_string',
-                   'comp1.a_array[2]', 'driver.workflow.itername']
-        inputs = ['comp1.x', 'comp1.y', 'comp1.x_array[1]', 'comp1.b_bool']
+        outputs = [('comp1.z', 1), ('comp2.z', 1), ('comp1.a_string', 1),
+                   ('comp1.a_array[2]', 1), ('driver.workflow.itername', 1)]
+        inputs = [('comp1.x', 1), ('comp1.y', 1), ('comp1.x_array[1]', 1),
+                  ('comp1.b_bool', 1)]
         self.top.recorders[0].register(id(self), inputs, outputs)
         outputs = [0, 0, 'world', 0, '1']
         inputs = [0.1, 2 + .1, 99.88, True]

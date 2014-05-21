@@ -3,7 +3,7 @@
 Interfaces for the OpenMDAO project.
 """
 
-# pylint: disable-msg=E0213,E0211,W0232
+# pylint: disable=E0213,E0211,W0232
 
 from zope.interface import implements, classImplements, Attribute, Interface
 
@@ -347,7 +347,7 @@ class IAssembly(IComponent):
         """
 
 
-class IFactory (Interface):
+class IFactory(Interface):
     """An object that creates and returns objects based on a type string."""
 
     def create(self, typname, version=None, server=None,
@@ -387,7 +387,7 @@ class IFactory (Interface):
         """
 
 
-class IResourceAllocator (Interface):
+class IResourceAllocator(Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
 
@@ -435,6 +435,9 @@ class ICaseRecorder(Interface):
 
     def register(src, inputs, outputs):
         """Register names for input and output data coming from `src`."""
+
+    def record_constants(constants):
+        """Record constant inputs."""
 
     def record(src, inputs, outputs, case_uuid, parent_uuid):
         """Record inputs and outputs data from `src`."""
@@ -883,7 +886,7 @@ class IStaticGeometry(Interface):
     These are created by Parametric Geometry objects.
     """
 
-    def get_visualization_data(wv_wrapper,  **kwargs):
+    def get_visualization_data(wv_wrapper, **kwargs):
         """Populate the wv_wrapper object with data for faces and edges by
         calling the following methods on wv_wrapper:
 

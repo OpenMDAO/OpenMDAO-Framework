@@ -653,7 +653,7 @@ class Component(Container):
                 self.pop_dir()
 
     @rbac(('owner', 'user'))
-    def _run_begins(self, includes=None, excludes=None):
+    def _run_begins(self):
         """ Executed at start of top-level run. """
         if hasattr(self, 'recorders'):
             self.configure_recording()

@@ -643,9 +643,9 @@ def _test_console_errors(browser):
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
-    inputs.rows[4].cells[2].click()
-    inputs[4][2] = '42'  # printvars
-    expected = "TraitError: The 'printvars' trait of an "     \
+    inputs.rows[1].cells[2].click()
+    inputs[1][2] = '42'  # 'excludes'
+    expected = "TraitError: The 'excludes' trait of an "     \
                "Assembly instance must be a list of items "  \
                "which are a legal value, but a value of 42 " \
                "<type 'int'> was specified."

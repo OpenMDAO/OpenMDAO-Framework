@@ -48,7 +48,8 @@ class _Case(object):
         _Case._uuid_seq += 1
         return str(uuid1(node=_Case._uuid_node, clock_seq=_Case._uuid_seq))
 
-    def __init__(self, index, inputs, outputs, case_uuid=None, parent_uuid=''):
+    def __init__(self, index, inputs, outputs, extra_outputs,
+                 case_uuid=None, parent_uuid=''):
         self.index = index  # Index of input and output values.
         self.retries = 0    # Retry counter.
         self.msg = None     # Exception message.
@@ -65,8 +66,12 @@ class _Case(object):
                 self._register_expr(name)
                 self._inputs[name] = value
 
-        self._outputs = outputs
-        for name in outputs:
+        self._outputs = outputs or []
+        for name in self._outputs:
+            self._register_expr(name)
+
+        self._extra_outputs = extra_outputs or []
+        for name in self._extra_outputs:
             self._register_expr(name)
 
         if case_uuid:
@@ -76,7 +81,8 @@ class _Case(object):
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
     def _register_expr(self, name):
-        """If the given string contains an expression, create an ExprEvaluator
+        """
+        If the given string contains an expression, create an ExprEvaluator
         and store it in self._exprs.
         """
         if not is_legal_name(name):
@@ -86,7 +92,8 @@ class _Case(object):
             self._exprs[name] = expr
 
     def apply_inputs(self, scope):
-        """Take the values of all of the inputs in this case and apply them
+        """
+        Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
         if self._exprs:
@@ -100,14 +107,20 @@ class _Case(object):
             for name, value in self._inputs.items():
                 scope.set(name, value)
 
-    def fetch_outputs(self, scope):
-        """ Return list of ``(name, value)`` of outputs from `scope`. """
+    def fetch_outputs(self, scope, extra=False, itername=''):
+        """
+        Return list of ``(name, value)`` of outputs from `scope`.
+        If `extra` is True, then fetch extra case recording outputs,
+        but skip `itername`, it should be handled by the caller.
+        """
         last_exc = None
-        outputs = self._outputs
+        outputs = self._extra_outputs if extra else self._outputs
         exprs = self._exprs
         data = []
         if exprs:
             for name in outputs:
+                if extra and name == itername:
+                    continue
                 expr = exprs.get(name)
                 try:
                     if expr:
@@ -120,6 +133,8 @@ class _Case(object):
                     self.msg = str(exc)
         else:
             for name in outputs:
+                if extra and name == itername:
+                    continue
                 try:
                     value = scope.get(name)
                     data.append((name, value))
@@ -142,6 +157,9 @@ class _Case(object):
             stream.write("      %s: %s\n" % (name, val))
         stream.write("   outputs:\n")
         for name in sorted(self._outputs):
+            stream.write("      %s\n" % name)
+        stream.write("   extra outputs:\n")
+        for name in sorted(self._extra_outputs):
             stream.write("      %s\n" % name)
         stream.write("   retries: %s\n" % self.retries)
         stream.write("   msg: %s\n" % self.msg)
@@ -340,6 +358,7 @@ class CaseIteratorDriver(Driver):
                 inp_values.append(value)
 
         outputs = self.get_responses().keys()
+        extra_outputs = self.workflow._rec_outputs
 
         length = len(inp_values[0]) if inp_values else 0
         cases = []
@@ -347,7 +366,8 @@ class CaseIteratorDriver(Driver):
             inputs = []
             for j in range(len(inp_paths)):
                 inputs.append((inp_paths[j], inp_values[j][i]))
-            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_uuid))
+            cases.append(_Case(i, inputs, outputs, extra_outputs,
+                               parent_uuid=self._case_uuid))
         self.init_responses(length)
 
         self._iter = iter(cases)
@@ -685,18 +705,6 @@ class CaseIteratorDriver(Driver):
         case.uuid = _Case.next_uuid()
         case.parent_uuid = self._case_uuid
 
-        # Additional user-requested variables.
-        # These must be added here so that the outputs are in the cases
-        # before they are in the server list.
-        top = self.parent
-        while top.parent:
-            top = top.parent
-        inputs, outputs = top.get_case_variables()
-        outputs.append(('%s.workflow.itername' % self.name,
-                        '%s.%s' % (self.itername, case.index+1)))
-        case.extra_inputs = inputs
-        case.extra_outputs = outputs
-
         try:
             try:
                 case.apply_inputs(server.top)
@@ -716,53 +724,43 @@ class CaseIteratorDriver(Driver):
             return True
 
     def _record_case(self, scope, case):
-        """ Record case data from `scope` in ``case_outputs``. """
+        """
+        Record case data from `scope` in ``case_outputs``.
+        Also sends case data to recorders.
+        """
         case_outputs = case.fetch_outputs(scope)
         for path, value in case_outputs:
             path = make_legal_path(path)
             self.set('case_outputs.'+path, value,
                      index=(case.index,), force=True)
 
-        if not self.workflow._rec_required:
-            return
-
         # Record workflow data in recorders.
-        # Names of recorded data already registered by our workflow.
-        top = scope
-        while top.parent:
-            top = top.parent
+        if self.workflow._rec_required:
+            inputs = []
+            recording = self.workflow._rec_parameters
+            for name, param in self.get_parameters().items():
+                if param in recording:
+                    if isinstance(name, tuple):  # Use first target.
+                        name = name[0]
+                    inputs.append(case._inputs[name])
 
-        inputs = []
-        outputs = []
+            outputs = []
+            recording = set(self.workflow._rec_responses)
+            for path, value in case_outputs:
+                if path in recording:
+                    outputs.append(value)
+            itername = '%s.workflow.itername' % self.name
+            extra = case.fetch_outputs(scope, extra=True, itername=itername)
+            outputs.extend([value for path, value in extra])
+            if itername in self.workflow._rec_outputs:
+                outputs.append('%s.%s' % (self.itername, case.index+1))
 
-        # Parameters.
-        for name, param in self.get_parameters().items():
-            if param in self.workflow._rec_parameters:
-                if isinstance(name, tuple):  # Use first target.
-                    name = name[0]
-                inputs.append(case._inputs[name])
-
-        # No Objectives.
-
-        # Responses.
-        outputs.extend(value for path, value in case_outputs)
-
-        # No Constraints.
-
-        # Variables.
-        if self.workflow._rec_inputs or self.workflow._rec_outputs:
-            inputs.extend(val for name, val in case.extra_inputs
-                               if name in self.workflow._rec_inputs)
-            outputs.extend(val for name, val in case.extra_outputs
-                                if name in self.workflow._rec_outputs)
-            name = '%s.workflow.itername' % self.get_pathname()
-            if name in self.workflow._rec_outputs:
-                outputs.append(self.workflow.itername)
-
-        # Record.
-        for recorder in top.recorders:
-            recorder.record(id(self.workflow), inputs, outputs,
-                            case.uuid, self._case_uuid)
+            top = scope
+            while top.parent:
+                top = top.parent
+            for recorder in top.recorders:
+                recorder.record(id(self.workflow), inputs, outputs,
+                                case.uuid, self._case_uuid)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """

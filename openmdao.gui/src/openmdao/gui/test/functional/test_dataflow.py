@@ -646,15 +646,19 @@ def _test_replace(browser):
     expected = [
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
+        ['', 'excludes', '[]', '',
+         'Patterns for variables to exclude from the recorders'
+         ' (only valid at top level).'],
         ['', 'force_execute', 'False', '',
          'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
+        ['', 'includes', "['*']", '',
+         'Patterns for variables to include in the recorders'
+         ' (only valid at top level).'],
         ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided'
          ' but some are missing'],
-        ['', 'printvars', '[]', '',
-         'List of extra variables to output in the recorders.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -957,7 +961,7 @@ def _test_column_sorting(browser):
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
          "output_filename", "directory", "force_execute", "force_fd",
-         " gradient_options", "printvars"], "inputs",
+         " gradient_options"], "inputs",
         SortOrder.ASCENDING
     )
 
@@ -974,7 +978,7 @@ def _test_column_sorting(browser):
         ["accuracy", "iout", "iprint", "maxiter",
          "output_filename", "directory", "force_execute", "force_fd",
          " gradient_options", "derivative_direction", "fd_form", "fd_step", "fd_step_type",
-         "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
+         "force_fd", "gmres_maxiter", "gmres_tolerance"], "inputs",
         SortOrder.ASCENDING
     )
 

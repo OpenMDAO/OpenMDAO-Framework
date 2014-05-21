@@ -117,7 +117,12 @@ class CaseArray(object):
 
     def register(self, src, inputs, outputs):
         """Register names for later record call from `src`."""
-        self._name_map[src] = (inputs, outputs)
+        self._name_map[src] = ([name for name, width in inputs],
+                               [name for name, width in  outputs])
+
+    def record_constants(self, constants):
+        """Record constant inputs - currently ignored."""
+        pass
 
     def record(self, src, inputs, outputs, case_uuid, parent_uuid):
         """Record the given run data."""
@@ -129,12 +134,12 @@ class CaseArray(object):
     def record_case(self, case):
         """Record the given Case."""
         src = id(self)
-        in_names = case.keys(iotype='in')
-        out_names = case.keys(iotype='out')
-        self.register(src, in_names, out_names)
+        in_cfg = [(name, 1) for name in case.keys(iotype='in')]
+        out_cfg = [(name, 1) for name in case.keys(iotype='out')]
+        self.register(src, in_cfg, out_cfg)
 
-        inputs = [case[name] for name in in_names]
-        outputs = [case[name] for name in out_names]
+        inputs = [case[name] for name, width in in_cfg]
+        outputs = [case[name] for name, width in out_cfg]
         self.record(src, inputs, outputs, '', '')
 
     def close(self):

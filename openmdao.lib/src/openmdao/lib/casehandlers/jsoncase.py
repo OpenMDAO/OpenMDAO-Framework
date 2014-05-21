@@ -1,4 +1,5 @@
 import cStringIO
+import json
 import StringIO
 import sys
 import time
@@ -6,8 +7,8 @@ import time
 from openmdao.main.interfaces import implements, ICaseRecorder
 
 
-class DumpCaseRecorder(object):
-    """Dumps cases in a "pretty" form to `out`, which may be a string or a
+class JSONCaseRecorder(object):
+    """Dumps cases in JSON form to `out`, which may be a string or a
     file-like object (defaults to ``stdout``). If `out` is ``stdout`` or
     ``stderr``, then that standard stream is used. Otherwise, if `out` is a
     string, then a file with that name will be opened in the current directory.
@@ -41,36 +42,24 @@ class DumpCaseRecorder(object):
         if not self.out:  # if self.out is None, just do nothing
             return
 
-        stream = self.out
-        stream.write("Constants:\n")
-        for path in sorted(constants.keys()):
-            val = constants[path]
-            stream.write("   %s: %s\n" % (path, val))
+        data = dict(constants=constants)
+        self.out.write(json.dumps(data, indent=4, sort_keys=True))
+        self.out.write('\n')
 
     def record(self, src, inputs, outputs, case_uuid, parent_uuid):
         """Dump the given run data in a "pretty" form."""
         if not self.out:  # if self.out is None, just do nothing
             return
 
-        stream = self.out
         in_names, out_names = self._name_map[src]
-        ins = sorted(zip(in_names, inputs))
-        outs = sorted(zip(out_names, outputs))
+        data = dict(uuid=case_uuid, parent_uuid=parent_uuid,
+                    timestamp=time.time())
+        data.update(zip(in_names, inputs))
+        data.update(zip(out_names, outputs))
 
-        stream.write("Case:\n")
-        stream.write("   uuid: %s\n" % case_uuid)
-        stream.write("   timestamp: %15f\n" % time.time())
-        if parent_uuid:
-            stream.write("   parent_uuid: %s\n" % parent_uuid)
-
-        if ins:
-            stream.write("   inputs:\n")
-            for name, val in ins:
-                stream.write("      %s: %s\n" % (name, val))
-        if outs:
-            stream.write("   outputs:\n")
-            for name, val in outs:
-                stream.write("      %s: %s\n" % (name, val))
+        data = dict(case=data)
+        self.out.write(json.dumps(data, indent=4, sort_keys=True))
+        self.out.write('\n')
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
@@ -93,7 +82,5 @@ class DumpCaseRecorder(object):
         return attrs
 
     def get_iterator(self):
-        """Doesn't really make sense to have a case iterator for dump files, so
-        just return None.
-        """
+        """Just returns None."""
         return None

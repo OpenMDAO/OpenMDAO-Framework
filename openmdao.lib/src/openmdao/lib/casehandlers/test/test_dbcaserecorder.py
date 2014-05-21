@@ -114,8 +114,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_pickle_conversion(self):
         recorder = DBCaseRecorder()
-        inputs = ['comp1.x', 'comp1.y']
-        outputs = ['comp1.z', 'comp2.normal']
+        inputs = [('comp1.x', 1), ('comp1.y', 1)]
+        outputs = [('comp1.z', 1), ('comp2.normal', 1)]
         recorder.register(id(self), inputs, outputs)
         for i in range(10):
             inputs = [i, i*2.]
@@ -132,8 +132,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_query(self):
         recorder = DBCaseRecorder()
-        inputs = ['comp1.x', 'comp1.y']
-        outputs = ['comp1.z', 'comp2.normal']
+        inputs = [('comp1.x', 1), ('comp1.y', 1)]
+        outputs = [('comp1.z', 1), ('comp2.normal', 1)]
         recorder.register(id(self), inputs, outputs)
         for i in range(10):
             inputs = [i, i*2.]
@@ -175,8 +175,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder(dfile)
 
         # create some Cases where some are missing a variable
-        outputs = ['comp1.z', 'comp2.z']
-        inputs = ['comp1.x', 'comp1.y', 'comp1.y2']
+        outputs = [('comp1.z', 1), ('comp2.z', 1)]
+        inputs = [('comp1.x', 1), ('comp1.y', 1), ('comp1.y2', 1)]
         recorder.register(id(self), inputs, outputs)
         for i in range(10):
             inputs = [i, i*2, i*3]
@@ -223,7 +223,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
 
     def test_string(self):
         recorder = DBCaseRecorder()
-        inputs = ['str', 'unicode', 'list']  # Check pickling.
+        inputs = [('str', 1), ('unicode', 1), ('list', 1)]  # Check pickling.
         recorder.register(id(self), inputs, [])
         inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
         recorder.record(id(self), inputs, [], '', '')
@@ -235,7 +235,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
     def test_close(self):
         # :memory: can be used after close.
         recorder = DBCaseRecorder()
-        inps = ['str', 'unicode', 'list']
+        inps = [('str', 1), ('unicode', 1), ('list', 1)]
         recorder.register(id(self), inps, [])
         inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
         recorder.record(id(self), inputs, [], '', '')

@@ -200,7 +200,9 @@ class CSVCaseRecorder(object):
         self.csv_writer = None
         self.num_backups = 5
         self._header_size = 0
-        self._name_map = {}
+        self._cfg_map = {}
+        self._all_inputs = []
+        self._all_outputs = []
 
         #Open output file
         self._write_headers = False
@@ -242,14 +244,23 @@ class CSVCaseRecorder(object):
             # of headers. These won't be available until the first
             # case is passed to self.record.
             self._write_headers = True
+            self._cfg_map = {}
+            self._all_inputs = []
+            self._all_outputs = []
 
         self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
                                      quotechar=self.quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
 
     def register(self, src, inputs, outputs):
-        """Register names for later record call from `src`."""
-        self._name_map[src] = (inputs, outputs)
+        """Register names and widths for later record call from `src`."""
+        self._cfg_map[src] = (inputs, outputs)
+        self._all_inputs.extend(inputs)
+        self._all_outputs.extend(outputs)
+
+    def record_constants(self, constants):
+        """Record constant inputs - currently ignored."""
+        pass
 
     def record(self, src, inputs, outputs, case_uuid, parent_uuid):
         """Store the case in a csv file. The format for a line of data
@@ -273,17 +284,17 @@ class CSVCaseRecorder(object):
         sorted_output_keys = []
         sorted_output_values = []
 
-        in_names, out_names = self._name_map[src]
+        in_cfg, out_cfg = self._cfg_map[src]
         input_keys = []
         input_values = []
-        for name, obj in zip(in_names, inputs):
+        for (name, width), obj in zip(in_cfg, inputs):
             for key, value in flatten_obj(name, obj):
                 input_keys.append(key)
                 input_values.append(value)
 
         output_keys = []
         output_values = []
-        for name, obj in zip(out_names, outputs):
+        for (name, width), obj in zip(out_cfg, outputs):
             for key, value in flatten_obj(name, obj):
                 output_keys.append(key)
                 output_values.append(value)

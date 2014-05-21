@@ -18,29 +18,29 @@ import unittest
 import numpy
 
 # disable complaints about .__init__: Use super on an old style class
-# pylint: disable-msg=E1002
+# pylint: disable=E1002
 
 # disable complaints about Module 'numpy' has no 'array' member
-# pylint: disable-msg=E1101
+# pylint: disable=E1101
 
 # Disable complaints about Too few public methods
-# pylint: disable-msg=R0903
+# pylint: disable=R0903
 
 # Disable complaints Invalid name "setUp" (should match [a-z_][a-z0-9_]{2,30}$)
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 # Disable complaints Comma not followed by a space
-# pylint: disable-msg=C0324
+# pylint: disable=C0324
 
 # Disable complaints Used builtin function 'map'
-# pylint: disable-msg=W0141
+# pylint: disable=W0141
 
 # Disable complaints Too many public methods
-# pylint: disable-msg=R0904
+# pylint: disable=R0904
 
 # Disable complaints about not being able to import modules that Python
 #     really can import
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -83,7 +83,7 @@ class OptRosenSuzukiComponent(Component):
     opt_objective = Float(iotype='out')
     g = Array([1., 1., 1.], iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         """Initialize"""
 
@@ -134,7 +134,7 @@ class Example1FromManualComponent(Component):
     x = Array(iotype='in')
     result = Float(iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         """Initialize"""
 
@@ -161,7 +161,7 @@ class ParaboloidComponent(Component):
     x = Array(iotype='in')
     result = Float(iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         super(ParaboloidComponent, self).__init__()
         self.x = numpy.array([10., 10.], dtype=float) # initial guess
@@ -206,7 +206,7 @@ class ConstrainedBettsComponent(Component):
     x = Array(iotype='in')
     result = Float(iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         super(ConstrainedBettsComponent, self).__init__()
         self.x = numpy.array([-1.0, -1.0], dtype=float) # initial guess
@@ -501,7 +501,6 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
         self.top.recorders = [ListCaseRecorder()]
-        self.top.printvars = ['comp.opt_objective']
 
         self.top.run()
 
@@ -521,8 +520,8 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
 
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
-        self.assertEqual(self.top.comp.opt_objective,
-                         end_case.get_output('comp.opt_objective'))
+        self.assertEqual(self.top.comp.result,
+                         end_case.get_output('Objective'))
 
 
     def test_opt1_a(self):
@@ -531,7 +530,6 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.x', -10.0, 99.0)
         self.top.driver.add_constraint('comp.g <= 0.')
         self.top.recorders = [ListCaseRecorder()]
-        self.top.printvars = ['comp.opt_objective']
         self.top.run()
 
         self.assertAlmostEqual(self.top.comp.opt_objective,
@@ -550,8 +548,8 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
 
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
-        self.assertEqual(self.top.comp.opt_objective,
-                         end_case.get_output('comp.opt_objective'))
+        self.assertEqual(self.top.comp.result,
+                         end_case.get_output('Objective'))
 
 
 class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
@@ -722,7 +720,7 @@ class OptRosenSuzukiComponent_Deriv(Component):
     x4 = Float(1.0, iotype='in')
     result = Float(0.0, iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         """Initialize"""
 

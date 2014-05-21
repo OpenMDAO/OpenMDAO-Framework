@@ -200,7 +200,12 @@ class DBCaseRecorder(object):
 
     def register(self, src, inputs, outputs):
         """Register names for later record call from `src`."""
-        self._name_map[src] = (inputs, outputs)
+        self._name_map[src] = ([name for name, width in inputs],
+                               [name for name, width in outputs])
+
+    def record_constants(self, constants):
+        """Record constant inputs - currently ignored."""
+        pass
 
     def record(self, src, inputs, outputs, case_uuid, parent_uuid):
         """Record the given run data."""

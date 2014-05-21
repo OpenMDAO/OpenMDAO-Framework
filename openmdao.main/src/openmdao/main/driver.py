@@ -11,7 +11,6 @@ from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, VarTree
 from openmdao.main.depgraph import find_all_connecting
-from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -326,8 +325,9 @@ class Driver(Component):
 
     @rbac(('owner', 'user'))
     def configure_recording(self, includes, excludes):
-        """ Called at start of top-level run to configure case recording. """
-        self.workflow.configure_recording(includes, excludes)
+        """Called at start of top-level run to configure case recording.
+        Returns set of paths for changing inputs."""
+        return self.workflow.configure_recording(includes, excludes)
 
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):
