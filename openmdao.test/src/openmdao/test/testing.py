@@ -33,6 +33,7 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
         the suite will be empty by default, though plugins may add
         their own tests.
         """
+        log.debug("Load from module %s", module)
         tests = []
         test_classes = []
         test_funcs = []
