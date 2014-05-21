@@ -67,7 +67,7 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
             #If a path was passed in, the case of path and
             #module_path need to be normalized before comparing the two.
             #This is to resolve a Windows-only issue with tests not being
-            #discovered for correctly for namespace packages.           
+            #discovered correctly for namespace packages.           
             if path:
                 norm_module_path = os.path.normcase(module_path)
                 norm_path = os.path.normcase(path)
