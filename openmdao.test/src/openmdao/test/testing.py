@@ -16,6 +16,14 @@ from pkg_resources import working_set, to_filename
 
 import atexit
 
+'''
+This is a monkey patch for nose.loader.loadTestsFromModule
+to correctly find tests on all platforms.
+A pull request was issued to github.com/nose-devs/nose that
+fixes this problem: https://github.com/nose-devs/nose/pull/810
+
+Changes are lines 72 to 74
+'''
 def loadTestsFromModule(self, module, path=None, discovered=False):
         """Load all tests from module and return a suite containing
         them. If the module has been discovered and is not test-like,
@@ -49,11 +57,17 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
         module_paths = getattr(module, '__path__', [])
         if path:
             path = os.path.realpath(path)
+            
+        
         for module_path in module_paths:
             log.debug("Load tests from module path %s?", module_path)
             log.debug("path: %s os.path.realpath(%s): %s",
                       path, module_path, os.path.realpath(module_path))
             
+            #If a path was passed in, the case of path and
+            #module_path need to be normalized before comparing the two.
+            #This is to resolve a Windows-only issue with tests not being
+            #discovered for correctly for namespace packages.           
             if path:
                 norm_module_path = os.path.normcase(module_path)
                 norm_path = os.path.normcase(path)
