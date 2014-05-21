@@ -9,8 +9,12 @@ from nose.plugins.base import Plugin
 
 from nose.util import isclass, func_lineno
 from nose.suite import ContextList
-from nose.pyversion import sort_list
-from nose.loader import log, TestLoader
+from nose.loader import log
+try:
+    from nose.pyversion import sort_list
+except ImportError:
+    def sort_list(l, key, reverse=False):
+        return l.sort(key=key, reverse=reverse)
 
 from pkg_resources import working_set, to_filename
 
@@ -22,7 +26,6 @@ to correctly find tests on all platforms.
 A pull request was issued to github.com/nose-devs/nose that
 fixes this problem: https://github.com/nose-devs/nose/pull/810
 
-Changes are lines 72 to 74
 '''
 def loadTestsFromModule(self, module, path=None, discovered=False):
         """Load all tests from module and return a suite containing
@@ -30,7 +33,6 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
         the suite will be empty by default, though plugins may add
         their own tests.
         """
-        log.debug("Load from module %s", module)
         tests = []
         test_classes = []
         test_funcs = []
@@ -64,6 +66,7 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
             log.debug("path: %s os.path.realpath(%s): %s",
                       path, module_path, os.path.realpath(module_path))
             
+            # BEGIN MONKEYPATCH
             #If a path was passed in, the case of path and
             #module_path need to be normalized before comparing the two.
             #This is to resolve a Windows-only issue with tests not being
@@ -71,6 +74,7 @@ def loadTestsFromModule(self, module, path=None, discovered=False):
             if path:
                 norm_module_path = os.path.normcase(module_path)
                 norm_path = os.path.normcase(path)
+            # END MONKEYPATCH
             
             if (self.config.traverseNamespace or not path) or \
                     os.path.realpath(norm_module_path).startswith(norm_path):
