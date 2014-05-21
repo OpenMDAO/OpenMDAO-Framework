@@ -61,7 +61,7 @@ class Workflow(object):
     def itername(self):
         return self._iterbase()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Perform any checks that we need prior to run. Specific workflows
         should override this."""
         pass

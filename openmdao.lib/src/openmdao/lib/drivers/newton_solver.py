@@ -40,10 +40,10 @@ class NewtonSolver(Driver):
         super(NewtonSolver, self).__init__()
         self.workflow = CyclicWorkflow()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """ This solver requires a CyclicWorkflow. """
 
-        super(NewtonSolver, self).check_config()
+        super(NewtonSolver, self).check_config(strict=strict)
 
         if not isinstance(self.workflow, CyclicWorkflow):
             msg = "The NewtonSolver requires a CyclicWorkflow workflow."

@@ -165,11 +165,10 @@ class IComponent(IContainer):
     its output variables based on the values of its input variables.
     """
 
-    def check_configuration():
+    def check_config(strict=False):
         """Verify that this component is properly configured to execute.
-        Classes inheriting from Component should not override this function,
-        but instead override check_config().
-        Bad configurations should raise an exception.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.  
         """
 
     def run(force=False):

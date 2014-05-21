@@ -12,7 +12,6 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting
-from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -122,12 +121,12 @@ class Driver(Component):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent
 
-    def check_configuration(self):
+    def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
 
         # workflow will raise an exception if it can't resolve a Component
-        super(Driver, self).check_configuration()
-        self.workflow.check_config()
+        super(Driver, self).check_config(strict=strict)
+        self.workflow.check_config(strict=strict)
 
     def iteration_set(self, solver_only=False):
         """Return a set of all Components in our workflow and
@@ -210,6 +209,7 @@ class Driver(Component):
 
             full = set(setcomps)
             full.update(getcomps)
+            full.update(self.list_pseudocomps())
 
             compgraph = self.parent._depgraph.component_graph()
 

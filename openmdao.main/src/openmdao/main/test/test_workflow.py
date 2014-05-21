@@ -278,11 +278,20 @@ class TestCase(unittest.TestCase):
         self.assertEqual(top.C2.exec_count, 1)
         self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
+
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow but are needed by other workflows: ['C1']")
+        else:
+            self.fail("Exception expected")
+
         
     def test_lazy_auto_nested(self):
         # lazy evaluation with auto determination of D2 workflow
         top = set_as_top(LazyModel())
-        top.driver.workflow.add(['C1', 'D2'])
+        top.driver.workflow.add(['D2', 'C1'])
         top.D2.add_parameter('C2.a', low=-99, high=99)
         top.D2.add_objective('C3.d')
 
@@ -292,6 +301,14 @@ class TestCase(unittest.TestCase):
         self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
         
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow and WILL NOT EXECUTE: ['C4']")
+        else:
+            self.fail("Exception expected")
+
     def test_lazy_manual_top(self):
         # manual top level workflow
         top = set_as_top(LazyModel())
@@ -303,6 +320,13 @@ class TestCase(unittest.TestCase):
         self.assertEqual(top.C3.exec_count, 1)
         self.assertEqual(top.C1.exec_count, 1)
         
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow but are needed by other workflows: ['C1']")
+        else:
+            self.fail("Exception expected")
 
 
 if __name__ == '__main__':

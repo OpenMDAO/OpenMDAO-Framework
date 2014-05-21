@@ -180,7 +180,7 @@ class PseudoComponent(object):
 
         self.missing_deriv_policy = 'error'
 
-    def check_configuration(self):
+    def check_config(self, strict=False):
         pass
 
     def cpath_updated(self):

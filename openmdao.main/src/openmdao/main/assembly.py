@@ -491,22 +491,21 @@ class Assembly(Component):
         return (compname, getattr(self, compname), varname)
 
     @rbac(('owner', 'user'))
-    def check_configuration(self):
+    def check_config(self, strict=False):
         """
         Verify that this component and all of its children are properly
-        configured to execute. This function is called prior to each
-        component execution, but is a no-op unless self._call_check_config is
-        True.
+        configured to execute. This function is called prior the first
+        component execution.  If strict is True, any warning or error
+        should raise an exception.
 
-        Do not override this function.
-
-        This function calls check_config(), which may be overridden by
-        inheriting classes to perform more specific configuration checks.
+        If you override this function to do checks specific to your class,
+        you must call this function.
         """
-        super(Assembly, self).check_configuration()
+
+        super(Assembly, self).check_config(strict=strict)
         self._check_input_collisions()
         self._check_unset_req_vars()
-        self._check_unexecuted_comps()
+        self._check_unexecuted_comps(strict)
                 
     def _check_input_collisions(self):
         graph = self._depgraph
@@ -531,32 +530,47 @@ class Assembly(Component):
             self.raise_exception("The following parameters collide with connected inputs: %s" %
                                  ','.join(collisions), RuntimeError)
 
-    def _check_unexecuted_comps(self):
+    def _check_unexecuted_comps(self, strict):
         cgraph = self._depgraph.component_graph()
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
         diff = set(cgraph.nodes()) - wfcomps
         if diff:
+            if strict:
+                errfunct = self.raise_exception
+            else:
+                errfunct = self._logger.warning
+
             out_edges = nx.edge_boundary(cgraph, diff)
             in_edges = nx.edge_boundary(cgraph, wfcomps)
             pre = [u for u,v in out_edges]
             post = [v for u,v in in_edges]
             
             if pre:
-                self._logger.warning("The following components are not in any workflow but "
-                                     "are needed by other workflows, so they will be executed "
-                                     "once per execution of this Assembly: %s" % pre)
+                msg = "The following components are not in any workflow but " \
+                      "are needed by other workflows"
+                if not strict:
+                    msg += ", so they will be executed once per execution of this Assembly"
+                msg += ": %s" % pre
+                errfunct(msg)
+
+                ## HACK ALERT!
+                ## If there are upstream comps that are not in any workflow, 
+                ## create a hidden top level driver called _init_driver. That
+                ## driver will be executed once per execution of the Assembly.
 
                 # can't call add here for _init_driver because that calls
                 # config_changed...
                 self._init_driver = Driver()
                 self._init_driver.parent = self
                 self._init_driver.workflow.add(pre)
+
             if post:
-                self._logger.warning("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
+                errfunct("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
                                       % list(diff))
 
     def _check_unset_req_vars(self):
+        """Find 'required' variables that have not been set."""
         graph = self._depgraph
         for name in chain(self._depgraph.all_comps(), 
                           self._depgraph.get_boundary_inputs(),
@@ -1056,23 +1070,23 @@ class Assembly(Component):
                      if isinstance(self.get(name), Component)]
         return names
 
-    def all_wflows_iter(self):
-        """An iterator of component names over all workflows in an iteration
+    def all_wflows_order(self):
+        """Returns a list of component names over all workflows in an iteration
         hierarchy.  Shows the actual Assembly-wide order of execution of components
         in the Assembly.  Note that a given component will appear multiple times if
         that component is a member of multiple workflows.
         """
 
-        def _all_wflows_iter(drv):
+        def _all_wflows_order(drv):
             comps = [drv.name]
             for comp in drv.workflow:
                 if has_interface(comp, IDriver):
-                    comps.extend(_all_wflows_iter(comp))
+                    comps.extend(_all_wflows_order(comp))
                 else:
                     comps.append(comp.name)
             return comps
 
-        return _all_wflows_iter(self.driver)
+        return _all_wflows_order(self.driver)
 
     @rbac(('owner', 'user'))
     def new_pseudo_name(self):

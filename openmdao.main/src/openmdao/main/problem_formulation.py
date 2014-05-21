@@ -187,15 +187,15 @@ class ArchitectureAssembly(Assembly):
         self.init_parameters()
         self.init_coupling_vars()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Checks the configuration of the assembly to make sure it's compatible
         with the architecture. Then initializes all the values in the
         parameters and coupling vars and configures the architecture if it
         hasn't been done already.
         """
-        super(ArchitectureAssembly, self).check_config()
+        super(ArchitectureAssembly, self).check_config(strict=strict)
         if self.architecture is not None:
-            self.architecture.check_config()
+            self.architecture.check_config(strict=strict)
             if not self.architecture.configured:
                 self.architecture.configure()
                 self.architecture.configured = True

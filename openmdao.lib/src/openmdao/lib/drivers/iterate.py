@@ -100,8 +100,10 @@ class FixedPointIterator(Driver):
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Make sure the problem is set up right."""
+
+        super(FixedPointIterator, self).check_config(strict=strict)
 
         # We need to figure our severed edges before querying.
         eqcons = self.get_constraints().values()

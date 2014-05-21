@@ -352,8 +352,8 @@ class MultiDriverTestCase(unittest.TestCase):
             '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
             '         comp2or3\n         comp4\n')
 
-        # test all_wflows_iter
-        comps = top.all_wflows_iter()
+        # test all_wflows_order
+        comps = top.all_wflows_order()
         self.assertEqual(comps, 
                          ['driver', 'driver1', 'comp1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
 

@@ -278,13 +278,13 @@ class DependsTestCase(unittest.TestCase):
         sub.driver.add_objective('comp6.c')
         sub.driver.add_objective('comp5.d')
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp5', 'comp6']))
+                         set(['comp5', 'comp6', '_pseudo_0', '_pseudo_1']))
         sub.driver.add_parameter('comp2.a', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp2', 'comp5', 'comp1', 'comp4', 'comp6']))
+                         set(['comp2', 'comp5', 'comp1', 'comp4', 'comp6', '_pseudo_0', '_pseudo_1']))
         sub.driver.add_parameter('comp3.b', low=0.0, high=10.0)
         self.assertEqual(sub.driver._get_required_compnames(),
-                         set(['comp6','comp5','comp1','comp4','comp3', 'comp2']))
+                         set(['comp6','comp5','comp1','comp4','comp3', 'comp2', '_pseudo_0', '_pseudo_1']))
         
     def test_auto_workflow(self):
         top = set_as_top(Assembly())
@@ -297,23 +297,17 @@ class DependsTestCase(unittest.TestCase):
         top.connect('comp1.c', 'comp2.b')
         top.connect('comp2.c', 'comp3.a')
         
-        # without lazy evaluation, comp1 never runs
         self.assertEqual(top.comp1.exec_count, 0)
         self.assertEqual(top.comp2.exec_count, 0)
         self.assertEqual(top.comp3.exec_count, 0)
         top.run()
-        self.assertEqual(top.comp1.exec_count, 0) 
+        self.assertEqual(top.comp1.exec_count, 1) 
         self.assertEqual(top.comp2.exec_count, 1)
         self.assertEqual(top.comp3.exec_count, 1)
         top.run()
-        self.assertEqual(top.comp1.exec_count, 0)
+        self.assertEqual(top.comp1.exec_count, 2)
         self.assertEqual(top.comp2.exec_count, 2)
         self.assertEqual(top.comp3.exec_count, 2)
-        top.comp1.a = 9999
-        top.run()
-        self.assertEqual(top.comp1.exec_count, 0)
-        self.assertEqual(top.comp2.exec_count, 3)
-        self.assertEqual(top.comp3.exec_count, 3)
 
 class ArrSimple(Component):
     ain  = Array([0.,1.,2.,3.], iotype='in')

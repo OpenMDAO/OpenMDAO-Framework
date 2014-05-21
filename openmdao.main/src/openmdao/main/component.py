@@ -286,57 +286,46 @@ class Component(Container):
         return req
 
     @rbac(('owner', 'user'))
-    def check_configuration(self):
+    def check_config(self, strict=False):
         """
         Verify that this component and all of its children are properly
-        configured to execute. This function is called prior to each
-        component execution, but is a no-op unless self._call_check_config is
-        True.
+        configured to execute. This function is called prior the first
+        component execution.  If strict is True, any warning or error
+        should raise an exception.
 
-        Do not override this function.
-
-        This function calls check_config(), which may be overridden by
-        inheriting classes to perform more specific configuration checks.
+        If you override this function to do checks specific to your class,
+        you must call this function.
         """
-        if self._call_check_config:
-            self.check_config()
 
-            # derivatives related checks
-            if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
-                if not hasattr(self, 'provideJ'):
-                    self.raise_exception("required method 'provideJ' is missing")
-                if not hasattr(self, 'list_deriv_vars'):
-                    self.raise_exception("required method 'list_deriv_vars' is missing")
-
-            if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
+        # derivatives related checks
+        if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
+            if not hasattr(self, 'provideJ'):
+                self.raise_exception("required method 'provideJ' is missing")
+            if not hasattr(self, 'list_deriv_vars'):
                 self.raise_exception("required method 'list_deriv_vars' is missing")
 
-            visited = set([id(self), id(self.parent)])
-            for name, trait in self.traits(type=not_event).items():
-                obj = getattr(self, name)
-                #self._check_req_trait(name, obj, trait)
-                if trait.required is True and trait.is_trait_type(Slot):
-                    if obj is None:
-                        self.raise_exception("required plugin '%s' is not"
-                                             " present" % name, RuntimeError)
-                if has_interface(obj, IComponent) and id(obj) not in visited:
-                    visited.add(id(obj))
-                    obj.check_configuration()
+        if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
+            self.raise_exception("required method 'list_deriv_vars' is missing")
 
-            if self.parent is None:
-                reqs = self.get_req_default()
-                if reqs:
-                    self.raise_exception("required variables %s were"
-                                         " not set" % reqs, RuntimeError)
+        visited = set([id(self), id(self.parent)])
+        for name, trait in self.traits(type=not_event).items():
+            obj = getattr(self, name)
+            #self._check_req_trait(name, obj, trait)
+            if trait.required is True and trait.is_trait_type(Slot):
+                if obj is None:
+                    self.raise_exception("required plugin '%s' is not"
+                                         " present" % name, RuntimeError)
+            if has_interface(obj, IComponent) and id(obj) not in visited:
+                visited.add(id(obj))
+                obj.check_config(strict=strict)
 
-            self._call_check_config = False
+        if self.parent is None:
+            reqs = self.get_req_default()
+            if reqs:
+                self.raise_exception("required variables %s were"
+                                     " not set" % reqs, RuntimeError)
 
-    def check_config(self):
-        """
-        Override this function to perform configuration checks specific to your
-        class. Bad configurations should raise an exception.
-        """
-        pass
+        self._call_check_config = False
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -404,7 +393,7 @@ class Component(Container):
             self.cpath_updated()
 
         if self._call_check_config:
-            self.check_configuration()
+            self.check_config()
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs

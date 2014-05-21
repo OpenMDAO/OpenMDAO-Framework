@@ -362,10 +362,10 @@ class NEWSUMTdriver(Driver):
         self.isdone = False
         self.resume = False
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """ OpenMDAO Hessian unsupported right now. """
 
-        super(NEWSUMTdriver, self).check_config()
+        super(NEWSUMTdriver, self).check_config(strict=strict)
 
         if not self.newsumt_diff:
             msg = "Hessians currently not supported by OpenMDAO differentiator"

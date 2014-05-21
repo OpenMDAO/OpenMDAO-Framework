@@ -191,8 +191,6 @@ if __name__ == "__main__":
     sp = SellarProblem()
     sp.architecture = BLISS()
 
-    sp.check_config()
-
     sp.run()
 
     for k, v in sp.check_solution().iteritems():

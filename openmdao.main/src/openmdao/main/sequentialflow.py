@@ -97,12 +97,16 @@ class SequentialWorkflow(Workflow):
         self._iternames = None
         self._initnames = None
 
-    def check_config(self):
-        super(SequentialWorkflow, self).check_config()
+    def check_config(self, strict=False):
+        super(SequentialWorkflow, self).check_config(strict=strict)
         self.get_names()
-        if self._initnames:
-            self._parent._logger.warning("The following components will execute EVERY iteration of this workflow (unnecessarily): %s" %
-                                          list(self._initnames))
+        if self._initnames and self._iternames:
+            msg = "The following components will execute EVERY iteration " \
+                  "of this workflow (unnecessarily): %s" % list(self._initnames)
+            if strict:
+                self._parent.raise_exception(msg, RuntimeError)
+            else:
+                self._parent._logger.warning(msg)
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -131,7 +135,8 @@ class SequentialWorkflow(Workflow):
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in self._iternames if n not in iterset]) - set(self._names)
+                added = set([n for n in self._iternames if not n.startswith('_pseudo_') 
+                                 and n not in iterset]) - set(self._names)
                 self._names.extend(added)
 
             self._fullnames = self._names[:]

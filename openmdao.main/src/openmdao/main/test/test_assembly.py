@@ -448,7 +448,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(foo, None)
 
         try:
-            bar = self.asm.comp1.get_metadata('bogus', 'bar')
+            self.asm.comp1.get_metadata('bogus', 'bar')
         except Exception as err:
             self.assertEqual(str(err),
                              "comp1: Couldn't find metadata for trait bogus")
@@ -464,7 +464,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         # However, cyclic graphs should not run with the Dataflow workflow.
         try:
-            self.asm.check_configuration()
+            self.asm.check_config()
         except RuntimeError, err:
             msg = ": circular dependency found between the following: " + \
                   "['comp2', 'comp1']"

@@ -150,13 +150,9 @@ class SellarBLISS2000(Assembly):
         
 if __name__ == "__main__":  
 
-    import time
     import math
     
     prob = SellarBLISS2000()
-    
-    prob.check_config()
-   
     
     config=[5,2,1]
     
@@ -172,13 +168,9 @@ if __name__ == "__main__":
     # exit()
     prob.run()
     
-    
-    
-    
     print
     print "Minimum found at", prob.meta_model_dis1.z1,prob.z2_store,prob.meta_model_dis1.x1
     print "Coupling Vars: %f, %f"%(prob.meta_model_dis2.y1,prob.meta_model_dis1.y2)
     print "with objective function value:",(prob.meta_model_dis1.x1)**2 + \
           prob.meta_model_dis1.z2 + prob.meta_model_dis1.y1 + math.exp(-prob.meta_model_dis2
                                                                        .y2)        
-    
