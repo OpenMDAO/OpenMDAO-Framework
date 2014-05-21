@@ -44,7 +44,7 @@ class DummyComp(Component):
 
     def provideJ(self):
 
-        return array([1])
+        return array([[1]])
 
     def list_deriv_vars(self):
 
@@ -627,7 +627,21 @@ class TestDerivativeVarTree(unittest.TestCase):
         # self.top.driver.remove_parameter('dis1.x')
         # self.top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
 
+    def test_graph_pruning(self):
 
+        top = set_as_top(Assembly())
+        top.add('comp1', CompWithVarTreeSubTree())
+        top.add('comp2', DummyComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.connect('comp1.z',  'comp2.x')
+        top.driver.add_parameter('comp1.ins.x.x1', low=-100, high=100)
+        top.driver.add_constraint('comp1.ins.x.x2 + comp2.y < 0')
+
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 2.0, .00001)
 
 
 if __name__ == "__main__":

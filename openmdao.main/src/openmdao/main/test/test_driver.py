@@ -55,6 +55,7 @@ class DriverTestCase(unittest.TestCase):
     def test_gradient_options(self):
         options = GradientOptions()
 
+        assert(options.get_metadata("directional_fd")["framework_var"])
         assert(options.get_metadata("derivative_direction")["framework_var"])
         assert(options.get_metadata("fd_form")["framework_var"])
         assert(options.get_metadata("fd_step")["framework_var"])

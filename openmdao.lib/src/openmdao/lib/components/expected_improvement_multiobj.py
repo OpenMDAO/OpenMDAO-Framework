@@ -9,11 +9,11 @@ except ImportError as err:
 _check = ['numpy']
 
 try:
-    from math import erf
+    from math import erfc
 except ImportError as err:
     logging.warn("In %s: %r" % (__file__, err))
     try:
-        from scipy.special import erf
+        from scipy.special import erfc
     except ImportError as err:
         logging.warn("In %s: %r" % (__file__, err))
         _check.append('scipy')
@@ -61,16 +61,16 @@ class MultiObjExpectedImprovement(Component):
 
         y_star = self.y_star
 
-        PI1 = (0.5+0.5*erf((1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))
-        PI3 = (1-(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0]))))\
-        *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
+        PI1 = (0.5*erfc(-(1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))
+        PI3 = (1-(0.5*erfc(-(1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0]))))\
+        *(0.5*erfc(-(1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
 
         PI2 = 0
         if len(y_star) > 1:
             for i in range(len(y_star) - 1):
-                PI2 = PI2+((0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
-                -(0.5+0.5*erf((1/(2**0.5))*((y_star[i][0]-mu[0])/sigma[0]))))\
-                *(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))
+                PI2 = PI2+((0.5*erfc(-(1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
+                -(0.5*erfc(-(1/(2**0.5))*((y_star[i][0]-mu[0])/sigma[0]))))\
+                *(0.5*erfc(-(1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))
         mcpi = PI1 + PI2 + PI3
         return mcpi
 
@@ -80,37 +80,37 @@ class MultiObjExpectedImprovement(Component):
         pareto frontier, mean and sigma of new point."""
 
         y_star = self.y_star
-        ybar11 = mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))\
+        ybar11 = mu[0]*(0.5*erfc(-(1/(2**0.5))*((y_star[0][0]-mu[0])/sigma[0])))\
         -sigma[0]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[0][0]-mu[0])**2/sigma[0]**2))
-        ybar13 = (mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))\
+        ybar13 = (mu[0]*(0.5*erfc(-(1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))\
         -sigma[0]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[-1][0]-mu[0])**2/sigma[0]**2)))\
-        *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
+        *(0.5*erfc(-(1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))
 
         ybar12 = 0
         if len(y_star) > 1:
             for i in range(len(y_star) - 1):
-                ybar12 = ybar12+((mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
+                ybar12 = ybar12+((mu[0]*(0.5*erfc(-(1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))\
                 -sigma[0]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[i+1][0]-mu[0])**2/sigma[0]**2)))\
-                -(mu[0]*(0.5+0.5*erf((1/(2**0.5))*((y_star[i][0]-mu[0])/sigma[0])))\
+                -(mu[0]*(0.5*erfc(-(1/(2**0.5))*((y_star[i][0]-mu[0])/sigma[0])))\
                 -sigma[0]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[i][0]-mu[0])**2/sigma[0]**2))))\
-                *(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))
+                *(0.5*erfc(-(1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))
 
         ybar1 = (ybar11+ybar12+ybar13)/self.PI
 
-        ybar21 = mu[1]*(0.5+0.5*erf((1/(2**0.5))*((y_star[0][1]-mu[1])/sigma[1])))\
+        ybar21 = mu[1]*(0.5*erfc(-(1/(2**0.5))*((y_star[0][1]-mu[1])/sigma[1])))\
         -sigma[1]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[0][1]-mu[1])**2/sigma[1]**2))
-        ybar23 = (mu[1]*(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))\
+        ybar23 = (mu[1]*(0.5*erfc(-(1/(2**0.5))*((y_star[-1][1]-mu[1])/sigma[1])))\
         -sigma[1]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[-1][1]-mu[1])**2/sigma[1]**2)))\
-        *(0.5+0.5*erf((1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))
+        *(0.5*erfc(-(1/(2**0.5))*((y_star[-1][0]-mu[0])/sigma[0])))
 
         ybar22 = 0
         if len(y_star) > 1:
             for i in range(len(y_star) - 1):
-                ybar22 = ybar22+((mu[1]*(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))\
+                ybar22 = ybar22+((mu[1]*(0.5*erfc(-(1/(2**0.5))*((y_star[i+1][1]-mu[1])/sigma[1])))\
                 -sigma[1]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[i+1][1]-mu[1])**2/sigma[1]**2)))\
-                -(mu[1]*(0.5+0.5*erf((1/(2**0.5))*((y_star[i][1]-mu[1])/sigma[1])))\
+                -(mu[1]*(0.5*erfc(-(1/(2**0.5))*((y_star[i][1]-mu[1])/sigma[1])))\
                 -sigma[1]*(1/((2*pi)**0.5))*exp(-0.5*((y_star[i][1]-mu[1])**2/sigma[1]**2))))\
-                *(0.5+0.5*erf((1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))
+                *(0.5*erfc(-(1/(2**0.5))*((y_star[i+1][0]-mu[0])/sigma[0])))
 
         ybar2 = (ybar21+ybar22+ybar23)/self.PI
         dists = [((ybar1-point[0])**2+(ybar2-point[1])**2)**0.5 for point in y_star]

@@ -64,6 +64,8 @@ Constants:
    driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
    driver.gradient_options.fd_form: forward
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
@@ -140,6 +142,8 @@ Constants:
    driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
    driver.gradient_options.fd_form: forward
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
