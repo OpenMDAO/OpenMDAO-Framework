@@ -28,6 +28,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
                                 flatten_list_of_iters
 from openmdao.util.decorators import method_accepts
+from openmdao.util.debug import strict_chk_config
 
 from numpy import ndarray, zeros
 
@@ -103,7 +104,7 @@ class SequentialWorkflow(Workflow):
         if self._initnames and self._iternames:
             msg = "The following components will execute EVERY iteration " \
                   "of this workflow (unnecessarily): %s" % list(self._initnames)
-            if strict:
+            if strict_chk_config(strict):
                 self._parent.raise_exception(msg, RuntimeError)
             else:
                 self._parent._logger.warning(msg)
@@ -146,6 +147,11 @@ class SequentialWorkflow(Workflow):
             self._fullnames.extend(fullset - set(self._names))
 
             self._initnames = set(self._fullnames) - self._iternames
+
+            # drivers are always manually placed in the workflow, so
+            # assume that they're supposed to be there and don't
+            # warn the user
+            self._initnames -= set([d.name for d in drivers])
 
         if full:
             return self._fullnames[:]

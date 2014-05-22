@@ -7,11 +7,6 @@ from openmdao.lib.drivers.api import SLSQPdriver, FixedPointIterator
 from openmdao.lib.optproblems import sellar
 
 
-class Dummy(Component):
-
-    def execute(self):
-        pass
-
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with FixedPointIterator.
@@ -28,9 +23,8 @@ class SellarMDF(Assembly):
         self.add('driver', SLSQPdriver())
 
         # Outer Loop - Global Optimization
-        self.add('dummy', Dummy())
         self.add('solver', FixedPointIterator())
-        self.driver.workflow.add(['dummy', 'solver'])
+        self.driver.workflow.add(['solver'])
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         self.add('dis1', sellar.Discipline1_WithDerivatives())

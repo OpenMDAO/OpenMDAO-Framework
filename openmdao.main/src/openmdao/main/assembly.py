@@ -37,11 +37,11 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import is_comp_node, is_boundary_node, DependencyGraph
+from openmdao.main.depgraph import DependencyGraph
 
 from openmdao.util.graph import list_deriv_vars
-from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.log import logger
+from openmdao.util.debug import strict_chk_config
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -133,7 +133,7 @@ class Assembly(Component):
         super(Assembly, self).__init__()
 
         self._pseudo_count = 0  # counter for naming pseudocomps
-        self._init_driver = None
+        self._pre_driver = None
 
         # data dependency graph
         self._depgraph = DependencyGraph()
@@ -344,6 +344,10 @@ class Assembly(Component):
             self.disconnect(name)
         elif name in self.list_inputs() or name in self.list_outputs():
             self.disconnect(name)
+            
+        if has_interface(obj, IDriver):
+            for pcomp in obj.list_pseudocomps():
+                self._depgraph.remove(pcomp)
 
         if name in self._depgraph:
             self._depgraph.remove(name)
@@ -535,11 +539,15 @@ class Assembly(Component):
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
         diff = set(cgraph.nodes()) - wfcomps
+        self._pre_driver = None
         if diff:
-            if strict:
+            msg = "The following components are not in any workflow but " \
+                  "are needed by other workflows"
+            if strict_chk_config(strict):
                 errfunct = self.raise_exception
             else:
                 errfunct = self._logger.warning
+                msg += ", so they will be executed once per execution of this Assembly"
 
             out_edges = nx.edge_boundary(cgraph, diff)
             in_edges = nx.edge_boundary(cgraph, wfcomps)
@@ -547,23 +555,19 @@ class Assembly(Component):
             post = [v for u,v in in_edges]
             
             if pre:
-                msg = "The following components are not in any workflow but " \
-                      "are needed by other workflows"
-                if not strict:
-                    msg += ", so they will be executed once per execution of this Assembly"
                 msg += ": %s" % pre
                 errfunct(msg)
 
                 ## HACK ALERT!
                 ## If there are upstream comps that are not in any workflow, 
-                ## create a hidden top level driver called _init_driver. That
+                ## create a hidden top level driver called _pre_driver. That
                 ## driver will be executed once per execution of the Assembly.
 
-                # can't call add here for _init_driver because that calls
+                # can't call add here for _pre_driver because that calls
                 # config_changed...
-                self._init_driver = Driver()
-                self._init_driver.parent = self
-                self._init_driver.workflow.add(pre)
+                self._pre_driver = Driver()
+                self._pre_driver.parent = self
+                self._pre_driver.workflow.add(pre)
 
             if post:
                 errfunct("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
@@ -714,7 +718,7 @@ class Assembly(Component):
             if isinstance(cont, Driver):
                 cont.config_changed(update_parent=False)
 
-        self._init_driver = None
+        self._pre_driver = None
         self._graph_loops = None
         self.J_input_keys = self.J_output_keys = None
 
@@ -731,8 +735,8 @@ class Assembly(Component):
             for recorder in self.recorders:
                 recorder.startup()
 
-        if self._init_driver is not None:
-            self._init_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        if self._pre_driver is not None:
+            self._pre_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
         self.update_inputs('driver')
         self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)

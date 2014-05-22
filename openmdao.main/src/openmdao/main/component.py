@@ -19,15 +19,13 @@ from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IContainer, IDriver, \
+                                     IAssembly, IComponent, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasResponses, \
                                      IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, ICaseIterator, \
-                                     IImplicitComponent
+                                     IHasEvents, IImplicitComponent
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -36,7 +34,7 @@ from openmdao.main.file_supp import FileMetadata
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
-                                        FileRef, Enum, VarTree
+                                        FileRef, Enum
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
 

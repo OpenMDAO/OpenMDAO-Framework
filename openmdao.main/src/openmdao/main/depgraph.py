@@ -149,6 +149,9 @@ def is_pseudo_node(graph, node):
 def is_objective_node(graph, node):
     return graph.node[node].get('pseudo') == 'objective'
 
+def is_param_node(graph, node):
+    return 'param' in graph.node.get(node, '')
+
 def is_pseudo_output_node(graph, node):
     pseudo = graph.node[node].get('pseudo')
     return pseudo == 'objective' or pseudo == 'constraint'
@@ -1029,7 +1032,8 @@ class DependencyGraph(nx.DiGraph):
         convars.update([v for u,v in conns])
         convars.update([self.base_var(v) for v in convars])
         to_remove = [v for v in self.nodes_iter()
-                         if is_var_node(self,v) and v not in convars]
+                         if v not in convars and is_var_node(self,v) 
+                                             and not is_param_node(self, v)]
         self.remove_nodes_from(to_remove)
 
 

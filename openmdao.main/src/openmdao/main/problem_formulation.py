@@ -296,6 +296,17 @@ class ArchitectureAssembly(Assembly):
 
         return result
 
+    def list_pseudocomps(self):
+        """Return a list of names of pseudocomps resulting from
+        our objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name in self._delegates_:
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
 
 class OptProblem(ArchitectureAssembly):
     """Class for specifying test problems for optimization

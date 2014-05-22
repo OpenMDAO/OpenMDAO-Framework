@@ -330,7 +330,7 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_pseudocomps(self):
         self.asm.add('driver', MyDriver())
-        self.asm.driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        self.asm.driver.workflow.add(['comp1','comp2'])
         self.assertEqual(self.asm._depgraph.list_connections(),
                          [])
         self.asm.driver.add_constraint('comp1.c-comp2.a>5.')
