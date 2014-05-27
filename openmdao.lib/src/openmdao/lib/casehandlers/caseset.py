@@ -33,7 +33,7 @@ class CaseArray(object):
             contents of Cases that are recorded in it.
         """
         self._parent_uuid = parent_uuid
-        self._name_map = {}
+        self._cfg_map = {}
         if names is None:
             self._names = []
         else:
@@ -91,9 +91,9 @@ class CaseArray(object):
                 lst = [biglist[j][i] for j in idxs]
                 self._add_values(lst)
 
-    def _record_first_case(self, src, inputs, outputs):
+    def _record_first_case(self, driver, inputs, outputs):
         """Called the first time we record a Case"""
-        in_names, out_names = self._name_map[src]
+        in_names, out_names = self._cfg_map[driver]
         if self._names:
             names = [n for n in in_names if n in self._names]
             tmp = [inputs[i] for i, n in enumerate(in_names)
@@ -101,7 +101,7 @@ class CaseArray(object):
         else:
             names = list(in_names)
             tmp = list(inputs)
-        self._split_idx = len(tmp) # index where we switch from inputs to outputs
+        self._split_idx = len(tmp) # where we switch from inputs to outputs
         if self._names:
             names.extend(n for n in out_names if n in self._names)
             tmp.extend(outputs[i] for i, n in enumerate(out_names)
@@ -115,32 +115,34 @@ class CaseArray(object):
         self._names = names
         self._add_values(tmp)
 
-    def register(self, src, inputs, outputs):
-        """Register names for later record call from `src`."""
-        self._name_map[src] = ([name for name, width in inputs],
-                               [name for name, width in  outputs])
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        self._cfg_map[driver] = ([name for name, width in inputs],
+                                 [name for name, width in  outputs])
 
     def record_constants(self, constants):
-        """Record constant inputs - currently ignored."""
+        """Record constant data - currently ignored."""
         pass
 
-    def record(self, src, inputs, outputs, case_uuid, parent_uuid):
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Record the given run data."""
         if not self._values:
-            self._record_first_case(src, inputs, outputs)
+            self._record_first_case(driver, inputs, outputs)
         else:
-            self._add_values(self._get_case_data(src, inputs, outputs))
+            self._add_values(self._get_case_data(driver, inputs, outputs))
 
     def record_case(self, case):
         """Record the given Case."""
-        src = id(self)
-        in_cfg = [(name, 1) for name in case.keys(iotype='in')]
-        out_cfg = [(name, 1) for name in case.keys(iotype='out')]
-        self.register(src, in_cfg, out_cfg)
+        in_names = case.keys(iotype='in')
+        out_names = case.keys(iotype='out')
 
-        inputs = [case[name] for name, width in in_cfg]
-        outputs = [case[name] for name, width in out_cfg]
-        self.record(src, inputs, outputs, '', '')
+        in_cfg = [(name, 1) for name in in_names]
+        out_cfg = [(name, 1) for name in out_names]
+        self.register(self, in_cfg, out_cfg)
+
+        inputs = [case[name] for name in in_names]
+        outputs = [case[name] for name in out_names]
+        self.record(self, inputs, outputs, case.exc, '', '')
 
     def close(self):
         """Does nothing."""
@@ -176,11 +178,11 @@ class CaseArray(object):
                                                   values[self._split_idx:])],
                     parent_uuid=self._parent_uuid)
 
-    def _get_case_data(self, src, inputs, outputs):
+    def _get_case_data(self, driver, inputs, outputs):
         """Return a list of values for the case in the same order as our values.
         Raise a KeyError if any of our names are missing from the case.
         """
-        in_names, out_names = self._name_map[src]
+        in_names, out_names = self._cfg_map[driver]
         vals = []
         for name in self._names:
             try:
@@ -419,11 +421,16 @@ def caseiter_to_caseset(caseiter, varnames=None, include_errors=False):
         of varnames in the first Case without errors returned from the case
         iterator will be used.
 
+    include_errors: bool (optional) [False]
+        If True, include data from cases that reported an error.
+
     """
 
     caseset = CaseSet()
 
     for case in caseiter:
+        if include_errors is False and case.msg:
+            continue  # case reported an error, so don't use it
         if varnames is not None:
             caseset.record_case(case.subcase(varnames))
         else:

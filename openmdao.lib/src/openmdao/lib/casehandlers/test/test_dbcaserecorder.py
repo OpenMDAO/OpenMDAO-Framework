@@ -116,11 +116,11 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder()
         inputs = [('comp1.x', 1), ('comp1.y', 1)]
         outputs = [('comp1.z', 1), ('comp2.normal', 1)]
-        recorder.register(id(self), inputs, outputs)
+        recorder.register(self, inputs, outputs)
         for i in range(10):
             inputs = [i, i*2.]
             outputs = [i*1.5, NormalDistribution(float(i), 0.5)]
-            recorder.record(id(self), inputs, outputs, '', '')
+            recorder.record(self, inputs, outputs, None, '', '')
         iterator = recorder.get_iterator()
         for i, case in enumerate(iterator):
             self.assertTrue(isinstance(case['comp2.normal'], NormalDistribution))
@@ -134,11 +134,11 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder()
         inputs = [('comp1.x', 1), ('comp1.y', 1)]
         outputs = [('comp1.z', 1), ('comp2.normal', 1)]
-        recorder.register(id(self), inputs, outputs)
+        recorder.register(self, inputs, outputs)
         for i in range(10):
             inputs = [i, i*2.]
             outputs = [i*1.5, NormalDistribution(float(i), 0.5)]
-            recorder.record(id(self), inputs, outputs, '', '')
+            recorder.record(self, inputs, outputs, None, '', '')
         iterator = recorder.get_iterator()
         iterator.selectors = ["value>=0", "value<3"]
 
@@ -177,11 +177,11 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         # create some Cases where some are missing a variable
         outputs = [('comp1.z', 1), ('comp2.z', 1)]
         inputs = [('comp1.x', 1), ('comp1.y', 1), ('comp1.y2', 1)]
-        recorder.register(id(self), inputs, outputs)
+        recorder.register(self, inputs, outputs)
         for i in range(10):
             inputs = [i, i*2, i*3]
             outputs = [i*i, float('NaN')]
-            recorder.record(id(self), inputs, outputs, '', '')
+            recorder.record(self, inputs, outputs, None, '', '')
 
         varnames = ['comp1.x', 'comp1.y', 'comp1.y2']
         varinfo = case_db_to_dict(dfile, varnames)
@@ -224,9 +224,9 @@ class DBCaseRecorderTestCase(unittest.TestCase):
     def test_string(self):
         recorder = DBCaseRecorder()
         inputs = [('str', 1), ('unicode', 1), ('list', 1)]  # Check pickling.
-        recorder.register(id(self), inputs, [])
+        recorder.register(self, inputs, [])
         inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
-        recorder.record(id(self), inputs, [], '', '')
+        recorder.record(self, inputs, [], None, '', '')
         for case in recorder.get_iterator():
             self.assertEqual(case['str'], 'Normal String')
             self.assertEqual(case['unicode'], u'Unicode String')
@@ -236,21 +236,21 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         # :memory: can be used after close.
         recorder = DBCaseRecorder()
         inps = [('str', 1), ('unicode', 1), ('list', 1)]
-        recorder.register(id(self), inps, [])
+        recorder.register(self, inps, [])
         inputs = ['Normal String', u'Unicode String', ['Hello', 'world']]
-        recorder.record(id(self), inputs, [], '', '')
+        recorder.record(self, inputs, [], None, '', '')
         recorder.close()
-        recorder.record(id(self), inputs, [], '', '')
+        recorder.record(self, inputs, [], None, '', '')
 
         # File-based DB recorder can not be used after close.
         tmpdir = tempfile.mkdtemp()
         try:
             dfile = os.path.join(tmpdir, 'junk.db')
             recorder = DBCaseRecorder(dfile)
-            recorder.register(id(self), inps, [])
-            recorder.record(id(self), inputs, [], '', '')
+            recorder.register(self, inps, [])
+            recorder.record(self, inputs, [], None, '', '')
             recorder.close()
-            code = "recorder.record(id(self), inputs, [], '', '')"
+            code = "recorder.record(self, inputs, [], None, '', '')"
             assert_raises(self, code, globals(), locals(), RuntimeError,
                           'Attempt to record on closed recorder')
         finally:

@@ -4,6 +4,7 @@ import sys
 import time
 
 from openmdao.main.interfaces import implements, ICaseRecorder
+from openmdao.main.exceptions import traceback_str
 
 
 class DumpCaseRecorder(object):
@@ -25,52 +26,57 @@ class DumpCaseRecorder(object):
             else:
                 out = open(out, 'w')
         self.out = out
-        self._name_map = {}
+        self._cfg_map = {}
 
     def startup(self):
         """ Nothing needed for a dumpcase."""
         pass
 
-    def register(self, src, inputs, outputs):
-        """Register names for later record call from `src`."""
-        self._name_map[src] = ([name for name, width in inputs],
-                               [name for name, width in outputs])
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        prefix = driver.parent.get_pathname()
+        if prefix:
+            prefix += '.'
+        self._cfg_map[driver] = ([prefix+name for name, width in inputs],
+                                 [prefix+name for name, width in outputs])
 
     def record_constants(self, constants):
-        """Record constant inputs."""
+        """Record constant data."""
         if not self.out:  # if self.out is None, just do nothing
             return
 
-        stream = self.out
-        stream.write("Constants:\n")
+        write = self.out.write
+        write("Constants:\n")
         for path in sorted(constants.keys()):
-            val = constants[path]
-            stream.write("   %s: %s\n" % (path, val))
+            write("   %s: %s\n" % (path, constants[path]))
 
-    def record(self, src, inputs, outputs, case_uuid, parent_uuid):
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Dump the given run data in a "pretty" form."""
         if not self.out:  # if self.out is None, just do nothing
             return
 
-        stream = self.out
-        in_names, out_names = self._name_map[src]
+        in_names, out_names = self._cfg_map[driver]
         ins = sorted(zip(in_names, inputs))
         outs = sorted(zip(out_names, outputs))
 
-        stream.write("Case:\n")
-        stream.write("   uuid: %s\n" % case_uuid)
-        stream.write("   timestamp: %15f\n" % time.time())
+        write = self.out.write
+        write("Case:\n")
+        write("   uuid: %s\n" % case_uuid)
+        write("   timestamp: %15f\n" % time.time())
         if parent_uuid:
-            stream.write("   parent_uuid: %s\n" % parent_uuid)
+            write("   parent_uuid: %s\n" % parent_uuid)
 
         if ins:
-            stream.write("   inputs:\n")
+            write("   inputs:\n")
             for name, val in ins:
-                stream.write("      %s: %s\n" % (name, val))
+                write("      %s: %s\n" % (name, val))
         if outs:
-            stream.write("   outputs:\n")
+            write("   outputs:\n")
             for name, val in outs:
-                stream.write("      %s: %s\n" % (name, val))
+                write("      %s: %s\n" % (name, val))
+        if exc:
+            write("   exc: %s\n" % exc)
+            write("        %s\n" % traceback_str(exc))
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

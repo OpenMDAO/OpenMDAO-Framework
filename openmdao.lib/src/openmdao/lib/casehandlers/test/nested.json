@@ -1,0 +1,895 @@
+{
+"simulation_info": {
+    "OpenMDAO_Version": "0.9.6", 
+    "constants": {
+        "asm2.asm3.comp1.directory": "", 
+        "asm2.asm3.comp1.force_execute": false, 
+        "asm2.asm3.comp1.force_fd": false, 
+        "asm2.asm3.comp1.missing_deriv_policy": "error", 
+        "asm2.asm3.directory": "", 
+        "asm2.asm3.driver.accuracy": 1e-06, 
+        "asm2.asm3.driver.directory": "", 
+        "asm2.asm3.driver.force_execute": true, 
+        "asm2.asm3.driver.force_fd": false, 
+        "asm2.asm3.driver.gradient_options.derivative_direction": "auto", 
+        "asm2.asm3.driver.gradient_options.directional_fd": false, 
+        "asm2.asm3.driver.gradient_options.fd_blocks": [], 
+        "asm2.asm3.driver.gradient_options.fd_form": "forward", 
+        "asm2.asm3.driver.gradient_options.fd_step": 1e-06, 
+        "asm2.asm3.driver.gradient_options.fd_step_type": "absolute", 
+        "asm2.asm3.driver.gradient_options.force_fd": false, 
+        "asm2.asm3.driver.gradient_options.gmres_maxiter": 100, 
+        "asm2.asm3.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "asm2.asm3.driver.iout": 6, 
+        "asm2.asm3.driver.iprint": 0, 
+        "asm2.asm3.driver.maxiter": 50, 
+        "asm2.asm3.driver.output_filename": "slsqp.out", 
+        "asm2.asm3.excludes": [], 
+        "asm2.asm3.force_execute": false, 
+        "asm2.asm3.force_fd": false, 
+        "asm2.asm3.includes": [
+            "*"
+        ], 
+        "asm2.asm3.missing_deriv_policy": "assume_zero", 
+        "asm2.comp1.directory": "", 
+        "asm2.comp1.force_execute": false, 
+        "asm2.comp1.force_fd": false, 
+        "asm2.comp1.missing_deriv_policy": "error", 
+        "asm2.directory": "", 
+        "asm2.driver.accuracy": 1e-06, 
+        "asm2.driver.directory": "", 
+        "asm2.driver.force_execute": true, 
+        "asm2.driver.force_fd": false, 
+        "asm2.driver.gradient_options.derivative_direction": "auto", 
+        "asm2.driver.gradient_options.directional_fd": false, 
+        "asm2.driver.gradient_options.fd_blocks": [], 
+        "asm2.driver.gradient_options.fd_form": "forward", 
+        "asm2.driver.gradient_options.fd_step": 1e-06, 
+        "asm2.driver.gradient_options.fd_step_type": "absolute", 
+        "asm2.driver.gradient_options.force_fd": false, 
+        "asm2.driver.gradient_options.gmres_maxiter": 100, 
+        "asm2.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "asm2.driver.iout": 6, 
+        "asm2.driver.iprint": 0, 
+        "asm2.driver.maxiter": 50, 
+        "asm2.driver.output_filename": "slsqp.out", 
+        "asm2.excludes": [], 
+        "asm2.force_execute": false, 
+        "asm2.force_fd": false, 
+        "asm2.includes": [
+            "*"
+        ], 
+        "asm2.missing_deriv_policy": "assume_zero", 
+        "comp1.directory": "", 
+        "comp1.force_execute": false, 
+        "comp1.force_fd": false, 
+        "comp1.missing_deriv_policy": "error", 
+        "comp1.x": 0.0, 
+        "directory": "", 
+        "driver.accuracy": 1e-06, 
+        "driver.directory": "", 
+        "driver.force_execute": true, 
+        "driver.force_fd": false, 
+        "driver.gradient_options.derivative_direction": "auto", 
+        "driver.gradient_options.directional_fd": false, 
+        "driver.gradient_options.fd_blocks": [], 
+        "driver.gradient_options.fd_form": "forward", 
+        "driver.gradient_options.fd_step": 1e-06, 
+        "driver.gradient_options.fd_step_type": "absolute", 
+        "driver.gradient_options.force_fd": false, 
+        "driver.gradient_options.gmres_maxiter": 100, 
+        "driver.gradient_options.gmres_tolerance": 1e-09, 
+        "driver.iout": 6, 
+        "driver.iprint": 0, 
+        "driver.maxiter": 50, 
+        "driver.output_filename": "slsqp.out", 
+        "excludes": [], 
+        "force_execute": false, 
+        "force_fd": false, 
+        "includes": [
+            "*"
+        ], 
+        "missing_deriv_policy": "assume_zero"
+    }, 
+    "expressions": {
+        "asm2.asm3.comp1.z": {
+            "data_type": "Objective", 
+            "pcomp_name": "asm2.asm3._pseudo_10"
+        }, 
+        "asm2.asm3.comp1.z >= 0": {
+            "data_type": "Constraint", 
+            "pcomp_name": "asm2.asm3._pseudo_11"
+        }, 
+        "asm2.asm3.z": {
+            "data_type": "Objective", 
+            "pcomp_name": "asm2._pseudo_12"
+        }, 
+        "asm2.comp1.z >= 0": {
+            "data_type": "Constraint", 
+            "pcomp_name": "asm2._pseudo_13"
+        }, 
+        "asm2.z": {
+            "data_type": "Objective", 
+            "pcomp_name": "_pseudo_14"
+        }, 
+        "comp1.z >= 0": {
+            "data_type": "Constraint", 
+            "pcomp_name": "_pseudo_15"
+        }
+    }, 
+    "uuid": "22b450b8-e5aa-11e3-969a-005056000100", 
+    "variable_metadata": {
+        "asm2.asm3.comp1.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.asm3.comp1.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.comp1.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.comp1.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.comp1.y": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.asm3.comp1.z": {
+            "assumed_default": false, 
+            "default_value": 0.0, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "target": "comp1.z", 
+            "vartypename": "Float"
+        }, 
+        "asm2.asm3.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.asm3.driver.accuracy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.asm3.driver.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.asm3.driver.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.driver.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.driver.gradient_options.derivative_direction": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "auto", 
+                "forward", 
+                "adjoint"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.gradient_options.directional_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.driver.gradient_options.fd_blocks": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.asm3.driver.gradient_options.fd_form": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "forward", 
+                "backward", 
+                "central", 
+                "complex_step"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.gradient_options.fd_step": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.asm3.driver.gradient_options.fd_step_type": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "absolute", 
+                "relative", 
+                "bounds_scaled"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.gradient_options.force_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.asm3.driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.asm3.driver.iout": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.asm3.driver.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1, 
+                2, 
+                3
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.driver.maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.asm3.driver.output_filename": {
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.asm3.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.asm3.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.asm3.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.asm3.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.asm3.z": {
+            "assumed_default": false, 
+            "default_value": 0.0, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "target": "asm3.z", 
+            "vartypename": "Float"
+        }, 
+        "asm2.comp1.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.comp1.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.comp1.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.comp1.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.comp1.y": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.comp1.z": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.driver.accuracy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.driver.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.driver.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.driver.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.driver.gradient_options.derivative_direction": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "auto", 
+                "forward", 
+                "adjoint"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.gradient_options.directional_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.driver.gradient_options.fd_blocks": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.driver.gradient_options.fd_form": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "forward", 
+                "backward", 
+                "central", 
+                "complex_step"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.gradient_options.fd_step": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.driver.gradient_options.fd_step_type": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "absolute", 
+                "relative", 
+                "bounds_scaled"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.gradient_options.force_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "asm2.driver.iout": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.driver.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1, 
+                2, 
+                3
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.driver.maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "asm2.driver.output_filename": {
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "asm2.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "asm2.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "asm2.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "asm2.z": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "target": "asm3.z", 
+            "vartypename": "Float"
+        }, 
+        "comp1.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "comp1.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "comp1.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "comp1.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "comp1.x": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "comp1.y": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "comp1.z": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "driver.accuracy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "driver.force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.derivative_direction": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "auto", 
+                "forward", 
+                "adjoint"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.directional_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.fd_blocks": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "driver.gradient_options.fd_form": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "forward", 
+                "backward", 
+                "central", 
+                "complex_step"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.fd_step": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.gradient_options.fd_step_type": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "absolute", 
+                "relative", 
+                "bounds_scaled"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.force_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.iout": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1, 
+                2, 
+                3
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.output_filename": {
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "force_execute": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }
+    }
+}
+, "driver_info_1": {
+    "eq_constraints": [], 
+    "ineq_constraints": [
+        "comp1.z >= 0"
+    ], 
+    "name": "asm2.asm3.driver", 
+    "objectives": [
+        "comp1.z"
+    ], 
+    "parameters": [
+        "comp1.y"
+    ]
+}
+, "driver_info_2": {
+    "eq_constraints": [], 
+    "ineq_constraints": [
+        "comp1.z >= 0"
+    ], 
+    "name": "asm2.driver", 
+    "objectives": [
+        "asm3.z"
+    ], 
+    "parameters": [
+        "comp1.y"
+    ]
+}
+, "driver_info_3": {
+    "eq_constraints": [], 
+    "ineq_constraints": [
+        "comp1.z >= 0"
+    ], 
+    "name": "driver", 
+    "objectives": [
+        "asm2.z"
+    ], 
+    "parameters": [
+        "comp1.y"
+    ]
+}
+, "iteration_case_1": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "22b7133d-e5aa-11e3-802c-005056000100", 
+    "_parent_id": "22b6fcbd-e5aa-11e3-802b-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.1-asm3.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.087532
+}
+, "iteration_case_2": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "22b746d7-e5aa-11e3-802d-005056000100", 
+    "_parent_id": "22b6fcbd-e5aa-11e3-802b-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.1-asm3.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.088599
+}
+, "iteration_case_3": {
+    "_driver_id": "asm2.driver", 
+    "_id": "22b6fcbd-e5aa-11e3-802b-005056000100", 
+    "_parent_id": "22b6db1c-e5aa-11e3-802a-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "asm3.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.096291
+}
+, "iteration_case_4": {
+    "_driver_id": "asm2.driver", 
+    "_id": "22b888f3-e5aa-11e3-802e-005056000100", 
+    "_parent_id": "22b6db1c-e5aa-11e3-802a-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "asm3.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.096875
+}
+, "iteration_case_5": {
+    "_driver_id": "driver", 
+    "_id": "22b6db1c-e5aa-11e3-802a-005056000100", 
+    "_parent_id": "22b450b8-e5aa-11e3-969a-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "asm2.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.104659
+}
+, "iteration_case_6": {
+    "_driver_id": "driver", 
+    "_id": "22b9cf33-e5aa-11e3-802f-005056000100", 
+    "_parent_id": "22b450b8-e5aa-11e3-969a-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Objective": 0.0, 
+        "asm2.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401200464.105252
+}
+}

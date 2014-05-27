@@ -14,7 +14,7 @@ from traits.trait_handlers import TraitListObject, TraitDictObject
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
 
-_casetable_attrs = set(['id', 'uuid', 'parent', 'model_id', 'timeEnter'])
+_casetable_attrs = set(['id', 'uuid', 'parent', 'msg', 'model_id', 'timeEnter'])
 _vartable_attrs = set(['var_id', 'name', 'case_id', 'sense', 'value'])
 
 def _query_split(query):
@@ -90,7 +90,7 @@ class DBCaseIterator(object):
         combined = ' '.join(sql)
         varcur = self._connection.cursor()
 
-        for cid, text_id, parent, model_id, timeEnter in casecur:
+        for cid, text_id, parent, msg, model_id, timeEnter in casecur:
             varcur.execute(combined % cid)
             inputs = []
             outputs = []
@@ -112,7 +112,8 @@ class DBCaseIterator(object):
                 elif sense == 'o':
                     outputs.append((vname, value))
             if len(inputs) > 0 or len(outputs) > 0:
-                yield Case(inputs=inputs, outputs=outputs,
+                exc = Exception(msg) if msg else None
+                yield Case(inputs=inputs, outputs=outputs, exc=exc,
                            case_uuid=text_id, parent_uuid=parent)
 
     def get_attributes(self, io_only=True):
@@ -155,7 +156,7 @@ class DBCaseRecorder(object):
     def __init__(self, dbfile=':memory:', model_id='', append=False):
         self.dbfile = dbfile  # this creates the connection
         self.model_id = model_id
-        self._name_map = {}
+        self._cfg_map = {}
 
         if append:
             exstr = 'if not exists'
@@ -167,6 +168,7 @@ class DBCaseRecorder(object):
          id INTEGER PRIMARY KEY,
          uuid TEXT,
          parent TEXT,
+         msg TEXT,
          model_id TEXT,
          timeEnter TEXT
          )""" % exstr)
@@ -198,25 +200,32 @@ class DBCaseRecorder(object):
         """ Opens the database for recording."""
         pass
 
-    def register(self, src, inputs, outputs):
-        """Register names for later record call from `src`."""
-        self._name_map[src] = ([name for name, width in inputs],
-                               [name for name, width in outputs])
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        if hasattr(driver, 'parent'):
+            prefix = driver.parent.get_pathname()
+            if prefix:
+                prefix += '.'
+        else:
+            prefix = ''
+        self._cfg_map[driver] = ([prefix+name for name, width in inputs],
+                                 [prefix+name for name, width in outputs])
 
     def record_constants(self, constants):
-        """Record constant inputs - currently ignored."""
+        """Record constant data - currently ignored."""
         pass
 
-    def record(self, src, inputs, outputs, case_uuid, parent_uuid):
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Record the given run data."""
         if self._connection is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
         cur = self._connection.cursor()
 
-        cur.execute("""insert into cases(id,uuid,parent,model_id,timeEnter)
-                           values (?,?,?,?,DATETIME('NOW'))""",
-                    (None, case_uuid, parent_uuid, self.model_id))
+        msg = '' if exc is None else str(exc)
+        cur.execute("""insert into cases(id,uuid,parent,msg,model_id,timeEnter)
+                           values (?,?,?,?,?,DATETIME('NOW'))""",
+                    (None, case_uuid, parent_uuid, msg, self.model_id))
 
         case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table.  Pickle them if
@@ -226,7 +235,7 @@ class DBCaseRecorder(object):
         cur.execute("insert into casevars(var_id,name,case_id,sense,value) values(?,?,?,?,?)",
                     v)
 
-        in_names, out_names = self._name_map[src]
+        in_names, out_names = self._cfg_map[driver]
 
         for name, value in zip(in_names, inputs):
             if isinstance(value, (float, int, str)):
@@ -306,7 +315,7 @@ def list_db_vars(dbname):
     varnames = set([v for v in varcur])
     return varnames
 
-def case_db_to_dict(dbname, varnames, case_sql='', var_sql=''):
+def case_db_to_dict(dbname, varnames, case_sql='', var_sql='', include_errors=False):
     """
     Retrieve the values of specified variables from a sqlite DB containing
     Case data.
@@ -330,6 +339,9 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql=''):
     var_sql: str (optional)
         SQL syntax that will be placed in the WHERE clause for variable retrieval.
 
+    include_errors: bool (optional) [False]
+        If True, include data from cases that reported an error.
+
     """
     connection = sqlite3.connect(dbname)
     vardict = dict([(name, []) for name in varnames])
@@ -338,6 +350,8 @@ def case_db_to_dict(dbname, varnames, case_sql='', var_sql=''):
     qlist = []
     if case_sql:
         qlist.append(case_sql)
+    if not include_errors:
+        qlist.append("msg = ''")
 
     if qlist:
         sql.append("WHERE %s" % ' AND '.join(qlist))

@@ -433,14 +433,14 @@ class ICaseRecorder(Interface):
     def startup():
         """Perform any operations required to start-up this recorder."""
 
-    def register(src, inputs, outputs):
-        """Register names for input and output data coming from `src`."""
+    def register(driver, inputs, outputs):
+        """Register names for input and output data coming from `driver`."""
 
     def record_constants(constants):
-        """Record constant inputs."""
+        """Record constant data."""
 
-    def record(src, inputs, outputs, case_uuid, parent_uuid):
-        """Record inputs and outputs data from `src`."""
+    def record(driver, inputs, outputs, exc, case_uuid, parent_uuid):
+        """Record input and output data from `driver`."""
 
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""

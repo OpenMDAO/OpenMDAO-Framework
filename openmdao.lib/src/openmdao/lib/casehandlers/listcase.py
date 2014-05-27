@@ -40,7 +40,7 @@ class ListCaseRecorder(object):
 
     def __init__(self):
         self.cases = []
-        self._name_map = {}
+        self._cfg_map = {}
 
     def __len__(self):
         return len(self.cases)
@@ -49,20 +49,20 @@ class ListCaseRecorder(object):
         """ Nothing needed for a list case."""
         pass
 
-    def register(self, src, inputs, outputs):
-        """Register names for later record call from `src`."""
-        self._name_map[src] = ([name for name, width in inputs],
-                               [name for name, width in outputs])
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        self._cfg_map[driver] = ([name for name, width in inputs],
+                                 [name for name, width in outputs])
 
     def record_constants(self, constants):
-        """Record constant inputs - currently ignored."""
+        """Record constant data - currently ignored."""
         pass
 
-    def record(self, src, inputs, outputs, case_uuid, parent_uuid):
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Store the case in our internal list."""
-        in_names, out_names = self._name_map[src]
+        in_names, out_names = self._cfg_map[driver]
         self.cases.append(Case(zip(in_names, inputs), zip(out_names, outputs),
-                               case_uuid=case_uuid, parent_uuid=parent_uuid))
+                               exc, case_uuid, parent_uuid))
 
     def close(self):
         """Does nothing."""

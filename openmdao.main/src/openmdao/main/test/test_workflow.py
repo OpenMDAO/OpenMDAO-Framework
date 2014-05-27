@@ -101,7 +101,7 @@ class DumbRecorder(object):
     def record_constants(self, constants):
         pass
 
-    def record(self, src, inputs, outputs, case_uuid, parent_uuid):
+    def record(self, src, inputs, outputs, err, case_uuid, parent_uuid):
         in_names, out_names = self._name_map[src]
         inputs = zip(in_names, inputs)
         outputs = zip(out_names, outputs)

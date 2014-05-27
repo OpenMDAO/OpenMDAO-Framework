@@ -7,7 +7,7 @@ from inspect import getmro
 import weakref
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError
+from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.variable import is_legal_name, make_legal_path
 
 __all__ = ["Case"]
@@ -87,8 +87,8 @@ class Case(object):
         Case._uuid_seq += 1
         return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
 
-    def __init__(self, inputs=None, outputs=None, case_uuid=None,
-                 parent_uuid=''):
+    def __init__(self, inputs=None, outputs=None, exc=None,
+                 case_uuid=None, parent_uuid=''):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. Outputs must be
@@ -98,6 +98,7 @@ class Case(object):
         self._exprs = None
         self._outputs = None
         self._inputs = {}
+        self.exc = exc  # Typically a TracedError.
 
         if case_uuid:
             self.uuid = str(case_uuid)
@@ -112,6 +113,16 @@ class Case(object):
         if outputs:
             self.add_outputs(outputs)
 
+    @property
+    def msg(self):
+        """Exception message."""
+        return '' if self.exc is None else str(self.exc)
+
+    @property
+    def traceback(self):
+        """Exception traceback."""
+        return '' if self.exc is None else traceback_str(self.exc)
+
     def __str__(self):
         if self._outputs:
             outs = self._outputs.items()
@@ -120,21 +131,26 @@ class Case(object):
             outs = []
         ins = self._inputs.items()
         ins.sort()
-        stream = StringIO()
-        stream.write("Case:\n")
-        stream.write("   uuid: %s\n" % self.uuid)
-        stream.write("   timestamp: %15f\n" % self.timestamp)
-        if self.parent_uuid:
-            stream.write("   parent_uuid: %s\n" % self.parent_uuid)
 
+        stream = StringIO()
+        write = stream.write
+        write("Case:\n")
+        write("   uuid: %s\n" % self.uuid)
+        write("   timestamp: %15f\n" % self.timestamp)
+        if self.parent_uuid:
+            write("   parent_uuid: %s\n" % self.parent_uuid)
         if ins:
-            stream.write("   inputs:\n")
+            write("   inputs:\n")
             for name, val in ins:
-                stream.write("      %s: %s\n" % (name, val))
+                write("      %s: %s\n" % (name, val))
         if outs:
-            stream.write("   outputs:\n")
+            write("   outputs:\n")
             for name, val in outs:
-                stream.write("      %s: %s\n" % (name, val))
+                write("      %s: %s\n" % (name, val))
+        if self.exc:
+            stream.write("   exc: %s\n" % self.exc)
+            stream.write("        %s\n" % traceback_str(self.exc))
+
         return stream.getvalue()
 
     def __eq__(self, other):

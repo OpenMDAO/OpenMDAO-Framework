@@ -1,11 +1,12 @@
 """ Base class for all workflows. """
 
 from fnmatch import fnmatch
+from traceback import format_exc
 
 # pylint: disable=E0611,F0401
 from openmdao.main.case import Case, flatten_obj
 from openmdao.main.depgraph import _get_inner_connections
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.exceptions import RunStopped, TracedError
 from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
@@ -95,7 +96,6 @@ class Workflow(object):
 
     def run(self, ffd_order=0, case_uuid=None):
         """ Run the Components in this Workflow. """
-
         self._stop = False
         self._exec_count += 1
 
@@ -108,17 +108,24 @@ class Workflow(object):
         else:
             record_case = False
 
-        for comp in self:
-            if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order)
-            else:
-                comp.set_itername('%s-%s' % (iterbase, comp.name))
-                comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            if self._stop:
-                raise RunStopped('Stop requested')
+        err = None
+        try:
+            for comp in self:
+                if isinstance(comp, PseudoComponent):
+                    comp.run(ffd_order=ffd_order)
+                else:
+                    comp.set_itername('%s-%s' % (iterbase, comp.name))
+                    comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+                if self._stop:
+                    raise RunStopped('Stop requested')
+        except Exception as exc:
+            err = TracedError(exc, format_exc())
 
         if record_case and self._rec_required:
-            self._record_case(case_uuid=case_uuid)
+            self._record_case(case_uuid, err)
+
+        if err is not None:
+            err.reraise(with_traceback=False)
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
@@ -147,7 +154,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
-                    inputs.append((path, param.size))
+                    inputs.append((name, param.size))
 
         # Objectives
         self._rec_objectives = []
@@ -162,7 +169,7 @@ class Workflow(object):
                     size = len(flatten_obj(name, val))
                 except Exception:
                     size = 1
-                outputs.append((path, size))
+                outputs.append((name, size))
         elif hasattr(driver, 'eval_objectives'):
             for j, key in enumerate(driver.get_objectives()):
                 name = 'Objective_%d' % j
@@ -174,7 +181,7 @@ class Workflow(object):
                         size = len(flatten_obj(name, val))
                     except Exception:
                         size = 1
-                    outputs.append((path, size))
+                    outputs.append((name, size))
 
         # Responses
         self._rec_responses = []
@@ -189,7 +196,7 @@ class Workflow(object):
                         size = len(flatten_obj(name, val))
                     except Exception:
                         size = 1
-                    outputs.append((path, 1))
+                    outputs.append((name, 1))
 
         # Constraints
         self._rec_constraints = []
@@ -199,7 +206,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append((path, con.size))
+                    outputs.append((name, con.size))
 
         if hasattr(driver, 'get_eq_constraints'):
             for name, con in driver.get_eq_constraints().items():
@@ -207,7 +214,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append((path, con.size))
+                    outputs.append((name, con.size))
 
         # Other outputs.
         self._rec_outputs = []
@@ -232,11 +239,11 @@ class Workflow(object):
         for src, dst in _get_inner_connections(scope._depgraph, srcs, dsts):
             path = prefix+src
             try:
-                val = scope.get(name)
-                size = len(flatten_obj(name, val))
+                val = scope.get(src)
+                size = len(flatten_obj(path, val))
             except Exception:
                 size = 1
-            cfg = (path, size)
+            cfg = (src, size)
             if cfg not in inputs and cfg not in outputs and \
                self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
@@ -246,15 +253,15 @@ class Workflow(object):
         path = prefix+name
         if self._check_path(path, includes, excludes):
             self._rec_outputs.append(name)
-            outputs.append((path, 1))
+            outputs.append((name, 1))
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
             for recorder in top.recorders:
-                recorder.register(id(self), inputs, outputs)
+                recorder.register(driver, inputs, outputs)
 
-        return (set(path for path, width in inputs), dict())
+        return (set(prefix+name for name, width in inputs), dict())
 
     @staticmethod
     def _check_path(path, includes, excludes):
@@ -270,7 +277,7 @@ class Workflow(object):
                 return False
         return True
 
-    def _record_case(self, case_uuid):
+    def _record_case(self, case_uuid, err):
         """ Record case in all recorders. """
         driver = self._parent
         scope = driver.parent
@@ -295,14 +302,18 @@ class Workflow(object):
         outputs.extend(driver.eval_response(key)
                        for key in self._rec_responses)
         # Constraints.
-        outputs.extend(con.evaluate(scope)
-                       for con in self._rec_constraints)
+        for con in self._rec_constraints:
+            value = con.evaluate(scope)  # evaluate() always returns list.
+            if len(value) == 1:
+                value = value[0]
+            outputs.append(value)
+
         # Other outputs.
         outputs.extend(scope.get(name)
                        for name in self._rec_outputs)
         # Record.
         for recorder in top.recorders:
-            recorder.record(id(self), inputs, outputs,
+            recorder.record(driver, inputs, outputs, err,
                             case_uuid, self._parent._case_uuid)
 
     def _iterbase(self):

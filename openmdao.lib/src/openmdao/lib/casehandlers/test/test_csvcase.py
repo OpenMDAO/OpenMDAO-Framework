@@ -301,7 +301,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         rec.num_backups = 0
         rec.startup()
         rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
-        rec.record(id(self), [2.0, 4.3, 1.9], [], '', '')
+        rec.record(id(self), [2.0, 4.3, 1.9], [], None, '', '')
         rec.close()
 
         outfile = open(self.filename, 'r')
@@ -309,9 +309,9 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         outfile.close()
 
         line = '"timestamp","/INPUTS","comp1.x","comp1.y","comp2.x",' \
-               '"/OUTPUTS","/METADATA","parent_uuid"\r\n'
+               '"/OUTPUTS","/METADATA","uuid","parent_uuid","msg"\r\n'
         self.assertEqual(csv_data[0], line)
-        line = '"",2.0,4.3,1.9,"","",""\r\n'
+        line = '"",2.0,4.3,1.9,"","","","",""\r\n'
         self.assertTrue(csv_data[1].endswith(line))
 
     def test_flatten(self):
@@ -422,13 +422,13 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.startup()
         rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
-        rec.record(id(self), [2.0, 4.3, 1.9], [], '', '')
+        rec.record(id(self), [2.0, 4.3, 1.9], [], None, '', '')
         try:
-            rec.record(id(self), [2.0, 1.9], [], '', '')
+            rec.record(id(self), [2.0, 1.9], [], None, '', '')
         except Exception as err:
             self.assertEqual(str(err),
-                             "number of data points (7) doesn't match"
-                             " header size (8) in CSV recorder")
+                             "number of data points (9) doesn't match"
+                             " header size (10) in CSV recorder")
         else:
             self.fail("Exception expected")
         finally:
@@ -463,7 +463,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders[0].register(id(self), inputs, outputs)
         outputs = [0, 0, 'world', 0, '1']
         inputs = [0.1, 2 + .1, 99.88, True]
-        code = "self.top.recorders[0].record(id(self), inputs, outputs, '', '')"
+        code = "self.top.recorders[0].record(id(self), inputs, outputs, None, '', '')"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
 
