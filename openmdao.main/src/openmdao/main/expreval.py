@@ -552,15 +552,14 @@ class ExprEvaluator(object):
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
 
-    def _pre_parse(self, root=None):
-        if root is None:
-            try:
-                root = ast.parse(self.text, mode='eval')
-            except SyntaxError:
-                # might be an assignment, try mode='exec'
-                root = ast.parse(self.text, mode='exec')
-                self._allow_set = False
-                return root
+    def _pre_parse(self):
+        try:
+            root = ast.parse(self.text, mode='eval')
+        except SyntaxError:
+            # might be an assignment, try mode='exec'
+            root = ast.parse(self.text, mode='exec')
+            self._allow_set = False
+            return root
 
         if not isinstance(root.body,
                           (ast.Attribute, ast.Name, ast.Subscript)):
@@ -569,10 +568,8 @@ class ExprEvaluator(object):
             self._allow_set = True
         return root
 
-    def _parse_get(self, root=None):
-        astree = self._pre_parse(root)
-        #varscanner = ExprVarScanner()
-        #varscanner.visit(astree)
+    def _parse_get(self):
+        astree = self._pre_parse()
 
         new_ast = ExprTransformer(self, getter=self.getter).visit(astree)
 
@@ -582,6 +579,10 @@ class ExprEvaluator(object):
         return (new_ast, compile(new_ast, '<string>', mode))
 
     def _parse_set(self):
+        self._pre_parse()
+        if not self._allow_set:
+            raise ValueError("expression '%s' can't be set to a value"
+                             % self.text)
         root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
         ## transform into a 'set' call to set the specified variable
         assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
@@ -589,12 +590,10 @@ class ExprEvaluator(object):
         code = compile(assign_ast, '<string>', 'exec')
         return (assign_ast, code)
 
-    def _parse(self, root=None):
+    def _parse(self):
         self.var_names = set()
-        if root is not None:
-            self.text = print_node(root)
         try:
-            new_ast, self._code = self._parse_get(root)
+            new_ast, self._code = self._parse_get()
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s"
                               % (self.text, str(err)))
@@ -799,22 +798,15 @@ class ExprEvaluator(object):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
-        if self._code is None:
-            self._pre_parse()
-
-        if self._allow_set:
-            # self.assignment_code is a compiled version of an assignment
-            # statement of the form 'somevar = _local_setter_', so we set
-            # _local_setter_ here and the exec call will pull it out of the
-            # locals dict.
-            _local_setter_ = val
-            _local_force_ = force
-            if self._assignment_code is None:
-                _, self._assignment_code = self._parse_set()
-            exec(self._assignment_code, _expr_dict, locals())
-        else:
-            raise ValueError("expression '%s' can't be set to a value"
-                             % self.text)
+        # self.assignment_code is a compiled version of an assignment
+        # statement of the form 'somevar = _local_setter_', so we set
+        # _local_setter_ here and the exec call will pull it out of the
+        # locals dict.
+        _local_setter_ = val
+        _local_force_ = force
+        if self._assignment_code is None:
+            _, self._assignment_code = self._parse_set()
+        exec(self._assignment_code, _expr_dict, locals())
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.
