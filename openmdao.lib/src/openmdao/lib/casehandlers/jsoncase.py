@@ -4,8 +4,9 @@ import logging
 import sys
 import time
 
-from json import dumps
-from uuid import uuid1
+from json  import dumps, JSONEncoder
+from numpy import ndarray
+from uuid  import uuid1
 
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.releaseinfo import __version__
@@ -129,8 +130,9 @@ class JSONCaseRecorder(object):
         write('{\n')
         write('"simulation_info": ')
         try:
-            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys))
-        except Exception as exc:
+            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
+                        cls=Encoder))
+        except Exception:
             # Has happened in past for 'validation_trait'.
             logging.error('JSON write failed for simulation_info:')
             for key in sorted(info):
@@ -161,7 +163,8 @@ class JSONCaseRecorder(object):
 
             count += 1
             write(', "driver_info_%s": ' % count)
-            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys))
+            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
+                        cls=Encoder))
             write('\n')
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
@@ -187,7 +190,8 @@ class JSONCaseRecorder(object):
         self._cases += 1
         write = self.out.write
         write(', "iteration_case_%s": ' % self._cases)
-        write(dumps(info, indent=self.indent, sort_keys=self.sort_keys))
+        write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
+                    cls=Encoder))
         write('\n')
 
     def close(self):
@@ -236,3 +240,14 @@ class JSONCaseRecorder(object):
     def get_iterator(self):
         """Just returns None."""
         return None
+
+
+class Encoder(JSONEncoder):
+    """Special encoder to deal with types not handled by default encoder."""
+
+    def default(self, obj):
+        if isinstance(obj, ndarray):
+            return obj.tolist()
+        else:
+            super(Encoder, self).default(obj)
+
