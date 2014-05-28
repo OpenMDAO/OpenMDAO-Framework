@@ -241,6 +241,32 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         self.assertTrue(model.comp.x is not complex)
         self.assertTrue(model.comp2.y is not complex)
 
+    def test_simple_float_subassy(self):
+
+        model = set_as_top(Assembly())
+        model.add('sub', Assembly())
+        model.sub.add('subsub', Assembly())
+        model.driver.workflow.add('sub')
+        model.sub.driver.workflow.add('subsub')
+
+        model.sub.subsub.add('comp', SimpleCompFloat())
+        model.sub.subsub.driver.workflow.add('comp')
+        model.sub.subsub.create_passthrough('comp.x')
+        model.sub.subsub.create_passthrough('comp.y')
+        model.sub.create_passthrough('subsub.x')
+        model.sub.create_passthrough('subsub.y')
+
+        model.driver.gradient_options.fd_form = 'complex_step'
+        model.driver.gradient_options.force_fd = True
+        model.run()
+
+        J = model.driver.workflow.calc_gradient(inputs=['sub.x'],
+                                                outputs=['sub.y'])
+
+        assert_rel_error(self, J[0, 0], 2.0, .000001)
+        self.assertTrue(model.sub.subsub.comp.x is not complex)
+        self.assertTrue(model.sub.subsub.comp.y is not complex)
+
     def test_simple_float_in_vartree(self):
 
         model = set_as_top(Assembly())

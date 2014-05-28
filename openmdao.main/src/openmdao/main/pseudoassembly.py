@@ -29,6 +29,17 @@ def from_PA_var(name):
     return name
 
 
+def _set_assembly_complex_step(assy):
+    """ Helper for complex step assembly recursion"""
+    for name in assy.list_components():
+        comp = assy.get(name)
+        comp._complex_step = True
+
+        # Recursion to support complex inputs in all our subassemblies.
+        if has_interface(comp, IAssembly):
+            _set_assembly_complex_step(comp)
+
+
 class PseudoAssembly(object):
     """The PseudoAssembly is used to aggregate blocks of components that cannot
     provide derivatives, and thus must be finite differenced. It is not a real
@@ -340,3 +351,7 @@ class PseudoAssembly(object):
         for name in self.itercomps:
             comp = self.wflow.scope.get(name)
             comp._complex_step = True
+
+            # Recursion to support complex inputs in all our subassemblies.
+            if has_interface(comp, IAssembly):
+                _set_assembly_complex_step(comp)
