@@ -218,11 +218,11 @@ class Workflow(object):
 
         # Other outputs.
         self._rec_outputs = []
-        srcs = []
+        srcs = scope.list_inputs()
         if hasattr(driver, 'get_parameters'):
             srcs.extend(param.target
                         for param in driver.get_parameters().values())
-        dsts = []
+        dsts = scope.list_outputs()
         if hasattr(driver, 'eval_objective') or \
            hasattr(driver, 'eval_objectives'):
             dsts.extend(objective.pcomp_name+'.out0'
