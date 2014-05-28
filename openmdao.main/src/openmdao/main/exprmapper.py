@@ -11,17 +11,6 @@ class ExprMapper(object):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
 
-    def get_output_exprs(self):
-        """Return all destination expressions at the output boundary"""
-        exprs = []
-        graph = self._exprgraph
-        for node, data in graph.nodes(data=True):
-            if graph.in_degree(node) > 0:
-                expr = data['expr']
-                if len(expr.get_referenced_compnames()) == 0:
-                    exprs.append(expr)
-        return exprs
-
     def get_expr(self, text):
         node = self._exprgraph.node.get(text)
         if node:
