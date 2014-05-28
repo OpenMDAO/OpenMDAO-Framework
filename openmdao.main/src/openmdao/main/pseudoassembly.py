@@ -334,9 +334,3 @@ class PseudoAssembly(object):
             compname, _, varname = varpath.partition('.')
             if varname and (compname in self.comps):
                 map_outputs[i] = to_PA_var(varpath, self.name)
-
-    def set_complex_step(self):
-        """Activate support for complex stepping in the comps in this PA."""
-        for name in self.itercomps:
-            comp = self.wflow.scope.get(name)
-            comp._complex_step = True
