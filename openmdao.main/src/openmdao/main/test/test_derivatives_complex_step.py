@@ -116,8 +116,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model.add('comp', SimpleCompFloat())
         model.driver.workflow.add('comp')
 
-        model.comp._complex_step = True
-
         model.comp.x = 3+4j
         model.run()
 
@@ -135,7 +133,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         # Make sure we can do whole workflows.
         model.add('comp2', SimpleCompFloat())
         model.driver.workflow.add('comp2')
-        model.comp2._complex_step = True
         model.connect('comp.y', 'comp2.x')
 
         model.comp.x = 3+4j
@@ -151,8 +148,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model.add('comp', CompWithVarTreeSubTree())
         model.driver.workflow.add('comp')
 
-        model.comp._complex_step = True
-
         model.comp.ins.x = 2+1j
         model.comp.ins.sub.x = 5+3j
         model.run()
@@ -167,8 +162,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', SimpleCompArray())
         model.driver.workflow.add('comp')
-
-        model.comp._complex_step = True
 
         model.comp.x = model.comp.x.astype('complex')
         model.comp.x[1, 1] = 3+4j
@@ -188,8 +181,6 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompWithArrayVarTreeSubTree())
         model.driver.workflow.add('comp')
-
-        model.comp._complex_step = True
 
         model.comp.ins.x = model.comp.ins.x.astype('complex')
         model.comp.ins.x[1, 1] = 1+2j
