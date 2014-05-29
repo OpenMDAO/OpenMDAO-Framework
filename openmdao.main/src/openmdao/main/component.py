@@ -173,7 +173,6 @@ class Component(Container):
         # Flags and caching used by the derivatives calculation
         self.ffd_order = 0
         self._provideJ_bounds = None
-        self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
         self._case_uuid = ''

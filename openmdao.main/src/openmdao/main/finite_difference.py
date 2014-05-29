@@ -255,7 +255,6 @@ class FiniteDifference(object):
                 elif form == 'complex_step':
 
                     complex_step = fd_step*1j
-                    self.pa.set_complex_step()
                     yc = zeros(len(self.y), dtype=complex128)
 
                     # Step
@@ -548,7 +547,6 @@ class DirectionalFD(object):
         elif form == 'complex_step':
 
             complex_step = fd_step*1j
-            self.pa.set_complex_step()
             yc = zeros(len(self.y), dtype=complex128)
 
             # Step

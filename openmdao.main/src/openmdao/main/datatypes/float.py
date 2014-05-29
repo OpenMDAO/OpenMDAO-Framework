@@ -134,21 +134,14 @@ class Float(Variable):
                                                          valunits)
 
         # Support for complex step method. We can step this trait in the
-        # complex direction while keeping the Range validator, but only
-        # do this when the user has requested complex step.
+        # complex direction while keeping the Range validator.
         is_complex_step = False
         if isinstance(value, complex):
 
-            # Vartree recursion, find the component parent.
-            comp = obj
-            while not hasattr(comp, '_complex_step'):
-                comp = comp._parent
-
-            if comp._complex_step == True:
-                value_imag = value.imag
-                value = value.real
-                if value_imag != 0:
-                    is_complex_step = True
+            value_imag = value.imag
+            value = value.real
+            if value_imag != 0:
+                is_complex_step = True
 
         try:
             new_val = self._validator.validate(obj, name, value)
@@ -156,8 +149,6 @@ class Float(Variable):
             self.error(obj, name, value)
 
         if is_complex_step:
-
-            # TODO - Need to do unit conversion on the complex part too.
             new_val += value_imag*1j
 
         #print name, new_val
