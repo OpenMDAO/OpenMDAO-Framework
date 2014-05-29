@@ -228,7 +228,12 @@ class SellarMDF(Assembly):
 
 if __name__ == '__main__':
     import sys
-    from openmdao.main.mpiwrap import under_mpirun, setup_mpi
+    from openmdao.main.mpiwrap import MPI, setup_mpi
+
+    """
+    To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
+    where modelname is whatever comes after _get_model in the various _get_model* functions above.
+    """
 
     run = False
     mname = ''
@@ -250,7 +255,7 @@ if __name__ == '__main__':
 
     dump_iteration_tree(top)
 
-    if under_mpirun():
+    if MPI is not None:
         setup_mpi(top)
         mpiprint(top.driver.workflow.get_subsystem().dump_subsystem_tree(stream=None))
 

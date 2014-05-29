@@ -11,7 +11,7 @@ def set_print_rank(rank):
     global MPI_PRINT_RANK
     MPI_PRINT_RANK = rank
 
-def under_mpirun():
+def _under_mpirun():
     """Return True if we're being executed under mpirun."""
     # TODO: this is a bit of a hack and there appears to be
     # no consistent set of environment vars between MPI implementations
@@ -20,7 +20,7 @@ def under_mpirun():
             return True
     return False
 
-if under_mpirun():
+if _under_mpirun():
     from mpi4py import MPI
     from petsc4py import PETSc
     import traceback
