@@ -1,4 +1,4 @@
-import ordereddict
+from ordereddict import OrderedDict
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
@@ -760,7 +760,7 @@ class HasParameters(object):
                        'get_referenced_varpaths', 'get_metadata']
 
     def __init__(self, parent):
-        self._parameters = ordereddict.OrderedDict()
+        self._parameters = OrderedDict()
         self._parent = parent
         self._allowed_types = ['continuous']
         if obj_has_interface(parent, ISolver):
@@ -934,7 +934,7 @@ class HasParameters(object):
         name: string
             Name of component being removed.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for pname, param in self._parameters.items():
             if name in param.get_referenced_compnames():
                 refs[pname] = param
@@ -991,7 +991,7 @@ class HasParameters(object):
         """Removes all parameters."""
         for name in self._parameters.keys():
             self.remove_parameter(name)
-        self._parameters = ordereddict.OrderedDict()
+        self._parameters = OrderedDict()
 
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
@@ -1201,6 +1201,8 @@ class HasVarTreeParameters(HasParameters):
             path = name
         elif isinstance(target, basestring):
             path = target
+        elif isinstance(target, Parameter):
+            path = target.name or target.target
         else:
             path = target[0]
 

@@ -1854,24 +1854,9 @@ class Component(Container):
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
 
-
-    ### Methods for distributed computation (MPI) ###
-
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.mpi.requested_cpus
-
-    # def setup_communicators(self, comm, scope=None):
-    #     self.mpi.comm = comm
-
-    # def setup_variables(self):
-    #     pass
-
-    # def setup_sizes(self):
-    #     pass
-
-    # def setup_vectors(self, arrays=None):
-    #     pass
 
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info
