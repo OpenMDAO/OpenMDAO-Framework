@@ -11,6 +11,13 @@ import StringIO
 from openmdao.util.log import logger, LOG_DEBUG
 
 
+def strict_chk_config(strict):
+    """check_config methods should call this to determine if they
+    should run in strict mode or not.
+    """
+    return strict or os.environ.get('OPENMDAO_STRICT_CONFIG')
+
+
 def traceit(frame, event, arg):
     """A function useful for tracing Python execution. Wherever you want the 
     tracing to start, insert a call to sys.settrace(traceit)."""

@@ -184,9 +184,6 @@ class Testcase_deriv_obj(unittest.TestCase):
         inputs = self.inputs
         outputs = self.outputs
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
-        self._check_J(J)
-        
         self.top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
@@ -195,6 +192,10 @@ class Testcase_deriv_obj(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
         
+        self.top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        self._check_J(J)
+         
     def test_geom_provide_deriv_check_fd_tail(self):    
         
         raise nose.SkipTest("OpenMDAO can't identify when half a connection is non-differntiable yet")

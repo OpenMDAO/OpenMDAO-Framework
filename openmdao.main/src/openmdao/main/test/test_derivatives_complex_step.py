@@ -4,10 +4,7 @@ Testing for complex step support in the framework.
 
 import unittest
 
-try:
-    from numpy import zeros, array, identity, random, eye
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random, eye
+from numpy import array, eye
 
 from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top

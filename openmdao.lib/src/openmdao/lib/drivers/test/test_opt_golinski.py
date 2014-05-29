@@ -274,10 +274,11 @@ class GolinskiTestCase(unittest.TestCase):
                                   [0.70, 17.0, 7.300, 7.300],
                                   [0.80, 28.0, 8.300, 8.300]):
             self.top.driver.add_parameter(param, low=low, high=high)
+        # FIXME: this is setting parameters outside of specified low/high
         self.top.driver.set_parameters([1.,1.,0.,0.])
         self.assertEqual(list(self.top.comp.x), 
                          [1.,1.,0.,0.,0.,0.,0.])
-        self.top.comp.execute()       
+        self.top.driver.workflow.run()
         self.assertEqual(self.top.driver.eval_objective(), -0.7854*43.09340)
         
 

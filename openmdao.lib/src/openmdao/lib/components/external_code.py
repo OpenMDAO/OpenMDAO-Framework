@@ -69,7 +69,7 @@ class ExternalCode(Component):
         return _AccessController()
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         """
         Don't allow setting of 'command' or 'resources' by a remote client.
         """
@@ -77,7 +77,7 @@ class ExternalCode(Component):
            and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
-        return super(ExternalCode, self).set(path, value, index, src, force)
+        return super(ExternalCode, self).set(path, value, index, force)
 
     def execute(self):
         """

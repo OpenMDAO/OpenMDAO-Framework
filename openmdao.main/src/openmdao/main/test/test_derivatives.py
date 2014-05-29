@@ -8,14 +8,10 @@ import re
 import unittest
 from mock import Mock
 
-try:
-    from numpy import zeros, array, identity, random
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random
+from numpy import zeros, array, identity, random
 
 from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
-from openmdao.lib.optproblems.scalable import Discipline_No_Deriv
 
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
@@ -25,7 +21,6 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
-import openmdao.main.pseudocomp as pcompmod
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -114,14 +109,6 @@ class BadListDerivsComp(Component):
 
 
 class Testcase_provideJ(unittest.TestCase):
-
-    def setUp(self):
-        """ Called before each test. """
-        pcompmod._count = 0
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
 
     def test_provideJ(self):
 
@@ -576,9 +563,6 @@ class ABCDintComp(Component):
 
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
-
-    def setUp(self):
-        pcompmod._count = 0 # keep pseudocomp names consistent
 
     def test_bad_list_deriv_vars(self):
         top = set_as_top(Assembly())
@@ -2957,9 +2941,6 @@ class CompAdjoint(CompBase):
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
 
-    def setUp(self):
-        pcompmod._count = 0
-
     def test_applyJ_and_applyJT(self):
 
         comp = Comp2()
@@ -3246,9 +3227,6 @@ class PreCompArray(Component):
 class Testcase_preconditioning(unittest.TestCase):
     """ Unit test for applyMinv and applyMinvT """
 
-    def setUp(self):
-        pcompmod._count = 0
-
     def test_simple(self):
 
         top = set_as_top(Assembly())
@@ -3406,9 +3384,6 @@ class Testcase_preconditioning(unittest.TestCase):
 
 
 class TestMultiDriver(unittest.TestCase):
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_nested_driver(self):
 

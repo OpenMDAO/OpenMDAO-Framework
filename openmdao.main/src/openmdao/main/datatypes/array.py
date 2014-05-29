@@ -5,8 +5,6 @@ Trait for numpy array variables, with optional units.
 #public symbols
 __all__ = ["Array"]
 
-import logging
-
 # pylint: disable-msg=E0611,F0401
 from openmdao.units import PhysicalQuantity
 
@@ -15,37 +13,8 @@ from openmdao.main.index import get_indexed_value
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
-try:
-    from numpy import array, zeros, ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, zeros, ndarray
-    from openmdao.main.variable import Variable
-
-    class TraitArray(Variable):
-        '''Simple fallback array class for when numpy is not available'''
-
-        def __init__(self, **metadata):
-            self._shape = metadata.get('shape')
-            self._dtype = metadata.get('dtype')
-            super(TraitArray, self).__init__(**metadata)
-
-        def validate(self, obj, name, value):
-            ''' Simple validation'''
-            try:
-                it = iter(value)
-            except:
-                msg = "attempted to assign non-iterable value to an array"
-                raise ValueError(msg)
-
-            # FIXME: improve type checking
-            if self._dtype:
-                return array(value, dtype=self._dtype)
-            else:
-                return array(value)
-else:
-    from traits.api import Array as TraitArray
-
+from numpy import array, zeros, ndarray
+from traits.api import Array as TraitArray
 
 
 class Array(TraitArray):
