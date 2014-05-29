@@ -154,7 +154,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
-                    inputs.append((name, param.size))
+                    inputs.append(name)
 
         # Objectives
         self._rec_objectives = []
@@ -164,24 +164,14 @@ class Workflow(object):
             path = prefix+name
             if self._check_path(path, includes, excludes):
                 self._rec_objectives.append(key)
-                try:
-                    val = driver.eval_named_objective(key)
-                    size = len(flatten_obj(name, val))
-                except Exception:
-                    size = 1
-                outputs.append((name, size))
+                outputs.append(name)
         elif hasattr(driver, 'eval_objectives'):
             for j, key in enumerate(driver.get_objectives()):
                 name = 'Objective_%d' % j
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    try:
-                        val = driver.eval_named_objective(key)
-                        size = len(flatten_obj(name, val))
-                    except Exception:
-                        size = 1
-                    outputs.append((name, size))
+                    outputs.append(name)
 
         # Responses
         self._rec_responses = []
@@ -191,12 +181,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    try:
-                        val = driver.eval_response(key)
-                        size = len(flatten_obj(name, val))
-                    except Exception:
-                        size = 1
-                    outputs.append((name, 1))
+                    outputs.append(name)
 
         # Constraints
         self._rec_constraints = []
@@ -206,7 +191,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append((name, con.size))
+                    outputs.append(name)
 
         if hasattr(driver, 'get_eq_constraints'):
             for name, con in driver.get_eq_constraints().items():
@@ -214,7 +199,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append((name, con.size))
+                    outputs.append(name)
 
         # Other outputs.
         self._rec_outputs = []
@@ -238,22 +223,16 @@ class Workflow(object):
                         for constraint in driver.get_eq_constraints().values())
         for src, dst in _get_inner_connections(scope._depgraph, srcs, dsts):
             path = prefix+src
-            try:
-                val = scope.get(src)
-                size = len(flatten_obj(path, val))
-            except Exception:
-                size = 1
-            cfg = (src, size)
-            if cfg not in inputs and cfg not in outputs and \
+            if src not in inputs and src not in outputs and \
                self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
-                outputs.append(cfg)
+                outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
         if self._check_path(path, includes, excludes):
             self._rec_outputs.append(name)
-            outputs.append((name, 1))
+            outputs.append(name)
 
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
@@ -261,7 +240,7 @@ class Workflow(object):
             for recorder in top.recorders:
                 recorder.register(driver, inputs, outputs)
 
-        return (set(prefix+name for name, width in inputs), dict())
+        return (set(prefix+name for name in inputs), dict())
 
     @staticmethod
     def _check_path(path, includes, excludes):

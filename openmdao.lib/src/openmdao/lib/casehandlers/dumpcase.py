@@ -37,8 +37,8 @@ class DumpCaseRecorder(object):
         prefix = driver.parent.get_pathname()
         if prefix:
             prefix += '.'
-        self._cfg_map[driver] = ([prefix+name for name, width in inputs],
-                                 [prefix+name for name, width in outputs])
+        self._cfg_map[driver] = ([prefix+name for name in inputs],
+                                 [prefix+name for name in outputs])
 
     def record_constants(self, constants):
         """Record constant data."""

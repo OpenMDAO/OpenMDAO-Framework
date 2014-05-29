@@ -300,8 +300,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.num_backups = 0
         rec.startup()
-        rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
-        rec.record(id(self), [2.0, 4.3, 1.9], [], None, '', '')
+        rec.register(self, ['comp1.x', 'comp1.y', 'comp2.x', ], [])
+        rec.record(self, [2.0, 4.3, 1.9], [], None, '', '')
         rec.close()
 
         outfile = open(self.filename, 'r')
@@ -421,10 +421,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
     def test_CSVCaseRecorder_messages(self):
         rec = CSVCaseRecorder(filename=self.filename)
         rec.startup()
-        rec.register(id(self), [('comp1.x', 1), ('comp1.y', 1), ('comp2.x', 1)], [])
-        rec.record(id(self), [2.0, 4.3, 1.9], [], None, '', '')
+        rec.register(self, ['comp1.x', 'comp1.y', 'comp2.x'], [])
+        rec.record(self, [2.0, 4.3, 1.9], [], None, '', '')
         try:
-            rec.record(id(self), [2.0, 1.9], [], None, '', '')
+            rec.record(self, [2.0, 1.9], [], None, '', '')
         except Exception as err:
             self.assertEqual(str(err),
                              "number of data points (9) doesn't match"
@@ -456,14 +456,13 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.recorders[0].num_backups = 0
         self.top.run()
-        outputs = [('comp1.z', 1), ('comp2.z', 1), ('comp1.a_string', 1),
-                   ('comp1.a_array[2]', 1), ('driver.workflow.itername', 1)]
-        inputs = [('comp1.x', 1), ('comp1.y', 1), ('comp1.x_array[1]', 1),
-                  ('comp1.b_bool', 1)]
-        self.top.recorders[0].register(id(self), inputs, outputs)
+        outputs = ['comp1.z', 'comp2.z', 'comp1.a_string',
+                   'comp1.a_array[2]', 'driver.workflow.itername']
+        inputs = ['comp1.x', 'comp1.y', 'comp1.x_array[1]', 'comp1.b_bool']
+        self.top.recorders[0].register(self, inputs, outputs)
         outputs = [0, 0, 'world', 0, '1']
         inputs = [0.1, 2 + .1, 99.88, True]
-        code = "self.top.recorders[0].record(id(self), inputs, outputs, None, '', '')"
+        code = "self.top.recorders[0].record(self, inputs, outputs, None, '', '')"
         assert_raises(self, code, globals(), locals(), RuntimeError,
                       'Attempt to record on closed recorder')
 

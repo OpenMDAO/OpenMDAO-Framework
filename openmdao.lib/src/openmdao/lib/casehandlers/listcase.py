@@ -51,8 +51,7 @@ class ListCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        self._cfg_map[driver] = ([name for name, width in inputs],
-                                 [name for name, width in outputs])
+        self._cfg_map[driver] = (inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""

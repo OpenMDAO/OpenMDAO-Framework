@@ -117,8 +117,7 @@ class CaseArray(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        self._cfg_map[driver] = ([name for name, width in inputs],
-                                 [name for name, width in  outputs])
+        self._cfg_map[driver] = (inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""
@@ -136,9 +135,7 @@ class CaseArray(object):
         in_names = case.keys(iotype='in')
         out_names = case.keys(iotype='out')
 
-        in_cfg = [(name, 1) for name in in_names]
-        out_cfg = [(name, 1) for name in out_names]
-        self.register(self, in_cfg, out_cfg)
+        self.register(self, in_names, out_names)
 
         inputs = [case[name] for name in in_names]
         outputs = [case[name] for name in out_names]

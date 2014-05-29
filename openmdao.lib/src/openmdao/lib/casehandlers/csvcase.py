@@ -249,15 +249,15 @@ class CSVCaseRecorder(object):
                                      quoting=csv.QUOTE_NONNUMERIC)
 
     def register(self, driver, inputs, outputs):
-        """Register names and widths for later record call from `driver`."""
+        """Register names for later record call from `driver`."""
         if hasattr(driver, 'parent'):
             prefix = driver.parent.get_pathname()
             if prefix:
                 prefix += '.'
         else:
             prefix = ''
-        self._cfg_map[driver] = ([(prefix+name, width) for name, width in inputs],
-                                 [(prefix+name, width) for name, width in outputs])
+        self._cfg_map[driver] = ([prefix+name for name in inputs],
+                                 [prefix+name for name in outputs])
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""
@@ -289,14 +289,14 @@ class CSVCaseRecorder(object):
         in_cfg, out_cfg = self._cfg_map[driver]
         input_keys = []
         input_values = []
-        for (name, width), obj in zip(in_cfg, inputs):
+        for name, obj in zip(in_cfg, inputs):
             for key, value in flatten_obj(name, obj):
                 input_keys.append(key)
                 input_values.append(value)
 
         output_keys = []
         output_values = []
-        for (name, width), obj in zip(out_cfg, outputs):
+        for name, obj in zip(out_cfg, outputs):
             for key, value in flatten_obj(name, obj):
                 output_keys.append(key)
                 output_values.append(value)

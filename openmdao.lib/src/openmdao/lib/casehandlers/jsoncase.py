@@ -22,7 +22,7 @@ class JSONCaseRecorder(object):
 
     implements(ICaseRecorder)
 
-    def __init__(self, out='stdout'):
+    def __init__(self, out='stdout', indent=4, sort_keys=True):
         if isinstance(out, basestring):
             if out == 'stdout':
                 out = sys.stdout
@@ -31,8 +31,8 @@ class JSONCaseRecorder(object):
             else:
                 out = open(out, 'w')
         self.out = out
-        self.indent = 4
-        self.sort_keys = True
+        self.indent = indent
+        self.sort_keys = sort_keys
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
@@ -43,9 +43,7 @@ class JSONCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        self._cfg_map[driver] = (driver.get_pathname(),
-                                 [name for name, width in inputs],
-                                 [name for name, width in outputs])
+        self._cfg_map[driver] = (driver.get_pathname(), inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data."""
@@ -131,7 +129,7 @@ class JSONCaseRecorder(object):
         write('"simulation_info": ')
         try:
             write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                        cls=Encoder))
+                        cls=Encoder, check_circular=False))
         except Exception:
             # Has happened in past for 'validation_trait'.
             logging.error('JSON write failed for simulation_info:')
@@ -164,8 +162,10 @@ class JSONCaseRecorder(object):
             count += 1
             write(', "driver_info_%s": ' % count)
             write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                        cls=Encoder))
+                        cls=Encoder, check_circular=False))
             write('\n')
+
+        self.out.flush()
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Dump the given run data in a "pretty" form."""
@@ -191,8 +191,9 @@ class JSONCaseRecorder(object):
         write = self.out.write
         write(', "iteration_case_%s": ' % self._cases)
         write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                    cls=Encoder))
+                    cls=Encoder, check_circular=False))
         write('\n')
+        self.out.flush()
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.
