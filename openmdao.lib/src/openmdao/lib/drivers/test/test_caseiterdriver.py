@@ -422,7 +422,6 @@ class TestCase(unittest.TestCase):
 
         top = set_as_top(Assembly())
         sub = top.add('sub', Assembly())
-        sub.force_execute = True
         top.driver.workflow.add('sub')
 
         cid = sub.add('driver', CaseIteratorDriver())

@@ -131,14 +131,13 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Inputs' in attributes)
         inputs = attributes['Inputs']
         names = sorted([input['name'] for input in inputs])
-        self.assertEqual(names, ['directory', 'force_execute', 'force_fd',
+        self.assertEqual(names, ['directory', 'force_fd',
                                  'missing_deriv_policy', 'x', 'y'])
         found_x = found_y = False
         for item in inputs:
             self.assertTrue('desc' in item)
             self.assertTrue('name' in item)
             self.assertTrue('type' in item)
-            self.assertTrue('valid' in item)
             self.assertTrue('value' in item)
             if item['name'] == 'x':
                 found_x = True
@@ -159,7 +158,6 @@ class ConsoleServerTestCase(unittest.TestCase):
             self.assertTrue('desc' in output)
             self.assertTrue('name' in output)
             self.assertTrue('type' in output)
-            self.assertTrue('valid' in output)
             self.assertTrue('value' in output)
             if output['name'] == 'f_xy':
                 found_f_xy = True
@@ -223,9 +221,8 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(workflow[0]['type'], 'paraboloid.Paraboloid')
 
     def test_execfile(self):
-        ''' execfile an input file (with a __main__) and make sure you
-            can save the project without any errors
-        '''
+        # execfile an input file (with a __main__) and make sure you
+        #    can save the project without any errors
         proj_file = os.path.join(self.path, 'simple_1.proj')
         proj_copy = os.path.join(self.tdir, 'simple_2.proj')
         shutil.copyfile(proj_file, proj_copy)

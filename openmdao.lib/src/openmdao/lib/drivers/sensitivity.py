@@ -9,7 +9,7 @@
 #public symbols
 __all__ = ['SensitivityDriver']
 
-from openmdao.main.numpy_fallback import zeros
+from numpy import zeros
 
 from openmdao.main.datatypes.api import Array, List
 from openmdao.main.driver_uses_derivatives import Driver

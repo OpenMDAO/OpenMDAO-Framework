@@ -248,9 +248,9 @@ class ProtectedBox(Box):
         raise RoleError('No get_attr access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, src, force)
+            return super(ProtectedBox, self).set(path, value, index, force)
         raise RoleError('No set access to %r' % path)
 
 

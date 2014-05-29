@@ -45,16 +45,15 @@ class HasEventsTestCase(unittest.TestCase):
         
     def test_event(self):
         self.asm.run()
-        self.assertEqual(self.asm.comp1.exec_count, 1)
+        self.assertEqual(self.asm.comp1.exec_count, 3)
         self.assertEqual(self.asm.comp1.doit_count, 0)
         self.assertEqual(self.asm.comp1.doit2_count, 0)
         
         self.asm.comp1.exec_count = 0
-        self.asm.comp1.invalidate_deps()
         
         self.asm.driver.add_event('comp1.doit')
         self.asm.run()
-        self.assertEqual(self.asm.comp1.exec_count, 1)
+        self.assertEqual(self.asm.comp1.exec_count, 3)
         self.assertEqual(self.asm.comp1.doit_count, 3)
         self.assertEqual(self.asm.comp1.doit2_count, 0)
         

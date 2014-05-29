@@ -165,8 +165,6 @@ class Constraint(object):
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
         pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
         val = pcomp.out0
 
         if isinstance(val, ndarray):

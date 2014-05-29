@@ -8,12 +8,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.typegroups import real_types, int_types
 
-try:
-    from numpy import array, ndarray, ndindex, ones
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, ones
+from numpy import array, ndarray, ndindex, ones
 
 __missing = object()
 
@@ -837,14 +832,6 @@ class HasParameters(object):
         referenced.
         """
 
-        if self._parent.parent:
-            parent_cnns = self._parent.parent.list_connections()
-            for lhs, rhs in parent_cnns:
-                if rhs == target:
-                    self._parent.raise_exception("'%s' is already connected"
-                                                 " to '%s'" % (target, lhs),
-                                                 RuntimeError)
-
         if isinstance(target, (ParameterBase, ParameterGroup)):
             self._parameters[target.name] = target
             target.override(low, high, scaler, adder, start, fd_step, name)
@@ -1022,7 +1009,6 @@ class HasParameters(object):
         for param in self._parameters.itervalues():
             if param.start is not None:
                 param.set(param.start, scope)
-        self._parent._invalidate()
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.

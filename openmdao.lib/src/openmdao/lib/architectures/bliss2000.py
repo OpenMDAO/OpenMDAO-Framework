@@ -235,7 +235,6 @@ class BLISS2000(Architecture):
             dis_doe.beta = .01
 
             dis_doe.add_event("%s.train_next"%meta_model.name)
-            dis_doe.force_execute = True
             driver.workflow.add(dis_doe.name) #run all doe training before system optimziation
                 
       
@@ -310,14 +309,11 @@ class BLISS2000(Architecture):
             
 if __name__=="__main__": 
     
-    from openmdao.lib.optproblems.api import UnitScalableProblem
     from openmdao.lib.optproblems.api import SellarProblem
     
     p = SellarProblem()
     
     p.architecture = BLISS2000()
-
-    p.check_config()
 
     #print [param for param in p.DOE_Trainer_dis2.get_parameters()]
     #exit()

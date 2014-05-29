@@ -62,7 +62,6 @@ class BLISS(Architecture):
 
         # Multidisciplinary Analysis
         mda = self.parent.add('mda', BroydenSolver())
-        mda.force_execute = True
         for couple in coupling.values():
             mda.add_parameter(couple.indep.target)
             mda.add_constraint("%s=%s" % (couple.indep.target, couple.dep.target))
@@ -191,8 +190,6 @@ if __name__ == "__main__":
 
     sp = SellarProblem()
     sp.architecture = BLISS()
-
-    sp.check_config()
 
     sp.run()
 

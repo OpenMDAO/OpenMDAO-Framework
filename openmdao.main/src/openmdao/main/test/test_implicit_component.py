@@ -5,8 +5,7 @@ derivatives solve.
 
 import unittest
 import numpy as np
-from mock import patch, Mock
-import scipy.sparse.linalg
+from mock import Mock
 
 import openmdao.main.implicitcomp
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
@@ -15,8 +14,6 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
-
-import openmdao.main.pseudocomp as pcompmod  # used to keep pseudocomp names consistent in tests
 
 
 class MyComp_No_Deriv(ImplicitComponent):
@@ -360,9 +357,6 @@ class Coupled2(ImplicitComponent):
 
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
-
-    def setUp(self):
-        pcompmod._count = 0  # reset pseudocomp numbering
 
     def test_error_logging1(self):
 

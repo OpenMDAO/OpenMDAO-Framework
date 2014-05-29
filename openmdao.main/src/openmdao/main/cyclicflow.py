@@ -3,23 +3,15 @@ required to converge this workflow in order to execute it. """
 from ordereddict import OrderedDict
 
 import networkx as nx
-from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
-try:
-    from numpy import ndarray, hstack, zeros, array, empty, arange, ones
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, hstack, zeros, array
-
+from numpy import ndarray, hstack, array, empty, arange, ones
 
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
-from openmdao.main.dataflow import Dataflow
 from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
@@ -31,10 +23,10 @@ class CyclicWorkflow(SequentialWorkflow):
     loops in the graph.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
 
-        super(CyclicWorkflow, self).__init__(parent, scope, members)
+        super(CyclicWorkflow, self).__init__(parent, members)
         self.config_changed()
 
     def config_changed(self):
@@ -92,26 +84,12 @@ class CyclicWorkflow(SequentialWorkflow):
                                                                             strong[0]))
 
                     self._severed_edges.update(edge_set)
+                    
+            if self._severed_edges:
+                self._var_graph = self.scope._depgraph.copy()
+                self._var_graph.remove_edges_from(self._severed_edges)
 
         return self._topsort
-
-    #def _get_collapsed_graph(self):
-        #"""Get a dependency graph with only our workflow components
-        #in it. This graph can be cyclic."""
-
-        ## Cached
-        #if self._workflow_graph is None:
-
-            #contents = self.get_components(full=True)
-
-            ## get the parent assembly's component graph
-            #scope = self.scope
-            #compgraph = scope._depgraph.component_graph()
-            #graph = compgraph.subgraph([c.name for c in contents])
-
-            #self._workflow_graph = graph
-
-        #return self._workflow_graph
 
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
@@ -436,8 +414,8 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Poke new value into the input end of the edge.
                     self.scope.set(target, new_val, force=True)
 
-                    # Prevent OpenMDAO from stomping on our poked input.
-                    self.scope.set_valid([target.split('[', 1)[0]], True)
+                    # # Prevent OpenMDAO from stomping on our poked input.
+                    # self.scope.set_valid([target.split('[', 1)[0]], True)
 
     def _vtree_set(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """

@@ -1,9 +1,6 @@
 import unittest
 
-try:
-    from numpy import zeros, array, identity, ones, linalg
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity
+from numpy import array, ones, linalg
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -13,7 +10,6 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod
 
 
 class TreeWithFloat(VariableTree):
@@ -418,9 +414,6 @@ class TestDerivativeVarTree(unittest.TestCase):
     #     J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
     #     top.driver.workflow.config_changed()
     #     J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
-
-    def setUp(self):
-        pcompmod._count = 0  # keep hashing behavior constant
 
     def test_varTree_parameter(self):
 
