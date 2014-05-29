@@ -347,7 +347,8 @@ class Assembly(Component):
             
         if has_interface(obj, IDriver):
             for pcomp in obj.list_pseudocomps():
-                self._depgraph.remove(pcomp)
+                if pcomp in self._depgraph:
+                    self._depgraph.remove(pcomp)
 
         if name in self._depgraph:
             self._depgraph.remove(name)
