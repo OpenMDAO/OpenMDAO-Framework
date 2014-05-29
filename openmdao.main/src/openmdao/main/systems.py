@@ -33,6 +33,7 @@ class System(object):
         self.app_ordering = None
         self.scatter_full = None
         self.scatter_partial = None
+        self.solver = None
 
     def get_inputs(self, local=False):
         # the full set of inputs is stored in the 

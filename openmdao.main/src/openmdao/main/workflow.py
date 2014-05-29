@@ -96,8 +96,9 @@ class Workflow(object):
 
     def run(self, ffd_order=0, case_label='', case_uuid=None):
         """ Run the Components in this Workflow. """
-        if self._subsystem is not None:
-            return self._subsystem.run()#self.scope, ffd_order, case_id, self._iterbase(case_id))
+        subsys = self.get_subsystem()
+        # if self._subsystem is not None:
+        #     return self._subsystem.run()#self.scope, ffd_order, case_id, self._iterbase(case_id))
 
         self._stop = False
         self._exec_count += 1
@@ -113,17 +114,19 @@ class Workflow(object):
 
         scope = self.scope
 
-        for comp in self:
-            # before the workflow runs each component, update that
-            # component's inputs based on the graph
-            scope.update_inputs(comp.name, graph=self._var_graph)
-            if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order)
-            else:
-                comp.set_itername('%s-%s' % (iterbase, comp.name))
-                comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            if self._stop:
-                raise RunStopped('Stop requested')
+        # for comp in self:
+        #     # before the workflow runs each component, update that
+        #     # component's inputs based on the graph
+        #     scope.update_inputs(comp.name, graph=self._var_graph)
+        #     if isinstance(comp, PseudoComponent):
+        #         comp.run(ffd_order=ffd_order)
+        #     else:
+        #         comp.set_itername('%s-%s' % (iterbase, comp.name))
+        #         comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+        #     if self._stop:
+        #         raise RunStopped('Stop requested')
+
+        subsys.run()
 
         if record_case:
             self._record_case(label=case_label, case_uuid=case_uuid)
