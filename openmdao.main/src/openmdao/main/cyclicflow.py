@@ -3,23 +3,15 @@ required to converge this workflow in order to execute it. """
 from ordereddict import OrderedDict
 
 import networkx as nx
-from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
-try:
-    from numpy import ndarray, hstack, zeros, array
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, hstack, zeros, array
-
+from numpy import ndarray, hstack, array, empty, arange, ones
 
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.main.pseudoassembly import from_PA_var, to_PA_var
 from openmdao.main.sequentialflow import SequentialWorkflow
-from openmdao.main.dataflow import Dataflow
 from openmdao.main.vartree import VariableTree
 
 __all__ = ['CyclicWorkflow']
@@ -31,10 +23,10 @@ class CyclicWorkflow(SequentialWorkflow):
     loops in the graph.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
 
-        super(CyclicWorkflow, self).__init__(parent, scope, members)
+        super(CyclicWorkflow, self).__init__(parent, members)
         self.config_changed()
 
     def config_changed(self):
@@ -92,26 +84,12 @@ class CyclicWorkflow(SequentialWorkflow):
                                                                             strong[0]))
 
                     self._severed_edges.update(edge_set)
+                    
+            if self._severed_edges:
+                self._var_graph = self.scope._depgraph.copy()
+                self._var_graph.remove_edges_from(self._severed_edges)
 
         return self._topsort
-
-    #def _get_collapsed_graph(self):
-        #"""Get a dependency graph with only our workflow components
-        #in it. This graph can be cyclic."""
-
-        ## Cached
-        #if self._workflow_graph is None:
-
-            #contents = self.get_components(full=True)
-
-            ## get the parent assembly's component graph
-            #scope = self.scope
-            #compgraph = scope._depgraph.component_graph()
-            #graph = compgraph.subgraph([c.name for c in contents])
-
-            #self._workflow_graph = graph
-
-        #return self._workflow_graph
 
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
@@ -315,24 +293,39 @@ class CyclicWorkflow(SequentialWorkflow):
 
         parent = self._parent
         deps = array(parent.eval_eq_constraints(self.scope))
-
         # Reorder for fixed point
         if fixed_point is True:
-            newdeps = zeros(len(deps))
             eqcons = parent.get_eq_constraints()
-            old_j = 0
-            for key, value in eqcons.iteritems():
-                #con_targets = value.get_referenced_varpaths()
-                new_j = 0
-                width = value.size
-                for params in parent.list_param_group_targets():
-                    if params[0] == value.rhs.text:
-                        newdeps[new_j:new_j+width] = deps[old_j:old_j+width]
-                    elif params[0] == value.lhs.text:
-                        newdeps[new_j:new_j+width] = -deps[old_j:old_j+width]
-                    new_j += width
-                old_j += width
-            deps = newdeps
+
+            rhs = {}
+            lhs = {}
+            i = 0
+            for key, value in eqcons.iteritems(): #make a mapping of position of each constraint
+                rhs[value.rhs.text] = (i, value.size)
+                lhs[value.lhs.text] = (i, value.size)
+                i+=value.size
+
+
+            new_dep_index = empty(len(deps),dtype="int")
+            new_dep_sign = empty(len(deps),dtype="int")
+            k = 0
+            for params in parent.list_param_group_targets(): #for each param, grab the right map value and set the sign convention
+                try: 
+                    j,size = rhs[params[0]]
+                    new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
+                    new_dep_sign[k:k+size] = ones((size,))
+                    k+=size
+                except KeyError: #wasn't in the rhs dict, try the lhs
+                    try: 
+                        j,size = lhs[params[0]]
+                        new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
+                        new_dep_sign[k:k+size] = -1*ones(size)
+                        k+=size
+                    except KeyError: 
+                        pass #TODO: need to throw an error here. Why was there a param that didn't show up in the constraint
+            
+            #reset the deps array to the new order and sign 
+            deps = deps[new_dep_index]*new_dep_sign
 
         sev_deps = []
         for src, target in self._severed_edges:
@@ -420,8 +413,8 @@ class CyclicWorkflow(SequentialWorkflow):
                     # Poke new value into the input end of the edge.
                     self.scope.set(target, new_val, force=True)
 
-                    # Prevent OpenMDAO from stomping on our poked input.
-                    self.scope.set_valid([target.split('[', 1)[0]], True)
+                    # # Prevent OpenMDAO from stomping on our poked input.
+                    # self.scope.set_valid([target.split('[', 1)[0]], True)
 
     def _vtree_set(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """

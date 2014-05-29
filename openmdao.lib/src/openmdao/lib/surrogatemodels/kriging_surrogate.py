@@ -1,24 +1,18 @@
 """ Surrogate model based on Kriging. """
 from math import log, e, sqrt
-import logging
-
 
 # pylint: disable-msg=E0611,F0401
-try:
-    from numpy import array, zeros, dot, ones, arange, eye, abs, vstack, exp, \
-         sum, log10
-    from numpy.linalg import det, linalg, lstsq
-    from scipy.linalg import cho_factor, cho_solve
-    from scipy.optimize import fmin, minimize
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from numpy import array, zeros, dot, ones, eye, abs, vstack, exp, \
+                  sum, log10
+from numpy.linalg import det, linalg, lstsq
+from scipy.linalg import cho_factor, cho_solve
+from scipy.optimize import minimize
 
 from openmdao.main.api import Container
 from openmdao.main.interfaces import implements, ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.util.decorators import stub_if_missing_deps
 
-@stub_if_missing_deps('numpy', 'scipy')
+
 class KrigingSurrogate(Container):
     """Surrogate Modeling method based on the simple Kriging interpolation.
     Predictions are returned as a NormalDistribution instance."""
@@ -28,10 +22,10 @@ class KrigingSurrogate(Container):
     def __init__(self):
         super(KrigingSurrogate, self).__init__()
 
-        self.m = None #number of independent
-        self.n = None #number of training points
+        self.m = None       # number of independent
+        self.n = None       # number of training points
         self.thetas = None
-        self.nugget = 0 #nugget smoothing parameter from [Sasena, 2002]
+        self.nugget = 0     # nugget smoothing parameter from [Sasena, 2002]
 
         self.R = None
         self.R_fact = None
@@ -47,7 +41,7 @@ class KrigingSurrogate(Container):
         """Calculates a predicted value of the response based on the current
         trained model for the supplied list of inputs.
         """
-        if self.m == None: #untrained surrogate
+        if self.m is None:  # untrained surrogate
             raise RuntimeError("KrigingSurrogate has not been trained, so no "
                                "prediction can be made")
         r = zeros(self.n)
@@ -97,7 +91,6 @@ class KrigingSurrogate(Container):
         dist = NormalDistribution(f, RMSE)
         return dist
 
-
     def train(self, X, Y):
         """Train the surrogate model with the given set of inputs and outputs."""
 
@@ -126,16 +119,16 @@ class KrigingSurrogate(Container):
 
         #if self.thetas == None:
         #self.thetas = fmin(_calcll, thetas, disp=False, ftol=0.0001)
-        def lowerBound(log10t): 
+        def lowerBound(log10t):
             return log10t - log10(self.thetas)
 
-        def upperBound(log10t): 
+        def upperBound(log10t):
             return log10(self.thetas) - log10t
 
         cons = []
         for i in xrange(self.m):
-            cons.append({'type': 'ineq', 'fun': lambda log10t: log10t[i] - log10(1e-2)}) #min
-            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(3) - log10t[i]}) #max
+            cons.append({'type': 'ineq', 'fun': lambda log10t: log10t[i] - log10(1e-2)})  # min
+            cons.append({'type': 'ineq', 'fun': lambda log10t: log10(3) - log10t[i]})     # max
 
         self.thetas = minimize(_calcll, thetas, method='COBYLA', constraints=cons, tol=1e-8).x
         #print self.thetas
@@ -173,8 +166,8 @@ class KrigingSurrogate(Container):
 
         except (linalg.LinAlgError, ValueError):
             #------LSTSQ---------
-            self.R_fact = None #reset this to none, so we know not to use cholesky
-            #self.R = self.R+diag([10e-6]*self.n) #improve conditioning[Booker et al., 1999]
+            self.R_fact = None  # reset this to none, so we know not to use cholesky
+            # self.R = self.R+diag([10e-6]*self.n)  # improve conditioning[Booker et al., 1999]
             rhs = vstack([Y, one]).T
             lsq = lstsq(self.R.T, rhs)[0].T
             self.mu = dot(one, lsq[0])/dot(one, lsq[1])
@@ -196,6 +189,3 @@ class FloatKrigingSurrogate(KrigingSurrogate):
     def get_uncertain_value(self, value):
         """Returns a float"""
         return float(value)
-
-
-

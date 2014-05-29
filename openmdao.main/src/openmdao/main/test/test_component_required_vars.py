@@ -81,14 +81,13 @@ class DumbCompA(Component):
 
 class RequiredVarTestCase(unittest.TestCase):
 
-
     def test_required_input(self):
         comp = MyComponent()
         comp.areq = [1]
         try:
             comp.run()
         except Exception as err:
-            self.assertEqual(str(err), ": required variable 'xreq' was not set")
+            self.assertEqual(str(err), ": required variables ['xreq'] were not set")
         else:
             self.fail("Exception expected")
 
@@ -97,7 +96,7 @@ class RequiredVarTestCase(unittest.TestCase):
         try:
             comp.run()
         except Exception as err:
-            self.assertEqual(str(err), ": required variable 'areq' was not set")
+            self.assertEqual(str(err), ": required variables ['areq'] were not set")
         else:
             self.fail("Exception expected")
 
@@ -119,7 +118,7 @@ class RequiredVarTestCase(unittest.TestCase):
         try:
             comp.run()
         except Exception as err:
-            self.assertEqual(str(err), ": required variable 'invar' was not set")
+            self.assertEqual(str(err), ": required variables ['invar.v1', 'invar.v2'] were not set")
         else:
             self.fail("Exception expected")
 
@@ -128,7 +127,7 @@ class RequiredVarTestCase(unittest.TestCase):
         try:
             comp.run()
         except Exception as err:
-            self.assertEqual(str(err), "invar: required variable 'v1' was not set")
+            self.assertEqual(str(err), ": required variables ['invar.v1'] were not set")
         else:
             self.fail("Exception expected")
 

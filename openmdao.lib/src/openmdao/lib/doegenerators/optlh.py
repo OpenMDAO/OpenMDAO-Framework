@@ -21,19 +21,14 @@ import logging
 from random import randint, shuffle, seed
 
 # pylint: disable-msg=E0611,F0401
-try:
-    from numpy import array, size, sum, floor, zeros
-    from numpy.linalg import norm
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from numpy import array, size, sum, floor, zeros
+from numpy.linalg import norm
 
 from openmdao.main.datatypes.api import Int, Enum
 from openmdao.main.interfaces import implements, IDOEgenerator
 from openmdao.main.api import Container
-from openmdao.util.decorators import stub_if_missing_deps
 
 
-@stub_if_missing_deps('numpy')
 def rand_latin_hypercube(n, k, edges=False):
     """
     Calculates a random Latin hypercube set of n points in k
@@ -76,7 +71,6 @@ def is_latin_hypercube(lh):
     return True
 
 
-@stub_if_missing_deps('numpy')
 class LHC_indivudal(object):
 
     def __init__(self, doe, q=2, p=1):
@@ -156,7 +150,6 @@ class LHC_indivudal(object):
 _norm_map = {"1-norm":1,"2-norm":2}
 
 
-@stub_if_missing_deps('numpy')
 class LatinHypercube(Container):
     """IDOEgenerator which provides a Latin hypercube DOE sample set.
     """
@@ -192,7 +185,6 @@ class LatinHypercube(Container):
         for row in rand_doe:
             yield row
 
-@stub_if_missing_deps('numpy')
 class OptLatinHypercube(Container):
     """IDOEgenerator which provides a Latin hypercube DOE sample set.
     The Morris-Mitchell sampling criterion of the DOE is optimzied
@@ -248,7 +240,6 @@ class OptLatinHypercube(Container):
             yield row
 
 
-@stub_if_missing_deps('numpy')
 def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube.
     Returns a new LatinHypercube instance with an optimized set of points.

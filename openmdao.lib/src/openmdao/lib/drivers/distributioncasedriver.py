@@ -11,7 +11,7 @@ from zope.interface import Interface
 # E0611 - name cannot be found in a module
 # F0401 - Unable to import module
 # E1101 - Used when a variable is accessed for an unexistent member
-from openmdao.main.numpy_fallback import zeros
+from numpy import zeros
 
 from openmdao.main.api import Container
 from openmdao.main.datatypes.api import Slot, Int, Enum, Bool

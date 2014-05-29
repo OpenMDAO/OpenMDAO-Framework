@@ -52,17 +52,6 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.comp = MyComponent()
 
-    def test_connect(self):
-        comp = self.comp
-
-        self.assertEqual(comp._depgraph.get_sources('x'), [])
-
-        comp.connect('parent.foo', 'x')
-        self.assertEqual(comp._depgraph.get_sources('x'), ['parent.foo'])
-
-        comp.connect('xout', 'parent.bar')
-        self.assertEqual(comp._depgraph.get_sources('xout'), [])
-
     def test_illegal_directory(self):
         logging.debug('')
         logging.debug('test_illegal_directory')
@@ -168,29 +157,6 @@ class TestCase(unittest.TestCase):
 
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Component()), 'openmdao.component')
-
-    def test_setattr_dependency_invalidation(self):
-        # i.e., comp should not need to re-run if you set an input to the same value.
-        self.comp.xreq = 1 # set required input so test won't fail
-        self.comp.areq = [1]
-        self.comp.set('x', 45.5)
-        self.assertEqual(self.comp.get_valid(['xout']), [False])
-        self.comp.run()
-        self.assertEqual(self.comp.get_valid(['xout']), [True])
-        self.comp.set('x', 45.5)
-        self.assertEqual(self.comp.get_valid(['xout']), [True])
-        self.comp.set('x', 99.999)
-        self.assertEqual(self.comp.get_valid(['xout']), [False])
-        self.comp.run()
-        self.assertEqual(self.comp.get_valid(['xout']), [True])
-
-        # Assignment should invalidate like set().
-        self.comp.x = 42
-        self.assertEqual(self.comp.get_valid(['xout']), [False])
-        self.comp.run()
-        self.assertEqual(self.comp.get_valid(['xout']), [True])
-        self.comp.x = 42
-        self.assertEqual(self.comp.get_valid(['xout']), [True])
 
     def test_override(self):
         code = """\

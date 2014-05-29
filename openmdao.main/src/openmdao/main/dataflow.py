@@ -17,9 +17,9 @@ class Dataflow(SequentialWorkflow):
     A Dataflow consists of a collection of Components which are executed in
     data flow order.
     """
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(parent, scope, members)
+        super(Dataflow, self).__init__(parent, members)
         self.config_changed()
 
     def __iter__(self):
@@ -29,10 +29,10 @@ class Dataflow(SequentialWorkflow):
         scope = self.scope
         return [getattr(scope, n) for n in self._get_topsort()].__iter__()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Check for cyclic graph."""
 
-        super(Dataflow, self).check_config()
+        super(Dataflow, self).check_config(strict=strict)
 
         graph = self._get_collapsed_graph()
         if not is_directed_acyclic_graph(graph):

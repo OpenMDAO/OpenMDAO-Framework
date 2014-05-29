@@ -11,7 +11,6 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod
 
 class Simple1(Component):
     """ Testing convergence failure"""
@@ -53,10 +52,6 @@ class Simple4(Component):
     invar = Float(1, iotype="in")
     outvar = Float(0, iotype="out")
 
-    def __init__(self):
-        super(Simple4, self).__init__()
-        self.force_execute = True
-
     def execute(self):
         self.outvar = self.outvar + self.invar
 
@@ -95,6 +90,18 @@ class MultiArrayMulti(Component):
         self.out1 = self.arr1/10.0
         self.out2 = self.arr2/10.0
 
+class MixedScalarArrayMulti(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    arr1 = Array([1., 1.], iotype="in")
+    in2 = Float(1.0, iotype="in")
+    out1 = Array([0., 0.], iotype="out")
+    out2 = Float(0, iotype="out")
+
+    def execute(self):
+        self.out1 = self.arr1/10.0
+        self.out2 = self.in2/10.0
+
 
 
 class FixedPointIteratorTestCase(unittest.TestCase):
@@ -102,8 +109,6 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
-        pcompmod._count = 0 # keep pseudocomp names consistent for each test
-                            # to avoid weird stuff like hash order changes
 
     def tearDown(self):
         self.top = None
@@ -231,6 +236,47 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
         assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+
+    def test_mixed_scalar_array_multi(self): 
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MixedScalarArrayMulti())
+
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.in2')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.in2, .01, .002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+    def test_mixed_scalar_array_multi_swapped(self): 
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MixedScalarArrayMulti())
+
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.in2 = simple.out2')
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.in2')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.in2, .01, .002)
         self.assertEqual(self.top.driver.current_iteration, 2)
 
     def test_maxiteration(self):

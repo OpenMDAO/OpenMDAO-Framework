@@ -4,7 +4,7 @@ import weakref
 
 from zope.interface import implements
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.has_traits import FunctionType
 from traits.trait_base import not_event
 
@@ -29,7 +29,6 @@ class VariableTree(Container):
         super(VariableTree, self).__init__()
 
         self._iotype = iotype
-        self.on_trait_change(self._iotype_modified, '_iotype')
 
         # Check for nested VariableTrees in the class definition.
         for name, obj in self.__class__.__dict__.items():
@@ -40,14 +39,14 @@ class VariableTree(Container):
 
         self.install_callbacks()
 
-        ## register callbacks for our class traits
-        #for name, trait in self.class_traits().items():
-            #if not name.startswith('_'):
-                #self.on_trait_change(self._trait_modified, name)
+        # register callbacks for our class traits
+        for name, trait in self.class_traits().items():
+            if not name.startswith('_'):
+                self.on_trait_change(self._trait_modified, name)
 
     @property
     def _parent(self):
-        """ Return dereferened weakref to parent. """
+        """ Return dereferenced weakref to parent. """
         return None if self._parent_ref is None else self._parent_ref()
 
     @_parent.setter
@@ -104,6 +103,15 @@ class VariableTree(Container):
         cp.install_callbacks()
         return cp
 
+    def __deepcopy__(self, memo):
+        id_self = id(self)
+        if id_self in memo:
+            return memo[id_self]
+
+        cp = super(VariableTree, self).__deepcopy__(memo)
+        cp.install_callbacks()
+        return cp
+
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
@@ -143,10 +151,6 @@ class VariableTree(Container):
         """Return a list of Variables in this VariableTree."""
         return [k for k in self.__dict__.keys() if not k.startswith('_')]
 
-    @rbac(('owner', 'user'))
-    def invalidate_deps(self, varnames=None, force=False):
-        return None
-
     def _iotype_modified(self, obj, name, old, new):
         for v in self.__dict__.values():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
@@ -174,10 +178,7 @@ class VariableTree(Container):
                     # we need to pass the full pathname of the child that was
                     # actually modified up to the parent component, and we can't
                     # modify the arglist of _input_trait_modified, so instead
-                    # call _input_check (assuming source checking hasn't been
-                    # turned off at the calling level) and _input_updated explicitly
-                    if self._input_check is not None:
-                        p._input_check(vt.name, vt)
+                    # call _input_updated explicitly
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
     def get_iotype(self, name):
@@ -222,31 +223,42 @@ class VariableTree(Container):
                                                         **metadata):
                             yield ('.'.join((name, chname)), child)
 
-    def _check_req_traits(self, comp):
-        """Raise an exception if any child traits with required=True have not
-        been set to a non-default value.
+    @rbac(('owner', 'user'))
+    def get_req_default(self, vt_required=None):
+        """Returns a list of all inputs that are required but still have
+        their default value.
         """
+        req = []
+        if vt_required:
+            req_test = [True, False, None]
+        else:
+            req_test = [True]
+
         for name, trait in self.traits(type=not_event).items():
             obj = getattr(self, name)
             if obj is self.parent:
                 continue
-            trait = self.trait(name)
             if is_instance(obj, VariableTree):
-                obj._check_req_traits(comp)
-            elif trait.required is True:
-                if comp._depgraph.get_sources(name):
-                    unset = False
-                else:
+                req.extend(['.'.join((self.name, n)) 
+                                 for n in obj.get_req_default(vt_required)])
+            elif trait.required in req_test:
+                try:
+                    trait = trait.trait_type
+                except:
                     unset = (obj == trait.default)
+                else:
+                    unset = (obj == trait.default_value)
+                if not isinstance(unset, bool):
                     try:
                         unset = unset.all()
                     except:
                         pass
                 if unset:
-                    self.raise_exception("required variable '%s' was"
-                                         " not set" % name, RuntimeError)
+                    req.append('.'.join((self.name, name)))
 
-    def get_attributes(self, io_only=True, indent=0, parent='', valid='false'):
+        return req
+
+    def get_attributes(self, io_only=True, indent=0, parent=''):
         """ Get attributes for this variable tree. Used by the GUI.
 
         io_only: bool
@@ -287,7 +299,6 @@ class VariableTree(Container):
 
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            attr['valid'] = valid
 
             # if this var is the top element of a variable tree, add 'vt' attribute
             if attr.get('ttype') == 'vartree':
@@ -309,18 +320,17 @@ class VariableTree(Container):
                 if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
-                                            connections])#.replace('@xin.', '')
+                                             connections])
                 else:
                     attr['connected'] = str([dst for src, dst in
-                                            connections])#.replace('@xout.', '')
+                                             connections])
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in attr:
                 vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
-                                                   parent=attr['id'],
-                                                   valid=valid)
+                                                   parent=attr['id'])
                 if self_io == 'in':
                     variables += vt_attrs['Inputs']
                 else:

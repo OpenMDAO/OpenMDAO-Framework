@@ -1,8 +1,10 @@
 '''The PseudoAssembly is used to aggregate blocks of components that cannot
 provide derivatives, and thus must be finite differenced.'''
 
+# pylint: disable=E0611,F0401
 import networkx as nx
 
+from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
@@ -40,6 +42,7 @@ class PseudoAssembly(object):
                                                   boundary_params)
 
         self.comps = wflow.scope._depgraph.order_components(set(comps))
+        self._depgraph = wflow.scope._depgraph.full_subgraph(self.comps)
 
         self.name = name
         self.boundary_params = list(boundary_params)
@@ -116,7 +119,7 @@ class PseudoAssembly(object):
 
         pa_inputs = edges_to_dict(in_edges).values()
         pa_inputs.extend(solver_states)
-        pa_outputs = set([a for a, b in out_edges])
+        pa_outputs = set([a[0] for a in out_edges])
 
         renames = {}
 
@@ -142,26 +145,37 @@ class PseudoAssembly(object):
 
     def run(self, ffd_order=0):
         """Run all components contained in this assy. Used by finite
-        difference."""
+        difference.
+        """
 
         # Override fake finite difference if requested. This enables a pure
         # finite-differences for check_derivatives.
         if self.ffd_order == 0:
             ffd_order = 0
 
+        scope = self.wflow.scope
+
         for name in self.itercomps:
-            comp = self.wflow.scope.get(name)
+            comp = scope.get(name)
             comp.set_itername(self.itername+'-fd')
+            scope.update_inputs(name, graph=self._depgraph)
             comp.run(ffd_order=ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
                          required_inputs=None, required_outputs=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
+
+        # Directional finite difference doesn't pre-generate a Jacobian
+        if self.wflow._parent.gradient_options.directional_fd == True:
+            if self.fd is None:
+                self.fd = DirectionalFD(self)
+                self.apply_deriv = self._apply_deriv
+            return None
+
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
-            from openmdao.main.derivatives import FiniteDifference
             self.fd = FiniteDifference(self)
 
         if hasattr(self.wflow, '_severed_edges'):
@@ -239,8 +253,13 @@ class PseudoAssembly(object):
         return self.J
 
     def provideJ(self):
-        """Jacobian for this block"""
+        """Return Jacobian for this block"""
         return self.J
+
+    def _apply_deriv(self, arg, result):
+        """Matrix vector product only used if we are doing a directional
+        derivative."""
+        self.fd.calculate(arg, result)
 
     def list_deriv_vars(self):
         """Derivative inputs and outputs for this block"""

@@ -15,7 +15,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjective
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 
 @add_delegate(HasParameters, HasConstraints, HasObjective)
@@ -223,7 +222,6 @@ class TracedAssembly(Assembly):
 
     def __init__(self, trace_buf):
         super(TracedAssembly, self).__init__()
-        self.force_execute = True
         self.trace_buf = trace_buf
 
     def execute(self):
@@ -252,7 +250,6 @@ class TracedComponent(Component):
 
     def __init__(self, trace_buf):
         super(TracedComponent, self).__init__()
-        self.force_execute = True
         self.trace_buf = trace_buf
 
     def execute(self):
@@ -288,34 +285,6 @@ class AssemblyTestCase(unittest.TestCase):
         top.driver.workflow.add(['comp1', 'nested', 'comp2', 'comp3'])
         nested.driver.workflow.add('comp1')
 
-    def test_lazy_eval(self):
-        top = set_as_top(Assembly())
-        comp1 = top.add('comp1', Multiplier())
-        comp2 = top.add('comp2', Multiplier())
-
-        top.driver.workflow.add(['comp1', 'comp2'])
-
-        top.comp1.mult = 2.0
-        top.comp2.mult = 4.0
-        top.connect('comp1.rval_out', 'comp2.rval_in')
-        top.comp1.rval_in = 5.0
-        top.run()
-        self.assertEqual(top.get('comp1.rval_out'), 10.)
-        self.assertEqual(top.get('comp2.rval_in'), 10.)
-        self.assertEqual(top.get('comp2.rval_out'), 40.)
-        self.assertEqual(top.comp1.exec_count, 1)
-        self.assertEqual(top.comp2.exec_count, 1)
-
-        # now change an input (mult) on comp2. This should only
-        # cause comp2 to execute when we run next time.
-        top.set('comp2.mult', 3.0)
-        top.run()
-        self.assertEqual(top.get('comp1.rval_out'), 10.)
-        self.assertEqual(top.get('comp2.rval_in'), 10.)
-        self.assertEqual(top.get('comp2.rval_out'), 30.)
-        self.assertEqual(top.comp1.exec_count, 1)
-        self.assertEqual(top.comp2.exec_count, 2)
-
     def test_data_passing(self):
         comp1 = self.asm.comp1
         comp2 = self.asm.comp2
@@ -327,20 +296,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.get('s'), 'once upon a time')
         self.assertEqual(comp1.r, 3.0)
         self.assertEqual(comp1.s, 'once upon a time')
-
-        # also, test that we can't do a direct set of a connected input
-        oldval = self.asm.comp2.r
-        try:
-            self.asm.comp2.r = 44
-        except Exception, err:
-            self.assertEqual(str(err),
-                             "comp2: 'r' is already connected to source"
-                             " 'parent.comp1.rout' and cannot be directly set")
-        else:
-            self.fail("Expected an Exception when setting a connected input")
-
-        # verify that old value of connected input hasn't changed
-        self.assertEqual(oldval, self.asm.comp2.r)
 
         self.asm.run()
 
@@ -365,20 +320,6 @@ class AssemblyTestCase(unittest.TestCase):
         comp2 = self.asm.comp2
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp1.sout', 'comp2.s')
-
-        # test that we can't do a direct set of a connected input
-        oldval = self.asm.comp2.r
-        try:
-            self.asm.comp2.r = 44
-        except Exception, err:
-            self.assertEqual(str(err),
-                             "comp2: 'r' is already connected to source"
-                             " 'parent.comp1.rout' and cannot be directly set")
-        else:
-            self.fail("Expected an Exception when setting a connected input")
-
-        # verify that old value of connected input hasn't changed
-        self.assertEqual(oldval, self.asm.comp2.r)
 
         # now test removal of the error callback when a connected input is disconnected
         self.asm.disconnect('comp1.rout', 'comp2.r')
@@ -422,14 +363,6 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual(str(err), str(KeyError(": 'rout' already exists")))
         else:
             self.fail('expected Exception')
-
-    #def test_autopassthrough_nested(self):
-        #self.asm.set('comp1.r', 8.)
-        #self.asm.connect('comp1.rout', 'nested.comp1.r')
-        #self.asm.connect('nested.comp1.rout', 'comp2.r')
-        #self.asm.run()
-        #self.assertEqual(self.asm.get('comp1.rout'), 12.)
-        #self.assertEqual(self.asm.get('comp2.rout'), 27.)
 
     def test_create_passthrough_alias(self):
         self.asm.nested.set('comp1.r', 75.4)
@@ -515,7 +448,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(foo, None)
 
         try:
-            bar = self.asm.comp1.get_metadata('bogus', 'bar')
+            self.asm.comp1.get_metadata('bogus', 'bar')
         except Exception as err:
             self.assertEqual(str(err),
                              "comp1: Couldn't find metadata for trait bogus")
@@ -531,7 +464,7 @@ class AssemblyTestCase(unittest.TestCase):
 
         # However, cyclic graphs should not run with the Dataflow workflow.
         try:
-            self.asm.check_configuration()
+            self.asm.check_config()
         except RuntimeError, err:
             msg = ": circular dependency found between the following: " + \
                   "['comp2', 'comp1']"
@@ -551,17 +484,14 @@ class AssemblyTestCase(unittest.TestCase):
         asm.driver.workflow.add(sequence)
         self.assertEqual([comp.name for comp in asm.driver.workflow], sequence)
         asm.run()
-        self.assertEqual(dup1.exec_count, 1)
-        self.assertEqual(dup2.exec_count, 1)
+        self.assertEqual(dup1.exec_count, 3)
+        self.assertEqual(dup2.exec_count, 2)
 
-        # With force_execute True, all executions are run.
         asm = Assembly()
         asm.add('a', Simple())
         asm.add('b', Simple())
         dup1 = asm.add('dup1', Simple())
-        dup1.force_execute = True
         dup2 = asm.add('dup2', Simple())
-        dup2.force_execute = True
         self.assertEqual(dup1.exec_count, 0)
         self.assertEqual(dup2.exec_count, 0)
         sequence = ['dup1', 'a', 'dup2', 'dup1', 'b', 'dup1', 'dup2']
@@ -613,16 +543,10 @@ class AssemblyTestCase(unittest.TestCase):
         # until we run, the values of comp1.a and comp2.b won't change
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
-        self.assertEqual(asm.nested.get_valid(['comp2.b']), [False])
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
-        self.assertEqual(asm.nested.comp1.get_valid(['a']), [True])
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [True])
         asm.nested.a = 999.
-        self.assertEqual(asm.nested.comp1.get_valid(['a']), [False])
-        self.assertEqual(asm.nested.comp2.get_valid(['b']), [False])
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
         asm.run()
@@ -814,84 +738,84 @@ class AssemblyTestCase(unittest.TestCase):
         expected = """\
 :
 driver:
-comp1: 1-1
-driverA: 1-2
-comp1: 1-2.1-1
-comp2: 1-2.1-2
-comp1: 1-2.2-1
-comp2: 1-2.2-2
-comp1: 1-2.3-1
-comp2: 1-2.3-2
-driverB: 1-3
-comp2: 1-3.1-1
-subassy: 1-3.1-2
-subassy.driver: 1-3.1-2
-subassy.comp3: 1-3.1-2.1-1
-subassy.comp3: 1-3.1-2.2-1
-comp2: 1-3.2-1
-subassy: 1-3.2-2
-subassy.driver: 1-3.2-2
-subassy.comp3: 1-3.2-2.1-1
-subassy.comp3: 1-3.2-2.2-1
-comp1: 2-1
-driverA: 2-2
-comp1: 2-2.1-1
-comp2: 2-2.1-2
-comp1: 2-2.2-1
-comp2: 2-2.2-2
-comp1: 2-2.3-1
-comp2: 2-2.3-2
-driverB: 2-3
-comp2: 2-3.1-1
-subassy: 2-3.1-2
-subassy.driver: 2-3.1-2
-subassy.comp3: 2-3.1-2.1-1
-subassy.comp3: 2-3.1-2.2-1
-comp2: 2-3.2-1
-subassy: 2-3.2-2
-subassy.driver: 2-3.2-2
-subassy.comp3: 2-3.2-2.1-1
-subassy.comp3: 2-3.2-2.2-1
+comp1: 1-comp1
+driverA: 1-driverA
+comp1: 1-driverA.1-comp1
+comp2: 1-driverA.1-comp2
+comp1: 1-driverA.2-comp1
+comp2: 1-driverA.2-comp2
+comp1: 1-driverA.3-comp1
+comp2: 1-driverA.3-comp2
+driverB: 1-driverB
+comp2: 1-driverB.1-comp2
+subassy: 1-driverB.1-subassy
+subassy.driver: 1-driverB.1-subassy
+subassy.comp3: 1-driverB.1-subassy.1-comp3
+subassy.comp3: 1-driverB.1-subassy.2-comp3
+comp2: 1-driverB.2-comp2
+subassy: 1-driverB.2-subassy
+subassy.driver: 1-driverB.2-subassy
+subassy.comp3: 1-driverB.2-subassy.1-comp3
+subassy.comp3: 1-driverB.2-subassy.2-comp3
+comp1: 2-comp1
+driverA: 2-driverA
+comp1: 2-driverA.1-comp1
+comp2: 2-driverA.1-comp2
+comp1: 2-driverA.2-comp1
+comp2: 2-driverA.2-comp2
+comp1: 2-driverA.3-comp1
+comp2: 2-driverA.3-comp2
+driverB: 2-driverB
+comp2: 2-driverB.1-comp2
+subassy: 2-driverB.1-subassy
+subassy.driver: 2-driverB.1-subassy
+subassy.comp3: 2-driverB.1-subassy.1-comp3
+subassy.comp3: 2-driverB.1-subassy.2-comp3
+comp2: 2-driverB.2-comp2
+subassy: 2-driverB.2-subassy
+subassy.driver: 2-driverB.2-subassy
+subassy.comp3: 2-driverB.2-subassy.1-comp3
+subassy.comp3: 2-driverB.2-subassy.2-comp3
 : ReRun
 driver: ReRun
-comp1: ReRun.1-1
-driverA: ReRun.1-2
-comp1: ReRun.1-2.1-1
-comp2: ReRun.1-2.1-2
-comp1: ReRun.1-2.2-1
-comp2: ReRun.1-2.2-2
-comp1: ReRun.1-2.3-1
-comp2: ReRun.1-2.3-2
-driverB: ReRun.1-3
-comp2: ReRun.1-3.1-1
-subassy: ReRun.1-3.1-2
-subassy.driver: ReRun.1-3.1-2
-subassy.comp3: ReRun.1-3.1-2.1-1
-subassy.comp3: ReRun.1-3.1-2.2-1
-comp2: ReRun.1-3.2-1
-subassy: ReRun.1-3.2-2
-subassy.driver: ReRun.1-3.2-2
-subassy.comp3: ReRun.1-3.2-2.1-1
-subassy.comp3: ReRun.1-3.2-2.2-1
-comp1: ReRun.2-1
-driverA: ReRun.2-2
-comp1: ReRun.2-2.1-1
-comp2: ReRun.2-2.1-2
-comp1: ReRun.2-2.2-1
-comp2: ReRun.2-2.2-2
-comp1: ReRun.2-2.3-1
-comp2: ReRun.2-2.3-2
-driverB: ReRun.2-3
-comp2: ReRun.2-3.1-1
-subassy: ReRun.2-3.1-2
-subassy.driver: ReRun.2-3.1-2
-subassy.comp3: ReRun.2-3.1-2.1-1
-subassy.comp3: ReRun.2-3.1-2.2-1
-comp2: ReRun.2-3.2-1
-subassy: ReRun.2-3.2-2
-subassy.driver: ReRun.2-3.2-2
-subassy.comp3: ReRun.2-3.2-2.1-1
-subassy.comp3: ReRun.2-3.2-2.2-1"""
+comp1: ReRun.1-comp1
+driverA: ReRun.1-driverA
+comp1: ReRun.1-driverA.1-comp1
+comp2: ReRun.1-driverA.1-comp2
+comp1: ReRun.1-driverA.2-comp1
+comp2: ReRun.1-driverA.2-comp2
+comp1: ReRun.1-driverA.3-comp1
+comp2: ReRun.1-driverA.3-comp2
+driverB: ReRun.1-driverB
+comp2: ReRun.1-driverB.1-comp2
+subassy: ReRun.1-driverB.1-subassy
+subassy.driver: ReRun.1-driverB.1-subassy
+subassy.comp3: ReRun.1-driverB.1-subassy.1-comp3
+subassy.comp3: ReRun.1-driverB.1-subassy.2-comp3
+comp2: ReRun.1-driverB.2-comp2
+subassy: ReRun.1-driverB.2-subassy
+subassy.driver: ReRun.1-driverB.2-subassy
+subassy.comp3: ReRun.1-driverB.2-subassy.1-comp3
+subassy.comp3: ReRun.1-driverB.2-subassy.2-comp3
+comp1: ReRun.2-comp1
+driverA: ReRun.2-driverA
+comp1: ReRun.2-driverA.1-comp1
+comp2: ReRun.2-driverA.1-comp2
+comp1: ReRun.2-driverA.2-comp1
+comp2: ReRun.2-driverA.2-comp2
+comp1: ReRun.2-driverA.3-comp1
+comp2: ReRun.2-driverA.3-comp2
+driverB: ReRun.2-driverB
+comp2: ReRun.2-driverB.1-comp2
+subassy: ReRun.2-driverB.1-subassy
+subassy.driver: ReRun.2-driverB.1-subassy
+subassy.comp3: ReRun.2-driverB.1-subassy.1-comp3
+subassy.comp3: ReRun.2-driverB.1-subassy.2-comp3
+comp2: ReRun.2-driverB.2-comp2
+subassy: ReRun.2-driverB.2-subassy
+subassy.driver: ReRun.2-driverB.2-subassy
+subassy.comp3: ReRun.2-driverB.2-subassy.1-comp3
+subassy.comp3: ReRun.2-driverB.2-subassy.2-comp3"""
         expected = expected.split('\n')
         errors = 0
 
@@ -918,22 +842,18 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
                 self.add('d', Dummy())
                 self.connect('x', 'd.z[0][0]')
 
-        t = set_as_top(TestA())
+        set_as_top(TestA())
 
     def test_tracing(self):
         # Check tracing of iteration coordinates.
         top = Assembly()
         comp = top.add('comp1', Dummy())
-        comp.force_execute = True
         top.add('driverA', Driver())
         comp = top.add('comp2', Dummy())
-        comp.force_execute = True
         top.add('driverB', Driver())
 
         sub = top.add('subassy', Assembly())
-        sub.force_execute = True
         comp = sub.add('comp3', Dummy())
-        comp.force_execute = True
         sub.driver.workflow.add('comp3')
 
         top.driver.workflow = SequentialWorkflow()
@@ -945,11 +865,11 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         enable_trace(trace_out)
         top.run()
         expected = """\
-1-1
-1-2.1-1
-1-2.1-2
-1-3.1-1
-1-3.1-2.1-1
+1-comp1
+1-driverA.1-comp1
+1-driverA.1-comp2
+1-driverB.1-comp2
+1-driverB.1-subassy.1-comp3
 """
         self.assertEqual(trace_out.getvalue(), expected)
 
@@ -977,8 +897,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         #asm.connect('sub.comp3.d', 'comp4.b')  # autopassthrough
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.comp2.b'),
-                              #('sub.comp3.d', 'comp4.b'),
+                         set([('comp1.c', 'sub.a2'),
+                              # ('comp1.d', 'sub.comp2.b'),
+                              # ('sub.comp3.d', 'comp4.b'),
                               ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),
@@ -995,8 +916,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
         asm.rename('sub', 'nested')
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'nested.a2'), #('comp1.d', 'nested.comp2.b'),
-                              #('nested.comp3.d', 'comp4.b'),
+                         set([('comp1.c', 'nested.a2'),
+                              # ('comp1.d', 'nested.comp2.b'),
+                              # ('nested.comp3.d', 'comp4.b'),
                               ('nested.c3', 'comp4.a')]))
         sub_connections = asm.nested.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),
@@ -1021,8 +943,9 @@ subassy.comp3: ReRun.2-3.2-2.2-1"""
 
         connections = asm.list_connections(show_passthrough=True)
         self.assertEqual(set(connections),
-                         set([('comp1.c', 'sub.a2'), #('comp1.d', 'sub.newcomp2.b'),
-                              #('sub.newcomp3.d', 'comp4.b'),
+                         set([('comp1.c', 'sub.a2'),
+                              # ('comp1.d', 'sub.newcomp2.b'),
+                              # ('sub.newcomp3.d', 'comp4.b'),
                               ('sub.c3', 'comp4.a')]))
         sub_connections = asm.sub.list_connections(show_passthrough=True)
         self.assertEqual(set(sub_connections),
@@ -1045,7 +968,6 @@ def pseudo_edges(index, num_inputs):
 class AssemblyTestCase2(unittest.TestCase):
 
     def setUp(self):
-        pcompmod._count = 0
         self.top = top = set_as_top(Assembly())
         self.top.add('driver', DumbDriver())
         top.add('C1', SimpleUnits())

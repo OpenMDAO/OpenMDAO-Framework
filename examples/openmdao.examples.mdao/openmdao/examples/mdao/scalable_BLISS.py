@@ -185,7 +185,6 @@ class Scalable(UnitScalableProblem):
         sysopt.add_constraint('(global_des_vars[2]-d0.z2) <= (-percent*d0.z2 -.0001)*factor**(mda.exec_count-offset)')
                 
         debug = self.add('debug',DebugComp())
-        debug.force_execute = True
         
         driver = self.add('driver',FixedPointIterator())
         driver.add_parameter('d0.x0',low=-1e99,high=1e99)

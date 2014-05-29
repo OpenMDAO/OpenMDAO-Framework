@@ -8,13 +8,7 @@ from traits.trait_handlers import TraitListObject
 
 from openmdao.util.typegroups import real_types, int_types
 
-try:
-    from numpy import ndarray, ravel_multi_index, prod, arange, array
-
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, arange, array
+from numpy import ndarray, ravel_multi_index, prod, arange, array
 
 
 class IndexGetter(object):

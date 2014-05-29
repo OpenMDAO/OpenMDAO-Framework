@@ -317,7 +317,7 @@ class SimpleSystem(System):
         if self._comp.parent is not None:
             self.vec['p'].set_to_scope(self._comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
-        comp.run(force=True)
+        comp.run()
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
         #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
@@ -390,7 +390,7 @@ class SimpleSystem(System):
     #     if self._comp.parent is not None:
     #         self.vec['p'].set_to_scope(self._comp.parent)
     #         #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
-    #     comp.run(force=True)
+    #     comp.run()
     #     if self._comp.parent is not None:
     #         self.vec['u'].set_from_scope(self._comp.parent)
     #     mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
@@ -411,7 +411,7 @@ class ExplicitSystem(SimpleSystem):
         if self._comp.parent is not None:
             self.vec['p'].set_to_scope(self._comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
-        comp.run(force=True)
+        comp.run()
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
         mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))

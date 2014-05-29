@@ -18,9 +18,5 @@ class SleepComponent(Component):
     # pylint: disable-msg=E1101
     sleep_time = Float(0.0, iotype='in', desc='The number of seconds to sleep')
 
-    def __init__(self):
-        super(SleepComponent, self).__init__()
-        self.force_execute = True  # always want this to run
-
     def execute(self):
         time.sleep( self.sleep_time )

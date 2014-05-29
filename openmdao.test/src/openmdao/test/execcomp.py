@@ -8,12 +8,7 @@ from openmdao.main.datatypes.api import Float
 from openmdao.main.expreval import ExprEvaluator, _expr_dict
 from openmdao.main.mpiwrap import mpiprint
 
-try:
-    from numpy import zeros
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import zeros
+from numpy import zeros
 
 class ExecComp(Component):
     """Given a list of assignment statements, this component creates

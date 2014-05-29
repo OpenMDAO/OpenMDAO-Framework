@@ -1,5 +1,5 @@
 """
-Test run/step/stop aspects of a simple workflow.
+Test run/stop aspects of a simple workflow.
 """
 
 import unittest
@@ -9,6 +9,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.datatypes.api import Int, Bool, Float
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
+from openmdao.main.test.test_assembly import Simple
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.util.decorators import add_delegate
 
@@ -49,15 +50,35 @@ class Model(Assembly):
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')
 
-    def rerun(self):
-        """ Called to force the model to run. """
-        global dummyval
-        dummyval += 1  # force dummyval to be different than last time so
-                       # comp1 will be invalidated
-        self.comp_a.set('dummy_input', dummyval)
-        self.run()
+class LazyModel(Assembly):
+    
+    def configure(self):
+        self.add('driver', NTimes(1))
 
+        self.add('D2', NTimes(1))
 
+        self.add('C1', Simple())
+        self.add('C2', Simple())
+        self.add('C3', Simple())
+        self.add('C4', Simple())
+        
+        # C1 --> C2 --> C3 --> C4
+        self.connect('C1.c', 'C2.a')
+        self.connect('C2.c', 'C3.a')
+        self.connect('C3.c', 'C4.a')
+
+@add_delegate(HasParameters, HasObjective)
+class NTimes(Driver):
+
+    def __init__(self, max_iterations):
+        super(NTimes, self).__init__()
+        self.max_iterations = max_iterations
+
+    def execute(self):
+        for i in range(self.max_iterations):
+            super(NTimes, self).execute()
+
+            
 @add_delegate(HasParameters, HasObjective)
 class CaseDriver(Driver):
 
@@ -69,7 +90,7 @@ class CaseDriver(Driver):
         for i in range(self.max_iterations):
             self.set_parameters([i])
             super(CaseDriver, self).execute()
-            obj = self.eval_objective()
+            self.eval_objective()
 
 
 class CaseComponent(Component):
@@ -103,7 +124,7 @@ class DumbRecorder(object):
 
 
 class TestCase(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
+    """ Test run/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """
@@ -132,52 +153,11 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_b.total_executions, 1)
         self.assertEqual(self.model.comp_c.total_executions, 1)
 
-        self.model.rerun()
+        self.model.run()
 
         self.assertEqual(self.model.comp_a.total_executions, 2)
         self.assertEqual(self.model.comp_b.total_executions, 2)
         self.assertEqual(self.model.comp_c.total_executions, 2)
-
-    def test_stepping(self):
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 0)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 1)
-
-        try:
-            self.model.step()
-        except StopIteration, exc:
-            self.assertEqual(str(exc), '')
-        else:
-            self.fail('Expected StopIteration')
 
     def test_run_stop_run(self):
         self.model.comp_b.set_stop = True
@@ -193,41 +173,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.comp_c.total_executions, 0)
 
         self.model.comp_b.set_stop = False
-        self.model.rerun()
+        self.model.run()
         self.assertEqual(self.model.comp_a.total_executions, 2)
         self.assertEqual(self.model.comp_b.total_executions, 2)
         self.assertEqual(self.model.comp_c.total_executions, 1)
-
-    def test_run_stop_step(self):
-        self.model.comp_b.set_stop = True
-        try:
-            self.model.run()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Stop requested')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 0)
-
-        try:
-            self.model.step()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Step complete')
-        else:
-            self.fail('Expected RunStopped')
-
-        self.assertEqual(self.model.comp_a.total_executions, 1)
-        self.assertEqual(self.model.comp_b.total_executions, 1)
-        self.assertEqual(self.model.comp_c.total_executions, 1)
-
-        try:
-            self.model.step()
-        except StopIteration, exc:
-            self.assertEqual(str(exc), '')
-        else:
-            self.fail('Expected StopIteration')
 
     def test_checks(self):
         # Tests out the validity checks.
@@ -306,17 +255,78 @@ class TestCase(unittest.TestCase):
 
         expected = [
             '1',
-            '1-1.1',
-            '1-1.1-2.1',
-            '1-1.1-2.2',
-            '1-1.1-2.3',
-            '1-1.2',
-            '1-1.2-2.1',
-            '1-1.2-2.2',
-            '1-1.2-2.3'
+            '1-driver1.1',
+            '1-driver1.1-driver2.1',
+            '1-driver1.1-driver2.2',
+            '1-driver1.1-driver2.3',
+            '1-driver1.2',
+            '1-driver1.2-driver2.1',
+            '1-driver1.2-driver2.2',
+            '1-driver1.2-driver2.3'
         ]
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
+
+    def test_lazy_auto_top(self):
+        # lazy evaluation with auto determination of top level workflow
+        top = set_as_top(LazyModel())
+        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_objective('C3.d')
+
+        top.run()
+
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
+        self.assertEqual(top.C1.exec_count, 1)
+
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow but are needed by other workflows: ['C1']")
+        else:
+            self.fail("Exception expected")
+
+        
+    def test_lazy_auto_nested(self):
+        # lazy evaluation with auto determination of D2 workflow
+        top = set_as_top(LazyModel())
+        top.driver.workflow.add(['D2', 'C1'])
+        top.D2.add_parameter('C2.a', low=-99, high=99)
+        top.D2.add_objective('C3.d')
+
+        top.run()
+
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
+        self.assertEqual(top.C1.exec_count, 1)
+        
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow and WILL NOT EXECUTE: ['C4']")
+        else:
+            self.fail("Exception expected")
+
+    def test_lazy_manual_top(self):
+        # manual top level workflow
+        top = set_as_top(LazyModel())
+        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_objective('C3.d')
+        top.driver.workflow.add(['C2', 'C3'])
+        top.run()
+        self.assertEqual(top.C2.exec_count, 1)
+        self.assertEqual(top.C3.exec_count, 1)
+        self.assertEqual(top.C1.exec_count, 1)
+        
+        # now test strict mode
+        try:
+            top.check_config(strict=True)
+        except Exception as err:
+            self.assertEqual(str(err), ": The following components are not in any workflow but are needed by other workflows: ['C1']")
+        else:
+            self.fail("Exception expected")
 
 
 if __name__ == '__main__':
@@ -325,4 +335,3 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.main')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

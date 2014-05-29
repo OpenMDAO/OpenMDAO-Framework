@@ -1,36 +1,30 @@
 
 import ast
-from threading import RLock
 
-from numpy import ndarray
+from numpy import ndarray, zeros
 
-from openmdao.main.array_helpers import flattened_size, flattened_size_info
+from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
+                                        flattened_value, get_val_and_index, get_index
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent, IVariableTree
+from openmdao.main.interfaces import implements, IComponent, IVariableTree, IAssembly
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.numpy_fallback import zeros
-from openmdao.main.array_helpers import flattened_value, \
-                                        get_val_and_index, get_index
+from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
 from openmdao.util.typegroups import real_types, int_types
 
-_namelock = RLock()
-_count = 0
 
 
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
+def _get_new_name(parent):
+    while not has_interface(parent, IAssembly):
+        parent = parent.parent
 
-def _get_new_name():
-    global _count
-    with _namelock:
-        name = "_pseudo_%d" % _count
-        _count += 1
-    return name
-
+    return parent.new_pseudo_name()
 
 def _get_varname(name):
     return name.split('[', 1)[0]
@@ -94,11 +88,10 @@ class PseudoComponent(object):
                  translate=True, pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
-        self.name = _get_new_name()
+        self._parent = parent
+        self.name = _get_new_name(parent)
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
-        self._valid = False
-        self._parent = parent
         self._inputs = []
         self._initialized = False
 
@@ -197,7 +190,7 @@ class PseudoComponent(object):
 
         self.missing_deriv_policy = 'error'
 
-    def check_configuration(self):
+    def check_config(self, strict=False):
         pass
 
     def cpath_updated(self):
@@ -239,6 +232,9 @@ class PseudoComponent(object):
     def list_outputs(self, connected=True):
         return ['out0']
 
+    def config_changed(self, update_parent=True):
+        pass
+
     def list_comp_connections(self):
         """Return a list of connections between our pseudocomp and
         parent components of our sources/destinations.
@@ -267,47 +263,23 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.disconnect(src, dest)
 
-    def invalidate_deps(self, varnames=None, force=False):
-        self._valid = False
-        return None
-
-    def get_invalidation_type(self):
-        return 'full'
-
-    def connect(self, src, dest):
-        self._valid = False
-
-    def run(self, force=False, ffd_order=0, case_id='', notify_parent=True):
-        self._parent.update_inputs(self.name)
-
-        src = self._srcexpr.evaluate()
-        setattr(self, 'out0', src)
-        self._valid = True
-        self._initialized = True
-        if notify_parent:
-            self._parent.child_run_finished(self.name)
-
-    def update_outputs(self, names):
-        self.run()
+    def run(self, ffd_order=0):
+        setattr(self, 'out0', self._srcexpr.evaluate())
 
     def get(self, name, index=None):
         if index is not None:
             raise RuntimeError("index not supported in PseudoComponent.get")
         return getattr(self, name)
 
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        self.invalidate_deps()
         setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
             return self._meta[traitpath]
         return self._meta[traitpath].get(metaname)
-
-    def is_valid(self):
-        return self._valid
 
     def set_itername(self, itername):
         self._itername = itername
@@ -430,3 +402,9 @@ class PseudoComponent(object):
             raise NotImplementedError("no support for setting flattened values into vartrees")
 
         self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
+
+    def get_req_default(self, self_reqired=None):
+        return []
+
+    def _input_updated(self, name, fullpath=None):
+        pass

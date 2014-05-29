@@ -4,17 +4,12 @@ output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
 
-import logging
-# pylint: disable-msg=E0611,F0401
-try:
-    from numpy import zeros
-    from numpy.linalg import norm
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
+from numpy import zeros
+from numpy.linalg import norm
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
 from openmdao.main.api import Driver, CyclicWorkflow
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.hasparameters import HasParameters
@@ -22,7 +17,6 @@ from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasEqConstraints, HasStopConditions)
 class FixedPointIterator(Driver):
     """ A simple fixed point iteration driver, which runs a workflow and passes
@@ -106,8 +100,10 @@ class FixedPointIterator(Driver):
             #if abs( (val1-val0)/val0 ) < self.tolerance:
             #    break
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Make sure the problem is set up right."""
+
+        super(FixedPointIterator, self).check_config(strict=strict)
 
         # We need to figure our severed edges before querying.
         eqcons = self.get_constraints().values()

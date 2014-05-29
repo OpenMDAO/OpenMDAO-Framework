@@ -6,6 +6,7 @@ import networkx as nx
 import sys
 from math import isnan
 from StringIO import StringIO
+from types import NoneType
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
@@ -26,13 +27,10 @@ from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
 from openmdao.main.mp_support import has_interface
 from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
                                 flatten_list_of_iters
+from openmdao.util.decorators import method_accepts
+from openmdao.util.debug import strict_chk_config
 
-try:
-    from numpy import ndarray, zeros
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros
+from numpy import ndarray, zeros
 
 _missing = object()
 
@@ -42,35 +40,31 @@ __all__ = ['SequentialWorkflow']
 class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent=None, members=None):
         """ Create an empty flow. """
         self._explicit_names = []  # names the user adds
         self._names = None   # names the user adds plus names required
                              # for params, objectives, and constraints
-        super(SequentialWorkflow, self).__init__(parent, scope, members)
+        super(SequentialWorkflow, self).__init__(parent, members)
 
         # Bookkeeping
         self._edges = None
         self._comp_edges = None
         self._derivative_graph = None
-        self.res = None
         self._upscoped = False
         self._J_cache = {}
         self._bounds_cache = {}
         self._shape_cache = {}
         self._width_cache = {}
+        self._iternames = None
+        self._initnames = None
 
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         return iter(self.get_components(full=True))
 
     def __len__(self):
-        if self._names is None:
-            self.get_names()
-        if self._names:
-            return len(self._names)
-        else:
-            return len(self._explicit_names)
+        return len(self.get_names(full=True))
 
     def __contains__(self, comp):
         return comp in self.get_names(full=True)
@@ -101,6 +95,19 @@ class SequentialWorkflow(Workflow):
         self._bounds_cache = {}
         self._shape_cache = {}
         self._width_cache = {}
+        self._iternames = None
+        self._initnames = None
+
+    def check_config(self, strict=False):
+        super(SequentialWorkflow, self).check_config(strict=strict)
+        self.get_names()
+        if self._initnames and self._iternames:
+            msg = "The following components will execute EVERY iteration " \
+                  "of this workflow (unnecessarily): %s" % list(self._initnames)
+            if strict_chk_config(strict):
+                self._parent.raise_exception(msg, RuntimeError)
+            else:
+                self._parent._logger.warning(msg)
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
@@ -123,13 +130,14 @@ class SequentialWorkflow(Workflow):
             comps = [getattr(self.scope, n) for n in self._explicit_names]
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
+            self._iternames = self._parent._get_required_compnames()
 
             if len(drivers) == len(comps):  # all comps are drivers
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in self._parent._get_required_compnames()
-                                if n not in iterset]) - set(self._names)
+                added = set([n for n in self._iternames if not n.startswith('_pseudo_') 
+                                 and n not in iterset]) - set(self._names)
                 self._names.extend(added)
 
             self._fullnames = self._names[:]
@@ -138,13 +146,28 @@ class SequentialWorkflow(Workflow):
                                                 self._names))
             self._fullnames.extend(fullset - set(self._names))
 
+            self._initnames = set(self._fullnames) - self._iternames
+
+            # drivers are always manually placed in the workflow, so
+            # assume that they're supposed to be there and don't
+            # warn the user
+            self._initnames -= set([d.name for d in drivers])
+
         if full:
             return self._fullnames[:]
         else:
             return self._names[:]
 
+    @method_accepts(TypeError,
+                     compnames=(str,list,tuple),
+                     index=(int,NoneType),
+                     check=bool)
     def add(self, compnames, index=None, check=False):
-        """ Add new component(s) to the end of the workflow by name. """
+        """
+        add(self, compnames, index=None, check=False)
+        Add new component(s) to the end of the workflow by name.
+        """
+
         if isinstance(compnames, basestring):
             nodes = [compnames]
         else:
@@ -535,7 +558,7 @@ class SequentialWorkflow(Workflow):
             # mode requires post multiplication of the result by the M after
             # you have the final gradient.
             #if hasattr(comp, 'applyMinv'):
-                #inputs = applyMinv(comp, inputs)
+                #inputs = applyMinv(comp, inputs, self._shape_cache)
 
             applyJ(comp, inputs, outputs, comp_residuals,
                    self._shape_cache.get(compname), self._J_cache.get(compname))
@@ -784,6 +807,10 @@ class SequentialWorkflow(Workflow):
         if fd is True:
             nondiff_groups = [comps]
 
+        # User specification of the blocks.
+        elif len(self._parent.gradient_options.fd_blocks) > 0:
+            nondiff_groups = self._parent.gradient_options.fd_blocks
+
         # Find the non-differentiable components
         else:
 
@@ -799,10 +826,13 @@ class SequentialWorkflow(Workflow):
                    not hasattr(comp, 'apply_derivT') and \
                    not hasattr(comp, 'provideJ'):
                     nondiff.add(name)
+                    #print "No derivatives defined:", name
                 elif comp.force_fd is True:
                     nondiff.add(name)
+                    #print "Force_fd set to True:", name
                 elif not dgraph.node[name].get('differentiable', True):
                     nondiff.add(name)
+                    #print "Graphs says nondifferentiable:", name
 
             # If a connection is non-differentiable, so are its src and
             # target components.
@@ -830,7 +860,7 @@ class SequentialWorkflow(Workflow):
                 else:
                     nondiff.add(src.split('.')[0])
                     nondiff.add(target.split('.')[0])
-                    #print "non-differentiable connection: ", src, target
+                    #print "Non-differentiable connection: ", src, target
 
             # Everything is differentiable, so return
             if len(nondiff) == 0:
@@ -952,7 +982,8 @@ class SequentialWorkflow(Workflow):
         self._stop = False
 
         dgraph = self.derivative_graph(required_inputs, required_outputs)
-        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()))
+        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()),
+                                              self.get_implicit_info())
         for compname, data in comps.iteritems():
             if '~' in compname:
                 comp = self._derivative_graph.node[compname]['pa_object']
@@ -1107,7 +1138,14 @@ class SequentialWorkflow(Workflow):
                         msg += " only has forward derivatives defined."
                         self.scope.raise_exception(msg, RuntimeError)
 
+        #print len(self.res), len(self._edges), len(self._comp_edge_list())
+
         if mode == 'adjoint':
+            if self._parent.gradient_options.directional_fd is True:
+                msg = "Directional derivatives can only be used with forward "
+                msg += "mode."
+                self.scope.raise_exception(msg, RuntimeError)
+
             J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
         elif mode in ['forward', 'fd']:
             J = calc_gradient(self, inputs, outputs, n_edge, shape)

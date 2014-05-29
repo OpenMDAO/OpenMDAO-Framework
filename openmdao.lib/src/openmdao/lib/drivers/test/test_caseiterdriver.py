@@ -16,6 +16,7 @@ import random
 import numpy.random as numpy_random
 
 from math import isnan
+from numpy import asarray, linspace, mean
 
 from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
 from openmdao.main.eggchecker import check_save_load
@@ -23,13 +24,14 @@ from openmdao.main.eggchecker import check_save_load
 from openmdao.main.datatypes.api import Float, Bool, Array, Int, Str, \
                                         List, VarTree
 from openmdao.lib.casehandlers.api import ListCaseRecorder
-from openmdao.lib.drivers.api import CaseIteratorDriver, SimpleCaseIterDriver
+from openmdao.lib.drivers.api import CaseIteratorDriver, SimpleCaseIterDriver, \
+                                     SLSQPdriver
 
 from openmdao.main.case import Case, CaseTreeNode
 
 from openmdao.test.cluster import init_cluster
 
-from openmdao.util.testutil import assert_raises
+from openmdao.util.testutil import assert_raises, assert_rel_error
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -193,7 +195,7 @@ class TestCase(unittest.TestCase):
         driver.case_inputs.driven.y = \
             [numpy_random.normal(size=10) for i in range(10)]
         driver.case_inputs.driven.raise_error = \
-            [force_errors and i%4 == 3 for i in range(10)]
+            [force_errors and i % 4 == 3 for i in range(10)]
 
     def tearDown(self):
         self.model.pre_delete()
@@ -260,10 +262,10 @@ class TestCase(unittest.TestCase):
                 self.model.run()
             except Exception as err:
                 err = replace_uuid(str(err))
-                if not sequential: # RemoteError has different format.
+                if not sequential:  # RemoteError has different format.
                     err = err[:-76]
                 startmsg = 'driver: Run aborted: Traceback '
-                endmsg = 'driven (4-1): Forced error'
+                endmsg = 'driven (4-driven): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)
                 self.assertEqual(err[-len(endmsg):], endmsg)
             else:
@@ -273,7 +275,7 @@ class TestCase(unittest.TestCase):
         """ Verify recorded results match expectations. """
         driver = self.model.driver
         for i in range(len(driver.case_inputs.driven.x)):
-            error_expected = forced_errors and i%4 == 3
+            error_expected = forced_errors and i % 4 == 3
             if error_expected:
                 rs = driver.case_outputs.driven.rosen_suzuki[i]
                 sy = driver.case_outputs.driven.sum_y[i]
@@ -393,16 +395,16 @@ class TestCase(unittest.TestCase):
 
     def verify_itername(self, cid, subassembly=False):
         # These iternames will have the case's uuid prepended.
-        expected = (('1-1', '1-2'),
-                    ('2-1', '2-2'),
-                    ('3-1', '3-2'))
+        expected = (('1-comp1', '1-comp2'),
+                    ('2-comp1', '2-comp2'),
+                    ('3-comp1', '3-comp2'))
 
         outs = cid.case_outputs
         for i in range(3):
             logging.debug('%s: %r %r', i,
                           outs.comp1.itername, outs.comp2.itername)
             if subassembly:
-                prefix = '1-1'
+                prefix = '1-sub'
                 prefix1, _, iter1 = outs.comp1.itername[i].partition('.')
                 prefix2, _, iter2 = outs.comp2.itername[i].partition('.')
                 self.assertEqual(prefix1, prefix)
@@ -420,7 +422,6 @@ class TestCase(unittest.TestCase):
 
         top = set_as_top(Assembly())
         sub = top.add('sub', Assembly())
-        sub.force_execute = True
         top.driver.workflow.add('sub')
 
         cid = sub.add('driver', CaseIteratorDriver())
@@ -476,14 +477,14 @@ class TestCase(unittest.TestCase):
         top.run()
         expected = [
             '1',
-            '1-1.1',
-            '1-1.1-2.1',
-            '1-1.1-2.2',
-            '1-1.1-2.3',
-            '1-1.2',
-            '1-1.2-2.1',
-            '1-1.2-2.2',
-            '1-1.2-2.3'
+            '1-driver1.1',
+            '1-driver1.1-driver2.1',
+            '1-driver1.1-driver2.2',
+            '1-driver1.1-driver2.3',
+            '1-driver1.2',
+            '1-driver1.2-driver2.1',
+            '1-driver1.2-driver2.2',
+            '1-driver1.2-driver2.3'
         ]
         self.verify_tree(top, expected)
 
@@ -498,8 +499,8 @@ class TestCase(unittest.TestCase):
         top.run()
         expected = [
             '1',
-            '1-1.1',
-            '1-1.2',
+            '1-driver1.1',
+            '1-driver1.2'
         ]
         self.verify_tree(top, expected)
 
@@ -529,6 +530,7 @@ class C0_l(Component):
     def execute(self):
         self.l = range(self.N)
 
+
 class C1_l(Component):
     l = List([], iotype='in')
     i = Int(0, iotype='in')
@@ -536,6 +538,7 @@ class C1_l(Component):
 
     def execute(self):
         self.val = self.l[self.i]
+
 
 class A_l(Assembly):
     def configure(self):
@@ -559,12 +562,14 @@ class A_l(Assembly):
 class V(VariableTree):
     l = List([])
 
+
 class C0_vt(Component):
     vt = VarTree(V(), iotype='out')
     N = Int(10, iotype='in')
 
     def execute(self):
         self.vt.l = range(self.N)
+
 
 class C1_vt(Component):
     vt = VarTree(V(), iotype='in')
@@ -573,6 +578,7 @@ class C1_vt(Component):
 
     def execute(self):
         self.val = self.vt.l[self.i]
+
 
 class A_vt(Assembly):
     def configure(self):
@@ -736,8 +742,166 @@ class MultiPoint(unittest.TestCase):
         self.assertEqual(list(top.d.in3), [14., 16., 16., 18., 18., 20.])
 
 
+class ConnectC(Component):
+    i1 = Float(0., iotype='in')
+    o1 = Float(iotype='out')
+
+    def execute(self):
+        self.o1 = self.i1 **2.
+
+class ConnectA(Assembly):
+    i1 = List([], iotype='in')
+    o1 = List(iotype='out')
+
+    def __init__(self, sequential):
+        self.sequential = sequential
+        super(ConnectA, self).__init__()
+
+    def configure(self):
+        self.add('c', ConnectC())
+        self.add('driver', CaseIteratorDriver())
+        self.driver.sequential = self.sequential
+        self.driver.workflow.add('c')
+        self.driver.add_parameter('c.i1')
+        self.driver.add_response('c.o1')
+        self.connect('i1', 'driver.case_inputs.c.i1')
+        self.connect('driver.case_outputs.c.o1', 'o1')
+
+
+class Connections(unittest.TestCase):
+
+    def test_connections(self):
+        print '---- sequential ----'
+        a1 = ConnectA(True)
+        a1.i1 = range(10)
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(10)])
+
+        print '\n---- par ----'
+        a1.i1 = range(5)
+        a1.driver.sequential = False
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(5)])
+
+        print '\n---- seq ----'
+        a1.i1 = range(3)
+        a1.driver.sequential = True
+        a1.run()
+        print a1.driver.case_inputs.c.i1
+        print a1.driver.case_outputs.c.o1
+        print a1.o1
+        self.assertEqual(a1.o1, [v**2 for v in range(3)])
+
+
+# Test bug reported by Frederik Zahle.
+
+class Builder(Component):
+
+    x0 = Float(iotype='in')
+    y0 = Float(iotype='in')
+    x = List(iotype='out')
+    y = List(iotype='out')
+
+    def execute(self):
+        self.x = list(linspace(self.x0 - 2, self.x0 + 2, 5))
+        self.y = list(linspace(self.y0 - 2, self.y0 + 2, 5))
+
+
+class DummyComp(Component):
+
+    x_in = Float(float('NaN'), iotype='in')
+    x_out = Float(float('NaN'), iotype='out')
+    y_in = Float(float('NaN'), iotype='in')
+    y_out = Float(float('NaN'), iotype='out')
+
+    def execute(self):
+        self.x_out = self.x_in
+        self.y_out = self.y_in
+
+
+class Paraboloidish(Component):
+
+    x = List(iotype='in')
+    y = List(iotype='in')
+    f_xy = Float(iotype='out')
+
+    def execute(self):
+        x_mean = mean(asarray(self.x))
+        y_mean = mean(asarray(self.y))
+        self.f_xy = (x_mean-3.0)**2 + x_mean*y_mean + (y_mean+4.0)**2 - 3.0
+        print self.name, x_mean, y_mean, self.f_xy
+
+
+class CIDAssembly(Assembly):
+
+    def configure(self):
+        self.add('p', DummyComp())
+
+        cid = self.add('cid', CaseIteratorDriver())
+        self.driver.workflow.add('cid')
+        cid.workflow.add('p')
+
+        cid.sequential = False
+        cid.reload_model = False
+
+        cid.add_parameter('p.x_in')
+        cid.add_parameter('p.y_in')
+        cid.add_response('p.x_out')
+        cid.add_response('p.y_out')
+
+        self.add('parab', Paraboloidish())
+        self.driver.workflow.add('parab')
+
+        self.create_passthrough('cid.case_inputs.p.x_in')
+        self.create_passthrough('cid.case_inputs.p.y_in')
+
+        self.connect('cid.case_outputs.p.x_out', 'parab.x')
+        self.connect('cid.case_outputs.p.y_out', 'parab.y')
+
+        self.create_passthrough('parab.f_xy')
+
+
+class OptAssembly(Assembly):
+
+    def configure(self):
+        self.add('driver', SLSQPdriver())
+        self.driver.gradient_options.force_fd = True
+        self.driver.iout = 1
+        self.driver.iprint = 3
+        self.driver.maxiter = 100
+
+        self.add('builder', Builder())
+        self.driver.workflow.add('builder')
+
+        self.add('cid', CIDAssembly())
+        self.driver.workflow.add('cid')
+
+        self.connect('builder.x', 'cid.x_in')
+        self.connect('builder.y', 'cid.y_in')
+
+        self.driver.add_parameter('builder.x0', low=-50, high=50)
+        self.driver.add_parameter('builder.y0', low=-50, high=50)
+        self.driver.add_constraint('builder.x0-builder.y0 >= 15.0')
+        self.driver.add_objective('cid.f_xy')
+
+
+class Optimization(unittest.TestCase):
+
+    def test_optimization(self):
+        # Test that CID within an optimization works.
+        top = OptAssembly()
+        top.run()
+        print 'objective', top.cid.f_xy
+        assert_rel_error(self, top.cid.f_xy, -27.0833328304, 0.001)
+
+
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')
     nose.runmodule()
-

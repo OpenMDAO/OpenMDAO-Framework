@@ -1,26 +1,14 @@
 """Expected Improvement calculation for single objective."""
 
-import logging
+from numpy import exp, abs, pi, seterr
+
 try:
-    from numpy import exp, abs, pi, seterr
+    from math import erfc   # py27 and later has erfc in the math module
 except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-_check = ['numpy']
-try:
-    from math import erf   # py27 and later has erf in the math module
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
-    try:
-        from scipy.special import erf
-    except ImportError as err:
-        logging.warn("In %s: %r" % (__file__, err))
-        _check.append('scipy')
+    from scipy.special import erfc
 
 from openmdao.main.datatypes.api import Float, Instance
-
 from openmdao.main.api import Component
-from openmdao.util.decorators import stub_if_missing_deps
-
 from openmdao.main.uncertain_distributions import NormalDistribution
 
 class ExpectedImprovement(Component):
@@ -51,9 +39,9 @@ class ExpectedImprovement(Component):
 
         try:
             seterr(divide='raise')
-            self.PI = 0.5+0.5*erf((1/2**.5)*((target-mu)/sigma))
+            self.PI = 0.5*erfc(-(1./2.**.5)*((target-mu)/sigma))
 
-            T1 = (target-mu)*.5*(1.+erf((target-mu)/(sigma*2.**.5)))
+            T1 = (target-mu)*.5*(erfc(-(target-mu)/(sigma*2.**.5)))
             T2 = sigma*((1./((2.*pi)**.5))*exp(-0.5*((target-mu)/sigma)**2.))
             self.EI = abs(T1+T2)
 

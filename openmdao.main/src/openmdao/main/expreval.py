@@ -13,8 +13,6 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
-from openmdao.main.printexpr import transform_expression
-
 def _import_functs(mod, dct, names=None):
     if names is None:
         names = dir(mod)
@@ -31,26 +29,20 @@ _expr_dict = {
 
 
 # make numpy functions available if possible
-try:
-    import numpy
-    names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
-    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
-    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
-    'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
-    _import_functs(numpy, _expr_dict, names=names)
+import numpy
+names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
+'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
+'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
+_import_functs(numpy, _expr_dict, names=names)
 
-    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
+_expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
 
+math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
+'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
+_import_functs(math, _expr_dict, names=math_names)
 
-    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
-    'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
-    _import_functs(math, _expr_dict, names=math_names)
-
-except ImportError:
-    _import_functs(math, _expr_dict)
-else:
-    _expr_dict['numpy'] = numpy
-    #_import_functs(numpy, _expr_dict, names=[])
+_expr_dict['numpy'] = numpy
 
 # if scipy is available, add some functions
 try:
@@ -61,8 +53,7 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
-import numpy
+from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
 
 
 _Missing = object()
@@ -174,17 +165,9 @@ class ExprTransformer(ast.NodeTransformer):
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
             args.append(self.rhs)
-            keywords = [ast.keyword('src', ast.Name(id='_local_src_',
-                                                    lineno=node.lineno,
-                                                    col_offset=1,
-                                                    ctx=ast.Load())),
-                        ast.keyword('force', ast.Name(id='_local_force_',
-                                                      lineno=node.lineno,
-                                                      col_offset=1,
-                                                      ctx=ast.Load()))]
         else:
             fname = self.getter
-            keywords = []
+        keywords = []
         names.append(fname)
 
         called_obj = _get_attr_node(names)
@@ -482,7 +465,8 @@ class ExprEvaluator(object):
 
     @scope.setter
     def scope(self, value):
-        if value is not self.scope:
+        scp = None if self._scope is None else self._scope()
+        if scp is None or value is not scp:
             self._code = self._assignment_code = None
             self._examiner = self.cached_grad_eq = None
             if value is not None:
@@ -568,15 +552,14 @@ class ExprEvaluator(object):
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
 
-    def _pre_parse(self, root=None):
-        if root is None:
-            try:
-                root = ast.parse(self.text, mode='eval')
-            except SyntaxError:
-                # might be an assignment, try mode='exec'
-                root = ast.parse(self.text, mode='exec')
-                self._allow_set = False
-                return root
+    def _pre_parse(self):
+        try:
+            root = ast.parse(self.text, mode='eval')
+        except SyntaxError:
+            # might be an assignment, try mode='exec'
+            root = ast.parse(self.text, mode='exec')
+            self._allow_set = False
+            return root
 
         if not isinstance(root.body,
                           (ast.Attribute, ast.Name, ast.Subscript)):
@@ -585,10 +568,8 @@ class ExprEvaluator(object):
             self._allow_set = True
         return root
 
-    def _parse_get(self, root=None):
-        astree = self._pre_parse(root)
-        #varscanner = ExprVarScanner()
-        #varscanner.visit(astree)
+    def _parse_get(self):
+        astree = self._pre_parse()
 
         new_ast = ExprTransformer(self, getter=self.getter).visit(astree)
 
@@ -598,6 +579,10 @@ class ExprEvaluator(object):
         return (new_ast, compile(new_ast, '<string>', mode))
 
     def _parse_set(self):
+        self._pre_parse()
+        if not self._allow_set:
+            raise ValueError("expression '%s' can't be set to a value"
+                             % self.text)
         root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
         ## transform into a 'set' call to set the specified variable
         assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
@@ -605,12 +590,10 @@ class ExprEvaluator(object):
         code = compile(assign_ast, '<string>', 'exec')
         return (assign_ast, code)
 
-    def _parse(self, root=None):
+    def _parse(self):
         self.var_names = set()
-        if root is not None:
-            self.text = print_node(root)
         try:
-            new_ast, self._code = self._parse_get(root)
+            new_ast, self._code = self._parse_get()
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s"
                               % (self.text, str(err)))
@@ -811,30 +794,19 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, src=None, force=False):
+    def set(self, val, scope=None, force=False):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
-        if self._code is None:
-            self._pre_parse()
-
-        if self._allow_set:
-            # self.assignment_code is a compiled version of an assignment
-            # statement of the form 'somevar = _local_setter_', so we set
-            # _local_setter_ here and the exec call will pull it out of the
-            # locals dict. _local_src_ is another local variable corresponding
-            # to the 'src' arg which is used to determine if a connected
-            # expression is being set by the source it's
-            # connected to.
-            _local_setter_ = val
-            _local_src_ = src
-            _local_force_ = force
-            if self._assignment_code is None:
-                _, self._assignment_code = self._parse_set()
-            exec(self._assignment_code, _expr_dict, locals())
-        else:
-            raise ValueError("expression '%s' can't be set to a value"
-                             % self.text)
+        # self.assignment_code is a compiled version of an assignment
+        # statement of the form 'somevar = _local_setter_', so we set
+        # _local_setter_ here and the exec call will pull it out of the
+        # locals dict.
+        _local_setter_ = val
+        _local_force_ = force
+        if self._assignment_code is None:
+            _, self._assignment_code = self._parse_set()
+        exec(self._assignment_code, _expr_dict, locals())
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.
@@ -853,7 +825,7 @@ class ExprEvaluator(object):
         for name in self.get_referenced_varpaths(copy=False):
             try:
                 metadata.append((name, scope.get_metadata(name, metaname)))
-            except AttributeError as error:
+            except AttributeError:
                 invalid_variables.append(name)
 
         if invalid_variables:
@@ -895,15 +867,6 @@ class ExprEvaluator(object):
             if len(parts) > 1:
                 nameset.add(parts[0])
         return nameset
-
-    def refs_parent(self):
-        """Return True if this expression references a variable in parent."""
-        if self._code is None:
-            self._parse()
-        for name in self.var_names:
-            if name.startswith('parent.'):
-                return True
-        return False
 
     def check_resolve(self):
         """Return True if all variables referenced by our expression can

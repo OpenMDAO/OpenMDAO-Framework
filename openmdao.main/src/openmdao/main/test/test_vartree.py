@@ -1,3 +1,4 @@
+import copy
 import glob
 import os
 import unittest
@@ -7,11 +8,11 @@ from traits.trait_base import not_none
 from openmdao.main.api import Component, Assembly, VariableTree, \
                               set_as_top, SimulationRoot
 from openmdao.main.datatypes.api import Array, Bool, Enum, Float, File, \
-                                        FileRef, Int, List, Str, VarTree
+                                        FileRef, Int, List, Str, VarTree, \
+                                        Instance
 from openmdao.main.case import flatten_obj
 
 from openmdao.util.testutil import assert_raises
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 
 
 class DumbVT3(VariableTree):
@@ -69,7 +70,13 @@ class SimpleComp(Component):
     cont_in = VarTree(DumbVT(), iotype='in')
     cont_out = VarTree(DumbVT(), iotype='out')
 
+    def __init__(self):
+        super(SimpleComp, self).__init__()
+        self._dirty = True
+        self._set_input_callback('cont_in')
+
     def execute(self):
+        self._dirty = False
         self.cont_out.v1 = self.cont_in.v1 + 1.0
         self.cont_out.v2 = self.cont_in.v2 + 1.0
         self.cont_out.vt2.x = self.cont_in.vt2.x + 1.0
@@ -123,6 +130,10 @@ class SimpleComp(Component):
             cont.vt2.vt3.data,
         ]
 
+    def _input_updated(self, *args, **kwargs):
+        super(SimpleComp, self)._input_updated(*args, **kwargs)
+        self._dirty = True
+
 
 class NamespaceTestCase(unittest.TestCase):
 
@@ -131,7 +142,6 @@ class NamespaceTestCase(unittest.TestCase):
         # over from other tests when running under nose, so
         # set it to cwd here just to be safe
         SimulationRoot.chroot(os.getcwd())
-        pcompmod._count = 0
         self.asm = set_as_top(Assembly())
         obj = self.asm.add('scomp1', SimpleComp())
         self.asm.add('scomp2', SimpleComp())
@@ -213,7 +223,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 1.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1',
@@ -224,7 +233,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2',
@@ -240,7 +248,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 2.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv1',
@@ -251,7 +258,6 @@ class NamespaceTestCase(unittest.TestCase):
                          'value': 3.0,
                          'high': None,
                          'connected': '',
-                         'valid': 'false',
                          'low': None,
                          'type': 'float',
                          'desc': 'vv2',
@@ -332,18 +338,18 @@ class NamespaceTestCase(unittest.TestCase):
         # verify that setting a var nested down in a VariableTree hierarchy will
         # notify the parent Component that an input has changed
         self.asm.run()
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
         self.asm.scomp1.cont_in.vt2.vt3.a = 5.0
-        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.assertEqual(self.asm.scomp1._dirty, True)
         self.asm.run()
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
         self.asm.scomp1.cont_in.vt2.x = -5.0
-        self.assertEqual(self.asm.scomp1._call_execute, True)
+        self.assertEqual(self.asm.scomp1._dirty, True)
         self.asm.run()
 
         # setting something in an output VariableTree should NOT set _call_execute
         self.asm.scomp1.cont_out.vt2.vt3.a = 55.0
-        self.assertEqual(self.asm.scomp1._call_execute, False)
+        self.assertEqual(self.asm.scomp1._dirty, False)
 
     def test_pathname(self):
         vt = self.asm.scomp2.cont_out.vt2.vt3
@@ -458,7 +464,8 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         newvt = comp.top_tree_in.copy()
         newvt._iotype = 'out'
@@ -468,7 +475,8 @@ class NestedVTTestCase(unittest.TestCase):
         outputs = attr.get('Outputs', [])
         self.assertEqual(inputs, [])
         self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         self.assertEqual(newvt.lev1.lev2.iotype, 'out')
         newvt._iotype = 'in'
@@ -486,8 +494,8 @@ class NestedVTTestCase(unittest.TestCase):
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
-
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         newvt = asm.top_tree_in.copy()
         newvt._iotype = 'out'
@@ -497,14 +505,16 @@ class NestedVTTestCase(unittest.TestCase):
         outputs = attr.get('Outputs', [])
         self.assertEqual(inputs, [])
         self.assertEqual(set([d['name'] for d in outputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
         attr = comp.top_tree_in.get_attributes()
         outputs = attr.get('Outputs', [])
         self.assertEqual(outputs, [])
         inputs = attr['Inputs']
         self.assertEqual(set([d['name'] for d in inputs]),
-                         set(['topfloat','lev1','lev1float','lev2','lev2float']))
+                         set(['topfloat', 'lev1', 'lev1float',
+                              'lev2', 'lev2float']))
 
 
 class ListConnectTestCase(unittest.TestCase):
@@ -643,6 +653,29 @@ class DeepCopyTestCase(unittest.TestCase):
                 print '%s   ' % prefix, cont2.get_pathname(), 'is missing', name
                 errors += 1
         return errors
+
+    def test_2nd_copy(self):
+        # Test that copy of copy is valid (had 'lost' REGION00_v).
+
+        class Region(VariableTree):
+            thickness = Float()
+            angle = Float()
+
+        class StData(VariableTree):
+            s = Float()
+
+            def add_region(self, name):
+                self.add(name + '_i', Instance(Region()))
+                self.add(name + '_v', VarTree(Region()))
+                self.add(name + '_f', Float())
+
+        s1 = StData()
+        s1.add_region('REGION00')
+        s2 = copy.deepcopy(s1)
+        s3 = copy.deepcopy(s2)
+        keys = sorted([key for key in s3.__dict__ if not key.startswith('_')])
+        expected = ['REGION00_f', 'REGION00_i', 'REGION00_v', 's']
+        self.assertEqual(keys, expected)
 
 
 if __name__ == "__main__":

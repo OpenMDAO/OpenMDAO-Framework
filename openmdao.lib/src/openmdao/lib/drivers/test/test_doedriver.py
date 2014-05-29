@@ -18,6 +18,10 @@ from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 from openmdao.util.testutil import assert_rel_error, assert_raises
 
+from openmdao.lib.drivers.api import SLSQPdriver, FixedPointIterator
+from openmdao.lib.components.api import MetaModel
+from openmdao.lib.surrogatemodels.api import ResponseSurface
+
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
@@ -102,7 +106,6 @@ class TestCaseDOE(unittest.TestCase):
     def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
 
     def test_sequential_errors_abort(self):
@@ -224,7 +227,6 @@ class TestCaseNeighborhoodDOE(unittest.TestCase):
     def test_sequential_errors(self):
         logging.debug('')
         logging.debug('test_sequential_errors')
-        self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True, retry=True)
 
     def test_sequential_errors_abort(self):
@@ -389,6 +391,56 @@ class ModelWithExceptionTest(unittest.TestCase):
                 self.assertTrue(isnan(result))
             else:
                 self.assertEqual(result, sqrt(x))
+
+
+
+class Comp(Component):
+    x = Float(5.0, iotype='in', high=10., low=-10.)
+    y = Float(iotype='out')
+    def execute(self):
+        self.y = self.x**6.+self.x**2
+
+        
+class Assem(Assembly):
+    y = Float(iotype='in')
+    def configure(self):
+        comp = self.add('comp', Comp())
+
+        doe = self.add('doe', NeighborhoodDOEdriver())
+        doe.DOEgenerator = FullFactorial()
+        doe.alpha = .1
+        doe.add_parameter('comp.x')
+        doe.add_response('comp.y')
+        doe.workflow.add('comp')
+
+
+        meta = self.add('meta', MetaModel(params=('x',), responses=('y', )))
+        meta.default_surrogate = ResponseSurface()
+
+        self.connect('doe.case_inputs.comp.x', 'meta.params.x')
+        self.connect('doe.case_outputs.comp.y', 'meta.responses.y')
+
+        opt = self.add('opt', SLSQPdriver())
+        opt.add_parameter('meta.x', high=10., low=-10.)
+        opt.add_objective('meta.y')
+        opt.workflow.add('meta')
+
+        drv = self.add('driver', FixedPointIterator())
+        drv.max_iteration = 2
+        drv.add_parameter('y')
+        drv.add_constraint('y=meta.y')
+        drv.workflow.add(['doe', 'opt'])
+
+
+class VTInputAsSrcInvalidationTest(unittest.TestCase):
+
+    def setUp(self):
+        self.model = set_as_top(Assem())
+
+    def test_invalidation_with_vtinput_as_src(self):
+        self.model.run()
+        self.assertEqual(self.model.doe.exec_count, 2)
+
 
 
 if __name__ == "__main__":

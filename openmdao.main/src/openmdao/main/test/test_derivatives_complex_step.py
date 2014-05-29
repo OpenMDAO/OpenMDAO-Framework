@@ -4,14 +4,12 @@ Testing for complex step support in the framework.
 
 import unittest
 
-try:
-    from numpy import zeros, array, identity, random
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random
+from numpy import array, eye
 
 from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
+from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
 class SimpleCompFloat(Component):
@@ -272,6 +270,18 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
                                                 outputs=['comp.y'])
         diff = abs(J - model.comp.J).max()
+        assert_rel_error(self, diff, 0.0, .0001)
+        self.assertTrue(J[0, 0] is not complex)
+
+        model.add('driver', SimpleDriver())
+        model.driver.add_parameter('comp.x', low=-10, high=10)
+        model.driver.add_objective('comp.y - comp.x')
+        model.run()
+
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(mode='fd')
+
+        diff = abs(J + eye(4) - model.comp.J).max()
         assert_rel_error(self, diff, 0.0, .0001)
         self.assertTrue(J[0, 0] is not complex)
 

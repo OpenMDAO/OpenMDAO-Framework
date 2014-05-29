@@ -294,6 +294,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
 
             def execute(self):
                 self.set_parameters([1.0])
+                self.workflow.run()
 
         top = set_as_top(Assembly())
         top.add('comp', MyComp())

@@ -111,43 +111,6 @@ push_exception_handler(handler=lambda o, t, ov, nv: None,
                        locked=True)
 
 
-class _ContainerDepends(object):
-    """An object that bookkeeps connections to/from Container variables."""
-    def __init__(self):
-        self._srcs = {}
-
-    def check_connect(self, srcpath, destpath):
-        dpdot = destpath+'.'
-        for dst, src in self._srcs.items():
-            if destpath.startswith(dst + '.') or dst.startswith(dpdot) or dst == destpath:
-                raise RuntimeError("'%s' is already connected to source '%s'" %
-                                   (dst, src))
-
-    def connect(self, scope, srcpath, destpath):
-        self._srcs[destpath] = srcpath
-
-    def disconnect(self, srcpath, destpath):
-        try:
-            del self._srcs[destpath]
-        except KeyError:
-            pass
-        dpdot = destpath+'.'
-        for d in [k for k in self._srcs if k.startswith(dpdot)]:
-            del self._srcs[d]
-
-    def get_source(self, destname):
-        """For a given destination name, return the connected source,
-        or None if not connected.
-        """
-        return self._srcs.get(destname)
-
-    def _check_source(self, path, src):
-        source = self.get_source(path)
-        if source is not None and src != source:
-            raise RuntimeError("'%s' is connected to source '%s' and cannot be "
-                               "set by source '%s'" % (path, source, src))
-
-
 class _MetaSafe(MetaHasTraits):
     """ Tries to keep users from shooting themselves in the foot. """
 
@@ -201,7 +164,6 @@ class Container(SafeHasTraits):
         self._call_configure = True
 
         self._managers = {}  # Object manager for remote access by authkey.
-        self._depgraph = _ContainerDepends()
 
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
@@ -303,123 +265,6 @@ class Container(SafeHasTraits):
                 break
             name = obj.name
         return '.'.join(path[::-1])
-
-    @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr):
-        """Connects one source expression to one destination expression.
-        When a name begins with "parent.", that indicates
-        it is referring to a variable outside of this object's scope.
-
-        srcexpr: str or ExprEvaluator
-            Source expression object or expression string.
-
-        destexpr: str or ExprEvaluator
-            Destination expression object or expression string.
-        """
-        child_connections = []  # for undo
-        if isinstance(srcexpr, basestring):
-            srcexpr = ConnectedExprEvaluator(srcexpr, self)
-        if isinstance(destexpr, basestring):
-            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
-
-        destpath = destexpr.text
-        srcpath = srcexpr.text
-
-        graph = self._depgraph
-
-        # check for self connections
-        if not destpath.startswith('parent.'):
-            vpath = destpath.split('[', 1)[0]
-            cname2, _, destvar = vpath.partition('.')
-            destvar = destpath[len(cname2)+1:]
-            if cname2 in srcexpr.get_referenced_compnames():
-                self.raise_exception("Can't connect '%s' to '%s'. Both refer"
-                                     " to the same component." %
-                                     (srcpath, destpath), RuntimeError)
-        try:
-            graph.check_connect(srcpath, destpath)
-
-            if not destpath.startswith('parent.'):
-                if destvar:
-                    child = getattr(self, cname2)
-                    if is_instance(child, Container):
-                        childsrc = srcexpr.scope_transform(self, child, parent=self)
-                        child.connect(childsrc, destvar)
-                        child_connections.append((child, childsrc, destvar))
-
-            for srcvar in srcexpr.get_referenced_varpaths(copy=False):
-                if not srcvar.startswith('parent.'):
-                    if not self.contains(srcvar):
-                        self.raise_exception("Can't find '%s'" % srcvar,
-                                             AttributeError)
-
-            srccomps = srcexpr.get_referenced_compnames()
-            if srccomps:
-                cname = srccomps.pop()
-                if cname != 'parent':
-                    child = getattr(self, cname)
-                    if is_instance(child, Container):
-                        childdest = 'parent.'+destpath
-                        restofpath = srcexpr.scope_transform(self, child, parent=self)
-                        child.connect(restofpath, childdest)
-                        child_connections.append((child, restofpath, childdest))
-
-            graph.connect(self, srcpath, destpath)
-        except Exception as err:
-            try:
-                for child, childsrc, childdest in child_connections:
-                    child.disconnect(childsrc, childdest)
-            except Exception as err:
-                self._logger.error("failed to disconnect %s from %s after"
-                                   " failed connection of %s to %s: (%s)" %
-                                   (childsrc, childdest, srcpath, destpath, err))
-            raise
-
-    @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
-        """
-        graph = self._depgraph
-
-        cname = cname2 = None
-        destvar = destpath.split('[', 1)[0]
-        srcexpr = ExprEvaluator(srcpath, self)
-        if not srcexpr.refs_parent():
-            srcvar = srcexpr.get_referenced_varpaths().pop()
-            if not self.contains(srcvar):
-                self.raise_exception("Can't find '%s'" % srcvar, AttributeError)
-            srccomps = srcexpr.get_referenced_compnames()
-            if srccomps:
-                cname = srccomps.pop()
-                if cname != 'parent':
-                    child = getattr(self, cname)
-                    if is_instance(child, Container):
-                        childdest = 'parent.'+destpath
-                        restofpath = srcexpr.scope_transform(self, child, parent=self)
-                        child.disconnect(restofpath, childdest)
-        if not destpath.startswith('parent.'):
-            if not self.contains(destvar):
-                self.raise_exception("Can't find '%s'" % destvar, AttributeError)
-            cname2, _, restofpath = destpath.partition('.')
-            if restofpath:
-                child = getattr(self, cname2)
-                if is_instance(child, Container):
-                    childsrc = srcexpr.scope_transform(self, child, parent=self)
-                    child.disconnect(childsrc, restofpath)
-
-        if cname == cname2 and cname is not None:
-            self.raise_exception("Can't disconnect '%s' from '%s'. "
-                                 "Both variables are on the same component" %
-                                 (srcpath, destpath), RuntimeError)
-
-        graph.disconnect(srcpath, destpath)
-
-    #TODO: get rid of any notion of valid/invalid from Containers.  If they have
-    # no execute, they can have no inputs/outputs, which means that validity
-    # should have no meaning for them.
-    def is_valid(self):
-        return True
 
     def get_trait(self, name, copy=False):
         """Returns the trait indicated by name, or None if not found. No
@@ -707,6 +552,9 @@ class Container(SafeHasTraits):
 
         return obj
 
+    def _add_after_parent_set(self, name, obj):
+        pass
+    
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
         object in preparation for insertion into self.
@@ -718,6 +566,14 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
+            
+        removed = False
+        if has_interface(obj, IContainer):
+            # if an old child with that name exists, remove it
+            if self.contains(name) and getattr(self, name):
+                self.remove(name)
+                removed = True
+
         if has_interface(obj, IContainer):
             self._check_recursion(obj)
             if isinstance(obj, OpenMDAO_Proxy):
@@ -726,11 +582,15 @@ class Container(SafeHasTraits):
                 obj.parent = self
             obj.name = name
 
+            self._add_after_parent_set(name, obj)
+            
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
+                
+        return removed
 
     def _post_container_add(self, name, obj, removed):
         pass
@@ -739,15 +599,9 @@ class Container(SafeHasTraits):
         """Add an object to this Container.
         Returns the added object.
         """
-        self._prep_for_add(name, obj)
+        removed = self._prep_for_add(name, obj)
 
         if has_interface(obj, IContainer):
-            # if an old child with that name exists, remove it
-            removed = False
-            if self.contains(name) and getattr(self, name):
-                self.remove(name)
-                removed = True
-
             setattr(self, name, obj)
 
             if self._cached_traits_ is None:
@@ -1226,7 +1080,7 @@ class Container(SafeHasTraits):
 
             self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
                 
-    def _set_failed(self, path, value, index=None, src=None, force=False):
+    def _set_failed(self, path, value, index=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
         Inherited classes can override this to locate the variable elsewhere
         and set its value.
@@ -1234,20 +1088,11 @@ class Container(SafeHasTraits):
         self.raise_exception("object has no attribute '%s'" % path,
                              AttributeError)
 
-    def _check_source(self, path, src):
-        """Raise an exception if the given source variable is not the one
-        that is connected to the destination variable specified by 'path'.
-        """
-        try:
-            self._depgraph._check_source(path, src)
-        except Exception as err:
-            self.raise_exception(str(err), RuntimeError)
-
     def get_iotype(self, name):
         return self.get_trait(name).iotype
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
         value, subject to validation and constraints. *index*, if not None,
@@ -1281,37 +1126,12 @@ class Container(SafeHasTraits):
             childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
             if obj is Missing or not is_instance(obj, Container):
-                return self._set_failed(path, value, index, src, force)
-            if src is not None:
-                #src = ExprEvaluator(src, scope=self).scope_transform(self, obj, parent=self)
-                src = 'parent.'+src
-            obj.set(restofpath, value, index, src=src, force=force)
+                return self._set_failed(path, value, index, force=force)
+            obj.set(restofpath, value, index, force=force)
+        elif index:  # array index specified
+            self._index_set(path, value, index)
         else:
-            try:
-                iotype = self.get_iotype(path)
-            except Exception:
-                return self._set_failed(path, value, index, src, force)
-
-            if iotype == 'in' or src is not None:
-                # setting an input or a boundary output, so have to check source
-                if not force and self._interactive:
-                    self._check_source(path, src)
-                if index is None:
-                    # bypass input source checking
-                    self._input_check = None
-                    try:
-                        setattr(self, path, value)
-                    finally:
-                        self._input_check = self._real_input_check
-                else:  # array index specified
-                    self._index_set(path, value, index)
-            elif iotype == 'out' and not force:
-                self.raise_exception('Cannot set output %r' % path,
-                                     RuntimeError)
-            elif index:  # array index specified
-                self._index_set(path, value, index)
-            else:
-                setattr(self, path, value)
+            setattr(self, path, value)
 
     def _index_set(self, name, value, index):
         if len(index) == 1:
@@ -1361,32 +1181,6 @@ class Container(SafeHasTraits):
                 path = item.name
                 full = '.'.join((path, full))
                 item = item.parent
-
-    def _real_input_check(self, name, old):
-        """This raises an exception if the specified input is attached
-        to a source.
-        """
-        if not self._interactive:
-            return
-
-        preds = self._depgraph.pred.get(name)
-        if preds:
-            namedot = name+'.'
-            preds = [n for n in preds if not n.startswith(namedot)]
-            if preds:
-                # bypass the callback here and set it back to the old value
-                self._trait_change_notify(False)
-                try:
-                    setattr(self, name, old)
-                finally:
-                    self._trait_change_notify(True)
-                self.raise_exception(
-                    "'%s' is already connected to source '%s' and "
-                    "cannot be directly set" %
-                    (name, preds[0]), RuntimeError)
-
-    # This gets set to None to disable checking, then reset to _real_input_check
-    _input_check = _real_input_check
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""

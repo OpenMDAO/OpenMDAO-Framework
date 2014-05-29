@@ -41,23 +41,19 @@ class GeomCompTestCase(unittest.TestCase):
         self.geomcomp.height = 10  
 
         #check that is has not run yet, and that volume has not changed
-        self.assertFalse(self.geomcomp.is_valid())
         self.assertEquals(self.geomcomp.volume,8)
 
         self.geomcomp.run()
-        self.assertTrue(self.geomcomp.is_valid())
         self.assertEquals(self.geomcomp.volume,40)
 
 
         self.geomcomp.auto_run = True
         self.geomcomp.height = 2
-        self.assertTrue(self.geomcomp.is_valid())
         self.assertEquals(self.geomcomp.volume,8)
 
         #make sure setting back to false works
         self.geomcomp.auto_run = False
         self.geomcomp.height = 10 
-        self.assertFalse(self.geomcomp.is_valid())
         self.assertEquals(self.geomcomp.volume,8)
 
     def test_with_pygem_diamond(self):
