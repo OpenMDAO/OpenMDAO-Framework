@@ -135,8 +135,17 @@ if sys.platform.startswith("linux"):
             '''Return the name and possible exes for chrome'''
 
             browser_name = "chrome"
-            browser_exe_filepath = get_executable_path(
-                ["chromium-browser", "google-chrome", "chrome"])
+
+            # FIXME: broken for chrome version 35
+            from openmdao.gui.util import chrome_version
+            chrome_version = int(chrome_version().split('.')[0])
+
+            if chrome_version > 34:
+                browser_exe_filepath = None
+            else:
+                browser_exe_filepath = get_executable_path(
+                    ["google-chrome", "chrome", "chromium-browser"])
+
             return browser_name, browser_exe_filepath
 
     class FirefoxJsUnitTestCase(BrowserJsUnitTestCase):
