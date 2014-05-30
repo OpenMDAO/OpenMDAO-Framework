@@ -13,13 +13,13 @@ from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error, assert_raises
 
-# pylint: disable-msg=E1101,E1103
+# pylint: disable=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
 class SellarDiscipline1(Component):
     """Component containing Discipline 1"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
     x1 = Float(0.0, iotype='in', desc='Local Design Variable')
@@ -42,7 +42,7 @@ class SellarDiscipline1(Component):
 class SellarDiscipline2(Component):
     """Component containing Discipline 2"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     z1 = Float(0.0, iotype='in', desc='Global Design Variable')
     z2 = Float(0.0, iotype='in', desc='Global Design Variable')
     y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
@@ -80,7 +80,7 @@ class SellarBroyden(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
 
         # create solver instance
         self.add('driver', BroydenSolver())
@@ -89,10 +89,10 @@ class SellarBroyden(Assembly):
         self.add('dis2', SellarDiscipline2())
         self.driver.workflow.add(['dis1', 'dis2'])
 
-        self.connect('dis1.y1','dis2.y1')
+        self.connect('dis1.y1', 'dis2.y1')
 
         # solver connections
-        self.driver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.driver.add_parameter('dis1.y2')
         self.driver.add_constraint('dis2.y2 = dis1.y2')
         self.driver.itmax = 10
         self.driver.alpha = .4
@@ -102,7 +102,7 @@ class SellarBroyden(Assembly):
 class MIMOEquation(Component):
     """Equation with 2 inputs and 2 outputs"""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     x = Array([1., 1., 1., 1., 1.], iotype='in', desc='Global Design Variables')
 
     f1 = Float(iotype='out', desc='Output of this Discipline')
@@ -131,7 +131,7 @@ class MIMOEquation(Component):
 class DumbComp(Component):
     """A component whose output is independent of the input."""
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     x1 = Float(1.0, iotype='in', desc='Global Design Variable')
     f1 = Float(3.14, iotype='out', desc='Output of this Discipline')
 
@@ -153,7 +153,7 @@ class DumbAssembly(Assembly):
         self.driver.workflow.add(['dis1'])
 
         # solver connections
-        self.driver.add_parameter('dis1.x1', low=-9.e99, high=9.e99)
+        self.driver.add_parameter('dis1.x1')
         self.driver.add_constraint('dis1.f1 = 0.0')
 
 
@@ -184,12 +184,10 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test. """
         self.prob = None
-        pass
 
     def tearDown(self):
         """ Called after each test. """
         self.prob = None
-        pass
 
     def test_Broyden2(self):
 
@@ -255,11 +253,11 @@ class TestCase(unittest.TestCase):
         set_as_top(self.prob)
 
         driver = self.prob.driver
-        driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
+        driver.add_parameter('dis1.x[0]')
+        driver.add_parameter('dis1.x[1]')
+        driver.add_parameter('dis1.x[2]')
+        driver.add_parameter('dis1.x[3]')
+        driver.add_parameter('dis1.x[4]')
 
         driver.add_constraint('dis1.f1 = 0.0')
         driver.add_constraint('dis1.f2 = 0.0')
@@ -285,7 +283,7 @@ class TestCase(unittest.TestCase):
         set_as_top(self.prob)
 
         driver = self.prob.driver
-        driver.add_parameter('dis1.x', low=-9.e99, high=9.e99)
+        driver.add_parameter('dis1.x')
         driver.add_constraint('dis1.ff = 0.0')
 
         self.prob.dis1.x = [1., 1., 1., 1., 1.]
@@ -307,11 +305,11 @@ class TestCase(unittest.TestCase):
         set_as_top(self.prob)
 
         driver = self.prob.driver
-        driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
+        driver.add_parameter('dis1.x[0]')
+        driver.add_parameter('dis1.x[1]')
+        driver.add_parameter('dis1.x[2]')
+        driver.add_parameter('dis1.x[3]')
+        driver.add_parameter('dis1.x[4]')
 
         driver.add_constraint('dis1.f1 = 0.0')
         driver.add_constraint('dis1.f2 = 0.0')
@@ -337,11 +335,11 @@ class TestCase(unittest.TestCase):
         set_as_top(self.prob)
 
         driver = self.prob.driver
-        driver.add_parameter('dis1.x[0]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[1]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[2]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[3]', low=-9.e99, high=9.e99)
-        driver.add_parameter('dis1.x[4]', low=-9.e99, high=9.e99)
+        driver.add_parameter('dis1.x[0]')
+        driver.add_parameter('dis1.x[1]')
+        driver.add_parameter('dis1.x[2]')
+        driver.add_parameter('dis1.x[3]')
+        driver.add_parameter('dis1.x[4]')
 
         driver.add_constraint('dis1.f1 = 0.0')
         driver.add_constraint('dis1.f2 = 0.0')
@@ -389,7 +387,7 @@ class TestCase(unittest.TestCase):
         # The reason for putting the AAA in the name is so it runs
         #   first. We should have to do that. There is some kind
         #   of testing bug that is forcing us to do that
-        
+
         # Test the fix that peforms an initial run
         #   at the top of the execute method
         class MyComp(Component):

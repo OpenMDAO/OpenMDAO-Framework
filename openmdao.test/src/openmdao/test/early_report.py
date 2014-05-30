@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+from itertools import chain
 
 from nose.plugins import Plugin
 from nose import SkipTest
@@ -104,9 +105,7 @@ class EarlyTestInfo(Plugin):
                 stream.writeln(test)
         if failed or errors:
             stream.writeln("\nThe following tests failed:")
-            for test in failed:
-                stream.writeln(test)
-            for test in errors:
+            for test in sorted(chain(failed, errors)):
                 stream.writeln(test)
 
         hrs = int(total_time/3600)

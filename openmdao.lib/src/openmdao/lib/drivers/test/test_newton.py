@@ -3,10 +3,9 @@ Test the Newton solver
 """
 
 import unittest
-from nose import SkipTest
 import numpy
 
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 from openmdao.lib.drivers.newton_solver import NewtonSolver
 from openmdao.lib.optproblems.scalable import Discipline
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
@@ -16,7 +15,6 @@ from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IHasParameters, implements
-from openmdao.lib.drivers.api import BroydenSolver
 from openmdao.main.datatypes.api import Float
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
@@ -307,7 +305,7 @@ class MDA_SolverTestCase(unittest.TestCase):
 
         class MyComp(Component):
 
-            x = Float(0.0, iotype='in', low=-100000, high=100000)
+            x = Float(0.0, iotype='in')
             xx = Float(0.0, iotype='in', low=-100000, high=100000)
             f_x = Float(iotype='out')
             y = Float(iotype='out')

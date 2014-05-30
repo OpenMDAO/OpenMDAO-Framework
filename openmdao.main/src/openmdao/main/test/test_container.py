@@ -1,4 +1,4 @@
-# pylint: disable-msg=C0111,C0103
+# pylint: disable=C0111,C0103
 
 import os.path
 import sys
@@ -16,7 +16,7 @@ from openmdao.main.container import Container, deep_hasattr, \
                                     create_io_traits
 from openmdao.main.uncertain_distributions import NormalDistribution
 from openmdao.main.variable import Variable
-from openmdao.main.datatypes.api import Instance, Slot, Float, Int, Bool, List, Dict
+from openmdao.main.datatypes.api import Instance, Float, Int, Bool, List, Dict
 from openmdao.util.testutil import make_protected_dir, assert_raises
 
 # Various Pickle issues arise only when this test runs as the main module.
@@ -148,14 +148,6 @@ class ContainerTestCase(unittest.TestCase):
         code = "create_io_traits(cont, 'xyzzy')"
         msg = ": build_trait()"
         assert_raises(self, code, globals(), locals(), NotImplementedError, msg)
-
-    def test_connect(self):
-        cont = MyContainer()
-        cont.connect('parent.foo', 'dyntrait')
-        self.assertEqual(cont._depgraph.get_source('dyntrait'), 'parent.foo')
-
-        cont.disconnect('parent.foo', 'dyntrait')
-        self.assertEqual(cont._depgraph.get_source('dyntrait'), None)
 
     def test_find_trait_and_value(self):
         class MyClass(object):
@@ -463,14 +455,6 @@ class ContainerTestCase(unittest.TestCase):
                       globals(), locals(), ValueError,
                       "b: add would cause container recursion")
 
-    def test_set_output(self):
-        c = Container()
-        c.add_trait('inp', Float(iotype='in'))
-        c.add_trait('out', Float(iotype='out'))
-        c.set('inp', 42)
-        assert_raises(self, "c.set('out', 666)", globals(), locals(),
-                      RuntimeError, ": Cannot set output 'out'")
-
     def test_get_attributes(self):
         c = Container()
         c.add_trait('inp', Float(desc='Stuff', low=-200, high=200))
@@ -481,6 +465,21 @@ class ContainerTestCase(unittest.TestCase):
                          'type': 'float', 'desc': 'Stuff'}
         for key in check.keys():
             self.assertEqual(check[key], attrs["Inputs"][0][key])
+
+    def test_set_metadata(self):
+        c = Container()
+        c.add_trait('inp', List(range(1000), ddcomp_start=0, ddcomp_end=-1))
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_start'), 0)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_end'), -1)
+
+        c.set_metadata('inp', 'ddcomp_start', 10)
+        c.set_metadata('inp', 'ddcomp_end', 20)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_start'), 10)
+        self.assertEqual(c.get_metadata('inp', 'ddcomp_end'), 20)
+
+        assert_raises(self, "c.set_metadata('inp', 'iotype', 'out')",
+                      globals(), locals(), TypeError,
+                      ": Can't set iotype on inp, read-only")
 
 
 if __name__ == "__main__":

@@ -184,7 +184,7 @@ def _test_value_editors(browser):
     #bool editor - set to true
     inputs = props.inputs
     inputs.rows[10].cells[1].click()
-    selection_path = '//*[@id="bool-editor-force_execute"]/option[1]'
+    selection_path = '//*[@id="bool-editor-force_fd"]/option[1]'
     browser.find_element_by_xpath(selection_path).click()
     time.sleep(0.5)
 
@@ -267,7 +267,6 @@ def _test_value_editors(browser):
     #check that all values were set correctly by the editors
     commands = ["top.p1.d['pi']",
                 "top.p1.d['phi']",
-                "top.p1.force_execute",
                 "top.p1.e",
                 "top.p1.x",
                 "top.p1.X",
@@ -275,7 +274,6 @@ def _test_value_editors(browser):
                 "top.p1.Z"]
     values = ["3.0",
               "1.61",
-              "True",
               "3",
               "2.71",
               "[ 0.  1.  2.  3.  4.]",
@@ -326,8 +324,6 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-            'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -347,8 +343,6 @@ def _test_Avartrees(browser):
         ['', ' vt2', '',  '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -390,8 +384,6 @@ def _test_Avartrees(browser):
         ['', ' cont_in', '',  '', ''],
         ['', 'directory', '', '',
             'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-            'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -413,7 +405,6 @@ def _test_Avartrees(browser):
     expected = [
         [' cont_in',      ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]
@@ -430,7 +421,6 @@ def _test_Avartrees(browser):
         ['v2', '2'],
         [' vt2', ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]
@@ -457,7 +447,6 @@ def _test_Avartrees(browser):
     expected = [
         [' cont_in',      ''],
         ['directory',     ''],
-        ['force_execute', 'False'],
         ['force_fd', 'False'],
         ['missing_deriv_policy', 'error']
     ]

@@ -29,6 +29,7 @@ from openmdao.util.typegroups import real_types, int_types, iterable_types
 
 array_test = re.compile("(\[[0-9]+\])+$")
 
+
 @add_delegate(HasParameters, HasObjective, HasEvents)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve
@@ -47,8 +48,7 @@ class Genetic(Driver):
                       desc="The maximum number of generations the algorithm "
                            "will evolve to before stopping.")
     population_size = Int(Consts.CDefGAPopulationSize, iotype="in",
-                          desc = "The size of the population in each "
-                                 "generation.")
+                          desc="The size of the population in each generation.")
     crossover_rate = Float(Consts.CDefGACrossoverRate, iotype="in", low=0.0,
                            high=1.0, desc="The crossover rate used when two "
                           "parent genomes reproduce to form a child genome.")
@@ -74,9 +74,9 @@ class Genetic(Driver):
     elitism = Bool(False, iotype="in", desc="Controls the use of elitism in "
                                             "the creation of new generations.")
 
-    best_individual = Slot(klass = GenomeBase.GenomeBase,
-                               desc="The genome with the "
-                               "best score from the optimization.")
+    best_individual = Slot(klass=GenomeBase.GenomeBase,
+                           desc="The genome with the "
+                                "best score from the optimization.")
 
     seed = Int(None, iotype="in",
                desc="Random seed for the optimizer. Set to a specific value "
@@ -139,7 +139,7 @@ class Genetic(Driver):
         #print self.seed
 
         #configuring the options
-        ga = GSimpleGA.GSimpleGA(genome, interactiveMode = False,
+        ga = GSimpleGA.GSimpleGA(genome, interactiveMode=False,
                                  seed=self.seed)
         pop = ga.getPopulation()
         pop = pop.scaleMethod.set(Scaling.SigmaTruncScaling)
@@ -163,11 +163,6 @@ class Genetic(Driver):
 
         #run it once to get the model into the optimal state
         self._run_model(self.best_individual)
-
-        # TODO - We really need to be able to record the best candidate from each
-        # generation, but that will only be possible if we let OpenMDAO drive
-        # the optimization. For now, just print out the final best individual state.
-        self.record_case()
 
     def _run_model(self, chromosome):
         self.set_parameters([val for val in chromosome])

@@ -1,10 +1,9 @@
 """ Base class for all workflows. """
 
 # pylint: disable-msg=E0611,F0401
+from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver
 
 __all__ = ['Workflow']
 
@@ -15,30 +14,27 @@ class Workflow(object):
     in some order.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent, members=None):
         """Create a Workflow.
 
-        parent: Driver (optional)
+        parent: Driver
             The Driver that contains this Workflow.  This option is normally
             passed instead of scope because scope usually isn't known at
             initialization time.  If scope is not provided, it will be
             set to parent.parent, which should be the Assembly that contains
             the parent Driver.
 
-        scope: Component (optional)
-            The scope can be explicitly specified here, but this is not
-            typically known at initialization time.
-
         members: list of str (optional)
             A list of names of Components to add to this workflow.
         """
-        self._iterator = None
         self._stop = False
         self._parent = parent
-        self._scope = scope
+        self._scope = None
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+        self._var_graph = None
+
         if members:
             for member in members:
                 if not isinstance(member, basestring):
@@ -63,9 +59,9 @@ class Workflow(object):
 
     @property
     def itername(self):
-        return self._iterbase('')
+        return self._iterbase()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Perform any checks that we need prior to run. Specific workflows
         should override this."""
         pass
@@ -84,55 +80,107 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0, case_label='', case_uuid=None):
         """ Run the Components in this Workflow. """
 
         self._stop = False
-        self._iterator = self.__iter__()
         self._exec_count += 1
-        self._comp_count = 0
-        iterbase = self._iterbase(case_id)
 
-        for comp in self._iterator:
+        iterbase = self._iterbase()
+
+        if case_uuid is None:
+            # We record the case and are responsible for unique case ids.
+            record_case = True
+            case_uuid = Case.next_uuid()
+        else:
+            record_case = False
+
+        scope = self.scope
+
+        for comp in self:
+            # before the workflow runs each component, update that
+            # component's inputs based on the graph
+            scope.update_inputs(comp.name, graph=self._var_graph)
             if isinstance(comp, PseudoComponent):
-                comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.run(ffd_order=ffd_order)
             else:
-                self._comp_count += 1
-                comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-                comp.run(ffd_order=ffd_order, case_id=case_id)
+                comp.set_itername('%s-%s' % (iterbase, comp.name))
+                comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             if self._stop:
                 raise RunStopped('Stop requested')
-        self._iterator = None
 
-    def _iterbase(self, case_id):
+        if record_case:
+            self._record_case(label=case_label, case_uuid=case_uuid)
+
+    def _record_case(self, label, case_uuid):
+        """ Record case in all recorders. """
+        top = self._parent
+        while top.parent is not None:
+            top = top.parent
+        recorders = top.recorders
+        if not recorders:
+            return
+
+        inputs = []
+        outputs = []
+        driver = self._parent
+        scope = driver.parent
+
+        # Parameters
+        if hasattr(driver, 'get_parameters'):
+            for name, param in driver.get_parameters().iteritems():
+                if isinstance(name, tuple):
+                    name = name[0]
+                value = param.evaluate(scope)
+                if param.size == 1:  # evaluate() always returns list.
+                    value = value[0]
+                inputs.append((name, value))
+
+        # Objectives
+        if hasattr(driver, 'eval_objective'):
+            outputs.append(('Objective', driver.eval_objective()))
+        elif hasattr(driver, 'eval_objectives'):
+            for j, obj in enumerate(driver.eval_objectives()):
+                outputs.append(('Objective_%d' % j, obj))
+
+        # Responses
+        if hasattr(driver, 'eval_responses'):
+            for j, response in enumerate(driver.eval_responses()):
+                outputs.append(("Response_%d" % j, response))
+
+        # Constraints
+        if hasattr(driver, 'get_ineq_constraints'):
+            for name, con in driver.get_ineq_constraints().iteritems():
+                val = con.evaluate(scope)
+                outputs.append(('Constraint ( %s )' % name, val))
+
+        if hasattr(driver, 'get_eq_constraints'):
+            for name, con in driver.get_eq_constraints().iteritems():
+                val = con.evaluate(scope)
+                outputs.append(('Constraint ( %s )' % name, val))
+
+        # Other
+        case_inputs, case_outputs = top.get_case_variables()
+        inputs.extend(case_inputs)
+        outputs.extend(case_outputs)
+        outputs.append(('%s.workflow.itername' % driver.get_pathname(),
+                        self.itername))
+
+        case = Case(inputs, outputs, label=label,
+                    case_uuid=case_uuid, parent_uuid=self._parent._case_uuid)
+
+        for recorder in recorders:
+            recorder.record(case)
+
+    def _iterbase(self):
         """ Return base for 'iteration coordinates'. """
         if self._parent is None:
             return str(self._exec_count)  # An unusual case.
         else:
             prefix = self._parent.get_itername()
-            if not prefix:
-                prefix = case_id
             if prefix:
                 prefix += '.'
             return '%s%d' % (prefix, self._exec_count)
-
-    def step(self, ffd_order=0, case_id=''):
-        """Run a single component in this Workflow."""
-        if self._iterator is None:
-            self._iterator = self.__iter__()
-            self._exec_count += 1
-            self._comp_count = 0
-
-        comp = self._iterator.next()
-        self._comp_count += 1
-        iterbase = self._iterbase(case_id)
-        comp.set_itername('%s-%d' % (iterbase, self._comp_count))
-        try:
-            comp.run(ffd_order=ffd_order, case_id=case_id)
-        except StopIteration, err:
-            self._iterator = None
-            raise err
-        raise RunStopped('Step complete')
 
     def stop(self):
         """
@@ -151,7 +199,7 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        pass
+        self._var_graph = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""

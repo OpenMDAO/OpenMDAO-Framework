@@ -102,7 +102,7 @@ class Architecture(Container):
                 typeset.add('ineq')
         return typeset
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Check the current configuration and raise an exception if
         something's not right.
         """

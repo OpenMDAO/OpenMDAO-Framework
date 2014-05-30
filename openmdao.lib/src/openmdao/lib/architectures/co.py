@@ -142,8 +142,6 @@ if __name__ == "__main__":
     
     prob.architecture = CO()
 
-    prob.check_config()
-    
     prob.run()
 
     print "\n"

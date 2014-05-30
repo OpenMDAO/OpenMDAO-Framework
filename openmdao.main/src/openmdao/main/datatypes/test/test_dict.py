@@ -25,7 +25,6 @@ class DictTestCase(unittest.TestCase):
                            'indent' : 0,
                            'value' : {1:2.0},
                            'value_type' : 'Float',
-                           'valid' : True,
                            'connected' : '',
                            'connection_types' : 0,
                            'type' : 'dict',

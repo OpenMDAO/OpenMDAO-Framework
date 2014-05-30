@@ -33,7 +33,6 @@ class DriverTestCase(unittest.TestCase):
         top.driver.workflow.add('evcomp')
 
     def test_add_event(self):
-        self.asm.evcomp.force_execute = True
         for i in range(3):
             self.asm.run()
             self.assertEqual(self.asm.evcomp.exec_count, i+1)
@@ -48,13 +47,10 @@ class DriverTestCase(unittest.TestCase):
     def test_get_entry_group(self):
         self.assertEqual(_get_entry_group(Driver()), 'openmdao.driver')
 
-    def test_default_value_force(self):
-        #driver default value should be True
-        self.assertTrue(self.asm.driver.force_execute)
-
     def test_gradient_options(self):
         options = GradientOptions()
 
+        assert(options.get_metadata("directional_fd")["framework_var"])
         assert(options.get_metadata("derivative_direction")["framework_var"])
         assert(options.get_metadata("fd_form")["framework_var"])
         assert(options.get_metadata("fd_step")["framework_var"])

@@ -27,14 +27,8 @@ __all__ = ['CONMINdriver']
 import logging
 
 # pylint: disable-msg=E0611,F0401
-try:
-    from numpy import zeros, ones
-    from numpy import int as numpy_int
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    # to keep class decl from barfing before being stubbed out
-    zeros = lambda *args, **kwargs: None
-    numpy_int = int
+from numpy import zeros, ones
+from numpy import int as numpy_int
 
 from openmdao.main.driver_uses_derivatives import Driver
 from openmdao.main.exceptions import RunStopped
@@ -44,7 +38,7 @@ from openmdao.main.interfaces import IHasParameters, IHasIneqConstraints, \
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective
-from openmdao.util.decorators import add_delegate, stub_if_missing_deps
+from openmdao.util.decorators import add_delegate
 
 import conmin.conmin as conmin
 
@@ -178,7 +172,6 @@ class _consav(object):
         self.ispace = [0, 0]
         # pylint: enable-msg=W0201
 
-@stub_if_missing_deps('numpy', 'conmin')
 @add_delegate(HasParameters, HasIneqConstraints, HasObjective)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN.
@@ -281,6 +274,8 @@ class CONMINdriver(Driver):
         self.g1 = zeros(0, 'd')
         self.g2 = zeros(0, 'd')
 
+        self._lower_bounds = zeros(0, 'd')
+        self._upper_bounds = zeros(0, 'd')
 
     def start_iteration(self):
         """Perform initial setup before iteration loop begins."""
@@ -386,16 +381,17 @@ class CONMINdriver(Driver):
             # Note. CONMIN is driving the finite difference estimation of the
             # gradient. However, we still take advantage of a component's
             # user-defined gradients via Fake Finite Difference.
+            # TODO - Fake Finite Difference has been disabled for now.
             if self.cnmn1.igoto == 3:
 
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
 
                 # Run model under Fake Finite Difference
-                self.calc_derivatives(first=True, savebase=True)
-                self.ffd_order = 1
+                #self.calc_derivatives(first=True, savebase=True)
+                #self.ffd_order = 1
                 super(CONMINdriver, self).run_iteration()
-                self.ffd_order = 0
+                #self.ffd_order = 0
             else:
                 # update the parameters in the model
                 self.set_parameters(self.design_vals[:-2])
@@ -453,10 +449,7 @@ class CONMINdriver(Driver):
         # loop because some cycles do other things (e.g., numerical
         # gradient calculation)
         if (self.iter_count != self.cnmn1.iter) or self.cnmn1.igoto == 0:
-
             self.iter_count = self.cnmn1.iter
-
-            self.record_case()
 
 
     def _config_conmin(self):
@@ -568,10 +561,10 @@ class CONMINdriver(Driver):
             """
 
         for name, value in self.cnmn1.__dict__.items():
-            setattr( conmin.cnmn1, name, value )
+            setattr(conmin.cnmn1, name, value)
 
         for name, value in self.consav.__dict__.items():
-            setattr( conmin.consav, name, value  )
+            setattr(conmin.consav, name, value)
 
 
     def _save_common_blocks(self):

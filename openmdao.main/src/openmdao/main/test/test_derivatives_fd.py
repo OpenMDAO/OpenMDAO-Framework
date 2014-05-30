@@ -7,8 +7,8 @@ import unittest
 import numpy as np
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.test.test_derivatives import SimpleDriver, ArrayComp2D
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.testutil import assert_rel_error
 
@@ -26,7 +26,7 @@ class MyComp(Component):
     #     gradient_options.fd_step_type to 'bounds_scaled'
     x6 = Float(1.0, iotype='in', fd_step = 0.001,
                low=0.0, high=100.0
-               ) 
+               )
     # So we can test the check on needing low and high when using bounds_scaled
     x7 = Float(1.0, iotype='in', fd_step = 0.01,
                fd_step_type='bounds_scaled')
@@ -65,6 +65,17 @@ class MyCompDerivs(Component):
         output_keys = ('y', )
         return input_keys, output_keys
 
+class ArrayParaboloid(Component):
+
+    x = Array([[0., 0.]], iotype='in', desc='The variable x')
+    f_x = Float(iotype='out', desc='F(x)')
+
+    def execute(self):
+        """f(x) = (x[0][0]-3)^2 + x[0][0]x[0][1] + (x[0][1]+4)^2 - 3
+        Optimal solution (minimum): x[0][0] = 6.6667; x[0][1] = -7.3333
+        """
+        x = self.x
+        self.f_x = (x[0][0]-3.0)**2 + x[0][0]*x[0][1] + (x[0][1]+4.0)**2 - 3.0
 
 class TestFiniteDifference(unittest.TestCase):
 
@@ -99,6 +110,16 @@ class TestFiniteDifference(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(outputs=['comp.y'])
 
         assert_rel_error(self, J[0, 1], 8.004, 0.0001)
+
+        # More Parameter Groups with pseudocomps in them.
+        model.driver.add_parameter('comp.x4', low=-100, high=100, fd_step=1.001)
+        model.driver.add_objective('comp.x1 + comp.x2 + comp.x3 + comp.x4 + comp.y')
+
+
+        model.run()
+        model.driver.workflow.config_changed()
+        J = model.driver.workflow.calc_gradient(inputs=['comp.x4'], mode='fd')
+        assert_rel_error(self, J[0, 0], 1.006, 0.0001)
 
 
     def test_central(self):
@@ -169,7 +190,7 @@ class TestFiniteDifference(unittest.TestCase):
                "For variable 'comp.x7', a finite "
                "difference step type of bounds_scaled "
                "is used but required low and high "
-               "values are not set" ) 
+               "values are not set" )
         else:
             self.fail("Exception expected because low "
                       "and high not set for comp.x7")
@@ -273,6 +294,61 @@ class TestFiniteDifference(unittest.TestCase):
         self.assertTrue('comp4' not in pa1.comps)
         self.assertTrue('comp5' not in pa1.comps)
         self.assertTrue(pa1.comps == pa1.itercomps)
+
+    def test_smart_low_high_array_param(self):
+
+        top = Assembly()
+        top.add('paraboloid', ArrayParaboloid())
+        driver = top.add('driver', SimpleDriver())
+        driver.add_objective('paraboloid.f_x')
+        driver.add_parameter('paraboloid.x', low=[-100, -99], high=[100, 99])
+        driver.workflow.add('paraboloid')
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+
+    def test_smart_low_high(self):
+
+        top = Assembly()
+        top.add('comp', MyComp())
+        driver = top.add('driver', SimpleDriver())
+        top.comp.add('x1', Float(1.0, iotype='in', low=-1.0, high=1.0))
+        driver.add_objective('comp.y')
+        driver.add_parameter('comp.x1', low=-1.0, high=1.0)
+        driver.workflow.add('comp')
+
+        top.driver.gradient_options.fd_form = 'central'
+        top.driver.gradient_options.fd_step = 0.1
+
+        top.comp.x1 = -0.95
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], -3.6, 0.001)
+
+        top.comp.x1 = 0.95
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 3.6, 0.001)
+
+    def test_PA_slices(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', ArrayComp2D())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add('comp')
+        top.comp.force_fd = True
+        top.driver.gradient_options.directional_fd = True
+
+        top.driver.add_parameter('comp.x', low=-100, high=100)
+        top.driver.add_constraint('comp.y[0][-1] < 1.0')
+        top.driver.add_constraint('sum(comp.y) < 4.0')
+
+        top.run()
+        J = top.driver.workflow.calc_gradient(mode='forward')
+
+        assert_rel_error(self, J[0, 0], 4.0, 0.001)
+        assert_rel_error(self, J[0, 1], 2.0, 0.001)
+        assert_rel_error(self, J[0, 2], 6.0, 0.001)
+        assert_rel_error(self, J[0, 3], 5.0, 0.001)
 
 if __name__ == '__main__':
     import nose

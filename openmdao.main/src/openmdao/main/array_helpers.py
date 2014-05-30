@@ -1,17 +1,11 @@
 """ Some functions for dealing with array bookkeeping. Mostly flatteners. """
 
 import itertools
-
+from traits.trait_handlers import TraitListObject
 from openmdao.main.vartree import VariableTree
 from openmdao.util.typegroups import real_types, int_types
 
-try:
-    from numpy import ndarray, ravel_multi_index, prod, arange, array
-
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, arange, array
+from numpy import ndarray, ravel_multi_index, prod, arange, array
 
 def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name)
@@ -51,7 +45,8 @@ def flattened_size(name, val, scope=None):
         for key in sorted(val.list_vars()):  # Force repeatable order.
             size += flattened_size('.'.join((name, key)), getattr(val, key))
         return size
-
+    elif isinstance(val, TraitListObject):
+        return len(val)
     else:
         dshape = scope.get_metadata(name.split('[')[0]).get('data_shape')
 
@@ -64,7 +59,7 @@ def flattened_size(name, val, scope=None):
 
 def flattened_value(name, val):
     """ Return `val` as a 1D float array. """
-    if isinstance(val, (float,int)):
+    if isinstance(val, (float, int, complex)):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
@@ -74,6 +69,8 @@ def flattened_value(name, val):
             value = getattr(val, key)
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
+    elif isinstance(val, TraitListObject):
+        return array(val)
     else:
         raise TypeError('Variable %s is of type %s which is not convertable'
                         ' to a 1D float array.' % (name, type(val)))

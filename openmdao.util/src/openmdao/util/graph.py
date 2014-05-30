@@ -91,26 +91,6 @@ def edges_matching_some(graph, **kwargs):
                 yield (u, v)
                 break
 
-
-def get_valids(graph, val, prefix=None):
-    """Returns all nodes with validity matching the
-    given value.
-    """
-    if prefix:
-        return [n for n in nodes_matching_all(graph, valid=val)
-                    if n.startswith(prefix)]
-    return sorted(nodes_matching_all(graph, valid=val))
-
-
-def dump_valid(graph, filter=None, stream=None):
-    dct = {}
-    for node in graph.nodes_iter():
-        if filter and not filter(node):
-            continue
-        dct[node] = graph.node[node]['valid']
-    pprint.pprint(dct, stream=stream)
-
-
 def flatten_list_of_iters(lst):
     """Returns a list of simple values, flattening
     any sub-lists or sub-tuples, or if the input is a
