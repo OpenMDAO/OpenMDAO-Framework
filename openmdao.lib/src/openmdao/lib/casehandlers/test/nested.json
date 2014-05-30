@@ -3,13 +3,11 @@
     "OpenMDAO_Version": "0.9.6", 
     "constants": {
         "asm2.asm3.comp1.directory": "", 
-        "asm2.asm3.comp1.force_execute": false, 
         "asm2.asm3.comp1.force_fd": false, 
         "asm2.asm3.comp1.missing_deriv_policy": "error", 
         "asm2.asm3.directory": "", 
         "asm2.asm3.driver.accuracy": 1e-06, 
         "asm2.asm3.driver.directory": "", 
-        "asm2.asm3.driver.force_execute": true, 
         "asm2.asm3.driver.force_fd": false, 
         "asm2.asm3.driver.gradient_options.derivative_direction": "auto", 
         "asm2.asm3.driver.gradient_options.directional_fd": false, 
@@ -25,20 +23,17 @@
         "asm2.asm3.driver.maxiter": 50, 
         "asm2.asm3.driver.output_filename": "slsqp.out", 
         "asm2.asm3.excludes": [], 
-        "asm2.asm3.force_execute": false, 
         "asm2.asm3.force_fd": false, 
         "asm2.asm3.includes": [
             "*"
         ], 
         "asm2.asm3.missing_deriv_policy": "assume_zero", 
         "asm2.comp1.directory": "", 
-        "asm2.comp1.force_execute": false, 
         "asm2.comp1.force_fd": false, 
         "asm2.comp1.missing_deriv_policy": "error", 
         "asm2.directory": "", 
         "asm2.driver.accuracy": 1e-06, 
         "asm2.driver.directory": "", 
-        "asm2.driver.force_execute": true, 
         "asm2.driver.force_fd": false, 
         "asm2.driver.gradient_options.derivative_direction": "auto", 
         "asm2.driver.gradient_options.directional_fd": false, 
@@ -54,21 +49,18 @@
         "asm2.driver.maxiter": 50, 
         "asm2.driver.output_filename": "slsqp.out", 
         "asm2.excludes": [], 
-        "asm2.force_execute": false, 
         "asm2.force_fd": false, 
         "asm2.includes": [
             "*"
         ], 
         "asm2.missing_deriv_policy": "assume_zero", 
         "comp1.directory": "", 
-        "comp1.force_execute": false, 
         "comp1.force_fd": false, 
         "comp1.missing_deriv_policy": "error", 
         "comp1.x": 0.0, 
         "directory": "", 
         "driver.accuracy": 1e-06, 
         "driver.directory": "", 
-        "driver.force_execute": true, 
         "driver.force_fd": false, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
@@ -84,7 +76,6 @@
         "driver.maxiter": 50, 
         "driver.output_filename": "slsqp.out", 
         "excludes": [], 
-        "force_execute": false, 
         "force_fd": false, 
         "includes": [
             "*"
@@ -94,41 +85,35 @@
     "expressions": {
         "asm2.asm3.comp1.z": {
             "data_type": "Objective", 
-            "pcomp_name": "asm2.asm3._pseudo_10"
+            "pcomp_name": "asm2.asm3._pseudo_0"
         }, 
         "asm2.asm3.comp1.z >= 0": {
             "data_type": "Constraint", 
-            "pcomp_name": "asm2.asm3._pseudo_11"
+            "pcomp_name": "asm2.asm3._pseudo_1"
         }, 
         "asm2.asm3.z": {
             "data_type": "Objective", 
-            "pcomp_name": "asm2._pseudo_12"
+            "pcomp_name": "asm2._pseudo_0"
         }, 
         "asm2.comp1.z >= 0": {
             "data_type": "Constraint", 
-            "pcomp_name": "asm2._pseudo_13"
+            "pcomp_name": "asm2._pseudo_1"
         }, 
         "asm2.z": {
             "data_type": "Objective", 
-            "pcomp_name": "_pseudo_14"
+            "pcomp_name": "_pseudo_0"
         }, 
         "comp1.z >= 0": {
             "data_type": "Constraint", 
-            "pcomp_name": "_pseudo_15"
+            "pcomp_name": "_pseudo_1"
         }
     }, 
-    "uuid": "2e1d2876-e672-11e3-80ff-005056000100", 
+    "uuid": "331ef258-e76e-11e3-b964-005056000100", 
     "variable_metadata": {
         "asm2.asm3.comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "asm2.asm3.comp1.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "asm2.asm3.comp1.force_fd": {
             "assumed_default": false, 
@@ -178,12 +163,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "asm2.asm3.driver.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "asm2.asm3.driver.force_fd": {
             "assumed_default": false, 
@@ -298,12 +277,6 @@
             "iotype": "in", 
             "vartypename": "List"
         }, 
-        "asm2.asm3.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
-        }, 
         "asm2.asm3.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -346,12 +319,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "asm2.comp1.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "asm2.comp1.force_fd": {
             "assumed_default": false, 
@@ -399,12 +366,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "asm2.driver.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "asm2.driver.force_fd": {
             "assumed_default": false, 
@@ -519,12 +480,6 @@
             "iotype": "in", 
             "vartypename": "List"
         }, 
-        "asm2.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
-        }, 
         "asm2.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -566,12 +521,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "comp1.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "comp1.force_fd": {
             "assumed_default": false, 
@@ -626,12 +575,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "driver.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "driver.force_fd": {
             "assumed_default": false, 
@@ -746,12 +689,6 @@
             "iotype": "in", 
             "vartypename": "List"
         }, 
-        "force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -816,8 +753,8 @@
 }
 , "iteration_case_1": {
     "_driver_id": "asm2.asm3.driver", 
-    "_id": "2e20b799-e672-11e3-802c-005056000100", 
-    "_parent_id": "2e209d0a-e672-11e3-802b-005056000100", 
+    "_id": "33223542-e76e-11e3-802c-005056000100", 
+    "_parent_id": "3321f0de-e76e-11e3-802b-005056000100", 
     "data": {
         "Constraint ( comp1.z>=0 )": -0.0, 
         "Objective": 0.0, 
@@ -828,14 +765,14 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.580784
+    "timestamp": 1401394624.156211
 }
 , "iteration_case_2": {
     "_driver_id": "asm2.asm3.driver", 
-    "_id": "2e20f961-e672-11e3-802d-005056000100", 
-    "_parent_id": "2e209d0a-e672-11e3-802b-005056000100", 
+    "_id": "332295f0-e76e-11e3-802d-005056000100", 
+    "_parent_id": "3321f0de-e76e-11e3-802b-005056000100", 
     "data": {
-        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Constraint ( comp1.z>=0 )": -0, 
         "Objective": 0.0, 
         "comp1.y": 0.0, 
         "comp1.z": 0.0, 
@@ -844,12 +781,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.5822
+    "timestamp": 1401394624.15729
 }
 , "iteration_case_3": {
     "_driver_id": "asm2.driver", 
-    "_id": "2e209d0a-e672-11e3-802b-005056000100", 
-    "_parent_id": "2e207757-e672-11e3-802a-005056000100", 
+    "_id": "3321f0de-e76e-11e3-802b-005056000100", 
+    "_parent_id": "3321b1e6-e76e-11e3-802a-005056000100", 
     "data": {
         "Constraint ( comp1.z>=0 )": -0.0, 
         "Objective": 0.0, 
@@ -861,14 +798,46 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.591201
+    "timestamp": 1401394624.164806
 }
 , "iteration_case_4": {
-    "_driver_id": "asm2.driver", 
-    "_id": "2e227163-e672-11e3-802e-005056000100", 
-    "_parent_id": "2e207757-e672-11e3-802a-005056000100", 
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "3323e394-e76e-11e3-802f-005056000100", 
+    "_parent_id": "3323d5a3-e76e-11e3-802e-005056000100", 
     "data": {
-        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.2-asm3.1", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.165812
+}
+, "iteration_case_5": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "3323f97d-e76e-11e3-8030-005056000100", 
+    "_parent_id": "3323d5a3-e76e-11e3-802e-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "1-asm2.2-asm3.2", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.166349
+}
+, "iteration_case_6": {
+    "_driver_id": "asm2.driver", 
+    "_id": "3323d5a3-e76e-11e3-802e-005056000100", 
+    "_parent_id": "3321b1e6-e76e-11e3-802a-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
         "Objective": 0.0, 
         "asm3.z": 0.0, 
         "comp1.y": 0.0, 
@@ -878,12 +847,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.591817
+    "timestamp": 1401394624.167926
 }
-, "iteration_case_5": {
+, "iteration_case_7": {
     "_driver_id": "driver", 
-    "_id": "2e207757-e672-11e3-802a-005056000100", 
-    "_parent_id": "2e1d2876-e672-11e3-80ff-005056000100", 
+    "_id": "3321b1e6-e76e-11e3-802a-005056000100", 
+    "_parent_id": "331ef258-e76e-11e3-b964-005056000100", 
     "data": {
         "Constraint ( comp1.z>=0 )": -0.0, 
         "Objective": 0.0, 
@@ -894,14 +863,112 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.599687
+    "timestamp": 1401394624.175787
 }
-, "iteration_case_6": {
-    "_driver_id": "driver", 
-    "_id": "2e23c078-e672-11e3-802f-005056000100", 
-    "_parent_id": "2e1d2876-e672-11e3-80ff-005056000100", 
+, "iteration_case_8": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "33259ae8-e76e-11e3-8033-005056000100", 
+    "_parent_id": "33258f97-e76e-11e3-8032-005056000100", 
     "data": {
-        "Constraint ( comp1.z>=0 )": -0.0, 
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.1-asm3.1", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.177058
+}
+, "iteration_case_9": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "3325b0ab-e76e-11e3-8034-005056000100", 
+    "_parent_id": "33258f97-e76e-11e3-8032-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.1-asm3.2", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.177625
+}
+, "iteration_case_10": {
+    "_driver_id": "asm2.driver", 
+    "_id": "33258f97-e76e-11e3-8032-005056000100", 
+    "_parent_id": "33258468-e76e-11e3-8031-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "asm3.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.1", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.181086
+}
+, "iteration_case_11": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "332659a8-e76e-11e3-8036-005056000100", 
+    "_parent_id": "33264ddc-e76e-11e3-8035-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.2-asm3.1", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.181938
+}
+, "iteration_case_12": {
+    "_driver_id": "asm2.asm3.driver", 
+    "_id": "33266dcf-e76e-11e3-8037-005056000100", 
+    "_parent_id": "33264ddc-e76e-11e3-8035-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.2-asm3.2", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.182445
+}
+, "iteration_case_13": {
+    "_driver_id": "asm2.driver", 
+    "_id": "33264ddc-e76e-11e3-8035-005056000100", 
+    "_parent_id": "33258468-e76e-11e3-8031-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
+        "Objective": 0.0, 
+        "asm3.z": 0.0, 
+        "comp1.y": 0.0, 
+        "comp1.z": 0.0, 
+        "driver.workflow.itername": "2-asm2.2", 
+        "x": 0.0
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1401394624.183813
+}
+, "iteration_case_14": {
+    "_driver_id": "driver", 
+    "_id": "33258468-e76e-11e3-8031-005056000100", 
+    "_parent_id": "331ef258-e76e-11e3-b964-005056000100", 
+    "data": {
+        "Constraint ( comp1.z>=0 )": -0, 
         "Objective": 0.0, 
         "asm2.z": 0.0, 
         "comp1.y": 0.0, 
@@ -910,6 +977,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401286382.600401
+    "timestamp": 1401394624.187606
 }
 }

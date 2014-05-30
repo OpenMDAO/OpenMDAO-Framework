@@ -3,17 +3,14 @@
     "OpenMDAO_Version": "0.9.6", 
     "constants": {
         "comp1.directory": "", 
-        "comp1.force_execute": false, 
         "comp1.force_fd": false, 
         "comp1.missing_deriv_policy": "error", 
         "comp1.y": 0.0, 
         "comp2.directory": "", 
-        "comp2.force_execute": false, 
         "comp2.force_fd": false, 
         "comp2.missing_deriv_policy": "error", 
         "directory": "", 
         "driver.directory": "", 
-        "driver.force_execute": true, 
         "driver.force_fd": false, 
         "driver.gradient_options.derivative_direction": "auto", 
         "driver.gradient_options.directional_fd": false, 
@@ -25,7 +22,6 @@
         "driver.gradient_options.gmres_maxiter": 100, 
         "driver.gradient_options.gmres_tolerance": 1e-09, 
         "excludes": [], 
-        "force_execute": false, 
         "force_fd": false, 
         "includes": [
             "*"
@@ -48,12 +44,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "comp1.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "comp1.force_fd": {
             "assumed_default": false, 
@@ -97,12 +87,6 @@
             "iotype": "in", 
             "vartypename": "Str"
         }, 
-        "comp2.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
-        }, 
         "comp2.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -135,12 +119,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
-        }, 
-        "driver.force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "driver.force_fd": {
             "assumed_default": false, 
@@ -221,12 +199,6 @@
             "copy": "deep", 
             "iotype": "in", 
             "vartypename": "List"
-        }, 
-        "force_execute": {
-            "assumed_default": false, 
-            "deriv_ignore": true, 
-            "iotype": "in", 
-            "vartypename": "Bool"
         }, 
         "force_fd": {
             "assumed_default": false, 

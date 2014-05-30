@@ -99,13 +99,7 @@ class Driver(Component):
         super(Driver, self).__init__()
 
         self.workflow = Dataflow(self)
-        self.force_execute = True
-
         self._required_compnames = None
-
-        # This flag is triggered by adding or removing any parameters,
-        # constraints, or objectives.
-        self._invalidated = False
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
@@ -127,38 +121,12 @@ class Driver(Component):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent
 
-    def _invalidate(self):
-        """ Method for delegates to declare that the driver is in an invalid
-        state so that isvalid() returns false. Presently, this is called when
-        a constraint/objective/parameter is set, removed, or cleared.
-        """
-        self._invalidated = True
-        self._set_exec_state('INVALID')
-
-    def is_valid(self):
-        """Return False if any Component in our workflow(s) is invalid,
-        if any of our variables is invalid, or if the parameters,
-        constraints, or objectives have changed.
-        """
-        if super(Driver, self).is_valid() is False:
-            return False
-
-        # force exection if any param, obj, or constraint has changed.
-        if self._invalidated:
-            return False
-
-        # force execution if any component in the workflow is invalid
-        for comp in self.workflow.get_components():
-            if not comp.is_valid():
-                return False
-        return True
-
-    def check_config(self):
+    def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
 
         # workflow will raise an exception if it can't resolve a Component
-        super(Driver, self).check_config()
-        self.workflow.check_config()
+        super(Driver, self).check_config(strict=strict)
+        self.workflow.check_config(strict=strict)
 
     def iteration_set(self, solver_only=False):
         """Return a set of all Components in our workflow and
@@ -240,6 +208,8 @@ class Driver(Component):
             setcomps = set([v for u, v in conns if v != self.name])
 
             full = set(setcomps)
+            full.update(getcomps)
+            full.update(self.list_pseudocomps())
 
             compgraph = self.parent._depgraph.component_graph()
 
@@ -337,8 +307,7 @@ class Driver(Component):
 
         # Reset the workflow.
         self.workflow.reset()
-        super(Driver, self).run(force, ffd_order, case_uuid)
-        self._invalidated = False
+        super(Driver, self).run(ffd_order, case_uuid)
 
     @rbac(('owner', 'user'))
     def configure_recording(self, includes, excludes):
@@ -421,7 +390,6 @@ class Driver(Component):
         """
         super(Driver, self).config_changed(update_parent)
         self._required_compnames = None
-        self._invalidate()
         if self.workflow is not None:
             self.workflow.config_changed()
 
@@ -434,7 +402,6 @@ class Driver(Component):
         ret['pathname'] = self.get_pathname()
         ret['type'] = type(self).__module__ + '.' + type(self).__name__
         ret['workflow'] = []
-        ret['valid'] = self.is_valid()
         comps = [comp for comp in self.workflow]
         for comp in comps:
 
@@ -451,7 +418,6 @@ class Driver(Component):
                     'type':       type(comp).__module__ + '.' + type(comp).__name__,
                     'interfaces': inames,
                     'driver':     comp.driver.get_workflow(),
-                    'valid':      comp.is_valid()
                 })
             elif is_instance(comp, Driver):
                 ret['workflow'].append(comp.get_workflow())
@@ -462,7 +428,6 @@ class Driver(Component):
                     'pathname':   pathname,
                     'type':       type(comp).__module__ + '.' + type(comp).__name__,
                     'interfaces': inames,
-                    'valid':      comp.is_valid()
                 })
         return ret
 

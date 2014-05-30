@@ -88,13 +88,11 @@ class Data_Dump_TestCase(unittest.TestCase):
         expected = """\
 Constants:
    comp1.directory:
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.x1: 0.0
    directory:
    driver.directory:
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -106,40 +104,32 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
-   nested.comp1.force_execute: False
    nested.comp1.force_fd: False
    nested.comp1.missing_deriv_policy: error
    nested.comp1.x1: 0.0
    nested.comp2.directory:
-   nested.comp2.force_execute: False
    nested.comp2.force_fd: False
    nested.comp2.missing_deriv_policy: error
    nested.comp3.directory:
-   nested.comp3.force_execute: False
    nested.comp3.force_fd: False
    nested.comp3.missing_deriv_policy: error
    nested.directory:
    nested.doublenest.comp1.directory:
-   nested.doublenest.comp1.force_execute: False
    nested.doublenest.comp1.force_fd: False
    nested.doublenest.comp1.missing_deriv_policy: error
    nested.doublenest.comp1.x1: 0.0
    nested.doublenest.comp2.directory:
-   nested.doublenest.comp2.force_execute: False
    nested.doublenest.comp2.force_fd: False
    nested.doublenest.comp2.missing_deriv_policy: error
    nested.doublenest.comp3.directory:
-   nested.doublenest.comp3.force_execute: False
    nested.doublenest.comp3.force_fd: False
    nested.doublenest.comp3.missing_deriv_policy: error
    nested.doublenest.directory:
    nested.doublenest.driver.directory:
-   nested.doublenest.driver.force_execute: True
    nested.doublenest.driver.force_fd: False
    nested.doublenest.driver.gradient_options.derivative_direction: auto
    nested.doublenest.driver.gradient_options.directional_fd: False
@@ -151,12 +141,10 @@ Constants:
    nested.doublenest.driver.gradient_options.gmres_maxiter: 100
    nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
    nested.doublenest.excludes: []
-   nested.doublenest.force_execute: False
    nested.doublenest.force_fd: False
    nested.doublenest.includes: ['*']
    nested.doublenest.missing_deriv_policy: assume_zero
    nested.driver.directory:
-   nested.driver.force_execute: True
    nested.driver.force_fd: False
    nested.driver.gradient_options.derivative_direction: auto
    nested.driver.gradient_options.directional_fd: False
@@ -168,7 +156,6 @@ Constants:
    nested.driver.gradient_options.gmres_maxiter: 100
    nested.driver.gradient_options.gmres_tolerance: 1e-09
    nested.excludes: []
-   nested.force_execute: False
    nested.force_fd: False
    nested.includes: ['*']
    nested.missing_deriv_policy: assume_zero
@@ -218,13 +205,11 @@ Case:
         expected = """\
 Constants:
    comp1.directory:
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.x1: 0.0
    directory:
    driver.directory:
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -236,40 +221,32 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
-   nested.comp1.force_execute: False
    nested.comp1.force_fd: False
    nested.comp1.missing_deriv_policy: error
    nested.comp1.x1: 0.0
    nested.comp2.directory:
-   nested.comp2.force_execute: False
    nested.comp2.force_fd: False
    nested.comp2.missing_deriv_policy: error
    nested.comp3.directory:
-   nested.comp3.force_execute: False
    nested.comp3.force_fd: False
    nested.comp3.missing_deriv_policy: error
    nested.directory:
    nested.doublenest.comp1.directory:
-   nested.doublenest.comp1.force_execute: False
    nested.doublenest.comp1.force_fd: False
    nested.doublenest.comp1.missing_deriv_policy: error
    nested.doublenest.comp1.x1: 0.0
    nested.doublenest.comp2.directory:
-   nested.doublenest.comp2.force_execute: False
    nested.doublenest.comp2.force_fd: False
    nested.doublenest.comp2.missing_deriv_policy: error
    nested.doublenest.comp3.directory:
-   nested.doublenest.comp3.force_execute: False
    nested.doublenest.comp3.force_fd: False
    nested.doublenest.comp3.missing_deriv_policy: error
    nested.doublenest.directory:
    nested.doublenest.driver.directory:
-   nested.doublenest.driver.force_execute: True
    nested.doublenest.driver.force_fd: False
    nested.doublenest.driver.gradient_options.derivative_direction: auto
    nested.doublenest.driver.gradient_options.directional_fd: False
@@ -281,12 +258,10 @@ Constants:
    nested.doublenest.driver.gradient_options.gmres_maxiter: 100
    nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
    nested.doublenest.excludes: []
-   nested.doublenest.force_execute: False
    nested.doublenest.force_fd: False
    nested.doublenest.includes: ['*']
    nested.doublenest.missing_deriv_policy: assume_zero
    nested.driver.directory:
-   nested.driver.force_execute: True
    nested.driver.force_fd: False
    nested.driver.gradient_options.derivative_direction: auto
    nested.driver.gradient_options.directional_fd: False
@@ -298,7 +273,6 @@ Constants:
    nested.driver.gradient_options.gmres_maxiter: 100
    nested.driver.gradient_options.gmres_tolerance: 1e-09
    nested.excludes: []
-   nested.force_execute: False
    nested.force_fd: False
    nested.includes: ['*']
    nested.missing_deriv_policy: assume_zero
@@ -350,17 +324,14 @@ Case:
         expected = """\
 Constants:
    comp1.directory:
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.x1: 0.0
    comp2.directory:
-   comp2.force_execute: False
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
    directory:
    driver.directory:
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -372,7 +343,6 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero
@@ -408,13 +378,11 @@ Case:
         expected = """\
 Constants:
    comp1.directory:
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.list_str: []
    comp1.missing_deriv_policy: error
    directory:
    driver.directory:
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -426,7 +394,6 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero
@@ -480,20 +447,25 @@ Case:
 
         top.run()
 
+        expected = [
+         'driverA.workflow.itername: 1-driverA.1',
+         'driverA.workflow.itername: 1-driverA.2',
+         'driverA.workflow.itername: 1-driverA.3',
+         'driverA.workflow.itername: 1-driverA.4',
+         'driverA.workflow.itername: 1-driverA.5',
+         'subassy.driver.workflow.itername: 1-driverB.1-subassy.1',
+         'driverB.workflow.itername: 1-driverB.1',
+         'subassy.driver.workflow.itername: 1-driverB.2-subassy.1',
+         'driverB.workflow.itername: 1-driverB.2',
+         'subassy.driver.workflow.itername: 1-driverB.3-subassy.1',
+         'driverB.workflow.itername: 1-driverB.3',
+         'subassy.driver.workflow.itername: 1-driverB.4-subassy.1',
+         'driverB.workflow.itername: 1-driverB.4',
+         'driver.workflow.itername: 1'
+         ]
         lines = [l.strip() for l in sout.getvalue().split('\n') if 'itername' in l]
-        self.assertEqual(lines, [
-            'driverA.workflow.itername: 1-driverA.1',
-            'driverA.workflow.itername: 1-driverA.2',
-            'driverA.workflow.itername: 1-driverA.3',
-            'driverA.workflow.itername: 1-driverA.4',
-            'driverA.workflow.itername: 1-driverA.5',
-            'subassy.driver.workflow.itername: 1-driverB.1-subassy.1',
-            'driverB.workflow.itername: 1-driverB.1',
-            'driverB.workflow.itername: 1-driverB.2',
-            'driverB.workflow.itername: 1-driverB.3',
-            'driverB.workflow.itername: 1-driverB.4',
-            'driver.workflow.itername: 1'
-        ])
+        for i, line in enumerate(lines):
+            self.assertEqual(line, expected[i])
 
 
 if __name__ == '__main__':

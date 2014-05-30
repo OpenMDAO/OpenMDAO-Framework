@@ -1,22 +1,10 @@
-from time import time
 
-try:
-    from numpy import exp, abs, pi, array,isnan,sum,sqrt,argsort, min
-    from scipy.special import erf
-    from scipy.integrate import dblquad
-except ImportError as err:
-    logging.warn("In %s: %r" % (__file__, err))
+from numpy import sqrt
 
-from openmdao.main.datatypes.api import Str, ListStr, Enum, \
-     Float, Array, Event, List
-
+from openmdao.main.datatypes.api import ListStr, Float, Array, Event, List
 from openmdao.main.component import Component
-
-from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.uncertain_distributions import NormalDistribution
-from openmdao.util.decorators import stub_if_missing_deps
 
-@stub_if_missing_deps('numpy', 'scipy')
 class Pareto_Min_Dist(Component):
     """Computes the probability that any given point from the primary concept 
     will interesect the pareto frontiers of some other concepts.
@@ -85,4 +73,3 @@ class Pareto_Min_Dist(Component):
             self.y_star_other = self.get_pareto()
         
         self.dist = self._calc_min_dist(mu,self.y_star_other)
-        

@@ -1,30 +1,24 @@
 
 import ast
-from threading import RLock
 
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent
+from openmdao.main.interfaces import implements, IComponent, IAssembly
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.numpy_fallback import zeros
+from openmdao.main.mp_support import has_interface
+
+from numpy import zeros
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
-
-_namelock = RLock()
-_count = 0
-
 
 def _remove_spaces(s):
     return s.translate(None, ' \n\t\r')
 
+def _get_new_name(parent):
+    while not has_interface(parent, IAssembly):
+        parent = parent.parent
 
-def _get_new_name():
-    global _count
-    with _namelock:
-        name = "_pseudo_%d" % _count
-        _count += 1
-    return name
-
+    return parent.new_pseudo_name()
 
 def _get_varname(name):
     return name.split('[', 1)[0]
@@ -88,17 +82,15 @@ class PseudoComponent(object):
                  pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
-        self.name = _get_new_name()
+        self._parent = parent
+        self.name = _get_new_name(parent)
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
-        self._valid = False
-        self._parent = parent
         self._inputs = []
 
         # Flags and caching used by the derivatives calculation
         self.force_fd = False
         self._provideJ_bounds = None
-        self._complex_step = False
 
         self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
                                          # this is, e.g., 'units', 'constraint', 'objective',
@@ -185,21 +177,9 @@ class PseudoComponent(object):
             self._outdests = []
             self._orig_expr = self._orig_src
 
-        #if destexpr and destexpr.text:
-            #out = destexpr.text
-        #else:
-            #out = 'out0'
-        #if translate:
-            #src = transform_expression(self._srcexpr.text,
-                                       #_invert_dict(self._inmap))
-        #else:
-            #src = self._srcexpr.text
-
-        #self._expr_conn = (src, out)  # the actual expression connection
-
         self.missing_deriv_policy = 'error'
 
-    def check_configuration(self):
+    def check_config(self, strict=False):
         pass
 
     def cpath_updated(self):
@@ -241,6 +221,9 @@ class PseudoComponent(object):
     def list_outputs(self):
         return ['out0']
 
+    def config_changed(self, update_parent=True):
+        pass
+
     def list_comp_connections(self):
         """Return a list of connections between our pseudocomp and
         parent components of our sources/destinations.
@@ -269,48 +252,23 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.disconnect(src, dest)
 
-    def invalidate_deps(self, varnames=None, force=False):
-        self._valid = False
-        return None
-
-    def get_invalidation_type(self):
-        return 'full'
-
-    def connect(self, src, dest):
-        self._valid = False
-
     def run(self, ffd_order=0):
-        self.update_inputs()
-
-        src = self._srcexpr.evaluate()
-        setattr(self, 'out0', src)
-        self._valid = True
-        self._parent.child_run_finished(self.name)
-
-    def update_inputs(self, inputs=None):
-        self._parent.update_inputs(self.name)
-
-    def update_outputs(self, names):
-        self.run()
+        setattr(self, 'out0', self._srcexpr.evaluate())
 
     def get(self, name, index=None):
         if index is not None:
             raise RuntimeError("index not supported in PseudoComponent.get")
         return getattr(self, name)
 
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         if index is not None:
             raise ValueError("index not supported in PseudoComponent.set")
-        self.invalidate_deps()
         setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
             return self._meta[traitpath]
         return self._meta[traitpath].get(metaname)
-
-    def is_valid(self):
-        return self._valid
 
     def set_itername(self, itername):
         self._itername = itername
@@ -353,6 +311,9 @@ class PseudoComponent(object):
 
     def list_deriv_vars(self):
         return tuple(self._inputs), ('out0',)
+
+    def get_req_default(self, self_reqired=None):
+        return []
 
     def _input_updated(self, name, fullpath=None):
         pass

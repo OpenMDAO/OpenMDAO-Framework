@@ -185,8 +185,6 @@ class HasObjectives(object):
         objs = []
         for obj in self._objectives.values():
             pcomp = getattr(scope, obj.pcomp_name)
-            if not pcomp.is_valid():
-                pcomp.update_outputs(['out0'])
             objs.append(pcomp.out0)
         return objs
 
@@ -195,8 +193,6 @@ class HasObjectives(object):
         scope = self._get_scope()
         obj = self._objectives[name]
         pcomp = getattr(scope, obj.pcomp_name)
-        if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
         return pcomp.out0
 
     def list_pseudocomps(self):

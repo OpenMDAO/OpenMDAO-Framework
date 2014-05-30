@@ -75,11 +75,13 @@ class ImplicitComponent(Component):
         self._resid_names = None
         self._shape_cache = {}
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """
         Override this function to perform configuration checks specific to your class.
         Bad configurations should raise an exception.
         """
+        super(ImplicitComponent, self).check_config(strict=strict)
+
         pass  # TODO: add check that total width of states == total width of residuals
 
     def execute(self):

@@ -81,6 +81,9 @@ def _create_trait(parent, name, meta):
         parent.add(parts[-1], _get_trait_from_meta(name, meta))
     else:  # just a simple variable
         parent.add(name, _get_trait_from_meta(name, meta))
+        iotype = meta.get('iotype')
+        if iotype == 'in':
+            parent._set_input_callback(name)
 
 
 class GeomComponent(Component):
@@ -134,9 +137,6 @@ class GeomComponent(Component):
         """
         if self.parametric_geometry is not None:
             try:
-                # params = self.parametric_geometry.list_parameters()
-                # for p in params: 
-                #     self._input_updated(p[0])
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
@@ -281,11 +281,8 @@ class GeomComponent(Component):
                 attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
-        
-        super(GeomComponent, self)._input_updated(name.split('.',1)[0])
 
-
-    def _set_failed(self, path, value, index=None, src=None, force=False):
+    def _set_failed(self, path, value, index=None):
         # check to see if dest attribute is inside of our parametric_geometry
         # object
         obj = self
@@ -299,7 +296,7 @@ class GeomComponent(Component):
             else:
                 raise RuntimeError('index not supported')
         except AttributeError:
-            super(GeomComponent, self)._set_failed(path, value, index, src, force)
+            super(GeomComponent, self)._set_failed(path, value, index)
 
     def _update_deriv_functs(self, geom):
         functs = ['apply_deriv','apply_derivT','provideJ']

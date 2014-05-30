@@ -50,18 +50,15 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         expected_constants = """\
 Constants:
    comp1.directory: 
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp2.directory: 
-   comp2.force_execute: False
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
    directory: 
    driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
    driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
    driver.directory: 
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -73,7 +70,6 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero"""
@@ -129,17 +125,14 @@ Case:
         expected = """\
 Constants:
    comp1.directory: 
-   comp1.force_execute: False
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.y: 0.0
    comp2.directory: 
-   comp2.force_execute: False
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
    directory: 
    driver.directory: 
-   driver.force_execute: True
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -151,7 +144,6 @@ Constants:
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
    excludes: []
-   force_execute: False
    force_fd: False
    includes: ['*']
    missing_deriv_policy: assume_zero

@@ -7,15 +7,8 @@ from sys import float_info
 from openmdao.main.array_helpers import flattened_size, flattened_value
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
-from openmdao.util.log import logger
 
-try:
-    from numpy import ndarray, zeros, ones, unravel_index, complex128
-
-except ImportError as err:
-    logger.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray, zeros, \
-                                    ones, unravel_index, complex128
+from numpy import ndarray, zeros, ones, unravel_index, complex128
 
 
 class FiniteDifference(object):
@@ -262,7 +255,6 @@ class FiniteDifference(object):
                 elif form == 'complex_step':
 
                     complex_step = fd_step*1j
-                    self.pa.set_complex_step()
                     yc = zeros(len(self.y), dtype=complex128)
 
                     # Step
@@ -416,17 +408,6 @@ class FiniteDifference(object):
                 else:
                     self.scope._input_updated(comp_name.split('[', 1)[0])
 
-            # Prevent OpenMDAO from stomping on our poked input.
-            if var_name:
-                self.scope.set_valid([self.scope._depgraph.base_var(src)],
-                                    True)
-
-                # Make sure we execute!
-                comp._call_execute = True
-
-            else:
-                self.scope.set_valid([comp_name.split('[', 1)[0]], True)
-
     def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for
         determining the relative stepsize to take."""
@@ -566,7 +547,6 @@ class DirectionalFD(object):
         elif form == 'complex_step':
 
             complex_step = fd_step*1j
-            self.pa.set_complex_step()
             yc = zeros(len(self.y), dtype=complex128)
 
             # Step
@@ -636,7 +616,7 @@ class DirectionalFD(object):
 
             # Support for Parameter Groups:
             if isinstance(src_tuple, basestring):
-                src_tuple = [src_tuple]
+                src_tuple = (src_tuple,)
 
             i1, i2 = self.in_bounds[src_tuple[0]]
 
@@ -685,17 +665,6 @@ class DirectionalFD(object):
                     else:
                         self.scope.set(src, old_val+direction, force=True)
 
-                # Prevent OpenMDAO from stomping on our poked input.
-                if var_name:
-                    self.scope.set_valid([self.scope._depgraph.base_var(src)],
-                                        True)
-
-                    # Make sure we execute!
-                    comp._call_execute = True
-
-                else:
-                    self.scope.set_valid([comp_name.split('[', 1)[0]], True)
-
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
 
@@ -715,4 +684,3 @@ class DirectionalFD(object):
                 x[i1:i2] = src_val.copy()
             else:
                 x[i1:i2] = src_val[0]
-

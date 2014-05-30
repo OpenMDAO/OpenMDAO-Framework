@@ -46,26 +46,9 @@ class IContainer(Interface):
         Returns the added Container object.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
     def contains(path):
         """Return True if the child specified by the given dotted path
         name is contained in this Container.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
         """
 
     def get_dyn_trait(pathname, iotype=None, trait=None):
@@ -98,17 +81,6 @@ class IContainer(Interface):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-
-    # def get_wrapped_attr(name, index=None):
-    #     """If the named Variable can return an AttrWrapper, then this
-    #     function will return that, with the value set to the current value of
-    #     the variable. Otherwise, it functions like *getattr*, just
-    #     returning the value of the variable. Raises an exception if the
-    #     variable cannot be found. The value will be copied if the variable has
-    #     a 'copy' metadata attribute that is not None. Possible values for
-    #     'copy' are 'shallow' and 'deep'.  index, if not None, should be of
-    #     the same form as described in the get() function.
-    #     """
 
     def items(recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
@@ -193,20 +165,16 @@ class IComponent(IContainer):
     its output variables based on the values of its input variables.
     """
 
-    def check_configuration():
+    def check_config(strict=False):
         """Verify that this component is properly configured to execute.
-        Classes inheriting from Component should not override this function,
-        but instead override check_config().
-        Bad configurations should raise an exception.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.  
         """
 
     def run(force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-
-    def is_valid():
-        """Return False if any of our variables is invalid."""
 
     def list_inputs(valid=None):
         """Return a list of names of input values. If valid is not None,
@@ -218,31 +186,9 @@ class IComponent(IContainer):
         the the list will contain names of outputs with matching validity.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
-        """
-
     def get_expr_depends():
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
-        """
-
-    def get_expr_sources():
-        """Return a list of tuples containing the names of all upstream components that are
-        referenced in any of our objectives, along with an initial exec_count of 0.
         """
 
     def get_abs_directory():
@@ -265,26 +211,6 @@ class IComponent(IContainer):
 
     def stop():
         """Stop this component."""
-
-    def get_valid(names):
-        """Get the value of the validity flag for each of the named io traits."""
-
-    def set_valid(names, valid):
-        """Mark the io traits with the given names as valid or invalid."""
-
-    def invalidate_deps(varnames=None, force=False):
-        """Invalidate all of our outputs if they're not invalid already.
-        For a typical Component, this will always be all or nothing, meaning
-        there will never be partial validation of outputs.  Components
-        supporting partial output validation must override this function.
-
-        Returns None, indicating that all outputs are invalidated.
-        """
-
-    def update_outputs(outnames):
-        """Do what is necessary to make the specified output Variables valid.
-        For a simple Component, this will result in a *run()*.
-        """
 
 
 class IImplicitComponent(IComponent):
@@ -339,6 +265,21 @@ class IAssembly(IComponent):
     """An interface for objects that contain a driver and its workflow components."""
 
     driver = Attribute("object that manage's the iteration of a workflow")
+
+    def connect(srcpath, destpath):
+        """Connects one source variable to one destination variable.
+
+        srcpath: str
+            Name of source variable.
+
+        destpath: str
+            Name of destination variable.
+        """
+
+    def disconnect(srcpath, destpath):
+        """Removes the connection between one source variable and one
+        destination variable.
+        """
 
     def get_dataflow(self):
         """ Get a dictionary of components and the connections between them

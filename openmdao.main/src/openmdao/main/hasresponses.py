@@ -180,8 +180,6 @@ class HasResponses(object):
         responses = []
         for response in self._responses.values():
             pcomp = getattr(scope, response.pcomp_name)
-            if not pcomp.is_valid():
-                pcomp.update_outputs(['out0'])
             responses.append(pcomp.out0)
         return responses
 
@@ -190,8 +188,6 @@ class HasResponses(object):
         scope = self._get_scope()
         response = self._responses[name]
         pcomp = getattr(scope, response.pcomp_name)
-        if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
         return pcomp.out0
 
     def list_pseudocomps(self):

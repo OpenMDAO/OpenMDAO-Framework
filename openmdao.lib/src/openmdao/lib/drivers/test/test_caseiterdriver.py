@@ -422,7 +422,6 @@ class TestCase(unittest.TestCase):
 
         top = set_as_top(Assembly())
         sub = top.add('sub', Assembly())
-        sub.force_execute = True
         top.driver.workflow.add('sub')
 
         cid = sub.add('driver', CaseIteratorDriver())
@@ -900,6 +899,52 @@ class Optimization(unittest.TestCase):
         top.run()
         print 'objective', top.cid.f_xy
         assert_rel_error(self, top.cid.f_xy, -27.0833328304, 0.001)
+
+
+# Test bug reported by Pierre-Elouan Rethore.
+
+class PTComp(Component):
+
+    i = Float(iotype='in')
+    o = Float(iotype='out')
+
+    def execute(self):
+        self.o = self.i**2.
+
+
+class PTReplacement(PTComp):
+
+    i = Float(iotype='in')
+    o = Float(iotype='out')
+
+    def execute(self):
+        self.o = self.i**4.
+
+
+class PTAssembly(Assembly):
+
+    def configure(self):
+        self.add('c', PTComp())
+        self.add('driver', CaseIteratorDriver())
+        self.driver.workflow.add(['c'])
+        self.driver.add_parameter('c.i')
+        self.driver.add_response('c.o')
+        self.driver.case_inputs.c.i = range(10)
+
+class ParameterTarget(unittest.TestCase):
+
+    def test_parameter_target(self):
+        # Test that replacing a parameter target is handled.
+        a1 = PTAssembly()
+        a1.run()
+        self.assertEqual(a1.driver.case_outputs.c.o,
+                         [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
+        a2 = PTAssembly()
+        a2.configure()
+        a2.replace('c', PTReplacement())
+        a2.run()
+        self.assertEqual(a2.driver.case_outputs.c.o,
+                         [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
 
 
 if __name__ == '__main__':

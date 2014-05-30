@@ -1,4 +1,4 @@
-import ordereddict
+from ordereddict import OrderedDict
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
@@ -8,12 +8,7 @@ from openmdao.main.vartree import VariableTree
 
 from openmdao.util.typegroups import real_types, int_types
 
-try:
-    from numpy import array, ndarray, ndindex, ones
-except ImportError as err:
-    import logging
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, ndarray, ones
+from numpy import array, ndarray, ndindex, ones
 
 __missing = object()
 
@@ -765,7 +760,7 @@ class HasParameters(object):
                        'get_referenced_varpaths', 'get_metadata']
 
     def __init__(self, parent):
-        self._parameters = ordereddict.OrderedDict()
+        self._parameters = OrderedDict()
         self._parent = parent
         self._allowed_types = ['continuous']
         if obj_has_interface(parent, ISolver):
@@ -836,14 +831,6 @@ class HasParameters(object):
         default to the values in the metadata of the variable being
         referenced.
         """
-
-        if self._parent.parent:
-            parent_cnns = self._parent.parent.list_connections()
-            for lhs, rhs in parent_cnns:
-                if rhs == target:
-                    self._parent.raise_exception("'%s' is already connected"
-                                                 " to '%s'" % (target, lhs),
-                                                 RuntimeError)
 
         if isinstance(target, (ParameterBase, ParameterGroup)):
             self._parameters[target.name] = target
@@ -947,7 +934,7 @@ class HasParameters(object):
         name: string
             Name of component being removed.
         """
-        refs = ordereddict.OrderedDict()
+        refs = OrderedDict()
         for pname, param in self._parameters.items():
             if name in param.get_referenced_compnames():
                 refs[pname] = param
@@ -1004,7 +991,7 @@ class HasParameters(object):
         """Removes all parameters."""
         for name in self._parameters.keys():
             self.remove_parameter(name)
-        self._parameters = ordereddict.OrderedDict()
+        self._parameters = OrderedDict()
 
     def get_parameters(self):
         """Returns an ordered dict of parameter objects."""
@@ -1022,7 +1009,6 @@ class HasParameters(object):
         for param in self._parameters.itervalues():
             if param.start is not None:
                 param.set(param.start, scope)
-        self._parent._invalidate()
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.
@@ -1215,6 +1201,8 @@ class HasVarTreeParameters(HasParameters):
             path = name
         elif isinstance(target, basestring):
             path = target
+        elif isinstance(target, Parameter):
+            path = target.name or target.target
         else:
             path = target[0]
 

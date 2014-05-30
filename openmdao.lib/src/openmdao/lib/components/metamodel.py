@@ -104,8 +104,10 @@ class MetaModel(Component):
 
         super(MetaModel, self)._input_updated(name.split('.',1)[0])
 
-    def check_config(self):
+    def check_config(self, strict=False):
         '''Called as part of pre_execute. Does some simple error checking.'''
+
+        super(MetaModel, self).check_config(strict=strict)
 
         # Either there are no surrogates set and no default surrogate (just
         # do passthrough ) or all outputs must have surrogates assigned

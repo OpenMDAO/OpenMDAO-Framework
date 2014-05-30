@@ -8,15 +8,9 @@ SLSQP is a gradient optimizer that can handle both equality and
 inequality constraints.
 """
 
-import logging
 from math import isnan
 
-try:
-    from numpy import zeros, array
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    # to keep class decl from barfing before being stubbed out
-    zeros = lambda *args, **kwargs: None
+from numpy import zeros, array
 
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
@@ -30,7 +24,6 @@ from openmdao.main.interfaces import IHasParameters, IHasConstraints, \
 from openmdao.util.decorators import add_delegate, stub_if_missing_deps
 
 
-@stub_if_missing_deps('numpy')
 @add_delegate(HasParameters, HasConstraints, HasObjective)
 class SLSQPdriver(Driver):
     """Minimize a function using the Sequential Least SQuares Programming

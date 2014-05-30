@@ -6,14 +6,12 @@ import unittest
 
 from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
 from openmdao.main.api import set_as_top
-import openmdao.main.pseudocomp as pcompmod
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
         self.model = set_as_top(EngineOptimization())
-        pcompmod._count = 0
 
     def tearDown(self):
         self.model.pre_delete()

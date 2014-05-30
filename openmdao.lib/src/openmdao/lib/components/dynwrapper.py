@@ -31,7 +31,7 @@ from openmdao.main.api import Component
     #def _get_failed(self, path, index=None):
         #pass
             
-    #def _set_failed(self, path, value, index=None, src=None, force=False):
+    #def _set_failed(self, path, value, index=None, force=False):
         #pass
     
     #def execute(self):

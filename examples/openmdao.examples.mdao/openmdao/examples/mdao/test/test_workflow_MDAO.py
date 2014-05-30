@@ -13,7 +13,6 @@ from openmdao.lib.optproblems import sellar
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-import openmdao.main.pseudocomp as pcompmod
 
 from openmdao.util.testutil import assert_rel_error
 
@@ -182,14 +181,6 @@ class SellarCO_Multi(Assembly):
 class TestCase(unittest.TestCase):
     """ Test MDAO architectures implemented as OpenMDAO workflows. """
 
-    def setUp(self):
-        """ Called before each test. """
-        pcompmod._count = 0
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
-
     def test_MDF(self):
         prob = SellarMDF()
         set_as_top(prob)
@@ -281,8 +272,7 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
     def test_BLISS(self):
-        prob = SellarBLISS()
-        set_as_top(prob)
+        prob = set_as_top(SellarBLISS())
 
         prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0
         prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
@@ -366,9 +356,6 @@ class SolverCO2(Assembly):
 
 
 class TestSubOptInclusion(unittest.TestCase):
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_basic_CO(self):
         # Our CO model failed if our submodels didn't have outputs in the graph.

@@ -18,29 +18,26 @@ class Workflow(object):
     in some order.
     """
 
-    def __init__(self, parent=None, scope=None, members=None):
+    def __init__(self, parent, members=None):
         """Create a Workflow.
 
-        parent: Driver (optional)
+        parent: Driver
             The Driver that contains this Workflow.  This option is normally
             passed instead of scope because scope usually isn't known at
             initialization time.  If scope is not provided, it will be
             set to parent.parent, which should be the Assembly that contains
             the parent Driver.
 
-        scope: Component (optional)
-            The scope can be explicitly specified here, but this is not
-            typically known at initialization time.
-
         members: list of str (optional)
             A list of names of Components to add to this workflow.
         """
         self._stop = False
         self._parent = parent
-        self._scope = scope
+        self._scope = None
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
+        self._var_graph = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -75,7 +72,7 @@ class Workflow(object):
     def itername(self):
         return self._iterbase()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Perform any checks that we need prior to run. Specific workflows
         should override this."""
         pass
@@ -109,8 +106,12 @@ class Workflow(object):
             record_case = False
 
         err = None
+        scope = self.scope
         try:
             for comp in self:
+                # before the workflow runs each component, update that
+                # component's inputs based on the graph
+                scope.update_inputs(comp.name, graph=self._var_graph)
                 if isinstance(comp, PseudoComponent):
                     comp.run(ffd_order=ffd_order)
                 else:
@@ -322,7 +323,7 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        pass
+        self._var_graph = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""

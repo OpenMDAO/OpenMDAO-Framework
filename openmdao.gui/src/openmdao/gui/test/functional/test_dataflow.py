@@ -120,7 +120,7 @@ def _test_connect(browser):
 
     time.sleep(0.5)  # Wait for display update.
 
-    eq(conn_page.count_variable_figures(), 22)
+    eq(conn_page.count_variable_figures(), 21)
     eq(conn_page.count_variable_connections(), 9)  # 3 connections for the expr
 
     conn_page.close()
@@ -227,7 +227,7 @@ def _test_connections(browser):
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.count_variable_figures(), 22)
+    eq(conn_page.count_variable_figures(), 21)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
     time.sleep(0.5)
@@ -512,8 +512,6 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -535,8 +533,6 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -556,8 +552,6 @@ def _test_replace(browser):
         ['', 'result_in', '0', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -579,8 +573,6 @@ def _test_replace(browser):
         ['', 'scaler', '1', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -620,8 +612,6 @@ def _test_replace(browser):
         ['', 'x', '[]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
@@ -649,8 +639,6 @@ def _test_replace(browser):
         ['', 'excludes', '[]', '',
          'Patterns for variables to exclude from the recorders'
          ' (only valid at top level).'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'includes', "['*']", '',
@@ -733,7 +721,6 @@ def _test_parameter_autocomplete(browser):
         'p1.cont_in.vt2.vt3.a',
         'p1.cont_in.vt2.vt3.b',
         'p1.directory',
-        'p1.force_execute',
         'p1.force_fd',
         'p1.missing_deriv_policy',
     ])
@@ -743,7 +730,7 @@ def _test_parameter_autocomplete(browser):
     #For p1 (simplecomp) there should only be
     #8 valid autocomplete targets.
 
-    eq(len(autocomplete_targets), 10)
+    eq(len(autocomplete_targets), 9)
 
     for target in autocomplete_targets:
         eq(target in expected_targets, True)
@@ -960,13 +947,13 @@ def _test_column_sorting(browser):
 
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
-         "output_filename", "directory", "force_execute", "force_fd",
+         "output_filename", "directory", "force_fd",
          " gradient_options"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        [" gradient_options", "force_fd", "force_execute",
+        [" gradient_options", "force_fd",
          "directory", "output_filename", "maxiter", "iprint", "iout",
          "accuracy"], "inputs",
         SortOrder.DESCENDING
@@ -976,7 +963,7 @@ def _test_column_sorting(browser):
 
     test_sorting(
         ["accuracy", "iout", "iprint", "maxiter",
-         "output_filename", "directory", "force_execute", "force_fd",
+         "output_filename", "directory", "force_fd",
          " gradient_options", "derivative_direction", "directional_fd", "fd_blocks", "fd_form", "fd_step", "fd_step_type",
          "force_fd", "gmres_maxiter", "gmres_tolerance"], "inputs",
         SortOrder.ASCENDING
@@ -985,7 +972,7 @@ def _test_column_sorting(browser):
     test_sorting(
          [" gradient_options", "gmres_tolerance", "gmres_maxiter",
          "force_fd", "fd_step_type", "fd_step", "fd_form", "fd_blocks", "directional_fd", "derivative_direction",
-         "force_fd", "force_execute", "directory",
+         "force_fd", "directory",
          "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
@@ -1026,13 +1013,13 @@ def _test_column_sorting(browser):
     editor.get_input("missing_deriv_policy")
     test_sorting(
         [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
-         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
+         "directory", "force_fd", "missing_deriv_policy"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["missing_deriv_policy", "force_fd", "force_execute", "directory",
+        ["missing_deriv_policy", "force_fd", "directory",
          " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING

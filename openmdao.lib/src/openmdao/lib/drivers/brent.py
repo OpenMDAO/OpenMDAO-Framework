@@ -116,8 +116,10 @@ class Brent(Driver):
             print 'iterations:', brent_iterations
             print 'residual:', self.eval_eq_constraints()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         '''Make sure we have 1 parameter and 1 constraint'''
+
+        super(Brent, self).check_config(strict=strict)
 
         params = self.get_parameters().values()
         if len(params) != 1:

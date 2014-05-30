@@ -5,13 +5,13 @@ import glob, os, time
 import StringIO
 import unittest
 
+from numpy import array
 
 from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
                                           DumpCaseRecorder
 from openmdao.main.datatypes.api import Array, Str, Bool, VarTree
 from openmdao.lib.drivers.api import SimpleCaseIterDriver
 from openmdao.main.api import Assembly, Case, set_as_top
-from openmdao.main.numpy_fallback import array
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_raises
 from openmdao.main.test.test_vartree import DumbVT

@@ -151,8 +151,6 @@ def _test_slot_subclass(browser):
         ['', 'excludes', '[]', '',
          'Patterns for variables to exclude from the recorders'
          ' (only valid at top level).'],
-        ['', 'force_execute',  'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'includes', "['*']", '',

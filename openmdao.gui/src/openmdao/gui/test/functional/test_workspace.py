@@ -438,7 +438,6 @@ def _test_properties(browser):
     eq(header, 'Driver: top.driver')
     eq(inputs.value, [
         ['directory',         ''],
-        ['force_execute',     'True'],
         ['force_fd',          'False'],
         [' gradient_options', ''],  # vartree, has leading space after the [+]
     ])
@@ -721,13 +720,13 @@ def _test_driver_config(browser):
     # Add a (nonsense) named parameter.
     editor('parameters_tab').click()
     dialog = editor.new_parameter()
-    dialog.target = 'mm.force_execute'
+    dialog.target = 'mm.force_fd'
     dialog.low = '0'
     dialog.high = '1'
     dialog.name = 'nonsense'
     dialog('ok').click()
     parameters = editor.get_parameters()
-    expected = [['', 'mm.force_execute', '0', '1', '1', '0', '', 'nonsense']]
+    expected = [['', 'mm.force_fd', '0', '1', '1', '0', '', 'nonsense']]
     eq(len(parameters.value), len(expected))
     for i, row in enumerate(parameters.value):
         eq(row, expected[i])
@@ -747,11 +746,11 @@ def _test_driver_config(browser):
     # Add a (nonsense) named objective.
     editor('objectives_tab').click()
     dialog = editor.new_objective()
-    dialog.expr = 'mm.force_execute'
+    dialog.expr = 'mm.force_fd'
     dialog.name = 'nonsense'
     dialog('ok').click()
     objectives = editor.get_objectives()
-    expected = [['', 'mm.force_execute', 'nonsense']]
+    expected = [['', 'mm.force_fd', 'nonsense']]
     eq(len(objectives.value), len(expected))
     for i, row in enumerate(objectives.value):
         eq(row, expected[i])
@@ -771,11 +770,11 @@ def _test_driver_config(browser):
     # Add a (nonsense) named constraint.
     editor('constraints_tab').click()
     dialog = editor.new_constraint()
-    dialog.expr = 'mm.force_execute > 0'
+    dialog.expr = 'mm.force_fd > 0'
     dialog.name = 'nonsense'
     dialog('ok').click()
     constraints = editor.get_constraints()
-    expected = [['', 'mm.force_execute > 0', 'nonsense']]
+    expected = [['', 'mm.force_fd > 0', 'nonsense']]
     eq(len(constraints.value), len(expected))
     for i, row in enumerate(constraints.value):
         eq(row, expected[i])
@@ -1018,8 +1017,6 @@ def _test_sorting(browser):
         ['', 'stress_i10', '0', '', ''],
         ['', 'directory',  '',  '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
         ['', 'missing_deriv_policy', 'error', '',
