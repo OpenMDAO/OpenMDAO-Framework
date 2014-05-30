@@ -4,7 +4,7 @@ from fnmatch import fnmatch
 from traceback import format_exc
 
 # pylint: disable=E0611,F0401
-from openmdao.main.case import Case, flatten_obj
+from openmdao.main.case import Case
 from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped, TracedError
 from openmdao.main.pseudocomp import PseudoComponent
@@ -209,11 +209,10 @@ class Workflow(object):
             srcs.extend(param.target
                         for param in driver.get_parameters().values())
         dsts = scope.list_outputs()
-        if hasattr(driver, 'eval_objective') or \
-           hasattr(driver, 'eval_objectives'):
+        if hasattr(driver, 'get_objectives'):
             dsts.extend(objective.pcomp_name+'.out0'
                         for objective in driver.get_objectives().values())
-        if hasattr(driver, 'eval_responses'):
+        if hasattr(driver, 'get_responses'):
             dsts.extend(response.pcomp_name+'.out0'
                         for response in driver.get_responses().values())
         if hasattr(driver, 'get_ineq_constraints'):
@@ -270,27 +269,48 @@ class Workflow(object):
 
         # Parameters.
         for param in self._rec_parameters:
-            value = param.evaluate(scope)
+            try:
+                value = param.evaluate(scope)
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (param, exc), RuntimeError)
+
             if param.size == 1:  # evaluate() always returns list.
                 value = value[0]
             inputs.append(value)
 
         # Objectives.
-        outputs.extend(driver.eval_named_objective(key)
-                       for key in self._rec_objectives)
+        for key in self._rec_objectives:
+            try:
+                outputs.append(driver.eval_named_objective(key))
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (key, exc), RuntimeError)
         # Responses.
-        outputs.extend(driver.eval_response(key)
-                       for key in self._rec_responses)
+        for key in self._rec_responses:
+            try:
+                outputs.append(driver.eval_response(key))
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (key, exc), RuntimeError)
         # Constraints.
         for con in self._rec_constraints:
-            value = con.evaluate(scope)  # evaluate() always returns list.
-            if len(value) == 1:
+            try:
+                value = con.evaluate(scope)
+            except Exception as exc:
+                driver.raise_exception("Can't evaluate '%s' for recording: %s"
+                                       % (con, exc), RuntimeError)
+            if len(value) == 1:  # evaluate() always returns list.
                 value = value[0]
             outputs.append(value)
 
         # Other outputs.
-        outputs.extend(scope.get(name)
-                       for name in self._rec_outputs)
+        for name in self._rec_outputs:
+            try:
+                outputs.append(scope.get(name))
+            except Exception as exc:
+                scope.raise_exception("Can't get '%s' for recording: %s"
+                                      % (name, exc), RuntimeError)
         # Record.
         for recorder in top.recorders:
             recorder.record(driver, inputs, outputs, err,

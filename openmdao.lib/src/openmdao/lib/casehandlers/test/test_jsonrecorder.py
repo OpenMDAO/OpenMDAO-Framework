@@ -4,17 +4,25 @@ import unittest
 from cStringIO import StringIO
 
 from openmdao.main.api import Assembly, Case, set_as_top
+from openmdao.main.datatypes.api import Instance
 from openmdao.test.execcomp import ExecComp
 from openmdao.lib.casehandlers.api import JSONCaseRecorder
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
+from openmdao.util.testutil import assert_raises
+
+
+class TExecComp(ExecComp):
+
+    data = Instance(iotype='in', desc='Used to check bad JSON data')
+
 
 class TestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = top = set_as_top(Assembly())
         driver = top.add('driver', CaseIteratorDriver())
-        top.add('comp1', ExecComp(exprs=['z=x+y']))
+        top.add('comp1', TExecComp(exprs=['z=x+y']))
         top.add('comp2', ExecComp(exprs=['z=x+1']))
         top.connect('comp1.z', 'comp2.x')
         driver.workflow.add(['comp1', 'comp2'])
@@ -125,6 +133,14 @@ class TestCase(unittest.TestCase):
         self.top.recorders[0].close()
         self.top.run()
         self.assertEqual(sout.getvalue(), '')
+
+    def test_badval(self):
+        sout = StringIO()
+        self.top.recorders = [JSONCaseRecorder(sout)]
+        self.top.comp1.data = self.test_badval.__func__
+        assert_raises(self, 'self.top.run()', globals(), locals(), RuntimeError,
+                      "JSON write failed for simulation_info.constants:"
+                      " keys ['comp1.data']: <function test_badval at")
 
 
 if __name__ == '__main__':

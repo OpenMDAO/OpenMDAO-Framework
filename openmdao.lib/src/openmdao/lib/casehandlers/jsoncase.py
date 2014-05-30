@@ -124,19 +124,11 @@ class JSONCaseRecorder(object):
             OpenMDAO_Version=__version__,
             uuid=self._uuid)
 
-        write = self.out.write
-        write('{\n')
-        write('"simulation_info": ')
-        try:
-            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                        cls=Encoder, check_circular=False))
-        except Exception:
-            # Has happened in past for 'validation_trait'.
-            logging.error('JSON write failed for simulation_info:')
-            for key in sorted(info):
-                logging.error('    %s: %s', key, info[key])
-            raise
-        write('\n')
+        category = 'simulation_info'
+        self.out.write('{\n"%s": ' % category)
+        self._dump(info, category,
+                   ('variable_metadata', 'expressions', 'constants'))
+        self.out.write('\n')
 
         # Write info for each driver.
         count = 0
@@ -160,10 +152,10 @@ class JSONCaseRecorder(object):
                     [str(con) for con in driver.get_eq_constraints().values()]
 
             count += 1
-            write(', "driver_info_%s": ' % count)
-            write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                        cls=Encoder, check_circular=False))
-            write('\n')
+            category = 'driver_info_%s' % count
+            self.out.write(', "%s": ' % category)
+            self._dump(info, category)
+            self.out.write('\n')
 
         self.out.flush()
 
@@ -188,12 +180,48 @@ class JSONCaseRecorder(object):
             data=data)
 
         self._cases += 1
-        write = self.out.write
-        write(', "iteration_case_%s": ' % self._cases)
-        write(dumps(info, indent=self.indent, sort_keys=self.sort_keys,
-                    cls=Encoder, check_circular=False))
-        write('\n')
+        category = 'iteration_case_%s' % self._cases
+        self.out.write(', "%s": ' % category)
+        self._dump(info, category)
+        self.out.write('\n')
         self.out.flush()
+
+    def _dump(self, info, category, subcategories=None):
+        """Write JSON data, report any bad keys & values encountered."""
+        try:
+            data = dumps(info, indent=self.indent, sort_keys=self.sort_keys,
+                         cls=Encoder, check_circular=False)
+        except Exception as exc:
+            # Log bad keys & values.
+            bad = []
+            for key in sorted(info):
+                try:
+                    dumps(info[key], indent=self.indent, sort_keys=self.sort_keys,
+                          cls=Encoder, check_circular=False)
+                except Exception:
+                    bad.append(key)
+
+            # If it's in a subcategory we only report the first subcategory.
+            if subcategories is not None and bad[0] in subcategories:
+                key = bad[0]
+                category = '.'.join((category, key))
+                info = info[key]
+                bad = []
+                for key in sorted(info):
+                    try:
+                        dumps(info[key], indent=self.indent, sort_keys=self.sort_keys,
+                              cls=Encoder, check_circular=False)
+                    except Exception:
+                        bad.append(key)
+
+            msg = 'JSON write failed for %s:' % category
+            logging.error(msg)
+            for key in bad:
+                logging.error('    %s: %s', key, info[key])
+
+            msg = '%s keys %s: %s' % (msg, bad, exc)
+            raise RuntimeError(msg)
+        self.out.write(data)
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

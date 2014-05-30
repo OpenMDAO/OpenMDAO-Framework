@@ -2,6 +2,7 @@
 "simulation_info": {
     "OpenMDAO_Version": "0.9.6", 
     "constants": {
+        "comp1.data": null, 
         "comp1.directory": "", 
         "comp1.force_fd": false, 
         "comp1.missing_deriv_policy": "error", 
@@ -60,15 +61,20 @@
     "expressions": {
         "comp1.z": {
             "data_type": "Response", 
-            "pcomp_name": "_pseudo_2"
+            "pcomp_name": "_pseudo_0"
         }, 
         "comp2.z": {
             "data_type": "Response", 
-            "pcomp_name": "_pseudo_3"
+            "pcomp_name": "_pseudo_1"
         }
     }, 
-    "uuid": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "uuid": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "variable_metadata": {
+        "comp1.data": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "Instance"
+        }, 
         "comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
@@ -312,8 +318,8 @@
 }
 , "iteration_case_1": {
     "_driver_id": "driver", 
-    "_id": "b939c53a-e2a9-11e3-8029-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b379f5-e82c-11e3-801f-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 0.0, 
         "Response_1": 1.0, 
@@ -325,12 +331,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.617462
+    "timestamp": 1401476412.359234
 }
 , "iteration_case_2": {
     "_driver_id": "driver", 
-    "_id": "b93a0c66-e2a9-11e3-802a-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b3ddb0-e82c-11e3-8020-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 3.0, 
         "Response_1": 4.0, 
@@ -342,12 +348,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.61923
+    "timestamp": 1401476412.359784
 }
 , "iteration_case_3": {
     "_driver_id": "driver", 
-    "_id": "b93a33d9-e2a9-11e3-802b-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b3f2c0-e82c-11e3-8021-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 6.0, 
         "Response_1": 7.0, 
@@ -359,12 +365,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.620082
+    "timestamp": 1401476412.360309
 }
 , "iteration_case_4": {
     "_driver_id": "driver", 
-    "_id": "b93a5540-e2a9-11e3-802c-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b4052e-e82c-11e3-8022-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 9.0, 
         "Response_1": 10.0, 
@@ -376,12 +382,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.620879
+    "timestamp": 1401476412.36078
 }
 , "iteration_case_5": {
     "_driver_id": "driver", 
-    "_id": "b93a73f5-e2a9-11e3-802d-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b41742-e82c-11e3-8023-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 12.0, 
         "Response_1": 13.0, 
@@ -393,12 +399,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.621694
+    "timestamp": 1401476412.361243
 }
 , "iteration_case_6": {
     "_driver_id": "driver", 
-    "_id": "b93a9423-e2a9-11e3-802e-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b429bd-e82c-11e3-8024-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 15.0, 
         "Response_1": 16.0, 
@@ -410,12 +416,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.622497
+    "timestamp": 1401476412.361715
 }
 , "iteration_case_7": {
     "_driver_id": "driver", 
-    "_id": "b93ab2eb-e2a9-11e3-802f-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b43c91-e82c-11e3-8025-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 18.0, 
         "Response_1": 19.0, 
@@ -427,12 +433,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.623291
+    "timestamp": 1401476412.362242
 }
 , "iteration_case_8": {
     "_driver_id": "driver", 
-    "_id": "b93ad1e6-e2a9-11e3-8030-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b45178-e82c-11e3-8026-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 21.0, 
         "Response_1": 22.0, 
@@ -444,12 +450,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.624112
+    "timestamp": 1401476412.362755
 }
 , "iteration_case_9": {
     "_driver_id": "driver", 
-    "_id": "b93af202-e2a9-11e3-8031-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b46623-e82c-11e3-8027-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 24.0, 
         "Response_1": 25.0, 
@@ -461,12 +467,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.624871
+    "timestamp": 1401476412.363282
 }
 , "iteration_case_10": {
     "_driver_id": "driver", 
-    "_id": "b93b0fbd-e2a9-11e3-8032-005056000100", 
-    "_parent_id": "b9384264-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0b479f0-e82c-11e3-8028-005056000100", 
+    "_parent_id": "a0b17ab6-e82c-11e3-b62b-005056000100", 
     "data": {
         "Response_0": 27.0, 
         "Response_1": 28.0, 
@@ -478,6 +484,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.625659
+    "timestamp": 1401476412.363779
 }
 }

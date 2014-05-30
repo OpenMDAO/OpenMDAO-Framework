@@ -2,6 +2,7 @@
 "simulation_info": {
     "OpenMDAO_Version": "0.9.6", 
     "constants": {
+        "comp1.data": null, 
         "comp1.directory": "", 
         "comp1.force_fd": false, 
         "comp1.missing_deriv_policy": "error", 
@@ -31,15 +32,20 @@
     "expressions": {
         "comp1.z": {
             "data_type": "Objective", 
-            "pcomp_name": "_pseudo_6"
+            "pcomp_name": "_pseudo_2"
         }, 
         "comp2.z": {
             "data_type": "Objective", 
-            "pcomp_name": "_pseudo_7"
+            "pcomp_name": "_pseudo_3"
         }
     }, 
-    "uuid": "b946c942-e2a9-11e3-ab4e-005056000100", 
+    "uuid": "a0be52f4-e82c-11e3-b62b-005056000100", 
     "variable_metadata": {
+        "comp1.data": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "Instance"
+        }, 
         "comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
@@ -237,8 +243,8 @@
 }
 , "iteration_case_1": {
     "_driver_id": "driver", 
-    "_id": "b9485030-e2a9-11e3-803d-005056000100", 
-    "_parent_id": "b946c942-e2a9-11e3-ab4e-005056000100", 
+    "_id": "a0c10cd9-e82c-11e3-8029-005056000100", 
+    "_parent_id": "a0be52f4-e82c-11e3-b62b-005056000100", 
     "data": {
         "Objective_0": 0.0, 
         "Objective_1": 1.0, 
@@ -249,6 +255,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1400870433.712815
+    "timestamp": 1401476412.448581
 }
 }
