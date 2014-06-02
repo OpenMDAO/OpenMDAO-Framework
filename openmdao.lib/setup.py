@@ -52,7 +52,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'cobyla==1.0.1',
           'slsqp==1.0.1',
           'numpy',
-          'scipy',
+          'scipy>=0.11.0',
           ],
       entry_points="""
       [openmdao.driver]
