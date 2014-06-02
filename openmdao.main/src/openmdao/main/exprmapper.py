@@ -11,17 +11,6 @@ class ExprMapper(object):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
 
-    def get_output_exprs(self):
-        """Return all destination expressions at the output boundary"""
-        exprs = []
-        graph = self._exprgraph
-        for node, data in graph.nodes(data=True):
-            if graph.in_degree(node) > 0:
-                expr = data['expr']
-                if len(expr.get_referenced_compnames()) == 0:
-                    exprs.append(expr)
-        return exprs
-
     def get_expr(self, text):
         node = self._exprgraph.node.get(text)
         if node:
@@ -31,11 +20,7 @@ class ExprMapper(object):
     def list_connections(self, show_passthrough=True, visible_only=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        excludes = set([name for name, data in self._exprgraph.nodes(data=True)
-                                   if data['expr'].refs_parent()])
-
-        lst = [(u, v, data) for u, v, data in self._exprgraph.edges(data=True)
-            if not (u in excludes or v in excludes)]
+        lst = self._exprgraph.edges(data=True)
 
         if not show_passthrough:
             lst = [(u, v, data) for u, v, data in lst if '.' in u and '.' in v]
@@ -101,7 +86,7 @@ class ExprMapper(object):
                             dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
 
-                if not isinstance(srccomp, PseudoComponent) and not srcexpr.refs_parent() and desttrait is not None:
+                if not isinstance(srccomp, PseudoComponent) and desttrait is not None:
                     # punt if dest is not just a simple var name.
                     # validity will still be checked at execution time
                     if destvar == destexpr.text:

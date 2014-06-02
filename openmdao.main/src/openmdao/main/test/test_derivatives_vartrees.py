@@ -1,9 +1,6 @@
 import unittest
 
-try:
-    from numpy import zeros, array, identity, ones, linalg
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity
+from numpy import array, ones, linalg
 
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
@@ -13,7 +10,6 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-import openmdao.main.pseudocomp as pcompmod
 
 
 class TreeWithFloat(VariableTree):
@@ -44,7 +40,7 @@ class DummyComp(Component):
 
     def provideJ(self):
 
-        return array([1])
+        return array([[1]])
 
     def list_deriv_vars(self):
 
@@ -419,9 +415,6 @@ class TestDerivativeVarTree(unittest.TestCase):
     #     top.driver.workflow.config_changed()
     #     J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
 
-    def setUp(self):
-        pcompmod._count = 0  # keep hashing behavior constant
-
     def test_varTree_parameter(self):
 
         top = set_as_top(Assembly())
@@ -627,7 +620,21 @@ class TestDerivativeVarTree(unittest.TestCase):
         # self.top.driver.remove_parameter('dis1.x')
         # self.top.driver.add_parameter('dis1.ins.x2', low=-10.0, high=10.0)
 
+    def test_graph_pruning(self):
 
+        top = set_as_top(Assembly())
+        top.add('comp1', CompWithVarTreeSubTree())
+        top.add('comp2', DummyComp())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.connect('comp1.z',  'comp2.x')
+        top.driver.add_parameter('comp1.ins.x.x1', low=-100, high=100)
+        top.driver.add_constraint('comp1.ins.x.x2 + comp2.y < 0')
+
+        top.run()
+        J = top.driver.workflow.calc_gradient()
+        assert_rel_error(self, J[0, 0], 2.0, .00001)
 
 
 if __name__ == "__main__":

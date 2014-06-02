@@ -1,13 +1,12 @@
 import unittest
 import random
 
-from numpy import array,round,linspace,sin,cos,pi
 import numpy as np
 
-from openmdao.lib.surrogatemodels.logistic_regression import LogisticRegression
+from openmdao.lib.surrogatemodels.api import ResponseSurface
 
 
-class LogisticRegressionTest(unittest.TestCase):
+class ResponseSurfaceTest(unittest.TestCase):
     
     def setUp(self):
         random.seed(10)
@@ -29,17 +28,11 @@ class LogisticRegressionTest(unittest.TestCase):
         
         
     def test_training(self):
-        a= 0
   
-        # Create a new learner, but use the same data for each run
-        lr = LogisticRegression(self.X_train, self.Y_train, alpha=a)
+        lr = ResponseSurface(self.X_train, self.Y_train)
             
         training_reconstruction = [lr.predict(x) for x in self.X_train]
         residual = sum([ x-y for x,y in zip(training_reconstruction,self.Y_train)])
         
         self.assertTrue(residual<1e-5)
         
-    def test_uncertain_value(self): 
-        lr = LogisticRegression()
-        
-        self.assertEqual(lr.get_uncertain_value(1.0),1.0)

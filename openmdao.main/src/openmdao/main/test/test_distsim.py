@@ -19,8 +19,7 @@ from Crypto.Random import get_random_bytes
 
 from traits.api import CTrait
 
-from openmdao.main.api import Assembly, Case, Component, Container, Driver, \
-                              set_as_top
+from openmdao.main.api import Assembly, Component, Container, Driver, set_as_top
 from openmdao.main.container import get_closest_proxy
 from openmdao.main.hasobjective import HasObjectives
 from openmdao.main.hasparameters import HasParameters
@@ -122,10 +121,6 @@ class HollowSphere(Component):
 class BoxDriver(Driver):
     """ Just drives :class:`Box` inputs and records results. """
 
-    def __init__(self):
-        super(BoxDriver, self).__init__()
-        self.recorders = [ListCaseRecorder()]
-
     def execute(self):
         """ Runs with various box parameter values. """
         for width in range(1, 2):
@@ -136,17 +131,6 @@ class BoxDriver(Driver):
                     self.workflow.run()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)
-
-                    case = Case()
-                    case.inputs = [('width', None, width),
-                                   ('height', None, height),
-                                   ('depth', None, depth)]
-                    case.outputs = [('volume', None, volume),
-                                    ('area', None, area),
-                                    ('pid', None, self.parent.box.pid)]
-                                   # Just to show access to remote from driver.
-                    for recorder in self.recorders:
-                        recorder.record(case)
 
 
 class BoxSource(ExecComp):
@@ -174,6 +158,8 @@ class Model(Assembly):
 
     def __init__(self, box):
         super(Model, self).__init__()
+        self.recorders = [ListCaseRecorder()]
+
         self.add('driver', BoxDriver())
         self.driver.workflow.add(self.add('source', BoxSource()).name)
         self.driver.workflow.add(self.add('box', box).name)
@@ -190,8 +176,8 @@ class Model(Assembly):
         self.connect('box.volume',       'sink.volume_in')
         self.connect('box.surface_area', 'sink.area_in')
 
-        self.driver.add_objective('sink.volume_out')
-        self.driver.add_objective('sink.area_out')
+        self.driver.add_objective('sink.volume_out', 'volume')
+        self.driver.add_objective('sink.area_out', 'area')
 
     @rbac('owner', proxy_types=[RemoteFile])
     def open(self, path, mode):
@@ -262,9 +248,9 @@ class ProtectedBox(Box):
         raise RoleError('No get_attr access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, src, force)
+            return super(ProtectedBox, self).set(path, value, index, force)
         raise RoleError('No set access to %r' % path)
 
 
@@ -445,8 +431,9 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorders[0].cases.pop(0)
-                    self.assertEqual(case.outputs[0][2], width*height*depth)
+                    case = model.recorders[0].cases.pop(0)
+                    self.assertEqual(case.get_output('Objective_0'),
+                                     width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
         self.assertTrue(has_interface(model.box.parent, IComponent))
@@ -539,8 +526,9 @@ class TestCase(unittest.TestCase):
         for width in range(1, 2):
             for height in range(1, 3):
                 for depth in range(1, 4):
-                    case = model.driver.recorders[0].cases.pop(0)
-                    self.assertEqual(case.outputs[0][2], width*height*depth)
+                    case = model.recorders[0].cases.pop(0)
+                    self.assertEqual(case.get_output('Objective_0'),
+                                     width*height*depth)
 
         # Check access protections.
         try:
@@ -624,8 +612,9 @@ class TestCase(unittest.TestCase):
             for width in range(1, 2):
                 for height in range(1, 3):
                     for depth in range(1, 4):
-                        case = model.driver.recorders[0].cases.pop(0)
-                        self.assertEqual(case.outputs[0][2], width*height*depth)
+                        case = model.recorders[0].cases.pop(0)
+                        self.assertEqual(case.get_output('Objective_0'),
+                                         width*height*depth)
         finally:
             if factory is not None:
                 factory.cleanup()

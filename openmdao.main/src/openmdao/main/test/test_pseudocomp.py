@@ -8,7 +8,6 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.pseudocomp import unit_xform
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.printexpr import print_node
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 from openmdao.util.testutil import assert_rel_error
 
 class Simple(Component):
@@ -74,9 +73,6 @@ def _simple_model(units=True):
     return top
 
 class PseudoCompTestCase(unittest.TestCase):
-
-    def setUp(self):
-        pcompmod._count = 0  # make sure pseudocomp names are consistent
 
     def test_unnecessary_pcomp(self):
         top = set_as_top(MuAsm())

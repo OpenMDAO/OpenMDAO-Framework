@@ -24,37 +24,45 @@ class Simulation(Assembly):
 
     def configure(self):
 
-        #Components
-        self.add("trig_meta_model",MetaModel())
-        self.trig_meta_model.model = Trig()
+        # Our component to be meta-modeled
+        self.add("trig_calc", Trig())
+
+        # Create meta_model for two responsese
+        self.add("trig_meta_model", MetaModel(params = ('x', ),
+                                              responses = ('f_x_sin', 'f_x_cos')))
+
+        # Use Kriging for the f_x output
         self.trig_meta_model.surrogates['f_x_sin'] = LogisticRegression()
         self.trig_meta_model.surrogates['f_x_cos'] = FloatKrigingSurrogate()
-        self.trig_meta_model.recorder = DBCaseRecorder()
 
-        #Training the MetaModel
-        self.add("DOE_Trainer",DOEdriver())
+        # Training the MetaModel
+        self.add("DOE_Trainer", DOEdriver())
         self.DOE_Trainer.DOEgenerator = FullFactorial()
         self.DOE_Trainer.DOEgenerator.num_levels = 20
-        self.DOE_Trainer.add_parameter("trig_meta_model.x",low=0,high=20)
-        self.DOE_Trainer.case_outputs = ["trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
-        self.DOE_Trainer.add_event("trig_meta_model.train_next")
-        self.DOE_Trainer.recorders = [DBCaseRecorder()]
+        self.DOE_Trainer.add_parameter("trig_calc.x", low=0, high=20)
+        self.DOE_Trainer.add_response('trig_calc.f_x_sin')
+        self.DOE_Trainer.add_response('trig_calc.f_x_cos')
+
+        # Pass training data to the meta model.
+        self.connect('DOE_Trainer.case_inputs.trig_calc.x', 'trig_meta_model.params.x')
+        self.connect('DOE_Trainer.case_outputs.trig_calc.f_x_sin', 'trig_meta_model.responses.f_x_sin')
+        self.connect('DOE_Trainer.case_outputs.trig_calc.f_x_cos', 'trig_meta_model.responses.f_x_cos')
 
         #MetaModel Validation
-        self.add("trig_calc",Trig())
-        self.add("DOE_Validate",DOEdriver())
+        self.add("DOE_Validate", DOEdriver())
         self.DOE_Validate.DOEgenerator = Uniform()
         self.DOE_Validate.DOEgenerator.num_samples = 20
-        self.DOE_Validate.add_parameter(("trig_meta_model.x","trig_calc.x"),low=0,high=20)
-        self.DOE_Validate.case_outputs = ["trig_calc.f_x_sin","trig_calc.f_x_cos","trig_meta_model.f_x_sin","trig_meta_model.f_x_cos"]
-        self.DOE_Validate.recorders = [DBCaseRecorder()]
+        self.DOE_Validate.add_parameter(("trig_meta_model.x", "trig_calc.x"),
+                                        low=0, high=20)
+        self.DOE_Validate.add_response("trig_calc.f_x_sin")
+        self.DOE_Validate.add_response("trig_calc.f_x_cos")
+        self.DOE_Validate.add_response("trig_meta_model.f_x_sin")
+        self.DOE_Validate.add_response("trig_meta_model.f_x_cos")
 
         #Iteration Hierarchy
-        self.driver.workflow = SequentialWorkflow()
-        self.driver.workflow.add(['DOE_Trainer','DOE_Validate'])
-        self.DOE_Trainer.workflow.add('trig_meta_model')
-        self.DOE_Validate.workflow.add('trig_meta_model')
-        self.DOE_Validate.workflow.add('trig_calc')
+        self.driver.workflow.add(['DOE_Trainer', 'DOE_Validate'])
+        self.DOE_Trainer.workflow.add('trig_calc')
+        self.DOE_Validate.workflow.add(['trig_calc', 'trig_meta_model'])
 
 if __name__ == "__main__":
 
@@ -62,17 +70,14 @@ if __name__ == "__main__":
     sim.run()
 
     #This is how you can access any of the data
-    train_data = sim.DOE_Trainer.recorders[0].get_iterator()
-    validate_data = sim.DOE_Validate.recorders[0].get_iterator()
-    train_inputs = [case['trig_meta_model.x'] for case in train_data]
-    train_actual_sin = [case['trig_meta_model.f_x_sin'] for case in train_data]
-    train_actual_cos = [case['trig_meta_model.f_x_cos'] for case in train_data]
-    inputs = [case['trig_calc.x'] for case in validate_data]
-    actual_sin = [case['trig_calc.f_x_sin'] for case in validate_data]
-    actual_cos = [case['trig_calc.f_x_cos'] for case in validate_data]
-    predicted_sin = [case['trig_meta_model.f_x_sin'] for case in validate_data]
-    predicted_cos = [case['trig_meta_model.f_x_cos'] for case in validate_data]
+    train_inputs = sim.DOE_Trainer.case_inputs.trig_calc.x
+    train_actual_sin = sim.DOE_Trainer.case_outputs.trig_calc.f_x_sin
+    train_actual_cos = sim.DOE_Trainer.case_outputs.trig_calc.f_x_cos
+    inputs = sim.DOE_Validate.case_inputs.trig_meta_model.x
+    actual_sin = sim.DOE_Validate.case_outputs.trig_calc.f_x_sin
+    actual_cos = sim.DOE_Validate.case_outputs.trig_calc.f_x_cos
+    predicted_sin = sim.DOE_Validate.case_outputs.trig_meta_model.f_x_sin
+    predicted_cos = sim.DOE_Validate.case_outputs.trig_meta_model.f_x_cos
 
-
-    for a,b,c,d in zip(actual_sin,predicted_sin,actual_cos,predicted_cos):
-        print "%1.3f, %1.3f, %1.3f, %1.3f"%(a,b,c,d)                
+    for a,b,c,d in zip(actual_sin, predicted_sin, actual_cos, predicted_cos):
+        print "%1.3f, %1.3f, %1.3f, %1.3f"%(a, b, c, d)

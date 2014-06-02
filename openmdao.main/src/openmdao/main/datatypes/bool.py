@@ -8,12 +8,14 @@ __all__ = ["Bool"]
 # pylint: disable-msg=E0611,F0401
 from traits.api import Bool as Enthought_Bool
 
+from numpy import bool_
+
 from openmdao.main.variable import Variable, gui_excludes
 
 
 class Bool(Variable):
     """A variable wrapper for a boolean variable.
-       """
+    """
 
     def __init__(self, default_value=False, iotype=None, desc=None,
                  **metadata):
@@ -31,17 +33,15 @@ class Bool(Variable):
 
         self._validator = Enthought_Bool(value=default_value, **metadata)
 
-        super(Bool, self).__init__(default_value=default_value, assumed_default=assumed_default, **metadata)
+        super(Bool, self).__init__(default_value=default_value,
+                                   assumed_default=assumed_default, **metadata)
 
     def validate(self, obj, name, value):
         """ Use the Enthought trait's validate.
         """
+        if isinstance(value, bool_):
+            value = bool(value)
         return self._validator.validate(obj, name, value)
-
-    def create_editor(self):
-        """ User the one in the Enthought trait.
-        """
-        return self._validator.create_editor()
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is

@@ -68,7 +68,7 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
         remoteargs = ['-f', os.path.join(os.path.basename(fname),
                                          'downloads',
                                          vername,
-                                         gfiles[0])]
+                                         'go-openmdao-{}.py'.format(vername))]
     else:
         remoteargs = ['-f', fname]
 

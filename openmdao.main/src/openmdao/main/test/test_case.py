@@ -4,7 +4,7 @@ import array
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.main.datatypes.api import Int, List
-from openmdao.main.numpy_fallback import array as nparray
+from numpy import array as nparray
 
 from openmdao.main.test.test_vartree import DumbVT
 
@@ -15,7 +15,7 @@ class Simple(Component):
     d = Int(iotype='out')
     a_lst = List(Int, iotype='in')
     c_lst = List(Int, iotype='out')
-    
+
     def __init__(self):
         super(Simple, self).__init__()
         self.a = 1
@@ -39,15 +39,15 @@ class CaseTestCase(unittest.TestCase):
         self.top.connect('comp1.d', 'comp2.b')
         self.top.connect('comp1.c_lst', 'comp2.a_lst')
         self.top.driver.workflow.add(['comp1','comp2'])
-        
+
         self.inputs = [('comp1.a',2),('comp1.b',4),('comp1.a_lst', [4,5,6])]
         self.outputs = ['comp2.c+comp2.d', 'comp2.c_lst[2]', 'comp2.d']
-        self.case = case = Case(inputs=self.inputs, outputs=self.outputs, 
+        self.case = case = Case(inputs=self.inputs, outputs=self.outputs,
                                 label='blah blah')
         case.apply_inputs(self.top)
         self.top.run()
         case.update_outputs(self.top)
-    
+
     def test_subcase(self):
         subcase = self.case.subcase( ['comp1.b', 'comp2.d'] )
         self.assertEqual(self.case.timestamp, subcase.timestamp )
@@ -55,19 +55,19 @@ class CaseTestCase(unittest.TestCase):
         self.assertEqual(subcase['comp1.b'], 4)
         self.assertEqual(len(subcase.get_outputs()),1)
         self.assertEqual(subcase.get_outputs()[0][0], 'comp2.d')
-        
+
     def test_case_access(self):
         self.assertEqual(self.case['comp1.a'], 2)
         self.assertEqual(self.case['comp2.c_lst[2]'], 24)
-        
+
         self.case['comp1.a'] = 5
         self.assertEqual(self.case['comp1.a'], 5)
-        
+
     def test_case_containment(self):
         self.assertTrue('comp1.a' in self.case)
         self.assertFalse('comp1.z' in self.case)
         self.assertTrue('comp2.c+comp2.d' in self.case)
-        
+
     def test_len(self):
         self.assertEqual(len(self.case), 6)
 
@@ -92,9 +92,9 @@ class CaseTestCase(unittest.TestCase):
                 self.assertTrue(line.startswith('   timestamp:'))
             else:
                 self.assertEqual(line, expected[i])
-                
+
         case = Case(inputs=[('comp1.a',4), ('comp1.b',8)],label='foo',
-                    case_uuid='abcd-efg', parent_uuid='abc-xyz-pdq', 
+                    case_uuid='abcd-efg', parent_uuid='abc-xyz-pdq',
                     max_retries=5, retries=4,
                     msg='failed')
         expected = ["Case: foo",
@@ -116,26 +116,26 @@ class CaseTestCase(unittest.TestCase):
                 self.assertEqual(line, expected[i])
 
 
-                
+
         self.assertFalse(case == self.case)
         self.assertTrue(case == case)
         self.assertTrue(case == copy.deepcopy(case))
-        
-        
+
+
     def test_items(self):
         inputs = dict(self.case.items(iotype='in'))
         self.assertEqual(len(self.inputs), len(inputs))
         for name,val in self.inputs:
             self.assertTrue(name in inputs)
             self.assertEqual(val, inputs[name])
-            
+
         outputs = dict(self.case.items(iotype='out'))
         expected_outs = dict([(k,v) for k,v in zip(self.outputs, [12,24,8])])
         self.assertEqual(len(expected_outs), len(outputs))
         for name, val in expected_outs.items():
             self.assertTrue(name in outputs)
             self.assertEqual(val, outputs[name])
-            
+
         both = dict(self.case.items())
         expected = expected_outs
         expected.update(self.inputs)
@@ -143,7 +143,7 @@ class CaseTestCase(unittest.TestCase):
         for name, val in expected.items():
             self.assertTrue(name in both)
             self.assertEqual(val, both[name])
-        
+
     def test_flatten(self):
         dvt = DumbVT()
         inputs = [('comp1.a_lst', [1,2,3,[7,8,9]]),
@@ -152,14 +152,14 @@ class CaseTestCase(unittest.TestCase):
                   ('comp1.vt', dvt),
                   ]
         case = Case(inputs=inputs)
-        self.assertEqual(set(case.items(flatten=True)), set([('comp1.a_lst[0]', 1), 
-                                                             ('comp1.a_lst[1]', 2), 
-                                                             ('comp1.a_lst[2]', 3), 
-                                                             ('comp1.a_lst[3][0]', 7), 
-                                                             ('comp1.a_lst[3][1]', 8), 
-                                                             ('comp1.a_lst[3][2]', 9), 
-                                                             ('comp1.a_arr[0]', 4.0), 
-                                                             ('comp1.a_arr[1]', 5.0), 
+        self.assertEqual(set(case.items(flatten=True)), set([('comp1.a_lst[0]', 1),
+                                                             ('comp1.a_lst[1]', 2),
+                                                             ('comp1.a_lst[2]', 3),
+                                                             ('comp1.a_lst[3][0]', 7),
+                                                             ('comp1.a_lst[3][1]', 8),
+                                                             ('comp1.a_lst[3][2]', 9),
+                                                             ('comp1.a_arr[0]', 4.0),
+                                                             ('comp1.a_arr[1]', 5.0),
                                                              ('comp1.a_arr[2]', 6.0),
                                                              ('comp1.np_arr[0][0]', 1),
                                                              ('comp1.np_arr[0][1]', 2),
@@ -167,12 +167,15 @@ class CaseTestCase(unittest.TestCase):
                                                              ('comp1.np_arr[1][1]', 4),
                                                              ('comp1.np_arr[2][0]', 5),
                                                              ('comp1.np_arr[2][1]', 6),
-                                                             ('comp1.vt.vt2.vt3.a',1.), 
+                                                             ('comp1.vt.vt2.vt3.a',1.),
                                                              ('comp1.vt.vt2.vt3.b',12.),
                                                              ('comp1.vt.vt2.x',-1.),
                                                              ('comp1.vt.vt2.y',-2.),
                                                              ('comp1.vt.v1',1.),
-                                                             ('comp1.vt.v2',2.)
+                                                             ('comp1.vt.v2',2.),
+                                                             ('comp1.vt.data', ''),
+                                                             ('comp1.vt.vt2.data', ''),
+                                                             ('comp1.vt.vt2.vt3.data', ''),
                                                              ]))
 
 if __name__ == "__main__":

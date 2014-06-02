@@ -8,10 +8,10 @@ import re
 import unittest
 from mock import Mock
 
-try:
-    from numpy import zeros, array, identity, random
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random
+from numpy import zeros, array, identity, random
+
+from openmdao.lib.architectures.api import MDF, CO
+from openmdao.lib.optproblems.api import UnitScalableProblem
 
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
@@ -21,7 +21,6 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
-import openmdao.main.pseudocomp as pcompmod
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -110,15 +109,6 @@ class BadListDerivsComp(Component):
 
 
 class Testcase_provideJ(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
-
-    def setUp(self):
-        """ Called before each test. """
-        pcompmod._count = 0
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
 
     def test_provideJ(self):
 
@@ -573,9 +563,6 @@ class ABCDintComp(Component):
 
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
-
-    def setUp(self):
-        pcompmod._count = 0 # keep pseudocomp names consistent
 
     def test_bad_list_deriv_vars(self):
         top = set_as_top(Assembly())
@@ -2917,11 +2904,42 @@ class Comp3_array(Component):
             result['x'] += dy.reshape((3, 3))
 
 
+class CompBase(Component):
+
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        self.y = self.x
+        pass
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        self.J = array([[1.0]])
+
+    def list_deriv_vars(self):
+        ''' What we have'''
+        return ('x',), ('y',)
+
+
+class CompForward(CompBase):
+
+    def apply_deriv(self, arg, result):
+
+        if 'y' in result and 'x' in arg:
+            result['y'] += arg['x']
+
+class CompAdjoint(CompBase):
+
+    def apply_derivT(self, arg, result):
+
+        if 'y' in arg and 'x' in result:
+            result['x'] += arg['y']
+
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_applyJ_and_applyJT(self):
 
@@ -3068,6 +3086,55 @@ class Testcase_applyJT(unittest.TestCase):
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
 
+    def test_forward_adjoint_error(self):
+        # Test our error messages for when you have are missing one
+        # of (apply_deriv, apply_derivT) and try to run the other
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompForward())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'forward'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "adjoint mode, but component %s" % 'comp'
+            msg += " only has forward derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompAdjoint())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'forward'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "forward mode, but component %s" % 'comp'
+            msg += " only has adjoint derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
 
 class PreComp(Component):
     '''Comp with preconditioner'''
@@ -3159,9 +3226,6 @@ class PreCompArray(Component):
 
 class Testcase_preconditioning(unittest.TestCase):
     """ Unit test for applyMinv and applyMinvT """
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_simple(self):
 
@@ -3321,9 +3385,6 @@ class Testcase_preconditioning(unittest.TestCase):
 
 class TestMultiDriver(unittest.TestCase):
 
-    def setUp(self):
-        pcompmod._count = 0
-
     def test_nested_driver(self):
 
         top = set_as_top(Assembly())
@@ -3350,6 +3411,57 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
         self.assertEqual(len(edges), 3)
+
+    def test_PA_subvar_solver_edges(self):
+
+        # Note, this test documents a bug where the pseudoassembly didn't
+        # correctly identify its solver edges because they were subvars,
+        # resulting in an exception. The test runs to assure there is no
+        # exception.
+
+        sp = set_as_top(UnitScalableProblem())
+        sp.architecture = MDF()
+
+        # Make sure it runs.
+        sp.run()
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
+    def test_PA_subvar_driver_edges(self):
+
+        # Ther was a keyerror here too, resulting from a basevar node
+        # that gor removed somehow on the recursed optimizer graph.
+
+        sp = set_as_top(UnitScalableProblem())
+        sp.architecture = CO()
+        sp.check_config()
+
+        # Don't run it forever
+        sp.driver.maxiter = 1
+        sp.local_opt_d0.maxiter = 1
+        sp.local_opt_d1.maxiter = 1
+
+        # Make sure it runs.
+        sp.run()
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
 
 if __name__ == '__main__':
     import nose

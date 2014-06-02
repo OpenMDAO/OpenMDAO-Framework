@@ -5,8 +5,7 @@ derivatives solve.
 
 import unittest
 import numpy as np
-from mock import patch, Mock
-import scipy.sparse.linalg
+from mock import Mock
 
 import openmdao.main.implicitcomp
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
@@ -15,8 +14,6 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
-
-import openmdao.main.pseudocomp as pcompmod  # used to keep pseudocomp names consistent in tests
 
 
 class MyComp_No_Deriv(ImplicitComponent):
@@ -361,9 +358,6 @@ class Coupled2(ImplicitComponent):
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
 
-    def setUp(self):
-        pcompmod._count = 0  # reset pseudocomp numbering
-
     def test_error_logging1(self):
 
         orig_gmres = openmdao.main.implicitcomp.gmres
@@ -619,59 +613,6 @@ class Testcase_implicit(unittest.TestCase):
         #print info
         self.assertEqual(set(info[('comp.res',)]),
                          set(['comp.x', 'comp.y', 'comp.z']))
-        self.assertEqual(len(info), 1)
-
-        edges = model.driver.workflow._edges
-        #print edges
-        self.assertEqual(set(edges['@in0']), set(['comp.c']))
-        self.assertEqual(set(edges['comp2.y']), set(['@out0']))
-
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
-
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
-                                                outputs=['comp2.y'],
-                                                mode='adjoint')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
-
-        model.driver.workflow.config_changed()
-        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
-                                                outputs=['comp2.y'],
-                                                mode='fd')
-        assert_rel_error(self, J[0][0], -0.1666, 1e-3)
-
-    def test_derivative_state_connection_external_solve_ProvideJ(self):
-
-        model = set_as_top(Assembly())
-        model.add('comp', MyComp_Deriv_ProvideJ())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
-
-        model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
-                                                   ["dy_dx=2"]))
-
-        model.add('solver', BroydenSolver())
-        model.solver.workflow.add(['comp', 'comp2'])
-        model.driver.workflow.add(['solver'])
-        model.connect('comp.z', 'comp2.x')
-
-        model.solver.add_parameter('comp.x', low=-100, high=100)
-        model.solver.add_parameter('comp.y', low=-100, high=100)
-        model.solver.add_parameter('comp.z', low=-100, high=100)
-
-        model.solver.add_constraint('comp.res[0] = 0')
-        model.solver.add_constraint('comp.res[1] = 0')
-        model.solver.add_constraint('comp.res[2] = 0')
-
-        model.comp.eval_only = True
-
-        model.run()
-        #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
-        J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
-                                                outputs=['comp2.y'])
-        info = model.driver.workflow.get_implicit_info()
-        #print info
-        self.assertEqual(set(info[('_pseudo_0.out0', '_pseudo_1.out0', '_pseudo_2.out0')]),
-                         set([('comp.x',), ('comp.y',), ('comp.z',)]))
         self.assertEqual(len(info), 1)
 
         edges = model.driver.workflow._edges

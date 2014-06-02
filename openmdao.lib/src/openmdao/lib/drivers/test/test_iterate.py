@@ -4,15 +4,13 @@ Test the FixedPointIterator component
 
 import unittest
 
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 from openmdao.lib.drivers.iterate import FixedPointIterator, IterateUntil
 from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
-                                            Discipline2_WithDerivatives, \
-                                            Discipline1, Discipline2
+                                            Discipline2_WithDerivatives
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Array, Float
 from openmdao.util.testutil import assert_rel_error
-
 
 class Simple1(Component):
     """ Testing convergence failure"""
@@ -54,10 +52,6 @@ class Simple4(Component):
     invar = Float(1, iotype="in")
     outvar = Float(0, iotype="out")
 
-    def __init__(self):
-        super(Simple4, self).__init__()
-        self.force_execute = True
-
     def execute(self):
         self.outvar = self.outvar + self.invar
 
@@ -84,6 +78,31 @@ class ArrayMulti(Component):
     def execute(self):
         self.out = self.arr/10.0
 
+class MultiArrayMulti(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    arr1 = Array([1., 1.], iotype="in")
+    arr2 = Array([1., 1.], iotype="in")
+    out1 = Array([0., 0.], iotype="out")
+    out2 = Array([0., 0.], iotype="out")
+
+    def execute(self):
+        self.out1 = self.arr1/10.0
+        self.out2 = self.arr2/10.0
+
+class MixedScalarArrayMulti(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    arr1 = Array([1., 1.], iotype="in")
+    in2 = Float(1.0, iotype="in")
+    out1 = Array([0., 0.], iotype="out")
+    out2 = Float(0, iotype="out")
+
+    def execute(self):
+        self.out1 = self.arr1/10.0
+        self.out2 = self.in2/10.0
+
+
 
 class FixedPointIteratorTestCase(unittest.TestCase):
     """test FixedPointIterator component"""
@@ -100,7 +119,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.outvar = simple.invar')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
         self.top.run()
 
         self.assertAlmostEqual(self.top.simple.invar,
@@ -113,7 +132,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.invar - simple.outvar = 0')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
 
         try:
             self.top.run()
@@ -142,8 +161,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out1 = simple.in1')
         self.top.driver.add_constraint('simple.out2 = simple.in2')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -158,8 +177,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out2 = simple.in2')
         self.top.driver.add_constraint('simple.out1 = simple.in1')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -174,8 +193,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         self.top.driver.add_constraint('simple.out2 = simple.in2')
         self.top.driver.add_constraint('simple.in1 = simple.out1')
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -189,7 +208,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.workflow.add('simple')
 
         self.top.driver.add_constraint('simple.out = simple.arr')
-        self.top.driver.add_parameter('simple.arr', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.arr')
         self.top.driver.tolerance = .02
         self.top.run()
 
@@ -197,12 +216,75 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
         self.assertEqual(self.top.driver.current_iteration, 2)
 
+    def test_multi_array_multi(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MultiArrayMulti())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.out2 = simple.arr2')
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.arr2')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.arr2[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+
+    def test_mixed_scalar_array_multi(self): 
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MixedScalarArrayMulti())
+
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.out2 = simple.in2')
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.in2')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.in2, .01, .002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
+    def test_mixed_scalar_array_multi_swapped(self): 
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", MixedScalarArrayMulti())
+
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.out1 = simple.arr1')
+        self.top.driver.add_constraint('simple.in2 = simple.out2')
+        self.top.driver.add_parameter('simple.arr1')
+        self.top.driver.add_parameter('simple.in2')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.arr1[0], .01, .002)
+        assert_rel_error(self, self.top.simple.arr1[1], .01, .002)
+        assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
+        assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
+        assert_rel_error(self, self.top.simple.in2, .01, .002)
+        self.assertEqual(self.top.driver.current_iteration, 2)
+
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
         self.top.add("simple", Simple1())
         self.top.driver.workflow.add('simple')
         self.top.driver.add_constraint('simple.outvar = simple.invar')
-        self.top.driver.add_parameter('simple.invar', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.invar')
         self.top.driver.max_iteration = 3
 
         self.top.run()
@@ -233,8 +315,8 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
 
-        self.top.driver.add_parameter('simple.in1', -9e99, 9e99)
-        self.top.driver.add_parameter('simple.in2', -9e99, 9e99)
+        self.top.driver.add_parameter('simple.in1')
+        self.top.driver.add_parameter('simple.in2')
 
         try:
             self.top.run()
@@ -355,7 +437,7 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
                                                    mode='fd')
 
         J = (J1 - J2)
-        print J.max()
+        #print J.max()
         self.assertTrue(J.max() < 1.0e-3)
 
 
