@@ -7,6 +7,8 @@ import os.path
 from os.path import isdir, exists, join, getsize, split
 import webbrowser
 import json
+import glob
+import subprocess
 
 from distutils.spawn import find_executable
 from openmdao.util.fileutil import find_files
@@ -153,6 +155,21 @@ def find_chrome():
             break
 
     return pathname
+
+
+def chrome_version():
+    if sys.platform == 'win32':  # No command-line version capability.
+        pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
+        _chrome_version = os.path.basename(sorted(glob.glob(pattern),
+                                                  reverse=True)[0])
+    else:
+        _chrome_version = subprocess.check_output([find_chrome(), '--version'])
+        _chrome_version = _chrome_version.strip().split()
+        if _chrome_version[0] == 'Chromium':
+            _chrome_version = _chrome_version[1]
+        else:
+            _chrome_version = _chrome_version[-1]
+    return _chrome_version
 
 
 def launch_browser(port, preferred_browser=None):
