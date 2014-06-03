@@ -7,6 +7,7 @@ from subprocess import Popen, STDOUT, PIPE, check_call
 import tarfile
 import tempfile
 import time
+import cProfile
 
 try:
     import paramiko
