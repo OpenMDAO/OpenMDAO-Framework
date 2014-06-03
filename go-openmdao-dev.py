@@ -2243,7 +2243,7 @@ def after_install(options, home_dir, activated=False):
     failed_imports = []
     for pkg in openmdao_prereqs:
         try:
-            _import_(pkg)
+            __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
 
