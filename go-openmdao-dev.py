@@ -1911,7 +1911,7 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 
 
-openmdao_prereqs = ['numpy', 'scipy>=0.11.0']
+openmdao_prereqs = ['numpy', 'scipy']
 
 
 
@@ -2101,7 +2101,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 
     #To get rid of OSX 10.9 compiler errors by turning them to warnings.
     if is_darwin:
-       extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+        extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
@@ -2112,7 +2112,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     #logger.debug("running command: %s" % ' '.join(cmdline))
     try:
         if is_darwin:
-           call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
         else:
             call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
     except OSError:
@@ -2185,7 +2185,7 @@ def after_install(options, home_dir, activated=False):
     if(os.path.exists(setuptools_egg)):
         os.remove(setuptools_egg)
 
-    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'argparse==1.2.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==1.3.3', 'ordereddict==1.1', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==0.13.3', 'scipy==0.14.0', 'slsqp==1.0.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
+    reqs = ['Fabric==0.9.3', 'Jinja2==2.4', 'Pyevolve==0.6', 'Pygments==1.3.1', 'SetupDocs==1.0.5', 'Sphinx==1.2.2', 'argparse==1.2.1', 'boto==2.0rc1', 'cobyla==1.0.1', 'conmin==1.0.1', 'decorator==3.2.0', 'docutils==0.10', 'mock==1.0.1', 'networkx==1.8.1', 'newsumt==1.1.0', 'nose==1.3.3', 'ordereddict==1.1', 'paramiko==1.7.7.1', 'pycrypto==2.3', 'pyparsing==1.5.7', 'requests==0.13.3', 'slsqp==1.0.1', 'traits==4.3.0', 'virtualenv==1.9.1', 'zope.interface==3.6.1']
     guireqs = ['PyYAML==3.10', 'argh==0.15.1', 'pathtools==0.1.2', 'pyV3D==0.4.4', 'pyzmq==13.1.0', 'tornado==2.2.1', 'watchdog==0.6.0']
     guitestreqs = ['EasyProcess==0.1.4', 'PyVirtualDisplay==0.1.0', 'entrypoint2==0.0.5', 'lazr.testing==0.1.2a', 'mocker==1.1', 'path.py==2.2.2', 'selenium==2.35.0', 'zope.exceptions==3.6.1', 'zope.testing==4.1.1', 'zope.testrunner==4.0.4']
 
@@ -2241,12 +2241,20 @@ def after_install(options, home_dir, activated=False):
             os.rename(site_patched, site_orig)
 
     failed_imports = []
-    from pkg_resources import working_set, Requirement
     for pkg in openmdao_prereqs:
         try:
-            working_set.resolve([Requirement.parse(pkg)])
-        except:
+            _import_(pkg)
+        except ImportError:
             failed_imports.append(pkg)
+
+        #Hack to make sure scipy is up to date.   
+        try:
+            from scipy.optimize import minimize
+        except:
+            if "scipy" in failed_imports:
+                failed_imports.remove("scipy")
+            failed_imports.append("scipy>=0.11.0")
+
     if failed_imports:
         if options.noprereqs:
             print "\n**** The following prerequisites could not be imported: %s." % failed_imports
@@ -2293,7 +2301,7 @@ def after_install(options, home_dir, activated=False):
 
         try:
             if is_darwin:
-               extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+                extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
             for pkg, pdir, _ in openmdao_packages:
                 if not options.gui and pkg == 'openmdao.gui':
@@ -2303,7 +2311,7 @@ def after_install(options, home_dir, activated=False):
                            'develop', '-N'] + cmds
                 try:
                     if is_darwin:
-                       call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
                     else:
                         call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
                 except OSError:
