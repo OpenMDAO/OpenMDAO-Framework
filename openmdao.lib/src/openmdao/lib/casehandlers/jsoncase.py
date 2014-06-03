@@ -65,16 +65,22 @@ class JSONCaseRecorder(object):
                 prefix += '.'
 
             for name in ins + outs:
-                try:
-                    metadata = scope.get_metadata(name)
-                except AttributeError:
-                    pass  # Response_0, etc.
+                if name.endswith('.workflow.itername') or \
+                   name.startswith('Constraint (') or \
+                   name == 'Objective' or name.startswith('Objective_') or \
+                   name.startswith('Response_'):
+                    pass  # No metadata.
                 else:
-                    metadata = metadata.copy()
-                    for key in cruft:
-                        if key in metadata:
-                            del metadata[key]
-                    variable_metadata[prefix+name] = metadata
+                    try:
+                        metadata = scope.get_metadata(name)
+                    except AttributeError:
+                        pass  # Error already logged.
+                    else:
+                        metadata = metadata.copy()
+                        for key in cruft:
+                            if key in metadata:
+                                del metadata[key]
+                        variable_metadata[prefix+name] = metadata
 
         for name in constants:
             metadata = top.get_metadata(name).copy()
@@ -125,9 +131,10 @@ class JSONCaseRecorder(object):
             uuid=self._uuid)
 
         category = 'simulation_info'
+        data = self._dump(info, category,
+                          ('variable_metadata', 'expressions', 'constants'))
         self.out.write('{\n"%s": ' % category)
-        self._dump(info, category,
-                   ('variable_metadata', 'expressions', 'constants'))
+        self.out.write(data)
         self.out.write('\n')
 
         # Write info for each driver.
@@ -153,8 +160,9 @@ class JSONCaseRecorder(object):
 
             count += 1
             category = 'driver_info_%s' % count
+            data = self._dump(info, category)
             self.out.write(', "%s": ' % category)
-            self._dump(info, category)
+            self.out.write(data)
             self.out.write('\n')
 
         self.out.flush()
@@ -181,15 +189,16 @@ class JSONCaseRecorder(object):
 
         self._cases += 1
         category = 'iteration_case_%s' % self._cases
+        data = self._dump(info, category, ('data',))
         self.out.write(', "%s": ' % category)
-        self._dump(info, category)
+        self.out.write(data)
         self.out.write('\n')
         self.out.flush()
 
     def _dump(self, info, category, subcategories=None):
-        """Write JSON data, report any bad keys & values encountered."""
+        """Return JSON data, report any bad keys & values encountered."""
         try:
-            data = dumps(info, indent=self.indent, sort_keys=self.sort_keys,
+            return dumps(info, indent=self.indent, sort_keys=self.sort_keys,
                          cls=Encoder, check_circular=False)
         except Exception as exc:
             # Log bad keys & values.
@@ -221,7 +230,6 @@ class JSONCaseRecorder(object):
 
             msg = '%s keys %s: %s' % (msg, bad, exc)
             raise RuntimeError(msg)
-        self.out.write(data)
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

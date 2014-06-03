@@ -123,7 +123,12 @@ class Workflow(object):
             err = TracedError(exc, format_exc())
 
         if record_case and self._rec_required:
-            self._record_case(case_uuid, err)
+            try:
+                self._record_case(case_uuid, err)
+            except Exception as exc:
+                if err is None:
+                    err = TracedError(exc, format_exc())
+                self._parent._logger.error("Can't record case: %s", exc)
 
         if err is not None:
             err.reraise(with_traceback=False)
@@ -131,15 +136,12 @@ class Workflow(object):
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        driver = self._parent
-        scope = driver.parent
-        top = scope
-        while top.parent is not None:
-            top = top.parent
-        if not top.recorders:
+        if not includes:
             self._rec_required = False
             return (set(), dict())
 
+        driver = self._parent
+        scope = driver.parent
         prefix = scope.get_pathname()
         if prefix:
             prefix += '.'
@@ -176,7 +178,7 @@ class Workflow(object):
 
         # Responses
         self._rec_responses = []
-        if hasattr(driver, 'eval_responses'):
+        if hasattr(driver, 'get_responses'):
             for j, key in enumerate(driver.get_responses()):
                 name = 'Response_%d' % j
                 path = prefix+name
@@ -221,7 +223,10 @@ class Workflow(object):
         if hasattr(driver, 'get_eq_constraints'):
             dsts.extend(constraint.pcomp_name+'.out0'
                         for constraint in driver.get_eq_constraints().values())
-        for src, dst in _get_inner_connections(scope._depgraph, srcs, dsts):
+
+        graph = scope._depgraph
+#        graph = scope._depgraph.full_subgraph(self.get_names(full=True))
+        for src, dst in _get_inner_connections(graph, srcs, dsts):
             path = prefix+src
             if src not in inputs and src not in outputs and \
                self._check_path(path, includes, excludes):
@@ -237,6 +242,9 @@ class Workflow(object):
         # If recording required, register names in recorders.
         self._rec_required = bool(inputs or outputs)
         if self._rec_required:
+            top = scope
+            while top.parent is not None:
+                top = top.parent
             for recorder in top.recorders:
                 recorder.register(driver, inputs, outputs)
 

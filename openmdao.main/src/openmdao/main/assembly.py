@@ -17,8 +17,8 @@ import networkx as nx
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
-                                     ICaseIterator, ICaseRecorder, IDOEgenerator, \
-                                     IHasParameters
+                                     ICaseIterator, ICaseRecorder, \
+                                     IDOEgenerator, IHasParameters
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -228,7 +228,7 @@ class Assembly(Component):
         """
         super(Assembly, self).add_trait(name, trait, refresh)
         if trait.iotype and name not in self._depgraph:
-            self._depgraph.add_boundary_var(self, name, 
+            self._depgraph.add_boundary_var(self, name,
                                             iotype=trait.iotype)
 
     def rename(self, oldname, newname):
@@ -279,7 +279,8 @@ class Assembly(Component):
                 # this should copy inputs, delegates and set name
                 newobj.mimic(tobj)
             except Exception:
-                self.reraise_exception("Couldn't replace '%s' of type %s with type %s"
+                self.reraise_exception("Couldn't replace '%s' of type %s with"
+                                       " type %s"
                                        % (target_name, type(tobj).__name__,
                                           type(newobj).__name__))
 
@@ -351,7 +352,7 @@ class Assembly(Component):
             self.disconnect(name)
         elif name in self.list_inputs() or name in self.list_outputs():
             self.disconnect(name)
-            
+
         if has_interface(obj, IDriver):
             for pcomp in obj.list_pseudocomps():
                 if pcomp in self._depgraph:
@@ -518,10 +519,10 @@ class Assembly(Component):
         self._check_input_collisions()
         self._check_unset_req_vars()
         self._check_unexecuted_comps(strict)
-                
+
     def _check_input_collisions(self):
         graph = self._depgraph
-        dests = set([v for u,v in self.list_connections()])
+        dests = set([v for u, v in self.list_connections()])
         allbases = set([graph.base_var(v) for v in dests])
         unconnected_bases = allbases - dests
         connected_bases = allbases - unconnected_bases
@@ -533,14 +534,17 @@ class Assembly(Component):
                     tbase = graph.base_var(target)
                     if target == tbase:  # target is a base var
                         if target in allbases:
-                            collisions.append("%s in %s" % (target, drv.get_pathname()))
+                            collisions.append("%s in %s"
+                                              % (target, drv.get_pathname()))
                     else:  # target is a sub var
                         if target in dests or tbase in connected_bases:
-                            collisions.append("%s in %s" % (target, drv.get_pathname()))
-                    
+                            collisions.append("%s in %s"
+                                              % (target, drv.get_pathname()))
+
         if collisions:
-            self.raise_exception("The following parameters collide with connected inputs: %s" %
-                                 ','.join(collisions), RuntimeError)
+            self.raise_exception("The following parameters collide with"
+                                 " connected inputs: %s" % ','.join(collisions),
+                                 RuntimeError)
 
     def _check_unexecuted_comps(self, strict):
         cgraph = self._depgraph.component_graph()
@@ -555,19 +559,20 @@ class Assembly(Component):
                 errfunct = self.raise_exception
             else:
                 errfunct = self._logger.warning
-                msg += ", so they will be executed once per execution of this Assembly"
+                msg += ", so they will be executed once per execution of " \
+                       "this Assembly"
 
             out_edges = nx.edge_boundary(cgraph, diff)
             in_edges = nx.edge_boundary(cgraph, wfcomps)
-            pre = [u for u,v in out_edges]
-            post = [v for u,v in in_edges]
-            
+            pre = [u for u, v in out_edges]
+            post = [v for u, v in in_edges]
+
             if pre:
                 msg += ": %s" % pre
                 errfunct(msg)
 
                 ## HACK ALERT!
-                ## If there are upstream comps that are not in any workflow, 
+                ## If there are upstream comps that are not in any workflow,
                 ## create a hidden top level driver called _pre_driver. That
                 ## driver will be executed once per execution of the Assembly.
 
@@ -578,24 +583,25 @@ class Assembly(Component):
                 self._pre_driver.workflow.add(pre)
 
             if post:
-                errfunct("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
-                                      % list(diff))
+                errfunct("The following components are not in any workflow"
+                         " and WILL NOT EXECUTE: %s" % list(diff))
 
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
         graph = self._depgraph
-        for name in chain(self._depgraph.all_comps(), 
+        for name in chain(self._depgraph.all_comps(),
                           self._depgraph.get_boundary_inputs(),
                           self._depgraph.get_boundary_outputs()):
             obj = getattr(self, name)
             if has_interface(obj, IContainer):
                 for vname in obj.get_req_default(self.trait(name).required):
-                    # each var must be connected, otherwise value will not 
+                    # each var must be connected, otherwise value will not
                     # be set to a non-default value
                     base = graph.base_var(vname)
                     indeg = graph.in_degree(base)
                     io = graph.node[base]['iotype']
-                    if (io == 'in' and indeg < 1) or (io == 'state' and indeg < 2):
+                    if (io == 'in' and indeg < 1) or \
+                       (io == 'state' and indeg < 2):
                         self.raise_exception("required variable '%s' was"
                                              " not set" % vname, RuntimeError)
 
@@ -645,8 +651,8 @@ class Assembly(Component):
             scomps = srcexpr.get_referenced_compnames()
             for dname in dcomps:
                 if dname in scomps:
-                    self.raise_exception("Can't connect '%s' to '%s'. Both refer"
-                                         " to the same component." %
+                    self.raise_exception("Can't connect '%s' to '%s'. Both"
+                                         " refer to the same component." %
                                          (src, dest), RuntimeError)
             for cname in chain(dcomps, scomps):
                 comp = getattr(self, cname)
@@ -703,7 +709,7 @@ class Assembly(Component):
                 else:
                     try:
                         self.remove_trait(name)
-                    except:
+                    except Exception:
                         pass
                 try:
                     graph.remove(name)
@@ -740,7 +746,8 @@ class Assembly(Component):
     def execute(self):
         """Runs driver and updates our boundary variables."""
         if self._pre_driver is not None:
-            self._pre_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+            self._pre_driver.run(ffd_order=self.ffd_order,
+                                 case_uuid=self._case_uuid)
 
         self.update_inputs('driver')
         self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
@@ -751,20 +758,27 @@ class Assembly(Component):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         if self.parent is None:
-            for recorder in self.recorders:
-                recorder.startup()
+            if self.recorders:
+                includes = self.includes
+                excludes = self.excludes
+                for recorder in self.recorders:
+                    recorder.startup()
+            else:
+                includes = excludes = None
 
         # Determine (changing) inputs and outputs to record
         inputs = set()
         constants = {}
-        includes = self.includes if self.parent is None else includes
-        excludes = self.excludes if self.parent is None else excludes
         for name in self.list_containers():
             obj = getattr(self, name)
             if has_interface(obj, IDriver, IAssembly):
                 inps, consts = obj.configure_recording(includes, excludes)
                 inputs.update(inps)
                 constants.update(consts)
+
+        # If nothing to record, return after configuring workflows.
+        if not includes:
+            return (inputs, constants)
 
         # Determine constant inputs.
         objs = [self]
@@ -945,8 +959,9 @@ class Assembly(Component):
             Finite difference step type. Set to 'absolute' or 'relative'.
             Default is 'absolute'.
 
-        Returns the finite difference gradient, the OpenMDAO-calculated gradient,
-        a list of the gradient names, and a list of suspect inputs/outputs.
+        Returns the finite difference gradient, the OpenMDAO-calculated
+        gradient, a list of the gradient names, and a list of suspect
+        inputs/outputs.
         """
         driver = self.driver
         obj = None
@@ -973,7 +988,7 @@ class Assembly(Component):
             if has_interface(obj, IDriver):
                 driver = obj
 
-        # fill in any missing inputs or outputs using the object specified by 'name'
+        # fill in missing inputs or outputs using the object specified by 'name'
         if not inputs:
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull inputs from driver
@@ -987,7 +1002,8 @@ class Assembly(Component):
                           for inp in list_deriv_vars(obj)[0]]
                 inputs = sorted(inputs)
             else:
-                self.raise_exception("Can't find any inputs for generating gradient.")
+                self.raise_exception("Can't find any inputs for generating"
+                                     " gradient.")
         if not outputs:
             if has_interface(obj, IDriver):
                 pass  # workflow.check_gradient can pull outputs from driver
@@ -1001,7 +1017,8 @@ class Assembly(Component):
                           for outp in list_deriv_vars(obj)[1]]
                 inputs = sorted(inputs)
             else:
-                self.raise_exception("Can't find any outputs for generating gradient.")
+                self.raise_exception("Can't find any outputs for generating"
+                                     " gradient.")
 
         if not has_interface(obj, IDriver) and (not inputs or not outputs):
             msg = 'Component %s has no analytic derivatives.' % obj.name
@@ -1094,9 +1111,9 @@ class Assembly(Component):
 
     def all_wflows_order(self):
         """Returns a list of component names over all workflows in an iteration
-        hierarchy.  Shows the actual Assembly-wide order of execution of components
-        in the Assembly.  Note that a given component will appear multiple times if
-        that component is a member of multiple workflows.
+        hierarchy.  Shows the actual Assembly-wide order of execution of
+        components in the Assembly.  Note that a given component will appear
+        multiple times if that component is a member of multiple workflows.
         """
 
         def _all_wflows_order(drv):
@@ -1230,7 +1247,7 @@ class Assembly(Component):
                     var = cont.get(vname)
                     vtype = type(var).__name__
                     if not '.' in vname:  # vartree vars handled separately
-                        full_name = cname + '.' + vname
+                        full_name = '%s.%s' % (cname, vname)
                         meta = cont.get_metadata(vname)
                         if meta and 'units' in meta:
                             units = meta['units']
@@ -1244,7 +1261,7 @@ class Assembly(Component):
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
                             child_var = var.get(child_name)
-                            full_name = cname + '.' + vname + '.' + child_name
+                            full_name = '%s.%s.%s' % (cname, vname, child_name)
                             meta = var.get_metadata(child_name)
                             if meta and 'units' in meta:
                                 units = meta['units']
@@ -1257,7 +1274,7 @@ class Assembly(Component):
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
-                            full_name = cname + '.' + vname + '[' + str(idx) + ']'
+                            full_name = '%s.%s[%s]' % (cname, vname, idx)
                             units = ''
                             connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
@@ -1269,7 +1286,7 @@ class Assembly(Component):
                     var = cont.get(vname)
                     vtype = type(var).__name__
                     if not '.' in vname:  # vartree vars handled separately
-                        full_name = cname + '.' + vname
+                        full_name = '%s.%s' % (cname, vname)
                         meta = cont.get_metadata(vname)
                         if meta and 'units' in meta:
                             units = meta['units']
@@ -1283,7 +1300,7 @@ class Assembly(Component):
                     if isinstance(var, VariableTree):
                         for child_name in var.list_vars():
                             child_var = var.get(child_name)
-                            full_name = cname + '.' + vname + '.' + child_name
+                            full_name = '%s.%s.%s' % (cname, vname, child_name)
                             meta = var.get_metadata(child_name)
                             if meta and 'units' in meta:
                                 units = meta['units']
@@ -1296,7 +1313,7 @@ class Assembly(Component):
                             }
                     elif vtype == 'ndarray':
                         for idx in range(0, len(var)):
-                            full_name = cname + '.' + vname + '[' + str(idx) + ']'
+                            full_name = '%s.%s[%s]' % (cname, vname, idx)
                             units = ''
                             connectivity['nodes'][full_name] = {
                                 'type':  type(var[0]).__name__,
@@ -1353,7 +1370,8 @@ class Assembly(Component):
                 if pcomp._pseudo_type in ['multi_var_expr', 'units']:
                     source = pcomp._orig_src  # units source will be orig var
                     if source not in connectivity['nodes'].keys():
-                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0],
+                                                   'units')
                         if not units:
                             units = ''
                         connectivity['nodes'][source] = {
@@ -1368,7 +1386,8 @@ class Assembly(Component):
                 if pcomp._pseudo_type in ['multi_var_expr']:
                     target = pcomp._orig_src
                     if target not in connectivity['nodes'].keys():
-                        units = pcomp.get_metadata(pcomp.list_outputs()[0], 'units')
+                        units = pcomp.get_metadata(pcomp.list_outputs()[0],
+                                                   'units')
                         if not units:
                             units = ''
                         connectivity['nodes'][target] = {
