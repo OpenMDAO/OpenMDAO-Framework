@@ -29,7 +29,7 @@ from optparse import OptionParser
 # and will fail with massive output of stuff that may be confusing to the user.
 # If the user runs the installer with a --noprereqs arg, then the prerequisites
 # won't be checked.
-openmdao_prereqs = ['numpy', 'scipy>=0.11.0']
+openmdao_prereqs = ['numpy', 'scipy']
 
 # list of tuples of the form: (openmdao package, parent directory relative to
 # the top of the repository, package type). The directory only has meaning for
@@ -485,12 +485,20 @@ def after_install(options, home_dir, activated=False):
             os.rename(site_patched, site_orig)
 
     failed_imports = []
-    from pkg_resources import working_set, Requirement
     for pkg in openmdao_prereqs:
         try:
-            working_set.resolve([Requirement.parse(pkg)])
-        except:
+            _import_(pkg)
+        except ImportError:
             failed_imports.append(pkg)
+
+        #Hack to make sure scipy is up to date.   
+        try:
+            from scipy.optimize import minimize
+        except:
+            if "scipy" in failed_imports:
+                failed_imports.remove("scipy")
+            failed_imports.append("scipy>=0.11.0")
+
     if failed_imports:
         if options.noprereqs:
             print "\\n**** The following prerequisites could not be imported: %%s." %% failed_imports
