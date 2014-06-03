@@ -438,3 +438,34 @@ def make_git_archive(tarfilename, prefix=''):
                     tarfilename, '--prefix=%s' % prefix, 'HEAD'])
     finally:
         os.chdir(startdir)
+
+class Timer(object):
+    def __init__(self, log_path, mode):
+        self.log_path = log_path
+        self.mode = mode
+
+        if os.path.exists(self.log_path):
+            os.remove(self.log_path)
+
+    def time(self, *time_args):
+        def decorator(target):
+            def wrapper(self, *args, **kargs):
+                t0 = time.time()
+                return_value = target(self, *args, **kargs)
+                t1 = time.time()
+                #msg = msg.format(target, args, kargs)
+
+                msg = "method:{}\nargs:{}\nkargs{}\n".format(target, [self]+args, kargs)
+                if time_args:
+                    time_args = '\n'.join(['{}:{}'.format(arg, getattr(self,arg)) for arg in time_args])
+                    msg = msg + time_args
+
+                msg = '{}{}'.format(msg,  (t1-t0)/1000.)
+
+                with open(self.log_path, self.mode) as fh:
+                    fh.write(msg)
+
+                return return_value
+            return wrapper
+        return decorator
+
