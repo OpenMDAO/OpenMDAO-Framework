@@ -449,19 +449,18 @@ class Timer(object):
 
     def time(self, *time_args):
         def decorator(target):
-            def wrapper(self, *args, **kargs):
+            def wrapper(*args, **kargs):
                 t0 = time.time()
-                return_value = target(self, *args, **kargs)
+                return_value = target(*args, **kargs)
                 t1 = time.time()
-                #msg = msg.format(target, args, kargs)
 
-                msg = "method:{}\nargs:{}\nkargs{}\n".format(target, [self]+args, kargs)
+                msg = "method:{}\nargs:{}\nkargs{}\n".format(target, args, kargs)
                 if time_args:
-                    time_args = '\n'.join(['{}:{}'.format(arg, getattr(self,arg)) for arg in time_args])
-                    msg = msg + time_args
+                    ur = '\n'.join(['{}:{}'.format(arg, getattr(args[0], arg)) for arg in time_args])
+                    msg = msg + ur + '\n'
 
-                msg = '{}{}'.format(msg,  (t1-t0)/1000.)
-
+                msg = '{}time:{} ms\n\n'.format(msg,  (t1-t0)/1000.)
+                
                 with open(self.log_path, self.mode) as fh:
                     fh.write(msg)
 
