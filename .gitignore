@@ -10,6 +10,7 @@ host_results/
 .coverage
 openmdao_log.txt
 build.out
+
 ~*
 *~
 *.egg-info
