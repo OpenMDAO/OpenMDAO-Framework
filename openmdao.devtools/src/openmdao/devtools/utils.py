@@ -440,35 +440,6 @@ def make_git_archive(tarfilename, prefix=''):
     finally:
         os.chdir(startdir)
 
-class Timer(object):
-    def __init__(self, log_path, mode):
-        self.log_path = log_path
-        self.mode = mode
-
-        if os.path.exists(self.log_path):
-            os.remove(self.log_path)
-
-    def time(self, *time_args):
-        def decorator(target):
-            def wrapper(*args, **kargs):
-                t0 = time.time()
-                return_value = target(*args, **kargs)
-                t1 = time.time()
-
-                msg = "method:{}\nargs:{}\nkargs{}\n".format(target, args, kargs)
-                if time_args:
-                    ur = '\n'.join(['{}:{}'.format(arg, getattr(args[0], arg)) for arg in time_args])
-                    msg = msg + ur + '\n'
-
-                msg = '{}time:{} ms\n\n'.format(msg,  (t1-t0)/1000.)
-                
-                with open(self.log_path, self.mode) as fh:
-                    fh.write(msg)
-
-                return return_value
-            return wrapper
-        return decorator
-
 def do_cprofile(func):
     '''
     Decorator for profiling a function using the `cProfile`
