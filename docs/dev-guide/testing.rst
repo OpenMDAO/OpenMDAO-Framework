@@ -136,7 +136,7 @@ Adding New Tests
 ----------------
 
 Generally, you should write your tests using Python's `unittest
-<http://docs.python.org/2/library/unittest.html>`_ framework if possible,
+<https://docs.python.org/2/library/unittest.html>`_ framework if possible,
 although the nose_ package is able to find and run tests that do not use
 unittest.
 
