@@ -86,7 +86,7 @@ class Constraint(object):
             self._size = len(self.evaluate(self.lhs.scope))
         return self._size
 
-    def activate(self):
+    def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -95,7 +95,7 @@ class Constraint(object):
                                      pseudo_type='constraint')
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope)
+        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove
@@ -412,7 +412,7 @@ class HasEqConstraints(_HasConstraintsBase):
                                          % name, ValueError)
 
         constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
-        constraint.activate()
+        constraint.activate(self._parent)
 
         name = ident if name is None else name
         self._constraints[name] = constraint
@@ -432,7 +432,7 @@ class HasEqConstraints(_HasConstraintsBase):
             expression string.
         """
         if constraint.comparator == '=':
-            constraint.activate()
+            constraint.activate(self._parent)
             self._constraints[name] = constraint
         else:
             self._parent.raise_exception("Inequality constraint '%s' is not"
@@ -518,7 +518,7 @@ class HasIneqConstraints(_HasConstraintsBase):
                                          % name, ValueError)
 
         constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
-        constraint.activate()
+        constraint.activate(self._parent)
 
         if name is None:
             self._constraints[ident] = constraint
@@ -541,7 +541,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         """
         if constraint.comparator != '=':
             self._constraints[name] = constraint
-            constraint.activate()
+            constraint.activate(self._parent)
         else:
             self._parent.raise_exception("Equality constraint '%s' is not"
                                          " supported on this driver"

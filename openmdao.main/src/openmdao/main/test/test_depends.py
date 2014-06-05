@@ -312,6 +312,9 @@ class DependsTestCase(unittest.TestCase):
 class ArrSimple(Component):
     ain  = Array([0.,1.,2.,3.], iotype='in')
     aout = Array([0.,1.,2.,3.], iotype='out')
+    ain2  = Array([0.,1.,2.,3.], iotype='in')
+    aout2 = Array([0.,1.,2.,3.], iotype='out')
+    
     
     def __init__(self):
         super(ArrSimple, self).__init__()
@@ -320,6 +323,7 @@ class ArrSimple(Component):
         global exec_order
         exec_order.append(self.name)
         self.aout = self.ain * 2.0
+        self.aout2 = self.ain2 * 0.5
 
         
 class SimplePTAsm(Assembly):
@@ -459,18 +463,20 @@ class DependsTestCase2(unittest.TestCase):
         top.add('sub',Assembly())
         top.sub.add('c2',ArrSimple())
         top.sub.create_passthrough('c2.ain')
+        top.sub.create_passthrough('c2.ain2')
         top.sub.create_passthrough('c2.aout')
+        top.sub.create_passthrough('c2.aout2')
         top.add('c3', ArrSimple())
         top.driver.workflow.add(['c1','sub', 'c3'])
         top.sub.driver.workflow.add('c2')
         top.connect('c1.aout[1]', 'sub.ain[1]')
         top.connect('sub.aout[1]', 'c3.ain[1]')
         
-        top.run()
-        
         top.c1.ain = [55.,44.,33.]
             
         top.run()
+        
+        self.assertEqual(top.c1.aout[1], 88.)
         self.assertEqual(top.sub.ain[1], 88.)
         self.assertEqual(top.sub.aout[1], 176.)
         self.assertEqual(top.c3.ain[1], 176.)

@@ -4,15 +4,11 @@
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
-from openmdao.main.exceptions import RunStopped
-from openmdao.main.pseudocomp import PseudoComponent
 
-#from openmdao.main.interfaces import IDriver
-#from openmdao.main.mp_support import has_interface
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
+from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  partition_subsystems, collapse_subdrivers, \
-                                  get_comm_if_active
+                                  partition_mpi_subsystems, partition_subsystems, \
+                                  collapse_subdrivers, get_comm_if_active, _create_simple_sys
 from openmdao.util.nameutil import partition_names_by_comp
 
 __all__ = ['Workflow']
@@ -21,7 +17,7 @@ __all__ = ['Workflow']
 class Workflow(object):
     """
     A Workflow consists of a collection of Components which are to be executed
-    in some order.
+    in some order during a single iteration of a Driver.
     """
 
     def __init__(self, parent, members=None):
@@ -94,42 +90,42 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_label='', case_uuid=None):
-        """ Run the Components in this Workflow. """
-        subsys = self.get_subsystem()
-        # if self._subsystem is not None:
-        #     return self._subsystem.run()#self.scope, ffd_order, case_id, self._iterbase(case_id))
+    # def run(self, ffd_order=0, case_label='', case_uuid=None):
+    #     """ Run the Components in this Workflow. """
+    #     subsys = self._subsystem
+    #     # if self._subsystem is not None:
+    #     #     return self._subsystem.run()#self.scope, ffd_order, case_id, self._iterbase(case_id))
 
-        self._stop = False
-        self._exec_count += 1
+    #     self._stop = False
+    #     self._exec_count += 1
 
-        iterbase = self._iterbase()
+    #     #iterbase = self._iterbase()
 
-        if case_uuid is None:
-            # We record the case and are responsible for unique case ids.
-            record_case = True
-            case_uuid = Case.next_uuid()
-        else:
-            record_case = False
+    #     if case_uuid is None:
+    #         # We record the case and are responsible for unique case ids.
+    #         record_case = True
+    #         case_uuid = Case.next_uuid()
+    #     else:
+    #         record_case = False
 
-        scope = self.scope
+    #     #scope = self.scope
 
-        # for comp in self:
-        #     # before the workflow runs each component, update that
-        #     # component's inputs based on the graph
-        #     scope.update_inputs(comp.name, graph=self._var_graph)
-        #     if isinstance(comp, PseudoComponent):
-        #         comp.run(ffd_order=ffd_order)
-        #     else:
-        #         comp.set_itername('%s-%s' % (iterbase, comp.name))
-        #         comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-        #     if self._stop:
-        #         raise RunStopped('Stop requested')
+    #     # for comp in self:
+    #     #     # before the workflow runs each component, update that
+    #     #     # component's inputs based on the graph
+    #     #     scope.update_inputs(comp.name, graph=self._var_graph)
+    #     #     if isinstance(comp, PseudoComponent):
+    #     #         comp.run(ffd_order=ffd_order)
+    #     #     else:
+    #     #         comp.set_itername('%s-%s' % (iterbase, comp.name))
+    #     #         comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+    #     #     if self._stop:
+    #     #         raise RunStopped('Stop requested')
 
-        subsys.run()
+    #     subsys.run()
 
-        if record_case:
-            self._record_case(label=case_label, case_uuid=case_uuid)
+    #     if record_case:
+    #         self._record_case(label=case_label, case_uuid=case_uuid)
 
     def _record_case(self, label, case_uuid):
         """ Record case in all recorders. """
@@ -254,7 +250,7 @@ class Workflow(object):
         if self._wf_comp_graph is None:
             cgraph = self.scope._depgraph.component_graph().copy()
 
-            topdrv = self._parent.parent.driver
+            topdrv = self.scope._top_driver
             srcs, dests = topdrv.get_expr_var_depends(recurse=True,
                                                       refs=True)
 
@@ -283,38 +279,35 @@ class Workflow(object):
      
     ## MPI stuff ##
 
-    def get_subsystem(self):
-        """Get the serial/parallel subsystem for this workflow. Each
+    def setup_systems(self):
+        """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component 
         graph, which contains components and/or other subsystems.
         """
-        if self._subsystem is None:
-            scope = self.scope
+        scope = self.scope
 
-            #mpiprint("depgraph = %s" % self._parent.parent._depgraph.edges())
-            #drvgraph = self.get_driver_graph()
+        #mpiprint("depgraph = %s" % self.scope._depgraph.edges())
+        #drvgraph = self.get_driver_graph()
 
-            # first, get the component subgraph that is limited to 
-            # the components in this workflow, but has extra edges
-            # due to driver dependencies.
-            cgraph = self.get_comp_graph().copy()
+        # first, get the component subgraph that is limited to 
+        # the components in this workflow, but has extra edges
+        # due to driver dependencies.
+        cgraph = self.get_comp_graph().copy()
 
-            #mpiprint("cgraph1 = %s" % cgraph.edges())
-            # collapse driver iteration sets into a single node for
-            # the driver, except for nodes from their iteration set
-            # that are in the iteration set of their parent.
-            # TODO: what about nodes in the itersets of sibling drivers?
-            #    - this is starting to remind me very much of PseudoAssembly
-            collapse_subdrivers(cgraph, self._parent)
-            #cgraph.remove_node(self._parent.name)
+        #mpiprint("cgraph1 = %s" % cgraph.edges())
+        # collapse driver iteration sets into a single node for
+        # the driver, except for nodes from their iteration set
+        # that are in the iteration set of their parent.
+        collapse_subdrivers(cgraph, self._parent)
+        #cgraph.remove_node(self._parent.name)
 
-            #mpiprint("cgraph2 = %s" % cgraph.edges())
-            #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
+        #mpiprint("cgraph2 = %s" % cgraph.edges())
+        #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
-            # collapse the graph (recursively) into nodes representing
-            # serial and parallel subsystems
-            partition_subsystems(cgraph, scope)
-
+        # collapse the graph (recursively) into nodes representing
+        # serial and parallel subsystems
+        if MPI:
+            partition_mpi_subsystems(cgraph, scope, self)
             #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
             #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
             
@@ -323,49 +316,61 @@ class Workflow(object):
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(cgraph, scope, 
+                    self._subsystem = SerialSystem(cgraph, scope, self,
                                                    tuple(sorted(cgraph.nodes())))
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(cgraph, scope, 
+                    self._subsystem = ParallelSystem(cgraph, scope, self,
                                                      tuple(sorted(cgraph.nodes())))
             elif len(cgraph) == 1:
-                self._subsystem = cgraph.node[cgraph.nodes()[0]]['system']
+                name = cgraph.nodes()[0]
+                self._subsystem = cgraph.node[name].get('system')
+                if self._subsystem is None:
+                    _create_simple_sys(cgraph, scope, name)
+                    self._subsystem = cgraph.node[name]['system']
             else:
                 raise RuntimeError("get_subsystem called on %s.workflow but component graph is empty!" %
                                     self._parent.get_pathname())
-
-        return self._subsystem
-
+        else:
+            partition_subsystems(cgraph, scope, self)
+            self._subsystem = SerialSystem(cgraph, scope, self,
+                                           tuple(sorted(cgraph.nodes())))
+            
+        for comp in self:
+            comp.setup_systems()
+            
     def get_req_cpus(self):
         """Return requested_cpus"""
-        return self.get_subsystem().get_req_cpus()
+        if self._subsystem is None:
+            return 1
+        else:
+            return self._subsystem.get_req_cpus()
 
     def setup_communicators(self, comm, scope):
         """Allocate communicators from here down to all of our
         child Components.
         """
         self.mpi.comm = get_comm_if_active(self, comm)
-        if self.mpi.comm == MPI.COMM_NULL:
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self.get_subsystem().setup_communicators(self.mpi.comm, scope)
+        self._subsystem.setup_communicators(self.mpi.comm, scope)
 
     def setup_variables(self):
-        if self.mpi.comm == MPI.COMM_NULL:
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        return self.get_subsystem().setup_variables()
+        return self._subsystem.setup_variables()
 
     def setup_sizes(self):
-        if self.mpi.comm == MPI.COMM_NULL:
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        return self.get_subsystem().setup_sizes()
+        return self._subsystem.setup_sizes()
 
     def setup_vectors(self, arrays=None):
-        if self.mpi.comm == MPI.COMM_NULL:
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self.get_subsystem().setup_vectors(arrays)
+        self._subsystem.setup_vectors(arrays)
 
     def setup_scatters(self):
-        if self.mpi.comm == MPI.COMM_NULL:
+        if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self.get_subsystem().setup_scatters()
+        self._subsystem.setup_scatters()

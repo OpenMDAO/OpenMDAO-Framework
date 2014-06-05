@@ -67,9 +67,15 @@ def write_nodes(f, G, indent, counts, parent):
 
         write_node(f, G, node, indent)
 
+_meta_excludes = set([
+    'inputs',
+    'outputs',
+])
+
 def write_node(f, G, node, indent):
     data = G.node[node]
-    assigns = ['%s=%s' % (k,v) for k,v in data.items()]
+    assigns = ['%s=%s' % (k,v) for k,v in data.items() 
+                    if k not in _meta_excludes]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
     
 def _get_comp_counts(drv, counts):
@@ -128,7 +134,7 @@ def _update_graph_metadata(G, scope):
                 for pcomp in driver.list_pseudocomps():
                     conns.append((pcomp, node))
                 if hasattr(driver, 'list_param_targets'):
-                    conns.extend([(node, p) for p in driver.list_param_targets()])
+                   conns.extend([(node, p) for p in driver.list_param_targets()])
         elif 'comp' in data:
             data['shape'] = 'box'
         else: # var node

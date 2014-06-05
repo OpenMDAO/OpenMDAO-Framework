@@ -8,13 +8,14 @@ import fnmatch
 import re
 import sys
 import threading
+import traceback
 from itertools import chain
 
 # pylint: disable-msg=E0611,F0401
 import networkx as nx
 from zope.interface import implementedBy
 
-from openmdao.main.mpiwrap import mpiprint
+from openmdao.main.mpiwrap import MPI, mpiprint
 
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
@@ -161,6 +162,11 @@ class Assembly(Component):
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
 
+    @property
+    def _top_driver(self):
+        if self._pre_driver:
+            return self._pre_driver
+        return self.driver
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -177,9 +183,9 @@ class Assembly(Component):
             Initial execution count for driver's workflow.
         """
         super(Assembly, self).set_itername(itername)
-        self.driver.set_itername(itername)
+        self._top_driver.set_itername(itername)
         if seqno:
-            self.driver.workflow.set_initial_count(seqno)
+            self._top_driver.workflow.set_initial_count(seqno)
 
     def find_referring_connections(self, name):
         """Returns a list of connections where the given name is referred
@@ -521,7 +527,7 @@ class Assembly(Component):
         connected_bases = allbases - unconnected_bases
 
         collisions = []
-        for drv in chain([self.driver], self.driver.subdrivers()):
+        for drv in chain([self._top_driver], self._top_driver.subdrivers()):
             if has_interface(drv, IHasParameters):
                 for target in drv.list_param_targets():
                     tbase = graph.base_var(target)
@@ -569,6 +575,7 @@ class Assembly(Component):
                 # config_changed...
                 self._pre_driver = Driver()
                 self._pre_driver.parent = self
+                pre.append('driver') # run the normal top driver after running the 'pre' comps
                 self._pre_driver.workflow.add(pre)
 
             if post:
@@ -737,11 +744,7 @@ class Assembly(Component):
             for recorder in self.recorders:
                 recorder.startup()
 
-        if self._pre_driver is not None:
-            self._pre_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
-
-        self.update_inputs('driver')
-        self.driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        self._top_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
         self._depgraph.update_boundary_outputs(self)
 
@@ -804,7 +807,7 @@ class Assembly(Component):
 
     def stop(self):
         """Stop the calculation."""
-        self.driver.stop()
+        self._top_driver.stop()
 
     @rbac(('owner', 'user'))
     def child_config_changed(self, child, adding=True, removing=True):
@@ -1093,7 +1096,7 @@ class Assembly(Component):
                     comps.append(comp.name)
             return comps
 
-        return _all_wflows_order(self.driver)
+        return _all_wflows_order(self._top_driver)
 
     @rbac(('owner', 'user'))
     def new_pseudo_name(self):
@@ -1384,18 +1387,21 @@ class Assembly(Component):
         conts = [getattr(self, n) for n in sorted(self.list_containers())]
         return [c for c in conts if has_interface(c, IComponent)]
 
+    def setup_systems(self):
+        self._top_driver.setup_systems()
+
     ## Distributed computing methods ##
 
     def get_req_cpus(self):
         """Return requested_cpus"""
-        return self.driver.get_req_cpus()
+        return self._top_driver.get_req_cpus()
 
     def setup_communicators(self, comm, scope=None):
         Container._interactive = False
-        self.driver.setup_communicators(comm)
+        self._top_driver.setup_communicators(comm)
         
     def setup_variables(self):
-        self.driver.setup_variables()
+        self._top_driver.setup_variables()
         # find all boundary vars (used in partition_names_by_comp
         # to identify vartree boundary subvars).
         bndry_vars = sorted(self._depgraph.get_boundary_inputs()) + \
@@ -1408,17 +1414,37 @@ class Assembly(Component):
         and share those across all processes in the communicator.
         """
         # # this will calculate sizes for all subsystems
-        # self.driver.setup_sizes(self.all_vector_vars)
-        self.driver.setup_sizes()
+        self._top_driver.setup_sizes()
 
     def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        self.driver.setup_vectors()
+        self._top_driver.setup_vectors()
 
     def setup_scatters(self):
-        self.driver.setup_scatters()
+        self._top_driver.setup_scatters()
+
+    def _setup(self):
+        if MPI:
+            try:
+                MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+
+                self.setup_systems()
+                self.setup_communicators(MPI.COMM_WORLD)
+                self.setup_variables()
+                self.setup_sizes()
+                self.setup_vectors()
+                self.setup_scatters()
+            except Exception:
+                mpiprint(traceback.format_exc())
+        else:
+            self.setup_systems()
+            self.setup_communicators(None)
+            self.setup_variables()
+            self.setup_sizes()
+            self.setup_vectors()
+            self.setup_scatters()
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

@@ -248,19 +248,17 @@ class PseudoComponent(object):
     def contains(self, name):
         return name == 'out0' or name in self._inputs
 
-    def make_connections(self, scope):
+    def make_connections(self, scope, driver=None):
         """Connect all of the inputs and outputs of this comp to
         the appropriate nodes in the dependency graph.
         """
         for src, dest in self.list_connections():
             scope.connect(src, dest)
 
-    def remove_connections(self, scope):
-        """Disconnect all of the inputs and outputs of this comp
-        from other nodes in the dependency graph.
-        """
-        for src, dest in self.list_connections():
-            scope.disconnect(src, dest)
+        # TODO: put this back in if we decide to add driver connections to the graph
+        # if driver is not None:
+        #     scope._depgraph.add_edge(self.name+'.out0', driver.name,
+        #                              drv_conn=True)
 
     def run(self, ffd_order=0):
         setattr(self, 'out0', self._srcexpr.evaluate())
@@ -340,6 +338,9 @@ class PseudoComponent(object):
 
     def get_req_cpus(self):
         return 1
+
+    def setup_systems(self):
+        pass
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm

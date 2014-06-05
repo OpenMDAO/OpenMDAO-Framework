@@ -847,10 +847,7 @@ class HasParameters(object):
                 key = name
 
             dups = set(self.list_param_targets()).intersection(names)
-            if len(dups) == 1:
-                self._parent.raise_exception("'%s' is already a Parameter"
-                                             " target" % dups.pop(), ValueError)
-            elif len(dups) > 1:
+            if dups:
                 self._parent.raise_exception("%s are already Parameter targets"
                                              % sorted(list(dups)), ValueError)
 
@@ -896,6 +893,13 @@ class HasParameters(object):
 
         name = key[0] if isinstance(key, tuple) else key
 
+        # TODO: put this back if we decide to add driver connections
+        #       to the graph
+        # # add a graph connection from the driver to the param target
+        # dgraph = self._get_scope()._depgraph
+        # dgraph.add_edge(self._parent.name, dgraph.add_subvar(target),
+        #                 drv_conn=True)
+
         if isinstance(val, ndarray):
             return ArrayParameter(target, low=low, high=high,
                                   scaler=scaler, adder=adder,
@@ -920,6 +924,14 @@ class HasParameters(object):
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver."
                                          % (name,), AttributeError)
+
+        # TODO: put this back if we decide to add driver connections
+        #       to the graph
+        # # remove param connections from dep graph
+        # dgraph = self._get_scope()._depgraph
+        # for target in param.targets:
+        #     dgraph.remove_edge(self._parent.name, target)
+
         self._parent.config_changed()
 
     def config_parameters(self):

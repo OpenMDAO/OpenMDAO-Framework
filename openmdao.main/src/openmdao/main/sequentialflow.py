@@ -187,7 +187,7 @@ class SequentialWorkflow(Workflow):
                 if check:
                     # check whether each node is valid and if not then
                     # construct a useful error message.
-                    name = self._parent.parent.name
+                    name = self.scope.name
                     if not name:
                         name = "the top assembly."
 
@@ -199,7 +199,7 @@ class SequentialWorkflow(Workflow):
 
                     # Does the component really exist?
                     try:
-                        target = self._parent.parent.get(node)
+                        target = self.scope.get(node)
                     except AttributeError:
                         msg = "Component '%s'" % node + \
                               " does not exist in %s" % name
@@ -492,7 +492,7 @@ class SequentialWorkflow(Workflow):
     def mimic(self, src):
         '''Mimic capability'''
         self.clear()
-        par = self._parent.parent
+        par = self.scope
         if par is not None:
             self._explicit_names = [n for n in src._explicit_names
                                             if hasattr(par, n)]
@@ -712,7 +712,7 @@ class SequentialWorkflow(Workflow):
                 outputs = None
 
             # If inputs aren't specified, use the parameters
-            parent_deriv_vars = list_deriv_vars(self._parent.parent)
+            parent_deriv_vars = list_deriv_vars(self.scope)
             if inputs is None:
                 if hasattr(self._parent, 'list_param_group_targets'):
                     inputs = self._parent.list_param_group_targets()
@@ -769,6 +769,95 @@ class SequentialWorkflow(Workflow):
 
         return self._derivative_graph
 
+    def _get_nondiff_groups(self, dgraph, fd):
+        cgraph = dgraph.component_graph()
+        comps = cgraph.nodes()
+
+        if fd is True:
+            # Full model finite-difference, so all components go in the PA
+            return [comps]
+        elif len(self._parent.gradient_options.fd_blocks) > 0:
+            # User specification of the blocks.
+            return self._parent.gradient_options.fd_blocks
+
+        pas = [dgraph.node[n]['pa_object']
+               for n in dgraph.nodes_iter()
+                     if n.startswith('~') and '.' not in n]
+        pa_excludes = set()
+        for pa in pas:
+            pa_excludes.update(pa._removed_comps)
+
+        # Find the non-differentiable components
+
+        # A component with no derivatives is non-differentiable
+        nondiff = set()
+        nondiff_groups = []
+
+        for name in comps:
+            if name.startswith('~') or name in pa_excludes:
+                continue  # don't want nested pseudoassemblies
+            comp = self.scope.get(name)
+            if not hasattr(comp, 'apply_deriv') and \
+               not hasattr(comp, 'apply_derivT') and \
+               not hasattr(comp, 'provideJ'):
+                nondiff.add(name)
+                #print "No derivatives defined:", name
+            elif comp.force_fd is True:
+                nondiff.add(name)
+                #print "Force_fd set to True:", name
+            elif not dgraph.node[name].get('differentiable', True):
+                nondiff.add(name)
+                #print "Graphs says nondifferentiable:", name
+
+        # If a connection is non-differentiable, so are its src and
+        # target components.
+        for edge in dgraph.list_connections():
+            src, target = edge
+            data = dgraph.node[src]
+
+            # boundary vars or fake inputs/outputs
+            if src.startswith('@') or target.startswith('@') or '.' not in src:
+                continue
+
+            # pseudoassemblies
+            if src.startswith('~') or target.startswith('~'):
+                continue
+
+            # Custom differentiable connections or ignored connections
+            if data.get('data_shape'):
+                continue
+
+            # differentiable connections
+            if is_differentiable_val(self.scope.get(src)):
+                continue
+
+            #Nothing else is differentiable
+            else:
+                nondiff.add(src.split('.')[0])
+                nondiff.add(target.split('.')[0])
+                #print "Non-differentiable connection: ", src, target
+
+        # Everything is differentiable, so return
+        if len(nondiff) == 0:
+            return []
+
+        # Groups any connected non-differentiable blocks. Each block is a
+        # set of component names.
+        sub = cgraph.subgraph(nondiff)
+        for inodes in nx.connected_components(sub.to_undirected()):
+
+            # Pull in any differentiable islands
+            nodeset = set(inodes)
+            for src in inodes:
+                for targ in inodes:
+                    if src != targ:
+                        nodeset.update(find_all_connecting(cgraph, src,
+                                                           targ))
+
+            nondiff_groups.append(nodeset)
+
+        return nondiff_groups
+
     def _group_nondifferentiables(self, fd=False, severed=None):
         """Method to find all non-differentiable blocks, and group them
         together, replacing them in the derivative graph with pseudo-
@@ -790,96 +879,12 @@ class SequentialWorkflow(Workflow):
         # If we have a cyclic workflow, we need to remove severed edges from
         # the derivatives graph.
         if severed is not None:
-            for edge in severed:
-                if edge in dgraph.edges():
-                    dgraph.remove_edge(edge[0], edge[1])
+            dgraph.remove_edges_from(severed)
+            # for edge in severed:
+            #     if edge in dgraph.edges():
+            #         dgraph.remove_edge(edge[0], edge[1])
 
-        cgraph = dgraph.component_graph()
-        comps = cgraph.nodes()
-        pas = [dgraph.node[n]['pa_object']
-               for n in dgraph.nodes_iter()
-                     if n.startswith('~') and '.' not in n]
-        pa_excludes = set()
-        for pa in pas:
-            pa_excludes.update(pa._removed_comps)
-
-        # Full model finite-difference, so all components go in the PA
-        if fd is True:
-            nondiff_groups = [comps]
-
-        # User specification of the blocks.
-        elif len(self._parent.gradient_options.fd_blocks) > 0:
-            nondiff_groups = self._parent.gradient_options.fd_blocks
-
-        # Find the non-differentiable components
-        else:
-
-            # A component with no derivatives is non-differentiable
-            nondiff = set()
-            nondiff_groups = []
-
-            for name in comps:
-                if name.startswith('~') or name in pa_excludes:
-                    continue  # don't want nested pseudoassemblies
-                comp = self.scope.get(name)
-                if not hasattr(comp, 'apply_deriv') and \
-                   not hasattr(comp, 'apply_derivT') and \
-                   not hasattr(comp, 'provideJ'):
-                    nondiff.add(name)
-                    #print "No derivatives defined:", name
-                elif comp.force_fd is True:
-                    nondiff.add(name)
-                    #print "Force_fd set to True:", name
-                elif not dgraph.node[name].get('differentiable', True):
-                    nondiff.add(name)
-                    #print "Graphs says nondifferentiable:", name
-
-            # If a connection is non-differentiable, so are its src and
-            # target components.
-            for edge in dgraph.list_connections():
-                src, target = edge
-                data = dgraph.node[src]
-
-                # boundary vars or fake inputs/outputs
-                if src.startswith('@') or target.startswith('@') or '.' not in src:
-                    continue
-
-                # pseudoassemblies
-                if src.startswith('~') or target.startswith('~'):
-                    continue
-
-                # Custom differentiable connections or ignored connections
-                if data.get('data_shape'):
-                    continue
-
-                # differentiable connections
-                if is_differentiable_val(self.scope.get(src)):
-                    continue
-
-                #Nothing else is differentiable
-                else:
-                    nondiff.add(src.split('.')[0])
-                    nondiff.add(target.split('.')[0])
-                    #print "Non-differentiable connection: ", src, target
-
-            # Everything is differentiable, so return
-            if len(nondiff) == 0:
-                return
-
-            # Groups any connected non-differentiable blocks. Each block is a
-            # set of component names.
-            sub = cgraph.subgraph(nondiff)
-            for inodes in nx.connected_components(sub.to_undirected()):
-
-                # Pull in any differentiable islands
-                nodeset = set(inodes)
-                for src in inodes:
-                    for targ in inodes:
-                        if src != targ:
-                            nodeset.update(find_all_connecting(cgraph, src,
-                                                               targ))
-
-                nondiff_groups.append(nodeset)
+        nondiff_groups = self._get_nondiff_groups(dgraph, fd)
 
         for j, group in enumerate(nondiff_groups):
             pa_name = '~%d' % j

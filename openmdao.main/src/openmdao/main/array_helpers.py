@@ -12,7 +12,7 @@ from numpy import ndarray, ravel_multi_index, prod, arange, array
 
 
 class IndexGetter(object):
-    """A simple class the returns the slice object used
+    """A simple class the returns the slice object or index used
     to call its __getitem__ method.
     """
     def __getitem__(self, idx):
@@ -20,7 +20,8 @@ class IndexGetter(object):
 
 _flat_idx_cache = {}
 _idx_cache = {}
-_idx_getter = IndexGetter()
+_eval_globals = {'_idx_getter': IndexGetter() }
+
 
 def get_index(name):
     """Return the index (int or slice or tuple combination) 
@@ -29,16 +30,21 @@ def get_index(name):
     an object's __getitem__ method, e.g., myval[idx], in order
     to retrieve a particular slice from that object without 
     having to parse the index more than once.
+
+    If name contains an index containing any non-literals, an
+    exception will be raised.
     """
-    global _idx_getter, _idx_cache
-    if '[' not in name:
+
+    try:
+        idxstr = name[name.index('['):]
+    except ValueError:
         return None
-    idxstr = name[name.index('['):]
+
     idx = _idx_cache.get(idxstr)
     if idx is None:
-        commas = idxstr.replace('][',',')
-        # FIXME: we should only cache an index if it's constant!!!!
-        _idx_cache[idxstr] = idx = eval('_idx_getter'+commas)
+        newstr = idxstr.replace('][',',')
+        # eval will fail if index contains any non-literals
+        _idx_cache[idxstr] = idx = eval('_idx_getter'+newstr, _eval_globals)
     return idx
     
 def get_val_and_index(scope, name):

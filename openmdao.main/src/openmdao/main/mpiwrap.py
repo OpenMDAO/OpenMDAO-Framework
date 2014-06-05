@@ -23,18 +23,8 @@ def _under_mpirun():
 if _under_mpirun():
     from mpi4py import MPI
     from petsc4py import PETSc
-    import traceback
 
     COMM_NULL = MPI.COMM_NULL
-
-    def MPI_run(top):
-        """Run a parallel version of the top object.
-        """
-        try:
-            _setup_mpi(top)
-            return top.run()
-        except Exception:
-            mpiprint(traceback.format_exc())
 
     def create_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm) 
@@ -54,8 +44,8 @@ else:
     PETSc = None
     COMM_NULL = None
     
-    def MPI_run(top):
-        return top.run()
+    # def MPI_run(top):
+    #     return top.run()
 
     def create_petsc_vec(comm, arr):
         return None
@@ -65,31 +55,20 @@ else:
         
 class MPI_info(object):
     def __init__(self):
-        self.requested_cpus = 0  # requested number of processors.
-                                 # 0 means it's duplicated across 
-                                 # all processors
+        self.requested_cpus = 1
         self.cpus = 0  # actual number of CPUs assigned. 
 
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
       
-def setup_mpi(obj):
-    """This is called on the top Assembly in the hierarchy."""
+    @property 
+    def size(self):
+        if MPI:
+            return self.comm.size
+        return 1
 
-    try:
-        return _setup_mpi(obj)
-    except Exception:
-        mpiprint(traceback.format_exc())
-
-def _setup_mpi(obj):
-    if not IAssembly.providedBy(obj):
-        raise RuntimeError("object passed to setup_mpi does not have "
-                           "the IAssembly interface.")
-
-    MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
-
-    obj.setup_communicators(MPI.COMM_WORLD)
-    obj.setup_variables()
-    obj.setup_sizes()
-    obj.setup_vectors()
-    obj.setup_scatters()
+    @property 
+    def rank(self):
+        if MPI:
+            return self.comm.rank
+        return 0

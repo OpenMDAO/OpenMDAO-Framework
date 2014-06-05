@@ -1131,7 +1131,16 @@ class Container(SafeHasTraits):
         elif index:  # array index specified
             self._index_set(path, value, index)
         else:
-            setattr(self, path, value)
+            if '[' in path or '(' in path:
+                # caller has put indexing in the string instead of
+                # using the indexing protocol
+                expr = self._exprcache.get(path)
+                if expr is None:
+                    expr = ExprEvaluator(path, scope=self)
+                    self._exprcache[path] = expr
+                expr.set(value)
+            else:
+                setattr(self, path, value)
 
     def _index_set(self, name, value, index):
         if len(index) == 1:
@@ -1158,29 +1167,29 @@ class Container(SafeHasTraits):
         else:
             obj[idx] = value
 
-        # setting of individual Array entries or sub attributes doesn't seem to
-        # trigger _input_trait_modified, so do it manually
-        # FIXME: if people register other callbacks on a trait, they won't
-        #        be called if we do it this way
-        eq = (old == value)
-        if not isinstance(eq, bool):
-            try:
-                eq = all(eq)
-            except TypeError:
-                pass
+        ## setting of individual Array entries or sub attributes doesn't seem to
+        ## trigger _input_trait_modified, so do it manually
+        ## FIXME: if people register other callbacks on a trait, they won't
+        ##        be called if we do it this way
+        #eq = (old == value)
+        #if not isinstance(eq, bool):
+            #try:
+                #eq = all(eq)
+            #except TypeError:
+                #pass
 
-        if not eq:
-            # need to find first item going up the parent tree that is a Component
-            item = self
-            path = name
-            full = name
-            while item:
-                if has_interface(item, IComponent):
-                    item._input_updated(path, fullpath=full)
-                    break
-                path = item.name
-                full = '.'.join((path, full))
-                item = item.parent
+        #if not eq:
+            ## need to find first item going up the parent tree that is a Component
+            #item = self
+            #path = name
+            #full = name
+            #while item:
+                #if has_interface(item, IComponent):
+                    #item._input_updated(path, fullpath=full)
+                    #break
+                #path = item.name
+                #full = '.'.join((path, full))
+                #item = item.parent
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""

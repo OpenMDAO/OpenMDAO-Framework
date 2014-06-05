@@ -528,26 +528,28 @@ class DependencyGraph(nx.DiGraph):
         self.edge[srcpath][destpath]['dexpr'] = dexpr
 
     def add_subvar(self, subvar):
-        """ Adds a subvar node for a model input. This node is used to
-        represent parameters that are array slices, mainly for metadata
-        storage and for defining edge iterators, but not for workflow
-        execution. Subvars created using this function will be labeled
-        as 'fake' in their metadata.
+        """ Adds a subvar node to the graph, properly connecting
+        it to its basevar.
         """
         base = self.base_var(subvar)
         if base not in self:
             raise RuntimeError("can't find basevar '%s' in graph" % base)
-        self.add_node(subvar, basevar=base, fake=True)
+        elif subvar in self:
+            # adding something that's already there
+            return subvar
+
+        self.add_node(subvar, basevar=base)
         if is_boundary_node(self, base):
-            if is_input_node(self, base):
-                self.add_edge(base, subvar)
-            else:
-                self.add_edge(subvar, base)
-        else:  # it's a var of a child component
-            if is_input_node(self, base):
-                self.add_edge(subvar, base)
-            else:
-                self.add_edge(base, subvar)
+            u, v = base, subvar
+        else: # it's a var of a child component
+            u, v = subvar, base
+
+        if is_input_node(self, base):
+            self.add_edge(u, v)
+        else:
+            self.add_edge(v, u)
+
+        return subvar
 
     def disconnect(self, srcpath, destpath=None):
 
@@ -816,6 +818,9 @@ class DependencyGraph(nx.DiGraph):
         compset = set(self.all_comps())
 
         g = nx.DiGraph()
+        g.graph['boundary_ins'] = {}  # for edges from Assembly boundary
+        g.graph['boundary_outs'] = {}  # for edges to Assembly boundary
+
         for comp in compset:
             g.add_node(comp, self.node[comp].copy())
             g.node[comp]['inputs'] = set()
@@ -828,9 +833,14 @@ class DependencyGraph(nx.DiGraph):
         for src, dest in self.list_connections():
             destcomp = dest.split('.', 1)[0]
             srccomp =  src.split('.', 1)[0]
+
             if srccomp in compset and destcomp in compset:
                 g.add_edge(srccomp, destcomp)
                 g[srccomp][destcomp].setdefault('var_edges',[]).append((src,dest))
+            elif is_boundary_node(self, src):
+                g.graph['boundary_ins'].setdefault(destcomp, []).append((src,dest))
+            elif is_boundary_node(self, dest):
+                g.graph['boundary_outs'].setdefault(srccomp, []).append((src,dest))
 
             if srccomp in compset:
                 g.node[srccomp]['outputs'].add(src)
@@ -1017,31 +1027,15 @@ class DependencyGraph(nx.DiGraph):
 
         return comps
 
-    def prune_unconnected(self):
-        """Removes all unconnected variable and component
-        nodes in the graph.  The graph at this point
-        should contain connections for all driver dependencies
-        as well as all normal data connections.
-        """
-        # save the set of all vars used in a connection
+    def prune_unconnected_vars(self):
+        """Remove unconnected variable nodes"""
         conns = self.list_connections(driver=True)
-        save = set([u for u,v in conns])
-        save.update([v for u,v in conns])
-        base = self.base_var
-
-        # save all basevars for any connected subvars
-        save.update([base(v) for v in save])
-
-        # finally, save all component nodes
-        save.update(self.all_comps())
-
-        # now do the pruning of variables
-        self.remove_nodes_from([n for n in self.nodes_iter() 
-                                        if n not in save])
-
-        # now, prune any component with no connections
-        self.remove_nodes_from([c for c in self.all_comps() 
-                                 if self.degree(c)==0])
+        convars = set([u for u,v in conns])
+        convars.update([v for u,v in conns])
+        convars.update([self.base_var(v) for v in convars])
+        to_remove = [v for v in self.nodes_iter()
+                         if v not in convars and is_var_node(self,v)]
+        self.remove_nodes_from(to_remove)
 
     def add_node(self, n, attr_dict=None, **attr):
         super(DependencyGraph, self).add_node(n,
@@ -1079,17 +1073,6 @@ class DependencyGraph(nx.DiGraph):
     def remove_edges_from(self, ebunch):
         super(DependencyGraph, self).remove_edges_from(ebunch)
         self.config_changed()
-
-    def prune_unconnected_vars(self):
-        """Remove unconnected variable nodes"""
-        conns = self.list_connections()
-        convars = set([u for u,v in conns])
-        convars.update([v for u,v in conns])
-        convars.update([self.base_var(v) for v in convars])
-        to_remove = [v for v in self.nodes_iter()
-                         if v not in convars and is_var_node(self,v) 
-                                             and not is_param_node(self, v)]
-        self.remove_nodes_from(to_remove)
 
 
 def find_related_pseudos(depgraph, nodes):

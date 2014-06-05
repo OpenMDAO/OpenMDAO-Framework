@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import numpy
 
-from openmdao.main.mpiwrap import mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
 from openmdao.util.typegroups import int_types
@@ -16,7 +16,7 @@ class VecWrapper(object):
         self.array = array
 
         allvars = system.all_variables
-        variables = system.variables
+        variables = system.vector_vars
         
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subvars = set()  # set of all names representing subviews of other views
@@ -38,9 +38,9 @@ class VecWrapper(object):
             if name not in vset:
                 continue
             sz = var['size']
-            if sz != system.local_var_sizes[system.mpi.comm.rank,i]:
+            if sz != system.local_var_sizes[system.mpi.rank,i]:
                 raise RuntimeError("ERROR: sz (%d) != local_var_sizes (%d) in %s" % 
-                          (sz,system.local_var_sizes[system.mpi.comm.rank,i],system.name))
+                          (sz,system.local_var_sizes[system.mpi.rank,i],system.name))
             if sz > 0:
                 end += sz
                 if self.array.size < (end-start):
@@ -57,7 +57,7 @@ class VecWrapper(object):
         for name, var in allvars.items():
             if name not in variables and name in vset:
                 sz = var['size']
-                if sz > 0:
+                if sz > 0 and not var.get('flat', True):
                     idx = var['flat_idx']
                     try:
                         basestart = self.start(var['basevar'])
@@ -140,7 +140,8 @@ class VecWrapper(object):
     def dump(self, vecname):
         for name, (array_val, start) in self._info.items():
             mpiprint("%s - %s: (%d,%d) %s" % (vecname,name, start, start+len(array_val),array_val))
-        mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
+        if self.petsc_vec is not None:
+            mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
 
     def items(self):
         lst = []
@@ -154,50 +155,73 @@ class VecWrapper(object):
 
 class DataTransfer(object):
     """A wrapper object that manages data transfer between
-    MPI processes via scatters (and possibly send/receive for 
+    systems via scatters (and possibly send/receive for 
     non-array values)
     """
-    def __init__(self, system, var_idxs, input_idxs, scatter_vars):
-        self.scatter_vars = scatter_vars[:]
+    def __init__(self, system, var_idxs, input_idxs, scatter_conns, noflat_vars):
+        self.scatter = None
+        self.scatter_conns = scatter_conns[:]
+        self.noflat_vars = noflat_vars[:]
 
         # TODO: remove the following attrs (used for debugging only)
         self.var_idxs = var_idxs[:]
         self.input_idxs = input_idxs[:]
+        
+        if not (scatter_conns or noflat_vars):
+            return  # no data to xfer
 
-        #mpiprint("SCATTER_VARS: %s" % scatter_vars)
+        #mpiprint("scatter_conns: %s" % scatter_conns)
         merged_vars = idx_merge(var_idxs)
         merged_inputs = idx_merge(input_idxs)
-
-        var_idx_set = PETSc.IS().createGeneral(merged_vars, 
-                                               comm=system.mpi.comm)
-        input_idx_set = PETSc.IS().createGeneral(merged_inputs, 
-                                                 comm=system.mpi.comm)
-        if system.app_ordering is not None:
-            var_idx_set = system.app_ordering.app2petsc(var_idx_set)
 
         if len(merged_vars) != len(merged_inputs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" % 
                                 (len(merged_vars), len(merged_inputs),
                                   merged_vars, merged_inputs, system.name))
-        try:
-            # note that scatter created here can be reused for other vectors as long
-            # as their sizes are the same as 'u' and 'p'
-            self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
-                                                  system.vec['p'].petsc_vec, input_idx_set)
-        except Exception as err:
-            raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" % 
-                                  (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
-                                   system.vec['p'].array.size, str(err)))
-            raise
+
+        if MPI:
+            var_idx_set = PETSc.IS().createGeneral(merged_vars, 
+                                                   comm=system.mpi.comm)
+            input_idx_set = PETSc.IS().createGeneral(merged_inputs, 
+                                                     comm=system.mpi.comm)
+            if system.app_ordering is not None:
+                var_idx_set = system.app_ordering.app2petsc(var_idx_set)
+    
+            try:
+                # note that scatter created here can be reused for other vectors as long
+                # as their sizes are the same as 'u' and 'p'
+                self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
+                                                      system.vec['p'].petsc_vec, input_idx_set)
+            except Exception as err:
+                raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" % 
+                                      (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
+                                       system.vec['p'].array.size, str(err)))
+        else:  # serial execution
+            if len(merged_vars) and len(merged_inputs):
+                self.scatter = SerialScatter(system.vec['u'], merged_vars,
+                                             system.vec['p'], merged_inputs)
 
     def __call__(self, system, srcvec, destvec, reverse=False):
 
-        src_petsc = srcvec.petsc_vec
-        dest_petsc = destvec.petsc_vec
+        if self.scatter is None and not self.noflat_vars:
+            return
+        
+        if MPI:
+            src = srcvec.petsc_vec
+            dest = destvec.petsc_vec
+        else:
+            src = srcvec.array
+            dest = destvec.array
 
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
-        self.scatter.scatter(src_petsc, dest_petsc, addv=False, mode=False)
+        if self.scatter:
+            self.scatter.scatter(src, dest, addv=False, mode=False)
+        if MPI:
+            pass # FIXME
+        else:
+            for src, dest in self.noflat_vars:
+                system.scope.set(dest, system.scope.get(src))
         #elif system.mode == 'rev':
         #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
         #else:
@@ -221,6 +245,22 @@ def idx_merge(idxs):
 def petsc_linspace(start, end):
     """ Return a linspace vector of the right int type for PETSc """
     #return numpy.arange(start, end, dtype=PETSc.IntType)
+    if MPI:
+        dtype = PETSc.IntType
+    else:
+        dtype = 'i'
     return numpy.array(numpy.linspace(start, end-1, end-start), 
-                       dtype=PETSc.IntType)
+                       dtype=dtype)
 
+
+class SerialScatter(object):
+    def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
+        self.src_idxs = src_idxs
+        self.dest_idxs = dest_idxs
+
+        
+    def scatter(self, srcvec, destvec, addv, mode):
+        if mode:  # reverse?
+            raise RuntimeError("reverse mode not supported yet")
+        else:   # fwd
+            destvec[self.dest_idxs] = srcvec[self.src_idxs]

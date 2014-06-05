@@ -168,13 +168,12 @@ class Component(Container):
 
         self._exec_state = None
         self._stop = False
-        self._call_check_config = True
+        self._new_config = True
 
         # cached configuration information
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_sources = None
 
         self._dir_stack = []
         self._dir_context = None
@@ -248,7 +247,6 @@ class Component(Container):
         state['_input_names'] = None
         state['_output_names'] = None
         state['_container_names'] = None
-        state['_expr_sources'] = None
 
         return state
 
@@ -336,8 +334,6 @@ class Component(Container):
                 self.raise_exception("required variables %s were"
                                      " not set" % reqs, RuntimeError)
 
-        self._call_check_config = False
-
     @rbac(('owner', 'user'))
     def cpath_updated(self):
         """Calls the base class version of *cpath_updated()*, checks our
@@ -394,17 +390,19 @@ class Component(Container):
             self._call_configure = False
 
     def _pre_execute(self):
-        """Prepares for execution by calling *cpath_updated()* and
-        *check_config()* if their "dirty" flags are set and by requesting that
-        the parent Assembly update this Component's invalid inputs.
+        """Prepares for execution by calling various initialization methods
+        if necessary.
 
         Overrides of this function must call this version.
         """
         if self._call_cpath_updated:
             self.cpath_updated()
 
-        if self._call_check_config:
+        if self._new_config:
             self.check_config()
+            if self.parent is None:
+                self._setup()  # only call _setup from top level
+            self._new_config = False
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -680,8 +678,7 @@ class Component(Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_sources = None
-        self._call_check_config = True
+        self._new_config = True
         self._provideJ_bounds = None
         self._var_sizes = {}
 
@@ -1873,3 +1870,6 @@ class Component(Container):
             self._var_sizes[name] = info
                 
         return info
+
+    def setup_systems(self):
+        pass

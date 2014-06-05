@@ -58,17 +58,17 @@ from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
 
 _Missing = object()
 
-def is_in_process(scope, vname):
-    """Return True if the object referenced by vname is accessible
-    within scope via getattr from this process.
+def find_dotted(scope, vname):
+    """Return the object corresponding to the given name in the given
+    scope. Returns _Missing if object is not found.
     """
     vname = vname.split('[', 1)[0]
     obj = scope
     for name in vname.split('.'):
         obj = getattr(obj, name, _Missing)
         if obj is _Missing:
-            return False
-    return True
+            return obj
+    return obj
 
 def in_expr_locals(scope, name):
     """Return True if the given (dotted) name refers to something in our
@@ -106,7 +106,7 @@ class ExprVarScanner(ast.NodeVisitor):
         if long_name:
             self.varnames.add(long_name)
 
-    def get_names(self, scope):
+    def get_var_names(self, scope):
         """Returns a tuple of the form (local_vars, external_vars)."""
         local_vars = []
         extern_vars = []
@@ -114,7 +114,7 @@ class ExprVarScanner(ast.NodeVisitor):
         for v in self.varnames:
             if in_expr_locals(scope, v):
                 continue
-            if is_in_process(scope, v):
+            if find_dotted(scope, v) is not _Missing:
                 local_vars.append(v)
             else:
                 extern_vars.append(v)

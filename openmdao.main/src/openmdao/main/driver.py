@@ -402,7 +402,8 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        wf.run(ffd_order=self.ffd_order)
+        #wf.run(ffd_order=self.ffd_order)
+        wf._subsystem.run()
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
@@ -470,6 +471,12 @@ class Driver(Component):
                     'interfaces': inames,
                 })
         return ret
+
+    def setup_systems(self):
+        """Allocate communicators from here down to all of our
+        child Components.
+        """
+        self.workflow.setup_systems()
 
     #### MPI related methods ####
 
