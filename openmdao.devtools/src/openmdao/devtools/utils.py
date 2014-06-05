@@ -470,6 +470,10 @@ class Timer(object):
         return decorator
 
 def do_cprofile(func):
+    '''
+    Decorator for profiling a function using the `cProfile`
+    '''
+
     def profiled_func(*args, **kwargs):
         profile = cProfile.Profile()
         try:
@@ -481,10 +485,22 @@ def do_cprofile(func):
             profile.print_stats()
     return profiled_func
 
-try:
-    from line_profiler import LineProfiler
+def do_line_profile(follow=[]):
+    """
+    Decorator for profiling a function line by line
+    using `line_profiler`. To use the decorator, `line_profiler`
+    must be installed manually, as it is not required
+    by openmdao.devtools. 
+ 
+    You can obtain `line_profiler` at http://pypi.python.org/pypi/line_profiler
 
-    def do_profile(follow=[]):
+    If `line_profiler` cannot be imported, fallback to 
+    profiling using `cProfile`
+    """
+
+    try:
+        from line_profiler import LineProfiler
+
         def inner(func):
             def profiled_func(*args, **kwargs):
                 try:
@@ -498,12 +514,8 @@ try:
                     profiler.print_stats()
             return profiled_func
         return inner
+    except ImportError:
+        print "Could not import 'line_profiler'. Falling back to profiling using 'cProfile'."
+        return do_cprofile
+        
 
-except ImportError:
-    def do_profile(follow=[]):
-        "Helpful if you accidentally leave in production!"
-        def inner(func):
-            def nothing(*args, **kwargs):
-                return func(*args, **kwargs)
-            return nothing
-        return inner
