@@ -8,7 +8,7 @@ __all__ = ["Float"]
 
 from sys import float_info
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.api import Range
 from traits.api import Complex as TraitComplex
 from traits.api import Float as TraitFloat
@@ -103,6 +103,9 @@ class Float(Variable):
         metadata['low'] = low
         metadata['high'] = high
 
+        if 'assumed_default' in metadata:
+            del metadata['assumed_default']
+
         if not _default_set and metadata.get('required') is True:
             super(Float, self).__init__(**metadata)
 
@@ -118,7 +121,7 @@ class Float(Variable):
         Units are converted as needed.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if isinstance(value, UncertainDistribution):
             value = value.getvalue()
         elif isinstance(value, AttrWrapper):
@@ -137,7 +140,6 @@ class Float(Variable):
         # complex direction while keeping the Range validator.
         is_complex_step = False
         if isinstance(value, complex):
-
             value_imag = value.imag
             value = value.real
             if value_imag != 0:
@@ -157,7 +159,7 @@ class Float(Variable):
     def error(self, obj, name, value):
         """Returns a descriptive error string."""
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if self.low is None and self.high is None:
             if self.units:
                 info = "a float having units compatible with '%s'" % self.units
@@ -191,7 +193,7 @@ class Float(Variable):
         """
         if index is not None:
             raise ValueError("Float does not support indexing")
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if self.units is None:
             return value
         return UnitsAttrWrapper(value, units=self.units)
@@ -201,7 +203,7 @@ class Float(Variable):
         the source trait.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         dst_units = self.units
 
         if isinstance(value, UncertainDistribution):
