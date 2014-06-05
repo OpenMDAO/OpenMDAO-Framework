@@ -5,7 +5,7 @@ Trait for boolean variables.
 #public symbols
 __all__ = ["Bool"]
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.api import Bool as Enthought_Bool
 
 from numpy import bool_
@@ -29,7 +29,8 @@ class Bool(Variable):
             metadata['desc'] = desc
 
         assumed_default = (default_value is None)
-
+        if 'assumed_default' in metadata:
+            del metadata['assumed_default']
 
         self._validator = Enthought_Bool(value=default_value, **metadata)
 
