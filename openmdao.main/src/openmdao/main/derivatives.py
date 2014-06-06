@@ -11,7 +11,7 @@ from openmdao.util.log import logger
 from numpy import zeros, vstack, hstack
 from scipy.sparse.linalg import gmres, LinearOperator
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 def calc_gradient(wflow, inputs, outputs, n_edge, shape):
     """Returns the gradient of the passed outputs with respect to
@@ -33,7 +33,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
         return J
 
     dgraph = wflow._derivative_graph
-    options = wflow._parent.gradient_options
+    options = wflow.parent.gradient_options
     bounds = wflow._bounds_cache
 
     # Forward mode, solve linear system for each parameter
@@ -52,7 +52,7 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             else:
                 param = param[0]
                 #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
-                                   #(param, wflow._parent.get_pathname()))
+                                   #(param, wflow.parent.get_pathname()))
         try:
             i1, i2 = bounds[param]
         except KeyError:
@@ -81,11 +81,11 @@ def calc_gradient(wflow, inputs, outputs, n_edge, shape):
             if info > 0:
                 msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                       "after %d iterations for parameter '%s' at index %d"
-                logger.error(msg % (wflow._parent.get_pathname(), info, param, irhs))
+                logger.error(msg, wflow.parent.get_pathname(), info, param, irhs)
             elif info < 0:
                 msg = "ERROR in calc_gradient in '%s': gmres failed " \
                       "for parameter '%s' at index %d"
-                logger.error(msg % (wflow._parent.get_pathname(), param, irhs))
+                logger.error(msg, wflow.parent.get_pathname(), param, irhs)
 
             i = 0
             for item in outputs:
@@ -126,7 +126,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
         return J
 
     dgraph = wflow._derivative_graph
-    options = wflow._parent.gradient_options
+    options = wflow.parent.gradient_options
     bounds = wflow._bounds_cache
 
     # Adjoint mode, solve linear system for each output
@@ -161,13 +161,11 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
             if info > 0:
                 msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed to converge " \
                       "after %d iterations for output '%s' at index %d"
-                logger.error(msg % (wflow._parent.get_pathname(),
-                                    info, output, irhs))
+                logger.error(msg, wflow.parent.get_pathname(), info, output, irhs)
             elif info < 0:
                 msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed " \
                       "for output '%s' at index %d"
-                logger.error(msg % (wflow._parent.get_pathname(),
-                                    output, irhs))
+                logger.error(msg, wflow.parent.get_pathname(), output, irhs)
 
             i = 0
 
@@ -184,7 +182,7 @@ def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
                     else:
                         param = param[0]
                         #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
-                                           #(param, wflow._parent.get_pathname()))
+                                           #(param, wflow.parent.get_pathname()))
 
                 try:
                     k1, k2 = bounds[param]

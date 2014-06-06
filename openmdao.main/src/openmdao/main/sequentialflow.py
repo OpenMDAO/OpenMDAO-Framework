@@ -8,7 +8,7 @@ from math import isnan
 from StringIO import StringIO
 from types import NoneType
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
                                         flatten_slice, is_differentiable_val
 from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
@@ -105,22 +105,22 @@ class SequentialWorkflow(Workflow):
             msg = "The following components will execute EVERY iteration " \
                   "of this workflow (unnecessarily): %s" % list(self._initnames)
             if strict_chk_config(strict):
-                self._parent.raise_exception(msg, RuntimeError)
+                self.parent.raise_exception(msg, RuntimeError)
             else:
-                self._parent._logger.warning(msg)
+                self.parent._logger.warning(msg)
 
     def sever_edges(self, edges):
         """Temporarily remove the specified edges but save
         them and their metadata for later restoration.
         """
         if edges:
-            params = self._parent.get_parameters()
+            params = self.parent.get_parameters()
             non_param_edges = [(src, targ) for (src, targ) in edges
                                            if targ not in params]
             self.scope._depgraph.sever_edges(non_param_edges)
 
     def unsever_edges(self):
-        self.scope._depgraph.unsever_edges(self._parent.get_expr_scope())
+        self.scope._depgraph.unsever_edges(self.parent.get_expr_scope())
 
     def get_names(self, full=False):
         """Return a list of component names in this workflow.
@@ -130,18 +130,18 @@ class SequentialWorkflow(Workflow):
             comps = [getattr(self.scope, n) for n in self._explicit_names]
             drivers = [c for c in comps if has_interface(c, IDriver)]
             self._names = self._explicit_names[:]
-            self._iternames = self._parent._get_required_compnames()
+            self._iternames = self.parent._get_required_compnames()
 
             if len(drivers) == len(comps):  # all comps are drivers
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
-                added = set([n for n in self._iternames if not n.startswith('_pseudo_') 
+                added = set([n for n in self._iternames if not n.startswith('_pseudo_')
                                  and n not in iterset]) - set(self._names)
                 self._names.extend(added)
 
             self._fullnames = self._names[:]
-            fullset = set(self._parent.list_pseudocomps())
+            fullset = set(self.parent.list_pseudocomps())
             fullset.update(find_related_pseudos(self.scope._depgraph,
                                                 self._names))
             self._fullnames.extend(fullset - set(self._names))
@@ -159,9 +159,9 @@ class SequentialWorkflow(Workflow):
             return self._names[:]
 
     @method_accepts(TypeError,
-                     compnames=(str,list,tuple),
-                     index=(int,NoneType),
-                     check=bool)
+                    compnames=(str, list, tuple),
+                    index=(int, NoneType),
+                    check=bool)
     def add(self, compnames, index=None, check=False):
         """
         add(self, compnames, index=None, check=False)
@@ -187,7 +187,8 @@ class SequentialWorkflow(Workflow):
                 if check:
                     # check whether each node is valid and if not then
                     # construct a useful error message.
-                    name = self._parent.parent.name
+                    parent = self.parent
+                    name = parent.parent.name
                     if not name:
                         name = "the top assembly."
 
@@ -199,21 +200,21 @@ class SequentialWorkflow(Workflow):
 
                     # Does the component really exist?
                     try:
-                        target = self._parent.parent.get(node)
+                        target = parent.parent.get(node)
                     except AttributeError:
                         msg = "Component '%s'" % node + \
                               " does not exist in %s" % name
                         raise AttributeError(msg)
 
                     # Don't add yourself to your own workflow
-                    if target == self._parent:
+                    if target == parent:
                         msg = "You cannot add a driver to its own workflow"
                         raise AttributeError(msg)
 
                     # Check for circular dependency in driver workflow
                     if hasattr(target, 'iteration_set'):
                         iterset = target.iteration_set()
-                        if self._parent in iterset:
+                        if parent in iterset:
                             msg = "Driver recursion loop detected"
                             raise AttributeError(msg)
 
@@ -492,7 +493,7 @@ class SequentialWorkflow(Workflow):
     def mimic(self, src):
         '''Mimic capability'''
         self.clear()
-        par = self._parent.parent
+        par = self.parent.parent
         if par is not None:
             self._explicit_names = [n for n in src._explicit_names
                                             if hasattr(par, n)]
@@ -703,6 +704,8 @@ class SequentialWorkflow(Workflow):
         """
 
         if self._derivative_graph is None or group_nondif is False:
+            parent = self.parent
+
             # when we call with group_nondif = False, we want the union of the
             # passed inputs/outputs plus the inputs/outputs from the solver
             if group_nondif is False and add_implicit is True:
@@ -712,10 +715,10 @@ class SequentialWorkflow(Workflow):
                 outputs = None
 
             # If inputs aren't specified, use the parameters
-            parent_deriv_vars = list_deriv_vars(self._parent.parent)
+            parent_deriv_vars = list_deriv_vars(parent.parent)
             if inputs is None:
-                if hasattr(self._parent, 'list_param_group_targets'):
-                    inputs = self._parent.list_param_group_targets()
+                if hasattr(parent, 'list_param_group_targets'):
+                    inputs = parent.list_param_group_targets()
                 elif parent_deriv_vars[0]:
                     inputs = parent_deriv_vars[0]
                 else:
@@ -728,12 +731,12 @@ class SequentialWorkflow(Workflow):
             # If outputs aren't specified, use the objectives and constraints
             if outputs is None:
                 outputs = []
-                if hasattr(self._parent, 'get_objectives'):
+                if hasattr(parent, 'get_objectives'):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                    self._parent.get_objectives().values()])
-                if hasattr(self._parent, 'get_constraints'):
+                                    parent.get_objectives().values()])
+                if hasattr(parent, 'get_constraints'):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                    self._parent.get_constraints().values()])
+                                    parent.get_constraints().values()])
 
             if group_nondif is False and add_implicit is True:
                 outputs = list(set(tmp_outputs).union(outputs))
@@ -808,8 +811,8 @@ class SequentialWorkflow(Workflow):
             nondiff_groups = [comps]
 
         # User specification of the blocks.
-        elif len(self._parent.gradient_options.fd_blocks) > 0:
-            nondiff_groups = self._parent.gradient_options.fd_blocks
+        elif len(self.parent.gradient_options.fd_blocks) > 0:
+            nondiff_groups = self.parent.gradient_options.fd_blocks
 
         # Find the non-differentiable components
         else:
@@ -929,14 +932,14 @@ class SequentialWorkflow(Workflow):
             if has_interface(comp, IImplicitComponent):
                 if not comp.eval_only:
                     key = tuple(['.'.join((cname, n))
-                                     for n in comp.list_residuals()])
+                                 for n in comp.list_residuals()])
                     info[key] = ['.'.join((cname, n))
-                                     for n in comp.list_states()]
+                                 for n in comp.list_states()]
 
         # Nested solvers act implicitly.
         pa_comps = [dgraph.node[item]['pa_object']
                     for item in comps if '~' in item]
-        for comp in self._parent.iteration_set(solver_only=True):
+        for comp in self.parent.iteration_set(solver_only=True):
             if has_interface(comp, ISolver):
 
                 key = tuple(comp.list_eq_constraint_targets())
@@ -1033,9 +1036,10 @@ class SequentialWorkflow(Workflow):
         """
 
         self._J_cache = {}
+        parent = self.parent
 
         # User may request full-model finite difference.
-        if self._parent.gradient_options.force_fd is True:
+        if parent.gradient_options.force_fd is True:
             mode = 'fd'
 
         # This function can be called from a parent driver's workflow for
@@ -1097,7 +1101,7 @@ class SequentialWorkflow(Workflow):
 
             # User-controlled setting in the driver. This takes precedence
             # over OpenMDAO's automatic choice.
-            opt = self._parent.gradient_options
+            opt = parent.gradient_options
 
             if opt.derivative_direction == 'forward':
                 mode = 'forward'
@@ -1141,7 +1145,7 @@ class SequentialWorkflow(Workflow):
         #print len(self.res), len(self._edges), len(self._comp_edge_list())
 
         if mode == 'adjoint':
-            if self._parent.gradient_options.directional_fd is True:
+            if parent.gradient_options.directional_fd is True:
                 msg = "Directional derivatives can only be used with forward "
                 msg += "mode."
                 self.scope.raise_exception(msg, RuntimeError)
@@ -1157,10 +1161,10 @@ class SequentialWorkflow(Workflow):
         # Finally, we need to untransform the jacobian if any parameters have
         # scalers.
         #print 'edges:', self._edges
-        if not hasattr(self._parent, 'get_parameters'):
+        if not hasattr(parent, 'get_parameters'):
             return J
 
-        params = self._parent.get_parameters()
+        params = parent.get_parameters()
 
         if len(params) == 0:
             return J
@@ -1229,6 +1233,8 @@ class SequentialWorkflow(Workflow):
         Returns the finite difference gradient, the OpenMDAO-calculated
         gradient, and a list of suspect inputs/outputs.
         """
+        parent = self.parent
+
         # tuples cause problems
         if inputs:
             inputs = list(inputs)
@@ -1262,8 +1268,8 @@ class SequentialWorkflow(Workflow):
         # the constraints and objectives.
 
         if inputs is None:
-            if hasattr(self._parent, 'list_param_group_targets'):
-                inputs = self._parent.list_param_group_targets()
+            if hasattr(parent, 'list_param_group_targets'):
+                inputs = parent.list_param_group_targets()
                 input_refs = []
                 for item in inputs:
                     if len(item) < 2:
@@ -1280,16 +1286,16 @@ class SequentialWorkflow(Workflow):
         if outputs is None:
             outputs = []
             output_refs = []
-            if hasattr(self._parent, 'get_objectives'):
+            if hasattr(parent, 'get_objectives'):
                 obj = ["%s.out0" % item.pcomp_name for item in
-                       self._parent.get_objectives().values()]
+                       parent.get_objectives().values()]
                 outputs.extend(obj)
-                output_refs.extend(self._parent.get_objectives().keys())
-            if hasattr(self._parent, 'get_constraints'):
+                output_refs.extend(parent.get_objectives().keys())
+            if hasattr(parent, 'get_constraints'):
                 con = ["%s.out0" % item.pcomp_name for item in
-                       self._parent.get_constraints().values()]
+                       parent.get_constraints().values()]
                 outputs.extend(con)
-                output_refs.extend(self._parent.get_constraints().keys())
+                output_refs.extend(parent.get_constraints().keys())
 
             if len(outputs) == 0:  # pragma no cover
                 msg = "No outputs given for derivatives."
