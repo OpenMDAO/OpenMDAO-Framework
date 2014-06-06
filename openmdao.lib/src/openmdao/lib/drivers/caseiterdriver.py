@@ -16,7 +16,7 @@ from uuid import uuid1, getnode
 
 from numpy import array
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, VariableTree
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
 from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.expreval import ExprEvaluator
@@ -308,8 +308,8 @@ class CaseIteratorDriver(Driver):
             replicant = self.parent.copy()
             workflow = replicant.get(self.name+'.workflow')
             driver = replicant.add('driver', Driver())
-            workflow._parent = driver
-            workflow._scope = None
+            workflow.parent = driver
+            workflow.scope = None
             replicant.driver.workflow = workflow
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)
@@ -710,6 +710,8 @@ class CaseIteratorDriver(Driver):
         """ Record case data from `scope` in ``case_outputs``. """
         outputs = case.fetch_outputs(scope)
         for path, value in outputs:
+            if self.sequential and isinstance(value, VariableTree):
+                value = deepcopy(value)
             path = make_legal_path(path)
             self.set('case_outputs.'+path, value,
                      index=(case.index,), force=True)
@@ -821,7 +823,7 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-#                self.workflow._parent.update_parameters()
+#                self.workflow.parent.update_parameters()
                 self.workflow.run(case_uuid=server.case.uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())
