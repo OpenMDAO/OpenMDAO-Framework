@@ -5,7 +5,7 @@ __all__ = ["Driver"]
 
 from zope.interface import implementedBy
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
@@ -115,7 +115,7 @@ class Driver(Component):
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
         if newwf is not None:
-            newwf._parent = self
+            newwf.parent = self
 
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""

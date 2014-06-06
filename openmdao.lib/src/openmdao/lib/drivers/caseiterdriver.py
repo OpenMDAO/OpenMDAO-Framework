@@ -3,7 +3,6 @@
 
 """
 
-from copy import deepcopy
 from cStringIO import StringIO
 import logging
 import os.path
@@ -308,8 +307,8 @@ class CaseIteratorDriver(Driver):
             replicant = self.parent.copy()
             workflow = replicant.get(self.name+'.workflow')
             driver = replicant.add('driver', Driver())
-            workflow._parent = driver
-            workflow._scope = None
+            workflow.parent = driver
+            workflow.scope = None
             replicant.driver.workflow = workflow
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)
@@ -821,7 +820,7 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-#                self.workflow._parent.update_parameters()
+#                self.workflow.parent.update_parameters()
                 self.workflow.run(case_uuid=server.case.uuid)
             except Exception as exc:
                 server.exception = TracedError(exc, traceback.format_exc())

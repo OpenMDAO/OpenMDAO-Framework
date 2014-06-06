@@ -1,5 +1,6 @@
 
 import ast
+import weakref
 
 from openmdao.main.array_helpers import flattened_size
 from openmdao.main.expreval import ConnectedExprEvaluator, _expr_dict
@@ -82,7 +83,8 @@ class PseudoComponent(object):
                  pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
-        self._parent = parent
+        self._parent = None
+        self.parent = parent
         self.name = _get_new_name(parent)
         self._inmap = {}  # mapping of component vars to our inputs
         self._meta = {}
@@ -179,6 +181,24 @@ class PseudoComponent(object):
 
         self.missing_deriv_policy = 'error'
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_parent'] = self.parent
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.parent = state['_parent']
+
+    @property
+    def parent(self):
+        """ Our parent assembly. """
+        return None if self._parent is None else self._parent()
+
+    @parent.setter
+    def parent(self, parent):
+        self._parent = None if parent is None else weakref.ref(parent)
+
     def check_config(self, strict=False):
         pass
 
@@ -189,7 +209,7 @@ class PseudoComponent(object):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-        return '.'.join((self._parent.get_pathname(rel_to_scope), self.name))
+        return '.'.join((self.parent.get_pathname(rel_to_scope), self.name))
 
     def list_connections(self, is_hidden=False, show_expressions=False):
         """list all of the inputs and output connections of this PseudoComponent.
@@ -204,15 +224,15 @@ class PseudoComponent(object):
                     return [(self._orig_src, self._orig_dest)]
                 else:
                     return [(src, self._outdests[0])
-                               for src in self._inmap.keys() if src]
+                            for src in self._inmap.keys() if src]
             else:
                 return []
         else:
             conns = [(src, '.'.join((self.name, dest)))
-                         for src, dest in self._inmap.items()]
+                     for src, dest in self._inmap.items()]
             if self._outdests:
                 conns.extend([('.'.join((self.name, 'out0')), dest)
-                                           for dest in self._outdests])
+                              for dest in self._outdests])
         return conns
 
     def list_inputs(self):
@@ -229,10 +249,10 @@ class PseudoComponent(object):
         parent components of our sources/destinations.
         """
         conns = [(src.split('.', 1)[0], self.name)
-                     for src, dest in self._inmap.items()]
+                 for src, dest in self._inmap.items()]
         if self._outdests:
             conns.extend([(self.name, dest.split('.', 1)[0])
-                                    for dest in self._outdests])
+                          for dest in self._outdests])
         return conns
 
     def contains(self, name):
