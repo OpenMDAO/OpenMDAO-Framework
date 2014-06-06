@@ -1,8 +1,10 @@
 
 import ordereddict
+import weakref
 
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+
 
 class Objective(ConnectedExprEvaluator):
     def __init__(self, *args, **kwargs):
@@ -45,7 +47,22 @@ class HasObjectives(object):
         self._objectives = ordereddict.OrderedDict()
         # max_objectives of 0 means unlimited objectives
         self._max_objectives = max_objectives
-        self._parent = parent
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_parent'] = self.parent
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        parent = state['_parent']
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    @property
+    def parent(self):
+        """ The object we are a delegate of. """
+        return None if self._parent is None else self._parent()
 
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from
@@ -59,11 +76,10 @@ class HasObjectives(object):
         objectives for them in the driver.
         """
         if isinstance(obj_iter, basestring):
-            self._parent.raise_exception("add_objectives requires an iterator"
-                                         " of expression strings.",
-                                         ValueError)
+            self.parent.raise_exception("add_objectives requires an iterator of"
+                                        " expression strings.", ValueError)
         for expr in obj_iter:
-            self._parent.add_objective(expr, scope=scope)
+            self.parent.add_objective(expr, scope=scope)
 
     def add_objective(self, expr, name=None, scope=None):
         """Adds an objective to the driver.
@@ -81,20 +97,20 @@ class HasObjectives(object):
          """
         if self._max_objectives > 0 and \
            len(self._objectives) >= self._max_objectives:
-            self._parent.raise_exception("Can't add objective '%s'. Only %d"
-                                         " objectives are allowed"
-                                         % (expr, self._max_objectives),
-                                         RuntimeError)
+            self.parent.raise_exception("Can't add objective '%s'. Only %d"
+                                        " objectives are allowed"
+                                        % (expr, self._max_objectives),
+                                        RuntimeError)
         expr = _remove_spaces(expr)
         if expr in self._objectives:
-            self._parent.raise_exception("Trying to add objective '%s' to"
-                                         " driver, but it's already there"
-                                         % expr, AttributeError)
+            self.parent.raise_exception("Trying to add objective '%s' to"
+                                        " driver, but it's already there"
+                                        % expr, AttributeError)
         if name is not None and name in self._objectives:
-            self._parent.raise_exception("Trying to add objective '%s' to"
-                                         " driver using name '%s', but name is"
-                                         " already used" % (expr, name),
-                                         AttributeError)
+            self.parent.raise_exception("Trying to add objective '%s' to"
+                                        " driver using name '%s', but name is"
+                                        " already used" % (expr, name),
+                                        AttributeError)
 
         scope = self._get_scope(scope)
         expreval = Objective(expr, scope)
@@ -102,7 +118,7 @@ class HasObjectives(object):
         if unresolved_vars:
             msg = "Can't add objective '{0}' because of invalid variables {1}"
             error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
-            self._parent.raise_exception(str(error), type(error))
+            self.parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
@@ -110,7 +126,7 @@ class HasObjectives(object):
 
         self._objectives[name] = expreval
 
-        self._parent.config_changed()
+        self.parent.config_changed()
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within
@@ -122,10 +138,10 @@ class HasObjectives(object):
             obj.deactivate()
             del self._objectives[expr]
         else:
-            self._parent.raise_exception("Trying to remove objective '%s' "
-                                         "that is not in this driver." % expr,
-                                         AttributeError)
-        self._parent.config_changed()
+            self.parent.raise_exception("Trying to remove objective '%s' "
+                                        "that is not in this driver." % expr,
+                                        AttributeError)
+        self.parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -167,8 +183,8 @@ class HasObjectives(object):
             try:
                 self.add_objective(str(obj), name, obj.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore objective '%s':"
-                                             " %s" % (name, str(err)))
+                self.parent._logger.warning("Couldn't restore objective"
+                                            " '%s': %s" % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
@@ -211,7 +227,7 @@ class HasObjectives(object):
         for each component referenced by our objectives. Note that this does not
         include pseudo-components.
         """
-        pname = self._parent.name
+        pname = self.parent.name
         conn_list = []
         for obj in self._objectives.values():
             conn_list.extend([(c, pname)
@@ -235,7 +251,7 @@ class HasObjectives(object):
     def _get_scope(self, scope=None):
         if scope is None:
             try:
-                return self._parent.get_expr_scope()
+                return self.parent.get_expr_scope()
             except AttributeError:
                 pass
         return scope
@@ -244,12 +260,12 @@ class HasObjectives(object):
         """Copy what objectives we can from the target."""
         if self._max_objectives > 0 and \
            len(target._objectives) > self._max_objectives:
-            self._parent.raise_exception("This driver allows a maximum of %d"
-                                         " objectives, but the driver being"
-                                         " replaced has %d" %
-                                         (self._max_objectives,
-                                          len(target._objectives)),
-                                         RuntimeError)
+            self.parent.raise_exception("This driver allows a maximum of %d"
+                                        " objectives, but the driver being"
+                                        " replaced has %d" %
+                                        (self._max_objectives,
+                                         len(target._objectives)),
+                                        RuntimeError)
         self.clear_objectives()
         for name, obj in target._objectives.items():
             self.add_objective(obj.text, name=name, scope=obj.scope)
@@ -264,6 +280,5 @@ class HasObjective(HasObjectives):
         if len(self._objectives) > 0:
             return super(HasObjective, self).eval_objectives()[0]
         else:
-            self._parent.raise_exception("no objective specified", Exception)
-
+            self.parent.raise_exception("no objective specified", Exception)
 

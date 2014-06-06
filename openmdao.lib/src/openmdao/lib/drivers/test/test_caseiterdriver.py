@@ -947,6 +947,48 @@ class ParameterTarget(unittest.TestCase):
                          [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
 
 
+# Test bug reported by Frederik Zahle. Sequential version would fail.
+
+class OutputVT(VariableTree):
+
+    a = Float()
+
+class AComp(Component):
+
+    inp = Float(iotype='in')
+    out = VarTree(OutputVT(), iotype='out')
+
+    def execute(self):
+        self.out.a = 2 * self.inp
+
+class CaseIter(Assembly):
+
+    def configure(self):
+        self.add('driver', CaseIteratorDriver())
+        self.add('acomp', AComp())
+        self.driver.workflow.add('acomp')
+        self.driver.add_parameter('acomp.inp')
+        self.driver.add_response('acomp.out')
+        self.driver.case_inputs.acomp.inp = [0, 1, 2]
+
+class Zahle(unittest.TestCase):
+
+    def test_sequential(self):
+        top = CaseIter()
+        top.run()
+        out = top.driver.case_outputs.acomp.out
+        out = [out[i].a for i in range(len(out))]
+        self.assertEqual(out, [0, 2, 4])
+
+    def test_concurrent(self):
+        top = CaseIter()
+        top.driver.sequential = False
+        top.run()
+        out = top.driver.case_outputs.acomp.out
+        out = [out[i].a for i in range(len(out))]
+        self.assertEqual(out, [0, 2, 4])
+
+
 if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao.lib.drivers')
     sys.argv.append('--cover-erase')

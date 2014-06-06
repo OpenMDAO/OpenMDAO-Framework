@@ -107,7 +107,7 @@ class PseudoAssembly(object):
         allnodes = dgraph.find_prefixed_nodes(self._orig_group_nodes)
         out_edges = nx.edge_boundary(dgraph, allnodes)
         in_edges = nx.edge_boundary(dgraph,
-                            set(dgraph.nodes()).difference(allnodes))
+                                    set(dgraph.nodes()).difference(allnodes))
         solver_states = []
         if fd is False:
             for comp in group:
@@ -167,7 +167,7 @@ class PseudoAssembly(object):
         Finite Difference."""
 
         # Directional finite difference doesn't pre-generate a Jacobian
-        if self.wflow._parent.gradient_options.directional_fd == True:
+        if self.wflow.parent.gradient_options.directional_fd == True:
             if self.fd is None:
                 self.fd = DirectionalFD(self)
                 self.apply_deriv = self._apply_deriv

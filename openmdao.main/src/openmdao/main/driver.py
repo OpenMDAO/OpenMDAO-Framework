@@ -115,7 +115,7 @@ class Driver(Component):
     def _workflow_changed(self, oldwf, newwf):
         """callback when new workflow is slotted"""
         if newwf is not None:
-            newwf._parent = self
+            newwf.parent = self
 
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""
