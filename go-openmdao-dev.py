@@ -2102,6 +2102,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     #To get rid of OSX 10.9 compiler errors by turning them to warnings.
     if is_darwin:
         extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
     cmdline = [] if is_win else [join(bin_dir, 'python')]
@@ -2110,11 +2111,10 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %s" % ' '.join(cmdline))
     try:
-         if is_darwin:
+        if is_darwin:
             call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
-         else:
+        else:
             call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
-
     except OSError:
         failures.append(req)
 
@@ -2246,6 +2246,15 @@ def after_install(options, home_dir, activated=False):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
+
+        #Hack to make sure scipy is up to date.   
+        try:
+            from scipy.optimize import minimize
+        except:
+            if "scipy" in failed_imports:
+                failed_imports.remove("scipy")
+            failed_imports.append("scipy>=0.11.0")
+
     if failed_imports:
         if options.noprereqs:
             print "\n**** The following prerequisites could not be imported: %s." % failed_imports
@@ -2291,7 +2300,6 @@ def after_install(options, home_dir, activated=False):
  ('openmdao.devtools', '', 'sdist')]
 
         try:
-            #Fix for newer 10.9 compiler errors, switching them to warnings.
             if is_darwin:
                 extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
@@ -2346,7 +2354,7 @@ def after_install(options, home_dir, activated=False):
     except Exception as err:
         print "ERROR: build failed: %s" % str(err)
         sys.exit(-1)
-        
+
     # If there are spaces in the install path lots of commands need to be
     # patched so Python can be found on Linux/Mac.
     abs_bin = os.path.abspath(bin_dir)

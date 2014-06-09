@@ -1,6 +1,8 @@
 """ Base class for all workflows. """
 
-# pylint: disable-msg=E0611,F0401
+import weakref
+
+# pylint: disable=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
@@ -27,8 +29,9 @@ class Workflow(object):
         members: list of str (optional)
             A list of names of Components to add to this workflow.
         """
+        self._parent = None
+        self.parent = parent
         self._stop = False
-        self._parent = parent
         self._scope = None
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
@@ -41,20 +44,40 @@ class Workflow(object):
                     raise TypeError("Components must be added to a workflow by name.")
                 self.add(member)
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_parent'] = None if self._parent is None else self._parent()
+        state['_scope'] = None if self._scope is None else self._scope()
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.parent = state['_parent']
+        self.scope = state['_scope']
+
+    @property
+    def parent(self):
+        """ This workflow's driver. """
+        return None if self._parent is None else self._parent()
+
+    @parent.setter
+    def parent(self, parent):
+        self._parent = None if parent is None else weakref.ref(parent)
+
     @property
     def scope(self):
         """The scoping Component that is used to resolve the Component names in
         this Workflow.
         """
-        if self._scope is None and self._parent is not None:
-            self._scope = self._parent.get_expr_scope()
+        if self._scope is None and self.parent is not None:
+            self._scope = weakref.ref(self.parent.get_expr_scope())
         if self._scope is None:
             raise RuntimeError("workflow has no scope!")
-        return self._scope
+        return self._scope()
 
     @scope.setter
     def scope(self, scope):
-        self._scope = scope
+        self._scope = None if scope is None else weakref.ref(scope)
         self.config_changed()
 
     @property
@@ -114,7 +137,7 @@ class Workflow(object):
 
     def _record_case(self, label, case_uuid):
         """ Record case in all recorders. """
-        top = self._parent
+        top = self.parent
         while top.parent is not None:
             top = top.parent
         recorders = top.recorders
@@ -123,7 +146,7 @@ class Workflow(object):
 
         inputs = []
         outputs = []
-        driver = self._parent
+        driver = self.parent
         scope = driver.parent
 
         # Parameters
@@ -167,17 +190,17 @@ class Workflow(object):
                         self.itername))
 
         case = Case(inputs, outputs, label=label,
-                    case_uuid=case_uuid, parent_uuid=self._parent._case_uuid)
+                    case_uuid=case_uuid, parent_uuid=self.parent._case_uuid)
 
         for recorder in recorders:
             recorder.record(case)
 
     def _iterbase(self):
         """ Return base for 'iteration coordinates'. """
-        if self._parent is None:
+        if self.parent is None:
             return str(self._exec_count)  # An unusual case.
         else:
-            prefix = self._parent.get_itername()
+            prefix = self.parent.get_itername()
             if prefix:
                 prefix += '.'
             return '%s%d' % (prefix, self._exec_count)
