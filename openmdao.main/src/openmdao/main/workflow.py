@@ -183,16 +183,9 @@ class Workflow(object):
 
         # Objectives
         self._rec_objectives = []
-        if hasattr(driver, 'eval_objective'):
-            key = driver.get_objectives().keys()[0]
-            name = 'Objective'
-            path = prefix+name
-            if self._check_path(path, includes, excludes):
-                self._rec_objectives.append(key)
-                outputs.append(name)
-        elif hasattr(driver, 'eval_objectives'):
-            for j, key in enumerate(driver.get_objectives()):
-                name = 'Objective_%d' % j
+        if hasattr(driver, 'eval_objectives'):
+            for key, objective in driver.get_objectives().items():
+                name = objective.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
@@ -201,8 +194,8 @@ class Workflow(object):
         # Responses
         self._rec_responses = []
         if hasattr(driver, 'get_responses'):
-            for j, key in enumerate(driver.get_responses()):
-                name = 'Response_%d' % j
+            for key, response in driver.get_responses().items():
+                name = response.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
@@ -210,17 +203,16 @@ class Workflow(object):
 
         # Constraints
         self._rec_constraints = []
-        if hasattr(driver, 'get_ineq_constraints'):
-            for name, con in driver.get_ineq_constraints().items():
-                name = 'Constraint ( %s )' % name
+        if hasattr(driver, 'get_eq_constraints'):
+            for con in driver.get_eq_constraints().values():
+                name = con.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
-
-        if hasattr(driver, 'get_eq_constraints'):
-            for name, con in driver.get_eq_constraints().items():
-                name = 'Constraint ( %s )' % name
+        if hasattr(driver, 'get_ineq_constraints'):
+            for con in driver.get_ineq_constraints().values():
+                name = con.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
@@ -239,16 +231,18 @@ class Workflow(object):
         if hasattr(driver, 'get_responses'):
             dsts.extend(response.pcomp_name+'.out0'
                         for response in driver.get_responses().values())
-        if hasattr(driver, 'get_ineq_constraints'):
-            dsts.extend(constraint.pcomp_name+'.out0'
-                        for constraint in driver.get_ineq_constraints().values())
         if hasattr(driver, 'get_eq_constraints'):
             dsts.extend(constraint.pcomp_name+'.out0'
                         for constraint in driver.get_eq_constraints().values())
+        if hasattr(driver, 'get_ineq_constraints'):
+            dsts.extend(constraint.pcomp_name+'.out0'
+                        for constraint in driver.get_ineq_constraints().values())
 
         graph = scope._depgraph
 #        graph = scope._depgraph.full_subgraph(self.get_names(full=True))
         for src, dst in _get_inner_connections(graph, srcs, dsts):
+            if scope.get_metadata(src)['iotype'] == 'in':
+                continue
             path = prefix+src
             if src not in inputs and src not in outputs and \
                self._check_path(path, includes, excludes):

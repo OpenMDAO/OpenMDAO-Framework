@@ -35,7 +35,7 @@ class _BaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """ Register names for later record call from `driver`. """
-        self._cfg_map[driver] = (driver.get_pathname(), inputs, outputs)
+        self._cfg_map[driver] = (inputs, outputs)
 
     def get_simulation_info(self, constants):
         """ Return simulation info dictionary. """
@@ -48,17 +48,14 @@ class _BaseRecorder(object):
         # Collect variable metadata.
         cruft = ('desc', 'framework_var', 'type', 'validation_trait')
         variable_metadata = {}
-        for driver, (dname, ins, outs) in self._cfg_map.items():
+        for driver, (ins, outs) in self._cfg_map.items():
             scope = driver.parent
             prefix = scope.get_pathname()
             if prefix:
                 prefix += '.'
 
             for name in ins + outs:
-                if name.endswith('.workflow.itername') or \
-                   name.startswith('Constraint (') or \
-                   name == 'Objective' or name.startswith('Objective_') or \
-                   name.startswith('Response_'):
+                if '_pseudo_' in name or name.endswith('.workflow.itername'):
                     pass  # No metadata.
                 else:
                     try:
@@ -81,7 +78,7 @@ class _BaseRecorder(object):
 
         # Collect expression data.
         expressions = {}
-        for driver, (dname, ins, outs) in sorted(self._cfg_map.items(),
+        for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                                  key=lambda item: item[1][0]):
             prefix = driver.parent.get_pathname()
             if prefix:
@@ -100,10 +97,10 @@ class _BaseRecorder(object):
                     expressions[prefix+str(response)] = info
 
             constraints = []
-            if hasattr(driver, 'get_ineq_constraints'):
-                constraints.extend(driver.get_ineq_constraints().values())
             if hasattr(driver, 'get_eq_constraints'):
                 constraints.extend(driver.get_eq_constraints().values())
+            if hasattr(driver, 'get_ineq_constraints'):
+                constraints.extend(driver.get_ineq_constraints().values())
             for con in constraints:
                 info = dict(data_type='Constraint',
                             pcomp_name=prefix+con.pcomp_name)
@@ -121,9 +118,9 @@ class _BaseRecorder(object):
     def get_driver_info(self):
         """ Return list of driver info dictionaries. """
         driver_info = []
-        for driver, (dname, ins, outs) in sorted(self._cfg_map.items(),
-                                                 key=lambda item: item[1][0]):
-            info = dict(name=dname)
+        for driver, (ins, outs) in sorted(self._cfg_map.items(),
+                                          key=lambda item: item[0].get_pathname()):
+            info = dict(name=driver.get_pathname(), _id=id(driver))
             if hasattr(driver, 'get_parameters'):
                 info['parameters'] = \
                     [str(param) for param in driver.get_parameters().values()]
@@ -133,25 +130,25 @@ class _BaseRecorder(object):
             if hasattr(driver, 'eval_responses'):
                 info['responses'] = \
                     [key for key in driver.get_responses()]
-            if hasattr(driver, 'get_ineq_constraints'):
-                info['ineq_constraints'] = \
-                    [str(con) for con in driver.get_ineq_constraints().values()]
             if hasattr(driver, 'get_eq_constraints'):
                 info['eq_constraints'] = \
                     [str(con) for con in driver.get_eq_constraints().values()]
+            if hasattr(driver, 'get_ineq_constraints'):
+                info['ineq_constraints'] = \
+                    [str(con) for con in driver.get_ineq_constraints().values()]
             driver_info.append(info)
         return driver_info
 
     def get_case_info(self, driver, inputs, outputs, exc,
                       case_uuid, parent_uuid):
         """ Return case info dictionary. """
-        dname, in_names, out_names = self._cfg_map[driver]
+        in_names, out_names = self._cfg_map[driver]
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
-                    _driver_id=dname,
+                    _driver_id=id(driver),
                     error_status=None,
                     error_message=str(exc) if exc else '',
                     timestamp=time.time(),
@@ -222,7 +219,7 @@ class JSONCaseRecorder(_BaseRecorder):
         try:
             return json.dumps(info, indent=self.indent,
                               sort_keys=self.sort_keys,
-                              cls=Encoder, check_circular=False)
+                              cls=_Encoder, check_circular=False)
         except Exception as exc:
             # Log bad keys & values.
             bad = []
@@ -230,7 +227,7 @@ class JSONCaseRecorder(_BaseRecorder):
                 try:
                     json.dumps(info[key], indent=self.indent,
                                sort_keys=self.sort_keys,
-                               cls=Encoder, check_circular=False)
+                               cls=_Encoder, check_circular=False)
                 except Exception:
                     bad.append(key)
 
@@ -244,7 +241,7 @@ class JSONCaseRecorder(_BaseRecorder):
                     try:
                         json.dumps(info[key], indent=self.indent,
                                    sort_keys=self.sort_keys,
-                                   cls=Encoder, check_circular=False)
+                                   cls=_Encoder, check_circular=False)
                     except Exception:
                         bad.append(key)
 
@@ -303,14 +300,14 @@ class JSONCaseRecorder(_BaseRecorder):
         return None
 
 
-class Encoder(json.JSONEncoder):
+class _Encoder(json.JSONEncoder):
     """ Special encoder to deal with types not handled by default encoder. """
 
     def default(self, obj):
         if isinstance(obj, ndarray):
             return obj.tolist()
         else:
-            super(Encoder, self).default(obj)
+            super(_Encoder, self).default(obj)
 
 
 class BSONCaseRecorder(_BaseRecorder):
@@ -318,6 +315,33 @@ class BSONCaseRecorder(_BaseRecorder):
     Dumps a run in BSON form to `out`, which may be a string or a file-like
     object. If `out` is a string, then a file with that name will be opened
     in the current directory. If `out` is None, cases will be ignored.
+
+    The resulting file can be read by code similar to this::
+
+        from bson import loads
+        from pprint import pprint
+        from struct import unpack
+        import sys
+
+        sep = '-'*60
+
+        with open(sys.argv[1], 'rb') as inp:
+            reclen = unpack('<L', inp.read(4))[0]
+            data = inp.read(reclen)
+            obj = loads(data)  # simulation_info
+            pprint(obj)
+            print sep
+
+            data = inp.read(4)
+            while data:
+                reclen = unpack('<L', data)[0]
+                data = inp.read(reclen)
+                obj = loads(data)  # driver_info or iteration_case
+                pprint(obj)
+                print sep
+
+                data = inp.read(4)
+
     """
 
     def __init__(self, out):
@@ -338,7 +362,6 @@ class BSONCaseRecorder(_BaseRecorder):
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
-        self.out.write(reclen)
 
         for i, info in enumerate(self.get_driver_info()):
             category = 'driver_info_%s' % (i+1)
@@ -346,7 +369,6 @@ class BSONCaseRecorder(_BaseRecorder):
             reclen = pack('<L', len(data))
             self.out.write(reclen)
             self.out.write(data)
-            self.out.write(reclen)
 
         self.out.flush()
 
@@ -363,7 +385,6 @@ class BSONCaseRecorder(_BaseRecorder):
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
-        self.out.write(reclen)
         self.out.flush()
 
     def _dump(self, info, category, subcategories=None):

@@ -39,7 +39,7 @@
             "pcomp_name": "_pseudo_3"
         }
     }, 
-    "uuid": "a0be52f4-e82c-11e3-b62b-005056000100", 
+    "uuid": "7689ad9a-f0af-11e3-b712-005056000100", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
@@ -230,6 +230,7 @@
     }
 }
 , "driver_info_1": {
+    "_id": 78582608, 
     "eq_constraints": [], 
     "ineq_constraints": [], 
     "name": "driver", 
@@ -242,12 +243,12 @@
     ]
 }
 , "iteration_case_1": {
-    "_driver_id": "driver", 
-    "_id": "a0c10cd9-e82c-11e3-8029-005056000100", 
-    "_parent_id": "a0be52f4-e82c-11e3-b62b-005056000100", 
+    "_driver_id": 78582608, 
+    "_id": "768a441c-f0af-11e3-8033-005056000100", 
+    "_parent_id": "7689ad9a-f0af-11e3-b712-005056000100", 
     "data": {
-        "Objective_0": 0.0, 
-        "Objective_1": 1.0, 
+        "_pseudo_2": 0.0, 
+        "_pseudo_3": 1.0, 
         "comp1.x": 0.0, 
         "comp1.z": 0.0, 
         "comp2.z": 1.0, 
@@ -255,6 +256,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1401476412.448581
+    "timestamp": 1402412214.997816
 }
 }

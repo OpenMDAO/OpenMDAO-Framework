@@ -1,12 +1,15 @@
+import bson
+import json
 import os.path
 import unittest
 
+from struct import unpack
 from cStringIO import StringIO
 
 from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.main.datatypes.api import Instance
 from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import JSONCaseRecorder
+from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
                                      SLSQPdriver
 from openmdao.util.testutil import assert_raises
@@ -114,18 +117,21 @@ class TestCase(unittest.TestCase):
             expected = inp.read().split('\n')
 
         for i in range(len(expected)):
-            if expected[i].startswith('    "_id":'):
+            expect = expected[i]
+            if expect.startswith('    "_driver_id":'):
+                self.assertTrue(lines[i].startswith('    "_driver_id":'))
+            elif expect.startswith('    "_id":'):
                 self.assertTrue(lines[i].startswith('    "_id":'))
-            elif expected[i].startswith('    "_parent_id":'):
+            elif expect.startswith('    "_parent_id":'):
                 self.assertTrue(lines[i].startswith('    "_parent_id":'))
-            elif expected[i].startswith('    "uuid":'):
+            elif expect.startswith('    "uuid":'):
                 self.assertTrue(lines[i].startswith('    "uuid":'))
-            elif expected[i].startswith('    "timestamp":'):
+            elif expect.startswith('    "timestamp":'):
                 self.assertTrue(lines[i].startswith('    "timestamp":'))
-            elif expected[i].startswith('            "pcomp_name":'):
+            elif expect.startswith('            "pcomp_name":'):
                 self.assertTrue(lines[i].startswith('            "pcomp_name":'))
             else:
-                self.assertEqual(lines[i], expected[i])
+                self.assertEqual(lines[i], expect)
 
     def test_close(self):
         sout = StringIO()
@@ -141,6 +147,53 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'self.top.run()', globals(), locals(), RuntimeError,
                       "JSON write failed for simulation_info.constants:"
                       " keys ['comp1.data']: <function test_badval at")
+
+    def test_bsonrecorder(self):
+        # Verify bson output can be read and that it matches json.
+        bson_out = StringIO()
+        json_out = StringIO()
+        self.top.recorders = [BSONCaseRecorder(bson_out),
+                              JSONCaseRecorder(json_out)]
+        self.top.run()
+
+        json_run = json.loads(json_out.getvalue())
+
+        inp = StringIO(bson_out.getvalue())
+        reclen = unpack('<L', inp.read(4))[0]
+        data = inp.read(reclen)
+        obj = bson.loads(data)  # simulation_info
+        keys = sorted(obj.keys())
+        self.assertEqual(keys, sorted(json_run['simulation_info'].keys()))
+        for key in keys:
+            if key not in ('uuid',):
+                self.assertEqual(obj[key], json_run['simulation_info'][key])
+
+        driver_count = 1
+        case_count = 1
+        data = inp.read(4)
+        while data:
+            reclen = unpack('<L', data)[0]
+            data = inp.read(reclen)
+            obj = bson.loads(data)  # driver_info or iteration_case
+            keys = sorted(obj.keys())
+
+            if '_driver_id' in obj:  # iteration_case
+                case = 'iteration_case_%s' % case_count
+                self.assertEqual(keys, sorted(json_run[case].keys()))
+                for key in keys:
+                    if key not in ('_driver_id', '_id', '_parent_id',
+                                   'timestamp'):
+                        self.assertEqual(obj[key], json_run[case][key])
+                case_count += 1
+            else:  # driver_info
+                driver = 'driver_info_%s' % driver_count
+                self.assertEqual(keys, sorted(json_run[driver].keys()))
+                for key in keys:
+                    if key not in ('_id',):
+                        self.assertEqual(obj[key], json_run[driver][key])
+                driver_count += 1
+
+            data = inp.read(4)
 
 
 if __name__ == '__main__':
