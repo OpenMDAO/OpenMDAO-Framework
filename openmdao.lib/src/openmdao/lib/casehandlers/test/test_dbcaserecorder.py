@@ -91,8 +91,8 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x: 8.0',
             '      comp1.y: 16.0',
             '   outputs:',
-            '      Response_0: 24.0',
-            '      Response_1: 25.0',
+            '      _pseudo_0: 24.0',
+            '      _pseudo_1: 25.0',
         ]
         lines = sout.getvalue().split('\n')
         count = 0

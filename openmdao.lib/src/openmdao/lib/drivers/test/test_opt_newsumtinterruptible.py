@@ -522,7 +522,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('Objective'))
+                         end_case.get_output('_pseudo_0'))
 
 
     def test_opt1_a(self):
@@ -550,7 +550,7 @@ class NEWSUMTdriverRosenSuzukiTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
         self.assertEqual(self.top.comp.result,
-                         end_case.get_output('Objective'))
+                         end_case.get_output('_pseudo_0'))
 
 
 class NEWSUMTdriverExample1FromManualTestCase(unittest.TestCase):
