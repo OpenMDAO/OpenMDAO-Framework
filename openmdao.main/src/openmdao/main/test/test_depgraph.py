@@ -3,7 +3,7 @@ import unittest
 import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
                                     find_all_connecting, mod_for_derivs, \
-                                    _get_inner_edges
+                                    _get_inner_edges, _get_inner_connections
 from openmdao.util.graph import edges_to_dict, nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some
@@ -29,7 +29,7 @@ def get_inner_edges(graph, srcs, dests, wflow):
     graph = graph.subgraph(graph.nodes())
 
     # add @in and @out nodes, rewire input srcs, etc.
-    mod_for_derivs(graph, srcs, dests, wflow)
+    graph = mod_for_derivs(graph, srcs, dests, wflow)
 
     # sort edges by src so that basevars occur before subvars
     edges = sorted(graph.list_connections(), key=lambda e: e[0])
@@ -40,7 +40,7 @@ class DumbClass(object):
     
     def __init__(self, depgraph, name, inputs=('a','b'), outputs=('c','d'), states=(), resids=()):
         self.name = name
-        self.dep = depgraph
+        self._depgraph = depgraph
 
         self._inputs = inputs[:]
         self._outputs = outputs[:]
@@ -53,12 +53,6 @@ class DumbClass(object):
     def get(self, name):
         return getattr(self, name, None)
     
-    def run(self, *args, **kwargs):
-        self.dep.child_run_finished(self.name)
-        
-    def get_invalidation_type(self):
-        return 'full'
-
     def list_inputs(self):
         return self._inputs
 
@@ -73,9 +67,6 @@ class DumbClass(object):
 
     def contains(self, name):
         return name in self._inputs or name in self._outputs or hasattr(self, name)
-    
-    def invalidate_deps(self, vnames=None):
-        return None
     
     def _get_required_compnames(self):
         return []
@@ -132,23 +123,13 @@ def _make_graph(comps=(), variables=(), connections=(), inputs=('a','b'), output
         setattr(scope, comp.name, comp)
 
     for v, iotype in variables:
-        dep.add_boundary_var(v, iotype=iotype)
+        dep.add_boundary_var(scope, v, iotype=iotype)
 
     for src, dest in connections:
         dep.connect(scope, src, dest)
         
     return dep, scope
 
-def _get_valids_dict(dep):
-    dct = {}
-    for n,data in dep.nodes(data=True):
-        dct[n] = data['valid']
-    return dct
-
-def _set_all_valid(dep):
-    for node, data in dep.nodes(data=True):
-        data['valid'] = True
-            
 
 class DepGraphTestCase(unittest.TestCase):
 
@@ -168,12 +149,6 @@ class DepGraphTestCase(unittest.TestCase):
             ('b[3]', 'A.b'),
             ('D.d', 'd.x'),
         ]
-        self.ext_conns = [
-            ('parent.C1.d', 'a'),
-            ('parent.C0.c', 'D.b'),
-            ('c', 'parent.C2.a'),
-            ('D.d', 'parent.C3.a'),
-        ]
         self.comps = ['A','B','C','D']
         self.bvariables = [('a','in'), ('b','in'),
                           ('c','out'), ('d','out')]
@@ -181,7 +156,7 @@ class DepGraphTestCase(unittest.TestCase):
                                            self.bvariables,
                                            self.conns +
                                            self.boundary_conns +
-                                           self.ext_conns)
+                                           [])
         
     def test_add(self):
         for name in self.comps:
@@ -210,7 +185,6 @@ class DepGraphTestCase(unittest.TestCase):
     def test_get_source(self):
         self.assertEqual(self.dep.get_sources('B.a'), ['A.c[2]'])
         self.assertEqual(self.dep.get_sources('A.a'), ['a'])
-        self.assertEqual(self.dep.get_sources('a'), ['parent.C1.d'])
         self.assertEqual(self.dep.get_sources('c'), ['C.c'])
         self.assertEqual(self.dep.get_sources('A.c'), [])
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
@@ -253,17 +227,12 @@ class DepGraphTestCase(unittest.TestCase):
         self.dep.connect(self.scope, 'D.c', 'B.b[5]')
     
     def test_get_boundary_inputs(self):
-        self.assertEqual(set(self.dep.get_boundary_inputs(connected=True)), 
-                         set(['a']))
+        self.assertEqual(self.dep.get_boundary_inputs(connected=True), [])
         self.assertEqual(set(self.dep.get_boundary_inputs()), 
                          set(['a','b']))
     
     def test_get_boundar_outputs(self):
-        self.assertEqual(set(self.dep.get_boundary_outputs(connected=True)), 
-                         set(['c']))
-        self.dep.connect(self.scope, 'D.a', 'parent.foo.bar')
-        self.assertEqual(set(self.dep.get_boundary_outputs(connected=True)), 
-                         set(['c']))
+        self.assertEqual(self.dep.get_boundary_outputs(connected=True), [])
         self.assertEqual(set(self.dep.get_boundary_outputs()), 
                          set(['c','d']))
     
@@ -286,9 +255,9 @@ class DepGraphTestCase(unittest.TestCase):
     
         # TODO: input boundary connection
 
-    def test_get_inner_edges(self):
-        self.assertEqual(len(_get_inner_edges(self.dep, ['b'], ['c'])), 6)
-        self.assertEqual(set(_get_inner_edges(self.dep, ['b'], ['c'])),
+    def test_get_inner_connections(self):
+        self.assertEqual(len(_get_inner_connections(self.dep, ['b'], ['c'])), 6)
+        self.assertEqual(set(_get_inner_connections(self.dep, ['b'], ['c'])),
                          set([('b[3]','A.b'),('A.d.z','B.b[4]'),('A.c[2]','B.a.x.y'),
                               ('B.c','C.a'),('B.d','C.b'),('C.c','c')]))
 
@@ -296,15 +265,15 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.c','B.a'),('A.d','B.b')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(len(_get_inner_edges(dep, ['A.a'], ['B.c'])), 2)
-        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['B.c'])),
+        self.assertEqual(len(_get_inner_connections(dep, ['A.a'], ['B.c'])), 2)
+        self.assertEqual(set(_get_inner_connections(dep, ['A.a'], ['B.c'])),
                          set([('A.c','B.a'),('A.d','B.b')]))
         
         dep, scope = _make_graph(comps=['A','B', 'C'],
                                  connections=[('A.c','B.a'),('A.d','B.b'),('B.d','C.a')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['C.c'])),
+        self.assertEqual(set(_get_inner_connections(dep, ['A.a'], ['C.c'])),
                          set([('A.c','B.a'),('A.d','B.b'),('B.d','C.a')]))
 
         # same output feeding two inputs
@@ -312,7 +281,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.d','B.a'),('A.d','B.b'),('B.d','C.a')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        edges = _get_inner_edges(dep, ['A.a'], ['C.c'])
+        edges = _get_inner_connections(dep, ['A.a'], ['C.c'])
         self.assertEqual(set(edges), set([('A.d','B.a'),('A.d','B.b'),('B.d','C.a')]))
         edict = edges_to_dict(edges)
         self.assertEqual(len(edict), 2)
@@ -324,7 +293,7 @@ class DepGraphTestCase(unittest.TestCase):
                                  connections=[('A.d','B.a'),('B.d','C.a'),('C.d','A.a')],
                                  inputs=['a','b'],
                                  outputs=['c','d'])
-        self.assertEqual(set(_get_inner_edges(dep, ['A.a'], ['C.d'])),
+        self.assertEqual(set(_get_inner_connections(dep, ['A.a'], ['C.d'])),
                          set([('A.d','B.a'),('B.d','C.a'),('C.d','A.a')]))
 
     def test_inner_iter_inp_as_out(self):
@@ -415,11 +384,9 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_connections_to(self):
         self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('c', 'parent.C2.a'),
-                              ('C.c', 'c')]))
+                         set([('C.c', 'c')]))
         self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('parent.C1.d', 'a'),
-                              ('a', 'A.a')]))
+                         set([('a', 'A.a')]))
         
         # unconnected var should return an empty list
         self.assertEqual(self.dep.connections_to('D.a'),[])
@@ -432,9 +399,7 @@ class DepGraphTestCase(unittest.TestCase):
                               ('A.d.z','B.b[4]')]))
 
         self.assertEqual(set(self.dep.connections_to('D')),
-                         set([('parent.C0.c', 'D.b'),
-                              ('D.d', 'parent.C3.a'),
-                              ('D.d', 'd.x')]))
+                         set([('D.d', 'd.x')]))
         
     def test_find_all_connecting(self):
         self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())
@@ -487,69 +452,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(set(edges_matching_some(g, foo=False, baz=False)),
                          set())
 
-
-
-    def test_invalidate(self):
-        dep, scope = _make_graph(comps=['A','B'],
-                                 connections=[('A.out1','B.in1')],
-                                 inputs=['in1','in2'],
-                                 outputs=['out1','out2'])
-        
-        _set_all_valid(dep)
-        
-        self.assertEqual(set(dep.nodes()), set(nodes_matching_all(dep, valid=True)))
-        self.assertEqual(set(), set(nodes_matching_all(dep, valid=False)))
-        
-        dep.invalidate_deps(scope, ['A.out2'])
-        self.assertEqual(set(['A.out2']), set(nodes_matching_all(dep, valid=False)))
-            
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.in1'])
-        self.assertEqual(set(['A.in1','A.in2','B.in2']), 
-                         set(nodes_matching_all(dep, valid=True)))
-        
-        _set_all_valid(dep)
-            
-        dep.connect(scope, 'B.out1', 'A.in1') # make a cycle
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-        
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-         
-        _set_all_valid(dep)
-
-        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A','A.in1','A.in2','A.out2','B.in2']), 
-                         set(nodes_matching_all(dep, valid=True)))
-
-        dep.unsever_edges(self.scope) # put cycle back
-        _set_all_valid(dep)
-
-        dep.invalidate_deps(scope, ['A.out1'])
-        self.assertEqual(set(['A.in2','B.in2']), set(nodes_matching_all(dep, valid=True)))
-        
-
-        dep.sever_edges([('B.out1','A.in1')]) # remove cycle
-        try:
-            dep.sever_edges([('A.out1','B.in1')])
-        except Exception as err:
-            self.assertEqual("only one set of severed edges is permitted", str(err))
-        else:
-            self.fail("Exception expected")
-
-    def test_invalidate_input_as_output(self):
-        dep, scope = _make_graph(comps=['A','B'],
-                                 connections=[('A.in1','B.in1')],
-                                 inputs=['in1','in2'],
-                                 outputs=['out1','out2'])
-        
-        _set_all_valid(dep)
-        dep.invalidate_deps(scope, ['A.in1'])
-        self.assertEqual(set(['A','A.out1','A.out2','B.in1','B','B.out1','B.out2']), 
-                         set(nodes_matching_all(dep, valid=False)))
-
     def test_var_edge_iter(self):
         # basevar to basevar connection
         dep, scope = _make_graph(comps=['A','B'],
@@ -591,24 +493,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual([('A.out1','B.in1[1]'),('B.in1[1]','B.in1')], list(dep.var_edge_iter('A.out1')))
         self.assertEqual([('B.in1[1]','B.in1'),('A.out1','B.in1[1]')], list(dep.var_edge_iter('B.in1', reverse=True)))
         
-    def test_basevar_iter(self):
-        dep = self.dep
-        self.assertEqual(set(dep.basevar_iter('a')), set(['A.a']))
-        self.assertEqual(set(dep.basevar_iter(['a'])), set(['A.a']))
-        self.assertEqual(set(dep.basevar_iter(['parent.C1.d'])), set(['a']))
-        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['B.a','B.b']))
-        self.assertEqual(set(dep.basevar_iter(['B.d'])), set(['C.b']))
-        self.assertEqual(set(dep.basevar_iter(['C.c'])), set(['c']))
-        self.assertEqual(list(dep.basevar_iter(['parent.C2.a'])), [])
-        self.assertEqual(list(dep.basevar_iter(['D.b'])), [])
-        self.assertEqual(set(dep.basevar_iter(['D.a','D.b'])), set())
-        self.assertEqual(len(list(dep.basevar_iter(['D.a','D.b']))), 0)
-
-        dep, scope = _make_xgraph()
-        self.assertEqual(set(dep.basevar_iter(['A.c','A.d'])), set(['C.a','D.a']))
-        self.assertEqual(set(dep.basevar_iter(['C.a','C.b'], reverse=True)), 
-                         set(['A.d','B.c']))
-
     def test_input_as_output(self):
         dep, scope = _make_graph(['A','B','C'], [],
                                  [('A.c','B.a'),('B.d','C.b')])
@@ -782,22 +666,9 @@ class DepGraphStateTestCase1(unittest.TestCase):
                                            self.boundary_conns,
                                            states=self.states,
                                            resids=self.resids)
-        
-    def test_invalidation(self):
-        dep, scope = self.dep, self.scope
-        
-        _set_all_valid(dep)
-        
-        self.assertEqual(set(dep.nodes()), set(nodes_matching_all(dep, valid=True)))
-        self.assertEqual(set(), set(nodes_matching_all(dep, valid=False)))
-        
-        dep.invalidate_deps(scope, ['C1.s1'])
-        self.assertEqual(set(['C2.a','C2.c','C2.d','c','C2.s1','C2.s2','C2.r1','C2.r2',
-                              'C1.c','C1.d','C1.s1','C1.s2','C1.r1','C1.r2','C1','C2']), 
-                         set(nodes_matching_all(dep, valid=False)))
-            
-    def test_inner_edges(self):
-        edges = _get_inner_edges(self.dep, ['a'], ['c'])
+                    
+    def test_inner_connections(self):
+        edges = _get_inner_connections(self.dep, ['a'], ['c'])
         self.assertEqual(set(edges), set([('C2.s2', 'c'), ('C1.s1', 'C2.a'), ('a', 'C1.s1')]))
 
 if __name__ == "__main__":

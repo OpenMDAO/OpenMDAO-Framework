@@ -21,6 +21,7 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util import shellproc
 
+from distutils.spawn import find_executable
 
 class ExternalCode(Component):
     """
@@ -68,7 +69,7 @@ class ExternalCode(Component):
         return _AccessController()
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, src=None, force=False):
+    def set(self, path, value, index=None, force=False):
         """
         Don't allow setting of 'command' or 'resources' by a remote client.
         """
@@ -76,7 +77,7 @@ class ExternalCode(Component):
            and remote_access():
             self.raise_exception('%r may not be set() remotely' % path,
                                  RuntimeError)
-        return super(ExternalCode, self).set(path, value, index, src, force)
+        return super(ExternalCode, self).set(path, value, index, force)
 
     def execute(self):
         """
@@ -242,6 +243,17 @@ class ExternalCode(Component):
         self._logger.info('executing %s...', self.command)
         start_time = time.time()
 
+        # check to make sure command exists
+        if isinstance(self.command, basestring):
+            program_to_execute = self.command
+        else:
+            program_to_execute = self.command[0]
+        command_full_path = find_executable( program_to_execute )
+
+        if not command_full_path:
+            self.raise_exception("The command to be executed, '%s', cannot be found" % program_to_execute,
+                                 ValueError)
+            
         self._process = \
             shellproc.ShellProc(self.command, self.stdin,
                                 self.stdout, self.stderr, self.env_vars)

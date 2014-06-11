@@ -4,6 +4,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry
 from openmdao.main.datatypes.api import Slot, Geom, Array, Enum, VarTree
 from openmdao.main.datatypes.api import Float, Int, Str, Python, List, Dict, Bool
+from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
 _ttdict = {
@@ -80,6 +81,9 @@ def _create_trait(parent, name, meta):
         parent.add(parts[-1], _get_trait_from_meta(name, meta))
     else:  # just a simple variable
         parent.add(name, _get_trait_from_meta(name, meta))
+        iotype = meta.get('iotype')
+        if iotype == 'in':
+            parent._set_input_callback(name)
 
 
 class GeomComponent(Component):
@@ -133,9 +137,6 @@ class GeomComponent(Component):
         """
         if self.parametric_geometry is not None:
             try:
-                # params = self.parametric_geometry.list_parameters()
-                # for p in params: 
-                #     self._input_updated(p[0])
                 self.parametric_geometry.regen_model()
             except Exception as err:
                 logger.error("ERROR:"+str(err))
@@ -280,11 +281,8 @@ class GeomComponent(Component):
                 attr = getattr(attr, part)
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
-        
-        super(GeomComponent, self)._input_updated(name.split('.',1)[0])
 
-
-    def _set_failed(self, path, value, index=None, src=None, force=False):
+    def _set_failed(self, path, value, index=None):
         # check to see if dest attribute is inside of our parametric_geometry
         # object
         obj = self
@@ -298,7 +296,7 @@ class GeomComponent(Component):
             else:
                 raise RuntimeError('index not supported')
         except AttributeError:
-            super(GeomComponent, self)._set_failed(path, value, index, src, force)
+            super(GeomComponent, self)._set_failed(path, value, index)
 
     def _update_deriv_functs(self, geom):
         functs = ['apply_deriv','apply_derivT','provideJ']
@@ -322,11 +320,7 @@ class GeomComponent(Component):
 
     def list_deriv_vars(self):
         if self.parametric_geometry is not None:
-            ins, outs = self.parametric_geometry.list_deriv_vars()
-            if isinstance(ins, basestring):
-                ins = (ins,)
-            if isinstance(outs, basestring):
-                outs = (outs,)
+            ins, outs = list_deriv_vars(self.parametric_geometry)
             if ins or outs and 'geom_out' not in outs:
                 return list(ins), list(outs)+['geom_out']
         else:

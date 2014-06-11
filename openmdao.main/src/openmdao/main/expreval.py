@@ -13,8 +13,6 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
 
-from openmdao.main.printexpr import transform_expression
-
 def _import_functs(mod, dct, names=None):
     if names is None:
         names = dir(mod)
@@ -31,26 +29,20 @@ _expr_dict = {
 
 
 # make numpy functions available if possible
-try:
-    import numpy
-    names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
-    'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
-    'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
-    'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
-    _import_functs(numpy, _expr_dict, names=names)
+import numpy
+names = ['array', 'cosh', 'ldexp', 'hypot', 'tan', 'isnan', 'log', 'fabs',
+'floor', 'sqrt', 'frexp', 'degrees', 'pi', 'log10', 'modf',
+'copysign', 'cos', 'ceil', 'isinf', 'sinh', 'trunc',
+'expm1', 'e', 'tanh', 'radians', 'sin', 'fmod', 'exp', 'log1p']
+_import_functs(numpy, _expr_dict, names=names)
 
-    _expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
+_expr_dict['pow'] = numpy.power #pow in math is not complex stepable, but this one is!
 
+math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
+'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
+_import_functs(math, _expr_dict, names=math_names)
 
-    math_names = ['asin', 'asinh', 'atanh', 'atan', 'atan2', 'factorial',
-    'fsum', 'lgamma', 'erf', 'erfc', 'acosh', 'acos', 'gamma']
-    _import_functs(math, _expr_dict, names=math_names)
-
-except ImportError:
-    _import_functs(math, _expr_dict)
-else:
-    _expr_dict['numpy'] = numpy
-    #_import_functs(numpy, _expr_dict, names=[])
+_expr_dict['numpy'] = numpy
 
 # if scipy is available, add some functions
 try:
@@ -61,23 +53,22 @@ else:
     _import_functs(scipy.special, _expr_dict, names=['gamma', 'polygamma'])
 
 
-from numpy import ndarray, ndindex, zeros, identity, complex, imag, issubdtype, array
-import numpy
+from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
 
 
 _Missing = object()
 
-def is_in_process(scope, vname):
-    """Return True if the object referenced by vname is accessible
-    within scope via getattr from this process.
+def find_dotted(scope, vname):
+    """Return the object corresponding to the given name in the given
+    scope. Returns _Missing if object is not found.
     """
     vname = vname.split('[', 1)[0]
     obj = scope
     for name in vname.split('.'):
         obj = getattr(obj, name, _Missing)
         if obj is _Missing:
-            return False
-    return True
+            return obj
+    return obj
 
 def in_expr_locals(scope, name):
     """Return True if the given (dotted) name refers to something in our
@@ -115,7 +106,7 @@ class ExprVarScanner(ast.NodeVisitor):
         if long_name:
             self.varnames.add(long_name)
 
-    def get_names(self, scope):
+    def get_var_names(self, scope):
         """Returns a tuple of the form (local_vars, external_vars)."""
         local_vars = []
         extern_vars = []
@@ -123,7 +114,7 @@ class ExprVarScanner(ast.NodeVisitor):
         for v in self.varnames:
             if in_expr_locals(scope, v):
                 continue
-            if is_in_process(scope, v):
+            if find_dotted(scope, v) is not _Missing:
                 local_vars.append(v)
             else:
                 extern_vars.append(v)
@@ -174,17 +165,9 @@ class ExprTransformer(ast.NodeTransformer):
         if self.rhs and len(self._stack) == 0:
             fname = 'set'
             args.append(self.rhs)
-            keywords = [ast.keyword('src', ast.Name(id='_local_src_',
-                                                    lineno=node.lineno,
-                                                    col_offset=1,
-                                                    ctx=ast.Load())),
-                        ast.keyword('force', ast.Name(id='_local_force_',
-                                                      lineno=node.lineno,
-                                                      col_offset=1,
-                                                      ctx=ast.Load()))]
         else:
             fname = self.getter
-            keywords = []
+        keywords = []
         names.append(fname)
 
         called_obj = _get_attr_node(names)
@@ -319,6 +302,7 @@ class ExprExaminer(ast.NodeVisitor):
     """"Examines various properties of an expression for later analysis."""
     def __init__(self, node, evaluator=None):
         super(ExprExaminer, self).__init__()
+        self._in_idx = False
         self.ref_ok = True
         self.const = True
         self.simplevar = True  # if true, it's just a simple variable name
@@ -333,6 +317,8 @@ class ExprExaminer(ast.NodeVisitor):
 
     def _maybe_add_ref(self, name):
         """Will add a ref if it's not a name from the locals dict."""
+        if name != 'None' and self._in_idx:
+            self.const_indices = False
         if not self.ref_ok:
             return
         if self._evaluator and in_expr_locals(self._evaluator.scope, name):
@@ -341,37 +327,17 @@ class ExprExaminer(ast.NodeVisitor):
 
     def visit_Index(self, node):
         self.simplevar = self.const = False
-        if not isinstance(node.value, ast.Num):
-            if not (isinstance(node.value, ast.Tuple) and \
-                    len(node.value.elts) == 0):
-                self.const_indices = False
         self.visit(node.value)
 
     def visit_Assign(self, node):
         self.assignable = False
         self.const = False
         self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def visit_Slice(self, node):
         self.simplevar = self.const = False
-        if node.lower is not None:
-            if not isinstance(node.lower, ast.Num):
-                self.const_indices = False
-            self.visit(node.lower)
-        if node.upper is not None:
-            if not isinstance(node.upper, ast.Num):
-                self.const_indices = False
-            self.visit(node.upper)
-        if node.step is not None:
-            if not isinstance(node.step, ast.Num):
-                # for the step parameter, if it's None, that really means 1,
-                # which is constant, unlike lower and upper which can vary
-                # depending upon the size of the containing array at any given
-                # time
-                if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
-                    self.const_indices = False
-            self.visit(node.step)
+        self.generic_visit(node)
 
     def visit_ExtSlice(self, node):
         self.simplevar = self.const = False
@@ -381,7 +347,7 @@ class ExprExaminer(ast.NodeVisitor):
     def visit_Name(self, node):
         self.const = False
         self._maybe_add_ref(node.id)
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def visit_Attribute(self, node):
         self.const = False
@@ -390,7 +356,7 @@ class ExprExaminer(ast.NodeVisitor):
             self._maybe_add_ref(long_name)
         else:
             self.simplevar = False
-            super(ExprExaminer, self).generic_visit(node)
+            self.generic_visit(node)
 
     def visit_Subscript(self, node):
         self.const = False
@@ -400,18 +366,21 @@ class ExprExaminer(ast.NodeVisitor):
         ok = self.ref_ok
         self.ref_ok = False
         self.visit(node.value)
+        old = self._in_idx
+        self._in_idx = True
         self.visit(node.slice)
+        self._in_idx = old
         self.ref_ok = ok
 
     def visit_Num(self, node):
         self.simplevar = False
         if self.const:
             self.assignable = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     def _no_assign(self, node):
         self.assignable = self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
+        self.generic_visit(node)
 
     visit_Load       = ast.NodeVisitor.generic_visit
     visit_Store      = ast.NodeVisitor.generic_visit
@@ -449,10 +418,6 @@ class ExprExaminer(ast.NodeVisitor):
     visit_IsNot      = _no_assign
     visit_In         = _no_assign
     visit_NotIn      = _no_assign
-
-    def generic_visit(self, node):
-        self.simplevar = False
-        super(ExprExaminer, self).generic_visit(node)
 
 
 class ExprEvaluator(object):
@@ -500,13 +465,52 @@ class ExprEvaluator(object):
 
     @scope.setter
     def scope(self, value):
-        if value is not self.scope:
+        scp = None if self._scope is None else self._scope()
+        if scp is None or value is not scp:
             self._code = self._assignment_code = None
             self._examiner = self.cached_grad_eq = None
             if value is not None:
                 self._scope = weakref.ref(value)
             else:
                 self._scope = None
+
+    @classmethod
+    def _invalid_expression_error(cls, unresolved_vars, expr=None, msg=None):
+        """
+        Creates and returns an invalid expression error that can be raised.
+        Also adds the unresolved variables as an attribute to the error.
+        This is so the message can be more specifically tailored by catching
+        the error, creating your own message, and passing the necessary
+        arguments to generate a new error.
+
+        An example of this can be seen in Constraint.__init__.
+
+        unresolved_vars: list of unresolved variables
+        expr: Expression string
+        msg: Message with {0} and {1} placeholders to be formatted.
+             {0} will be replaced by expr and {1} will be replaced
+             by the unresolved variables
+
+        """
+        if not msg:
+            msg = "Expression '{0}' has invalid variables {1}"
+
+        if not expr:
+            expr = cls.text
+
+        #do some formatting for the error message
+        #wrap the variables in single quotes
+        formatted_vars = ["'{0}'".format(var) for var in unresolved_vars]
+
+        #if there is more than one variable,
+        #seperate the variables with commas
+        if len(formatted_vars) == 1:
+            formatted_vars = ''.join(formatted_vars)
+        else:
+            formatted_vars = ', '.join(formatted_vars)
+
+        #throw the error
+        return ValueError(msg.format(expr, formatted_vars))
 
     def is_valid_assignee(self):
         """Returns True if the syntax of our expression is valid to
@@ -537,6 +541,7 @@ class ExprEvaluator(object):
         # remove weakref to scope because it won't pickle
         state['_scope'] = self.scope
         state['_code'] = None  # <type 'code'> won't pickle either.
+        state['cached_grad_eq'] = None
         if state.get('_assignment_code'):
             state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
@@ -547,15 +552,14 @@ class ExprEvaluator(object):
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
 
-    def _pre_parse(self, root=None):
-        if root is None:
-            try:
-                root = ast.parse(self.text, mode='eval')
-            except SyntaxError:
-                # might be an assignment, try mode='exec'
-                root = ast.parse(self.text, mode='exec')
-                self._allow_set = False
-                return root
+    def _pre_parse(self):
+        try:
+            root = ast.parse(self.text, mode='eval')
+        except SyntaxError:
+            # might be an assignment, try mode='exec'
+            root = ast.parse(self.text, mode='exec')
+            self._allow_set = False
+            return root
 
         if not isinstance(root.body,
                           (ast.Attribute, ast.Name, ast.Subscript)):
@@ -564,10 +568,8 @@ class ExprEvaluator(object):
             self._allow_set = True
         return root
 
-    def _parse_get(self, root=None):
-        astree = self._pre_parse(root)
-        #varscanner = ExprVarScanner()
-        #varscanner.visit(astree)
+    def _parse_get(self):
+        astree = self._pre_parse()
 
         new_ast = ExprTransformer(self, getter=self.getter).visit(astree)
 
@@ -577,6 +579,10 @@ class ExprEvaluator(object):
         return (new_ast, compile(new_ast, '<string>', mode))
 
     def _parse_set(self):
+        self._pre_parse()
+        if not self._allow_set:
+            raise ValueError("expression '%s' can't be set to a value"
+                             % self.text)
         root = ast.parse("%s=_local_setter_" % self.text, mode='exec')
         ## transform into a 'set' call to set the specified variable
         assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
@@ -584,12 +590,10 @@ class ExprEvaluator(object):
         code = compile(assign_ast, '<string>', 'exec')
         return (assign_ast, code)
 
-    def _parse(self, root=None):
+    def _parse(self):
         self.var_names = set()
-        if root is not None:
-            self.text = print_node(root)
         try:
-            new_ast, self._code = self._parse_get(root)
+            new_ast, self._code = self._parse_get()
         except SyntaxError as err:
             raise SyntaxError("failed to parse expression '%s': %s"
                               % (self.text, str(err)))
@@ -605,7 +609,11 @@ class ExprEvaluator(object):
         """Return the value of the scoped string, evaluated
         using the eval() function.
         """
-        scope = self._get_updated_scope(scope)
+        if scope is None:
+            scope = self.scope
+        else:
+            self.scope = scope
+
         try:
             if self._code is None:
                 self._parse()
@@ -676,7 +684,8 @@ class ExprEvaluator(object):
         elif not isinstance(yp, complex):
             return None
         else:
-            return imag(yp/stepsize)[0]
+            # note, imag returns a 0-d array, Don't know why.
+            return imag(yp/stepsize).reshape(1, )[0]
 
         return imag(yp/stepsize)
 
@@ -762,7 +771,7 @@ class ExprEvaluator(object):
 
                     if grad is None:
                         var_dict[var][index] = base
-                        grad = self._finite_difference(grad_code,var_dict, var,
+                        grad = self._finite_difference(grad_code, var_dict, var,
                                                        stepsize, index)
                     gradient[var][:, i] = grad
                     var_dict[var][index] = base
@@ -776,7 +785,7 @@ class ExprEvaluator(object):
 
                 if grad is None:
                     var_dict[var] = base
-                    grad = self._finite_difference(grad_code,var_dict, var,
+                    grad = self._finite_difference(grad_code, var_dict, var,
                                                    stepsize)
                 gradient[var] = grad
                 var_dict[var] = base
@@ -785,30 +794,19 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, src=None, force=False):
+    def set(self, val, scope=None, force=False):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
-        if self._code is None:
-            self._pre_parse()
-
-        if self._allow_set:
-            # self.assignment_code is a compiled version of an assignment
-            # statement of the form 'somevar = _local_setter_', so we set
-            # _local_setter_ here and the exec call will pull it out of the
-            # locals dict. _local_src_ is another local variable corresponding
-            # to the 'src' arg which is used to determine if a connected
-            # expression is being set by the source it's
-            # connected to.
-            _local_setter_ = val
-            _local_src_ = src
-            _local_force_ = force
-            if self._assignment_code is None:
-                _, self._assignment_code = self._parse_set()
-            exec(self._assignment_code, _expr_dict, locals())
-        else:
-            raise ValueError("expression '%s' can't be set to a value"
-                             % self.text)
+        # self.assignment_code is a compiled version of an assignment
+        # statement of the form 'somevar = _local_setter_', so we set
+        # _local_setter_ here and the exec call will pull it out of the
+        # locals dict.
+        _local_setter_ = val
+        _local_force_ = force
+        if self._assignment_code is None:
+            _, self._assignment_code = self._parse_set()
+        exec(self._assignment_code, _expr_dict, locals())
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.
@@ -820,19 +818,41 @@ class ExprEvaluator(object):
         corresponding to each variable referenced by this expression.
         """
         scope = self._get_updated_scope(scope)
-        return [(name, scope.get_metadata(name, metaname))
-                  for name in self.get_referenced_varpaths(copy=False)]
 
-    def get_referenced_varpaths(self, copy=True):
-        """Return a set of pathnames relative to *scope.parent* and based on
-        the names of Variables referenced in our expression string.
+        invalid_variables = []
+        metadata = []
+
+        for name in self.get_referenced_varpaths(copy=False):
+            try:
+                metadata.append((name, scope.get_metadata(name, metaname)))
+            except AttributeError:
+                invalid_variables.append(name)
+
+        if invalid_variables:
+            msg = "Couldn't find metadata for traits {traits}"
+            traits = ', '.join("'{0}'".format(var) for var in invalid_variables)
+            msg = msg.format(traits=traits)
+
+            raise AttributeError(msg)
+
+        return metadata
+
+    def get_referenced_varpaths(self, copy=True, refs=False):
+        """Return a set of pathnames relative to *scope.parent* and 
+        based on the names of Variables referenced in our expression 
+        string.  If refs is True, return full references that may 
+        include not only the var name but also an array index, e.g.,
+        'x[3]' instead of just 'x'.
         """
         if self._code is None:
             self._parse()
-        if copy:
-            return self.var_names.copy()
+        if refs:
+            return self.refs(copy)
         else:
-            return self.var_names
+            if copy:
+                return self.var_names.copy()
+            else:
+                return self.var_names
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the pathnames of
@@ -847,15 +867,6 @@ class ExprEvaluator(object):
             if len(parts) > 1:
                 nameset.add(parts[0])
         return nameset
-
-    def refs_parent(self):
-        """Return True if this expression references a variable in parent."""
-        if self._code is None:
-            self._parse()
-        for name in self.var_names:
-            if name.startswith('parent.'):
-                return True
-        return False
 
     def check_resolve(self):
         """Return True if all variables referenced by our expression can

@@ -238,41 +238,6 @@ TestCase("ProjectTest", {
         sinon.assert.calledOnce(error_handler);
     },
 
-    "test getConnections": function() {
-        var success_handler = sinon.spy();
-        var error_handler = sinon.spy();
-
-        openmdao.project.getConnections("connectionspathname", "src_name", "dst_name")
-            .done(success_handler)
-            .fail(error_handler);
-
-        // Check the requests
-        assertEquals("object/connectionspathname/connections?source=src_name&target=dst_name",
-                     this.requests[0].url);
-        this.checkStandardRequestInfo(this.requests);
-
-        // Set the response
-        this.requests[0].respond(200,
-            {"Content-Type": "application/json"},
-            '{"id" : 1223, "name" : "connectionspathname"}'
-        );
-
-        // Check the callbacks
-        this.checkStandardCallbackBehavior(success_handler, error_handler);
-        assert(success_handler.calledWith({"id": 1223, "name": "connectionspathname"}));
-
-        // test call of error handler
-        openmdao.project.getConnections("connectionspathname", "src_name", "dst_name")
-            .done(success_handler)
-            .fail(error_handler);
-        this.requests[1].respond(500,
-            {"Content-Type": "application/json"},
-            '{}'
-        );
-        sinon.assert.calledOnce(success_handler);
-        sinon.assert.calledOnce(error_handler);
-    },
-
     "test putObject": function() {
         var callback = sinon.spy();
 

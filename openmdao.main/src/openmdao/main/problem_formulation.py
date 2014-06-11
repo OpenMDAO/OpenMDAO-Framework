@@ -187,26 +187,18 @@ class ArchitectureAssembly(Assembly):
         self.init_parameters()
         self.init_coupling_vars()
 
-    def check_config(self):
+    def check_config(self, strict=False):
         """Checks the configuration of the assembly to make sure it's compatible
         with the architecture. Then initializes all the values in the
         parameters and coupling vars and configures the architecture if it
         hasn't been done already.
         """
-        super(ArchitectureAssembly, self).check_config()
+        super(ArchitectureAssembly, self).check_config(strict=strict)
         if self.architecture is not None:
-            self.architecture.check_config()
+            self.architecture.check_config(strict=strict)
             if not self.architecture.configured:
                 self.architecture.configure()
                 self.architecture.configured = True
-
-    def _invalidate(self):
-        """ Method for delegates to declare that this is in an invalid
-        state so that isvalid() returns false. Presently, this is called when
-        a constraint/objective/parameter is set, removed, or cleared.
-        """
-        self._invalidated = True
-        self._set_exec_state('INVALID')
 
     def get_local_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters for
@@ -304,6 +296,17 @@ class ArchitectureAssembly(Assembly):
 
         return result
 
+    def list_pseudocomps(self):
+        """Return a list of names of pseudocomps resulting from
+        our objectives, and constraints.
+        """
+        pcomps = []
+        if hasattr(self, '_delegates_'):
+            for name in self._delegates_:
+                delegate = getattr(self, name)
+                if hasattr(delegate, 'list_pseudocomps'):
+                    pcomps.extend(delegate.list_pseudocomps())
+        return pcomps
 
 class OptProblem(ArchitectureAssembly):
     """Class for specifying test problems for optimization

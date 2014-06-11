@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.main.numpy_fallback import array
+from numpy import array
 
 from openmdao.main.api import Component
 from openmdao.main.datatypes.array import Array
@@ -144,7 +144,7 @@ class ArrayTestCase(unittest.TestCase):
         attrs = self.hobj.get_attributes(io_only=False)
         input_attrs = attrs['Inputs']
 
-        self.assertEqual(len(input_attrs), 8)
+        self.assertEqual(len(input_attrs), 7)
         self.assertTrue({'name': 'arr1',
                          'id': 'arr1',
                          'dim': '3',
@@ -154,11 +154,11 @@ class ArrayTestCase(unittest.TestCase):
                          'implicit': '',
                          'connected': '',
                          'connection_types' : 0,
-                         'valid': True,
                          'units': 'ft',
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)
+                         'indent': 0, 
+                         'assumed_default': False} in input_attrs)
         self.assertTrue({'name': 'arr3',
                          'id': 'arr3',
                          'dim': '1',
@@ -168,12 +168,12 @@ class ArrayTestCase(unittest.TestCase):
                          'implicit': '',
                          'connected': '',
                          'connection_types' : 0,
-                         'valid': True,
                          'units': 'kg',
                          'array': True,
                          'type': 'ndarray',
                          'desc': 'stuff',
-                         'indent': 0} in input_attrs)
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)
         self.assertTrue({'name': 'arr99',
                          'id': 'arr99',
                          'dim': '2, 4',
@@ -183,10 +183,10 @@ class ArrayTestCase(unittest.TestCase):
                          'value': arr99,
                          'implicit': '',
                          'connected': '',
-                         'valid': True,
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)        
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)        
         self.assertTrue({'name': 'arr98',
                          'id': 'arr98',
                          'dim': '2, 4',
@@ -196,10 +196,10 @@ class ArrayTestCase(unittest.TestCase):
                          'value': arr98,
                          'implicit': '',
                          'connected': '',
-                         'valid': True,
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in input_attrs)        
+                         'indent': 0, 
+                         'assumed_default': True} in input_attrs)        
         
         output_attrs = attrs['Outputs']
         
@@ -212,11 +212,11 @@ class ArrayTestCase(unittest.TestCase):
                          'value': '[[1.0, 2.0], [3.0, 4.0]]',
                          'implicit': '',
                          'connected': '',
-                         'valid': False,
                          'units': 'inch',
                          'array': True,
                          'type': 'ndarray',
-                         'indent': 0} in output_attrs)
+                         'indent': 0, 
+                         'assumed_default': False} in output_attrs)
         
 if __name__ == "__main__":
     unittest.main()

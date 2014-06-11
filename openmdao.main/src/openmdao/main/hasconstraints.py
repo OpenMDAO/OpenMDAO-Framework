@@ -9,7 +9,7 @@ import ordereddict
 
 from numpy import ndarray
 
-from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {
@@ -57,17 +57,25 @@ class Constraint(object):
 
     def __init__(self, lhs, comparator, rhs, scope):
         self.lhs = ExprEvaluator(lhs, scope=scope)
-        if not self.lhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid left-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.lhs.get_unresolved()
 
-        self.comparator = comparator
+        if unresolved_vars:
+            msg = "Left hand side of constraint '{0}' has invalid variables {1}"
+            expression = ' '.join((lhs, comparator, rhs))
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
+
 
         self.rhs = ExprEvaluator(rhs, scope=scope)
-        if not self.rhs.check_resolve():
-            raise ValueError("Constraint '%s' has an invalid right-hand-side."
-                              % ' '.join([lhs, comparator, rhs]))
+        unresolved_vars = self.rhs.get_unresolved()
 
+        if unresolved_vars:
+            msg = "Right hand side of constraint '{0}' has invalid variables {1}"
+            expression = ' '.join((lhs, comparator, rhs))
+
+            raise ExprEvaluator._invalid_expression_error(unresolved_vars, expr=expression, msg=msg)
+
+        self.comparator = comparator
         self.pcomp_name = None
         self._size = None
 
@@ -78,7 +86,7 @@ class Constraint(object):
             self._size = len(self.evaluate(self.lhs.scope))
         return self._size
 
-    def activate(self):
+    def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -87,7 +95,7 @@ class Constraint(object):
                                      pseudo_type='constraint')
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope)
+        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove
@@ -101,7 +109,7 @@ class Constraint(object):
                 pass
             else:
                 scope.remove(pcomp.name)
-            finally:  
+            finally:
                 self.pcomp_name = None
 
     def _combined_expr(self):
@@ -156,9 +164,8 @@ class Constraint(object):
 
     def evaluate(self, scope):
         """Returns the value of the constraint as a sequence."""
+
         pcomp = getattr(scope, self.pcomp_name)
-        if not pcomp.is_valid():
-            pcomp.update_outputs(['out0'])
         val = pcomp.out0
 
         if isinstance(val, ndarray):
@@ -188,18 +195,18 @@ class Constraint(object):
             return self.lhs.get_referenced_compnames().union(
                                             self.rhs.get_referenced_compnames())
 
-    def get_referenced_varpaths(self, copy=True):
+    def get_referenced_varpaths(self, copy=True, refs=False):
         """Returns a set of names of each component referenced by this
         constraint.
         """
         if isinstance(self.rhs, float):
-            return self.lhs.get_referenced_varpaths(copy=copy)
+            return self.lhs.get_referenced_varpaths(copy=copy, refs=refs)
         else:
-            return self.lhs.get_referenced_varpaths(copy=copy).union(
-                                    self.rhs.get_referenced_varpaths(copy=copy))
+            return self.lhs.get_referenced_varpaths(copy=copy, refs=refs).union(
+                    self.rhs.get_referenced_varpaths(copy=copy, refs=refs))
 
     def __str__(self):
-        return ' '.join([str(self.lhs), self.comparator, str(self.rhs)])
+        return ' '.join((str(self.lhs), self.comparator, str(self.rhs)))
 
     def __eq__(self, other):
         if not isinstance(other, Constraint):
@@ -263,9 +270,9 @@ class _HasConstraintsBase(object):
             Value returned by :meth:`get_references`.
 
         Note: this is called from the replace() method, where
-        the replacing object may be missing variables that were 
+        the replacing object may be missing variables that were
         found in the target object, so no restore_references
-        call should raise an exception when restoring a reference 
+        call should raise an exception when restoring a reference
         fails.
         """
         for name, constraint in refs.items():
@@ -275,7 +282,7 @@ class _HasConstraintsBase(object):
                 self.add_constraint(str(constraint), name,
                                     constraint.lhs.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore constraint '%s': %s" 
+                self._parent._logger.warning("Couldn't restore constraint '%s': %s"
                                               % (name, str(err)))
 
     def clear_constraints(self):
@@ -322,13 +329,14 @@ class _HasConstraintsBase(object):
             names.update(constraint.get_referenced_compnames())
         return names
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns a set of variable names referenced by a
         constraint.
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.get_referenced_varpaths(copy=False))
+            names.update(constraint.get_referenced_varpaths(copy=False, 
+                                                            refs=refs))
         return names
 
     def mimic(self, target):
@@ -393,7 +401,7 @@ class HasEqConstraints(_HasConstraintsBase):
         if not isinstance(rhs, basestring):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
-        ident = _remove_spaces('='.join([lhs, rhs]))
+        ident = _remove_spaces('='.join((lhs, rhs)))
         if ident in self._constraints:
             self._parent.raise_exception('A constraint of the form "%s" already'
                                          ' exists in the driver. Add failed.'
@@ -404,7 +412,7 @@ class HasEqConstraints(_HasConstraintsBase):
                                          % name, ValueError)
 
         constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
-        constraint.activate()
+        constraint.activate(self._parent)
 
         name = ident if name is None else name
         self._constraints[name] = constraint
@@ -424,7 +432,7 @@ class HasEqConstraints(_HasConstraintsBase):
             expression string.
         """
         if constraint.comparator == '=':
-            constraint.activate()
+            constraint.activate(self._parent)
             self._constraints[name] = constraint
         else:
             self._parent.raise_exception("Inequality constraint '%s' is not"
@@ -455,6 +463,9 @@ class HasEqConstraints(_HasConstraintsBase):
     def list_eq_constraint_targets(self):
         """Returns a list of outputs suitable for calc_gradient()."""
         return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
+
+    def list_constraint_targets(self):
+        return self.list_eq_constraint_targets()
 
 
 class HasIneqConstraints(_HasConstraintsBase):
@@ -496,7 +507,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         if not isinstance(rhs, basestring):
             msg = "Constraint right-hand-side (%s) is not a string" % rhs
             raise ValueError(msg)
-        ident = _remove_spaces(rel.join([lhs, rhs]))
+        ident = _remove_spaces(rel.join((lhs, rhs)))
         if ident in self._constraints:
             self._parent.raise_exception('A constraint of the form "%s" already'
                                          ' exists in the driver. Add failed.'
@@ -507,7 +518,7 @@ class HasIneqConstraints(_HasConstraintsBase):
                                          % name, ValueError)
 
         constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
-        constraint.activate()
+        constraint.activate(self._parent)
 
         if name is None:
             self._constraints[ident] = constraint
@@ -530,7 +541,7 @@ class HasIneqConstraints(_HasConstraintsBase):
         """
         if constraint.comparator != '=':
             self._constraints[name] = constraint
-            constraint.activate()
+            constraint.activate(self._parent)
         else:
             self._parent.raise_exception("Equality constraint '%s' is not"
                                          " supported on this driver"
@@ -560,6 +571,9 @@ class HasIneqConstraints(_HasConstraintsBase):
     def list_ineq_constraint_targets(self):
         """Returns a list of outputs suitable for calc_gradient()."""
         return ["%s.out0" % c.pcomp_name for c in self._constraints.values()]
+
+    def list_constraint_targets(self):
+        return self.list_ineq_constraint_targets()
 
 
 class HasConstraints(object):
@@ -764,12 +778,12 @@ class HasConstraints(object):
         names.update(self._ineq.get_referenced_compnames())
         return names
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns a set of names of each component referenced by a
         constraint.
         """
-        names = set(self._eq.get_referenced_varpaths())
-        names.update(self._ineq.get_referenced_varpaths())
+        names = set(self._eq.get_referenced_varpaths(refs=refs))
+        names.update(self._ineq.get_referenced_varpaths(refs=refs))
         return names
 
     def mimic(self, target):

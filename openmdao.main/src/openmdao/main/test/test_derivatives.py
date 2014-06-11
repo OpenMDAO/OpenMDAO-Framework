@@ -8,10 +8,10 @@ import re
 import unittest
 from mock import Mock
 
-try:
-    from numpy import zeros, array, identity, random
-except ImportError as err:
-    from openmdao.main.numpy_fallback import zeros, array, identity, random
+from numpy import zeros, array, identity, random
+
+from openmdao.lib.architectures.api import MDF, CO
+from openmdao.lib.optproblems.api import UnitScalableProblem
 
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
@@ -21,10 +21,10 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
-import openmdao.main.pseudocomp as pcompmod
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+from openmdao.util.graph import list_deriv_vars
 
 class Tree2(VariableTree):
 
@@ -94,17 +94,21 @@ class IntComp(Component):
     def provideJ(self):
         return array([[2.0]])
 
+class BadListDerivsComp(Component):
+    x = Float(iotype='in')
+    y = Float(iotype='out')
+
+    def execute(self):
+        self.y = self.x * 2.0
+
+    def list_deriv_vars(self):
+        return ['x','y']
+
+    def provideJ(self):
+        return array([[2.0]])
+
 
 class Testcase_provideJ(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
-
-    def setUp(self):
-        """ Called before each test. """
-        pcompmod._count = 0
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
 
     def test_provideJ(self):
 
@@ -522,11 +526,55 @@ class GComp_noD(Component):
 
         self.y1 = 5.0*self.x1 + 7.0*self.x2 - 3.0*self.x3
 
+class ABCDComp(Component):
+
+    a = Float(1.0, iotype='in')
+    b = Float(1.0, iotype='in')
+    c = Float(2.0, iotype='out')
+    d = Float(0.0, iotype='out')
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+    def provideJ(self):
+        return array([[1., 1.]]).transpose()
+
+    def list_deriv_vars(self):
+        return (('a',),('c','d'))
+
+class ABCDintComp(Component):
+
+    a = Float(1.0, iotype='in')
+    b = Int(1, iotype='in')
+    c = Float(2.0, iotype='out')
+    d = Float(0.0, iotype='out')
+
+    def execute(self):
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+    def provideJ(self):
+        return array([[1., 1.]]).transpose()
+
+    def list_deriv_vars(self):
+        return (('a',),('c','d'))
+
+
 class Testcase_derivatives(unittest.TestCase):
     """ Test derivative aspects of a simple workflow. """
 
-    def setUp(self):
-        pcompmod._count = 0 # keep pseudocomp names consistent
+    def test_bad_list_deriv_vars(self):
+        top = set_as_top(Assembly())
+        top.add('comp1', BadListDerivsComp())
+        top.driver.workflow.add(['comp1'])
+        top.comp1.x = 1.0
+        top.run()
+        self.assertEqual(top.comp1.y, 2.0)
+        try:
+            J = top.driver.calc_gradient(['comp1.x'], ['comp1.y'])
+        except Exception as err:
+            self.assertEqual(str(err), "comp1: The return value of list_deriv_vars() was not a tuple of the form (invars, outvars). Value returned was ['x', 'y']")
 
     def test_int_ignore(self):
 
@@ -893,6 +941,48 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
         assert_rel_error(self, J[0, 1], 12.0, 0.0001)
 
+    def test_input_as_output2(self):
+        # irrelevant float edge was causing a key error
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.add('c1', ABCDComp())
+        sub.add('c2', ABCDComp())
+        sub.add('c3', ABCDComp())
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c2.b')
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
+        top.driver.workflow.add('sub')
+        top.run()
+        J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
+
+    def test_input_as_output3(self):
+        # irrelevant int edge was causing unnecessary finite differencing
+        top = set_as_top(Assembly())
+        sub = top.add('sub', Assembly())
+        sub.add('c1', ABCDintComp())
+        sub.add('c2', ABCDintComp())
+        sub.add('c3', ABCDintComp())
+        sub.connect('c1.c', 'c2.a')
+        sub.connect('c1.b', 'c2.b')
+        sub.create_passthrough('c1.a')
+        sub.create_passthrough('c1.b')
+        sub.create_passthrough('c2.c')
+        sub.create_passthrough('c3.d')
+        sub.driver.workflow.add(['c1','c2','c3'])
+        top.driver.workflow.add('sub')
+        top.run()
+        J = top.driver.workflow.calc_gradient(('sub.a',),('sub.c','sub.d'))
+        self.assertEqual(J.shape, (2,1))
+        self.assertEqual(J[0,0], 1.)
+        self.assertEqual(J[1,0], 0.)
+
     def test_input_as_output_nondiff_array(self):
 
         top = set_as_top(Assembly())
@@ -952,7 +1042,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
         # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys = top.nest.list_deriv_vars()
+        inkeys, outkeys = list_deriv_vars(top.nest)
         J = top.nest.provideJ(inkeys, outkeys)
         self.assertTrue('x' in inkeys)
         self.assertTrue('y' in inkeys)
@@ -1025,6 +1115,42 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 0.0, .001)
 
         top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.junk', 'nest.f_xy', ],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.junk', 'nest.f_xy', ],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff', 'nest.x'],
+                                              outputs=['nest.f_xy', ],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
+                                              outputs=['nest.f_xy', ],
+                                              mode='adjoint')
+
+        assert_rel_error(self, J[0, 0], 5.0, .001)
+        assert_rel_error(self, J[0, 1], 0.0, .001)
+
+        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.stuff'],
                                               outputs=['nest.f_xy', 'nest.junk'],
                                               mode='adjoint')
@@ -1052,6 +1178,63 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             self.assertEqual(str(err), msg)
         else:
             self.fail("RuntimeError expected")
+
+    def test_broadcast_graph(self):
+
+        top = set_as_top(Assembly())
+        equation = ['y = 2.0*x + 3.0*z']
+        top.add('comp1', ExecComp(equation))
+        top.add('comp2', ExecComp(equation))
+        top.driver.workflow.add(['comp1', 'comp2'])
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp2.x')],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 2.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z')],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                              outputs=['comp2.y'],
+                                              mode='adjoint')
+        #print J
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        #print J
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 5.0, .001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x', 'comp1.z'), ('comp2.x', 'comp2.z')],
+                                              outputs=['comp2.y'],
+                                              mode='fd')
+        #print J
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[0, 1], 5.0, .001)
 
     def test_5in_1out(self):
 
@@ -1959,6 +2142,57 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 1], 6.0, .000001)
         assert_rel_error(self, J[2, 1], 9.0, .000001)
 
+    def test_nested_array_full_and_partial_passthrough(self):
+
+        top = Assembly()
+        top.add('nest', Assembly())
+        top.nest.add('comp1', ArrayComp2D())
+        top.nest.add('comp2', ArrayComp2D())
+
+        top.nest.driver.workflow.add(['comp1', 'comp2'])
+        top.nest.create_passthrough('comp1.x', 'x')
+        top.nest.create_passthrough('comp1.y', 'y1')
+        top.nest.create_passthrough('comp2.y', 'y2')
+        top.nest.connect('x[-1, -1]', 'comp2.x[-1, -1]')
+
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['nest'])
+        top.run()
+
+        Jbase = top.nest.comp1.provideJ()
+
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='fd')
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='forward')
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                              outputs=['nest.y1', 'nest.y2'],
+                                              mode='adjoint')
+        diff = abs(J[0:4, :] - Jbase)
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[0:4, -1] - Jbase[:, -1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+        diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
     def test_large_dataflow(self):
 
         self.top = set_as_top(Assembly())
@@ -2064,6 +2298,47 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.workflow.config_changed()
         J = self.top.driver.workflow.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], -8.0, .001)
+
+    def test_three_way(self):
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 50.0*x1',
+                'y2 = 1.0*x1']
+        deriv1 = ['dy1_dx1 = 50.0',
+                  'dy2_dx1 = 1.0']
+
+        exp2 = ['y1 = 1.2*x1']
+        deriv2 = ['dy1_dx1 = 1.2']
+
+        exp3 = ['y1 = 100.0*x1*x2 + 30*x1 + 0.3*x2']
+        deriv3 = ['dy1_dx1 = 100.0*x2 + 30',
+                  'dy1_dx2 = 100.0*x1 + 0.3']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3'])
+
+        self.top.connect('comp1.y1', 'comp2.x1')
+        self.top.connect('comp1.y2', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+
+        self.top.comp1.x1 = 2.0
+        self.top.run()
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp3.y1'],
+                                                   mode='forward')
+
+        self.top.driver.workflow.config_changed()
+        Jfd = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                     outputs=['comp3.y1'],
+                                                     mode='fd')
+
+        diff = Jfd-J
+        assert_rel_error(self, diff.max(), 0.0, 0.1)
+
 
     def test_nondifferentiable_blocks(self):
 
@@ -2438,8 +2713,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[1, 0], 0.0, .001)
 
         # This will error unless we ignore missing derivs
-        derivs = self.top.check_gradient(name='dis2')
+        derivs = self.top.check_gradient(name='dis2', stream=None)
         self.assertTrue('dis2.y / dis2.x' in derivs[2])
+
+        self.top.driver.run_iteration()
+        self.top.driver.workflow.config_changed()
+        J = self.top.driver.workflow.calc_gradient(inputs=['dis2.miss_in'],
+                                                   mode='fd')
+        assert_rel_error(self, J[0, 0], 0.0, .001)
+        assert_rel_error(self, J[1, 0], 0.0, .001)
+
 
     def test_fd_param_group_arrays_sharing_memory(self):
 
@@ -2621,11 +2904,42 @@ class Comp3_array(Component):
             result['x'] += dy.reshape((3, 3))
 
 
+class CompBase(Component):
+
+    x = Float(1.0, iotype='in', units='ft')
+    y = Float(1.0, iotype='out', units='ft')
+
+    def execute(self):
+        """ Executes it """
+        self.y = self.x
+        pass
+
+    def provideJ(self):
+        """Analytical first derivatives"""
+
+        self.J = array([[1.0]])
+
+    def list_deriv_vars(self):
+        ''' What we have'''
+        return ('x',), ('y',)
+
+
+class CompForward(CompBase):
+
+    def apply_deriv(self, arg, result):
+
+        if 'y' in result and 'x' in arg:
+            result['y'] += arg['x']
+
+class CompAdjoint(CompBase):
+
+    def apply_derivT(self, arg, result):
+
+        if 'y' in arg and 'x' in result:
+            result['x'] += arg['y']
+
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_applyJ_and_applyJT(self):
 
@@ -2772,6 +3086,55 @@ class Testcase_applyJT(unittest.TestCase):
         diff = J.T - Jt
         self.assertEqual(diff.max(), 0.0)
 
+    def test_forward_adjoint_error(self):
+        # Test our error messages for when you have are missing one
+        # of (apply_deriv, apply_derivT) and try to run the other
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompForward())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'forward'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "adjoint mode, but component %s" % 'comp'
+            msg += " only has forward derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
+
+        model = set_as_top(Assembly())
+        model.add('comp', CompAdjoint())
+        model.driver.workflow.add('comp')
+        model.driver.gradient_options.derivative_direction = 'adjoint'
+
+        model.run()
+
+        inputs = ['comp.x']
+        outputs = ['comp.y']
+        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+
+        model.driver.gradient_options.derivative_direction = 'forward'
+        model.driver.config_changed()
+        try:
+            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
+        except RuntimeError as err:
+            msg = ": Attempting to calculate derivatives in " + \
+                  "forward mode, but component %s" % 'comp'
+            msg += " only has adjoint derivatives defined."
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail("exception expected")
 
 class PreComp(Component):
     '''Comp with preconditioner'''
@@ -2863,9 +3226,6 @@ class PreCompArray(Component):
 
 class Testcase_preconditioning(unittest.TestCase):
     """ Unit test for applyMinv and applyMinvT """
-
-    def setUp(self):
-        pcompmod._count = 0
 
     def test_simple(self):
 
@@ -2977,6 +3337,8 @@ class Testcase_preconditioning(unittest.TestCase):
         top.nest.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
+
+
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
         assert_rel_error(self, J[0, 1], -7.0, 0.0001)
         assert_rel_error(self, J[0, 2], 0.0, 0.0001)
@@ -3023,9 +3385,6 @@ class Testcase_preconditioning(unittest.TestCase):
 
 class TestMultiDriver(unittest.TestCase):
 
-    def setUp(self):
-        pcompmod._count = 0
-
     def test_nested_driver(self):
 
         top = set_as_top(Assembly())
@@ -3052,6 +3411,57 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
         self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
         self.assertEqual(len(edges), 3)
+
+    def test_PA_subvar_solver_edges(self):
+
+        # Note, this test documents a bug where the pseudoassembly didn't
+        # correctly identify its solver edges because they were subvars,
+        # resulting in an exception. The test runs to assure there is no
+        # exception.
+
+        sp = set_as_top(UnitScalableProblem())
+        sp.architecture = MDF()
+
+        # Make sure it runs.
+        sp.run()
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
+    def test_PA_subvar_driver_edges(self):
+
+        # Ther was a keyerror here too, resulting from a basevar node
+        # that gor removed somehow on the recursed optimizer graph.
+
+        sp = set_as_top(UnitScalableProblem())
+        sp.architecture = CO()
+        sp.check_config()
+
+        # Don't run it forever
+        sp.driver.maxiter = 1
+        sp.local_opt_d0.maxiter = 1
+        sp.local_opt_d1.maxiter = 1
+
+        # Make sure it runs.
+        sp.run()
+
+        # Test gradient
+        sp.driver.gradient_options.fd_form = 'central'
+        J = sp.driver.workflow.calc_gradient()
+
+        sp.driver.workflow.config_changed()
+        Jfd = sp.driver.workflow.calc_gradient(mode='fd')
+
+        diff = J - Jfd
+        assert_rel_error(self, diff.max(), 0.0, .001)
+
 
 if __name__ == '__main__':
     import nose

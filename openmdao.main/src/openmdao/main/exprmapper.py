@@ -4,22 +4,12 @@ from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.units import PhysicalQuantity
 
+
 class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
         self._scope = scope
-
-    def get_output_exprs(self):
-        """Return all destination expressions at the output boundary"""
-        exprs = []
-        graph = self._exprgraph
-        for node, data in graph.nodes(data=True):
-            if graph.in_degree(node) > 0:
-                expr = data['expr']
-                if len(expr.get_referenced_compnames()) == 0:
-                    exprs.append(expr)
-        return exprs
 
     def get_expr(self, text):
         node = self._exprgraph.node.get(text)
@@ -30,10 +20,7 @@ class ExprMapper(object):
     def list_connections(self, show_passthrough=True, visible_only=False):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        excludes = set([name for name, data in  self._exprgraph.nodes(data=True)
-                                   if data['expr'].refs_parent()])
-
-        lst = [(u,v,data) for u,v,data in self._exprgraph.edges(data=True) if not (u in excludes or v in excludes)]
+        lst = self._exprgraph.edges(data=True)
 
         if not show_passthrough:
             lst = [(u, v, data) for u, v, data in lst if '.' in u and '.' in v]
@@ -45,11 +32,11 @@ class ExprMapper(object):
                 if pcomp is not None:
                     newlst.extend(pcomp.list_connections(is_hidden=True))
                 else:
-                    srccmp = getattr(self._scope, u.split('.',1)[0], None)
-                    dstcmp = getattr(self._scope, v.split('.',1)[0], None)
+                    srccmp = getattr(self._scope, u.split('.', 1)[0], None)
+                    dstcmp = getattr(self._scope, v.split('.', 1)[0], None)
                     if isinstance(srccmp, PseudoComponent) or isinstance(dstcmp, PseudoComponent):
                         continue
-                    newlst.append((u,v))
+                    newlst.append((u, v))
             return newlst
 
         return [(u, v) for u, v, data in lst]
@@ -88,7 +75,7 @@ class ExprMapper(object):
         desttrait = None
         srccomp = None
 
-        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.') and not len(srcvars)>1:
+        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.') and not len(srcvars) > 1:
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
                     srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
@@ -99,7 +86,7 @@ class ExprMapper(object):
                             dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
 
-                if not isinstance(srccomp, PseudoComponent) and not srcexpr.refs_parent() and desttrait is not None:
+                if not isinstance(srccomp, PseudoComponent) and desttrait is not None:
                     # punt if dest is not just a simple var name.
                     # validity will still be checked at execution time
                     if destvar == destexpr.text:
@@ -129,7 +116,7 @@ class ExprMapper(object):
         """Returns a list of expression strings that reference the given name, which
         can refer to either a variable or a component.
         """
-        return [node for node, data in self._exprgraph.nodes(data=True) 
+        return [node for node, data in self._exprgraph.nodes(data=True)
                        if data['expr'].refers_to(name)]
 
     def _remove_disconnected_exprs(self):
@@ -144,7 +131,7 @@ class ExprMapper(object):
 
     def disconnect(self, srcpath, destpath=None):
         """Disconnect the given expressions/variables/components.
-        Returns a list of edges to remove and a list of pseudocomponents 
+        Returns a list of edges to remove and a list of pseudocomponents
         to remove.
         """
         graph = self._exprgraph
@@ -195,11 +182,11 @@ class ExprMapper(object):
         """
 
         if self.get_source(dest) is not None:
-            scope.raise_exception("'%s' is already connected to source '%s'" % 
+            scope.raise_exception("'%s' is already connected to source '%s'" %
                                   (dest, self.get_source(dest)), RuntimeError)
 
         destexpr = ConnectedExprEvaluator(dest, scope, is_dest=True)
-        srcexpr = ConnectedExprEvaluator(src, scope, 
+        srcexpr = ConnectedExprEvaluator(src, scope,
                                          getter='get_attr')
 
         srccomps = srcexpr.get_referenced_compnames()
@@ -211,12 +198,12 @@ class ExprMapper(object):
         return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
 
     def _needs_pseudo(self, parent, srcexpr, destexpr):
-        """Return a non-None pseudo_type if srcexpr and destexpr require a 
+        """Return a non-None pseudo_type if srcexpr and destexpr require a
         pseudocomp to be created.
         """
         srcrefs = list(srcexpr.refs())
         if srcrefs and srcrefs[0] != srcexpr.text:
-            # expression is more than just a simple variable reference, 
+            # expression is more than just a simple variable reference,
             # so we need a pseudocomp
             return 'multi_var_expr'
 
@@ -227,27 +214,24 @@ class ExprMapper(object):
         if srcmeta:
             srcunit = srcmeta[0][1]
             if srcunit:
-                srcunit = PhysicalQuantity(1., srcunit).get_unit_name()
+                srcunit = PhysicalQuantity(1., srcunit).unit
         else:
             srcunit = None
 
         if destmeta:
             destunit = destmeta[0][1]
             if destunit:
-                destunit = PhysicalQuantity(1., destunit).get_unit_name()
+                destunit = PhysicalQuantity(1., destunit).unit
         else:
             destunit = None
 
-        if destunit and srcunit and destunit != srcunit:
-            return 'units'
+        if destunit and srcunit:
+            if destunit.powers != srcunit.powers or destunit.factor != srcunit.factor or \
+               destunit.offset != srcunit.offset:
+                return 'units'
 
         return None
 
     def list_pseudocomps(self):
-        return [data['pcomp'].name for u, v, data in 
+        return [data['pcomp'].name for u, v, data in
                            self._exprgraph.edges(data=True) if 'pcomp' in data]
-
-
-
-
-

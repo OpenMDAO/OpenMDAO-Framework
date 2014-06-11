@@ -84,7 +84,7 @@ def _get_releaseinfo_str(version):
     f = StringIO.StringIO()
     opts['version'] = version
     opts['date'] = get_git_log_info("%ci")
-    opts['comments'] = get_git_log_info("%b%+s%+N")
+    opts['comments'] = get_git_log_info("%b%+s%+N").strip('"')
     opts['commit'] = get_git_log_info("%H")
     f.write(relfile_template % opts)
     return f.getvalue()
@@ -438,7 +438,7 @@ def build_release(parser, options):
         os.chdir(startdir)
         _build_bdist_eggs(proj_dirs, destdir, list(binary_hosts), cfgpath)
 
-        print 'creating bootstrapping installer script go-openmdao.py'
+        print 'creating bootstrapping installer script go-openmdao-%s.py' % options.version
         installer = os.path.join(os.path.dirname(__file__),
                                  'mkinstaller.py')
 
@@ -463,7 +463,10 @@ def build_release(parser, options):
         if options.test:
             _rollback_releaseinfo_files()
         #Cleanup
-        shutil.rmtree(os.path.join(topdir, "openmdao.main", 'src', 'openmdao', 'main', "docs"), onerror=onerror)
+        try:
+            shutil.rmtree(os.path.join(topdir, "openmdao.main", 'src', 'openmdao', 'main', "docs"))
+        except:
+            pass
         os.chdir(startdir)
 
 
@@ -500,7 +503,7 @@ def _get_release_parser():
     parser = subparsers.add_parser('test',
                                    description="test an OpenMDAO release")
     parser.add_argument('fname', nargs='?',
-                        help='pathname of release directory or go-openmdao.py file')
+                        help='pathname of release directory or go-openmdao-<version>.py file')
     add_config_options(parser)
     parser.add_argument("-k", "--keep", action="store_true", dest='keep',
                       help="Don't delete the temporary build directory. "

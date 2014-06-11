@@ -8,16 +8,12 @@ import unittest
 import numpy as np
 
 from openmdao.lib.components.geomcomp import GeomComponent
-from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.datatypes.api import Array
 from openmdao.main.interfaces import IParametricGeometry, implements, \
                                      IStaticGeometry
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
-
-from openmdao.main.interfaces import IParametricGeometry, implements, IStaticGeometry
-
 
 #not a working geometry, but pretends to be! only useful for this test
 class DummyGeometry(object): 
@@ -144,7 +140,6 @@ class GeomRecieveDerivApplyDeriv(GeomRecieve):
             result['geom_in'] += self.J.T.dot(arg['out'])
     
 class Testcase_deriv_obj(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def _check_J(self, J): 
         assert_rel_error(self, J[0, 0], 2.0, .00001)
@@ -185,9 +180,6 @@ class Testcase_deriv_obj(unittest.TestCase):
         inputs = self.inputs
         outputs = self.outputs
 
-        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
-        self._check_J(J)
-        
         self.top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
@@ -196,6 +188,10 @@ class Testcase_deriv_obj(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
         
+        self.top.driver.workflow.config_changed()
+        J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
+        self._check_J(J)
+         
     def test_geom_provide_deriv_check_fd_tail(self):    
         
         raise nose.SkipTest("OpenMDAO can't identify when half a connection is non-differntiable yet")

@@ -64,7 +64,6 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'name': 'dummy_data', 
                          'vt': 'vt', 
                          'implicit': '', 
-                         'valid': True, 
                          'connected': '',
                          'connection_types' : 0,
                          'ttype': 'vartree',
@@ -76,16 +75,15 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'parent': 'dummy_data', 
                          'value': 1.0, 
                          'high': None, 
-                         'valid': True, 
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy_data.dummy1'} in attrs['Inputs'])
+                         'id': 'dummy_data.dummy1', 
+                         'assumed_default': False} in attrs['Inputs'])
         self.assertTrue({'indent': 0, 
                          'name': 'dummy1_out', 
                          'vt': 'vt', 
                          'implicit': '', 
-                         'valid': False, 
                          'connected': '', 
                          'connection_types' : 0,
                          'ttype': 'vartree',
@@ -97,11 +95,11 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'parent': 'dummy1_out', 
                          'value': 1.0, 
                          'high': None, 
-                         'valid': False, 
                          'connected': '', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy1_out.dummy1'} in attrs['Outputs'])
+                         'id': 'dummy1_out.dummy1', 
+                         'assumed_default': False} in attrs['Outputs'])
 
         blah = set_as_top(TstAssembly())
         attrs = blah.get_attributes(True)
@@ -109,27 +107,27 @@ class VarTreePassthroughTestCase(unittest.TestCase):
                          'name': 'dummy1', 
                          'value': 1.0, 
                          'high': None, 
-                         'valid': True, 
                          'implicit': '', 
                          'connected': '', 
                          'connection_types' : 0,
                          'target': 'comp.dummy_data.dummy1', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy1'} in attrs['Inputs'])
+                         'id': 'dummy1', 
+                         'assumed_default': False} in attrs['Inputs'])
         self.assertTrue({'indent': 0, 
                          'name': 'dummy1_out', 
                          'value': 1.0, 
                          'high': None, 
-                         'valid': False, 
                          'implicit': '', 
                          'connected': '', 
                          'connection_types' : 0,
                          'target': 'comp.dummy_data_out.dummy1', 
                          'low': None, 
                          'type': 'float', 
-                         'id': 'dummy1_out'} in attrs['Outputs'])
-        
+                         'id': 'dummy1_out', 
+                         'assumed_default': False} in attrs['Outputs'])
+    
 if __name__ == "__main__":
     unittest.main()
 

@@ -41,26 +41,26 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
     if (editable) {
         objectives.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
-            cmd = pathname+'.'+args.item.name+'='+args.item.value;
+            cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
-   }
+    }
     objectives.onClick.subscribe(function (e) {
         var cell = objectives.getCellFromEvent(e);
         if (cell.cell === 0) {
             var delname = objectives.getData()[cell.row].name;
-            cmd = pathname+'.remove_objective("'+delname+'");';
+            var cmd = pathname+'.remove_objective("'+delname+'")';
             project.issueCommand(cmd);
         }
     });
 
     /** add a new objective */
     function addObjective(expr,name) {
-        cmd = pathname+".add_objective('"+expr+"'";
+        var cmd = pathname+".add_objective('"+expr+"'";
         if (name) {
-            cmd = cmd + ",name='"+name+"'";
+            cmd = cmd + ", name='"+name+"'";
         }
-        cmd = cmd + ");";
+        cmd = cmd + ")";
         project.issueCommand(cmd);
     }
 
@@ -113,7 +113,7 @@ openmdao.ObjectivesPane = function(elm, project, pathname, name, editable) {
 
     /** clear all objectives */
     function clearObjectives() {
-        cmd = pathname+".clear_objectives();";
+        var cmd = pathname+".clear_objectives()";
         project.issueCommand(cmd);
     }
 

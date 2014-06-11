@@ -1,8 +1,10 @@
 """ VariableTree class definition
 """
+import weakref
+
 from zope.interface import implements
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.has_traits import FunctionType
 from traits.trait_base import not_event
 
@@ -12,6 +14,7 @@ from openmdao.main.datatypes.str import Str
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
+from openmdao.main.array_helpers import flattened_size
 
 
 class VariableTree(Container):
@@ -22,9 +25,10 @@ class VariableTree(Container):
     implements(IVariableTree)
 
     def __init__(self, iotype=''):
+        self._parent_ref = None
         super(VariableTree, self).__init__()
+
         self._iotype = iotype
-        self.on_trait_change(self._iotype_modified, '_iotype')
 
         # Check for nested VariableTrees in the class definition.
         for name, obj in self.__class__.__dict__.items():
@@ -35,10 +39,33 @@ class VariableTree(Container):
 
         self.install_callbacks()
 
-        ## register callbacks for our class traits
-        #for name, trait in self.class_traits().items():
-            #if not name.startswith('_'):
-                #self.on_trait_change(self._trait_modified, name)
+        # register callbacks for our class traits
+        for name, trait in self.class_traits().items():
+            if not name.startswith('_'):
+                self.on_trait_change(self._trait_modified, name)
+
+    @property
+    def _parent(self):
+        """ Return dereferenced weakref to parent. """
+        return None if self._parent_ref is None else self._parent_ref()
+
+    @_parent.setter
+    def _parent(self, value):
+        """ Set weakref to parent. """
+        self._parent_ref = None if value is None else weakref.ref(value)
+
+    def __getstate__(self):
+        """ Return state after dereferencing weakref to parent. """
+        state = super(VariableTree, self).__getstate__()
+        if self._parent_ref is not None:
+            state['_parent_ref'] = self._parent_ref()
+        return state
+
+    def __setstate__(self, state):
+        """ Set state and set weakref to parent. """
+        super(VariableTree, self).__setstate__(state)
+        if self._parent_ref is not None:
+            self._parent_ref = weakref.ref(self._parent_ref)
 
     @property
     def iotype(self):
@@ -76,11 +103,25 @@ class VariableTree(Container):
         cp.install_callbacks()
         return cp
 
+    def __deepcopy__(self, memo):
+        id_self = id(self)
+        if id_self in memo:
+            return memo[id_self]
+
+        cp = super(VariableTree, self).__deepcopy__(memo)
+        cp.install_callbacks()
+        return cp
+
     def install_callbacks(self):
         """Install trait callbacks on deep-copied VariableTree."""
         self.on_trait_change(self._iotype_modified, '_iotype')
-        for name, trait in self._alltraits().items():
-            if name not in ('trait_added', 'trait_modified') and not name.startswith('_') and hasattr(self, name):
+        # _alltraits() is missing some traits after a deepcopy, so use the
+        # union of _alltraits() and everything in self.__dict__
+        allset = set(self._alltraits().keys())
+        allset.update(self.__dict__.keys())
+        for name in allset:
+            if name not in ('trait_added', 'trait_modified') \
+               and not name.startswith('_') and hasattr(self, name):
                 self.on_trait_change(self._trait_modified, name)
                 obj = getattr(self, name)
                 if isinstance(obj, VariableTree) and obj is not self.parent:
@@ -110,12 +151,8 @@ class VariableTree(Container):
         """Return a list of Variables in this VariableTree."""
         return [k for k in self.__dict__.keys() if not k.startswith('_')]
 
-    @rbac(('owner', 'user'))
-    def invalidate_deps(self, varnames=None, force=False):
-        return None
-
     def _iotype_modified(self, obj, name, old, new):
-        for k, v in self.__dict__.items():
+        for v in self.__dict__.values():
             if isinstance(v, (VariableTree, VarTree)) and v is not self.parent:
                 v._iotype = new
 
@@ -141,10 +178,7 @@ class VariableTree(Container):
                     # we need to pass the full pathname of the child that was
                     # actually modified up to the parent component, and we can't
                     # modify the arglist of _input_trait_modified, so instead
-                    # call _input_check (assuming source checking hasn't been
-                    # turned off at the calling level) and _input_updated explicitly
-                    if self._input_check != self._input_nocheck:
-                        p._input_check(vt.name, vt)
+                    # call _input_updated explicitly
                     p._input_updated(vt.name, fullpath='.'.join(path[::-1]))
 
     def get_iotype(self, name):
@@ -178,7 +212,7 @@ class VariableTree(Container):
                 newdict = metadata
 
             if matches_io:
-                for name, trait in self._alltraits(**newdict).items():
+                for name in self._alltraits(**newdict):
                     if name.startswith('_'):
                         continue
                     obj = getattr(self, name)
@@ -187,33 +221,44 @@ class VariableTree(Container):
                        id(obj) not in visited:
                         for chname, child in obj._items(visited, recurse,
                                                         **metadata):
-                            yield ('.'.join([name, chname]), child)
+                            yield ('.'.join((name, chname)), child)
 
-    def _check_req_traits(self, comp):
-        """Raise an exception if any child traits with required=True have not
-        been set to a non-default value.
+    @rbac(('owner', 'user'))
+    def get_req_default(self, vt_required=None):
+        """Returns a list of all inputs that are required but still have
+        their default value.
         """
+        req = []
+        if vt_required:
+            req_test = [True, False, None]
+        else:
+            req_test = [True]
+
         for name, trait in self.traits(type=not_event).items():
             obj = getattr(self, name)
             if obj is self.parent:
                 continue
-            trait = self.trait(name)
             if is_instance(obj, VariableTree):
-                obj._check_req_traits(comp)
-            elif trait.required is True:
-                if comp._depgraph.get_sources(name):
-                    unset = False
-                else:
+                req.extend(['.'.join((self.name, n)) 
+                                 for n in obj.get_req_default(vt_required)])
+            elif trait.required in req_test:
+                try:
+                    trait = trait.trait_type
+                except:
                     unset = (obj == trait.default)
+                else:
+                    unset = (obj == trait.default_value)
+                if not isinstance(unset, bool):
                     try:
                         unset = unset.all()
                     except:
                         pass
                 if unset:
-                    self.raise_exception("required variable '%s' was"
-                                         " not set" % name, RuntimeError)
+                    req.append('.'.join((self.name, name)))
 
-    def get_attributes(self, io_only=True, indent=0, parent='', valid='false'):
+        return req
+
+    def get_attributes(self, io_only=True, indent=0, parent=''):
         """ Get attributes for this variable tree. Used by the GUI.
 
         io_only: bool
@@ -254,7 +299,6 @@ class VariableTree(Container):
 
             # Each variable type provides its own basic attributes
             attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            attr['valid'] = valid
 
             # if this var is the top element of a variable tree, add 'vt' attribute
             if attr.get('ttype') == 'vartree':
@@ -265,6 +309,7 @@ class VariableTree(Container):
             # Support for expand/collapse
             attr['indent'] = indent
             attr['id'] = '%s.%s' % (parent, name)
+
             if parent:
                 attr['parent'] = parent
 
@@ -275,18 +320,17 @@ class VariableTree(Container):
                 if self_io == 'in':
                     # there can be only one connection to an input
                     attr['connected'] = str([src for src, dst in
-                                            connections])#.replace('@xin.', '')
+                                             connections])
                 else:
                     attr['connected'] = str([dst for src, dst in
-                                            connections])#.replace('@xout.', '')
+                                             connections])
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs
             # into this variable list
             if 'vt' in attr:
                 vt_attrs = vartable.get_attributes(io_only, indent=indent + 1,
-                                                   parent=attr['id'],
-                                                   valid=valid)
+                                                   parent=attr['id'])
                 if self_io == 'in':
                     variables += vt_attrs['Inputs']
                 else:
@@ -299,6 +343,27 @@ class VariableTree(Container):
 
         return attrs
 
+    def get_flattened_size(self):
+        """Return the size of a flattened float array containing
+        all values in the vartree that are flattenable to float
+        arrays.  Any values not flattenable to float arrays will
+        raise an exception. 
+        """
+        # FIXME: maybe all non float flattenable vals should
+        #        just return 0 size, and when asked for their
+        #        flattened float array val should just return []?
+        size = 0
+        for key in self.list_vars():
+            size += flattened_size(key, getattr(self, key), scope=self)
+        return size
+
+    def get_flattened_index(self, name):
+        """Return the slice within the flattened array of the 
+        current vartree that is occupied by the named 
+        subvar.
+        """
+        raise NotImplementedError('get_flattened_index')  # FIXME
+            
 
 # register a flattener for Cases
 from openmdao.main.case import flatteners, flatten_obj
@@ -307,7 +372,7 @@ from openmdao.main.case import flatteners, flatten_obj
 def _flatten_vartree(name, vt):
     ret = []
     for n, v in vt._items(set()):
-        ret.extend([('.'.join([name, k]), v) for k, v in flatten_obj(n, v)])
+        ret.extend([('.'.join((name, k)), v) for k, v in flatten_obj(n, v)])
     return ret
 
 flatteners[VariableTree] = _flatten_vartree

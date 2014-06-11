@@ -37,11 +37,11 @@ setup(name='openmdao.main',
       package_dir={'': 'src'},
       include_package_data=True,
       package_data={
-          'openmdao.main.test': ['src/doubler.py', 
-                                 'load_test/_macros/default', 
-                                 'load_test/_settings.cfg', 
+          'openmdao.main.test': ['src/doubler.py',
+                                 'load_test/_macros/default',
+                                 'load_test/_settings.cfg',
                                  'load_test/simple.py'],
-          'openmdao.main': ['src/openmdao/main/docs/*'] 
+          'openmdao.main': ['src/openmdao/main/docs/*']
       },
       test_suite='nose.collector',
       zip_safe=False,
@@ -56,7 +56,6 @@ setup(name='openmdao.main',
           'pyparsing',
           'setuptools',
           'Sphinx',
-          'sympy',
           'Traits==4.3.0',
           'zope.interface',
       ],
@@ -77,9 +76,6 @@ setup(name='openmdao.main',
       openmdao.main.problem_formulation.ArchitectureAssembly = openmdao.main.problem_formulation:ArchitectureAssembly
       openmdao.main.implicitcomp.ImplicitComponent = openmdao.main.implicitcomp:ImplicitComponent
 
-      [openmdao.driver]
-      openmdao.main.driver.Run_Once = openmdao.main.driver:Run_Once
-      
       [openmdao.variable]
       openmdao.main.datatypes.any.Any = openmdao.main.datatypes.any:Any
       openmdao.main.datatypes.bool.Bool = openmdao.main.datatypes.bool:Bool
@@ -100,5 +96,10 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
       
+      [openmdao.driver]
+      openmdao.main.distsolve.MPINonlinearGS=openmdao.main.distsolve:MPINonlinearGS
+      openmdao.main.distsolve.MPINonlinearSolver=openmdao.main.distsolve:MPINonlinearSolver
+      openmdao.main.distsolve.MPISolver=openmdao.main.distsolve:MPISolver
+      openmdao.main.distsolve.MPINonlinearJacobi=openmdao.main.distsolve:MPINonlinearJacobi
       """,
       )

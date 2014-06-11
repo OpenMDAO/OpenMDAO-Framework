@@ -9,7 +9,7 @@ class Objective(ConnectedExprEvaluator):
         super(Objective, self).__init__(*args, **kwargs)
         self.pcomp_name = None
 
-    def activate(self):
+    def activate(self, driver):
         """Make this constraint active by creating the appropriate
         connections in the dependency graph.
         """
@@ -17,7 +17,7 @@ class Objective(ConnectedExprEvaluator):
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope, driver)
 
     def deactivate(self):
         """Remove this objective from the dependency graph and remove
@@ -92,13 +92,15 @@ class HasObjectives(object):
 
         scope = self._get_scope(scope)
         expreval = Objective(expr, scope)
-        if not expreval.check_resolve():
-            self._parent.raise_exception("Can't add objective because I can't evaluate '%s'." % expr,
-                                         ValueError)
+        unresolved_vars = expreval.get_unresolved()
+        if unresolved_vars:
+            msg = "Can't add objective '{0}' because of invalid variables {1}"
+            error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars, expreval.text, msg)
+            self._parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
-        expreval.activate()
+        expreval.activate(self._parent)
 
         self._objectives[name] = expreval
 
@@ -177,8 +179,6 @@ class HasObjectives(object):
         objs = []
         for obj in self._objectives.values():
             pcomp = getattr(scope, obj.pcomp_name)
-            if not pcomp.is_valid():
-                pcomp.update_outputs(['out0'])
             objs.append(pcomp.out0)
         return objs
 
@@ -211,11 +211,11 @@ class HasObjectives(object):
             lst.extend(obj.get_referenced_compnames())
         return lst
 
-    def get_referenced_varpaths(self):
+    def get_referenced_varpaths(self, refs=False):
         """Returns the names of variables referenced by the objectives."""
         lst = []
         for obj in self._objectives.values():
-            lst.extend(obj.get_referenced_varpaths(copy=False))
+            lst.extend(obj.get_referenced_varpaths(copy=False, refs=refs))
         return lst
 
     def _get_scope(self, scope=None):

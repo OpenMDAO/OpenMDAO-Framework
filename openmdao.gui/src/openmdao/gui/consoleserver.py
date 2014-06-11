@@ -360,19 +360,17 @@ class ConsoleServer(cmd.Cmd):
         return json.dumps(self._get_components(self.proj._project_globals),
                           default=json_default)
 
-    def get_connections(self, pathname, src_name, dst_name):
-        ''' For the assembly with the given pathname, get a list of the outputs
-            from the component *src_name* (sources), the inputs to the component
-            *dst_name* (destinations), and the connections between them.
+    def get_connectivity(self, pathname):
+        ''' Get the connectivity data for the assembly with the given pathname
         '''
-        conns = {}
+        connectivity = {}
         asm, root = self.get_object(pathname)
         if asm:
             try:
-                conns = asm.get_connections(src_name, dst_name)
+                connectivity = asm.get_connectivity()
             except Exception as err:
                 self._error(err, sys.exc_info())
-        return json.dumps(conns, default=json_default)
+        return json.dumps(connectivity, default=json_default)
 
     def get_dataflow(self, pathname):
         ''' Get the structure of the specified assembly or of the global
@@ -397,7 +395,6 @@ class ConsoleServer(cmd.Cmd):
                         'name': k,
                         'pathname': k,
                         'type': type(v).__name__,
-                        'valid': v.is_valid(),
                         'interfaces': inames,
                         'python_id': id(v)
                     })
@@ -406,6 +403,7 @@ class ConsoleServer(cmd.Cmd):
             dataflow['parameters']  = []
             dataflow['constraints'] = []
             dataflow['objectives']  = []
+            dataflow['responses']   = []
         return json.dumps(dataflow, default=json_default)
 
     def get_available_events(self, pathname):
@@ -535,12 +533,14 @@ class ConsoleServer(cmd.Cmd):
                 repo.revert(commit_id)
                 if commit_id is None:
                     commit_id = 'latest'
-                print "Reverted project %s to commit '%s'" % (self.proj.name, commit_id)
+                print "Reverted project %s to commit '%s'" \
+                      % (self.proj.name, commit_id)
             except Exception as err:
                 self._error(err, sys.exc_info())
-                return err  # give the caller an indication that something went wrong so he can
-                            # give the proper error response to the http call if desired. Raising
-                            # an exception here doesn't work
+                return err  # give the caller an indication that something went
+                            # wrong so he can give the proper error response to
+                            # the http call if desired. Raising an exception
+                            # here doesn't work
         else:
             msg = 'No Project to revert'
             self._print_error(msg)
@@ -569,7 +569,7 @@ class ConsoleServer(cmd.Cmd):
     def add_object(self, pathname, classname, args):
         ''' Add a new object of the given type to the specified parent.
         '''
-        parentname, dot, name = pathname.rpartition('.')
+        parentname, _, name = pathname.rpartition('.')
         if isidentifier(name):
             name = name.encode('utf8')
             if args is None:
@@ -593,7 +593,7 @@ class ConsoleServer(cmd.Cmd):
         ''' Replace existing object with object of the given type.
         '''
         pathname = pathname.encode('utf8')
-        parentname, dot, name = pathname.rpartition('.')
+        parentname, _, name = pathname.rpartition('.')
         if parentname:
             try:
                 self.proj.command('%s.replace("%s", create("%s"))'

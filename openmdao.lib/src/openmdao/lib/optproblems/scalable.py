@@ -12,14 +12,14 @@ from openmdao.main.datatypes.api import Float, Array
 from numpy import array, matrix, identity, zeros, ones
 
 
-class Discipline(Component):
+class Discipline_No_Deriv(Component):
     '''Single discipline for the scalable problem.'''
 
     c_y_out = Float(1.0, iotype="in",
                     desc="Coefficient for the output variables.")
 
     def __init__(self, prob_size=1):
-        super(Discipline, self).__init__()
+        super(Discipline_No_Deriv, self).__init__()
 
         self.add_trait("z", Array(zeros((prob_size, 1)), iotype="in",
                                  desc="global variables",
@@ -59,7 +59,10 @@ class Discipline(Component):
         y = matrix(self.y_in)
 
         self.y_out = array(-1.0/self.c_y_out*(Cz*z + Cx*x - Cy*y))
-        #print "running", self.name, self.y_in, self.y_out
+        #print "running", self.name, z, x, self.y_in, self.y_out
+
+class Discipline(Discipline_No_Deriv):
+    '''Add derivatives to the scalable problem.'''
 
     def provideJ(self):
         """ Calculate the Jacobian """
@@ -77,11 +80,25 @@ class Discipline(Component):
         if 'y_out' in result:
 
             if 'x' in arg:
-                result['y_out'] += self.Jx.dot(arg['x'])
+                result['y_out'] -= self.Jx.dot(arg['x'])
             if 'y_in' in arg:
                 result['y_out'] += self.Jy.dot(arg['y_in'])
             if 'z' in arg:
-                result['y_out'] += self.Jz.dot(arg['z'])
+                result['y_out'] -= self.Jz.dot(arg['z'])
+
+
+    def apply_derivT(self, arg, result):
+        """Multiply an input vector by the Jacobian."""
+
+        if 'y_out' in arg:
+
+            if 'x' in result:
+                result['x'] -= self.Jx.T.dot(arg['y_out'])
+            if 'y_in' in result:
+                result['y_in'] += self.Jy.T.dot(arg['y_out'])
+            if 'z' in result:
+                result['z'] -= self.Jz.T.dot(arg['y_out'])
+
 
 
 class UnitScalableProblem(OptProblem):
@@ -169,20 +186,24 @@ class UnitScalableProblem(OptProblem):
 
 
 if __name__ == '__main__':
-    from openmdao.lib.architectures.api import MDF
+
+
+    from openmdao.lib.architectures.api import MDF, IDF
 
     sp = UnitScalableProblem(3)
 
-    sp.architecture = MDF()
+    sp.architecture = IDF()
 
     sp.run()
 
     error = sp.check_solution()
 
 
+    print "solution"
     for k, v in sp.solution.iteritems():
         print k, v
-    print
+    print 
+    print "error"
     #print sp.d0.x0
     for k, v in error.iteritems():
         print k, v

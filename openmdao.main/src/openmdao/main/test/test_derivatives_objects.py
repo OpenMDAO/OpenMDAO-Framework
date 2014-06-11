@@ -146,7 +146,6 @@ class Comp_Receive_ApplyDeriv(Comp_Receive):
             result['data'] += self.J.T[2, :]*arg['q3']
 
 class TestcaseDerivObj(unittest.TestCase):
-    """ Test run/step/stop aspects of a simple workflow. """
 
     def setUp(self):
         """ Called before each test. """
@@ -343,7 +342,6 @@ class TestcaseNonDiff(unittest.TestCase):
         meta = model.driver.workflow._derivative_graph.node['~0']
         self.assertTrue('comp1' in meta['pa_object'].comps)
         self.assertTrue('sub' in meta['pa_object'].comps)
-
 
 if __name__ == '__main__':
     import nose

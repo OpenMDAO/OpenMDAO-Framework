@@ -8,7 +8,6 @@ from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.pseudocomp import unit_xform
 from openmdao.units.units import PhysicalQuantity
 from openmdao.main.printexpr import print_node
-import openmdao.main.pseudocomp as pcompmod  # to keep pseudocomp names consistent in tests
 from openmdao.util.testutil import assert_rel_error
 
 class Simple(Component):
@@ -50,6 +49,16 @@ class SimpleNoUnits(Component):
         self.c = self.a + self.b
         self.d = self.a - self.b
 
+class MuComp(Component):
+    mu = Float(1.81206e-5, iotype='in', units='kg/(m*s)')
+    out = Float(iotype='out')
+
+    def execute(self):
+      self.out = self.mu
+
+class MuAsm(Assembly):
+    mu = Float(1.81206e-5, iotype='in', units='kg/m/s')
+
 
 def _simple_model(units=True):
     if units:
@@ -65,9 +74,12 @@ def _simple_model(units=True):
 
 class PseudoCompTestCase(unittest.TestCase):
 
-    def setUp(self):
-        pcompmod._count = 0  # make sure pseudocomp names are consistent
-        self.fakes = ['@bin','@bout','@xin','@xout']
+    def test_unnecessary_pcomp(self):
+        top = set_as_top(MuAsm())
+        top.add('comp', MuComp())
+        nodes = set(top._depgraph.nodes())
+        top.connect("mu", "comp.mu") # connect two vars with same units but diff unit strings
+        self.assertEqual(set(), set(top._depgraph.nodes())-nodes)
 
     def test_basic_nounits(self):
         top = _simple_model(units=False)
@@ -88,7 +100,7 @@ class PseudoCompTestCase(unittest.TestCase):
                          set([('_pseudo_0.out0', 'comp2.a'),
                               ('comp1.c', '_pseudo_0.in0')]))
 
-        self.assertEqual(top._pseudo_0._expr_conn, ('comp1.c*12.0', 'comp2.a'))
+        self.assertEqual(top._pseudo_0._orig_expr, "comp1.c 'ft' -> comp2.a 'inch'")
         top.comp1.a = 12.
         top.comp1.b = 24.
         top.run()
@@ -284,7 +296,7 @@ class Comp1(Component):
 
 class SubAsmb(Assembly):
 
-    x = Array([1,1], iotype="in")
+    x = Array([1.,1.], iotype="in")
     y = Float(2, iotype="in")
 
     z = Float(iotype="out")

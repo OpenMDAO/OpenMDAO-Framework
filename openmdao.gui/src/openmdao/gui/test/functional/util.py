@@ -25,7 +25,7 @@ from distutils.spawn import find_executable
 from nose import SkipTest
 from nose.tools import eq_ as eq
 from selenium import webdriver
-if sys.platform != 'win32':
+if sys.platform.startswith("linux"):  # headless testing on linux only
     from pyvirtualdisplay import Display
 
 from optparse import OptionParser
@@ -83,12 +83,20 @@ def setup_chrome():
     path = find_executable(exe)
     if not path:
         # Download, unpack, and install chromedriver into OpenMDAO 'bin'.
-        if _chrome_version > 29:
-            version = 2.8
+        # Note: As new versions of Chrome & chromedriver are released, the
+        #       following should be updated.  Refer to the following URL:
+        #       https://chromedriver.storage.googleapis.com/index.html
+        #       and see notes.txt for each version for Chrome compatibility
+        if _chrome_version > 32:
+            version = '2.10'
+        elif _chrome_version > 30:
+            version = '2.9'
+        elif _chrome_version > 29:
+            version = '2.8'
         elif _chrome_version > 28:
-            version = 2.6
+            version = '2.6'
         else:
-            version = 2.3
+            version = '2.3'
 
         if sys.platform == 'darwin':
             flavor = 'mac32'
@@ -105,7 +113,7 @@ def setup_chrome():
         os.chdir(os.path.dirname(sys.executable))
 
         prefix = 'http://chromedriver.storage.googleapis.com'
-        url = '/'.join([prefix, str(version), filename])
+        url = '/'.join([prefix, version, filename])
         logging.critical('Downloading %s for chrome version %d to %s',
                          url, _chrome_version, os.getcwd())
         try:
@@ -215,7 +223,7 @@ def setup_server(virtual_display=True):
         raise RuntimeError('Timeout trying to connect to localhost:%d' % port)
 
     # If running headless, setup the virtual display.
-    if sys.platform != 'win32' and virtual_display:
+    if sys.platform.startswith("linux") and virtual_display:
         _display = Display(size=(1280, 1024))
         _display.start()
     _display_set = True

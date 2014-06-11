@@ -27,7 +27,6 @@
         { "text": "View Geometry", "id": "tools-geometry",  "onclick": "openmdao.project.viewGeometry();"},
         { "text": "View Images",   "id": "tools-images",    "onclick": "openmdao.project.viewImages();"},
         { "text": "Plot Variable", "id": "tools-plotter",   "onclick": "openmdao.PlotFrame.prototype.chooseVariable();"},
-        { "text": "Show Drawing",  "id": "tools-drawing",   "onclick": "openmdao.DrawingFrame.prototype.chooseVariable();"},
         { "text": "Show Log",      "id": "tools-log",       "onclick": "openmdao.DisplayLogFrame();"}
       ]
     },

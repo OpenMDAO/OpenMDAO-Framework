@@ -14,36 +14,41 @@ import sys
 import weakref
 import re
 
+try:
+    from numpy import ndarray
+except ImportError as err:
+    logging.warn("In %s: %r", __file__, err)
+    from openmdao.main.numpy_fallback import ndarray
+
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
-from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IContainer, IDriver, \
+                                     IAssembly, IComponent, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
-                                     IHasParameters, IHasConstraints, \
+                                     IHasParameters, IHasResponses, \
+                                     IHasConstraints, \
                                      IHasEqConstraints, IHasIneqConstraints, \
-                                     IHasEvents, ICaseIterator, ICaseRecorder, \
-                                     IImplicitComponent
+                                     IHasEvents, IImplicitComponent
 from openmdao.main.hasparameters import ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.file_supp import FileMetadata
-from openmdao.main.depgraph import DependencyGraph, is_input_node
 from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import has_interface, is_instance
 from openmdao.main.datatypes.api import Bool, List, Str, Int, Slot, Dict, \
-                                        FileRef, Enum, VarTree
+                                        FileRef, Enum
 from openmdao.main.publisher import Publisher
 from openmdao.main.vartree import VariableTree
+from openmdao.main.mpiwrap import MPI_info
 
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-
-from openmdao.main.numpy_fallback import ndarray
+from openmdao.util.graph import list_deriv_vars
+from openmdao.main.array_helpers import flattened_size_info
 
 import openmdao.util.log as tracing
 
@@ -119,7 +124,6 @@ _iodict = {'out': 'output', 'in': 'input'}
 # this key in publish_vars indicates a subscriber to the Component attributes
 __attributes__ = '__attributes__'
 
-
 class Component(Container):
     """This is the base class for all objects containing Traits that are
     accessible to the OpenMDAO framework and are "runnable."
@@ -132,9 +136,6 @@ class Component(Container):
     external_files = List(FileMetadata,
                           desc='FileMetadata objects for external files used'
                                ' by this component.', deriv_ignore=True)
-    force_execute = Bool(False, iotype='in', framework_var=True, deriv_ignore=True,
-                         desc="If True, always execute even if all IO traits"
-                              " are valid.")
     force_fd = Bool(False, iotype='in', framework_var=True, deriv_ignore=True,
                     desc="If True, always finite difference this component.")
 
@@ -163,51 +164,31 @@ class Component(Container):
     def __init__(self):
         super(Component, self).__init__()
 
-        self._exec_state = 'INVALID'  # possible values: VALID, INVALID, RUNNING
-        self._invalidation_type = 'full'
+        self.mpi = MPI_info()
 
-        # dependency graph between us and our boundaries
-        # (bookkeeps connections between our variables and external ones).
-        # This replaces self._depgraph from Container.
-        self._depgraph = DependencyGraph()
-
-        # register callbacks for all of our 'in' traits
-        for name, trait in self.class_traits().items():
-            if trait.iotype == 'in':
-                self._set_input_callback(name)
-            if trait.iotype:  # input or output
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
-
-        # Components with input CaseIterators will be forced to execute whenever
-        # run() is called on them, even if they don't have any invalid inputs
-        # or outputs.
-        self._num_input_caseiters = 0
-        for name, trait in self.class_traits().items():
-            # isinstance(trait.trait_type.klass,ICaseIterator) doesn't work here
-            if trait.iotype == 'in' and trait.trait_type \
-               and trait.trait_type.klass is ICaseIterator:
-                self._num_input_caseiters += 1
-
+        self._exec_state = None
         self._stop = False
-        self._call_check_config = True
-        self._call_execute = True
+        self._new_config = True
 
         # cached configuration information
         self._input_names = None
         self._output_names = None
         self._container_names = None
-        self._expr_sources = None
-        self._connected_inputs = None
-        self._connected_outputs = None
 
         self._dir_stack = []
         self._dir_context = None
 
+        # Flags and caching used by the derivatives calculation
         self.ffd_order = 0
         self._provideJ_bounds = None
+
         self._case_id = ''
+        self._var_sizes = {}
+
+        self._complex_step = False
 
         self._publish_vars = {}  # dict of varname to subscriber count
+        self._case_uuid = ''
 
     @property
     def dir_context(self):
@@ -221,11 +202,7 @@ class Component(Container):
             self._exec_state = state
             pub = Publisher.get_instance()
             if pub:
-                pub.publish('.'.join([self.get_pathname(), 'exec_state']), state)
-
-    @rbac(('owner', 'user'))
-    def get_invalidation_type(self):
-        return self._invalidation_type
+                pub.publish('.'.join((self.get_pathname(), 'exec_state')), state)
 
     @rbac(('owner', 'user'))
     def get_itername(self):
@@ -242,27 +219,15 @@ class Component(Container):
         """
         self.itername = itername
 
-    # call this if any trait having 'iotype' metadata of 'in' is changed
     def _input_trait_modified(self, obj, name, old, new):
-
         if name.endswith('_items'):
             n = name[:-6]
-            if hasattr(self, n):  # if n in self._valid_dict:
+            if hasattr(self, n):
                 name = n
-
-        self._input_check(name, old)
         self._input_updated(name)
 
     def _input_updated(self, name, fullpath=None):
-        self._call_execute = True
-        self._set_exec_state("INVALID")
-        if self.parent:
-            try:
-                inval = self.parent.child_invalidated
-            except AttributeError:
-                pass
-            else:
-                inval(self.name, vnames=[name], iotype='in')
+        pass
 
     def __deepcopy__(self, memo):
         """ For some reason, deepcopying does not set the trait callback
@@ -282,9 +247,6 @@ class Component(Container):
         state['_input_names'] = None
         state['_output_names'] = None
         state['_container_names'] = None
-        state['_expr_sources'] = None
-        state['_connected_inputs'] = None
-        state['_connected_outputs'] = None
 
         return state
 
@@ -297,70 +259,80 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-    def _check_req_trait(self, name, obj, trait):
-        if trait.iotype in ['in', 'state']:
-            if trait.required is True:
-                if self._depgraph.get_sources(name):
-                    unset = False
-                else:
-                    unset = (obj == trait.trait_type.default_value)
+
+    @rbac(('owner', 'user'))
+    def get_req_default(self, self_required=None):
+        """Returns a list of all inputs that are required but still have
+        their default value.
+        """
+        req = []
+        for name, trait in self.traits(type=not_event).items():
+            if trait.iotype in ['in', 'state']:
+                obj = getattr(self, name)
+                if is_instance(obj, VariableTree):
+                    if self.name:
+                        req.extend(['.'.join((self.name, n)) 
+                                     for n in obj.get_req_default(trait.required)])
+                    else:
+                        req.extend(obj.get_req_default(trait.required))
+                elif trait.required is True:
+                    try:
+                        trait = trait.trait_type
+                    except:
+                        unset = (obj == trait.default)
+                    else:
+                        unset = (obj == trait.default_value)
                     if not isinstance(unset, bool):
                         try:
                             unset = unset.all()
                         except:
                             pass
-                if unset:
-                    self.raise_exception("required variable '%s' was"
-                                         " not set" % name, RuntimeError)
-            elif trait.is_trait_type(VarTree):
-                obj._check_req_traits(self)
+                    if unset:
+                        if self.name:
+                            req.append('.'.join((self.name, name)))
+                        else:
+                            req.append(name)
+        return req
 
     @rbac(('owner', 'user'))
-    def check_configuration(self):
+    def check_config(self, strict=False):
         """
         Verify that this component and all of its children are properly
-        configured to execute. This function is called prior to each
-        component execution, but is a no-op unless self._call_check_config is
-        True.
+        configured to execute. This function is called prior the first
+        component execution.  If strict is True, any warning or error
+        should raise an exception.
 
-        Do not override this function.
-
-        This function calls check_config(), which may be overridden by
-        inheriting classes to perform more specific configuration checks.
+        If you override this function to do checks specific to your class,
+        you must call this function.
         """
-        if self._call_check_config:
-            self.check_config()
 
-            # derivatives related checks
-            if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
-                if not hasattr(self, 'provideJ'):
-                    self.raise_exception("required method 'provideJ' is missing")
-                if not hasattr(self, 'list_deriv_vars'):
-                    self.raise_exception("required method 'list_deriv_vars' is missing")
-
-            if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
+        # derivatives related checks
+        if hasattr(self, 'apply_deriv') or hasattr(self, 'apply_derivT'):
+            if not hasattr(self, 'provideJ'):
+                self.raise_exception("required method 'provideJ' is missing")
+            if not hasattr(self, 'list_deriv_vars'):
                 self.raise_exception("required method 'list_deriv_vars' is missing")
 
-            visited = set([id(self), id(self.parent)])
-            for name, trait in self.traits(type=not_event).items():
-                obj = getattr(self, name)
-                self._check_req_trait(name, obj, trait)
-                if trait.required is True and trait.is_trait_type(Slot):
-                    if obj is None:
-                        self.raise_exception("required plugin '%s' is not"
-                                             " present" % name, RuntimeError)
-                if has_interface(obj, IComponent) and id(obj) not in visited:
-                    visited.add(id(obj))
-                    obj.check_configuration()
+        if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
+            self.raise_exception("required method 'list_deriv_vars' is missing")
 
-            self._call_check_config = False
+        visited = set([id(self), id(self.parent)])
+        for name, trait in self.traits(type=not_event).items():
+            obj = getattr(self, name)
+            #self._check_req_trait(name, obj, trait)
+            if trait.required is True and trait.is_trait_type(Slot):
+                if obj is None:
+                    self.raise_exception("required plugin '%s' is not"
+                                         " present" % name, RuntimeError)
+            if has_interface(obj, IComponent) and id(obj) not in visited:
+                visited.add(id(obj))
+                obj.check_config(strict=strict)
 
-    def check_config(self):
-        """
-        Override this function to perform configuration checks specific to your
-        class. Bad configurations should raise an exception.
-        """
-        pass
+        if self.parent is None:
+            reqs = self.get_req_default()
+            if reqs:
+                self.raise_exception("required variables %s were"
+                                     " not set" % reqs, RuntimeError)
 
     @rbac(('owner', 'user'))
     def cpath_updated(self):
@@ -417,42 +389,20 @@ class Component(Container):
             self.configure()
             self._call_configure = False
 
-    def _pre_execute(self, force=False):
-        """Prepares for execution by calling *cpath_updated()* and
-        *check_config()* if their "dirty" flags are set and by requesting that
-        the parent Assembly update this Component's invalid inputs.
+    def _pre_execute(self):
+        """Prepares for execution by calling various initialization methods
+        if necessary.
 
         Overrides of this function must call this version.
         """
         if self._call_cpath_updated:
             self.cpath_updated()
 
-        if force:
-            outs = self.invalidate_deps()
-            if (outs is None) or outs:
-                if self.parent:
-                    self.parent.child_invalidated(self.name, outs)
-        else:
-            if not self.is_valid():
-                self._call_execute = True
-            elif self._num_input_caseiters > 0:
-                self._call_execute = True
-                # we're valid, but we're running anyway because of our input
-                # CaseIterators, so we need to notify downstream comps so they
-                # grab our new outputs
-                outs = self.invalidate_deps()
-                if (outs is None) or outs:
-                    if self.parent:
-                        self.parent.child_invalidated(self.name, outs)
-
-        if self.parent is None:
-            # if parent is None, we're not part of an Assembly
-            # so Variable validity doesn't apply. Just execute.
-            self._call_execute = True
-        else:
-            self.parent.update_inputs(self.name)
-
-        self.check_configuration()
+        if self._new_config:
+            self.check_config()
+            if self.parent is None:
+                self._setup()  # only call _setup from top level
+            self._new_config = False
 
     def execute(self):
         """Perform calculations or other actions, assuming that inputs
@@ -473,12 +423,7 @@ class Component(Container):
             Order of the derivatives to be used (1 or 2).
         """
 
-        input_keys, output_keys = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(input_keys, basestring):
-            input_keys = (input_keys,)
-        if isinstance(output_keys, basestring):
-            output_keys = (output_keys,)
+        input_keys, output_keys = list_deriv_vars(self)
         J = self.provideJ()
 
         if ffd_order == 1:
@@ -487,8 +432,7 @@ class Component(Container):
                 for i, in_name in enumerate(input_keys):
                     y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
 
-
-                self.set(out_name, y, force=True)
+                self.set(out_name, y)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
@@ -529,7 +473,7 @@ class Component(Container):
 
             # Don't fake finite difference assemblies, but do fake finite
             # difference on their contained components.
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 if savebase:
                     self.driver.calc_derivatives(first, second, savebase,
                                                  required_inputs, required_outputs)
@@ -546,12 +490,7 @@ class Component(Container):
 
         # Save baseline state for fake finite difference.
         # TODO: fake finite difference something with apply_der?
-        ffd_inputs, ffd_outputs = self.list_deriv_vars()
-        # correct for the one item tuple missing comma problem
-        if isinstance(ffd_inputs, basestring):
-            ffd_inputs = (ffd_inputs,)
-        if isinstance(ffd_outputs, basestring):
-            ffd_outputs = (ffd_outputs,)
+        ffd_inputs, ffd_outputs = list_deriv_vars(self)
         if savebase and J is not None:
             self._ffd_inputs = {}
             self._ffd_outputs = {}
@@ -569,82 +508,64 @@ class Component(Container):
         Overrides of this function must call this version.  This is only
         called if execute() actually ran.
         """
-        self._validate()
-
-        if self.parent:
-            self.parent.child_run_finished(self.name, self._outputs_to_validate())
-        self.publish_vars()
+        if Publisher.get_instance() is not None:
+            self.publish_vars()
 
     def _post_run(self):
         """"Runs at the end of the run function, whether execute() ran or not."""
         pass
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0, case_uuid=''):
         """Run this object. This should include fetching input variables
         (if necessary), executing, and updating output variables.
         Do not override this function.
-
-        force: bool
-            If True, force component to execute even if inputs have not
-            changed. (Default is False.)
 
         ffd_order: int
             Order of the derivatives to be used during Fake
             Finite Difference (typically 1 or 2). During regular execution,
             ffd_order should be 0. (Default is 0.)
 
-        case_id: str
+        case_uuid: str
             Identifier for the Case that is associated with this run.
-            (Default is ''.) If applied to the top-level assembly, this will be
-            prepended to all iteration coordinates.
         """
 
         if self.directory:
             self.push_dir()
 
-        if self.force_execute:
-            force = True
-
         self._stop = False
         self.ffd_order = ffd_order
-        self._case_id = case_id
+        self._case_uuid = case_uuid
 
         try:
-            self._pre_execute(force)
+            self._pre_execute()
             self._set_exec_state('RUNNING')
 
-            if self._call_execute or force:
+            if ffd_order == 1 \
+               and not obj_has_interface(self, IDriver, IAssembly) \
+               and hasattr(self, '_ffd_inputs') \
+               and self.force_fd is not True:
+                # During Fake Finite Difference, the available derivatives
+                # are used to approximate the outputs.
+                #print 'execute_ffd: %s' % self.get_pathname()
+                self._execute_ffd(1)
 
-                if ffd_order == 1 \
-                   and not has_interface(self, IDriver) \
-                   and not has_interface(self, IAssembly) \
-                   and (hasattr(self, '_ffd_inputs')) \
-                   and self.force_fd is not True:
-                    # During Fake Finite Difference, the available derivatives
-                    # are used to approximate the outputs.
-                    #print 'execute_ffd: %s' % self.get_pathname()
-                    self._execute_ffd(1)
+            elif ffd_order == 2 and \
+               hasattr(self, 'calculate_second_derivatives'):
+                # During Fake Finite Difference, the available derivatives
+                # are used to approximate the outputs.
+                #print "FFD pass. doing nothing for %s" % self.get_pathname()
+                pass
 
-                elif ffd_order == 2 and \
-                   hasattr(self, 'calculate_second_derivatives'):
-                    # During Fake Finite Difference, the available derivatives
-                    # are used to approximate the outputs.
-                    #print "FFD pass. doing nothing for %s" % self.get_pathname()
-                    pass
-
-                else:
-                    #print 'execute: %s' % self.get_pathname()
-                    # Component executes as normal
-                    self.exec_count += 1
-                    if tracing.TRACER is not None and \
-                       not obj_has_interface(self, IAssembly) and \
-                       not obj_has_interface(self, IDriver):
-
-                        tracing.TRACER.debug(self.get_itername())
-                        #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-
-                    self.execute()
+            else:
+                #print 'execute: %s' % self.get_pathname()
+                # Component executes as normal
+                self.exec_count += 1
+                if tracing.TRACER is not None and \
+                   not obj_has_interface(self, IDriver, IAssembly):
+                    tracing.TRACER.debug(self.get_itername())
+                    #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
+                self.execute()
 
                 self._post_execute()
             #else:
@@ -660,26 +581,12 @@ class Component(Container):
             if self.directory:
                 self.pop_dir()
 
+    @rbac(('owner', 'user'))
     def _run_terminated(self):
         """ Executed at end of top-level run. """
-        def _recursive_close(container, visited):
-            """ Close all case recorders. """
-            # Using ._alltraits() since .items() won't pickle.
-            # and we may be traversing a distributed tree.
-            for name in container._alltraits():
-                obj = getattr(container, name)
-                if id(obj) in visited:
-                    continue
-                visited.add(id(obj))
-                if obj_has_interface(obj, IDriver):
-                    for recorder in obj.recorders:
-                        recorder.close()
-                elif obj_has_interface(obj, ICaseRecorder):
-                    obj.close()
-                if isinstance(obj, Container):
-                    _recursive_close(obj, visited)
-        visited = set((id(self),))
-        _recursive_close(self, visited)
+        if hasattr(self, 'recorders'):
+            for recorder in self.recorders:
+                recorder.close()
 
     def add(self, name, obj):
         """Override of base class version to force call to *check_config*
@@ -698,27 +605,10 @@ class Component(Container):
 
         return obj
 
-    def _post_container_add(self, name, obj, removed):
-        """Called after a new child Container has been
-        added to self.
-        """
-        if has_interface(obj, IContainer):
-            io = self._cached_traits_[name].iotype
-            if io:
-                if removed:
-                    # since we just removed this container and it was
-                    # being used as an io variable, we need to put
-                    # it back in the dep graph
-                    self._depgraph.add_boundary_var(name, iotype=io)
-            elif has_interface(obj, IComponent):
-                self._depgraph.add_component(name, obj)
-
     def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
-        if name in self._depgraph:
-            self._depgraph.remove(name)
         try:
             return super(Component, self).remove(name)
         finally:
@@ -749,22 +639,10 @@ class Component(Container):
         """
         super(Component, self).add_trait(name, trait, refresh)
 
-        # if it's an input trait, register a callback to be called whenever it's changed
-        if trait.iotype == 'in':
-            self._set_input_callback(name)
-
         self.config_changed()
 
-        # TODO: revisit this...
-        if trait.iotype == 'in' and trait.trait_type \
-           and trait.trait_type.klass is ICaseIterator:
-            self._num_input_caseiters += 1
-
-        if trait.iotype:
-            if name not in self._depgraph:
-                self._depgraph.add_boundary_var(name, iotype=trait.iotype)
-                if self.parent and self.name in self.parent._depgraph:
-                    self.parent._depgraph.child_config_changed(self, removing=False)
+        if trait.iotype and self.parent:
+            self.parent.child_config_changed(self, removing=False)
 
     def _set_input_callback(self, name, remove=False):
 
@@ -781,31 +659,14 @@ class Component(Container):
                                  remove=remove)
 
     def remove_trait(self, name):
-        """Overrides base definition of *add_trait* in order to
+        """Overrides base definition of *remove_trait* in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        trait = self.get_trait(name)
-
-        # remove the callback if it's an input trait
-        if trait and trait.iotype == 'in':
-            self._set_input_callback(name, remove=True)
-
         try:
             super(Component, self).remove_trait(name)
         finally:
             self.config_changed()
-
-        if trait and trait.iotype == 'in' and trait.trait_type \
-           and trait.trait_type.klass is ICaseIterator:
-            self._num_input_caseiters -= 1
-
-    @rbac(('owner', 'user'))
-    def is_valid(self):
-        """Return False if any of our variables is invalid."""
-        if self._call_execute or self._exec_state == 'INVALID':
-            return False
-        return True
 
     @rbac(('owner', 'user'))
     def config_changed(self, update_parent=True):
@@ -816,55 +677,26 @@ class Component(Container):
             self.parent.config_changed(update_parent)
         self._input_names = None
         self._output_names = None
-        self._connected_inputs = None
-        self._connected_outputs = None
         self._container_names = None
-        self._expr_sources = None
-        self._call_check_config = True
-        self._call_execute = True
+        self._new_config = True
         self._provideJ_bounds = None
+        self._var_sizes = {}
 
     @rbac(('owner', 'user'))
-    def list_inputs(self, connected=None):
-        """Return a list of names of input values.
-
-        connected: bool (optional)
-            If connected is not None, the list will contain names
-            of inputs with matching *external* connectivity status.
-        """
-        if self._connected_inputs is None:
-            self._connected_inputs = \
-                       self._depgraph.get_boundary_inputs(connected=True)
+    def list_inputs(self):
+        """Return a list of names of input values."""
+        if self._input_names is None:
             self._input_names = [k for k, v in self.items(iotype='in')]
 
-        if connected is None:
-            return self._input_names[:]
-        elif connected is True:
-            return self._connected_inputs[:]
-        else:  # connected is False
-            return [n for n in self._input_names
-                            if n not in self._connected_inputs]
+        return self._input_names[:]
 
     @rbac(('owner', 'user'))
-    def list_outputs(self, connected=None):
-        """Return a list of names of output values.
-
-        connected: bool (optional)
-            If connected is not None, the list will contain names
-            of outputs with matching *external* connectivity status.
-        """
-        if self._connected_outputs is None:
-            self._connected_outputs = \
-                       self._depgraph.get_boundary_outputs(connected=True)
+    def list_outputs(self):
+        """Return a list of names of output values."""
+        if self._output_names is None:
             self._output_names = [k for k, v in self.items(iotype='out')]
 
-        if connected is None:
-            return self._output_names[:]
-        elif connected is True:
-            return self._connected_outputs[:]
-        else:  # connected is False
-            return [n for n in self._output_names
-                            if n not in self._connected_outputs]
+        return self._output_names[:]
 
     def list_containers(self):
         """Return a list of names of child Containers."""
@@ -883,44 +715,6 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def list_deriv_vars(self):
         return (), ()
-
-    @rbac(('owner', 'user'))
-    def connect(self, srcexpr, destexpr):
-        """Connects one source expression to one destination expression.
-        When a name begins with 'parent.', that indicates
-        it is referring to a variable outside of this object's scope.
-
-        srcexpr: str or ExprEvaluator
-            Source expression object or expression string.
-
-        destexpr: str or ExprEvaluator
-            Destination expression object or expression string.
-
-        """
-        if isinstance(srcexpr, basestring):
-            srcexpr = ConnectedExprEvaluator(srcexpr, self)
-        if isinstance(destexpr, basestring):
-            destexpr = ConnectedExprEvaluator(destexpr, self, is_dest=True)
-
-        destpath = destexpr.text
-
-        if not srcexpr.refs_parent():
-            # reset cached value of connected outputs
-            self._connected_outputs = None
-        if not destpath.startswith('parent.'):
-            self.config_changed(update_parent=False)
-
-        super(Component, self).connect(srcexpr, destexpr)
-
-    @rbac(('owner', 'user'))
-    def disconnect(self, srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
-        """
-        try:
-            super(Component, self).disconnect(srcpath, destpath)
-        finally:
-            self.config_changed(update_parent=False)
 
     @rbac(('owner', 'user'))
     def mimic(self, target):
@@ -1006,17 +800,6 @@ class Component(Container):
                 if hasattr(delegate, 'get_expr_depends'):
                     conn_list.extend(delegate.get_expr_depends())
         return conn_list
-
-    @rbac(('owner', 'user'))
-    def get_expr_sources(self):
-        """Return a list of tuples containing the names of all upstream
-        components that are referenced in any of our ExprEvaluators, along with
-        an initial exec_count of 0.
-        """
-        if self._expr_sources is None:
-            self._expr_sources = [(u, 0)
-                for u, v in self.get_expr_depends() if v == self.name]
-        return self._expr_sources
 
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
@@ -1190,7 +973,7 @@ class Component(Container):
             for meta, path in fixup_meta:
                 meta.path = path
             for comp, name, path in fixup_fvar:
-                comp.set(name + '.path', path, force=True)
+                comp.set(name + '.path', path)
 
     def _fix_directory(self, comp, comp_dir, root_dir, require_relpaths,
                        fixup_dirs):
@@ -1262,7 +1045,7 @@ class Component(Container):
                 if isabs(fvar.path):
                     path = relpath(path, comp_dir)
                     fixup_fvar.append((comp, fvarname, fvar.path))
-                    comp.set(fvarname + '.path', path, force=True)
+                    comp.set(fvarname + '.path', path)
             elif require_relpaths:
                 self.raise_exception(
                     "Can't save, %s path '%s' doesn't start with '%s'."
@@ -1551,46 +1334,9 @@ class Component(Container):
                 dst.close()
             completed_bytes += size
 
-    def step(self):
-        """For Components that run other components (e.g., Assembly or Drivers),
-        this will run one Component and return. For simple components, it is
-        the same as *run()*.
-        """
-        self.run()
-
     def stop(self):
         """Stop this component."""
         self._stop = True
-
-    def _validate(self):
-        """Mark self as valid."""
-        self._call_execute = False
-        self._set_exec_state('VALID')
-
-    @rbac(('owner', 'user'))
-    def invalidate_deps(self, varnames=None):
-        """Invalidate all of our outputs if they're not invalid already.
-        For a typical Component, this will always be all or nothing, meaning
-        there will never be partial validation of outputs.
-
-        NOTE: Components supporting partial output validation must override
-        this function.
-
-        Returns None, indicating that all outputs are newly invalidated, or [],
-        indicating that no outputs are newly invalidated.
-        """
-        self._call_execute = True
-        self._set_exec_state('INVALID')
-        return None
-
-    def _outputs_to_validate(self):
-        return None  # indicates that all outputs should be validated
-
-    def update_outputs(self, outnames):
-        """Do what is necessary to make the specified output Variables valid.
-        For a simple Component, this will result in a *run()*.
-        """
-        self.run()
 
     def _get_log_level(self):
         """Return logging message level."""
@@ -1620,14 +1366,14 @@ class Component(Container):
                             return
 
                 if publish:
-                    Publisher.register('.'.join([self.get_pathname(), name]),
+                    Publisher.register('.'.join((self.get_pathname(), name)),
                                        obj)
                     if name in self._publish_vars:
                         self._publish_vars[name] += 1
                     else:
                         self._publish_vars[name] = 1
                 else:
-                    Publisher.unregister('.'.join([self.get_pathname(), name]))
+                    Publisher.unregister('.'.join((self.get_pathname(), name)))
                     if name in self._publish_vars:
                         self._publish_vars[name] -= 1
                         if self._publish_vars[name] < 1:
@@ -1647,7 +1393,7 @@ class Component(Container):
                     if var == __attributes__:
                         lst.append((pname, self.get_attributes(io_only=False)))
                     else:
-                        lst.append(('.'.join([pname, var]), getattr(self, var)))
+                        lst.append(('.'.join((pname, var)), getattr(self, var)))
                 pub.publish_list(lst)
 
     def get_attributes(self, io_only=True):
@@ -1667,13 +1413,13 @@ class Component(Container):
             connected_inputs = []
             connected_outputs = []
         else:
-            connected_inputs = self._depgraph.get_boundary_inputs(connected=True)
-            connected_outputs = self._depgraph.get_boundary_outputs(connected=True)
+            connected_inputs = self.parent._depgraph.list_inputs(self.name, connected=True)
+            connected_outputs = self.parent._depgraph.list_outputs(self.name, connected=True)
 
         # Additionally, we need to know if anything is connected to a
-        # param, objective, or constraint.
-        # Objectives and constraints are "implicit" connections. Parameters
-        # are as well, though they lock down their variable targets.
+        # parameter, objective, response, or constraint.
+        # Objectives, responses, and constraints are "implicit" connections.
+        # Parameters are as well, though they lock down their variable targets.
         parameters = {}
         implicit = {}
         partial_parameters = {}
@@ -1695,6 +1441,11 @@ class Component(Container):
                 if target not in implicit:
                     implicit[target] = []
                 implicit[target].append(objective)
+
+            for target, response in dataflow['responses']:
+                if target not in implicit:
+                    implicit[target] = []
+                implicit[target].append(response)
 
             for target, constraint in dataflow['constraints']:
                 if target not in implicit:
@@ -1737,8 +1488,6 @@ class Component(Container):
 
             io_attr['indent'] = 0
 
-            io_attr['valid'] = self.get_valid([name])[0]
-
             # connections
             io_attr['connected'] = ''
             io_attr['connection_types'] = 0
@@ -1747,10 +1496,10 @@ class Component(Container):
             partially_connected_indices = []
 
             for inp in connected_inputs:
-                cname = inp.split('[', 1)[0]  # Could be 'inp[0]'.
+                cname = inp.split('[', 1)[0].split('.',1)[1]  # Could be 'inp[0]'.
 
                 if cname == name:
-                    connections = self._depgraph._var_connections(inp)
+                    connections = self.parent._depgraph._var_connections(inp)
                     connections = [src for src, dst in connections]
                     connected.extend(connections)
 
@@ -1767,9 +1516,9 @@ class Component(Container):
                         column_index = 0
 
                         for dimension, array_index in enumerate(array_indices[:-1]):
-                            column_index = column_index + (shape[-1] ** (dimensions - dimension) * array_index)
+                            column_index += (shape[-1] ** (dimensions - dimension) * array_index)
 
-                        column_index = column_index + array_indices[-1]
+                        column_index += array_indices[-1]
 
                         partially_connected_indices.append(column_index)
 
@@ -1782,8 +1531,8 @@ class Component(Container):
             if partially_connected_indices:
                 io_attr['partially_connected_indices'] = str(partially_connected_indices)
 
-            if name in connected_outputs:  # No array element indications.
-                connections = self._depgraph._var_connections(name)
+            if '.'.join((self.name, name)) in connected_outputs:  # No array element indications.
+                connections = self.parent._depgraph._var_connections('.'.join((self.name, name)))
                 io_attr['connected'] = \
                     str([dst for src, dst in connections])
 
@@ -1855,12 +1604,21 @@ class Component(Container):
             # into this variable list
             if 'vt' in io_attr:
                 vt_attrs = vartable.get_attributes(io_only, indent=1,
-                                                   parent=name,
-                                                   valid=io_attr['valid'])
+                                                   parent=name)
                 if name in inputs_list:
-                    inputs += vt_attrs.get('Inputs', [])
+                    vt_inputs = vt_attrs.get('Inputs', [])
+                    if "~" in io_attr['id']:
+                        for vt_input in vt_inputs:
+                            vt_input['id'] = '~{0}'.format(vt_input['id'])
+
+                    inputs += vt_inputs
                 else:
-                    outputs += vt_attrs.get('Outputs', [])
+                    vt_outputs = vt_attrs.get('Outputs', [])
+                    if "~" in io_attr['id']:
+                        for vt_output in vt_outputs:
+                            vt_outputs['id'] = '~{0}'.format(vt_output['id'])
+
+                    outputs += vt_outputs
 
         attrs['Inputs'] = inputs
         attrs['Outputs'] = outputs
@@ -1901,13 +1659,13 @@ class Component(Container):
                         if slot_attr is not None:
                             slots.append(slot_attr)
 
-            if has_interface(self, IAssembly):
+            if obj_has_interface(self, IAssembly):
                 attrs['Dataflow'] = self.get_dataflow()
 
-            if has_interface(self, IDriver):
+            if obj_has_interface(self, IDriver):
                 attrs['Workflow'] = self.get_workflow()
 
-            if has_interface(self, IHasCouplingVars):
+            if obj_has_interface(self, IHasCouplingVars):
                 couples = []
                 objs = self.list_coupling_vars()
                 for indep, dep in objs:
@@ -1917,10 +1675,10 @@ class Component(Container):
                     couples.append(attr)
                 attrs['CouplingVars'] = couples
 
-            if has_interface(self, IHasObjectives):
+            if obj_has_interface(self, IHasObjectives):
                 objectives = []
                 objs = self.get_objectives()
-                for key in objs.keys():
+                for key in objs:
                     attr = {}
                     attr['name'] = str(key)
                     attr['expr'] = objs[key].text
@@ -1928,7 +1686,18 @@ class Component(Container):
                     objectives.append(attr)
                 attrs['Objectives'] = objectives
 
-            if has_interface(self, IHasParameters):
+            if obj_has_interface(self, IHasResponses):
+                responses = []
+                resps = self.get_responses()
+                for key in resps:
+                    attr = {}
+                    attr['name'] = str(key)
+                    attr['expr'] = resps[key].text
+                    attr['scope'] = resps[key].scope.name
+                    responses.append(attr)
+                attrs['Responses'] = responses
+
+            if obj_has_interface(self, IHasParameters):
                 parameters = []
                 for key, parm in self.get_parameters().items():
                     attr = {}
@@ -1951,8 +1720,8 @@ class Component(Container):
 
             constraints = []
             has_constraints = False
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasEqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasEqConstraints):
                 has_constraints = True
                 cons = self.get_eq_constraints()
                 for key, con in cons.iteritems():
@@ -1961,8 +1730,8 @@ class Component(Container):
                     attr['expr'] = str(con)
                     constraints.append(attr)
 
-            if has_interface(self, IHasConstraints) or \
-               has_interface(self, IHasIneqConstraints):
+            if obj_has_interface(self, IHasConstraints) or \
+               obj_has_interface(self, IHasIneqConstraints):
                 has_constraints = True
                 cons = self.get_ineq_constraints()
                 for key, con in cons.iteritems():
@@ -1974,11 +1743,11 @@ class Component(Container):
             if has_constraints:
                 attrs['Constraints'] = constraints
 
-            if has_interface(self, IHasEvents):
+            if obj_has_interface(self, IHasEvents):
                 attrs['Triggers'] = [dict(target=path)
                                      for path in self.get_events()]
 
-            if has_interface(self, IImplicitComponent):
+            if obj_has_interface(self, IImplicitComponent):
                 states = []
                 names = self.list_states()
                 for name in names:
@@ -2008,33 +1777,10 @@ class Component(Container):
         if len(slots) > 0:
             attrs['Slots'] = slots
 
+        if hasattr(self, '_repr_svg_'):
+            attrs['Drawing'] = self._repr_svg_()
+
         return attrs
-
-    @rbac(('owner', 'user'))
-    def get_valid(self, names):
-        """Get the value of the validity flag for the specified variables.
-        Returns a list of bools.
-
-        names: iterator of str
-            Names of variables whose validity is requested.
-        """
-        if self.parent and has_interface(self.parent, IAssembly):
-            return self.parent.get_valid(
-                ['.'.join([self.name, n]) for n in names])
-        else:
-            valids = []
-            if self._exec_state == 'INVALID':
-                isvalid = False
-            else:
-                isvalid = True
-            for name in names:
-                if is_input_node(self._depgraph, name):
-                    valids.append(True)
-                elif isvalid:
-                    valids.append(True)
-                else:
-                    valids.append(False)
-            return valids
 
     def check_gradient(self, inputs=None, outputs=None,
                        stream=sys.stdout, mode='auto',
@@ -2104,3 +1850,26 @@ class Component(Container):
                                               stream=stream, mode=mode,
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
+
+    def get_req_cpus(self):
+        """Return requested_cpus"""
+        return self.mpi.requested_cpus
+
+    def get_float_var_info(self, name):
+        """Returns the local flattened size, index and basevar info
+        of the value of the named variable, if the flattened value 
+        can be expressed as an array of floats.  Otherwise, None is 
+        returned.
+        """
+        info = self._var_sizes.get(name, __missing__)
+        if info is __missing__:
+            try:
+                info = flattened_size_info(name, self)
+            except TypeError:
+                info = None
+            self._var_sizes[name] = info
+                
+        return info
+
+    def setup_systems(self):
+        pass

@@ -22,18 +22,19 @@ class HasObjectiveTestCase(unittest.TestCase):
         self.asm.comp1.b = 2
         self.asm.comp1.c = 3
         self.asm.comp1.d = -1
-                
+
     def test_add_objective(self):
         try:
             self.asm.driver.add_objective('blah.foo')
         except Exception as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add objective because I can't evaluate 'blah.foo'.")
+            self.assertEqual(str(err),
+                             "driver: Can't add objective 'blah.foo' because of invalid variables 'blah.foo'")
         else:
             self.fail('Exception expected')
-        
+
     def test_eval_objective(self):
         self.asm.driver.add_objective('comp1.a-comp1.b')
+        self.asm.run()
         self.assertEqual(self.asm.driver.eval_objective(), -1)
 
 
@@ -51,51 +52,51 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.comp1.b = 2
         self.asm.comp1.c = 3
         self.asm.comp1.d = -1
-        
+
     def test_add_objective(self):
         try:
             self.asm.driver.add_objective('blah.foo')
         except Exception as err:
-            self.assertEqual(str(err), 
-                             "driver: Can't add objective because I can't evaluate 'blah.foo'.")
+            self.assertEqual(str(err),
+                             "driver: Can't add objective 'blah.foo' because of invalid variables 'blah.foo'")
         else:
             self.fail('Exception expected')
-                
+
     def test_remove_objective(self):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.asm.driver.remove_objective('comp1.a-comp1.b')
-        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()),
                          set(['comp1.c-comp1.d']))
-        
+
     def test_objective_names(self):
         self.asm.driver.add_objective('comp1.a-comp1.b', name='foobar')
         self.asm.driver.add_objective('comp1.c-comp1.d')
-        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()),
                          set(['comp1.c-comp1.d', 'foobar']))
         try:
             self.asm.driver.add_objective('comp1.c-comp1.d', 'blah')
         except Exception as err:
-            self.assertEqual(str(err), 
+            self.assertEqual(str(err),
                              "driver: Trying to add objective 'comp1.c-comp1.d' "
                              "to driver, but it's already there")
-        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()),
                          set(['comp1.c-comp1.d', 'foobar']))
-            
+
         try:
             self.asm.driver.add_objective('comp1.c-comp1.a', 'foobar')
         except Exception as err:
-            self.assertEqual(str(err), 
+            self.assertEqual(str(err),
                              "driver: Trying to add objective 'comp1.c-comp1.a' "
                              "to driver using name 'foobar', but name is already used")
-            
+
         self.asm.driver.remove_objective('foobar')
-        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()),
                          set(['comp1.c-comp1.d']))
-        
+
     def test_add_objectives(self):
         self.asm.driver.add_objectives(['comp1.a-comp1.b', 'comp1.c-comp1.d'])
-        self.assertEqual(set(self.asm.driver.get_objectives().keys()), 
+        self.assertEqual(set(self.asm.driver.get_objectives().keys()),
                          set(['comp1.a-comp1.b', 'comp1.c-comp1.d']))
         try:
             self.asm.driver.add_objectives('comp1.d+comp1.a')
@@ -103,9 +104,10 @@ class HasObjectivesTestCase(unittest.TestCase):
             self.assertEqual(str(err), "driver: add_objectives requires an iterator of expression strings.")
         else:
             self.fail("Exception expected")
-    
+
     def test_eval_objectives(self):
         self.asm.driver.add_objectives(['comp1.a-comp1.b', 'comp1.c-comp1.d'])
+        self.asm.run()
         vals = self.asm.driver.eval_objectives()
         self.assertEqual(vals, [-1, 4])
 
@@ -113,11 +115,7 @@ class HasObjectivesTestCase(unittest.TestCase):
         self.asm.driver.add_objective('comp1.a-comp1.b')
         self.asm.driver.add_objective('comp1.c-comp1.d')
         self.asm.run()
-        self.assertEqual(self.asm.driver.is_valid(), True)
-        self.assertEqual(self.asm.driver._exec_state, 'VALID')
         self.asm.driver.clear_objectives()
-        self.assertEqual(self.asm.driver.is_valid(), False)
-        self.assertEqual(self.asm.driver._exec_state, 'INVALID')
         self.assertEqual(len(self.asm.driver.get_objectives()), 0)
 
 if __name__ == "__main__":

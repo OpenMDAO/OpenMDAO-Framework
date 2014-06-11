@@ -67,7 +67,8 @@ jQuery(function() {
         // intercept tab clicks to set the adjacent label
         var central_label = jQuery('#central_label'),
             dataflow_tab  = jQuery('#dataflow_tab a'),
-            workflow_tab  = jQuery('#workflow_tab a');
+            workflow_tab  = jQuery('#workflow_tab a'),
+            property_tab  = jQuery('#properties_tab a');
 
         dataflow_tab.click(function(e) {
             central_label.text(data.getPathname());
@@ -76,6 +77,11 @@ jQuery(function() {
             central_label.text(work.getPathname());
             // unfortunately, can't compute background until element is visible
             jQuery('.WorkflowFigure').trigger('setBackground');
+        });
+        property_tab.click(function(e) {
+            // slickgrid fails to render some cells when tab is hidden
+            // this will trigger rendering when tab is clicked
+            prop.resize_contents();
         });
 
         function data_fn(path) { data.showDataflow(path); dataflow_tab.click(); }

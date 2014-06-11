@@ -104,14 +104,25 @@ def _test_connect(browser):
     comp1 = workspace_page.get_dataflow_figure('comp1', 'top')
     comp2 = workspace_page.get_dataflow_figure('comp2', 'top')
     conn_page = workspace_page.connect(comp1, comp2)
+    time.sleep(0.5)
     conn_page.move(-100, -100)
     eq(conn_page.dialog_title, 'Connections: top')
     eq(conn_page.source_component, 'comp1')
     eq(conn_page.target_component, 'comp2')
-    for prefix in ('b', 'e', 'f', 'i', 's'):
+    for prefix in ('b', 'e', 'f', 'i', 's', 'w'):
         conn_page.connect_vars('comp1.' + prefix + '_out',
                                'comp2.' + prefix + '_in')
         time.sleep(0.5)  # Wait for display update.
+
+    conn_page.set_source_expression('comp1.f_out+comp1.i_out')
+    conn_page.target_variable = 'comp2.x_in'
+    conn_page.connect()
+
+    time.sleep(0.5)  # Wait for display update.
+
+    eq(conn_page.count_variable_figures(), 21)
+    eq(conn_page.count_variable_connections(), 9)  # 3 connections for the expr
+
     conn_page.close()
 
     # Set inputs (re-fetch required after updating).
@@ -158,6 +169,12 @@ def _test_connect(browser):
     editor = comp2.editor_page()
     editor.move(-100, 0)
     eq(editor.dialog_title, 'Connectable: top.comp2')
+
+    inputs = editor.get_inputs()
+    for i, row in enumerate(inputs.value):
+        if row[1] == 'w_in':
+            eq(row[2], '5000')
+
     outputs = editor.get_outputs()
     expected = [
         ['', 'b_out', 'True', '', ''],
@@ -165,14 +182,17 @@ def _test_connect(browser):
         ['', 'f_out', '2.781828', '', ''],
         ['', 'i_out', '42', '', ''],
         ['', 's_out', 'xyzzy', '', ''],
+        ['', 'w_out', '5', 'kg', ''],
+        ['', 'x_out', '44.781828', '', ''],
         ['', 'derivative_exec_count', '0', '',
          "Number of times this Component's derivative function has been executed."],
         ['', 'exec_count', '1', '',
          'Number of times this Component has been executed.'],
-        ['', 'itername', '1-2', '', 'Iteration coordinates.'],
+        ['', 'itername', '1-comp2', '', 'Iteration coordinates.'],
     ]
     for i, row in enumerate(outputs.value):
         eq(row, expected[i])
+
     editor.close()
 
     # Clean up.
@@ -202,12 +222,12 @@ def _test_connections(browser):
     eq(conn_page.dialog_title, 'Connections: vehicle')
     eq(conn_page.source_component, '-- Assembly --')
     eq(conn_page.target_component, '-- Assembly --')
-    eq(conn_page.count_variable_connections(), 0)
+    eq(conn_page.count_variable_connections(), 36)
 
     # two connections between engine and chassis
     conn_page.set_source_component('engine')
     conn_page.set_target_component('chassis')
-    eq(conn_page.count_variable_figures(), 22)
+    eq(conn_page.count_variable_figures(), 21)
     eq(conn_page.count_variable_connections(), 2)
     conn_page.show_connected_variables()
     time.sleep(0.5)
@@ -304,10 +324,10 @@ def _test_connections(browser):
     conn_page = vehicle.connections_page()
     conn_page.move(-50, -100)
 
-    eq(conn_page.count_variable_connections(), 0)
+    eq(conn_page.count_variable_connections(), 18)
 
     # test invalid variable
-    conn_page.connect_vars('chassis.acceleration', 'acceleration')
+    conn_page.connect_vars('chassis.accel', 'acceleration')
     message = NotifierPage.wait(workspace_page)
     eq(message, "Invalid source variable")
 
@@ -347,7 +367,7 @@ def _test_connect_nested(browser):
     conn_page.set_target_component('perf')
     eq(conn_page.source_component, 'BE0')
     eq(conn_page.target_component, 'perf')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
 
     # check that array is not expanded
@@ -368,27 +388,27 @@ def _test_connect_nested(browser):
     delta_Cts = conn_page.find_variable_name('delta_Ct[0]')
     eq(len(delta_Cts), 1)
     conn_page.connect_vars('BE0.delta_Ct', 'perf.delta_Ct[0]')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # switch source component, destination array should still be expanded
     conn_page.set_source_component('BE1')
     eq(conn_page.source_component, 'BE1')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     delta_Cts = conn_page.find_variable_name('delta_Ct[1]')
     eq(len(delta_Cts), 1)
     conn_page.connect_vars('BE1.delta_Ct', 'perf.delta_Ct[1]')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # check connecting var tree to var tree
     conn_page.set_source_component('-- Assembly --')
     eq(conn_page.source_component, '-- Assembly --')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     conn_page.connect_vars('free_stream', 'perf.free_stream')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # collapse delta_Ct array and confirm that it worked
@@ -402,18 +422,18 @@ def _test_connect_nested(browser):
     # check connecting var tree variable to variable
     conn_page.set_target_component('BE0')
     eq(conn_page.target_component, 'BE0')
-    time.sleep(0.5)
+    time.sleep(1)
     connection_count = conn_page.count_variable_connections()
     free_streams = conn_page.find_variable_name('free_stream')
     eq(len(free_streams), 1)
     chain = ActionChains(browser)
     chain.double_click(free_streams[0]).perform()
-    free_stream_V = conn_page.find_variable_name('free_stream.V')
+    free_stream_V = conn_page.find_variable_name('V')
     eq(len(free_stream_V), 1)
-    free_stream_rho = conn_page.find_variable_name('free_stream.rho')
-    eq(len(free_stream_rho), 1)
+    rho = conn_page.find_variable_name('rho')
+    eq(len(rho), 2)
     conn_page.connect_vars('free_stream.rho', 'BE0.rho')
-    time.sleep(0.5)
+    time.sleep(1)
     eq(conn_page.count_variable_connections(), connection_count + 1)
 
     # Clean up.
@@ -492,12 +512,11 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -514,12 +533,11 @@ def _test_replace(browser):
         ['', 'x_in', '[1.0, 1.0, 1.0, 1.0]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -534,12 +552,11 @@ def _test_replace(browser):
         ['', 'result_in', '0', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -556,12 +573,11 @@ def _test_replace(browser):
         ['', 'scaler', '1', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -596,12 +612,11 @@ def _test_replace(browser):
         ['', 'x', '[]', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing']
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -621,12 +636,13 @@ def _test_replace(browser):
     expected = [
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'force_execute', 'False', '',
-         'If True, always execute even if all IO traits are valid.'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'missing_deriv_policy', 'error', '', 
-         'Determines behavior when some analytical derivatives are provided but some are missing']
+        ['', 'missing_deriv_policy', 'error', '',
+         'Determines behavior when some analytical derivatives are provided'
+         ' but some are missing'],
+        ['', 'printvars', '[]', '',
+         'List of extra variables to output in the recorders.'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -682,7 +698,8 @@ def _test_parameter_autocomplete(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp',
+                                                "vartree", prefix=None)
     workspace_page.replace_driver('vartree', 'SLSQPdriver')
 
     driver = workspace_page.get_dataflow_figure('driver', 'vartree')
@@ -700,7 +717,6 @@ def _test_parameter_autocomplete(browser):
         'p1.cont_in.vt2.vt3.a',
         'p1.cont_in.vt2.vt3.b',
         'p1.directory',
-        'p1.force_execute',
         'p1.force_fd',
         'p1.missing_deriv_policy',
     ])
@@ -710,7 +726,7 @@ def _test_parameter_autocomplete(browser):
     #For p1 (simplecomp) there should only be
     #8 valid autocomplete targets.
 
-    eq(len(autocomplete_targets), 10)
+    eq(len(autocomplete_targets), 9)
 
     for target in autocomplete_targets:
         eq(target in expected_targets, True)
@@ -741,24 +757,28 @@ def _test_io_filter_without_vartree(browser):
 
     #filter on name='ctlmin'
     editor.filter_inputs("ctlmin")
-    eq([u'', u'ctlmin', u'0.001', u'', u'Minimum absolute value of ctl used in optimization.'], editor.get_inputs().value[0])
+    eq([u'', u'ctlmin', u'0.001', u'',
+        u'Minimum absolute value of ctl used in optimization.'],
+       editor.get_inputs().value[0])
     editor.clear_inputs_filter()
 
     #filter on description='conjugate'
     editor.filter_inputs("conjugate")
-    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'],
+       editor.get_inputs().value[0])
     editor.clear_inputs_filter()
 
     #filter on description='Conjugate'
     editor.filter_inputs("Conjugate")
-    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'], editor.get_inputs().value[0])
+    eq([u'', u'icndir', u'0', u'', u'Conjugate gradient restart. parameter.'],
+       editor.get_inputs().value[0])
     editor.clear_inputs_filter()
 
     #filter on term='print'
     #filter should match items in name and description column
     expected = [
-        [u'', u'iprint', u'0', u'', u'Print information during CONMIN solution. Higher values are more verbose. 0 suppresses all output.'],
-        [u'', u'printvars', u'[]', u'', u'List of extra variables to output in the recorders.']
+        [u'', u'iprint', u'0', u'', u'Print information during CONMIN solution.'
+         ' Higher values are more verbose. 0 suppresses all output.'],
     ]
 
     editor.filter_inputs("print")
@@ -779,19 +799,24 @@ def _test_io_filter_without_vartree(browser):
 
     #filter on name='derivative_exec_count'
     editor.filter_outputs("derivative_exec_count")
-    eq([u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."], editor.get_outputs().value[0])
+    eq([u'', u'derivative_exec_count', u'0', u'',
+        u"Number of times this Component's derivative function has been executed."],
+       editor.get_outputs().value[0])
     editor.clear_outputs_filter()
 
     #filter on description='coordinates'
     editor.filter_outputs("coordinates")
-    eq([u'', u'itername', u'', u'', u"Iteration coordinates."], editor.get_outputs().value[0])
+    eq([u'', u'itername', u'', u'', u"Iteration coordinates."],
+       editor.get_outputs().value[0])
     editor.clear_outputs_filter()
 
     #filter on term='time'.
     editor.filter_outputs("time")
     expected = [
-        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
-        [u'', u'exec_count', u'0', u'',  u"Number of times this Component has been executed."]
+        [u'', u'derivative_exec_count', u'0', u'',
+         u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'',
+         u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -799,8 +824,10 @@ def _test_io_filter_without_vartree(browser):
     #filter on term='Time'.
     editor.filter_outputs("Time")
     expected = [
-        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
-        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
+        [u'', u'derivative_exec_count', u'0', u'',
+         u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'',
+         u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -816,7 +843,8 @@ def _test_io_filter_with_vartree(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "vartree", prefix=None)
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp',
+                                                "vartree", prefix=None)
     workspace_page.show_dataflow("vartree")
 
     comp = workspace_page.get_dataflow_figure('p1', "vartree")
@@ -833,7 +861,8 @@ def _test_io_filter_with_vartree(browser):
         [u'', u' vt3', u'', u'', u''],
         [u'', u'b', u'12', u'inch', u''],
         [u'', u'directory', u'', u'', u'If non-blank, the directory to execute in.'],
-        [u'', u'missing_deriv_policy', u'error', u'', u'Determines behavior when some analytical derivatives are provided but some are missing']
+        [u'', u'missing_deriv_policy', u'error', u'',
+         u'Determines behavior when some analytical derivatives are provided but some are missing']
     ]
 
     eq(expected, editor.get_inputs().value)
@@ -858,8 +887,10 @@ def _test_io_filter_with_vartree(browser):
         [u'', u' vt2', u'', u'', u''],
         [u'', u' vt3', u'', u'', u''],
         [u'', u'b', u'12', u'inch', u''],
-        [u'', u'derivative_exec_count', u'0', u'', u"Number of times this Component's derivative function has been executed."],
-        [u'', u'exec_count', u'0', u'', u"Number of times this Component has been executed."]
+        [u'', u'derivative_exec_count', u'0', u'',
+         u"Number of times this Component's derivative function has been executed."],
+        [u'', u'exec_count', u'0', u'',
+         u"Number of times this Component has been executed."]
     ]
 
     eq(expected, editor.get_outputs().value)
@@ -887,10 +918,10 @@ def _test_column_sorting(browser):
         names = None
         variables = None
 
-        if (grid == "inputs"):
+        if grid == "inputs":
             editor.show_inputs()
             editor.sort_inputs_column("Name", sort_order)
-            
+
             variables = editor.get_inputs()
 
         else:
@@ -911,16 +942,34 @@ def _test_column_sorting(browser):
     editor.move(-100, 0)
 
     test_sorting(
-        ["accuracy", " gradient_options", "iout", "iprint", "maxiter", 
-         "output_filename", "directory", "force_execute", "force_fd", 
-         "printvars"], "inputs",
+        ["accuracy", "iout", "iprint", "maxiter",
+         "output_filename", "directory", "force_fd",
+         " gradient_options", "printvars"], "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["printvars", "force_fd", "force_execute", 
-         "directory", "output_filename", "maxiter", "iprint", "iout", 
-         " gradient_options", "accuracy"], "inputs",
+        [" gradient_options", "force_fd",
+         "directory", "output_filename", "maxiter", "iprint", "iout",
+         "accuracy"], "inputs",
+        SortOrder.DESCENDING
+    )
+
+    editor.get_input(" gradient_options").name.click()
+
+    test_sorting(
+        ["accuracy", "iout", "iprint", "maxiter",
+         "output_filename", "directory", "force_fd",
+         " gradient_options", "derivative_direction", "directional_fd", "fd_blocks", "fd_form", "fd_step", "fd_step_type",
+         "force_fd", "gmres_maxiter", "gmres_tolerance", "printvars"], "inputs",
+        SortOrder.ASCENDING
+    )
+
+    test_sorting(
+         [" gradient_options", "gmres_tolerance", "gmres_maxiter",
+         "force_fd", "fd_step_type", "fd_step", "fd_form", "fd_blocks", "directional_fd", "derivative_direction",
+         "force_fd", "directory",
+         "output_filename", "maxiter", "iprint", "iout", "accuracy"], "inputs",
         SortOrder.DESCENDING
     )
 
@@ -945,7 +994,8 @@ def _test_column_sorting(browser):
     file_path = pkg_resources.resource_filename('openmdao.gui.test.functional',
                                                 'files/model_vartree.py')
     workspace_page.add_file(file_path)
-    workspace_page.add_library_item_to_dataflow('model_vartree.Topp', "apples", offset=(120, 90))
+    workspace_page.add_library_item_to_dataflow('model_vartree.Topp',
+                                                "apples", offset=(120, 90))
     #workspace_page.show_dataflow("vartree")
 
     comp = workspace_page.get_dataflow_figure('p1', "apples")
@@ -955,18 +1005,17 @@ def _test_column_sorting(browser):
     editor.get_input(" vt2").name.click()
     editor.get_input(" vt3").name.click()
 
-
     #Testing sort for inputs
-    editor.get_input("missing_deriv_policy") 
+    editor.get_input("missing_deriv_policy")
     test_sorting(
-        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
-         "directory", "force_execute", "force_fd", "missing_deriv_policy"],
+        [" cont_in", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
+         "directory", "force_fd", "missing_deriv_policy"],
         "inputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["missing_deriv_policy", "force_fd", "force_execute", "directory", 
+        ["missing_deriv_policy", "force_fd", "directory",
          " cont_in", " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "inputs",
         SortOrder.DESCENDING
@@ -978,14 +1027,14 @@ def _test_column_sorting(browser):
     editor.get_output(" vt3").name.click()
 
     test_sorting(
-        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y", 
+        [" cont_out", "v1", "v2", " vt2", " vt3", "a", "b", "x", "y",
          "derivative_exec_count", "exec_count", "itername"],
         "outputs",
         SortOrder.ASCENDING
     )
 
     test_sorting(
-        ["itername", "exec_count", "derivative_exec_count", " cont_out", 
+        ["itername", "exec_count", "derivative_exec_count", " cont_out",
          " vt2", "y", "x", " vt3", "b", "a", "v2", "v1"],
         "outputs",
         SortOrder.DESCENDING
@@ -1008,7 +1057,7 @@ def _test_taborder(browser):
     # verify that expected tabs appear in expected order
     eq(editor.get_tab_labels(),
        ['Inputs', 'Outputs', 'Parameters', 'Objectives', 'Constraints',
-        'Triggers', 'Workflow', 'Slots'])
+        'Triggers', 'Workflow'])
 
     editor.close()
 

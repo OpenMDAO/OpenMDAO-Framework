@@ -2,6 +2,11 @@
 var openmdao = (typeof openmdao === "undefined" || !openmdao ) ? {} : openmdao ;
 
 openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
+
+    /***********************************************************************
+     *  private
+     ***********************************************************************/
+
     var constraints,
         constraintsDiv = jQuery("<div id='"+name+"_constraints' class='slickgrid' style='overflow:none; height:320px; width:620px'>"),
         addButton = jQuery("<button>Add Constraint</button>").button(),
@@ -22,6 +27,7 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
         button = '<div class="ui-icon-trash"></div>';
         return button;
     }
+
     elm.append(constraintsDiv);
 
     var tabdiv = jQuery('<div class="post_slick" style="height:40px;">'),
@@ -41,15 +47,16 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
     if (editable) {
         constraints.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
-            cmd = pathname+'.'+args.item.name+'='+args.item.value;
+            var cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
-   }
+    }
+
     constraints.onClick.subscribe(function (e) {
         var cell = constraints.getCellFromEvent(e);
         if (cell.cell === 0) {
             var delname = constraints.getData()[cell.row].name;
-            cmd = pathname+'.remove_constraint("'+delname+'");';
+            var cmd = pathname+'.remove_constraint("'+delname+'")';
             project.issueCommand(cmd);
         }
     });
@@ -60,11 +67,11 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
 
     /** add a new constraint */
     function addConstraint(expr, name) {
-        cmd = pathname+".add_constraint('"+expr+"'";
+        var cmd = pathname+".add_constraint('"+expr+"'";
         if (name) {
-            cmd = cmd + ",name='"+name+"'";
+            cmd = cmd + ", name='"+name+"'";
         }
-        cmd = cmd + ");";
+        cmd = cmd + ")";
         project.issueCommand(cmd);
     }
 
@@ -113,12 +120,17 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
 
     /** clear all constraints */
     function clearConstraints() {
-        cmd = pathname+".clear_constraints();";
+        var cmd = pathname+".clear_constraints()";
         project.issueCommand(cmd);
     }
 
     addButton.click(function() { promptForConstraint(addConstraint); });
     clrButton.click(function() { clearConstraints(); });
+
+
+    /***********************************************************************
+     *  privileged
+     ***********************************************************************/
 
     /** load the table with the given properties */
     this.loadData = function(properties) {

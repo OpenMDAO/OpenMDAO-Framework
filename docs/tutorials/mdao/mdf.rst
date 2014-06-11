@@ -134,8 +134,7 @@ directly is arbitrary. You could have swapped the two, and the problem would sti
 
 To tell a FixedPointIterator which variable to vary, we just use ``add_parameter`` again.  During
 iteration, this is the variable that is going to be sent to the input  of ``SellarDiscipline1``, which is
-``'dis1y2'``. We specify very small and large values for the  low and high arguments because solvers
-shouldn't really be constrained like that.  Similarly, we setup the convergence constraint as an equality
+``'dis1y2'``.  We setup the convergence constraint as an equality
 constraint. A solver essentially tries to drive something to zero. In this case, we want to drive the
 residual error in the coupled variable ``y2`` to zero. An equality constraint is defined with an expression
 string which is parsed for the equals sign. In the above example, you see that ``'dis2.y2 = dis1.y2'`` is
@@ -148,7 +147,7 @@ tolerance.
         self.connect('dis1.y1','dis2.y1')
 
         # Iteration loop
-        self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.solver.add_parameter('dis1.y2')
         self.solver.add_constraint('dis2.y2 = dis1.y2')
         self.solver.max_iteration = 100
         self.solver.tolerance = .00001
@@ -218,7 +217,7 @@ Finally, putting it all together gives:
                 self.connect('dis1.y1','dis2.y1')
 
                 # Iteration loop
-                self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+                self.solver.add_parameter('dis1.y2')
                 self.solver.add_constraint('dis2.y2 = dis1.y2')
 
                 #Driver settings
@@ -294,7 +293,7 @@ We just change some of solver specific settings.
 .. testcode:: MDF_parts
 
         # Iteration loop
-        self.solver.add_parameter('dis1.y2', low=-9.e99, high=9.e99)
+        self.solver.add_parameter('dis1.y2')
         self.solver.add_constraint('dis2.y2 = dis1.y2')
 
         self.solver.itmax = 10

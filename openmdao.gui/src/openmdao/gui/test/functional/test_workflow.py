@@ -49,12 +49,10 @@ def _test_basic(browser):
 
     # Verify that component state is represented properly
     driver = workspace_page.get_workflow_component_figure('sim.driver')
-    assert driver.state == 'INVALID'
     driver.run()
     time.sleep(2.0)
     message = NotifierPage.wait(workspace_page)
     eq(message, 'Run complete: success')
-    assert driver.state == 'VALID'
 
     # Verify workflow can be cleared
     nested = workspace_page.get_workflow_figure('nested.driver')
@@ -218,20 +216,9 @@ def _test_array_parameter(browser):
 
     # Run optimization.
     top = workspace_page.get_dataflow_figure('top')
-    assert top.state == 'INVALID'
-    driver = workspace_page.get_dataflow_figure('driver', 'top')
-    assert driver.state == 'INVALID'
-    paraboloid = workspace_page.get_dataflow_figure('paraboloid', 'top')
-    assert paraboloid.state == 'INVALID'
-
     top.run()
     message = NotifierPage.wait(workspace_page)
     eq(message, 'Run complete: success')
-
-    assert top.state == 'VALID'
-    assert driver.state == 'VALID'
-#FIXME: this should be 'VALID'
-    assert paraboloid.state == 'INVALID'
 
     # Check results.
     workspace_page.do_command("top.paraboloid.x[0][0]")

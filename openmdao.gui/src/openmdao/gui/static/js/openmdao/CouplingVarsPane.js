@@ -34,14 +34,14 @@ openmdao.CouplingVarsPane = function(elm, project, pathname, name, editable) {
     if (editable) {
         couplingVars.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
-            cmd = pathname+'.'+args.item.name+'='+args.item.value;
+            var cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
    }
 
     /** add a new objective */
     function addCouplingVars(indep,dep,scope) {
-        cmd = pathname+".add_coupling_var('"+indep+"','"+dep+")'";
+        var cmd = pathname+".add_coupling_var('"+indep+"', '"+dep+"')";
         project.issueCommand(cmd);
     }
 
@@ -80,7 +80,7 @@ openmdao.CouplingVarsPane = function(elm, project, pathname, name, editable) {
 
     /** clear all CouplingVars */
     function clearCouplingVars() {
-        cmd = pathname+".clear_coupling_vars();";
+        var cmd = pathname+".clear_coupling_vars()";
         project.issueCommand(cmd);
     }
 

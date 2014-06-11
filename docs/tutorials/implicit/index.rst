@@ -153,7 +153,7 @@ and run the model. We will let the implicit component solve its own residuals.
 
 The implicit component completes its iteration until the state values satisfy
 the residual equations. We can also configure an OpenMDAO solver to solve for
-the states. Here, we set up a new assembly with the Brent solver as the top
+the states. Here, we set up a new assembly with the Broyden solver as the top
 driver. Then we assign the states as the solver's parameters and constrain
 the residuals to be equal to zero. Also, we don't want the implicit
 component's internal solver to solve this in competition with the BroydenSolver
@@ -172,9 +172,9 @@ component just runs the `eval` statement we defined in the class definition.
             self.comp.eval_only = True
             self.add('driver', BroydenSolver())
             self.driver.workflow.add('comp')
-            self.driver.add_parameter('comp.x', low=-100, high=100)
-            self.driver.add_parameter('comp.y', low=-100, high=100)
-            self.driver.add_parameter('comp.z', low=-100, high=100)
+            self.driver.add_parameter('comp.x')
+            self.driver.add_parameter('comp.y')
+            self.driver.add_parameter('comp.z')
             self.driver.add_constraint('comp.res[0] = 0')
             self.driver.add_constraint('comp.res[1] = 0')
             self.driver.add_constraint('comp.res[2] = 0')

@@ -332,7 +332,7 @@ class PythonSourceTreeAnalyser(object):
                 self.fileinfo[pyfile] = info
                 return info[0]
 
-        logger.info("analyzing %s", pyfile)
+        logger.debug("analyzing %s", pyfile)
 
         myvisitor = PythonSourceFileAnalyser(pyfile, self)
         self.modinfo[get_module_path(pyfile)] = myvisitor
