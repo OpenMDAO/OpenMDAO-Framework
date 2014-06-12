@@ -11,7 +11,7 @@ from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
-from openmdao.main.depgraph import find_all_connecting
+from openmdao.main.depgraph import find_all_connecting, get_graph_partition
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -23,6 +23,7 @@ from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
+from openmdao.main.systems import DriverSystem
 
 from openmdao.util.decorators import add_delegate
 
@@ -122,6 +123,33 @@ class Driver(Component):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent
 
+    def _collapse_subdrivers(self, g):
+        """collapse subdriver iteration sets into single nodes."""
+        # collapse all subdrivers in our graph
+        wfnames = set(self.workflow.get_names(full=True))
+        for child_drv in self.subdrivers(recurse=False):
+            iterset = [c.name for c in child_drv.iteration_set()
+                        if c.name not in wfnames]
+            subnodes, in_edges, out_edges = get_graph_partition(g, iterset)
+            
+            # create new connections to collapsed node
+            drvname = child_drv.name
+            for u,v in in_edges:
+                g.add_edge(u, drvname)
+                # create our own copy of edge metadata
+                g[u][drvname] = g[u][v].copy()
+
+            for u,v in out_edges:
+                g.add_edge(drvname, v)
+                # create our own copy of edge metadata
+                g[drvname][v] = g[u][v].copy()
+
+            g.remove_nodes_from(subnodes)
+
+
+    def get_depgraph(self):
+        return self.parent._depgraph  # May change this to use a smaller graph later
+
     def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
 
@@ -155,21 +183,18 @@ class Driver(Component):
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])
-        conn_list = super(Driver, self).get_expr_depends()
         new_list = []
-        for src, dest in conn_list:
+        for src, dest in super(Driver, self).get_expr_depends():
             if src not in iternames and dest not in iternames:
                 new_list.append((src, dest))
         return new_list
 
     @rbac(('owner', 'user'))
-    def get_expr_var_depends(self, recurse=True, refs=False):
+    def get_expr_var_depends(self, recurse=True):
         """Returns a tuple of sets of the form (src_set, dest_set)
         containing all dependencies introduced by any parameters,
         objectives, or constraints in this Driver.  If recurse is True,
-        include any refs from subdrivers. This returns variable names
-        only, i.e. if the expression contains a reference to x[4], only
-        x is returned.
+        include any refs from subdrivers. 
         """
         srcset = set()
         destset = set()
@@ -177,7 +202,7 @@ class Driver(Component):
             for dname in self._delegates_:
                 delegate = getattr(self, dname)
                 if isinstance(delegate, HasParameters):
-                    destset.update(delegate.get_referenced_varpaths(refs=refs))
+                    destset.update(delegate.get_referenced_varpaths(refs=True))
                 elif isinstance(delegate, (HasConstraints,
                                      HasEqConstraints, HasIneqConstraints)):
                     srcset.update(delegate.list_constraint_targets())
@@ -186,54 +211,27 @@ class Driver(Component):
                     srcset.update(delegate.list_objective_targets())
 
             if recurse:
-                for sub in self.subdrivers():
-                    srcs, dests = sub.get_expr_var_depends(recurse=recurse,
-                                                           refs=refs)
+                for sub in self.subdrivers(recurse=True):
+                    srcs, dests = sub.get_expr_var_depends(recurse=True)
                     srcset.update(srcs)
                     destset.update(dests)
 
         return srcset, destset
 
-
-    # @rbac(('owner', 'user'))
-    # def add_driver_connections(self, graph, recurse=False):
-    #     """Adds connections to the graph based on dependencies introduced 
-    #     by any parameters, objectives, or constraints in this Driver.  
-    #     The connections will be of the form (drvname,cname.vname)
-    #     or (cname.vname,drvname) depending on the direction 
-    #     of the dataflow.
-
-    #     If recurse is True, include any refs from subdrivers. 
-    #     """
-    #     if hasattr(self, '_delegates_'):
-    #         for dname, dclass in self._delegates_.items():
-    #             delegate = getattr(self, dname)
-    #             if isinstance(delegate, HasParameters):
-    #                 for param in delegate.list_param_targets():
-    #                     graph.add_edge(self.name, param, drv_conn=self.name)
-    #                     #mpiprint("!!!!!param = %s" % param)
-    #             elif isinstance(delegate, (HasConstraints,
-    #                                  HasEqConstraints, HasIneqConstraints)):
-    #                 for cnst in delegate.list_constraint_targets():
-    #                     #mpiprint("!!!!!cnst = %s" % cnst)
-    #                     graph.add_edge(cnst, self.name, drv_conn=self.name)
-    #             elif isinstance(delegate, (HasObjective, HasObjectives)):
-    #                 for obj in delegate.list_objective_targets():
-    #                     #mpiprint("!!!!!obj = %s" % obj)
-    #                     graph.add_edge(obj, self.name, drv_conn=self.name)
-
-    #         if recurse:
-    #             for sub in self.subdrivers():
-    #                 sub.add_driver_connections(graph, recurse=recurse)
-
     @rbac(('owner', 'user'))
-    def subdrivers(self):
-        """Returns a generator of of direct subdrivers of 
-        this driver.
+    def subdrivers(self, recurse=False):
+        """Returns a generator of all subdrivers
+        contained in this driver's workflow.  If recurse is True,
+        include all subdrivers in our entire iteration set.
         """
-        for d in self.iteration_set():
-            if has_interface(d, IDriver):
-                yield d
+        if recurse:
+            itercomps = self.iteration_set()
+        else:
+            itercomps = list(self.workflow)
+
+        for comp in itercomps:
+            if has_interface(comp, IDriver):
+                yield comp
 
     def _get_required_compnames(self):
         """Returns a set of names of components that are required by
@@ -243,7 +241,12 @@ class Driver(Component):
         parameters and those referenced by objectives and/or constraints.
         """
         if self._required_compnames is None:
+            # call base class version of get_expr_depends so we don't filter out
+            # comps in our iterset.  We want required names to be everything between
+            # and including comps that we reference in any parameter, objective, or
+            # constraint.
             conns = super(Driver, self).get_expr_depends()
+            
             getcomps = set([u for u, v in conns if u != self.name])
             setcomps = set([v for u, v in conns if v != self.name])
 
@@ -251,7 +254,7 @@ class Driver(Component):
             full.update(getcomps)
             full.update(self.list_pseudocomps())
 
-            compgraph = self.parent._depgraph.component_graph()
+            compgraph = self.get_depgraph().component_graph()
 
             for end in getcomps:
                 for start in setcomps:
@@ -431,6 +434,7 @@ class Driver(Component):
         """
         super(Driver, self).config_changed(update_parent)
         self._required_compnames = None
+        self._depgraph = None
         if self.workflow is not None:
             self.workflow.config_changed()
 
@@ -476,6 +480,7 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
+        #self._system = DriverSystem(self.get_depgraph(), self)       
         self.workflow.setup_systems()
 
     #### MPI related methods ####

@@ -9,7 +9,7 @@ import ordereddict
 
 from numpy import ndarray
 
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
 
 _ops = {

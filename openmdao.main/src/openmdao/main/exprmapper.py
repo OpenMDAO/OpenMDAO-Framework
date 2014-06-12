@@ -71,14 +71,14 @@ class ExprMapper(object):
         srcvars = srcexpr.get_referenced_varpaths(copy=False)
         destvar = destexpr.get_referenced_varpaths().pop()
 
-        destcompname, destcomp, destvarname = scope._split_varpath(destvar)
+        destcompname, destcomp, destvarname = _split_varpath(scope, destvar)
         desttrait = None
         srccomp = None
 
         if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.') and not len(srcvars) > 1:
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
-                    srccompname, srccomp, srcvarname = scope._split_varpath(srcvar)
+                    srccompname, srccomp, srcvarname = _split_varpath(scope, srcvar)
                     if not isinstance(srccomp, PseudoComponent):
                         src_io = 'in' if srccomp is scope else 'out'
                         srccomp.get_dyn_trait(srcvarname, src_io)
@@ -235,3 +235,20 @@ class ExprMapper(object):
     def list_pseudocomps(self):
         return [data['pcomp'].name for u, v, data in
                            self._exprgraph.edges(data=True) if 'pcomp' in data]
+
+
+def _split_varpath(cont, path):
+    """Return a tuple of compname,component,varname given a path
+    name of the form 'compname.varname'. If the name is of the form
+    'varname', then compname will be None and comp is cont.
+    """
+    try:
+        compname, varname = path.split('.', 1)
+    except ValueError:
+        return (None, cont, path)
+
+    t = cont.get_trait(compname)
+    if t and t.iotype:
+        return (None, cont, path)
+    return (compname, getattr(cont, compname), varname)
+

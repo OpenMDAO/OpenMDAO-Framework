@@ -893,12 +893,10 @@ class HasParameters(object):
 
         name = key[0] if isinstance(key, tuple) else key
 
-        # TODO: put this back if we decide to add driver connections
-        #       to the graph
-        # # add a graph connection from the driver to the param target
-        # dgraph = self._get_scope()._depgraph
-        # dgraph.add_edge(self._parent.name, dgraph.add_subvar(target),
-        #                 drv_conn=True)
+        # add a graph connection from the driver to the param target
+        dgraph = self._get_scope().get_depgraph()
+        dgraph.add_edge(self._parent.name, dgraph.add_subvar(target),
+                        drv_conn=self._parent.name)
 
         if isinstance(val, ndarray):
             return ArrayParameter(target, low=low, high=high,
@@ -925,12 +923,10 @@ class HasParameters(object):
                                          "that is not in this driver."
                                          % (name,), AttributeError)
 
-        # TODO: put this back if we decide to add driver connections
-        #       to the graph
-        # # remove param connections from dep graph
-        # dgraph = self._get_scope()._depgraph
-        # for target in param.targets:
-        #     dgraph.remove_edge(self._parent.name, target)
+        # remove param connections from dep graph
+        dgraph = self._get_scope()._depgraph
+        for target in param.targets:
+            dgraph.remove_edge(self._parent.name, target)
 
         self._parent.config_changed()
 

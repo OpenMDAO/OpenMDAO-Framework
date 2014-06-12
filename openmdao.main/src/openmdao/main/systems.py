@@ -3,15 +3,15 @@ from StringIO import StringIO
 from collections import OrderedDict
 from itertools import chain
 
-from networkx import edge_boundary
-
 import numpy
+import networkx as nx
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
+from openmdao.main.depgraph import break_cycles, get_graph_partition, is_driver_node
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -21,16 +21,39 @@ def call_if_found(obj, fname, *args, **kwargs):
         return getattr(obj, fname)(*args, **kwargs)
 
 class System(object):
-    def __init__(self, graph, scope, parent_node):
-        self.graph = graph
-        self.scope = scope
-        if len(graph) > 1:
-            self.name = str(tuple(sorted(graph.nodes())))
+    def __init__(self, depgraph, nodes):
+        # get our I/O edges from the depgraph
+        subnodes, self.in_edges, self.out_edges = \
+                         get_graph_partition(depgraph, 
+                                             simple_node_iter(nodes))
+
+        for i,(u,v) in enumerate(self.in_edges):
+            if is_driver_node(depgraph, u):
+                u = v
+            elif is_driver_node(depgraph, v):
+                v = u
+            self.in_edges[i] = (u,v)
+
+        for i,(u,v) in enumerate(self.out_edges):
+            if is_driver_node(depgraph, u):
+                u = v
+            elif is_driver_node(depgraph, v):
+                v = u
+            self.out_edges[i] = (u,v)
+
+
+        if len(nodes) > 1:
+            self.name = str(tuple(sorted(nodes)))
         else:
-            self.name = graph.nodes()[0]
-        self.parent_node = parent_node # node in parent graph
-        self.subsystems = []
+            self.name = nodes[0]
+
+        mpiprint("%s: in_edges = %s" % (self.name, self.in_edges))
+        mpiprint("%s: out_edges = %s" % (self.name, self.out_edges))
+
+
         self.mpi = MPI_info()
+        self.local_subsystems = []  # subsystems in the same process
+        self.all_subsystems = []
         self.mpi.requested_cpus = None
         self.all_variables = OrderedDict() # dict of all vars used in data xfer
         self.vector_vars = OrderedDict() # all vars used in vectors
@@ -39,30 +62,7 @@ class System(object):
         self.app_ordering = None
         self.scatter_full = None
         self.scatter_partial = None
-        self.solver = None
 
-    def get_inputs(self, local=False):
-        # the full set of inputs is stored in the 
-        # metadata of this System's graph.
-        # data = self.graph.graph
-        # return data.get('inputs',set()).union(data.get('drv_inputs',set()))
-        if local:
-            systems = self.subsystems
-        else:
-            systems = self.get_all_subsystems()
-
-        inputs = set()
-        data = self.graph.node
-        for sub in systems:
-            inputs.update(data[sub.parent_node]['inputs'])
-            inputs.update(data[sub.parent_node]['drv_inputs'])
-        return inputs
-
-    def get_outputs(self):
-        # the full set of outputs is stored in the 
-        # metadata of this System's graph.
-        return self.graph.graph.get('outputs',set())
-        
     def get_req_cpus(self):
         return self.mpi.requested_cpus
 
@@ -71,23 +71,27 @@ class System(object):
 
         self.all_variables = OrderedDict()
 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.setup_variables()
-
             #mpiprint("%s for SUB %s, adding vars %s" % (self.name,sub.name,sub.all_variables.keys()))
             self.all_variables.update(sub.all_variables)
+
+        #mpiprint("%s: inputs = %s" % (self.name, self.get_inputs(local=True)))
+        #mpiprint("%s: outputs = %s" % (self.name, self.get_outputs()))
 
         for vname in chain(sorted(self.get_inputs(local=True)), 
                            sorted(self.get_outputs())):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
                 self.all_variables[vname] = { 'size': 0 }
-        
+
+        #mpiprint("%s: all_variables = %s" % (self.name, self.all_variables.keys()))
+                    
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for 
         those that are local.
         """
-        mpiprint("setup_sizes: %s" % self.name)
+        #mpiprint("setup_sizes: %s" % self.name)
         comm = self.mpi.comm
         if MPI and comm == MPI.COMM_NULL:
             return
@@ -97,12 +101,12 @@ class System(object):
 
         # pass the call down to any subdrivers/subsystems
         # and subassemblies. 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.setup_sizes()
 
         sizes_add, sizes_noadd, noflat = _partition_vars(self.all_variables)
 
-        #mpiprint("in %s, add=%s, noadd = %s" % (self.name,sizes_add,sizes_noadd))
+        mpiprint("in %s, add=%s, noadd = %s, noflat=%s" % (self.name,sizes_add,sizes_noadd,noflat))
 
         # create an (nproc x numvars) var size vector containing 
         # local sizes across all processes in our comm
@@ -142,12 +146,12 @@ class System(object):
             comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
         #mpiprint("%s input_sizes: %s" % (self.name, self.input_sizes))
-            
+
     def setup_vectors(self, arrays):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        mpiprint("setup_vectors: %s" % self.name)
+        #mpiprint("setup_vectors: %s" % self.name)
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
 
@@ -175,7 +179,7 @@ class System(object):
         self.vec['p'].dump('p')
 
         start, end = 0, 0
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
             end += sz
             if end-start > arrays['u'][start:end].size:
@@ -187,16 +191,44 @@ class System(object):
 
         return self.vec
 
-    def get_all_subsystems(self):
-        for node, data in self.graph.nodes_iter(data=True):
-            sub = data.get('system')
-            if sub is not None:
-                yield sub
+    def scatter(self, srcvecname, destvecname, subsystem=None):
+        """ Perform data transfer (partial or full scatter or
+        send/receive for data that isn't flattenable to a 
+        float array.
+        """
+        if subsystem is None:
+            scatter = self.scatter_full
+        else:
+            scatter = subsystem.scatter_partial
 
-    def get_simple_subsystems(self):
-        for sub in self.get_all_subsystems():
-            if isinstance(sub, SimpleSystem):
-                yield sub
+        if not scatter is None:
+            #if subsystem is not None:
+            #    sub = "(sub=%s)" % subsystem.name
+            #else:
+            #    sub = ''
+            #mpiprint("scatter: %s %s  %s" % (self.name, sub,scatter.scatter_conns))
+
+            srcvec = self.vec[srcvecname]
+            destvec = self.vec[destvecname]
+
+            #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
+            scatter(self, srcvec, destvec) #, reverse=??)
+
+            # copy dest vector values back into local src vector after
+            # scatter since other systems share parts of the src
+            # vector (via shared views) with this system.
+            # FIXME: make sure we're not duplicating copy operation because
+            #        in some cases we copy vector values back and forth from
+            #        scoping Assembly...
+            srcvec = self.vec[srcvecname]
+            destvec = self.vec[destvecname]
+            subvars = destvec._subvars
+            for name, (array, start) in destvec._info.items():
+                if name not in subvars:
+                    #mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
+                    srcvec[name][:] = array
+
+        return scatter
 
     def dump_subsystem_tree(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -204,7 +236,7 @@ class System(object):
         into SerialSystems and ParallelSystems).  It shows which
         components run on the current processor.
         """
-        mpiprint("dump_subsystem_tree: %s" % self.name)
+        #mpiprint("dump_subsystem_tree: %s" % self.name)
         if stream is None:
             getval = True
             stream = StringIO()
@@ -238,79 +270,25 @@ class System(object):
                 stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds(v))))
 
         nest += 4
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.dump_subsystem_tree(nest, stream)
 
         return stream.getvalue() if getval else None
 
-    def scatter(self, srcvecname, destvecname, subsystem=None):
-        """ Perform data transfer (partial or full scatter or
-        send/receive for data that isn't flattenable to a 
-        float array.
-        """
-        if subsystem is None:
-            scatter = self.scatter_full
-        else:
-            scatter = subsystem.scatter_partial
-
-        if not scatter is None:
-            if subsystem is not None:
-                sub = "(sub=%s)" % subsystem.name
-            else:
-                sub = ''
-            mpiprint("scatter: %s %s  %s" % (self.name, sub,scatter.scatter_conns))
-
-            srcvec = self.vec[srcvecname]
-            destvec = self.vec[destvecname]
-
-            #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
-            scatter(self, srcvec, destvec) #, reverse=??)
-
-            # copy dest vector values back into local src vector after
-            # scatter since other systems share parts of the src
-            # vector (via shared views) with this system.
-            # FIXME: make sure we're not duplicating copy operation because
-            #        in some cases we copy vector values back and forth from
-            #        scoping Assembly...
-            srcvec = self.vec[srcvecname]
-            destvec = self.vec[destvecname]
-            subvars = destvec._subvars
-            for name, (array, start) in destvec._info.items():
-                if name not in subvars:
-                    mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
-                    srcvec[name][:] = array
-
-        return scatter
-
-    def _dump_graph(self, recurse=True, indent=0):
-        tab = ' '*indent
-        mpiprint(tab+"GRAPH DUMP (%s) for %s" % (self.__class__.__name__,self.name))
-        for node, data in self.graph.nodes_iter(data=True):
-            mpiprint(tab+"%s: %s" % (str(node), {'inputs':data['inputs'],'outputs':data['outputs'],'drv_inputs':data.get('drv_inputs',())}))
-        for u,v,data in self.graph.edges_iter(data=True):
-            mpiprint(tab+"(%s,%s): %s" % (u,v,{'var_edges':data['var_edges']}))
-        if recurse:
-            for sub in self.get_all_subsystems():
-                sub._dump_graph(recurse, indent+4)
-
 
 class SimpleSystem(System):
     """A System for a single Component."""
-    def __init__(self, graph, scope, comp):
-        super(SimpleSystem, self).__init__(graph, scope, comp.name)
-        data = self.graph.node[self.name]
-        self.graph.graph.setdefault('inputs', set()).update(data['inputs'])
-        self.graph.graph.setdefault('drv_inputs',set()).update(data.get('drv_inputs',()))
-        self.graph.graph.setdefault('outputs', set()).update(data['outputs'])
+    def __init__(self, depgraph, comp):
+        super(SimpleSystem, self).__init__(depgraph, (comp.name,))
         self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
 
     def get_inputs(self, local=False):
-        inputs = set()
-        inputs.update(self.graph.graph.get('inputs',()))
-        inputs.update(self.graph.graph.get('drv_inputs',()))
-        return inputs
+        return [v for u,v in self.in_edges]
+
+    def get_outputs(self, local=False):
+        return [u for u,v in self.out_edges]
 
     def run(self):
         comp = self._comp
@@ -318,7 +296,7 @@ class SimpleSystem(System):
         # if not isinstance(comp, PseudoComponent):
         #     comp.set_itername('%s-%d' % (iterbase, 1))
 
-        mpiprint("%s.run  (system)" % comp.name)
+        #mpiprint("%s.run  (system)" % comp.name)
         self.scatter('u','p')
         if self._comp.parent is not None and 'p' in self.vec:
             self.vec['p'].set_to_scope(self._comp.parent)
@@ -331,14 +309,16 @@ class SimpleSystem(System):
         #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
     def setup_communicators(self, comm, scope):
-        size = comm.size if MPI else 1
-        mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
+        #size = comm.size if MPI else 1
+        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self.mpi.comm = comm
-        self.subsystems = []
 
     def setup_variables(self):
-        mpiprint("setup_variables: %s" % self.name)
+        #mpiprint("setup_variables: %s" % self.name)
+
         super(SimpleSystem, self).setup_variables()
+
+        mpiprint("%s: all_vars = %s" % (self.name, self.all_variables.keys()))
         comp = self._comp
         for name, vdict in self.all_variables.items():
             cname, vname = name.split('.',1)
@@ -356,7 +336,7 @@ class SimpleSystem(System):
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        mpiprint("setup_scatters: %s" % self.name)
+        #mpiprint("setup_scatters: %s" % self.name)
         rank = self.mpi.rank
         start = numpy.sum(self.input_sizes[:rank])
         end = numpy.sum(self.input_sizes[:rank+1])
@@ -381,9 +361,8 @@ class SimpleSystem(System):
                                 (len(src_idxs), len(dest_idxs), src_idxs, dest_idxs, self.name))
         
         if scatter_conns or other_conns:
-            self.scatter_full = DataTransfer(self, src_idxs, dest_idxs, scatter_conns, other_conns)
-
-        #call_if_found(self._comp, 'setup_scatters')
+            self.scatter_full = DataTransfer(self, src_idxs, dest_idxs, 
+                                             scatter_conns, other_conns)
 
     def apply_F(self):
         self.scatter('u','p')
@@ -400,7 +379,7 @@ class SimpleSystem(System):
 class ExplicitSystem(SimpleSystem):
     def apply_F(self):
         """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
-        mpiprint("%s.apply_F" % self.name)
+        #mpiprint("%s.apply_F" % self.name)
         vec = self.vec
         self.scatter('u','p')
         comp = self._comp
@@ -411,22 +390,23 @@ class ExplicitSystem(SimpleSystem):
         comp.run()
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
-        mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
-        mpiprint("=== F vector for %s after: %s" % (comp.name,self.vec['f'].items()))
+        #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
+        #mpiprint("=== F vector for %s after: %s" % (comp.name,self.vec['f'].items()))
         vec['f'].array[:] -= vec['u'].array[:]
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
 
-# TODO: possibly get rid of DriverSystem and AssemblySystem and move all
-# subsystem related stuff from System down into CompoundSystem
-
+# FIXME: probably not all Driver systems should be explicit...
 class DriverSystem(ExplicitSystem):
     """A System for a Driver component."""
 
+    def __init__(self, depgraph, comp):
+        super(DriverSystem, self).__init__(depgraph, comp)
+
     def setup_communicators(self, comm, scope):
-        size = comm.size if MPI else 1
-        mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
+        #size = comm.size if MPI else 1
+        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self._comp.setup_communicators(self.mpi.comm, scope)
 
     def setup_variables(self):
@@ -471,31 +451,55 @@ class AssemblySystem(ExplicitSystem):
         self._comp.setup_scatters()
 
 
-class InnerAssemblySystem(System):
-    """A system to handle data transfer to/from an Assembly
-    boundary to/from its inner components.
-    """
-    def __init__(self, graph, scope, name):
-        super(InnerAssemblySystem, self).__init__(graph, scope, name)
-
-	# TODO: finish this...
-
-
 class CompoundSystem(System):
     """A System that has subsystems."""
 
-    def __init__(self, graph, scope, wflow, parent_node):
-        super(CompoundSystem, self).__init__(graph, scope, parent_node)
-        self._ordering = [c.name for c in wflow]
-        for node in self.graph.nodes_iter():
-            if isinstance(node, basestring):
-                _create_simple_sys(graph, scope, node)
+    def __init__(self, depgraph, subg):
+        super(CompoundSystem, self).__init__(depgraph, subg.nodes())
+        self.driver = None
+        self.graph = subg
+        try:
+            self._ordering = nx.topological_sort(subg)
+        except nx.NetworkXUnfeasible:
+            # don't modify real graph
+            g = subg.subgraph(subg.nodes())
+            break_cycles(g)
+            self._ordering = nx.topological_sort(g)
+
+    def get_inputs(self, local=False):
+        if local:
+            systems = self.local_subsystems
+        else:
+            systems = self.all_subsystems
+
+        inputs = set()
+        for sub in systems:
+            inputs.update(sub.get_inputs())
+        return inputs
+
+    def get_outputs(self, local=False):
+        # the full set of outputs is stored in the 
+        # metadata of this System's graph.
+        if local:
+            systems = self.local_subsystems
+        else:
+            systems = self.all_subsystems
+
+        outputs = set()
+        for sub in systems:
+            outputs.update(sub.get_outputs())
+        return outputs
+        
+    def get_simple_subsystems(self):
+        for sub in self.all_subsystems:
+            if isinstance(sub, SimpleSystem):
+                yield sub
 
     def setup_scatters(self):
         """ Defines a scatter for args at this system's level """
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        mpiprint("setup_scatters: %s" % self.name)
+        #mpiprint("setup_scatters: %s" % self.name)
         var_sizes = self.local_var_sizes
         input_sizes = self.input_sizes
         rank = self.mpi.rank
@@ -539,23 +543,18 @@ class CompoundSystem(System):
             dest_partial = []
             scatter_conns = []
             other_conns = []  # non-flattenable vars
-            if subsystem in self.subsystems:
-                var_edges = []
+            if subsystem in self.local_subsystems:
+                var_edges = subsystem.in_edges[:]
                 
-                # data connection scatters
-                for u,v,edata in self.graph.in_edges_iter(node, data=True):
-                    var_edges.extend(edata['var_edges'])
-                    
-                # boundary scatters
-                bins = self.graph.graph['boundary_ins']
-                for n in simple_node_iterator(node):
-                    if n in bins:
-                        var_edges.extend(bins[n])
-                    
+                ## data connection scatters
+                # for u,v,edata in self.graph.in_edges_iter(node, data=True):
+                #     var_edges.extend(edata['var_edges'])
+                 
                 for src, dest in var_edges:
                     try:
                         isrc = varkeys.index(src)
                     except ValueError:
+                        mpiprint("system %s: couldn't find %s in %s" % (self.name, [src,dest], varkeys))
                         other_conns.append((src, dest))
                         other_conns_full.append((src, dest))
                     else:
@@ -569,22 +568,20 @@ class CompoundSystem(System):
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
 
-                # Now add scatters for driver inputs
-                for drv_input in data.get('drv_inputs',[]):
-                    if drv_input in self.vec['p']:
-                        isrc = varkeys.index(drv_input)
-                        dest_idxs = self.vec['p'].indices(drv_input)
-                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
-                                          petsc_linspace(0, dest_idxs.shape[0])
-                        scatter_conns.append((drv_input,drv_input))
-                        scatter_conns_full.append((drv_input,drv_input))
-                        src_partial.append(src_idxs)
-                        dest_partial.append(dest_idxs)
+                # # Now add scatters for driver inputs
+                # for drv_input in data.get('drv_inputs',[]):
+                #     if drv_input in self.vec['p']:
+                #         isrc = varkeys.index(drv_input)
+                #         dest_idxs = self.vec['p'].indices(drv_input)
+                #         src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
+                #                           petsc_linspace(0, dest_idxs.shape[0])
+                #         scatter_conns.append((drv_input,drv_input))
+                #         scatter_conns_full.append((drv_input,drv_input))
+                #         src_partial.append(src_idxs)
+                #         dest_partial.append(dest_idxs)
                         
                 src_full.extend(src_partial)
                 dest_full.extend(dest_partial)
-            else:
-                mpiprint("%s is not a subsystem!" % subsystem.name)
 
             #mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
             #                                                  src_partial, dest_partial))
@@ -597,51 +594,48 @@ class CompoundSystem(System):
             self.scatter_full = DataTransfer(self, src_full, dest_full, 
                                              scatter_conns_full, other_conns_full)
 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.setup_scatters()
 
     def apply_F(self):
         """ Delegate to subsystems """
-        mpiprint("%s.apply_F" % self.name)
+        #mpiprint("%s.apply_F" % self.name)
         self.scatter('u','p')
-        for subsystem in self.subsystems:
+        for subsystem in self.local_subsystems:
             subsystem.apply_F()
-        mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
-        mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))        
+        #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
+        #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))        
 
 
 class SerialSystem(CompoundSystem):
 
     def get_req_cpus(self):
         cpus = []
-        for node, data in self.graph.nodes_iter(data=True):
-            cpus.append(data['system'].get_req_cpus())
+        for sub in self.all_subsystems:
+            cpus.append(sub.get_req_cpus())
         self.mpi.requested_cpus = max(cpus+[1])
         return self.mpi.requested_cpus
 
     def run(self):
-        if self.solver is None:
-            mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.subsystems]))
-            for sub in self.subsystems:
-                self.scatter('u', 'p', sub)
-                sub.run()
-        # else solver directly runs our subsystems
+        #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems]))
+        for sub in self.local_subsystems:
+            self.scatter('u', 'p', sub)
+            sub.run()
 
     def setup_communicators(self, comm, scope):
         if comm is not None:
             mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
-        self.subsystems = []
+        self.local_subsystems = []
 
-        mpiprint("setup_comms Split (serial)")
+        #mpiprint("setup_comms Split (serial)")
         self.mpi.comm = comm #get_comm_if_active(self, comm)
         #if self.mpi.comm == MPI.COMM_NULL:
         #    return
 
-        for name in self._ordering: # must use order from parent workflow
-            if name in self.graph:
-                sub = self.graph.node[name]['system']
-                self.subsystems.append(sub)
-                sub.setup_communicators(self.mpi.comm, scope)
+        for name in self._ordering:
+            sub = self.graph.node[name]['system']
+            self.local_subsystems.append(sub)
+            sub.setup_communicators(self.mpi.comm, scope)
 
 
 class ParallelSystem(CompoundSystem):
@@ -656,21 +650,19 @@ class ParallelSystem(CompoundSystem):
         return cpus
  
     def run(self):
-        if self.solver is None:
-            mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.subsystems]))
-            # don't scatter unless we contain something that's actually 
-            # going to run
-            if not self.subsystems:
-                return
+        #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_subsystems]))
+        # don't scatter unless we contain something that's actually 
+        # going to run
+        if not self.local_subsystems:
+            return
 
-            self.scatter('u', 'p')
+        self.scatter('u', 'p')
 
-            for sub in self.subsystems:
-                sub.run()
-        # else solver directly runs our subsystems
+        for sub in self.local_subsystems:
+            sub.run()
 
     def setup_communicators(self, comm, scope):
-        mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+        #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         size = comm.size
         rank = comm.rank
@@ -708,7 +700,7 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("requested_procs: %s" % requested_procs)
         #mpiprint("assigned_procs: %s" % assigned_procs)
 
-        self.subsystems = []
+        self.local_subsystems = []
 
         for i,sub in enumerate(subsystems):
             if requested_procs[i] > 0 and assigned_procs[i] == 0:
@@ -723,7 +715,7 @@ class ParallelSystem(CompoundSystem):
             color.extend([MPI.UNDEFINED]*(size-assigned))
 
         rank_color = color[rank]
-        mpiprint("setup_comms Split (par)")
+        #mpiprint("setup_comms Split (par)")
         sub_comm = comm.Split(rank_color)
 
         if sub_comm == MPI.COMM_NULL:
@@ -732,25 +724,25 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("RANKCOLOR: %d,  COLOR: %s, comm.size: %d, subcomm.size: %d" % (rank_color, color,comm.size,sub_comm.size))
         for i,sub in enumerate(subsystems):
             if i == rank_color:
-                self.subsystems.append(sub)
+                self.local_subsystems.append(sub)
             elif requested_procs[i] == 0:  # sub is duplicated everywhere
-                self.subsystems.append(sub)
+                self.local_subsystems.append(sub)
 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.setup_communicators(sub_comm, scope)
              
     def setup_variables(self):
         """ Determine variables from local subsystems """
-        mpiprint("setup_variables: %s" % self.name)
+        #mpiprint("setup_variables: %s" % self.name)
         self.all_variables = OrderedDict()
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             sub.setup_variables()
 
-        if self.subsystems:
-            sub = self.subsystems[0]
+        if self.local_subsystems:
+            sub = self.local_subsystems[0]
             names = sub.all_variables.keys()
         else:
             sub = None
@@ -763,41 +755,50 @@ class ParallelSystem(CompoundSystem):
             for name in varkeys:
                 self.all_variables[name] = { 'size': 0 }
 
-        for sub in self.subsystems:
+        for sub in self.local_subsystems:
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
 
-def _create_simple_sys(g, scope, name):
+class InnerAssemblySystem(CompoundSystem):
+    """A system to handle data transfer to/from an Assembly
+    boundary to/from its inner components.
+    """
+    def __init__(self, depgraph, nodes):
+        super(InnerAssemblySystem, self).__init__(depgraph, nodes)
+        # since nodes given to us were boundary nodes instead of
+        # all of the nodes INSIDE of this system, we need
+        # to flip in_edges and out_edges
+        self.in_edges, self.out_edges = self.out_edges, self.in_edges
+
+    # TODO: finish this...
+
+
+def _create_simple_sys(depgraph, scope, name):
     comp = getattr(scope, name)
-    subg = _precollapse(scope, g, (name,), newname=name)
 
     if has_interface(comp, IDriver):
-        sub = DriverSystem(subg, scope, comp)
+        sub = DriverSystem(depgraph, comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(subg, scope, comp)
+        sub = AssemblySystem(depgraph, comp)
     elif has_interface(comp, IImplicitComponent):
-        sub = SimpleSystem(subg, scope, comp)
+        sub = SimpleSystem(depgraph, comp)
     else:
-        sub = ExplicitSystem(subg, scope, comp)
-    node = g.node[name]
-    node['system'] = sub
-    node['inputs'] = sub.get_inputs()
-    node['drv_inputs'] = sub.graph.graph.get('drv_inputs',[])
-    node['outputs'] = sub.get_outputs()
+        sub = ExplicitSystem(depgraph, comp)
+    return sub
 
 def partition_subsystems(g, scope, wflow):
     return g
 
-def partition_mpi_subsystems(g, scope, wflow):
-    """Return a nested graph with metadata for parallel
+def partition_mpi_subsystems(depgraph, cgraph, scope):
+    """Return a nested system graph with metadata for parallel
     and serial subworkflows.  Graph must acyclic. All subdriver
     iterations sets must have already been collapsed.
     
     """
-    if len(g) < 2:
-        return g
+    if len(cgraph) < 2:
+        return cgraph
 
-    gcopy = g.copy()
+    gcopy = cgraph.copy()
 
     to_remove = []
 
@@ -820,134 +821,29 @@ def partition_mpi_subsystems(g, scope, wflow):
             for branch in parallel_group:
                 if isinstance(branch, tuple):
                     to_remove.extend(branch)
-                    subg = _precollapse(scope, g, branch)
-                    partition_mpi_subsystems(subg, scope, wflow)
+                    subg = cgraph.subgraph(branch)  #_precollapse(scope, g, branch)
+                    partition_mpi_subsystems(depgraph, subg, scope)
                     #mpiprint("%d adding system for %s %s" % (id(g),type(branch),str(branch)))
-                    g.node[branch]['system'] = SerialSystem(subg, scope, wflow, branch)
+                    cgraph.add_node(branch, system=SerialSystem(depgraph, subg))
                     gcopy.remove_nodes_from(branch)
                 else: # single comp system
                     gcopy.remove_node(branch)
 
             parallel_group = tuple(sorted(parallel_group))
             to_remove.extend(parallel_group)
-            subg = _precollapse(scope, g, parallel_group)
+            subg = cgraph.subgraph(parallel_group)  #_precollapse(scope, g, parallel_group)
             #mpiprint("%d adding system for %s %s" % (id(g),type(parallel_group),str(parallel_group)))
-            g.node[parallel_group]['system'] = ParallelSystem(subg, scope, wflow, parallel_group)
+            cgraph.add_node(parallel_group, 
+                       system=ParallelSystem(depgraph, subg))
         elif len(zero_in_nodes) == 1:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
-        else: # circular
-            # break cycles
-            #break_cycles(g)
+        else: # circular - no further splitting
             break
 
     # Now remove all of the old nodes
-    g.remove_nodes_from(to_remove)
+    cgraph.remove_nodes_from(to_remove)
 
-    return g
-
-    
-def collapse_subdrivers(g, driver):
-    """collapse subdriver iteration sets into single nodes."""
-    # collapse all subdrivers (recursively) 
-    scope = driver.parent
-    wfnames = driver.workflow.get_names(full=True)
-    for child_drv in driver.subdrivers():
-        iterset = [c.name for c in child_drv.iteration_set()
-                    if c.name not in wfnames]
-        iterset.append(child_drv.name)
-        #mpiprint("%s: iterset = %s" % (child_drv.name,iterset))
-        _precollapse(scope, g, iterset, newname=child_drv.name)
-        iterset.remove(child_drv.name)
-        g.remove_nodes_from(iterset)
-        #mpiprint("post-collapse: %s" % g.nodes())
-
-def _expand_tuples(nodes):
-    lst = []
-    stack = list(nodes)
-    while stack:
-        node = stack.pop()
-        if isinstance(node, tuple):
-            stack.extend(node)
-        else:
-            lst.append(node)
-    return lst
-
-def _get_boundary_io(g, nodes, newname):
-    """Return xfers, inputs, and outputs for the
-    combined node composed of all of the given nodes.
-    """
-    inputs = set()
-    outputs = set()
-    xfers = {}
-
-    # the component graph connection edges contain 'var_edges' metadata
-    # that contains all variable connections that were collapsed into
-    # each system connection.
-    nset = set(nodes)
-    opp = set(g.nodes_iter())-nset
-
-    # get all incoming and outgoing boundary edges
-    out_edges = edge_boundary(g, nodes)
-    in_edges = edge_boundary(g, opp)
-
-    for u,v in out_edges:
-        var_edges = g.edge[u][v].get('var_edges', ())
-        xfers.setdefault((newname, v), set()).update(var_edges)
-        outputs.update([u for u,v in var_edges])
-
-    for u,v in in_edges:
-        var_edges = g.edge[u][v].get('var_edges', ())
-        xfers.setdefault((u, newname), set()).update(var_edges)
-        inputs.update([v for u,v in var_edges])
-
-    return xfers, inputs, outputs
-
-def _precollapse(scope, g, nodes, newname=None):
-    """Update all metadata and create new combined nodes based
-    on the named nodes, but don't actually remove the old nodes.
-    Returns a subgraph containing only the specified nodes.
-    """
-    if newname is None:
-        if len(nodes) > 1:
-            # combine node names into a single tuple if new name not given
-            newname = tuple(nodes)
-        else:
-            newname = nodes[0]
-
-    # create a subgraph containing all of the collapsed nodes
-    # inside of the new node
-    subg = g.subgraph(nodes).copy()
-
-    #mpiprint("collapsing %s" % list(nodes))
-
-    g.add_node(newname)
-
-    xfers, inputs, outputs = _get_boundary_io(g, nodes, newname)
-
-    g.add_edges_from(xfers.keys())
-
-    # save the collapsed edges in the metadata of the new edges
-    # so each subsystem knows what its inputs and outputs are
-    for edge, var_edges in xfers.items():
-        g[edge[0]][edge[1]]['var_edges'] = var_edges
-
-    # update our driver inputs with driver inputs from child nodes
-    drv_inputs = set()
-    for node, data in subg.nodes_iter(data=True):
-        drv_inputs.update(data.get('drv_inputs',()))
-
-    subg.graph['inputs'] = inputs.copy()
-    subg.graph['outputs'] = outputs.copy()
-    subg.graph['drv_inputs'] = drv_inputs.copy()
-    subg.graph['boundary_ins'] = g.graph['boundary_ins'].copy()
-    subg.graph['boundary_outs'] = g.graph['boundary_outs'].copy()
-
-    g.node[newname]['inputs'] = inputs.copy()
-    g.node[newname]['drv_inputs'] = drv_inputs.copy()
-    g.node[newname]['outputs'] = outputs.copy()
-
-    return subg
-
+    return cgraph
 
 def get_branch(g, node, visited=None):
     """Return the full list of nodes that branch *exclusively*
@@ -994,10 +890,14 @@ def _partition_vars(vardict):
             base = name.split('[', 1)[0]
             if base in nameset:
                 nosizes.append(name)
+                #mpiprint("adding %s to nosizes, %s" % (name, nameset))
+            else:
+                sizes.append(name)
         else:
             base = name
             if base.rsplit('.', 1)[0] in nameset:
                 nosizes.append(name)
+                #mpiprint("adding %s to nosizes, %s" % (name, nameset))
             else:
                 sizes.append(name)
 
@@ -1027,7 +927,7 @@ def get_comm_if_active(obj, comm):
     return newcomm
 
 
-def simple_node_iterator(nodes):
+def simple_node_iter(nodes):
     """Return individual nodes from an iterator containing nodes and 
     iterators of nodes.
     """
@@ -1038,5 +938,5 @@ def simple_node_iterator(nodes):
         if isinstance(node, basestring):
             yield node
         else:
-            for n in simple_node_iterator(node):
+            for n in simple_node_iter(node):
                 yield n

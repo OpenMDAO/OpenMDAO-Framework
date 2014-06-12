@@ -188,7 +188,7 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-def is_drv_connection(graph, src, dest, driver):
+def is_drv_connection(graph, src, dest, driver=True):
     try:
         if driver is True: # True for any driver
             return 'drv_conn' in graph.edge[src][dest]
@@ -714,12 +714,18 @@ class DependencyGraph(nx.DiGraph):
         else:
             return full
 
-    def full_subgraph(self, nodes):
+    def full_subgraph(self, nodes, add_boundary=False):
         """Returns the subgraph specified by the given component
         or pseudocomp nodes and any variable or expr nodes
-        corresponding to those nodes.
+        corresponding to those nodes.  If add_boundary is True,
+        any boundary nodes will also be included in the subgraph.
         """
-        return self.subgraph(self.find_prefixed_nodes(nodes))
+        if add_boundary:
+            return self.subgraph(chain(self.find_prefixed_nodes(nodes),
+                                       self.get_boundary_inputs(),
+                                       self.get_boundary_outputs()))
+        else:
+            return self.subgraph(self.find_prefixed_nodes(nodes))
 
     def _comp_connections(self, cname, direction=None):
         conns = []
@@ -812,44 +818,24 @@ class DependencyGraph(nx.DiGraph):
         """Return a subgraph containing only Components
         and PseudoComponents and edges between them.
         """
-        if self._component_graph is not None:
-            return self._component_graph
+        if self._component_graph is None:
+            compset = set(self.all_comps())
 
-        compset = set(self.all_comps())
+            g = nx.DiGraph()
 
-        g = nx.DiGraph()
-        g.graph['boundary_ins'] = {}  # for edges from Assembly boundary
-        g.graph['boundary_outs'] = {}  # for edges to Assembly boundary
+            for comp in compset:
+                g.add_node(comp, self.node[comp].copy())
 
-        for comp in compset:
-            g.add_node(comp, self.node[comp].copy())
-            g.node[comp]['inputs'] = set()
-            g.node[comp]['outputs'] = set()
+            for src, dest in self.list_connections():
+                destcomp = dest.split('.', 1)[0]
+                srccomp =  src.split('.', 1)[0]
 
-        # create 'var_edges' metadata in graph edges to 
-        # indicate which edges from the variable graph have
-        # been collapsed, and mark active inputs and outputs
-        # in node metadata.
-        for src, dest in self.list_connections():
-            destcomp = dest.split('.', 1)[0]
-            srccomp =  src.split('.', 1)[0]
+                if srccomp in compset and destcomp in compset:
+                    g.add_edge(srccomp, destcomp)
 
-            if srccomp in compset and destcomp in compset:
-                g.add_edge(srccomp, destcomp)
-                g[srccomp][destcomp].setdefault('var_edges',[]).append((src,dest))
-            elif is_boundary_node(self, src):
-                g.graph['boundary_ins'].setdefault(destcomp, []).append((src,dest))
-            elif is_boundary_node(self, dest):
-                g.graph['boundary_outs'].setdefault(srccomp, []).append((src,dest))
+            self._component_graph = g
 
-            if srccomp in compset:
-                g.node[srccomp]['outputs'].add(src)
-
-            if destcomp in compset:
-                g.node[destcomp]['inputs'].add(dest)
-        
-        self._component_graph = g
-        return g
+        return self._component_graph
 
     def order_components(self, comps):
         """Return a list of the given components, sorted in
@@ -1036,6 +1022,10 @@ class DependencyGraph(nx.DiGraph):
         to_remove = [v for v in self.nodes_iter()
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
+
+    # The following group of methods are overridden so we can
+    # call config_changed when the graph structure is modified
+    # in any way.
 
     def add_node(self, n, attr_dict=None, **attr):
         super(DependencyGraph, self).add_node(n,
@@ -1817,8 +1807,7 @@ def get_missing_derivs(obj, recurse=True):
 
 def break_cycles(graph):
     """Breaks up a cyclic graph and returns a list of severed
-    edges. Also sets that list of edges into the top level
-    graph metadata as 'severed_edges'. The severed edges list
+    edges. The severed edges list
     is a list of tuples of the form [(u,v,metadata), ...]
     """
     severed_edges = []
@@ -1847,7 +1836,23 @@ def break_cycles(graph):
                 severed_edges.append((u,v,meta))
                 break
 
-    graph.graph['severed_edges'] = severed_edges[:]
-
     return severed_edges
 
+def get_graph_partition(g, nodes):
+    """Returns a tuple of the form (subnodes, in_edges, out_edges),
+    where subnodes is the full node set containing the given nodes
+    and any that they own (e.g., if a node is a comp node,
+    subnodes will include comp node and all of its var and
+    subvar nodes) and in_edges and out_edges are boundary
+    edges between the subnodes and the rest of the full graph.
+    """
+    if isinstance(g, DependencyGraph):
+        subnodes = g.find_prefixed_nodes(nodes)
+    else:
+        subnodes = nodes
+    others = set(g.nodes_iter()).difference(subnodes)
+    out_edges = nx.edge_boundary(g, subnodes)
+    in_edges = nx.edge_boundary(g, others)
+    
+    return subnodes, in_edges, out_edges
+        

@@ -122,7 +122,7 @@ class VecWrapper(object):
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
                 array_val[:] = scope.get_flattened_value(name)
-                mpiprint("getting %s (%s) from scope" % (name, array_val))
+                #mpiprint("getting %s (%s) from scope" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -134,7 +134,7 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
+                #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
            
     def dump(self, vecname):
@@ -170,7 +170,7 @@ class DataTransfer(object):
         if not (scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        #mpiprint("scatter_conns: %s" % scatter_conns)
+        mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
         merged_vars = idx_merge(var_idxs)
         merged_inputs = idx_merge(input_idxs)
 
@@ -204,6 +204,7 @@ class DataTransfer(object):
     def __call__(self, system, srcvec, destvec, reverse=False):
 
         if self.scatter is None and not self.noflat_vars:
+            mpiprint("dataxfer is a noop for system %s" % system.name)
             return
         
         if MPI:
@@ -216,12 +217,16 @@ class DataTransfer(object):
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
         if self.scatter:
+            mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
             self.scatter.scatter(src, dest, addv=False, mode=False)
-        if MPI:
-            pass # FIXME
-        else:
-            for src, dest in self.noflat_vars:
-                system.scope.set(dest, system.scope.get(src))
+
+        if self.noflat_vars:
+            if MPI:
+                raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
+                                          self.noflat_vars) # FIXME
+            else:
+                for src, dest in self.noflat_vars:
+                    system.scope.set(dest, system.scope.get_attr(src))
         #elif system.mode == 'rev':
         #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
         #else:

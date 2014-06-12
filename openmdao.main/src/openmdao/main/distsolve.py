@@ -4,7 +4,7 @@ output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
 from openmdao.main.driver import Driver
-from openmdao.main.datatypes.api import Float, Int, Enum
+from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -52,7 +52,7 @@ class MPISolver(Driver):
         """ Computes the norm that must be driven to zero """
         raise NotImplementedError("_norm method not implemented")
 
-    def _get_param_constraint_tuples(self):
+    def _get_param_constraint_pairs(self):
         """Returns a list of tuples of the form (param, cnstraint, sign) where
         sign is 1 or -1.
         """
@@ -61,9 +61,9 @@ class MPISolver(Driver):
         for key, cnst in self.get_eq_constraints().iteritems():
             for params in pgroups:
                 if params[0] == cnst.rhs.text:
-                    pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
-                elif params[0] == cnst.lhs.text:
                     pairs.append((params[0], cnst.pcomp_name+'.out0', -1))
+                elif params[0] == cnst.lhs.text:
+                    pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
         return pairs
         
     def run_iteration(self):
@@ -71,11 +71,11 @@ class MPISolver(Driver):
         raise NotImplementedError("run_iteration method not implemented")
 
     def start_iteration(self):
-        """ Commands run before iteration """
+        """ Commands run before any iterations """
         self.current_iteration = 0
         self.normval = 1.e99
         self.norm0 = 1.e99
-        self.pairs = self._get_param_constraint_tuples()
+        self.pairs = self._get_param_constraint_pairs()
         mpiprint("PAIRS: %s" % self.pairs)
         system = self.workflow._subsystem
         system.vec['u'].set_from_scope(self.parent)
@@ -88,9 +88,11 @@ class MPISolver(Driver):
                self.normval > self.tolerance # and self.normval/self.norm0 > self.rtol:
 
     def pre_iteration(self):
+        """Runs before each iteration."""
         pass
 
     def post_iteration(self):
+        """Runs after each iteration"""
         self.normval = self._norm()
         self.current_iteration += 1
         mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
@@ -112,6 +114,13 @@ class MPINonlinearSolver(MPISolver):
         #mpiprint("f vector (post-assemble): %s" % system.vec['f'].items())
         return system.vec['f'].petsc_vec.norm()
 
+    def run_iteration(self):
+        mpiprint("NLGS running")
+        self.workflow._subsystem.run()
+        mpiprint("updating u vector with residuals")
+        self.add_constraint_residuals()
+        mpiprint("UVEC: %s" % self.workflow._subsystem.vec['u'].items())
+
     def add_constraint_residuals(self):
         uvec = self.workflow._subsystem.vec['u']
         for param, cnst, sign in self.pairs:
@@ -121,39 +130,39 @@ class MPINonlinearSolver(MPISolver):
                 uvec[param][:] -= uvec[cnst]
 
 
-class MPINonlinearGS(MPINonlinearSolver):
-    """ Nonlinear block Gauss Seidel """
+# class MPINonlinearGS(MPINonlinearSolver):
+#     """ Nonlinear block Gauss Seidel """
 
-    def run_iteration(self):
-        """ Solve each subsystem in series """
-        mpiprint("NLGS running")
-        system = self.workflow._subsystem
-        for subsystem in system.subsystems:
-            #mpiprint("=== system U vector before %s run: %s" % (subsystem.name, system.vec['u'].items()))
-            system.scatter('u','p', subsystem)
-            subsystem.run()
-            #mpiprint("=== system U vector after %s run: %s" % (subsystem.name, system.vec['u'].items()))
+#     def run_iteration(self):
+#         """ Solve each subsystem in series """
+#         mpiprint("NLGS running")
+#         system = self.workflow._subsystem
+#         for subsystem in system.local_subsystems:
+#             #mpiprint("=== system U vector before %s run: %s" % (subsystem.name, system.vec['u'].items()))
+#             system.scatter('u','p', subsystem)
+#             subsystem.run()
+#             #mpiprint("=== system U vector after %s run: %s" % (subsystem.name, system.vec['u'].items()))
 
-        # TODO: look at collecting params into contiguous view and
-        # constraints as well so we can do a fast numpy update with no
-        # copying.
+#         # TODO: look at collecting params into contiguous view and
+#         # constraints as well so we can do a fast numpy update with no
+#         # copying.
 
-        # add current value of constraint residual to params
-        self.add_constraint_residuals()
+#         # add current value of constraint residual to params
+#         self.add_constraint_residuals()
 
 
-class MPINonlinearJacobi(MPINonlinearSolver):
-    """ Nonlinear block Jacobi """
+# class MPINonlinearJacobi(MPINonlinearSolver):
+#     """ Nonlinear block Jacobi """
 
-    def run_iteration(self):
-        """ Solve each subsystem in parallel """
-        system = self.workflow._subsystem
-        system.scatter('u','p')
-        for subsystem in system.subsystems:
-            subsystem.run()
+#     def run_iteration(self):
+#         """ Solve each subsystem in parallel """
+#         system = self.workflow._subsystem
+#         system.scatter('u','p')
+#         for subsystem in system.local_subsystems:
+#             subsystem.run()
 
-        # add current value of constraint residual to params
-        self.add_constraint_residuals()
+#         # add current value of constraint residual to params
+#         self.add_constraint_residuals()
 
 
 class MPILinearSolver(MPISolver):

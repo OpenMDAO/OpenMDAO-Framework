@@ -137,7 +137,10 @@ class Assembly(Component):
         self._pseudo_count = 0  # counter for naming pseudocomps
         self._pre_driver = None
 
-        # data dependency graph
+        # data dependency graph. Includes edges for data
+        # connections as well as for all driver parameters and
+        # constraints/objectives.  This is the starting graph for
+        # all later transformations.
         self._depgraph = DependencyGraph()
 
         for name, trait in self.class_traits().items():
@@ -145,12 +148,8 @@ class Assembly(Component):
                 self._depgraph.add_boundary_var(self, name, iotype=trait.iotype)
 
         self._exprmapper = ExprMapper(self)
-        self._graph_loops = []
         self.J_input_keys = None
         self.J_output_keys = None
-
-        # # parent depgraph may have to invalidate us multiple times per pass
-        # self._invalidation_type = 'partial'
 
         # default Driver executes its workflow once
         self.add('driver', Driver())
@@ -487,21 +486,6 @@ class Assembly(Component):
             'outputs': outputs
         }
 
-    def _split_varpath(self, path):
-        """Return a tuple of compname,component,varname given a path
-        name of the form 'compname.varname'. If the name is of the form
-        'varname', then compname will be None and comp is self.
-        """
-        try:
-            compname, varname = path.split('.', 1)
-        except ValueError:
-            return (None, self, path)
-
-        t = self.get_trait(compname)
-        if t and t.iotype:
-            return (None, self, path)
-        return (compname, getattr(self, compname), varname)
-
     @rbac(('owner', 'user'))
     def check_config(self, strict=False):
         """
@@ -527,7 +511,8 @@ class Assembly(Component):
         connected_bases = allbases - unconnected_bases
 
         collisions = []
-        for drv in chain([self._top_driver], self._top_driver.subdrivers()):
+        for drv in chain([self._top_driver], 
+                          self._top_driver.subdrivers(recurse=True)):
             if has_interface(drv, IHasParameters):
                 for target in drv.list_param_targets():
                     tbase = graph.base_var(target)
@@ -577,6 +562,7 @@ class Assembly(Component):
                 self._pre_driver.parent = self
                 pre.append('driver') # run the normal top driver after running the 'pre' comps
                 self._pre_driver.workflow.add(pre)
+                self._pre_driver.name = '_pre_driver'
 
             if post:
                 errfunct("The following components are not in any workflow and WILL NOT EXECUTE: %s" 
@@ -728,7 +714,6 @@ class Assembly(Component):
                 cont.config_changed(update_parent=False)
 
         self._pre_driver = None
-        self._graph_loops = None
         self.J_input_keys = self.J_output_keys = None
 
     def _set_failed(self, path, value, index=None, force=False):
@@ -1117,9 +1102,6 @@ class Assembly(Component):
         responses   = []
 
         # list of components (name & type) in the assembly
-        # g = self._depgraph.component_graph()
-        # names = [name for name in nx.algorithms.dag.topological_sort(g)
-        #                        if not name.startswith('@')]
         names = self._depgraph.order_components(self._depgraph.all_comps())
 
         # Bubble-up drivers ahead of their parameter targets.
@@ -1380,6 +1362,9 @@ class Assembly(Component):
     #     """
     #     return graph_to_svg(self._depgraph.component_graph())
 
+    def get_depgraph(self):
+        return self._depgraph
+
     def get_comps(self):
         """Returns a list of all of objects contained in this
         Assembly implementing the IComponent interface.
@@ -1388,9 +1373,12 @@ class Assembly(Component):
         return [c for c in conts if has_interface(c, IComponent)]
 
     def setup_systems(self):
-        self._top_driver.setup_systems()
+        # dgraph = self.get_depgraph()
+        # bndry_vars = [n for n,d in dgraph.nodes_iter(data=True)
+        #                           if 'boundary' in d]
 
-    ## Distributed computing methods ##
+        # self._system = InnerAssemblySystem(bndry_vars)
+        self._top_driver.setup_systems()
 
     def get_req_cpus(self):
         """Return requested_cpus"""
@@ -1401,13 +1389,8 @@ class Assembly(Component):
         self._top_driver.setup_communicators(comm)
         
     def setup_variables(self):
+        #self._system.setup_variables(self.get_depgraph())
         self._top_driver.setup_variables()
-        # find all boundary vars (used in partition_names_by_comp
-        # to identify vartree boundary subvars).
-        bndry_vars = sorted(self._depgraph.get_boundary_inputs()) + \
-                     sorted(self._depgraph.get_boundary_outputs())
-        # FIXME: need to add boundary vars somewhere if they
-        #        connect internally
  
     def setup_sizes(self):
         """Calculate the local sizes of all relevant variables
@@ -1426,6 +1409,9 @@ class Assembly(Component):
         self._top_driver.setup_scatters()
 
     def _setup(self):
+        """This is called automatically on the top level Assembly
+        prior to execution.
+        """
         if MPI:
             try:
                 MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)

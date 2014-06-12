@@ -8,7 +8,6 @@ from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent, IVariableTree, IAssembly
 from openmdao.main.printexpr import transform_expression, print_node
-from openmdao.main.numpy_fallback import zeros
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info
 
@@ -255,10 +254,9 @@ class PseudoComponent(object):
         for src, dest in self.list_connections():
             scope.connect(src, dest)
 
-        # TODO: put this back in if we decide to add driver connections to the graph
-        # if driver is not None:
-        #     scope._depgraph.add_edge(self.name+'.out0', driver.name,
-        #                              drv_conn=True)
+        if driver is not None:
+            scope._depgraph.add_edge(self.name+'.out0', driver.name,
+                                     drv_conn=driver)
 
     def run(self, ffd_order=0):
         setattr(self, 'out0', self._srcexpr.evaluate())

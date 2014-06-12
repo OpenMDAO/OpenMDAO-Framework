@@ -14,12 +14,6 @@ import sys
 import weakref
 import re
 
-try:
-    from numpy import ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray
-
 # pylint: disable-msg=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
@@ -49,6 +43,7 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
 from openmdao.main.array_helpers import flattened_size_info
+#from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
 

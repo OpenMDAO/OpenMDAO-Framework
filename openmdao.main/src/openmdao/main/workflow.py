@@ -5,11 +5,10 @@
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
 
-from openmdao.main.mpiwrap import MPI, MPI_info
+from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_mpi_subsystems, partition_subsystems, \
-                                  collapse_subdrivers, get_comm_if_active, _create_simple_sys
-from openmdao.util.nameutil import partition_names_by_comp
+                                  get_comm_if_active, _create_simple_sys
 
 __all__ = ['Workflow']
 
@@ -241,41 +240,6 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
-
-    def get_comp_graph(self):
-        """Returns the subgraph of the component graph that contains
-        the components in this workflow, including additional connections
-        needed due to subdriver iterations.
-        """
-        if self._wf_comp_graph is None:
-            cgraph = self.scope._depgraph.component_graph().copy()
-
-            topdrv = self.scope._top_driver
-            srcs, dests = topdrv.get_expr_var_depends(recurse=True,
-                                                      refs=True)
-
-            #mpiprint("DRIVER SRCS: %s" % srcs)
-            #mpiprint("DRIVER DESTS: %s" % dests)
-            wfnames = set(self.get_names(full=True))
-            self._wf_comp_graph = wfgraph = cgraph.subgraph(wfnames)
-
-            # get ALL driver inputs and outputs and label the
-            # appropriate graph nodes so we can use that during
-            # decomposition
-            comp_ins = partition_names_by_comp(dests)
-            comp_outs = partition_names_by_comp(srcs)
-            for cname, inputs in comp_ins.items():
-                if cname in wfnames:
-                    drvins = wfgraph.node[cname].setdefault('drv_inputs',set())
-                    for inp in inputs:
-                        drvins.add('.'.join((cname,inp)))
-            for cname, outputs in comp_outs.items():
-                if cname in wfnames:
-                    drvouts = wfgraph.node[cname].setdefault('outputs',set())
-                    for out in outputs:
-                        drvouts.add('.'.join((cname,out)))
-
-        return self._wf_comp_graph
      
     ## MPI stuff ##
 
@@ -285,56 +249,51 @@ class Workflow(object):
         graph, which contains components and/or other subsystems.
         """
         scope = self.scope
+        depgraph = self._parent.get_depgraph()
 
-        #mpiprint("depgraph = %s" % self.scope._depgraph.edges())
-        #drvgraph = self.get_driver_graph()
+        cgraph = depgraph.component_graph()
+        cgraph = cgraph.subgraph(self.get_names(full=True))
 
-        # first, get the component subgraph that is limited to 
-        # the components in this workflow, but has extra edges
-        # due to driver dependencies.
-        cgraph = self.get_comp_graph().copy()
-
-        #mpiprint("cgraph1 = %s" % cgraph.edges())
-        # collapse driver iteration sets into a single node for
-        # the driver, except for nodes from their iteration set
-        # that are in the iteration set of their parent.
-        collapse_subdrivers(cgraph, self._parent)
-        #cgraph.remove_node(self._parent.name)
+        # #mpiprint("cgraph1 = %s" % cgraph.edges())
+        # # collapse driver iteration sets into a single node for
+        # # the driver, except for nodes from their iteration set
+        # # that are in the iteration set of their parent.
+        self._parent._collapse_subdrivers(cgraph)
+        # #cgraph.remove_node(self._parent.name)
 
         #mpiprint("cgraph2 = %s" % cgraph.edges())
         #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
+        # create systems for all simple components
+        for node, data in cgraph.nodes_iter(data=True):
+            if isinstance(node, basestring):
+                data['system'] = _create_simple_sys(depgraph, scope, node)
+
         # collapse the graph (recursively) into nodes representing
-        # serial and parallel subsystems
+        # subsystems
         if MPI:
-            partition_mpi_subsystems(cgraph, scope, self)
-            #mpiprint("**** %s: cgraph nodes (post-xform) = %s" % (self._parent.name,cgraph.nodes()))
-            #mpiprint("**** %s: cgraph edges (post-xform) = %s" % (self._parent.name,cgraph.edges()))
-            
-            #mpiprint("cgraph3 = %s" % cgraph.edges())
+            cgraph = partition_mpi_subsystems(depgraph, cgraph, scope)
 
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
-                    #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(cgraph, scope, self,
-                                                   tuple(sorted(cgraph.nodes())))
+                    mpiprint("creating serial top: %s" % cgraph.nodes())
+                    self._subsystem = SerialSystem(depgraph, cgraph)
                 else:
-                    #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(cgraph, scope, self,
-                                                     tuple(sorted(cgraph.nodes())))
+                    mpiprint("creating parallel top: %s" % cgraph.nodes())
+                    self._subsystem = ParallelSystem(depgraph, cgraph)
             elif len(cgraph) == 1:
                 name = cgraph.nodes()[0]
                 self._subsystem = cgraph.node[name].get('system')
-                if self._subsystem is None:
-                    _create_simple_sys(cgraph, scope, name)
-                    self._subsystem = cgraph.node[name]['system']
+                # if self._subsystem is None:
+                #     self._subsystem = _create_simple_sys(cgraph, scope)
+                #     cgraph.node[name]['system'] = self._subsystem
             else:
-                raise RuntimeError("get_subsystem called on %s.workflow but component graph is empty!" %
+                raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
                                     self._parent.get_pathname())
+
         else:
-            partition_subsystems(cgraph, scope, self)
-            self._subsystem = SerialSystem(cgraph, scope, self,
-                                           tuple(sorted(cgraph.nodes())))
+            partition_subsystems(depgraph, cgraph, scope)
+            self._subsystem = SerialSystem(depgraph, cgraph)
             
         for comp in self:
             comp.setup_systems()

@@ -132,7 +132,7 @@ class SequentialWorkflow(Workflow):
             self._names = self._explicit_names[:]
             self._iternames = self._parent._get_required_compnames()
 
-            if len(drivers) == len(comps):  # all comps are drivers
+            if len(drivers) == len(comps):  # all comps are drivers or explicit set is empty
                 iterset = set()
                 for driver in drivers:
                     iterset.update([c.name for c in driver.iteration_set()])
