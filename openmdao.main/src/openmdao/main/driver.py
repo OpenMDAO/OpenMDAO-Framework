@@ -489,11 +489,11 @@ class Driver(Component):
         """Return requested_cpus."""
         return self.workflow.get_req_cpus()
 
-    def setup_communicators(self, comm, scope=None):
+    def setup_communicators(self, comm):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self.workflow.setup_communicators(comm, self.parent)
+        self.workflow.setup_communicators(comm)
 
     def setup_variables(self):
         return self.workflow.setup_variables()

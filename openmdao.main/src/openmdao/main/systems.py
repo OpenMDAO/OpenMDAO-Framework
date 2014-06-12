@@ -21,7 +21,9 @@ def call_if_found(obj, fname, *args, **kwargs):
         return getattr(obj, fname)(*args, **kwargs)
 
 class System(object):
-    def __init__(self, depgraph, nodes):
+    def __init__(self, scope, depgraph, nodes):
+        self.scope = scope
+
         # get our I/O edges from the depgraph
         subnodes, self.in_edges, self.out_edges = \
                          get_graph_partition(depgraph, 
@@ -279,7 +281,7 @@ class System(object):
 class SimpleSystem(System):
     """A System for a single Component."""
     def __init__(self, depgraph, comp):
-        super(SimpleSystem, self).__init__(depgraph, (comp.name,))
+        super(SimpleSystem, self).__init__(comp.parent, depgraph, (comp.name,))
         self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
@@ -299,16 +301,16 @@ class SimpleSystem(System):
         #mpiprint("%s.run  (system)" % comp.name)
         self.scatter('u','p')
         if self._comp.parent is not None and 'p' in self.vec:
-            self.vec['p'].set_to_scope(self._comp.parent)
+            self.vec['p'].set_to_scope(comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
         comp.run()
         if self._comp.parent is not None and 'u' in self.vec:
-            self.vec['u'].set_from_scope(self._comp.parent)
+            self.vec['u'].set_from_scope(comp.parent)
         #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
         # for vname in chain(comp.list_inputs(connected=True), comp.list_outputs(connected=True)):
         #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
-    def setup_communicators(self, comm, scope):
+    def setup_communicators(self, comm):
         #size = comm.size if MPI else 1
         #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self.mpi.comm = comm
@@ -401,13 +403,13 @@ class ExplicitSystem(SimpleSystem):
 class DriverSystem(ExplicitSystem):
     """A System for a Driver component."""
 
-    def __init__(self, depgraph, comp):
-        super(DriverSystem, self).__init__(depgraph, comp)
+    def __init__(self, scope, depgraph, comp):
+        super(DriverSystem, self).__init__(scope, depgraph, comp)
 
-    def setup_communicators(self, comm, scope):
+    def setup_communicators(self, comm):
         #size = comm.size if MPI else 1
         #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
-        self._comp.setup_communicators(self.mpi.comm, scope)
+        self._comp.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
         super(DriverSystem, self).setup_variables()
@@ -429,8 +431,8 @@ class DriverSystem(ExplicitSystem):
 class AssemblySystem(ExplicitSystem):
     """A System to handle an Assembly."""
 
-    def setup_communicators(self, comm, scope):
-        super(AssemblySystem, self).setup_communicators(comm, None)
+    def setup_communicators(self, comm):
+        super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
 
     def setup_variables(self):
@@ -454,8 +456,8 @@ class AssemblySystem(ExplicitSystem):
 class CompoundSystem(System):
     """A System that has subsystems."""
 
-    def __init__(self, depgraph, subg):
-        super(CompoundSystem, self).__init__(depgraph, subg.nodes())
+    def __init__(self, scope, depgraph, subg):
+        super(CompoundSystem, self).__init__(scope, depgraph, subg.nodes())
         self.driver = None
         self.graph = subg
         try:
@@ -622,7 +624,7 @@ class SerialSystem(CompoundSystem):
             self.scatter('u', 'p', sub)
             sub.run()
 
-    def setup_communicators(self, comm, scope):
+    def setup_communicators(self, comm):
         if comm is not None:
             mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.local_subsystems = []
@@ -635,7 +637,7 @@ class SerialSystem(CompoundSystem):
         for name in self._ordering:
             sub = self.graph.node[name]['system']
             self.local_subsystems.append(sub)
-            sub.setup_communicators(self.mpi.comm, scope)
+            sub.setup_communicators(self.mpi.comm)
 
 
 class ParallelSystem(CompoundSystem):
@@ -661,7 +663,7 @@ class ParallelSystem(CompoundSystem):
         for sub in self.local_subsystems:
             sub.run()
 
-    def setup_communicators(self, comm, scope):
+    def setup_communicators(self, comm):
         #mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
         self.mpi.comm = comm
         size = comm.size
@@ -729,7 +731,7 @@ class ParallelSystem(CompoundSystem):
                 self.local_subsystems.append(sub)
 
         for sub in self.local_subsystems:
-            sub.setup_communicators(sub_comm, scope)
+            sub.setup_communicators(sub_comm)
              
     def setup_variables(self):
         """ Determine variables from local subsystems """
@@ -763,8 +765,8 @@ class InnerAssemblySystem(CompoundSystem):
     """A system to handle data transfer to/from an Assembly
     boundary to/from its inner components.
     """
-    def __init__(self, depgraph, nodes):
-        super(InnerAssemblySystem, self).__init__(depgraph, nodes)
+    def __init__(self, scope, depgraph, nodes):
+        super(InnerAssemblySystem, self).__init__(scope, depgraph, nodes)
         # since nodes given to us were boundary nodes instead of
         # all of the nodes INSIDE of this system, we need
         # to flip in_edges and out_edges
@@ -786,8 +788,8 @@ def _create_simple_sys(depgraph, scope, name):
         sub = ExplicitSystem(depgraph, comp)
     return sub
 
-def partition_subsystems(g, scope, wflow):
-    return g
+def partition_subsystems(depgraph, cgraph, scope):
+    return cgraph
 
 def partition_mpi_subsystems(depgraph, cgraph, scope):
     """Return a nested system graph with metadata for parallel
@@ -824,7 +826,7 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
                     subg = cgraph.subgraph(branch)  #_precollapse(scope, g, branch)
                     partition_mpi_subsystems(depgraph, subg, scope)
                     #mpiprint("%d adding system for %s %s" % (id(g),type(branch),str(branch)))
-                    cgraph.add_node(branch, system=SerialSystem(depgraph, subg))
+                    cgraph.add_node(branch, system=SerialSystem(scope, depgraph, subg))
                     gcopy.remove_nodes_from(branch)
                 else: # single comp system
                     gcopy.remove_node(branch)
@@ -834,7 +836,7 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
             subg = cgraph.subgraph(parallel_group)  #_precollapse(scope, g, parallel_group)
             #mpiprint("%d adding system for %s %s" % (id(g),type(parallel_group),str(parallel_group)))
             cgraph.add_node(parallel_group, 
-                       system=ParallelSystem(depgraph, subg))
+                       system=ParallelSystem(scope, depgraph, subg))
         elif len(zero_in_nodes) == 1:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
         else: # circular - no further splitting

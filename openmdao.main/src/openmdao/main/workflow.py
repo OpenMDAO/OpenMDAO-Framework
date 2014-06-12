@@ -277,10 +277,10 @@ class Workflow(object):
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(depgraph, cgraph)
+                    self._subsystem = SerialSystem(scope, depgraph, cgraph)
                 else:
                     mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(depgraph, cgraph)
+                    self._subsystem = ParallelSystem(scope, depgraph, cgraph)
             elif len(cgraph) == 1:
                 name = cgraph.nodes()[0]
                 self._subsystem = cgraph.node[name].get('system')
@@ -305,14 +305,14 @@ class Workflow(object):
         else:
             return self._subsystem.get_req_cpus()
 
-    def setup_communicators(self, comm, scope):
+    def setup_communicators(self, comm):
         """Allocate communicators from here down to all of our
         child Components.
         """
         self.mpi.comm = get_comm_if_active(self, comm)
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self._subsystem.setup_communicators(self.mpi.comm, scope)
+        self._subsystem.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
