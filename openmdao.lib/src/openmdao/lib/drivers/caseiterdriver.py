@@ -3,7 +3,6 @@
 
 """
 
-from copy import deepcopy
 from cStringIO import StringIO
 import logging
 import os.path
@@ -337,7 +336,10 @@ class CaseIteratorDriver(Driver):
         for i in range(length):
             inputs = []
             for j in range(len(inp_paths)):
-                inputs.append((inp_paths[j], inp_values[j][i]))
+                value = inp_values[j][i]
+                if not self.sequential and isinstance(value, VariableTree):
+                    value = value.copy()
+                inputs.append((inp_paths[j], value))
             cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_uuid))
         self.init_responses(length)
 
@@ -711,7 +713,7 @@ class CaseIteratorDriver(Driver):
         outputs = case.fetch_outputs(scope)
         for path, value in outputs:
             if self.sequential and isinstance(value, VariableTree):
-                value = deepcopy(value)
+                value = value.copy()
             path = make_legal_path(path)
             self.set('case_outputs.'+path, value,
                      index=(case.index,), force=True)

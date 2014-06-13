@@ -43,7 +43,7 @@ from openmdao.main.index import get_indexed_value, deep_hasattr, \
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
-from openmdao.main.rbac import rbac
+from openmdao.main.rbac import rbac, remote_access
 from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -1006,7 +1006,11 @@ class Container(SafeHasTraits):
             else:
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
-                    return self._get_failed(path, index)
+                    obj = self._get_failed(path, index)
+                if isinstance(obj, Container) and hasattr(obj, '_iotype') and \
+                   remote_access():
+                    # Remote access to VariableTree needs standalone copy.
+                    obj = obj.copy()
                 return obj
         else:  # has an index
             obj = getattr(self, path, Missing)
