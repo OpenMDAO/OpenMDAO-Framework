@@ -372,30 +372,6 @@ class NestedCaseTestCase(unittest.TestCase):
         self.assertEqual(len(levels[1]), self.top.asm.comp1.exec_count)
         self.assertEqual(len(levels[2]), self.top.asm.asm.comp1.exec_count)
 
-    def test_nested_workflows_simple(self):
-        from nose import SkipTest
-        raise SkipTest("New case drivers don't report nested workflows")
-
-        dbname = os.path.join(self.tdir, 'dbfile')
-        self.top = self._create_nested_workflows(dbname, SimpleCaseIterDriver)
-        self.top.run()
-        levels = self._check_cases(DBCaseIterator(dbname))
-        self.assertEqual(self.num_cases**len(levels), len(levels[-1]))
-        self.assertEqual(self.num_cases**len(levels),
-                         self.top.comp1.exec_count)
-
-    def test_nested_workflows_caseiter(self):
-        from nose import SkipTest
-        raise SkipTest("New case drivers don't report nested workflows")
-
-        dbname = os.path.join(self.tdir, 'dbfile')
-        self.top = self._create_nested_workflows(dbname, CaseIteratorDriver)
-        self.top.run()
-        levels = self._check_cases(DBCaseIterator(dbname))
-        self.assertEqual(self.num_cases**len(levels), len(levels[-1]))
-        self.assertEqual(self.num_cases**len(levels),
-                         self.top.comp1.exec_count)
-
 
 if __name__ == '__main__':
     unittest.main()

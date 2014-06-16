@@ -243,57 +243,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp1.y, 0.0)
         self.assertEqual(self.top.comp2.b_string, "Goodbye z")
 
-    def test_inoutCSV_empty_inputs(self):
-        from nose import SkipTest
-        raise SkipTest("New case drivers don't execute without inputs.")
-
-        # now create some Cases
-        outputs = ['comp1.z']
-        cases = []
-        for i in range(10):
-            cases.append(Case(inputs=[], outputs=outputs))
-        self.top.driver.clear_parameters()
-        Case.set_vartree_inputs(self.top.driver, cases)
-        self.top.driver.clear_responses()
-        self.top.driver.add_responses(outputs)
-
-        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.recorders[0].num_backups = 0
-        self.top.run()
-
-        # now use the CSV recorder as source of Cases
-        cases = [case for case in self.top.recorders[0].get_iterator()]
-        Case.set_vartree_inputs(self.top.driver, cases)
-
-        sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.run()
-        expected = [
-            'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239019.152071',
-            '   outputs:',
-            '      Response_0: 0.0',
-            '      driver.workflow.itername: 9',
-            ]
-        lines = sout.getvalue().split('\n')
-        count = 0
-        for index, line in enumerate(lines):
-            if line.startswith('Case: '):
-                count += 1
-                if count != 9:
-                    continue
-                for i in range(len(expected)):
-                    if expected[i].startswith('   uuid:'):
-                        self.assertTrue(lines[index+i].startswith('   uuid:'))
-                    elif expected[i].startswith('   timestamp:'):
-                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
-                    else:
-                        self.assertEqual(lines[index+i], expected[i])
-                break
-        else:
-            self.fail("couldn't find the expected Case")
-
     def test_sorting(self):
         # Make sure outputs are sorted
 
