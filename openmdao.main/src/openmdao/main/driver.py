@@ -104,8 +104,6 @@ class Driver(Component):
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
 
-        self._evaluators = {}  # Used to evaluate variables to e recorded.
-
     def __deepcopy__(self, memo):
         """For some reason `missing_deriv_policy` gets resurrected."""
         result = super(Driver, self).__deepcopy__(memo)
