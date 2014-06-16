@@ -83,317 +83,102 @@ class Data_Dump_TestCase(unittest.TestCase):
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.printvars = ['*']
         self.top.run()
 
         expected = """\
+Constants:
+   comp1.directory:
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp1.x1: 0.0
+   directory:
+   driver.directory:
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero
+   nested.comp1.directory:
+   nested.comp1.force_fd: False
+   nested.comp1.missing_deriv_policy: error
+   nested.comp1.x1: 0.0
+   nested.comp2.directory:
+   nested.comp2.force_fd: False
+   nested.comp2.missing_deriv_policy: error
+   nested.comp3.directory:
+   nested.comp3.force_fd: False
+   nested.comp3.missing_deriv_policy: error
+   nested.directory:
+   nested.doublenest.comp1.directory:
+   nested.doublenest.comp1.force_fd: False
+   nested.doublenest.comp1.missing_deriv_policy: error
+   nested.doublenest.comp1.x1: 0.0
+   nested.doublenest.comp2.directory:
+   nested.doublenest.comp2.force_fd: False
+   nested.doublenest.comp2.missing_deriv_policy: error
+   nested.doublenest.comp3.directory:
+   nested.doublenest.comp3.force_fd: False
+   nested.doublenest.comp3.missing_deriv_policy: error
+   nested.doublenest.directory:
+   nested.doublenest.driver.directory:
+   nested.doublenest.driver.force_fd: False
+   nested.doublenest.driver.gradient_options.derivative_direction: auto
+   nested.doublenest.driver.gradient_options.directional_fd: False
+   nested.doublenest.driver.gradient_options.fd_blocks: []
+   nested.doublenest.driver.gradient_options.fd_form: forward
+   nested.doublenest.driver.gradient_options.fd_step: 1e-06
+   nested.doublenest.driver.gradient_options.fd_step_type: absolute
+   nested.doublenest.driver.gradient_options.force_fd: False
+   nested.doublenest.driver.gradient_options.gmres_maxiter: 100
+   nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.doublenest.excludes: []
+   nested.doublenest.force_fd: False
+   nested.doublenest.includes: ['*']
+   nested.doublenest.missing_deriv_policy: assume_zero
+   nested.driver.directory:
+   nested.driver.force_fd: False
+   nested.driver.gradient_options.derivative_direction: auto
+   nested.driver.gradient_options.directional_fd: False
+   nested.driver.gradient_options.fd_blocks: []
+   nested.driver.gradient_options.fd_form: forward
+   nested.driver.gradient_options.fd_step: 1e-06
+   nested.driver.gradient_options.fd_step_type: absolute
+   nested.driver.gradient_options.force_fd: False
+   nested.driver.gradient_options.gmres_maxiter: 100
+   nested.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.excludes: []
+   nested.force_fd: False
+   nested.includes: ['*']
+   nested.missing_deriv_policy: assume_zero
 Case:
-   uuid: c0c89730-d530-11e3-8005-08002764016b
-   timestamp: 1399389112.093102
-   parent_uuid: c0c84a4f-d530-11e3-8004-08002764016b
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      directory:
-      driver.directory:
-      driver.force_fd: False
-      driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8997ac>
-      force_fd: False
-      missing_deriv_policy: assume_zero
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.comp2.directory:
-      nested.comp2.force_fd: False
-      nested.comp2.missing_deriv_policy: error
-      nested.comp2.x1: 100.0
-      nested.comp3.directory:
-      nested.comp3.force_fd: False
-      nested.comp3.missing_deriv_policy: error
-      nested.comp3.x1: 10100.0
-      nested.directory:
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
-      nested.doublenest.comp2.directory:
-      nested.doublenest.comp2.force_fd: False
-      nested.doublenest.comp2.missing_deriv_policy: error
-      nested.doublenest.comp2.x1: 100.0
-      nested.doublenest.comp3.directory:
-      nested.doublenest.comp3.force_fd: False
-      nested.doublenest.comp3.missing_deriv_policy: error
-      nested.doublenest.comp3.x1: 10100.0
-      nested.doublenest.directory:
-      nested.doublenest.driver.directory:
-      nested.doublenest.driver.force_fd: False
-      nested.doublenest.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8bca4c>
-      nested.doublenest.force_fd: False
-      nested.doublenest.missing_deriv_policy: assume_zero
-      nested.doublenest.printvars: []
-      nested.driver.directory:
-      nested.driver.force_fd: False
-      nested.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8992cc>
-      nested.force_fd: False
-      nested.missing_deriv_policy: assume_zero
-      nested.printvars: []
-      printvars: ['*']
+   uuid: 87008694-e042-11e3-8005-005056000100
+   timestamp: 1400606208.869153
+   parent_uuid: 87001ef0-e042-11e3-8004-005056000100
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      derivative_exec_count: 0
-      driver.derivative_exec_count: 0
-      driver.exec_count: 1
-      driver.itername:
-      exec_count: 1
-      itername:
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.comp2.derivative_exec_count: 0
-      nested.comp2.exec_count: 1
-      nested.comp2.itername: 1-nested.1-comp2
-      nested.comp2.y1: 101.0
-      nested.comp3.derivative_exec_count: 0
-      nested.comp3.exec_count: 1
-      nested.comp3.itername: 1-nested.1-comp3
-      nested.comp3.y1: 10101.0
-      nested.derivative_exec_count: 0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
-      nested.doublenest.comp2.derivative_exec_count: 0
-      nested.doublenest.comp2.exec_count: 1
-      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
-      nested.doublenest.comp2.y1: 101.0
-      nested.doublenest.comp3.derivative_exec_count: 0
-      nested.doublenest.comp3.exec_count: 1
-      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
-      nested.doublenest.comp3.y1: 10101.0
-      nested.doublenest.derivative_exec_count: 0
-      nested.doublenest.driver.derivative_exec_count: 0
-      nested.doublenest.driver.exec_count: 1
-      nested.doublenest.driver.itername: 1-nested.1-doublenest
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
-      nested.doublenest.exec_count: 1
-      nested.doublenest.itername: 1-nested.1-doublenest
-      nested.driver.derivative_exec_count: 0
-      nested.driver.exec_count: 1
-      nested.driver.itername: 1-nested
-      nested.exec_count: 1
-      nested.itername: 1-nested
 Case:
-   uuid: c0c84a4f-d530-11e3-8004-08002764016b
-   timestamp: 1399389112.105507
-   parent_uuid: c0c84635-d530-11e3-8003-08002764016b
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      directory:
-      driver.directory:
-      driver.force_fd: False
-      driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8997ac>
-      force_fd: False
-      missing_deriv_policy: assume_zero
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.comp2.directory:
-      nested.comp2.force_fd: False
-      nested.comp2.missing_deriv_policy: error
-      nested.comp2.x1: 100.0
-      nested.comp3.directory:
-      nested.comp3.force_fd: False
-      nested.comp3.missing_deriv_policy: error
-      nested.comp3.x1: 10100.0
-      nested.directory:
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
-      nested.doublenest.comp2.directory:
-      nested.doublenest.comp2.force_fd: False
-      nested.doublenest.comp2.missing_deriv_policy: error
-      nested.doublenest.comp2.x1: 100.0
-      nested.doublenest.comp3.directory:
-      nested.doublenest.comp3.force_fd: False
-      nested.doublenest.comp3.missing_deriv_policy: error
-      nested.doublenest.comp3.x1: 10100.0
-      nested.doublenest.directory:
-      nested.doublenest.driver.directory:
-      nested.doublenest.driver.force_fd: False
-      nested.doublenest.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8bca4c>
-      nested.doublenest.force_fd: False
-      nested.doublenest.missing_deriv_policy: assume_zero
-      nested.doublenest.printvars: []
-      nested.driver.directory:
-      nested.driver.force_fd: False
-      nested.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8992cc>
-      nested.force_fd: False
-      nested.missing_deriv_policy: assume_zero
-      nested.printvars: []
-      printvars: ['*']
+   uuid: 87001ef0-e042-11e3-8004-005056000100
+   timestamp: 1400606208.869368
+   parent_uuid: 870019e8-e042-11e3-8003-005056000100
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      derivative_exec_count: 0
-      driver.derivative_exec_count: 0
-      driver.exec_count: 1
-      driver.itername:
-      exec_count: 1
-      itername:
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.comp2.derivative_exec_count: 0
-      nested.comp2.exec_count: 1
-      nested.comp2.itername: 1-nested.1-comp2
-      nested.comp2.y1: 101.0
-      nested.comp3.derivative_exec_count: 0
-      nested.comp3.exec_count: 1
-      nested.comp3.itername: 1-nested.1-comp3
-      nested.comp3.y1: 10101.0
-      nested.derivative_exec_count: 0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
-      nested.doublenest.comp2.derivative_exec_count: 0
-      nested.doublenest.comp2.exec_count: 1
-      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
-      nested.doublenest.comp2.y1: 101.0
-      nested.doublenest.comp3.derivative_exec_count: 0
-      nested.doublenest.comp3.exec_count: 1
-      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
-      nested.doublenest.comp3.y1: 10101.0
-      nested.doublenest.derivative_exec_count: 0
-      nested.doublenest.driver.derivative_exec_count: 0
-      nested.doublenest.driver.exec_count: 1
-      nested.doublenest.driver.itername: 1-nested.1-doublenest
-      nested.doublenest.exec_count: 1
-      nested.doublenest.itername: 1-nested.1-doublenest
-      nested.driver.derivative_exec_count: 0
-      nested.driver.exec_count: 1
-      nested.driver.itername: 1-nested
       nested.driver.workflow.itername: 1-nested.1
-      nested.exec_count: 1
-      nested.itername: 1-nested
 Case:
-   uuid: c0c84635-d530-11e3-8003-08002764016b
-   timestamp: 1399389112.117693
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      directory:
-      driver.directory:
-      driver.force_fd: False
-      driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8997ac>
-      force_fd: False
-      missing_deriv_policy: assume_zero
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.comp2.directory:
-      nested.comp2.force_fd: False
-      nested.comp2.missing_deriv_policy: error
-      nested.comp2.x1: 100.0
-      nested.comp3.directory:
-      nested.comp3.force_fd: False
-      nested.comp3.missing_deriv_policy: error
-      nested.comp3.x1: 10100.0
-      nested.directory:
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
-      nested.doublenest.comp2.directory:
-      nested.doublenest.comp2.force_fd: False
-      nested.doublenest.comp2.missing_deriv_policy: error
-      nested.doublenest.comp2.x1: 100.0
-      nested.doublenest.comp3.directory:
-      nested.doublenest.comp3.force_fd: False
-      nested.doublenest.comp3.missing_deriv_policy: error
-      nested.doublenest.comp3.x1: 10100.0
-      nested.doublenest.directory:
-      nested.doublenest.driver.directory:
-      nested.doublenest.driver.force_fd: False
-      nested.doublenest.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8bca4c>
-      nested.doublenest.force_fd: False
-      nested.doublenest.missing_deriv_policy: assume_zero
-      nested.doublenest.printvars: []
-      nested.driver.directory:
-      nested.driver.force_fd: False
-      nested.driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xa8992cc>
-      nested.force_fd: False
-      nested.missing_deriv_policy: assume_zero
-      nested.printvars: []
-      printvars: ['*']
+   uuid: 870019e8-e042-11e3-8003-005056000100
+   timestamp: 1400606208.869599
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      derivative_exec_count: 0
-      driver.derivative_exec_count: 0
-      driver.exec_count: 1
-      driver.itername:
-      driver.workflow.itername: 1
-      exec_count: 1
-      itername:
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.comp2.derivative_exec_count: 0
-      nested.comp2.exec_count: 1
-      nested.comp2.itername: 1-nested.1-comp2
-      nested.comp2.y1: 101.0
-      nested.comp3.derivative_exec_count: 0
-      nested.comp3.exec_count: 1
-      nested.comp3.itername: 1-nested.1-comp3
-      nested.comp3.y1: 10101.0
-      nested.derivative_exec_count: 0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
-      nested.doublenest.comp2.derivative_exec_count: 0
-      nested.doublenest.comp2.exec_count: 1
-      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
-      nested.doublenest.comp2.y1: 101.0
-      nested.doublenest.comp3.derivative_exec_count: 0
-      nested.doublenest.comp3.exec_count: 1
-      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
-      nested.doublenest.comp3.y1: 10101.0
-      nested.doublenest.derivative_exec_count: 0
-      nested.doublenest.driver.derivative_exec_count: 0
-      nested.doublenest.driver.exec_count: 1
-      nested.doublenest.driver.itername: 1-nested.1-doublenest
-      nested.doublenest.exec_count: 1
-      nested.doublenest.itername: 1-nested.1-doublenest
-      nested.driver.derivative_exec_count: 0
-      nested.driver.exec_count: 1
-      nested.driver.itername: 1-nested
-      nested.exec_count: 1
-      nested.itername: 1-nested
-"""
+      driver.workflow.itername: 1"""
+
         expected = expected.split('\n')
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for line, template in zip(lines, expected):
             line = line.rstrip()
@@ -403,8 +188,6 @@ Case:
                 self.assertTrue(line.startswith('   timestamp:'))
             elif template.startswith('   parent_uuid:'):
                 self.assertTrue(line.startswith('   parent_uuid:'))
-            elif 'gradient_options' in template:
-                self.assertEqual(line.split('<')[0], template.split('<')[0])
             else:
                 self.assertEqual(line, template)
 
@@ -417,104 +200,102 @@ Case:
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.printvars = ['*comp1*']
         self.top.run()
 
         expected = """\
+Constants:
+   comp1.directory:
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp1.x1: 0.0
+   directory:
+   driver.directory:
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero
+   nested.comp1.directory:
+   nested.comp1.force_fd: False
+   nested.comp1.missing_deriv_policy: error
+   nested.comp1.x1: 0.0
+   nested.comp2.directory:
+   nested.comp2.force_fd: False
+   nested.comp2.missing_deriv_policy: error
+   nested.comp3.directory:
+   nested.comp3.force_fd: False
+   nested.comp3.missing_deriv_policy: error
+   nested.directory:
+   nested.doublenest.comp1.directory:
+   nested.doublenest.comp1.force_fd: False
+   nested.doublenest.comp1.missing_deriv_policy: error
+   nested.doublenest.comp1.x1: 0.0
+   nested.doublenest.comp2.directory:
+   nested.doublenest.comp2.force_fd: False
+   nested.doublenest.comp2.missing_deriv_policy: error
+   nested.doublenest.comp3.directory:
+   nested.doublenest.comp3.force_fd: False
+   nested.doublenest.comp3.missing_deriv_policy: error
+   nested.doublenest.directory:
+   nested.doublenest.driver.directory:
+   nested.doublenest.driver.force_fd: False
+   nested.doublenest.driver.gradient_options.derivative_direction: auto
+   nested.doublenest.driver.gradient_options.directional_fd: False
+   nested.doublenest.driver.gradient_options.fd_blocks: []
+   nested.doublenest.driver.gradient_options.fd_form: forward
+   nested.doublenest.driver.gradient_options.fd_step: 1e-06
+   nested.doublenest.driver.gradient_options.fd_step_type: absolute
+   nested.doublenest.driver.gradient_options.force_fd: False
+   nested.doublenest.driver.gradient_options.gmres_maxiter: 100
+   nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.doublenest.excludes: []
+   nested.doublenest.force_fd: False
+   nested.doublenest.includes: ['*']
+   nested.doublenest.missing_deriv_policy: assume_zero
+   nested.driver.directory:
+   nested.driver.force_fd: False
+   nested.driver.gradient_options.derivative_direction: auto
+   nested.driver.gradient_options.directional_fd: False
+   nested.driver.gradient_options.fd_blocks: []
+   nested.driver.gradient_options.fd_form: forward
+   nested.driver.gradient_options.fd_step: 1e-06
+   nested.driver.gradient_options.fd_step_type: absolute
+   nested.driver.gradient_options.force_fd: False
+   nested.driver.gradient_options.gmres_maxiter: 100
+   nested.driver.gradient_options.gmres_tolerance: 1e-09
+   nested.excludes: []
+   nested.force_fd: False
+   nested.includes: ['*']
+   nested.missing_deriv_policy: assume_zero
 Case:
-   uuid: fa071440-d530-11e3-8008-08002764016b
-   timestamp: 1399389208.121672
-   parent_uuid: fa06a96b-d530-11e3-8007-08002764016b
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
+   uuid: 84c2195c-e043-11e3-8008-005056000100
+   timestamp: 1400606634.601406
+   parent_uuid: 84c1b666-e043-11e3-8007-005056000100
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
-   uuid: fa06a96b-d530-11e3-8007-08002764016b
-   timestamp: 1399389208.126233
-   parent_uuid: fa06a528-d530-11e3-8006-08002764016b
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
+   uuid: 84c1b666-e043-11e3-8007-005056000100
+   timestamp: 1400606634.601622
+   parent_uuid: 84c1b0f8-e043-11e3-8006-005056000100
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
       nested.driver.workflow.itername: 1-nested.1
 Case:
-   uuid: fa06a528-d530-11e3-8006-08002764016b
-   timestamp: 1399389208.129687
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      nested.comp1.directory:
-      nested.comp1.force_fd: False
-      nested.comp1.missing_deriv_policy: error
-      nested.comp1.x1: 0.0
-      nested.doublenest.comp1.directory:
-      nested.doublenest.comp1.force_fd: False
-      nested.doublenest.comp1.missing_deriv_policy: error
-      nested.doublenest.comp1.x1: 0.0
+   uuid: 84c1b0f8-e043-11e3-8006-005056000100
+   timestamp: 1400606634.601857
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 0
-      comp1.itername:
-      comp1.y1: 0.0
-      driver.workflow.itername: 1
-      nested.comp1.derivative_exec_count: 0
-      nested.comp1.exec_count: 1
-      nested.comp1.itername: 1-nested.1-comp1
-      nested.comp1.y1: 1.0
-      nested.doublenest.comp1.derivative_exec_count: 0
-      nested.doublenest.comp1.exec_count: 1
-      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
-      nested.doublenest.comp1.y1: 1.0
-"""
+      driver.workflow.itername: 1"""
+
         expected = expected.split('\n')
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -538,47 +319,41 @@ Case:
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.printvars = ['*']
         self.top.run()
 
         expected = """\
+Constants:
+   comp1.directory:
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp1.x1: 0.0
+   comp2.directory:
+   comp2.force_fd: False
+   comp2.missing_deriv_policy: error
+   directory:
+   driver.directory:
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero
 Case:
-   uuid: 6acc6d0a-d52d-11e3-8001-08002764016b
-   timestamp: 1399387679.341002
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.missing_deriv_policy: error
-      comp1.x1: 0.0
-      comp2.directory:
-      comp2.force_fd: False
-      comp2.missing_deriv_policy: error
-      comp2.x1: 100.0
-      directory:
-      driver.directory:
-      driver.force_fd: False
-      driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0xaa9bb9c>
-      force_fd: False
-      missing_deriv_policy: assume_zero
-      printvars: ['*']
+   uuid: 0d85f3c5-e044-11e3-8001-005056000100
+   timestamp: 1400606864.054437
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.y1: 1.0
-      comp2.derivative_exec_count: 0
-      comp2.exec_count: 1
-      comp2.itername: 1-comp2
-      comp2.y1: 101.0
-      derivative_exec_count: 0
-      driver.derivative_exec_count: 0
-      driver.exec_count: 1
-      driver.itername:
-      driver.workflow.itername: 1
-      exec_count: 1
-      itername:
-"""
+      driver.workflow.itername: 1"""
+
         expected = expected.split('\n')
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -598,39 +373,38 @@ Case:
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.printvars = ['*']
         self.top.run()
 
         expected = """\
+Constants:
+   comp1.directory:
+   comp1.force_fd: False
+   comp1.list_str: []
+   comp1.missing_deriv_policy: error
+   directory:
+   driver.directory:
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero
 Case:
-   uuid: fdcac244-9f24-11e3-83f2-005056000100
-   timestamp: 1393446697.681743
-   inputs:
-      comp1.directory:
-      comp1.force_fd: False
-      comp1.list_str: []
-      comp1.missing_deriv_policy: error
-      directory:
-      driver.directory:
-      driver.force_fd: False
-      driver.gradient_options: <openmdao.main.driver.GradientOptions object at 0x3c77f50>
-      force_fd: False
-      missing_deriv_policy: assume_zero
-      printvars: ['*']
+   uuid: 4f3ca163-e044-11e3-8002-005056000100
+   timestamp: 1400606974.301962
    outputs:
-      comp1.derivative_exec_count: 0
-      comp1.exec_count: 1
-      comp1.itername: 1-comp1
-      comp1.string: Testing
-      derivative_exec_count: 0
-      driver.derivative_exec_count: 0
-      driver.exec_count: 1
-      driver.itername:
-      driver.workflow.itername: 1
-      exec_count: 1
-      itername:
-"""
+      driver.workflow.itername: 1"""
+
         expected = expected.split('\n')
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):

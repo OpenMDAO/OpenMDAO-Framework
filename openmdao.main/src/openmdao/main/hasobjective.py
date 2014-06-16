@@ -45,7 +45,8 @@ class HasObjectives(object):
 
     def __init__(self, parent, max_objectives=0):
         self._objectives = ordereddict.OrderedDict()
-        self._max_objectives = max_objectives # max_objectives of 0 means unlimited objectives
+        # max_objectives of 0 means unlimited objectives
+        self._max_objectives = max_objectives
         self._parent = None if parent is None else weakref.ref(parent)
 
     def __getstate__(self):
@@ -182,8 +183,8 @@ class HasObjectives(object):
             try:
                 self.add_objective(str(obj), name, obj.scope)
             except Exception as err:
-                self.parent._logger.warning("Couldn't restore objective '%s': %s"
-                                            % (name, str(err)))
+                self.parent._logger.warning("Couldn't restore objective"
+                                            " '%s': %s" % (name, str(err)))
 
     def get_objectives(self):
         """Returns an OrderedDict of objective expressions."""
@@ -202,6 +203,13 @@ class HasObjectives(object):
             pcomp = getattr(scope, obj.pcomp_name)
             objs.append(pcomp.out0)
         return objs
+
+    def eval_named_objective(self, name):
+        """Returns the value of objective `name`."""
+        scope = self._get_scope()
+        obj = self._objectives[name]
+        pcomp = getattr(scope, obj.pcomp_name)
+        return pcomp.out0
 
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our
@@ -222,7 +230,8 @@ class HasObjectives(object):
         pname = self.parent.name
         conn_list = []
         for obj in self._objectives.values():
-            conn_list.extend([(c, pname) for c in obj.get_referenced_compnames()])
+            conn_list.extend([(c, pname)
+                              for c in obj.get_referenced_compnames()])
         return conn_list
 
     def get_referenced_compnames(self):

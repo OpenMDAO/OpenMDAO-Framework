@@ -95,7 +95,7 @@ class HasResponses(object):
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
 
-         """
+        """
         expr = _remove_spaces(expr)
         if expr in self._responses:
             self.parent.raise_exception("Trying to add response '%s' to"
@@ -106,7 +106,6 @@ class HasResponses(object):
                                         " driver using name '%s', but name is"
                                         " already used" % (expr, name),
                                         AttributeError)
-
 
         scope = self._get_scope(scope)
         expreval = Response(expr, scope)
@@ -199,6 +198,13 @@ class HasResponses(object):
             pcomp = getattr(scope, response.pcomp_name)
             responses.append(pcomp.out0)
         return responses
+
+    def eval_response(self, name):
+        """Returns the value of response `name`."""
+        scope = self._get_scope()
+        response = self._responses[name]
+        pcomp = getattr(scope, response.pcomp_name)
+        return pcomp.out0
 
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our

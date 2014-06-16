@@ -12,6 +12,10 @@ from openmdao.lib.casehandlers.csvcase import CSVCaseIterator, CSVCaseRecorder
 from openmdao.lib.casehandlers.dbcase import DBCaseIterator, DBCaseRecorder, \
                                              case_db_to_dict
 from openmdao.lib.casehandlers.dumpcase import DumpCaseRecorder
+
+from openmdao.lib.casehandlers.jsoncase import JSONCaseRecorder, \
+                                               BSONCaseRecorder
+
 from openmdao.lib.casehandlers.listcase import ListCaseRecorder, \
                                                ListCaseIterator
 

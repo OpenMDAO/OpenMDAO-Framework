@@ -1,8 +1,9 @@
 """A Case Iterator and CaseRecorder that stores the cases in a list.
 """
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
+from openmdao.main.case import Case
 
 
 class ListCaseIterator(object):
@@ -39,6 +40,7 @@ class ListCaseRecorder(object):
 
     def __init__(self):
         self.cases = []
+        self._cfg_map = {}
 
     def __len__(self):
         return len(self.cases)
@@ -47,9 +49,19 @@ class ListCaseRecorder(object):
         """ Nothing needed for a list case."""
         pass
 
-    def record(self, case):
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        self._cfg_map[driver] = (inputs, outputs)
+
+    def record_constants(self, constants):
+        """Record constant data - currently ignored."""
+        pass
+
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Store the case in our internal list."""
-        self.cases.append(case)
+        in_names, out_names = self._cfg_map[driver]
+        self.cases.append(Case(zip(in_names, inputs), zip(out_names, outputs),
+                               exc, case_uuid, parent_uuid))
 
     def close(self):
         """Does nothing."""
