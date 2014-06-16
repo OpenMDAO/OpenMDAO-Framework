@@ -1,6 +1,8 @@
 import bson
 import json
 import os.path
+import re
+import sys
 import unittest
 
 from struct import unpack
@@ -130,6 +132,19 @@ class TestCase(unittest.TestCase):
                 self.assertTrue(lines[i].startswith('    "timestamp":'))
             elif expect.startswith('            "pcomp_name":'):
                 self.assertTrue(lines[i].startswith('            "pcomp_name":'))
+            elif expect.startswith('            "high":'):
+                value = re.match('.*:([^,]*),', lines[i]).group(1)
+                if value != ' null':
+                    self.assertEqual(int(value), sys.maxint)
+            elif expect.startswith('            "low":'):
+                value = re.match('.*:([^,]*),', lines[i]).group(1)
+                if value not in (' null', ' 0'):
+                    self.assertEqual(int(value), -sys.maxint)
+            elif expect.startswith('        "_pseudo_1":'):
+                expect = re.match('.*:([^,]*),', expect).group(1)
+                value = re.match('.*:([^,]*),', lines[i]).group(1)
+                # Multiple representations of zero...
+                self.assertEqual(value, expect)
             else:
                 self.assertEqual(lines[i], expect)
 
