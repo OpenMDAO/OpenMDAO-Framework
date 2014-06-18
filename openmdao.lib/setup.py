@@ -46,6 +46,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'Pyevolve==0.6',
+          'bson',
           'ordereddict',
           'conmin==1.0.1',
           'newsumt==1.1.0',
@@ -104,6 +105,8 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.casehandlers.csvcase.CSVCaseRecorder = openmdao.lib.casehandlers.csvcase:CSVCaseRecorder
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+      openmdao.lib.casehandlers.jsoncase.JSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:JSONCaseRecorder
+      openmdao.lib.casehandlers.jsoncase.BSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:BSONCaseRecorder
 
       [openmdao.caseiterator]
       openmdao.lib.casehandlers.listcase.ListCaseIterator = openmdao.lib.casehandlers.listcase:ListCaseIterator

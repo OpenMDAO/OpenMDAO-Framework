@@ -36,14 +36,11 @@ class TestCase(unittest.TestCase):
     def test_expr(self):
         cases = (
             Case(inputs=(('comp1.a', 4),),
-                 outputs=(('comp2.b', 3),),
-                 msg=None),
+                 outputs=(('comp2.b', 3),)),
             Case(inputs=(('comp1.a', 6),),
-                 outputs=(('comp2.b', 3),),
-                 msg='failed'),
+                 outputs=(('comp2.b', 3),)),
             Case(inputs=(('comp1.a', 4),),
-                 outputs=(('comp2.b', 2),),
-                 msg=None),
+                 outputs=(('comp2.b', 2),)),
         )
 
         # By sequence number.
@@ -69,14 +66,6 @@ class TestCase(unittest.TestCase):
             if filter.select(seqno, case):
                 accepted.append(seqno)
         self.assertEqual(accepted, [0])
-
-        # Failed evaluations.
-        filter = ExprCaseFilter('case.msg')
-        accepted = []
-        for seqno, case in enumerate(cases):
-            if filter.select(seqno, case):
-                accepted.append(seqno)
-        self.assertEqual(accepted, [1])
 
         # Missing variable.
         filter = ExprCaseFilter("case['comp1.z'] < 5")
