@@ -121,7 +121,11 @@ def setup_chrome():
             os.remove(filename)
         finally:
             os.chdir(orig_dir)
-    driver = webdriver.Chrome(executable_path=path)
+    from selenium.webdriver.chrome.options import Options
+    chrome_options = Options()
+    chrome_options.add_argument("--test-type")
+    driver = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
+    #driver = webdriver.Chrome(executable_path=path)
     driver.implicitly_wait(15)
     TEST_CONFIG['browsers'].append(driver)
     return driver
