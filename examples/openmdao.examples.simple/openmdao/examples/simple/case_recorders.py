@@ -47,7 +47,6 @@ if __name__ == "__main__": # pragma: no cover
 
     opt_problem.recorders = [CSVCaseRecorder(filename='converge.csv'),
                              DBCaseRecorder(dbfile='converge.db', append=False)]
-    opt_problem.printvars = ['*']
 
     #-----------------------------
     # Run problem

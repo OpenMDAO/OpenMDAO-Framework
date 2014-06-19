@@ -54,7 +54,7 @@ compilers.
     Xcode from the App store. If you don't want to get the whole X-Code environment, for Lion and
     Mountain Lion  Apple offers a smaller compiler-only library called *Command Line Tools for Xcode*.
     You can get the latest Xcode or the  smaller compiler package `here
-    <https://developer.apple.com/xcode>`_.
+    <https://developer.apple.com/xcode/downloads>`_.
 
 
   - gfortran 

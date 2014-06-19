@@ -8,6 +8,7 @@ import networkx as nx
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
@@ -355,6 +356,10 @@ class SimpleSystem(System):
             # for vname in chain(comp.list_inputs(connected=True), comp.list_outputs(connected=True)):
             #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
 
+    def stop(self):
+        if self._comp is not None:
+            self._comp.stop()
+
     def setup_communicators(self, comm):
         #size = comm.size if MPI else 1
         #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
@@ -658,6 +663,10 @@ class CompoundSystem(System):
         #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
         #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))        
 
+    def stop(self):
+        for s in self.all_subsystems():
+            s.stop()
+
 
 class SerialSystem(CompoundSystem):
 
@@ -697,9 +706,12 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
+        self._stop = False
         for sub in self.local_subsystems():
             self.scatter('u', 'p', sub)
             sub.run(iterbase, ffd_order, case_label, case_uuid)
+            if self._stop:
+                raise RunStopped('Stop requested')
 
     def setup_communicators(self, comm):
         if comm is not None:

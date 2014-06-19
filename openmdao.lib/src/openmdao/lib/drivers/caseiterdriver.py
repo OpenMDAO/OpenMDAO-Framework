@@ -11,12 +11,12 @@ import Queue
 import sys
 import thread
 import threading
-import traceback
+from traceback import format_exc
 from uuid import uuid1, getnode
 
 from numpy import array
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, VariableTree
 from openmdao.main.datatypes.api import Bool, Dict, Enum, Int
 from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.expreval import ExprEvaluator
@@ -49,11 +49,11 @@ class _Case(object):
         _Case._uuid_seq += 1
         return str(uuid1(node=_Case._uuid_node, clock_seq=_Case._uuid_seq))
 
-    def __init__(self, index, inputs, outputs, case_uuid=None, parent_uuid=''):
+    def __init__(self, index, inputs, outputs, extra_outputs,
+                 case_uuid=None, parent_uuid=''):
         self.index = index  # Index of input and output values.
         self.retries = 0    # Retry counter.
-        self.msg = None     # Exception message.
-        self.exc = None     # Exception.
+        self.exc = None     # TracedError.
         self._exprs = None  # Dictionary of ExprEvaluators.
 
         self._inputs = {}
@@ -66,8 +66,12 @@ class _Case(object):
                 self._register_expr(name)
                 self._inputs[name] = value
 
-        self._outputs = outputs
-        for name in outputs:
+        self._outputs = outputs or []
+        for name in self._outputs:
+            self._register_expr(name)
+
+        self._extra_outputs = extra_outputs or []
+        for name in self._extra_outputs:
             self._register_expr(name)
 
         if case_uuid:
@@ -77,7 +81,8 @@ class _Case(object):
         self.parent_uuid = str(parent_uuid)  # identifier of parent case, if any
 
     def _register_expr(self, name):
-        """If the given string contains an expression, create an ExprEvaluator
+        """
+        If the given string contains an expression, create an ExprEvaluator
         and store it in self._exprs.
         """
         if not is_legal_name(name):
@@ -87,7 +92,8 @@ class _Case(object):
             self._exprs[name] = expr
 
     def apply_inputs(self, scope):
-        """Take the values of all of the inputs in this case and apply them
+        """
+        Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
         if self._exprs:
@@ -101,14 +107,22 @@ class _Case(object):
             for name, value in self._inputs.items():
                 scope.set(name, value)
 
-    def fetch_outputs(self, scope):
-        """ Return list of ``(name, value)`` of outputs from `scope`. """
-        last_exc = None
-        outputs = self._outputs
-        exprs = self._exprs
+    def fetch_outputs(self, scope, extra=False, itername=''):
+        """
+        Return list of ``(name, value)`` of outputs from `scope`.
+        If `extra` is True, then fetch extra case recording outputs,
+        but skip `itername`, it should be handled by the caller.
+        """
+        outputs = self._extra_outputs if extra else self._outputs
         data = []
+        exc = None
+
+        # Fetch all outputs we can, retaining only the last exception.
+        exprs = self._exprs
         if exprs:
             for name in outputs:
+                if extra and name == itername:
+                    continue
                 expr = exprs.get(name)
                 try:
                     if expr:
@@ -117,39 +131,38 @@ class _Case(object):
                         value = scope.get(name)
                     data.append((name, value))
                 except Exception as exc:
-                    last_exc = TracedError(exc, traceback.format_exc())
-                    self.msg = str(exc)
+                    exc = TracedError(exc, format_exc())
         else:
             for name in outputs:
+                if extra and name == itername:
+                    continue
                 try:
                     value = scope.get(name)
                     data.append((name, value))
                 except Exception as exc:
-                    last_exc = TracedError(exc, traceback.format_exc())
-                    self.msg = str(exc)
+                    exc = TracedError(exc, format_exc())
 
-        if last_exc is not None:
-            raise last_exc
-
-        return data
+        return (data, exc)
 
     def __str__(self):
         stream = StringIO()
-        stream.write("Case: %s\n" % self.index)
-        stream.write("   uuid: %s\n" % self.uuid)
-        stream.write("   parent_uuid: %s\n" % self.parent_uuid)
-        stream.write("   inputs:\n")
+        write = stream.write
+        write("Case: %s\n" % self.index)
+        write("   uuid: %s\n" % self.uuid)
+        write("   parent_uuid: %s\n" % self.parent_uuid)
+        write("   inputs:\n")
         for name, val in sorted(self._inputs.items()):
-            stream.write("      %s: %s\n" % (name, val))
-        stream.write("   outputs:\n")
+            write("      %s: %s\n" % (name, val))
+        write("   outputs:\n")
         for name in sorted(self._outputs):
-            stream.write("      %s\n" % name)
-        stream.write("   retries: %s\n" % self.retries)
-        stream.write("   msg: %s\n" % self.msg)
-        if self.exc is None:
-            stream.write("   exc: %s\n" % self.exc)
-        else:
-            stream.write("   exc: %s\n" % traceback_str(self.exc))
+            write("      %s\n" % name)
+        write("   extra outputs:\n")
+        for name in sorted(self._extra_outputs):
+            write("      %s\n" % name)
+        write("   retries: %s\n" % self.retries)
+        write("   exc: %s\n" % self.exc)
+        if self.exc is not None:
+            write("        %s\n" % traceback_str(self.exc))
         return stream.getvalue()
 
 
@@ -169,10 +182,6 @@ class _ServerData(object):
         self.in_use = False     # True if being used.
         self.load_failures = 0  # Load failure count.
 
-
-class _ServerError(Exception):
-    """ Raised when a server thread has problems. """
-    pass
 
 
 @add_delegate(HasVarTreeParameters, HasVarTreeResponses)
@@ -308,8 +317,8 @@ class CaseIteratorDriver(Driver):
             replicant = self.parent.copy()
             workflow = replicant.get(self.name+'.workflow')
             driver = replicant.add('driver', Driver())
-            workflow._parent = driver
-            workflow._scope = None
+            workflow.parent = driver
+            workflow.scope = None
             replicant.driver.workflow = workflow
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)
@@ -331,6 +340,7 @@ class CaseIteratorDriver(Driver):
                 inp_values.append(value)
 
         outputs = self.get_responses().keys()
+        extra_outputs = self.workflow._rec_outputs
 
         length = len(inp_values[0]) if inp_values else 0
         cases = []
@@ -338,7 +348,8 @@ class CaseIteratorDriver(Driver):
             inputs = []
             for j in range(len(inp_paths)):
                 inputs.append((inp_paths[j], inp_values[j][i]))
-            cases.append(_Case(i, inputs, outputs, parent_uuid=self._case_uuid))
+            cases.append(_Case(i, inputs, outputs, extra_outputs,
+                               parent_uuid=self._case_uuid))
         self.init_responses(length)
 
         self._iter = iter(cases)
@@ -551,22 +562,21 @@ class CaseIteratorDriver(Driver):
                 try:
                     self._record_case(server.top, case)
                 except Exception as exc:
-                    msg = 'Exception getting case outputs: %s' % exc
+                    msg = 'Exception recording case: %s' % exc
                     self._logger.debug('    %s', msg)
                     self._logger.debug('%s', case)
                     case.msg = '%s: %s' % (self.get_pathname(), msg)
             else:
                 self._logger.debug('    exception while executing: %r', exc)
-                case.msg = str(exc)
                 case.exc = exc
 
-            if case.msg is not None:
+            if case.exc is not None:
                 if self.error_policy == 'ABORT':
                     if self._abort_exc is None:
-                        self._abort_exc = exc
+                        self._abort_exc = case.exc
                     self._stop = True
                 elif case.retries < self.max_retries:
-                    case.msg = None
+                    case.exc = None
                     case.retries += 1
                     self._rerun.append(case)
                 else:
@@ -649,7 +659,7 @@ class CaseIteratorDriver(Driver):
         elif self._rerun:
             self._logger.debug('    rerun case')
             case = self._rerun.pop(0)
-            in_use = self._run_case(case, server, rerun=True)
+            in_use = self._run_case(case, server)
         elif self._iter is None:
             self._logger.debug('    no more cases')
             in_use = False
@@ -666,67 +676,85 @@ class CaseIteratorDriver(Driver):
 
         return in_use
 
-    def _run_case(self, case, server, rerun=False):
+    def _run_case(self, case, server):
         """ Setup and start a case. Returns True if started. """
-        if not rerun:
-            case.retries = 0
-        case.msg = None
+        case.exc = None
 
         # We record the case and are responsible for unique case ids.
         case.uuid = _Case.next_uuid()
         case.parent_uuid = self._case_uuid
 
-        # Additional user-requested variables.
-        # These must be added here so that the outputs are in the cases
-        # before they are in the server list.
-        top = self.parent
-        while top.parent:
-            top = top.parent
-        inputs, outputs = top.get_case_variables()
-        outputs.append(('%s.workflow.itername' % self.name,
-                        '%s.%s' % (self.itername, case.index+1)))
-        case.extra_inputs = inputs
-        case.extra_outputs = outputs
-
         try:
-            try:
-                case.apply_inputs(server.top)
-            except Exception as exc:
-                msg = 'Exception setting case inputs: %s' % exc
-                self._logger.debug('    %s', msg)
-                self.raise_exception(msg, _ServerError)
-            server.case = case
-            self._model_execute(server)
-            server.state = _EXECUTING
-        except _ServerError as exc:
+            case.apply_inputs(server.top)
+        except Exception as exc:
+            case.exc = TracedError(exc, format_exc())
+            msg = 'Exception setting case inputs: %s' % case.exc
+            self._logger.debug('    %s', msg)
             if case.retries < self.max_retries:
                 case.retries += 1
                 self._rerun.append(case)
             return self._start_processing(server)
-        else:
-            return True
+
+        server.case = case
+        self._model_execute(server)
+        server.state = _EXECUTING
+        return True
 
     def _record_case(self, scope, case):
-        """ Record case data from `scope` in ``case_outputs``. """
-        outputs = case.fetch_outputs(scope)
-        for path, value in outputs:
-            path = make_legal_path(path)
-            self.set('case_outputs.'+path, value,
-                     index=(case.index,), force=True)
+        """
+        Record case data from `scope` in ``case_outputs``.
+        Also sends case data to recorders.
+        """
+        case_outputs, exc = case.fetch_outputs(scope)
+        if exc is None and case.exc is None:
+            index = case.index
+            for path, value in case_outputs:
+                path = make_legal_path(path)
+                if self.sequential and isinstance(value, VariableTree):
+                    value = deepcopy(value)
+                self.set('case_outputs.'+path, value,
+                         index=(index,), force=True)
 
-        # Record regular case in recorders.
-        top = self.parent
-        while top.parent:
-            top = top.parent
-        if top.recorders:
-            inputs = case._inputs.items()
-            inputs.extend(case.extra_inputs)
-            outputs.extend(case.extra_outputs)
-            from openmdao.main.case import Case
-            recorded = Case(inputs, outputs, retries=case.retries,
-                            case_uuid=case.uuid, parent_uuid=case.parent_uuid)
+        # Record workflow data in recorders.
+        workflow = self.workflow
+        if workflow._rec_required:
+            inputs = []
+            recording = workflow._rec_parameters
+            for name, param in self.get_parameters().items():
+                if param in recording:
+                    if isinstance(name, tuple):  # Use first target.
+                        name = name[0]
+                    inputs.append(case._inputs[name])
+
+            outputs = []
+            recording = set(workflow._rec_responses)
+            for path, value in case_outputs:
+                if path in recording:
+                    if self.sequential and isinstance(value, VariableTree):
+                        value = deepcopy(value)
+                    outputs.append(value)
+
+            itername = '%s.workflow.itername' % self.name
+            extra, extra_exc = case.fetch_outputs(scope, extra=True,
+                                                  itername=itername)
+            for path, value in extra:
+                if self.sequential and isinstance(value, VariableTree):
+                    value = deepcopy(value)
+                outputs.append(value)
+
+            if itername in workflow._rec_outputs:
+                if self.itername:
+                    outputs.append('%s.%s' % (self.itername, case.index+1))
+                else:
+                    outputs.append('%s' % (case.index+1))
+
+            top = scope
+            while top.parent:
+                top = top.parent
             for recorder in top.recorders:
-                recorder.record(recorded)
+                recorder.record(self, inputs, outputs,
+                                case.exc or exc or extra_exc,
+                                case.uuid, self._case_uuid)
 
     def _service_loop(self, name, resource_desc, credentials, reply_q):
         """ Each server has an associated thread executing this. """
@@ -801,7 +829,7 @@ class CaseIteratorDriver(Driver):
                 self._logger.error('server %r filexfer of %r failed: %r',
                                    server.name, self._egg_file, exc)
                 server.top = None
-                server.exception = TracedError(exc, traceback.format_exc())
+                server.exception = TracedError(exc, format_exc())
                 return
             else:
                 server.info['egg_file'] = self._egg_file
@@ -812,7 +840,7 @@ class CaseIteratorDriver(Driver):
             self._logger.error('server.load_model of %r failed: %r',
                                self._egg_file, exc)
             server.top = None
-            server.exception = TracedError(exc, traceback.format_exc())
+            server.exception = TracedError(exc, format_exc())
         else:
             server.top = tlo
 
@@ -821,10 +849,10 @@ class CaseIteratorDriver(Driver):
         server.exception = None
         if server.queue is None:
             try:
-#                self.workflow._parent.update_parameters()
+#                self.workflow.parent.update_parameters()
                 self.workflow.run(case_uuid=server.case.uuid)
             except Exception as exc:
-                server.exception = TracedError(exc, traceback.format_exc())
+                server.exception = TracedError(exc, format_exc())
                 self._logger.critical('Caught exception: %r' % exc)
         else:
             server.queue.put((self._remote_model_execute, server))
@@ -836,7 +864,7 @@ class CaseIteratorDriver(Driver):
             server.top.set_itername(self.get_itername(), case.index+1)
             server.top.run(case_uuid=case.uuid)
         except Exception as exc:
-            server.exception = TracedError(exc, traceback.format_exc())
+            server.exception = TracedError(exc, format_exc())
             self._logger.error('Caught exception from server %r,'
                                ' PID %d on %s: %r',
                                server.info['name'], server.info['pid'],

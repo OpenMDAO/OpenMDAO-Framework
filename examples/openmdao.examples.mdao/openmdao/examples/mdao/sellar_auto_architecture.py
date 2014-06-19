@@ -70,8 +70,6 @@ if __name__ == "__main__": # pragma: no cover
     prob.configure()
 
     prob.recorders = [DBCaseRecorder()]
-    prob.printvars = ['ssa.F[0]+ssa.dF[0][0]*(global_des_vars[0]-dis1.z1)'
-                      '+ssa.dF[0][1]*(global_des_vars[1]-dis1.z2)']
 
     tt = time.time()
     prob.run()

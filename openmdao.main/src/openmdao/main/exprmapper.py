@@ -1,5 +1,7 @@
+import weakref
 
 import networkx as nx
+
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.units import PhysicalQuantity
@@ -9,7 +11,21 @@ class ExprMapper(object):
     """A mapping between source expressions and destination expressions"""
     def __init__(self, scope):
         self._exprgraph = nx.DiGraph()  # graph of source expressions to destination expressions
-        self._scope = scope
+        self._scope = None if scope is None else weakref.ref(scope)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_scope'] = self.scope
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        scope = state['_scope']
+        self._scope = None if scope is None else weakref.ref(scope)
+
+    @property
+    def scope(self):
+        return None if self._scope is None else self._scope()
 
     def get_expr(self, text):
         node = self._exprgraph.node.get(text)
@@ -27,14 +43,16 @@ class ExprMapper(object):
 
         if visible_only:
             newlst = []
+            scope = self.scope
             for u, v, data in lst:
                 pcomp = data.get('pcomp')
                 if pcomp is not None:
                     newlst.extend(pcomp.list_connections(is_hidden=True))
                 else:
-                    srccmp = getattr(self._scope, u.split('.', 1)[0], None)
-                    dstcmp = getattr(self._scope, v.split('.', 1)[0], None)
-                    if isinstance(srccmp, PseudoComponent) or isinstance(dstcmp, PseudoComponent):
+                    srccmp = getattr(scope, u.split('.', 1)[0], None)
+                    dstcmp = getattr(scope, v.split('.', 1)[0], None)
+                    if isinstance(srccmp, PseudoComponent) or \
+                       isinstance(dstcmp, PseudoComponent):
                         continue
                     newlst.append((u, v))
             return newlst
@@ -42,8 +60,8 @@ class ExprMapper(object):
         return [(u, v) for u, v, data in lst]
 
     def get_source(self, dest_expr):
-        """Returns the text of the source expression that is connected to the given
-        destination expression.
+        """Returns the text of the source expression that is connected to the
+        given destination expression.
         """
         dct = self._exprgraph.pred.get(dest_expr)
         if dct:
@@ -52,11 +70,12 @@ class ExprMapper(object):
             return None
 
     def get_dests(self, src_expr):
-        """Returns the list of destination expressions that are connected to the given
-        source expression.
+        """Returns the list of destination expressions that are connected to
+        the given source expression.
         """
         graph = self._exprgraph
-        return [graph.node(name)['expr'] for name in self._exprgraph.succ[src_expr].keys()]
+        return [graph.node(name)['expr']
+                for name in self._exprgraph.succ[src_expr].keys()]
 
     def remove(self, compname):
         """Remove any connections referring to the given component"""
@@ -75,7 +94,8 @@ class ExprMapper(object):
         desttrait = None
         srccomp = None
 
-        if not isinstance(destcomp, PseudoComponent) and not destvar.startswith('parent.') and not len(srcvars) > 1:
+        if not isinstance(destcomp, PseudoComponent) and \
+           not destvar.startswith('parent.') and not len(srcvars) > 1:
             for srcvar in srcvars:
                 if not srcvar.startswith('parent.'):
                     srccompname, srccomp, srcvarname = _split_varpath(scope, srcvar)
@@ -86,7 +106,8 @@ class ExprMapper(object):
                             dest_io = 'out' if destcomp is scope else 'in'
                             desttrait = destcomp.get_dyn_trait(destvarname, dest_io)
 
-                if not isinstance(srccomp, PseudoComponent) and desttrait is not None:
+                if not isinstance(srccomp, PseudoComponent) and \
+                   desttrait is not None:
                     # punt if dest is not just a simple var name.
                     # validity will still be checked at execution time
                     if destvar == destexpr.text:
@@ -99,8 +120,8 @@ class ExprMapper(object):
                         else:
                             # no validate function on destination trait. Most likely
                             # it's a property trait.  No way to validate without
-                            # unknown side effects. Have to wait until later when
-                            # data actually gets passed via the connection.
+                            # unknown side effects. Have to wait until later
+                            # when data actually gets passed via the connection.
                             pass
 
         if src not in self._exprgraph:
@@ -113,8 +134,8 @@ class ExprMapper(object):
             self._exprgraph[src][dest]['pcomp'] = pseudocomp
 
     def find_referring_exprs(self, name):
-        """Returns a list of expression strings that reference the given name, which
-        can refer to either a variable or a component.
+        """Returns a list of expression strings that reference the given name,
+        which can refer to either a variable or a component.
         """
         return [node for node, data in self._exprgraph.nodes(data=True)
                        if data['expr'].refers_to(name)]
@@ -151,18 +172,21 @@ class ExprMapper(object):
                 data = graph[srcpath][destpath]
                 if 'pcomp' in data:
                     pcomps.add(data['pcomp'].name)
-            else:  # assume they're disconnecting two variables, so find connected exprs that refer to them
+            else:
+                # assume they're disconnecting two variables, so find connected
+                # exprs that refer to them
                 src_exprs = set(self.find_referring_exprs(srcpath))
                 dest_exprs = set(self.find_referring_exprs(destpath))
                 to_remove.update([(src, dest) for src, dest in graph.edges()
                                                if src in src_exprs and dest in dest_exprs])
 
         added = []
+        scope = self.scope
         for src, dest in to_remove:
             if src.startswith('_pseudo_'):
-                pcomp = getattr(self._scope, src.split('.', 1)[0])
+                pcomp = getattr(scope, src.split('.', 1)[0])
             elif dest.startswith('_pseudo_'):
-                pcomp = getattr(self._scope, dest.split('.', 1)[0])
+                pcomp = getattr(scope, dest.split('.', 1)[0])
             else:
                 continue
             added.extend(pcomp.list_connections())
@@ -177,8 +201,8 @@ class ExprMapper(object):
         return to_remove, pcomps
 
     def check_connect(self, src, dest, scope):
-        """Check validity of connecting a source expression to a destination expression, and
-        determine if we need to create links to pseudocomps.
+        """Check validity of connecting a source expression to a destination
+        expression, and determine if we need to create links to pseudocomps.
         """
 
         if self.get_source(dest) is not None:
@@ -193,7 +217,8 @@ class ExprMapper(object):
         destcomps = list(destexpr.get_referenced_compnames())
 
         if destcomps and destcomps[0] in srccomps:
-            raise RuntimeError("'%s' and '%s' refer to the same component." % (src, dest))
+            raise RuntimeError("'%s' and '%s' refer to the same component."
+                               % (src, dest))
 
         return srcexpr, destexpr, self._needs_pseudo(scope, srcexpr, destexpr)
 
@@ -226,7 +251,8 @@ class ExprMapper(object):
             destunit = None
 
         if destunit and srcunit:
-            if destunit.powers != srcunit.powers or destunit.factor != srcunit.factor or \
+            if destunit.powers != srcunit.powers or \
+               destunit.factor != srcunit.factor or \
                destunit.offset != srcunit.offset:
                 return 'units'
 

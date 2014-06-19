@@ -1,4 +1,5 @@
 from ordereddict import OrderedDict
+import weakref
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
@@ -28,13 +29,11 @@ class ParameterBase(object):
         Parameter.
         """
 
-        if scaler is None and adder is None:
-            self._transform = self._do_nothing
-            self._untransform = self._do_nothing
         if scaler is None:
             scaler = 1.0
         if adder is None:
             adder = 0.0
+        self._scaling_required = scaler != 1. or adder != 0.
 
         self.low = low
         self.high = high
@@ -79,15 +78,17 @@ class ParameterBase(object):
 
     def _transform(self, val):
         """ Unscales the variable (parameter space -> var space). """
-        return (val + self.adder) * self.scaler
+        if self._scaling_required:
+            return (val + self.adder) * self.scaler
+        else:
+            return val
 
     def _untransform(self, val):
         """ Scales the variable (var space -> parameter space). """
-        return val / self.scaler - self.adder
-
-    def _do_nothing(self, val):
-        """ Used to overlay _transform and _untransform. """
-        return val
+        if self._scaling_required:
+            return val / self.scaler - self.adder
+        else:
+            return val
 
     def _get_scope(self):
         """Return scope of target expression."""
@@ -761,10 +762,25 @@ class HasParameters(object):
 
     def __init__(self, parent):
         self._parameters = OrderedDict()
-        self._parent = parent
         self._allowed_types = ['continuous']
         if obj_has_interface(parent, ISolver):
             self._allowed_types.append('unbounded')
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_parent'] = self.parent
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        parent = state['_parent']
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    @property
+    def parent(self):
+        """ The object we are a delegate of. """
+        return None if self._parent is None else self._parent()
 
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from
@@ -848,12 +864,12 @@ class HasParameters(object):
 
             dups = set(self.list_param_targets()).intersection(names)
             if dups:
-                self._parent.raise_exception("%s are already Parameter targets"
+                self.parent.raise_exception("%s are already Parameter targets"
                                              % sorted(list(dups)), ValueError)
 
             if key in self._parameters:
-                self._parent.raise_exception("%s is already a Parameter" % key,
-                                             ValueError)
+                self.parent.raise_exception("%s is already a Parameter" % key,
+                                            ValueError)
             try:
                 _scope = self._get_scope(scope)
                 if len(names) == 1:
@@ -871,9 +887,9 @@ class HasParameters(object):
                     target = ParameterGroup(parameters)
                 self._parameters[key] = target
             except Exception:
-                self._parent.reraise_exception()
+                self.parent.reraise_exception()
 
-        self._parent.config_changed()
+        self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,
                 key, scope):
@@ -895,8 +911,8 @@ class HasParameters(object):
 
         # add a graph connection from the driver to the param target
         dgraph = self._get_scope().get_depgraph()
-        dgraph.add_edge(self._parent.name, dgraph.add_subvar(target),
-                        drv_conn=self._parent.name)
+        dgraph.add_edge(self.parent.name, dgraph.add_subvar(target),
+                        drv_conn=self.parent.name)
 
         if isinstance(val, ndarray):
             return ArrayParameter(target, low=low, high=high,
@@ -919,16 +935,16 @@ class HasParameters(object):
         if param:
             del self._parameters[name]
         else:
-            self._parent.raise_exception("Trying to remove parameter '%s' "
+            self.parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver."
                                          % (name,), AttributeError)
 
         # remove param connections from dep graph
         dgraph = self._get_scope()._depgraph
         for target in param.targets:
-            dgraph.remove_edge(self._parent.name, target)
+            dgraph.remove_edge(self.parent.name, target)
 
-        self._parent.config_changed()
+        self.parent.config_changed()
 
     def config_parameters(self):
         """Reconfigure parameters from potentially changed targets."""
@@ -972,8 +988,8 @@ class HasParameters(object):
             try:
                 self.add_parameter(param)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore parameter '%s': %s"
-                                              % (pname, str(err)))
+                self.parent._logger.warning("Couldn't restore parameter '%s': %s"
+                                            % (pname, str(err)))
 
     def list_param_targets(self):
         """Returns a list of parameter targets. Note that this
@@ -1149,7 +1165,7 @@ class HasParameters(object):
         for each dependency introduced by a parameter.
         """
         conns = set()
-        pname = self._parent.name
+        pname = self.parent.name
         for param in self._parameters.values():
             for cname in param.get_referenced_compnames():
                 conns.add((pname, cname))
@@ -1175,7 +1191,7 @@ class HasParameters(object):
     def _get_scope(self, scope=None):
         if scope is None:
             try:
-                return self._parent.get_expr_scope()
+                return self.parent.get_expr_scope()
             except AttributeError:
                 pass
         return scope
@@ -1215,7 +1231,7 @@ class HasVarTreeParameters(HasParameters):
             path = target[0]
 
         path = make_legal_path(path)
-        obj = self._parent
+        obj = self.parent
         names = ['case_inputs'] + path.split('.')
         for name in names[:-1]:
             if obj.get_trait(name):
@@ -1238,7 +1254,7 @@ class HasVarTreeParameters(HasParameters):
             path = name[0]
 
         path = make_legal_path(name)
-        obj = self._parent
+        obj = self.parent
         names = ['case_inputs'] + path.split('.')
         for name in names[:-1]:
             obj = obj.get(name)
