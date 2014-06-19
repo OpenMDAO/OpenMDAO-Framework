@@ -1,8 +1,11 @@
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
+from functools import cmp_to_key
 
 import networkx as nx
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
@@ -15,8 +18,6 @@ from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
-from networkx.algorithms.dag import is_directed_acyclic_graph
-from networkx.algorithms.components import strongly_connected_components
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -298,8 +299,8 @@ class DependencyGraph(nx.DiGraph):
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
         old_outs = set(self.list_outputs(cname))
-        old_states = set([n for n in old_outs if self.node[n]['iotype'] == 'state'])
-        old_resids = set([n for n in old_outs if self.node[n]['iotype'] == 'residual'])
+        old_states = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'state'])
+        old_resids = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'residual'])
 
         # remove states from old_ins
         old_ins -= old_states
@@ -705,8 +706,9 @@ class DependencyGraph(nx.DiGraph):
 
         full = []
         for node in nodes:
-            full.extend(self._all_child_vars(node))
-            full.append(node)
+            if node in self:
+                full.extend(self._all_child_vars(node))
+                full.append(node)
 
         if data:
             sn = self.node
@@ -714,18 +716,12 @@ class DependencyGraph(nx.DiGraph):
         else:
             return full
 
-    def full_subgraph(self, nodes, add_boundary=False):
+    def full_subgraph(self, nodes):
         """Returns the subgraph specified by the given component
         or pseudocomp nodes and any variable or expr nodes
-        corresponding to those nodes.  If add_boundary is True,
-        any boundary nodes will also be included in the subgraph.
+        corresponding to those nodes.
         """
-        if add_boundary:
-            return self.subgraph(chain(self.find_prefixed_nodes(nodes),
-                                       self.get_boundary_inputs(),
-                                       self.get_boundary_outputs()))
-        else:
-            return self.subgraph(self.find_prefixed_nodes(nodes))
+        return self.subgraph(self.find_prefixed_nodes(nodes))
 
     def _comp_connections(self, cname, direction=None):
         conns = []
@@ -914,10 +910,10 @@ class DependencyGraph(nx.DiGraph):
             except StopIteration:
                 queue.popleft()
 
-    def update_boundary_outputs(self, scope):
-        """Update destination vars on our boundary."""
-        for out in self.get_boundary_outputs():
-            self.update_destvar(scope, out)
+    # def update_boundary_outputs(self, scope):
+    #     """Update destination vars on our boundary."""
+    #     for out in self.get_boundary_outputs():
+    #         self.update_destvar(scope, out)
 
     def update_destvar(self, scope, vname):
         """Update the value of the given variable in the
@@ -1839,20 +1835,77 @@ def break_cycles(graph):
     return severed_edges
 
 def get_graph_partition(g, nodes):
-    """Returns a tuple of the form (subnodes, in_edges, out_edges),
-    where subnodes is the full node set containing the given nodes
-    and any that they own (e.g., if a node is a comp node,
-    subnodes will include comp node and all of its var and
-    subvar nodes) and in_edges and out_edges are boundary
-    edges between the subnodes and the rest of the full graph.
+    """Returns a tuple of the form (in_edges, out_edges),
+    where in_edges and out_edges are boundary
+    edges between the nodes and the rest of the full graph.
     """
-    if isinstance(g, DependencyGraph):
-        subnodes = g.find_prefixed_nodes(nodes)
-    else:
-        subnodes = nodes
-    others = set(g.nodes_iter()).difference(subnodes)
-    out_edges = nx.edge_boundary(g, subnodes)
+    others = set(g.nodes_iter()).difference(nodes)
+    # print "get_graph_partition: %s" % list(nodes)
+    # print "others: %s" % list(others)
+    out_edges = nx.edge_boundary(g, nodes)
     in_edges = nx.edge_boundary(g, others)
     
-    return subnodes, in_edges, out_edges
+    return in_edges, out_edges
+     
+def collapse_nodes(g, collapsed_name, nodes):
+    """Collapse the given set of nodes into a single
+    node with the specified name.
+    """
+    in_edges, out_edges = \
+                  get_graph_partition(g, nodes)
+    
+    # create new connections to collapsed node
+    for u,v in in_edges:
+        g.add_edge(u, collapsed_name)
+        # create our own copy of edge metadata
+        g[u][collapsed_name] = g[u][v].copy()
+
+    for u,v in out_edges:
+        g.add_edge(collapsed_name, v)
+        # create our own copy of edge metadata
+        g[collapsed_name][v] = g[u][v].copy()
+
+    g.remove_nodes_from(nodes)
+
+    return in_edges, out_edges
+    
+def collapse_driver(g, driver, excludes=()):
+    """For the given driver object, collapse the
+    driver's iteration set nodes into a single driver
+    system node.
+    """
+    nodes = [n for n in 
+                driver.get_full_nodeset(driver.get_depgraph())
+                if n not in excludes]
+
+    return collapse_nodes(g, driver.name, nodes)
         
+def get_all_deps(g):
+    """Return a set of edge tuples where the
+    existence of a tuple (u,v) means that v depends 
+    on u, either directly or indirectly.  Note that this will 
+    be slow for large dense graphs.
+    """
+    edges = set()
+    dfs = nx.dfs_edges
+
+    for node in g.nodes_iter():
+        edges.update([(node, v) for u,v in dfs(g, node)])
+
+    return edges
+
+def gsort(deps, names):
+    """Return a sorted version of the given names
+    iterator, based on dependency specified by the
+    given set of dependencies.  Sort is a stable
+    sort, so original order will be preserved unless
+    a dependency is violated.
+    """
+    def gorder(n1, n2):
+        if (n1,n2) in deps:
+            return -1
+        elif (n2,n1) in deps:
+            return 1
+        return 0
+
+    return sorted(names, key=cmp_to_key(gorder))

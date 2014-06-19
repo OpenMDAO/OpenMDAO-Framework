@@ -4,11 +4,12 @@
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
-
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  partition_mpi_subsystems, partition_subsystems, \
-                                  get_comm_if_active, _create_simple_sys
+                                  partition_mpi_subsystems, \
+                                  get_comm_if_active, _create_simple_sys, \
+                                  get_full_nodeset
 
 __all__ = ['Workflow']
 
@@ -89,42 +90,29 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    # def run(self, ffd_order=0, case_label='', case_uuid=None):
-    #     """ Run the Components in this Workflow. """
-    #     subsys = self._subsystem
-    #     # if self._subsystem is not None:
-    #     #     return self._subsystem.run()#self.scope, ffd_order, case_id, self._iterbase(case_id))
+    def run(self, ffd_order=0, case_label='', case_uuid=None):
+        """ Run the Components in this Workflow. """
 
-    #     self._stop = False
-    #     self._exec_count += 1
+        self._stop = False
+        self._exec_count += 1
 
-    #     #iterbase = self._iterbase()
+        iterbase = self._iterbase()
 
-    #     if case_uuid is None:
-    #         # We record the case and are responsible for unique case ids.
-    #         record_case = True
-    #         case_uuid = Case.next_uuid()
-    #     else:
-    #         record_case = False
+        if case_uuid is None:
+            # We record the case and are responsible for unique case ids.
+            record_case = True
+            case_uuid = Case.next_uuid()
+        else:
+            record_case = False
 
-    #     #scope = self.scope
+        self._subsystem.run(iterbase=iterbase, ffd_order=ffd_order, 
+                            case_uuid=case_uuid)
 
-    #     # for comp in self:
-    #     #     # before the workflow runs each component, update that
-    #     #     # component's inputs based on the graph
-    #     #     scope.update_inputs(comp.name, graph=self._var_graph)
-    #     #     if isinstance(comp, PseudoComponent):
-    #     #         comp.run(ffd_order=ffd_order)
-    #     #     else:
-    #     #         comp.set_itername('%s-%s' % (iterbase, comp.name))
-    #     #         comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-    #     #     if self._stop:
-    #     #         raise RunStopped('Stop requested')
+        if self._stop:
+            raise RunStopped('Stop requested')
 
-    #     subsys.run()
-
-    #     if record_case:
-    #         self._record_case(label=case_label, case_uuid=case_uuid)
+        if record_case:
+            self._record_case(label=case_label, case_uuid=case_uuid)
 
     def _record_case(self, label, case_uuid):
         """ Record case in all recorders. """
@@ -254,15 +242,10 @@ class Workflow(object):
         cgraph = depgraph.component_graph()
         cgraph = cgraph.subgraph(self.get_names(full=True))
 
-        # #mpiprint("cgraph1 = %s" % cgraph.edges())
-        # # collapse driver iteration sets into a single node for
-        # # the driver, except for nodes from their iteration set
-        # # that are in the iteration set of their parent.
+        # collapse driver iteration sets into a single node for
+        # the driver, except for nodes from their iteration set
+        # that are in the iteration set of their parent driver.
         self._parent._collapse_subdrivers(cgraph)
-        # #cgraph.remove_node(self._parent.name)
-
-        #mpiprint("cgraph2 = %s" % cgraph.edges())
-        #mpiprint("**** %s: cgraph edges (pre-xform) = %s" % (self._parent.name,cgraph.edges()))
 
         # create systems for all simple components
         for node, data in cgraph.nodes_iter(data=True):
@@ -276,24 +259,21 @@ class Workflow(object):
 
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
-                    mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(scope, depgraph, cgraph)
+                    #mpiprint("creating serial top: %s" % cgraph.nodes())
+                    self._subsystem = SerialSystem(scope, depgraph, cgraph, tuple(cgraph.nodes()))
                 else:
-                    mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(scope, depgraph, cgraph)
+                    #mpiprint("creating parallel top: %s" % cgraph.nodes())
+                    self._subsystem = ParallelSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
             elif len(cgraph) == 1:
                 name = cgraph.nodes()[0]
                 self._subsystem = cgraph.node[name].get('system')
-                # if self._subsystem is None:
-                #     self._subsystem = _create_simple_sys(cgraph, scope)
-                #     cgraph.node[name]['system'] = self._subsystem
             else:
                 raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
                                     self._parent.get_pathname())
-
         else:
-            partition_subsystems(depgraph, cgraph, scope)
-            self._subsystem = SerialSystem(depgraph, cgraph)
+            self._subsystem = SerialSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
+
+        self._subsystem.set_ordering([c.name for c in self])
             
         for comp in self:
             comp.setup_systems()
@@ -333,3 +313,10 @@ class Workflow(object):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
         self._subsystem.setup_scatters()
+
+    def get_full_nodeset(self, depgraph):
+        """Return the full set of nodes in the depgraph
+        belonging to this driver (inlcudes full iteration set).
+        """
+        return get_full_nodeset(depgraph, self.scope, 
+                                self.get_names(full=True))

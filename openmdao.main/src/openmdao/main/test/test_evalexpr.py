@@ -630,17 +630,6 @@ class ExprEvalTestCase(unittest.TestCase):
 
         assert_rel_error(self, grad['comp1.in1'], 1.0, 0.00001)
 
-
-    def test_scope_transform(self):
-        exp = ExprEvaluator('myvar+abs(comp.x)*a.a1d[2]', self.top)
-        self.assertEqual(new_text(exp), "scope.get('myvar')+abs(scope.get('comp.x'))*scope.get('a.a1d',[(0,2)])")
-        xformed = exp.scope_transform(self.top, self.top.comp)
-        self.assertEqual(xformed, 'parent.myvar+abs(x)*parent.a.a1d[2]')
-
-        exp = ExprEvaluator('parent.var+abs(x)*parent.a.a1d[2]', self.top.comp)
-        xformed = exp.scope_transform(self.top.comp, self.top)
-        self.assertEqual(xformed, 'var+abs(comp.x)*a.a1d[2]')
-
     def test_connected_expr(self):
         ConnectedExprEvaluator("var1[x]", self.top)._parse()
         try:

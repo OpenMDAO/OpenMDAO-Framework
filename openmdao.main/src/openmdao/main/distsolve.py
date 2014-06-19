@@ -76,7 +76,7 @@ class MPISolver(Driver):
         self.normval = 1.e99
         self.norm0 = 1.e99
         self.pairs = self._get_param_constraint_pairs()
-        mpiprint("PAIRS: %s" % self.pairs)
+        #mpiprint("PAIRS: %s" % self.pairs)
         system = self.workflow._subsystem
         system.vec['u'].set_from_scope(self.parent)
         #mpiprint("initial u vector: %s" % system.vec['u'].items())
@@ -95,7 +95,7 @@ class MPISolver(Driver):
         """Runs after each iteration"""
         self.normval = self._norm()
         self.current_iteration += 1
-        mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
+        #mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
         
 class MPINonlinearSolver(MPISolver):
     """ A base class for dostribited nonlinear solvers """
@@ -115,11 +115,11 @@ class MPINonlinearSolver(MPISolver):
         return system.vec['f'].petsc_vec.norm()
 
     def run_iteration(self):
-        mpiprint("NLGS running")
+        #mpiprint("NLGS running")
         self.workflow._subsystem.run()
-        mpiprint("updating u vector with residuals")
+        #mpiprint("updating u vector with residuals")
         self.add_constraint_residuals()
-        mpiprint("UVEC: %s" % self.workflow._subsystem.vec['u'].items())
+        #mpiprint("UVEC: %s" % self.workflow._subsystem.vec['u'].items())
 
     def add_constraint_residuals(self):
         uvec = self.workflow._subsystem.vec['u']
@@ -165,37 +165,37 @@ class MPINonlinearSolver(MPISolver):
 #         self.add_constraint_residuals()
 
 
-class MPILinearSolver(MPISolver):
-    """ A base class for linear solvers """
+# class MPILinearSolver(MPISolver):
+#     """ A base class for linear solvers """
 
-    def _norm(self):
-        """ Computes the norm of the linear residual """
-        system = self.workflow._subsystem
-        system.apply_dFdpu(system.variables.keys())
-        system.rhs_vec.array[:] *= -1.0
-        system.rhs_vec.array[:] += system.rhs_buf.array[:]
-        system.rhs_vec.petsc.assemble()
-        return system.rhs_vec.petsc.norm()
+#     def _norm(self):
+#         """ Computes the norm of the linear residual """
+#         system = self.workflow._subsystem
+#         system.apply_dFdpu(system.variables.keys())
+#         system.rhs_vec.array[:] *= -1.0
+#         system.rhs_vec.array[:] += system.rhs_buf.array[:]
+#         system.rhs_vec.petsc.assemble()
+#         return system.rhs_vec.petsc.norm()
 
-    def start_iteration(self):
-        """ Stores the rhs and initial sol vectors """
-        system = self.workflow._subsystem
-        system.rhs_buf.array[:] = system.rhs_vec.array[:]
-        system.sol_buf.array[:] = system.sol_vec.array[:]
-        norm = self._norm()
-        norm0 = norm if norm != 0.0 else 1.0
-        return norm0, norm
+#     def start_iteration(self):
+#         """ Stores the rhs and initial sol vectors """
+#         system = self.workflow._subsystem
+#         system.rhs_buf.array[:] = system.rhs_vec.array[:]
+#         system.sol_buf.array[:] = system.sol_vec.array[:]
+#         norm = self._norm()
+#         norm0 = norm if norm != 0.0 else 1.0
+#         return norm0, norm
 
-    def end_iteration(self):
-        """ Copy the sol vector ; used for KSP solver """
-        system = self.workflow._subsystem
-        system.sol_vec.array[:] = system.sol_buf.array[:]
+#     def end_iteration(self):
+#         """ Copy the sol vector ; used for KSP solver """
+#         system = self.workflow._subsystem
+#         system.sol_vec.array[:] = system.sol_buf.array[:]
 
 
-class MPIIdentity(MPILinearSolver):
-    """ Identity mapping; no preconditioning """
+# class MPIIdentity(MPILinearSolver):
+#     """ Identity mapping; no preconditioning """
 
-    def execute(self):
-        """ Just copy the rhs to the sol vector """
-        system = self.workflow._subsystem
-        system.sol_vec.array[:] = system.rhs_vec.array[:]
+#     def execute(self):
+#         """ Just copy the rhs to the sol vector """
+#         system = self.workflow._subsystem
+#         system.sol_vec.array[:] = system.rhs_vec.array[:]

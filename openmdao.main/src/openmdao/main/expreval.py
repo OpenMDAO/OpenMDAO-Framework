@@ -885,33 +885,6 @@ class ExprEvaluator(object):
             return self.var_names.copy()
         return []
 
-    def scope_transform(self, scope, new_scope, parent=None):
-        """Return a transformed version of our text string where the attribute
-        names are changed based on a change in scope to the given object.
-        """
-        if self._code is None:
-            self._parse()
-
-        oldname = scope.name + '.' if scope.name else ''
-        newname = new_scope.name + '.' if new_scope.name else ''
-        if scope is new_scope.parent or scope is parent:
-            oldname = 'parent.'
-        elif new_scope is scope.parent or new_scope is parent:
-            newname = 'parent.'
-
-        mapping = {}
-        for var in self.get_referenced_varpaths(copy=False):
-            if var.startswith(newname):
-                mapping[var] = var[len(newname):]
-            else:
-                mapping[var] = oldname+var
-
-        try:
-            return transform_expression(self.text, mapping)
-        except SyntaxError as err:
-            raise SyntaxError("failed to transform expression '%s': %s"
-                              % (self.text, str(err)))
-
     def __eq__(self, other):
         if isinstance(other, self.__class__):
             return self.text == other.text

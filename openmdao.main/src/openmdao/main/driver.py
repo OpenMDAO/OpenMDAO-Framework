@@ -11,7 +11,8 @@ from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
-from openmdao.main.depgraph import find_all_connecting, get_graph_partition
+from openmdao.main.depgraph import find_all_connecting, \
+                                   collapse_driver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -23,7 +24,6 @@ from openmdao.main.mp_support import is_instance, has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
-from openmdao.main.systems import DriverSystem
 
 from openmdao.util.decorators import add_delegate
 
@@ -128,24 +128,7 @@ class Driver(Component):
         # collapse all subdrivers in our graph
         wfnames = set(self.workflow.get_names(full=True))
         for child_drv in self.subdrivers(recurse=False):
-            iterset = [c.name for c in child_drv.iteration_set()
-                        if c.name not in wfnames]
-            subnodes, in_edges, out_edges = get_graph_partition(g, iterset)
-            
-            # create new connections to collapsed node
-            drvname = child_drv.name
-            for u,v in in_edges:
-                g.add_edge(u, drvname)
-                # create our own copy of edge metadata
-                g[u][drvname] = g[u][v].copy()
-
-            for u,v in out_edges:
-                g.add_edge(drvname, v)
-                # create our own copy of edge metadata
-                g[drvname][v] = g[u][v].copy()
-
-            g.remove_nodes_from(subnodes)
-
+            collapse_driver(g, child_drv, wfnames)
 
     def get_depgraph(self):
         return self.parent._depgraph  # May change this to use a smaller graph later
@@ -156,6 +139,14 @@ class Driver(Component):
         # workflow will raise an exception if it can't resolve a Component
         super(Driver, self).check_config(strict=strict)
         self.workflow.check_config(strict=strict)
+
+    @rbac(('owner', 'user'))
+    def get_itername(self):
+        """Return current 'iteration coordinates'."""
+        if self.parent._top_driver is self:
+            return self.parent.get_itername()
+
+        return self.itername
 
     def iteration_set(self, solver_only=False):
         """Return a set of all Components in our workflow and
@@ -183,11 +174,11 @@ class Driver(Component):
         inside of this Driver's iteration set.
         """
         iternames = set([c.name for c in self.iteration_set()])
-        new_list = []
+        deps = []
         for src, dest in super(Driver, self).get_expr_depends():
             if src not in iternames and dest not in iternames:
-                new_list.append((src, dest))
-        return new_list
+                deps.add((src, dest))
+        return list(deps)
 
     @rbac(('owner', 'user'))
     def get_expr_var_depends(self, recurse=True):
@@ -405,8 +396,7 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        #wf.run(ffd_order=self.ffd_order)
-        wf._subsystem.run()
+        wf.run(ffd_order=self.ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
@@ -480,11 +470,11 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        #self._system = DriverSystem(self.get_depgraph(), self)       
         self.workflow.setup_systems()
 
     #### MPI related methods ####
 
+    @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus."""
         return self.workflow.get_req_cpus()
@@ -507,3 +497,11 @@ class Driver(Component):
     def setup_scatters(self):
         self.workflow.setup_scatters()
 
+    @rbac(('owner', 'user'))
+    def get_full_nodeset(self, depgraph):
+        """Return the full set of nodes in the depgraph
+        belonging to this driver (inlcudes full iteration set).
+        """
+        names = super(Driver, self).get_full_nodeset(depgraph)
+        names.update(self.workflow.get_full_nodeset(depgraph))
+        return names

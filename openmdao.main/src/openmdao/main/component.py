@@ -395,7 +395,7 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            if self.parent is None:
+            if self.parent is None and IAssembly.providedBy(self):
                 self._setup()  # only call _setup from top level
             self._new_config = False
 
@@ -1846,6 +1846,7 @@ class Component(Container):
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
 
+    @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.mpi.requested_cpus
@@ -1868,3 +1869,10 @@ class Component(Container):
 
     def setup_systems(self):
         pass
+
+    @rbac(('owner', 'user'))
+    def get_full_nodeset(self, depgraph):
+        """Return the full set of nodes in the depgraph
+        belonging to this component.
+        """
+        return set(depgraph.find_prefixed_nodes((self.name,)))

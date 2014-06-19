@@ -541,7 +541,7 @@ class ArrayTest(unittest.TestCase):
                          [[1, 2, 3], [4, 5, 6]])
 
         self.assertEqual(driver._hasparameters.get_expr_depends(),
-                         [('driver', 'comp'), ('driver', 'comp')])
+                         [('driver', 'comp')])
         self.assertEqual(driver._hasparameters.get_referenced_compnames(),
                          set(['comp']))
         self.assertEqual(driver._hasparameters.get_referenced_varpaths(),

@@ -16,7 +16,7 @@ class VecWrapper(object):
         self.array = array
 
         allvars = system.all_variables
-        variables = system.vector_vars
+        vector_vars = system.vector_vars
         
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subvars = set()  # set of all names representing subviews of other views
@@ -26,15 +26,15 @@ class VecWrapper(object):
         else:
             vset = inputs
             #mpiprint("SCATTER_INPUTS: %s" % inputs)
-            notfound = [n for n in inputs if n not in variables]
+            notfound = [n for n in inputs if n not in vector_vars]
             if notfound:
-                mpiprint("SCATTER for %s: inputs %s\nnot in variables %s" %
-                        (system.name, notfound, variables.keys()))
+                mpiprint("SCATTER for %s: inputs %s\nnot in vector_vars %s" %
+                        (system.name, notfound, vector_vars.keys()))
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., their basevars are not included in the vector.
         start, end = 0, 0
-        for i, (name, var) in enumerate(variables.items()):
+        for i, (name, var) in enumerate(vector_vars.items()):
             if name not in vset:
                 continue
             sz = var['size']
@@ -49,13 +49,13 @@ class VecWrapper(object):
                 self._info[name] = (self.array[start:end], start)
                 if end-start > self.array[start:end].size:
                     raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" % 
-                                 (system.name,name, [start,end],self._info[name][0].size))
+                                 (system.name,name, [start,end],self[name].size))
                 start += sz
 
         # now add views for subvars that are subviews of their
         # basevars
         for name, var in allvars.items():
-            if name not in variables and name in vset:
+            if name not in vector_vars and name in vset:
                 sz = var['size']
                 if sz > 0 and not var.get('flat', True):
                     idx = var['flat_idx']
@@ -85,11 +85,19 @@ class VecWrapper(object):
 
     def __contains__(self, name):
         return name in self._info
-        
-    def list_views(self):
-        """Return a list of names of subviews of our array."""
+
+    def keys(self):
         return self._info.keys()
 
+    def items(self):
+        lst = []
+        for name, (view, start) in self._info.items():
+            if len(view) == 1:
+                lst.append((name, view[0]))
+            else:
+                lst.append((name, view))
+        return lst
+        
     def start(self, name):
         """Return the starting index for the array view belonging
         to the given name. name may contain array indexing.
@@ -116,7 +124,7 @@ class VecWrapper(object):
         versions of them in our array.
         """
         if vnames is None:
-            vnames = self._info.keys()
+            vnames = self.keys()
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
@@ -129,7 +137,7 @@ class VecWrapper(object):
         and set them into the given scope.
         """
         if vnames is None:
-            vnames = self._info.keys()
+            vnames = self.keys()
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
@@ -137,20 +145,11 @@ class VecWrapper(object):
                 #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
            
-    def dump(self, vecname):
+    def dump(self, vecname=''):
         for name, (array_val, start) in self._info.items():
             mpiprint("%s - %s: (%d,%d) %s" % (vecname,name, start, start+len(array_val),array_val))
         if self.petsc_vec is not None:
             mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
-
-    def items(self):
-        lst = []
-        for name, (array_val, start) in self._info.items():
-            if len(array_val) == 1:
-                lst.append((name, array_val[0]))
-            else:
-                lst.append((name, array_val))
-        return lst
 
 
 class DataTransfer(object):
@@ -163,6 +162,8 @@ class DataTransfer(object):
         self.scatter_conns = scatter_conns[:]
         self.noflat_vars = noflat_vars[:]
 
+        #print "noflat: %s" % noflat_vars
+
         # TODO: remove the following attrs (used for debugging only)
         self.var_idxs = var_idxs[:]
         self.input_idxs = input_idxs[:]
@@ -170,7 +171,7 @@ class DataTransfer(object):
         if not (scatter_conns or noflat_vars):
             return  # no data to xfer
 
-        mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
+        #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
         merged_vars = idx_merge(var_idxs)
         merged_inputs = idx_merge(input_idxs)
 
@@ -217,7 +218,7 @@ class DataTransfer(object):
         #srcvec.array *= system.vec['u0'].array
         #if system.mode == 'fwd':
         if self.scatter:
-            mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
+            #mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
             self.scatter.scatter(src, dest, addv=False, mode=False)
 
         if self.noflat_vars:
@@ -262,10 +263,13 @@ class SerialScatter(object):
     def __init__(self, srcvec, src_idxs, destvec, dest_idxs):
         self.src_idxs = src_idxs
         self.dest_idxs = dest_idxs
+        self.svec = srcvec
+        self.dvec = destvec
 
-        
     def scatter(self, srcvec, destvec, addv, mode):
         if mode:  # reverse?
             raise RuntimeError("reverse mode not supported yet")
         else:   # fwd
+            #print "pre-scatter, dest = %s" % destvec
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
+            #print "post-scatter, dest = %s" % destvec

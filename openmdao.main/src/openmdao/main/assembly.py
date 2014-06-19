@@ -40,6 +40,7 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.systems import InnerAssemblySystem
 
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
@@ -729,9 +730,10 @@ class Assembly(Component):
             for recorder in self.recorders:
                 recorder.startup()
 
-        self._top_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        self._system.run(self.itername, ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        #self._top_driver.run(ffd_order=self.ffd_order, case_uuid=self._case_uuid)
 
-        self._depgraph.update_boundary_outputs(self)
+        #self._depgraph.update_boundary_outputs(self)
 
     def get_case_variables(self):
         """Collect variables to be recorded by workflows."""
@@ -1373,64 +1375,70 @@ class Assembly(Component):
         return [c for c in conts if has_interface(c, IComponent)]
 
     def setup_systems(self):
-        # dgraph = self.get_depgraph()
-        # bndry_vars = [n for n,d in dgraph.nodes_iter(data=True)
-        #                           if 'boundary' in d]
+        #self._top_driver.setup_systems()
+        self._system = InnerAssemblySystem(self)
+        return self._system
 
-        # self._system = InnerAssemblySystem(bndry_vars)
-        self._top_driver.setup_systems()
-
+    @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self._top_driver.get_req_cpus()
 
     def setup_communicators(self, comm):
         Container._interactive = False
-        self._top_driver.setup_communicators(comm)
+        self._system.setup_communicators(comm)
         
     def setup_variables(self):
         #self._system.setup_variables(self.get_depgraph())
-        self._top_driver.setup_variables()
+        self._system.setup_variables()
  
     def setup_sizes(self):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
         # # this will calculate sizes for all subsystems
-        self._top_driver.setup_sizes()
+        self._system.setup_sizes()
 
     def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        self._top_driver.setup_vectors()
+        self._system.setup_vectors(None)
 
     def setup_scatters(self):
-        self._top_driver.setup_scatters()
+        self._system.setup_scatters()
 
     def _setup(self):
         """This is called automatically on the top level Assembly
         prior to execution.
         """
-        if MPI:
-            try:
-                MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+        save_dg = self._depgraph
+        self._depgraph = save_dg.subgraph(save_dg.nodes())
+        self._depgraph.prune_unconnected_vars()
 
+        try:
+            if MPI:
+                try:
+                    MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+
+                    self.setup_systems()
+                    self.setup_communicators(MPI.COMM_WORLD)
+                    self.setup_variables()
+                    self.setup_sizes()
+                    self.setup_vectors()
+                    self.setup_scatters()
+                except Exception:
+                    mpiprint(traceback.format_exc())
+            else:
                 self.setup_systems()
-                self.setup_communicators(MPI.COMM_WORLD)
+                self.setup_communicators(None)
                 self.setup_variables()
                 self.setup_sizes()
                 self.setup_vectors()
                 self.setup_scatters()
-            except Exception:
-                mpiprint(traceback.format_exc())
-        else:
-            self.setup_systems()
-            self.setup_communicators(None)
-            self.setup_variables()
-            self.setup_sizes()
-            self.setup_vectors()
-            self.setup_scatters()
+        finally:
+            self._depgraph = save_dg # go back to full depgraph to allow
+                                     # doing connects, etc. later
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

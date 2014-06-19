@@ -1148,12 +1148,12 @@ class HasParameters(object):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency introduced by a parameter.
         """
-        conn_list = []
+        conns = set()
         pname = self._parent.name
         for param in self._parameters.values():
             for cname in param.get_referenced_compnames():
-                conn_list.append((pname, cname))
-        return conn_list
+                conns.add((pname, cname))
+        return list(conns)
 
     def get_referenced_compnames(self):
         """Return a set of Component names based on the

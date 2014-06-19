@@ -453,8 +453,8 @@ class Container(SafeHasTraits):
             _check_bad_default(name, t)
             break  # just check the first arg in the list
 
-        if name in self._trait_metadata:
-            del self._trait_metadata[name]  # Invalidate.
+        if name in cls._trait_metadata:
+            del cls._trait_metadata[name]  # Invalidate.
 
         return super(Container, cls).add_class_trait(name, *trait)
 
@@ -526,14 +526,22 @@ class Container(SafeHasTraits):
             return obj.get_attr(restofpath, index)
 
         if index is None:
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
+            if '[' in path:
+                try:
+                    obj = get_val_and_index(self, path)[0]
+                except:
+                    return self._get_failed(path, index)
+                trait = self.get_trait(path.split('[',1)[0])
+            else:
+                obj = getattr(self, path, Missing)
+                if obj is Missing:
+                    return self._get_failed(path, index)
+                trait = self.get_trait(path)
 
-            trait = self.get_trait(path)
             if trait is None:
                 self.raise_exception("trait '%s' does not exist" %
                                      path, AttributeError)
+
             # copy value if 'copy' found in metadata
             if trait.copy:
                 if isinstance(obj, Container):
@@ -1009,9 +1017,16 @@ class Container(SafeHasTraits):
             return obj.get(restofpath, index)
 
         if index is None:
-            if '[' in path or '(' in path:
-                # caller has put indexing in the string instead of
-                # using the indexing protocol
+            if '[' in path:
+                try:
+                    return get_val_and_index(self, path)[0]
+                except:
+                    return self._get_failed(path, index)
+            elif '(' in path:
+                # caller is doing something funky and not using the
+                # indexing protocol, so just create/cache an expression
+                # and evaluate it (which will call this method again using
+                # the indexing protocol)
                 expr = self._exprcache.get(path)
                 if expr is None:
                     expr = ExprEvaluator(path, scope=self)
@@ -1071,7 +1086,7 @@ class Container(SafeHasTraits):
                 # else, fall through to error
             elif isinstance(val, ndarray):
                 if idx is None:
-                    setattr(self, path, value)
+                    setattr(self, path, value.reshape(val.shape))
                 else:
                     val[idx] = value
                 return

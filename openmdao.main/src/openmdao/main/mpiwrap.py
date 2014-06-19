@@ -49,6 +49,7 @@ else:
         return None
 
     def mpiprint(msg, rank=-1):
+        #pass
         print msg
         
 class MPI_info(object):

@@ -258,7 +258,7 @@ class PseudoComponent(object):
             scope._depgraph.add_edge(self.name+'.out0', driver.name,
                                      drv_conn=driver)
 
-    def run(self, ffd_order=0):
+    def run(self, ffd_order=0, case_uuid=''):
         setattr(self, 'out0', self._srcexpr.evaluate())
 
     def get(self, name, index=None):
@@ -406,3 +406,9 @@ class PseudoComponent(object):
 
     def _input_updated(self, name, fullpath=None):
         pass
+
+    def get_full_nodeset(self, depgraph):
+        """Return the full set of nodes in the depgraph
+        belonging to this component.
+        """
+        return set(depgraph.find_prefixed_nodes((self.name,)))
