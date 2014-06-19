@@ -5,7 +5,7 @@ Trait for numpy array variables, with optional units.
 #public symbols
 __all__ = ["Array"]
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
@@ -102,15 +102,18 @@ class Array(TraitArray):
                     raise ValueError("Shape of the default value does not "
                                      "match the shape attribute.")
 
-        super(Array, self).__init__(dtype=dtype, value=default_value, assumed_default=assumed_default,
-                                    **metadata)
+        if 'assumed_default' in metadata:
+            del metadata['assumed_default']
+
+        super(Array, self).__init__(dtype=dtype, value=default_value,
+                                    assumed_default=assumed_default, **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         Units are converted as needed.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # If both source and target have units, we need to process differently
         if isinstance(value, AttrWrapper):
             value = value.value
@@ -119,9 +122,7 @@ class Array(TraitArray):
                 if valunits and isinstance(valunits, basestring) and \
                    self.units != valunits:
                     value = self._validate_with_metadata(obj, name,
-                                                         value.value,
-                                                         valunits)
-
+                                                         value.value, valunits)
         try:
             new_val = super(Array, self).validate(obj, name, value)
         except Exception:
@@ -136,7 +137,7 @@ class Array(TraitArray):
         wvalue = value
         info = "an array-like object"
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if self.shape and hasattr(value, 'shape') and value.shape:
             if self.shape != value.shape:
                 info += " of shape %s" % str(self.shape)
@@ -155,7 +156,7 @@ class Array(TraitArray):
         """Return a UnitsAttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if index is not None:
             value = get_indexed_value(value, None, index)
         if self.units:
@@ -168,7 +169,7 @@ class Array(TraitArray):
         the source trait.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         dst_units = self.units
 
         try:

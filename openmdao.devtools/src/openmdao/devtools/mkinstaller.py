@@ -232,7 +232,7 @@ def main(args=None):
         openmdao_packages = %s
         try:
             if is_darwin:
-               extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+                extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
             for pkg, pdir, _ in openmdao_packages:
                 if not options.gui and pkg == 'openmdao.gui':
@@ -242,7 +242,7 @@ def main(args=None):
                            'develop', '-N'] + cmds
                 try:
                     if is_darwin:
-                       call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
                     else:
                         call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
                 except OSError:
@@ -345,7 +345,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
 
     #To get rid of OSX 10.9 compiler errors by turning them to warnings.
     if is_darwin:
-       extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+        extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
@@ -356,7 +356,7 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
     try:
         if is_darwin:
-           call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
         else:
             call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
     except OSError:
@@ -490,6 +490,15 @@ def after_install(options, home_dir, activated=False):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
+
+        #Hack to make sure scipy is up to date.   
+        try:
+            from scipy.optimize import minimize
+        except:
+            if "scipy" in failed_imports:
+                failed_imports.remove("scipy")
+            failed_imports.append("scipy>=0.11.0")
+
     if failed_imports:
         if options.noprereqs:
             print "\\n**** The following prerequisites could not be imported: %%s." %% failed_imports
