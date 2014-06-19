@@ -43,7 +43,7 @@ from openmdao.main.index import get_indexed_value, deep_hasattr, \
 from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
-from openmdao.main.rbac import rbac, remote_access
+from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
