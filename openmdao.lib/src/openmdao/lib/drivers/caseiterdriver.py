@@ -304,15 +304,20 @@ class CaseIteratorDriver(Driver):
             # Replicate and mutate model to run our workflow once.
             # Originally this was done in-place, but that 'invalidated'
             # various workflow quantities.
+            self._record_leaks('\nbefore replicant copy', report=False)
             replicant = self.parent.copy()
+            self._record_leaks('\nafter replicant copy')
             workflow = replicant.get(self.name+'.workflow')
             driver = replicant.add('driver', Driver())
             workflow.parent = driver
             workflow.scope = None
             replicant.driver.workflow = workflow
+            self._record_leaks('\nbefore save_to_egg')
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)
+            self._record_leaks('\nafter save_to_egg')
             replicant = None
+            self._record_leaks('\nafter release')
 
             self._egg_file = egg_info[0]
             self._egg_required_distributions = egg_info[1]
@@ -707,6 +712,11 @@ class CaseIteratorDriver(Driver):
             return self._start_processing(server)
         else:
             return True
+
+    def _record_leaks(self, msg, report=True):
+        from openmdao.util.leakchk import LeakChecker
+        print msg, 'reporting', report
+        LeakChecker.get_instance().record(report=report)
 
     def _record_case(self, scope, case):
         """ Record case data from `scope` in ``case_outputs``. """

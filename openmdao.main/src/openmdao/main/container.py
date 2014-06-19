@@ -995,23 +995,19 @@ class Container(SafeHasTraits):
             return obj.get(restofpath, index)
 
         if index is None:
-            if '[' in path or '(' in path:
-                # caller has put indexing in the string instead of
-                # using the indexing protocol
-                expr = self._exprcache.get(path)
-                if expr is None:
-                    expr = ExprEvaluator(path, scope=self)
-                    self._exprcache[path] = expr
-                return expr.evaluate()
-            else:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    obj = self._get_failed(path, index)
-                if isinstance(obj, Container) and hasattr(obj, '_iotype') and \
-                   remote_access():
-                    # Remote access to VariableTree needs standalone copy.
-                    obj = obj.copy()
-                return obj
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                if '[' in path or '(' in path:
+                    # caller has put indexing in the string instead of
+                    # using the indexing protocol
+                    expr = self._exprcache.get(path)
+                    if expr is None:
+                        expr = ExprEvaluator(path, scope=self)
+                        self._exprcache[path] = expr
+                    return expr.evaluate()
+                else:
+                    return self._get_failed(path, index)
+            return obj
         else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:

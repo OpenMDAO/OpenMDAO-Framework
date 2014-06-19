@@ -47,6 +47,7 @@ import threading
 import time
 import traceback
 
+from copy import deepcopy
 from Crypto import Random
 
 from multiprocessing import Process, current_process, connection, util
@@ -656,6 +657,7 @@ class OpenMDAO_Server(Server):
                 msg = ('#PROXY', (res._exposed_, res._token, res._pubkey))
 
         elif access_controller is not None:
+            # Check if the value must be proxied.
             if methodname in SPECIALS:
                 if access_controller.need_proxy(obj, args[0], res):
                     # Create proxy if in declared proxy types.
@@ -669,6 +671,10 @@ class OpenMDAO_Server(Server):
                 proxyid = typeid
                 if typeid not in self.registry:
                     self.registry[typeid] = (None, None, None, None)
+
+            elif hasattr(res, '_parent') and res._parent is not None:
+                # Check if the value must be deep copied (VariableTree).
+                res = deepcopy(res)
 
         # Proxy pass-through only happens remotely.
         else:  #pragma no cover
