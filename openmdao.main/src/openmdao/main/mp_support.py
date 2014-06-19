@@ -47,7 +47,6 @@ import threading
 import time
 import traceback
 
-from copy import deepcopy
 from Crypto import Random
 
 from multiprocessing import Process, current_process, connection, util
@@ -673,8 +672,9 @@ class OpenMDAO_Server(Server):
                     self.registry[typeid] = (None, None, None, None)
 
             elif hasattr(res, '_parent') and res._parent is not None:
-                # Check if the value must be deep copied (VariableTree).
-                res = deepcopy(res)
+                # Check if the value must be copied (VariableTree).
+                # Odd that it isn't being proxied (though we don't want one).
+                res = res.copy()
 
         # Proxy pass-through only happens remotely.
         else:  #pragma no cover

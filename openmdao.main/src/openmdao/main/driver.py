@@ -307,6 +307,12 @@ class Driver(Component):
         self.workflow.reset()
         super(Driver, self).run(ffd_order, case_uuid)
 
+    @rbac(('owner', 'user'))
+    def configure_recording(self, includes, excludes):
+        """Called at start of top-level run to configure case recording.
+        Returns set of paths for changing inputs."""
+        return self.workflow.configure_recording(includes, excludes)
+
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):
             for param in self.get_parameters().values():
