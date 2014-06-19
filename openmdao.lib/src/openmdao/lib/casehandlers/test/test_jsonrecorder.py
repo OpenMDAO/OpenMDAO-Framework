@@ -141,8 +141,8 @@ class TestCase(unittest.TestCase):
                 if value not in (' null', ' 0'):
                     self.assertEqual(int(value), -sys.maxint)
             elif expect.startswith('        "_pseudo_1":'):
-                expect = re.match('.*:([^,]*),', expect).group(1)
-                value = re.match('.*:([^,]*),', lines[i]).group(1)
+                expect = float(re.match('.*:([^,]*),', expect).group(1))
+                value = float(re.match('.*:([^,]*),', lines[i]).group(1))
                 # Multiple representations of zero...
                 self.assertEqual(value, expect)
             else:
