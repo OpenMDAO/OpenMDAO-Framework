@@ -3,8 +3,8 @@
 
 """
 
-from copy import deepcopy
 from cStringIO import StringIO
+import gc
 import logging
 import os.path
 import Queue
@@ -322,7 +322,8 @@ class CaseIteratorDriver(Driver):
             replicant.driver.workflow = workflow
             egg_info = replicant.save_to_egg(self.name, version,
                                              need_requirements=need_reqs)
-            replicant = None
+            replicant = workflow = driver = None  # Release objects.
+            gc.collect()  # Collect/compact before possible fork.
 
             self._egg_file = egg_info[0]
             self._egg_required_distributions = egg_info[1]
@@ -711,7 +712,7 @@ class CaseIteratorDriver(Driver):
             for path, value in case_outputs:
                 path = make_legal_path(path)
                 if self.sequential and isinstance(value, VariableTree):
-                    value = deepcopy(value)
+                    value = value.copy()
                 self.set('case_outputs.'+path, value,
                          index=(index,), force=True)
 
@@ -731,7 +732,7 @@ class CaseIteratorDriver(Driver):
             for path, value in case_outputs:
                 if path in recording:
                     if self.sequential and isinstance(value, VariableTree):
-                        value = deepcopy(value)
+                        value = value.copy()
                     outputs.append(value)
 
             itername = '%s.workflow.itername' % self.name
@@ -739,7 +740,7 @@ class CaseIteratorDriver(Driver):
                                                   itername=itername)
             for path, value in extra:
                 if self.sequential and isinstance(value, VariableTree):
-                    value = deepcopy(value)
+                    value = value.copy()
                 outputs.append(value)
 
             if itername in workflow._rec_outputs:

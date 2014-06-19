@@ -158,10 +158,10 @@ class TestCase(unittest.TestCase):
     def test_badval(self):
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
-        self.top.comp1.data = self.test_badval.__func__
+        self.top.comp1.data = self.test_badval.__func__.__code__
         assert_raises(self, 'self.top.run()', globals(), locals(), RuntimeError,
                       "JSON write failed for simulation_info.constants:"
-                      " keys ['comp1.data']: <function test_badval at")
+                      " keys ['comp1.data']: <code object test_badval at")
 
     def test_bsonrecorder(self):
         # Verify bson output can be read and that it matches json.
