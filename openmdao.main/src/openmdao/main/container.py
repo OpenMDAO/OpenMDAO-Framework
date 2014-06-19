@@ -540,7 +540,7 @@ class Container(SafeHasTraits):
 
     def _add_after_parent_set(self, name, obj):
         pass
-    
+
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
         object in preparation for insertion into self.
@@ -552,7 +552,7 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
-            
+
         removed = False
         if has_interface(obj, IContainer):
             # if an old child with that name exists, remove it
@@ -569,13 +569,13 @@ class Container(SafeHasTraits):
             obj.name = name
 
             self._add_after_parent_set(name, obj)
-            
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
-                
+
         return removed
 
     def _post_container_add(self, name, obj, removed):
