@@ -5,6 +5,7 @@ Test run/stop aspects of a simple workflow.
 import unittest
 
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
+from openmdao.main.case import Case
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.datatypes.api import Int, Bool, Float
 from openmdao.main.hasparameters import HasParameters
@@ -15,7 +16,7 @@ from openmdao.util.decorators import add_delegate
 
 from openmdao.main.case import CaseTreeNode
 
-# pylint: disable-msg=E1101,E1103
+# pylint: disable=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
 dummyval = 1
@@ -109,13 +110,23 @@ class DumbRecorder(object):
 
     def __init__(self):
         self.cases = []
+        self._name_map = {}
 
     def startup(self):
         pass
 
-    def record(self, case):
-        self.cases.append(case)
+    def register(self, src, inputs, outputs):
+        self._name_map[src] = (inputs, outputs)
 
+    def record_constants(self, constants):
+        pass
+
+    def record(self, src, inputs, outputs, err, case_uuid, parent_uuid):
+        in_names, out_names = self._name_map[src]
+        inputs = zip(in_names, inputs)
+        outputs = zip(out_names, outputs)
+        self.cases.append(Case(inputs, outputs,
+                               case_uuid=case_uuid, parent_uuid=parent_uuid))
     def close(self):
         return
 

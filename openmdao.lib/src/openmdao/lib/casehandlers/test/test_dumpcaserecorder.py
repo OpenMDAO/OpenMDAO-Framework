@@ -27,7 +27,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         cases = []
         for i in range(10):
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
-            cases.append(Case(inputs=inputs, outputs=outputs, label='case%s'%i))
+            cases.append(Case(inputs=inputs, outputs=outputs))
 
         Case.set_vartree_inputs(driver, cases)
         driver.add_responses(outputs)
@@ -47,24 +47,61 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout1), DumpCaseRecorder(sout2)]
         self.top.run()
 
-        expected = [
-            'Case: ',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239074.309192',
-            '   inputs:',
-            '      comp1.x: 8.0',
-            '      comp1.y: 16.0',
-            '   outputs:',
-            '      Response_0: 24.0',
-            '      Response_1: 25.0',
-            '      driver.workflow.itername: 9',
-            ]
+        expected_constants = """\
+Constants:
+   comp1.directory: 
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp2.directory: 
+   comp2.force_fd: False
+   comp2.missing_deriv_policy: error
+   directory: 
+   driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+   driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+   driver.directory: 
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero"""
 
+        expected_case = """\
+Case:
+   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
+   timestamp: 1383239074.309192
+   inputs:
+      comp1.x: 8.0
+      comp1.y: 16.0
+   outputs:
+      _pseudo_0: 24.0
+      _pseudo_1: 25.0
+      comp1.z: 24.0
+      comp2.z: 25.0
+      driver.workflow.itername: 9"""
+
+#        print sout1.getvalue()
+
+        expected = expected_constants.split('\n')
+        for sout in [sout1, sout2]:
+            lines = sout.getvalue().split('\n')
+            for i in range(len(expected)):
+                self.assertEqual(lines[i], expected[i])
+
+        expected = expected_case.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
             start = 0
             for i in range(9):
-                index = start + lines[start:].index('Case: ')
+                index = start + lines[start:].index('Case:')
                 start = index + 1
             for i in range(len(expected)):
                 if expected[i].startswith('   uuid:'):
@@ -85,20 +122,46 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DumpCaseRecorder(sout)]
         self.top.run()
 
-        expected = [
-            'Case: ',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239074.309192',
-            '   inputs:',
-            '      comp1.x: 0.0',
-            '   outputs:',
-            '      Objective_0: 0.0',
-            '      Objective_1: 1.0',
-            '      driver.workflow.itername: 1',
-            ]
+        expected = """\
+Constants:
+   comp1.directory: 
+   comp1.force_fd: False
+   comp1.missing_deriv_policy: error
+   comp1.y: 0.0
+   comp2.directory: 
+   comp2.force_fd: False
+   comp2.missing_deriv_policy: error
+   directory: 
+   driver.directory: 
+   driver.force_fd: False
+   driver.gradient_options.derivative_direction: auto
+   driver.gradient_options.directional_fd: False
+   driver.gradient_options.fd_blocks: []
+   driver.gradient_options.fd_form: forward
+   driver.gradient_options.fd_step: 1e-06
+   driver.gradient_options.fd_step_type: absolute
+   driver.gradient_options.force_fd: False
+   driver.gradient_options.gmres_maxiter: 100
+   driver.gradient_options.gmres_tolerance: 1e-09
+   excludes: []
+   force_fd: False
+   includes: ['*']
+   missing_deriv_policy: assume_zero
+Case:
+   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
+   timestamp: 1383239074.309192
+   inputs:
+      comp1.x: 0.0
+   outputs:
+      _pseudo_2: 0.0
+      _pseudo_3: 1.0
+      comp1.z: 0.0
+      comp2.z: 1.0
+      driver.workflow.itername: 1"""
 
+#        print sout.getvalue()
+        expected = expected.split('\n')
         lines = sout.getvalue().split('\n')
-
         for i in range(len(expected)):
             if expected[i].startswith('   uuid:'):
                 self.assertTrue(lines[i].startswith('   uuid:'))
