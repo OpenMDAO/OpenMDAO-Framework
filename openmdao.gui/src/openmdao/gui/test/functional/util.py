@@ -121,11 +121,16 @@ def setup_chrome():
             os.remove(filename)
         finally:
             os.chdir(orig_dir)
+    """
+    Adding code here to eliminate warning banner in Chrome (as of
+    version 35)  The banner pushes the display downward and makes some 
+    items unclickable in Selenium.  Adding the test-type flag turns off the banner 
+    """
     from selenium.webdriver.chrome.options import Options
     chrome_options = Options()
     chrome_options.add_argument("--test-type")
     driver = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
-    #driver = webdriver.Chrome(executable_path=path)
+
     driver.implicitly_wait(15)
     TEST_CONFIG['browsers'].append(driver)
     return driver
