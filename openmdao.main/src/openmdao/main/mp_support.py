@@ -656,6 +656,7 @@ class OpenMDAO_Server(Server):
                 msg = ('#PROXY', (res._exposed_, res._token, res._pubkey))
 
         elif access_controller is not None:
+            # Check if the value must be proxied.
             if methodname in SPECIALS:
                 if access_controller.need_proxy(obj, args[0], res):
                     # Create proxy if in declared proxy types.
@@ -669,6 +670,11 @@ class OpenMDAO_Server(Server):
                 proxyid = typeid
                 if typeid not in self.registry:
                     self.registry[typeid] = (None, None, None, None)
+
+            elif hasattr(res, '_parent') and res._parent is not None:
+                # Check if the value must be copied (VariableTree).
+                # Odd that it isn't being proxied (though we don't want one).
+                res = res.copy()
 
         # Proxy pass-through only happens remotely.
         else:  #pragma no cover
