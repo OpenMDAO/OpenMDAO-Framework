@@ -306,8 +306,12 @@ class _Encoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ndarray):
             return obj.tolist()
+        elif hasattr(obj, 'json_encode'):
+            return obj.json_encode()
+        elif hasattr(obj, '__dict__'):
+            return obj.__dict__
         else:
-            super(_Encoder, self).default(obj)
+            return super(_Encoder, self).default(obj)
 
 
 class BSONCaseRecorder(_BaseRecorder):

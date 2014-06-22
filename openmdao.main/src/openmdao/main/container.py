@@ -995,19 +995,19 @@ class Container(SafeHasTraits):
             return obj.get(restofpath, index)
 
         if index is None:
-            if '[' in path or '(' in path:
-                # caller has put indexing in the string instead of
-                # using the indexing protocol
-                expr = self._exprcache.get(path)
-                if expr is None:
-                    expr = ExprEvaluator(path, scope=self)
-                    self._exprcache[path] = expr
-                return expr.evaluate()
-            else:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
+                if '[' in path or '(' in path:
+                    # caller has put indexing in the string instead of
+                    # using the indexing protocol
+                    expr = self._exprcache.get(path)
+                    if expr is None:
+                        expr = ExprEvaluator(path, scope=self)
+                        self._exprcache[path] = expr
+                    return expr.evaluate()
+                else:
                     return self._get_failed(path, index)
-                return obj
+            return obj
         else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:
