@@ -910,7 +910,7 @@ class HasParameters(object):
         name = key[0] if isinstance(key, tuple) else key
 
         # add a graph connection from the driver to the param target
-        dgraph = self._get_scope().get_depgraph()
+        dgraph = self.parent.get_depgraph()
         dgraph.add_edge(self.parent.name, dgraph.add_subvar(target),
                         drv_conn=self.parent.name)
 

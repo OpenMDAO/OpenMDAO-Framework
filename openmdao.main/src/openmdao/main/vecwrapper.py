@@ -24,12 +24,7 @@ class VecWrapper(object):
         if inputs is None:
             vset = allvars
         else:
-            vset = inputs
-            #mpiprint("SCATTER_INPUTS: %s" % inputs)
-            notfound = [n for n in inputs if n not in vector_vars]
-            if notfound:
-                mpiprint("SCATTER for %s: inputs %s\nnot in vector_vars %s" %
-                        (system.name, notfound, vector_vars.keys()))
+            vset = set(inputs)
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., their basevars are not included in the vector.
@@ -142,8 +137,21 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
+                mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
+           
+    def set_to_vec(self, vec, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given array.
+        """
+        if vnames is None:
+            vnames = self.keys()
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None and name not in self._subvars:
+                mpiprint("setting %s (%s) to vector" % (name, array_val))
+                vec[name][:] = array_val
            
     def dump(self, vecname=''):
         for name, (array_val, start) in self._info.items():
@@ -165,25 +173,23 @@ class DataTransfer(object):
         #print "noflat: %s" % noflat_vars
 
         # TODO: remove the following attrs (used for debugging only)
-        self.var_idxs = var_idxs[:]
-        self.input_idxs = input_idxs[:]
+        self.var_idxs = idx_merge(var_idxs)
+        self.input_idxs = idx_merge(input_idxs)
         
         if not (scatter_conns or noflat_vars):
             return  # no data to xfer
 
         #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
-        merged_vars = idx_merge(var_idxs)
-        merged_inputs = idx_merge(input_idxs)
 
-        if len(merged_vars) != len(merged_inputs):
+        if len(self.var_idxs) != len(self.input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" % 
-                                (len(merged_vars), len(merged_inputs),
-                                  merged_vars, merged_inputs, system.name))
+                                (len(self.var_idxs), len(self.input_idxs),
+                                  self.var_idxs, self.input_idxs, system.name))
 
         if MPI:
-            var_idx_set = PETSc.IS().createGeneral(merged_vars, 
+            var_idx_set = PETSc.IS().createGeneral(self.var_idxs, 
                                                    comm=system.mpi.comm)
-            input_idx_set = PETSc.IS().createGeneral(merged_inputs, 
+            input_idx_set = PETSc.IS().createGeneral(self.input_idxs, 
                                                      comm=system.mpi.comm)
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
@@ -198,9 +204,9 @@ class DataTransfer(object):
                                       (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
                                        system.vec['p'].array.size, str(err)))
         else:  # serial execution
-            if len(merged_vars) and len(merged_inputs):
-                self.scatter = SerialScatter(system.vec['u'], merged_vars,
-                                             system.vec['p'], merged_inputs)
+            if len(self.var_idxs) and len(self.input_idxs):
+                self.scatter = SerialScatter(system.vec['u'], self.var_idxs,
+                                             system.vec['p'], self.input_idxs)
 
     def __call__(self, system, srcvec, destvec, reverse=False):
 
@@ -233,6 +239,21 @@ class DataTransfer(object):
         #else:
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
+
+        # # copy dest vector values back into local src vector after
+        # # scatter since other systems share parts of the src
+        # # vector (via shared views) with this system.
+        # # FIXME: make sure we're not duplicating copy operation because
+        # #        in some cases we copy vector values back and forth from
+        # #        scoping Assembly...
+        # subvars = destvec._subvars
+        # for name, (array, start) in destvec._info.items():
+        #     if name not in subvars:
+        #         #mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
+        #         srcvec[name][:] = array
+
+        for _, dvar in self.scatter_conns:
+            srcvec[dvar][:] = destvec[dvar][:]
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
@@ -270,6 +291,10 @@ class SerialScatter(object):
         if mode:  # reverse?
             raise RuntimeError("reverse mode not supported yet")
         else:   # fwd
-            #print "pre-scatter, dest = %s" % destvec
+            ## the following debug stuff only works if all vars are size=1
+            #sk = self.svec.keys()
+            #dk = self.dvec.keys()
+            #for s,d in zip(self.src_idxs, self.dest_idxs):
+                #print "%s (%s) -> %s (%s)" % (sk[s], srcvec[s], dk[d], destvec[d])
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
             #print "post-scatter, dest = %s" % destvec

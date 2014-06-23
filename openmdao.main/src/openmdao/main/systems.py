@@ -57,6 +57,7 @@ class System(object):
         self.mpi.requested_cpus = None
         self.all_variables = OrderedDict() # dict of all vars used in data xfer
         self.vector_vars = OrderedDict() # all vars used in vectors
+        self.vector_subvars = OrderedDict() # all vars that are subvars of vector vars
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays
         self.vec = {}
         self.app_ordering = None
@@ -81,6 +82,33 @@ class System(object):
     def get_req_cpus(self):
         return self.mpi.requested_cpus
 
+    def _get_var_info(self, name):
+        vdict = { 'size': 0 }
+        
+        parts = name.split('.',1)
+        if len(parts) > 1:
+            cname, vname = parts
+            child = getattr(self.scope, cname)
+        else:
+            cname, vname = '', name
+            child = self.scope
+        info = child.get_float_var_info(vname)
+        if info is None:
+            vdict['flat'] = False
+        else:  # variable is flattenable to a float array
+            sz, flat_idx, base = info
+            vdict['size'] = sz
+            if flat_idx is not None:
+                vdict['flat_idx'] = flat_idx
+            if base is not None:
+                if cname:
+                    bname = '.'.join((cname, base))
+                else:
+                    bname = base
+                vdict['basevar'] = bname
+                
+        return vdict
+
     def setup_variables(self):
         #mpiprint("setup_variables: %s" % self.name)
 
@@ -91,6 +119,12 @@ class System(object):
             #mpiprint("%s for SUB %s, adding vars %s" % (self.name,sub.name,sub.all_variables.keys()))
             self.all_variables.update(sub.all_variables)
 
+            # # sub inputs may be connected to Assembly boundary vars. If so,
+            # # include them in all_variables
+            # for u,v in sub.in_edges:
+            #     if u not in self.all_variables:            
+            #         self.all_variables[u] = self._get_var_info(u)
+
         #mpiprint("%s: inputs = %s" % (self.name, self.get_inputs(local=True)))
         #mpiprint("%s: outputs = %s" % (self.name, self.get_outputs()))
 
@@ -98,10 +132,10 @@ class System(object):
                            sorted(self.get_outputs())):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
-                self.all_variables[vname] = { 'size': 0 }
+                self.all_variables[vname] = self._get_var_info(vname)
 
         #mpiprint("=== %s: all_variables = %s" % (self.name, self.all_variables.keys()))
-                    
+
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for 
         those that are local.
@@ -128,9 +162,9 @@ class System(object):
         for sub in self.local_subsystems():
             sub.setup_sizes()
 
-        sizes_add, sizes_noadd, noflat = _partition_vars(self.all_variables)
+        sizes_add, sizes_noadd, noflats = _partition_vars(self.all_variables)
 
-        #mpiprint("in %s, add=%s, noadd = %s, noflat=%s" % (self.name,sizes_add,sizes_noadd,noflat))
+        #mpiprint("in %s, add=%s, noadd = %s, noflat=%s" % (self.name,sizes_add,sizes_noadd,noflats))
 
         # create an (nproc x numvars) var size vector containing 
         # local sizes across all processes in our comm
@@ -138,6 +172,12 @@ class System(object):
 
         for name in sizes_add:
             self.vector_vars[name] = self.all_variables[name]
+
+        for name in sizes_noadd:
+            self.vector_subvars[name] = self.all_variables[name]
+
+        for name in noflats:
+            self.noflat_vars[name] = self.all_variables[name]
 
         #mpiprint("%s setup_sizes: vars = %s" % (self.name, self.vector_vars.keys()))
         
@@ -177,7 +217,7 @@ class System(object):
         rank = self.mpi.rank
         if arrays is None:  # we're the top level System in our Assembly
             arrays = {}
-            # create top level vectors            
+            # create top level vectors
             size = numpy.sum(self.local_var_sizes[rank, :])
             for name in ['u', 'f']: #, 'du', 'df']:
                 arrays[name] = numpy.zeros(size)
@@ -220,32 +260,20 @@ class System(object):
         else:
             scatter = subsystem.scatter_partial
 
-        if not scatter is None:
-            # if subsystem is not None:
-            #     sub = "(sub=%s)" % subsystem.name
-            # else:
-            #     sub = ''
-            # mpiprint("scatter: %s %s  %s" % (self.name, sub,scatter.scatter_conns))
+        if scatter is None:
+            print "NO scatter for %s" % self.name
+        #if not scatter is None:
+        else:   
+            if subsystem is None:
+                print "full scatter for %s" % self.name
+            else:
+                print "scatter %s --> %s" % (self.name, subsystem.name)
 
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
             #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
             scatter(self, srcvec, destvec) #, reverse=??)
-
-            # copy dest vector values back into local src vector after
-            # scatter since other systems share parts of the src
-            # vector (via shared views) with this system.
-            # FIXME: make sure we're not duplicating copy operation because
-            #        in some cases we copy vector values back and forth from
-            #        scoping Assembly...
-            srcvec = self.vec[srcvecname]
-            destvec = self.vec[destvecname]
-            subvars = destvec._subvars
-            for name, (array, start) in destvec._info.items():
-                if name not in subvars:
-                    #mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
-                    srcvec[name][:] = array
 
         return scatter
 
@@ -299,7 +327,7 @@ class System(object):
             noflats = self.scatter_full.noflat_vars
         else:
             noflats = ()
-        if noflats:
+        if self.noflats:
             stream.write(' '*(nest+2) + "= noflats =\n")
 
         for src, dest in noflats:
@@ -320,7 +348,7 @@ class SimpleSystem(System):
             comp = getattr(scope, name)
             super(SimpleSystem, self).__init__(scope, depgraph, 
                                                comp.get_full_nodeset(depgraph), name)
-        else:
+        else: # system for a bunch of boundary vars
             super(SimpleSystem, self).__init__(scope, depgraph, name, str(name))
             comp = None
 
@@ -338,7 +366,7 @@ class SimpleSystem(System):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         comp = self._comp
-        #mpiprint("running simple system %s: %s" % (self.name, self._comp.name))
+        mpiprint("running simple system %s" % self.name)
         # if not isinstance(comp, PseudoComponent):
         #     comp.set_itername('%s-%d' % (iterbase, 1))
 
@@ -365,33 +393,33 @@ class SimpleSystem(System):
         #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self.mpi.comm = comm
 
-    def setup_variables(self):
-        #mpiprint("setup_variables: %s" % self.name)
+    #def setup_variables(self):
+        ##mpiprint("setup_variables: %s" % self.name)
 
-        super(SimpleSystem, self).setup_variables()
+        #super(SimpleSystem, self).setup_variables()
 
-        for name, vdict in self.all_variables.items():
-            parts = name.split('.',1)
-            if len(parts) > 1:
-                cname, vname = parts
-                child = getattr(self.scope, cname)
-            else:
-                cname, vname = '', name
-                child = self.scope
-            info = child.get_float_var_info(vname)
-            if info is None:
-                vdict['flat'] = False
-            else:  # variable is flattenable to a float array
-                sz, flat_idx, base = info
-                vdict['size'] = sz
-                if flat_idx is not None:
-                    vdict['flat_idx'] = flat_idx
-                if base is not None:
-                    if cname:
-                        bname = '.'.join((cname, base))
-                    else:
-                        bname = base
-                    vdict['basevar'] = bname
+        #for name, vdict in self.all_variables.items():
+            #parts = name.split('.',1)
+            #if len(parts) > 1:
+                #cname, vname = parts
+                #child = getattr(self.scope, cname)
+            #else:
+                #cname, vname = '', name
+                #child = self.scope
+            #info = child.get_float_var_info(vname)
+            #if info is None:
+                #vdict['flat'] = False
+            #else:  # variable is flattenable to a float array
+                #sz, flat_idx, base = info
+                #vdict['size'] = sz
+                #if flat_idx is not None:
+                    #vdict['flat_idx'] = flat_idx
+                #if base is not None:
+                    #if cname:
+                        #bname = '.'.join((cname, base))
+                    #else:
+                        #bname = base
+                    #vdict['basevar'] = bname
 
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
@@ -402,11 +430,12 @@ class SimpleSystem(System):
         end = numpy.sum(self.input_sizes[:rank+1])
         dest_idxs = [petsc_linspace(start, end)]
         src_idxs = []
-        veckeys = self.vec['p'].keys()
+        ukeys = self.vec['u'].keys()
+        pkeys = self.vec['p'].keys()
         scatter_conns = []
         other_conns = []
-        for dest in veckeys:
-            ivar = veckeys.index(dest)
+        for dest in pkeys:
+            ivar = ukeys.index(dest)
             scatter_conns.append((dest,dest))
             # FIXME: currently just using the local var size for input size
             src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + # ??? args[arg] - user really needs to be able to define size for multi-proc comps
@@ -415,7 +444,7 @@ class SimpleSystem(System):
             raise RuntimeError("ERROR: setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" % 
                                 (len(src_idxs), len(dest_idxs), src_idxs, dest_idxs, self.name))
         
-        other_conns = [(n,n) for n in self.get_inputs() if n not in veckeys]
+        other_conns = [(n,n) for n in self.get_inputs() if n not in pkeys]
         
         if scatter_conns or other_conns:
             self.scatter_full = DataTransfer(self, src_idxs, dest_idxs, 
@@ -454,43 +483,6 @@ class SimpleSystem(System):
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
-
-# FIXME: probably not all Driver systems should be explicit...
-class DriverSystem(SimpleSystem):
-    """A System for a Driver component."""
-
-    def __init__(self, driver):
-        depgraph = driver.get_depgraph()
-        scope = driver.parent
-        super(DriverSystem, self).__init__(depgraph, scope, driver.name)
-        driver.setup_systems()
-
-    def setup_communicators(self, comm):
-        #size = comm.size if MPI else 1
-        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
-        self._comp.setup_communicators(self.mpi.comm)
-
-    def setup_variables(self):
-        super(DriverSystem, self).setup_variables()
-        self._comp.setup_variables()
-
-    def setup_sizes(self):
-        super(DriverSystem, self).setup_sizes()
-        self._comp.setup_sizes()
-
-    def setup_vectors(self, arrays):
-        super(DriverSystem, self).setup_vectors(arrays)
-        self._comp.setup_vectors(arrays)
-
-    def setup_scatters(self):
-        super(DriverSystem, self).setup_scatters()
-        self._comp.setup_scatters()
-        
-    def local_subsystems(self):
-        return self.all_subsystems()
-
-    def all_subsystems(self):
-        return (self._comp.workflow._subsystem,)
 
 
 class AssemblySystem(SimpleSystem):
@@ -661,7 +653,7 @@ class CompoundSystem(System):
         for subsystem in self.local_subsystems():
             subsystem.apply_F()
         #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
-        #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))        
+        #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))
 
     def stop(self):
         for s in self.all_subsystems():
@@ -705,7 +697,7 @@ class SerialSystem(CompoundSystem):
         return self.mpi.requested_cpus
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
+        mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
         self._stop = False
         for sub in self.local_subsystems():
             self.scatter('u', 'p', sub)
@@ -759,8 +751,7 @@ class ParallelSystem(CompoundSystem):
 
         subsystems = []
         requested_procs = []
-        for name, data in self.graph.nodes_iter(data=True):
-            system = data['system']
+        for system in self.all_subsystems():
             subsystems.append(system)
             requested_procs.append(system.get_req_cpus())
 
@@ -832,7 +823,7 @@ class ParallelSystem(CompoundSystem):
             sub.setup_variables()
 
         if self.local_subsystems():
-            sub = self._local_subsystems[0]
+            sub = self.local_subsystems()[0]
             names = sub.all_variables.keys()
         else:
             sub = None
@@ -843,11 +834,55 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
             for name in varkeys:
-                self.all_variables[name] = { 'size': 0 }
+                self.all_variables[name] = self._get_var_info(name)
 
         for sub in self.local_subsystems():
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
+
+class DriverSystem(SimpleSystem):
+#class DriverSystem(SerialSystem):
+    """A System for a Driver component."""
+
+    def __init__(self, driver):
+        driver.setup_systems()
+        depgraph = driver.get_depgraph()
+        scope = driver.parent
+        #subg = depgraph.subgraph(driver.name).copy()
+        #subg.node[driver.name]['system'] = driver.workflow._subsystem
+        #super(DriverSystem, self).__init__(scope, depgraph, subg, driver.name)
+        super(DriverSystem, self).__init__(depgraph, scope, driver.name)
+        
+    #def set_ordering(self, ordering):
+        #self._ordering = [self.name]  
+        ## our workflow will set the order of its subsystem
+
+    def setup_communicators(self, comm):
+        #size = comm.size if MPI else 1
+        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
+        self._comp.setup_communicators(self.mpi.comm)
+
+    def setup_variables(self):
+        super(DriverSystem, self).setup_variables()
+        self._comp.setup_variables()
+
+    def setup_sizes(self):
+        super(DriverSystem, self).setup_sizes()
+        self._comp.setup_sizes()
+
+    def setup_vectors(self, arrays):
+        super(DriverSystem, self).setup_vectors(arrays)
+        self._comp.setup_vectors(arrays)
+
+    def setup_scatters(self):
+        super(DriverSystem, self).setup_scatters()
+        self._comp.setup_scatters()
+      
+    def local_subsystems(self):
+        return self.all_subsystems()
+
+    def all_subsystems(self):
+        return (self._comp.workflow._subsystem,)
 
 
 class InnerAssemblySystem(SerialSystem):
@@ -868,7 +903,8 @@ class InnerAssemblySystem(SerialSystem):
         bndry_ins = [v for v in scope.list_inputs() if v in srcset]
 
         g = nx.DiGraph()
-        g.add_node(drvname, system=DriverSystem(scope._top_driver))
+        g.add_node(drvname)
+        g.node[drvname]['system'] = DriverSystem(scope._top_driver)
 
         self.bins = bins = tuple(bndry_ins)
         self.bouts = bouts = tuple(bndry_outs)

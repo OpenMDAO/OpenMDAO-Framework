@@ -335,7 +335,7 @@ class Driver(Component):
         # force param pseudocomps to get updated values to start
         # KTM1 - probably don't need this anymore
         self.update_parameters()
-
+        
         # Reset the workflow.
         self.workflow.reset()
         super(Driver, self).run(ffd_order, case_uuid)

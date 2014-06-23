@@ -2,6 +2,7 @@ from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
 from functools import cmp_to_key
+from heapq import merge
 
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
@@ -1894,13 +1895,14 @@ def get_all_deps(g):
 
     return edges
 
+# this could be optimized a bit for speed, but we only use it
+# for small graphs, so performance isn't an issue
 def gsort(deps, names):
     """Return a sorted version of the given names
     iterator, based on dependency specified by the
-    given set of dependencies.  Sort is a stable
-    sort, so original order will be preserved unless
-    a dependency is violated.
+    given set of dependencies.
     """
+    
     def gorder(n1, n2):
         if (n1,n2) in deps:
             return -1
@@ -1908,4 +1910,39 @@ def gsort(deps, names):
             return 1
         return 0
 
-    return sorted(names, key=cmp_to_key(gorder))
+    # get all names that actually have a graph dependency
+    depnames = set([u for u,v in deps])
+    depnames.update([v for u,v in deps])
+    
+    ordered = [n for n in names if n in depnames]
+    
+    # get the sorted list of names with dependencies. Note that this
+    # is a stable sort, so original order of the list will be
+    # preserved unless there's a dependency violation.
+    sortlist = sorted(ordered, key=cmp_to_key(gorder))
+    
+    # reverse the list so we can pop from it below
+    rev = sortlist[::-1]
+    
+    # now take the names without dependencies and insert them in the 
+    # proper location in the list.  Since they have no dependencies,
+    # they can be inserted anywhere in the list without messing up 
+    # the sort
+    
+    final = [None]*len(names)
+    for i,n in enumerate(names):
+        if n in depnames:
+            final[i] = rev.pop()
+        else:
+            final[i] = n
+    
+    return final
+        
+    #key = cmp_to_key(gorder)    
+    #data = [key(n) for n in names]
+    
+    #slist = []
+    #for d in data:
+        #insort(slist, d)
+
+    #return [s.obj for s in slist]

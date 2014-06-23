@@ -139,6 +139,7 @@ class Workflow(object):
         err = None
         scope = self.scope
         try:
+            self._subsystem.scatter('u', 'p')
             self._subsystem.run(iterbase=iterbase, ffd_order=ffd_order, 
                                 case_uuid=case_uuid)
 

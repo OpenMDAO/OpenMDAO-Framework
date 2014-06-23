@@ -579,6 +579,7 @@ class Assembly(Component):
                 pre.append('driver') # run the normal top driver after running the 'pre' comps
                 self._pre_driver.workflow.add(pre)
                 self._pre_driver.name = '_pre_driver'
+                self._depgraph.add_node('_pre_driver', comp=True, driver=True)
 
             if post:
                 errfunct("The following components are not in any workflow"
