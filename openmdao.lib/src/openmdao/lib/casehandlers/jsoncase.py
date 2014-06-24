@@ -359,17 +359,13 @@ class BSONCaseRecorder(_BaseRecorder):
         if not self.out:  # if self.out is None, just do nothing
             return
 
-        info = self.get_simulation_info(constants)
-        category = 'simulation_info'
-        data = self._dump(info, category,
-                          ('variable_metadata', 'expressions', 'constants'))
+        data = self._dump(self.get_simulation_info(constants))
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
 
-        for i, info in enumerate(self.get_driver_info()):
-            category = 'driver_info_%s' % (i+1)
-            data = self._dump(info, category)
+        for info in self.get_driver_info():
+            data = self._dump(info)
             reclen = pack('<L', len(data))
             self.out.write(reclen)
             self.out.write(data)
@@ -383,46 +379,30 @@ class BSONCaseRecorder(_BaseRecorder):
 
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
-        self._cases += 1
-        category = 'iteration_case_%s' % self._cases
-        data = self._dump(info, category, ('data',))
+        data = self._dump(info)
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
         self.out.flush()
 
-    def _dump(self, info, category, subcategories=None):
+    def _dump(self, info):
         """ Return BSON data, report any bad keys & values encountered. """
-        try:
-            return bson.dumps(info)
-        except Exception as exc:
-            # Log bad keys & values.
-            bad = []
-            for key in sorted(info):
-                try:
-                    bson.dumps(info[key])
-                except Exception:
-                    bad.append(key)
+        info = BSONCaseRecorder._fixup(info)
+        return bson.dumps(info)
 
-            # If it's in a subcategory we only report the first subcategory.
-            if subcategories is not None and bad[0] in subcategories:
-                key = bad[0]
-                category = '.'.join((category, key))
-                info = info[key]
-                bad = []
-                for key in sorted(info):
-                    try:
-                        bson.dumps(info[key])
-                    except Exception:
-                        bad.append(key)
-
-            msg = 'BSON write failed for %s:' % category
-            logging.error(msg)
-            for key in bad:
-                logging.error('    %s: %s', key, info[key])
-
-            msg = '%s keys %s: %s' % (msg, bad, exc)
-            raise RuntimeError(msg)
+    @staticmethod
+    def _fixup(info):
+        """ Stock bson doesn't handle a lot of types, just skips them. """
+        for key, value in info.items():
+            if isinstance(value, dict):
+                info[key] = BSONCaseRecorder._fixup(value)
+            if isinstance(value, ndarray):
+                info[key] = value.tolist()
+            elif hasattr(value, 'json_encode'):
+                info[key] = value.json_encode()
+            elif hasattr(value, '__dict__'):
+                info[key] = value.__dict__
+        return info
 
     def close(self):
         """
