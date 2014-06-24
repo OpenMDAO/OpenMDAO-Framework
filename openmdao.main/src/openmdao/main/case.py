@@ -9,6 +9,7 @@ import weakref
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exceptions import TracedError, traceback_str
 from openmdao.main.variable import is_legal_name, make_legal_path
+from openmdao.main.array_helpers import flattened_value
 
 __all__ = ["Case"]
 
@@ -282,16 +283,19 @@ class Case(object):
         to the specified scope.
         """
         scope._case_uuid = self.uuid
-        if self._exprs:
-            for name, value in self._inputs.items():
-                expr = self._exprs.get(name)
-                if expr:
-                    expr.set(value, scope)
-                else:
-                    scope.set(name, value)
-        else:
-            for name, value in self._inputs.items():
+        for name, value in self._inputs.items():
+            expr = self._exprs.get(name)
+            if expr:
+                expr.set(value, scope, tovector=True)
+            else:
                 scope.set(name, value)
+                # FIXME: this extra setting of the vector is messy...
+                if hasattr(scope, 'get_system'):
+                    system = scope.get_system()
+                    if system is not None:
+                        uvec = system.vec.get('u')
+                        if uvec and name in uvec:
+                            uvec[name][:] = flattened_value(name, value)
 
     def update_outputs(self, scope):
         """Update the value of all outputs in this Case, using the given scope.

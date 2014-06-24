@@ -237,6 +237,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
         self.top.recorders = [DumpCaseRecorder(sout)]
+        
+        from openmdao.util.dotgraph import plot_graph
+        plot_graph(self.top._depgraph)
+        
         self.top.run()
 
         self.assertEqual(self.top.comp1.x, 3.14159)

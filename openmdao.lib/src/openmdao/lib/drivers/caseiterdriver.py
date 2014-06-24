@@ -27,6 +27,7 @@ from openmdao.main.rbac import get_credentials, set_credentials
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.main.resource import LocalAllocator
 from openmdao.main.variable import is_legal_name, make_legal_path
+from openmdao.main.array_helpers import flattened_value
 
 from openmdao.util.decorators import add_delegate
 from openmdao.util.filexfer import filexfer
@@ -96,16 +97,19 @@ class _Case(object):
         Take the values of all of the inputs in this case and apply them
         to the specified scope.
         """
-        if self._exprs:
-            for name, value in self._inputs.items():
-                expr = self._exprs.get(name)
-                if expr:
-                    expr.set(value, scope)
-                else:
-                    scope.set(name, value)
-        else:
-            for name, value in self._inputs.items():
+        for name, value in self._inputs.items():
+            expr = self._exprs.get(name)
+            if expr:
+                expr.set(value, scope, tovector=True)
+            else:
                 scope.set(name, value)
+                # FIXME: this extra setting of the vector is messy...
+                if hasattr(scope, 'get_system'):
+                    system = scope.get_system()
+                    if system is not None:
+                        uvec = system.vec.get('u')
+                        if uvec and name in uvec:
+                            uvec[name][:] = flattened_value(name, value)
 
     def fetch_outputs(self, scope, extra=False, itername=''):
         """

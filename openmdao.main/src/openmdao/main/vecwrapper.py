@@ -246,7 +246,10 @@ class DataTransfer(object):
                                           self.noflat_vars) # FIXME
             else:
                 for src, dest in self.noflat_vars:
-                    system.scope.set(dest, system.scope.get_attr(src))
+                    try:
+                        system.scope.set(dest, system.scope.get_attr(src))
+                    except Exception:
+                        system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
         #elif system.mode == 'rev':
         #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
         #else:
