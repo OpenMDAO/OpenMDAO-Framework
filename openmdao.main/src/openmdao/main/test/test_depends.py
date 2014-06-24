@@ -16,13 +16,13 @@ exec_order = []
 @add_delegate(HasObjectives, HasParameters, HasConstraints)
 class DumbDriver(Driver):
     def __init__(self):
-        self.oldval = 11
+        self.oldval = 11.
         super(DumbDriver, self).__init__()
         
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        self.oldval += 1
+        self.oldval += 1.
         
         self.set_parameters([self.oldval]*len(self.get_parameters()))
         super(DumbDriver, self).execute()
@@ -77,14 +77,14 @@ subvars = subins+subouts
 
 class DbgAssembly(Assembly):
     def execute(self):
-        for name in ['a1','a3','b2','b4','b6']:
-            print ", %s=%s" % (name, getattr(self,name)),
-        print ""
+        # for name in ['a1','a3','b2','b4','b6']:
+        #     print ", %s=%s" % (name, getattr(self,name)),
+        # print ""
         super(DbgAssembly, self).execute()
-        print self.get_pathname(),
-        for name in ['c2','d5','d1','c4','d3']:
-            print ", %s=%s" % (name, getattr(self,name)),
-        print ""
+        # print self.get_pathname(),
+        # for name in ['c2','d5','d1','c4','d3']:
+        #     print ", %s=%s" % (name, getattr(self,name)),
+        # print ""
 
 def fullvnames(cname, vnames):
     return ['.'.join([cname,n]) for n in vnames]
@@ -258,8 +258,8 @@ class DependsTestCase(unittest.TestCase):
         top.connect('c1.c', 'c2.a')
         top.driver1.add_objective("c2.c*c2.d")
         top.driver2.add_objective("c1.c")
-        from openmdao.util.dotgraph import plot_graph
-        plot_graph(top._depgraph)
+        #from openmdao.util.dotgraph import plot_graph
+        #plot_graph(top._depgraph)
         top.run()
         # FIXME: without lazy evaluation, c1 runs in the wrong order
         self.assertEqual(exec_order, ['driver1','c2','driver2','c1','c3'])
@@ -473,6 +473,8 @@ class DependsTestCase2(unittest.TestCase):
         
         top.c1.ain = [55.,44.,33.]
             
+        #from openmdao.util.dotgraph import plot_graph
+        #plot_graph(top._depgraph)
         top.run()
         
         self.assertEqual(top.c1.aout[1], 88.)
@@ -521,10 +523,10 @@ class DependsTestCase3(unittest.TestCase):
         self.assertEqual(top.comp.a[0], top._pseudo_0.in0)
         
 class ArrayComp(Component):
-    a = Array([1,2,3,4,5], iotype="in")
-    b = Array([1,2,3,4,5], iotype='in')
-    c = Array([2,4,6,8,10], iotype='out')
-    d = Array([0,0,0,0,0], iotype='out')
+    a = Array([1.,2.,3.,4.,5.], dtype=float, iotype="in")
+    b = Array([1.,2.,3.,4.,5.], dtype=float, iotype='in')
+    c = Array([2.,4.,6.,8.,10.], dtype=float, iotype='out')
+    d = Array([0.,0.,0.,0.,0.], dtype=float, iotype='out')
     
     def execute(self):
         global exec_order

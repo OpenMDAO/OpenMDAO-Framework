@@ -43,7 +43,7 @@ class MPISolver(Driver):
     def execute(self):
         """ Executes an iterative solver """
         self.current_iteration = 0
-        system = self.workflow._subsystem
+        system = self.workflow._system
         if MPI and system.mpi.comm == MPI.COMM_NULL:
             return
         super(MPISolver, self).execute()
@@ -77,7 +77,7 @@ class MPISolver(Driver):
         self.norm0 = 1.e99
         self.pairs = self._get_param_constraint_pairs()
         #mpiprint("PAIRS: %s" % self.pairs)
-        system = self.workflow._subsystem
+        system = self.workflow._system
         system.vec['u'].set_from_scope(self.parent)
         #mpiprint("initial u vector: %s" % system.vec['u'].items())
         self.normval = self._norm()
@@ -102,7 +102,7 @@ class MPINonlinearSolver(MPISolver):
 
     def _norm(self):
         """ Computes the norm of the f Vec """
-        system = self.workflow._subsystem
+        system = self.workflow._system
         #mpiprint("NORM for %s" % system.name)
         #for n in ['block_size','local_size','owner_range','owner_ranges','size','sizes']:
         #    mpiprint("f.%s = %s" % (n,getattr(system.vec['f'].petsc_vec,n)))
@@ -116,13 +116,13 @@ class MPINonlinearSolver(MPISolver):
 
     def run_iteration(self):
         #mpiprint("NLGS running")
-        self.workflow._subsystem.run()
+        self.workflow._system.run()
         #mpiprint("updating u vector with residuals")
         self.add_constraint_residuals()
-        #mpiprint("UVEC: %s" % self.workflow._subsystem.vec['u'].items())
+        #mpiprint("UVEC: %s" % self.workflow._system.vec['u'].items())
 
     def add_constraint_residuals(self):
-        uvec = self.workflow._subsystem.vec['u']
+        uvec = self.workflow._system.vec['u']
         for param, cnst, sign in self.pairs:
             if sign > 0:
                 uvec[param][:] += uvec[cnst]
@@ -136,7 +136,7 @@ class MPINonlinearSolver(MPISolver):
 #     def run_iteration(self):
 #         """ Solve each subsystem in series """
 #         mpiprint("NLGS running")
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         for subsystem in system.local_subsystems:
 #             #mpiprint("=== system U vector before %s run: %s" % (subsystem.name, system.vec['u'].items()))
 #             system.scatter('u','p', subsystem)
@@ -156,7 +156,7 @@ class MPINonlinearSolver(MPISolver):
 
 #     def run_iteration(self):
 #         """ Solve each subsystem in parallel """
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         system.scatter('u','p')
 #         for subsystem in system.local_subsystems:
 #             subsystem.run()
@@ -170,7 +170,7 @@ class MPINonlinearSolver(MPISolver):
 
 #     def _norm(self):
 #         """ Computes the norm of the linear residual """
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         system.apply_dFdpu(system.variables.keys())
 #         system.rhs_vec.array[:] *= -1.0
 #         system.rhs_vec.array[:] += system.rhs_buf.array[:]
@@ -179,7 +179,7 @@ class MPINonlinearSolver(MPISolver):
 
 #     def start_iteration(self):
 #         """ Stores the rhs and initial sol vectors """
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         system.rhs_buf.array[:] = system.rhs_vec.array[:]
 #         system.sol_buf.array[:] = system.sol_vec.array[:]
 #         norm = self._norm()
@@ -188,7 +188,7 @@ class MPINonlinearSolver(MPISolver):
 
 #     def end_iteration(self):
 #         """ Copy the sol vector ; used for KSP solver """
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         system.sol_vec.array[:] = system.sol_buf.array[:]
 
 
@@ -197,5 +197,5 @@ class MPINonlinearSolver(MPISolver):
 
 #     def execute(self):
 #         """ Just copy the rhs to the sol vector """
-#         system = self.workflow._subsystem
+#         system = self.workflow._system
 #         system.sol_vec.array[:] = system.rhs_vec.array[:]

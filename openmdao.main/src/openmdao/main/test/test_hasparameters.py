@@ -234,7 +234,7 @@ class HasParametersTestCase(unittest.TestCase):
         driver.add_parameter('comp.y', low=0., high=1.e99)
         code = "driver.add_parameter('comp.y')"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: 'comp.y' is already a Parameter target")
+                      "driver: ['comp.y'] are already Parameter targets")
 
     def test_named_params(self):
         driver = self.top.driver
@@ -248,7 +248,7 @@ class HasParametersTestCase(unittest.TestCase):
 
         code = "driver.add_parameter('comp.lst[3]', name='blah')"
         assert_raises(self, code, globals(), locals(), ValueError,
-                      "driver: 'comp.lst[3]' is already a Parameter target")
+                      "driver: ['comp.lst[3]'] are already Parameter targets")
 
         targets = driver.list_param_targets()
         self.assertEqual(set(targets), set(['comp.lst[1]', 'comp.lst[3]']))
@@ -561,11 +561,11 @@ class ArrayTest(unittest.TestCase):
 
     def test_mixed_use(self):
         # Connect to one element of array and use another element as parameter.
-        self.top.comp.x1d = [1, 2, 3]
+        self.top.comp.x1d = [1., 2., 3.]
         self.top.add('exec_comp', ExecComp(exprs=['c=x+y', 'd=x-y']))
         self.top.driver.workflow.add('exec_comp')
         self.top.connect('exec_comp.c', 'comp.x1d[0]')
-        self.top.driver.add_parameter('comp.x1d[1]', low=-10, high=10, start=1)
+        self.top.driver.add_parameter('comp.x1d[1]', low=-10, high=10, start=1.)
         self.top.run()
 
 

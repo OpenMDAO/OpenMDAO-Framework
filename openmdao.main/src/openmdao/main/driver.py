@@ -470,6 +470,7 @@ class Driver(Component):
                 })
         return ret
 
+    @rbac(('owner', 'user'))
     def setup_systems(self):
         """Allocate communicators from here down to all of our
         child Components.
@@ -502,10 +503,10 @@ class Driver(Component):
         self.workflow.setup_scatters()
 
     @rbac(('owner', 'user'))
-    def get_full_nodeset(self, depgraph):
+    def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
         belonging to this driver (inlcudes full iteration set).
         """
-        names = super(Driver, self).get_full_nodeset(depgraph)
-        names.update(self.workflow.get_full_nodeset(depgraph))
+        names = super(Driver, self).get_full_nodeset()
+        names.update(self.workflow.get_full_nodeset())
         return names

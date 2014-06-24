@@ -13,8 +13,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_graph_partition, \
-                                   is_driver_node, get_all_deps, gsort, \
-                                   collapse_driver
+                                   is_driver_node, get_all_deps, gsort
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -98,6 +97,7 @@ class System(object):
         else:  # variable is flattenable to a float array
             sz, flat_idx, base = info
             vdict['size'] = sz
+            vdict['flat'] = True
             if flat_idx is not None:
                 vdict['flat_idx'] = flat_idx
             if base is not None:
@@ -119,12 +119,6 @@ class System(object):
             #mpiprint("%s for SUB %s, adding vars %s" % (self.name,sub.name,sub.all_variables.keys()))
             self.all_variables.update(sub.all_variables)
 
-            # # sub inputs may be connected to Assembly boundary vars. If so,
-            # # include them in all_variables
-            # for u,v in sub.in_edges:
-            #     if u not in self.all_variables:            
-            #         self.all_variables[u] = self._get_var_info(u)
-
         #mpiprint("%s: inputs = %s" % (self.name, self.get_inputs(local=True)))
         #mpiprint("%s: outputs = %s" % (self.name, self.get_outputs()))
 
@@ -133,6 +127,19 @@ class System(object):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
                 self.all_variables[vname] = self._get_var_info(vname)
+
+        # check both ends of each connection.  If either side is not flattenable,
+        # then leave both vars out of the scatter vectors by marking them as flat=False
+        myvars = self.all_variables
+        for sub in self.local_subsystems():
+            for u,v in chain(sub.in_edges, sub.out_edges):
+                if u in myvars:
+                    if not myvars[u].get('flat') and v in myvars:
+                        myvars[v]['flat'] = False
+                        
+                if v in myvars:
+                    if not myvars[v].get('flat') and u in myvars:
+                        myvars[u]['flat'] = False
 
         #mpiprint("=== %s: all_variables = %s" % (self.name, self.all_variables.keys()))
 
@@ -162,7 +169,7 @@ class System(object):
         for sub in self.local_subsystems():
             sub.setup_sizes()
 
-        sizes_add, sizes_noadd, noflats = _partition_vars(self.all_variables)
+        sizes_add, sizes_noadd, noflats = self._partition_vars()
 
         #mpiprint("in %s, add=%s, noadd = %s, noflat=%s" % (self.name,sizes_add,sizes_noadd,noflats))
 
@@ -261,13 +268,13 @@ class System(object):
             scatter = subsystem.scatter_partial
 
         if scatter is None:
-            print "NO scatter for %s" % self.name
+            mpiprint("NO scatter for %s" % self.name)
         #if not scatter is None:
         else:   
             if subsystem is None:
-                print "full scatter for %s" % self.name
+                mpiprint("full scatter for %s" % self.name)
             else:
-                print "scatter %s --> %s" % (self.name, subsystem.name)
+                mpiprint("scatter %s --> %s" % (self.name, subsystem.name))
 
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
@@ -340,6 +347,48 @@ class System(object):
 
         return stream.getvalue() if getval else None
 
+    def _partition_vars(self):
+        """If a subvar has a basevar that is also included in a
+        var vector, then the size of the subvar does not add
+        to the total size of the var vector because it's size
+        is already included in its basevar size. Also, unflattenable
+        vars must be handled separately from the var vector.
+
+        This method returns (sizes, nosizes, noflat), where sizes is a list 
+        of vars/subvars that add to the size of the var vector and 
+        nosizes is a list of subvars that are flattenable but do not, 
+        and noflat is a list of vars/subvars that are not flattenable.
+
+        The items in each list will have the same ordering as they
+        had in the original list of names.
+        """
+        nosizes = []
+        sizes = []
+        noflats = []
+        vardict = self.all_variables
+        nameset = set(vardict.keys())
+
+        for name, info in vardict.items():
+            if not info.get('flat', True):
+                noflats.append(name)
+            elif '[' in name:
+                base = name.split('[', 1)[0]
+                if base in nameset:
+                    nosizes.append(name)
+                    #mpiprint("adding %s to nosizes, %s" % (name, nameset))
+                else:
+                    sizes.append(name)
+            else:
+                base = name
+                if '.' in name and base.rsplit('.', 1)[0] in nameset:
+                    nosizes.append(name)
+                    #mpiprint("adding %s to nosizes, %s" % (name, nameset))
+                else:
+                    sizes.append(name)
+
+        return (sizes, nosizes, noflats)
+
+
 
 class SimpleSystem(System):
     """A System for a single Component."""
@@ -347,7 +396,8 @@ class SimpleSystem(System):
         if isinstance(name, basestring):
             comp = getattr(scope, name)
             super(SimpleSystem, self).__init__(scope, depgraph, 
-                                               comp.get_full_nodeset(depgraph), name)
+                          depgraph.find_prefixed_nodes(comp.get_full_nodeset()), 
+                          name)
         else: # system for a bunch of boundary vars
             super(SimpleSystem, self).__init__(scope, depgraph, name, str(name))
             comp = None
@@ -849,9 +899,10 @@ class DriverSystem(SimpleSystem):
         depgraph = driver.get_depgraph()
         scope = driver.parent
         #subg = depgraph.subgraph(driver.name).copy()
-        #subg.node[driver.name]['system'] = driver.workflow._subsystem
+        #subg.node[driver.name]['system'] = driver.workflow._system
         #super(DriverSystem, self).__init__(scope, depgraph, subg, driver.name)
         super(DriverSystem, self).__init__(depgraph, scope, driver.name)
+        driver._system = self
         
     #def set_ordering(self, ordering):
         #self._ordering = [self.name]  
@@ -882,7 +933,7 @@ class DriverSystem(SimpleSystem):
         return self.all_subsystems()
 
     def all_subsystems(self):
-        return (self._comp.workflow._subsystem,)
+        return (self._comp.workflow._system,)
 
 
 class InnerAssemblySystem(SerialSystem):
@@ -1021,47 +1072,6 @@ def get_branch(g, node, visited=None):
     return branch
 
 
-def _partition_vars(vardict):
-    """If a subvar has a basevar that is also included in a
-    var vector, then the size of the subvar does not add
-    to the total size of the var vector because it's size
-    is already included in its basevar size. Also, unflattenable
-    vars must be handled separately from the var vector.
-
-    This method returns (sizes, nosizes, noflat), where sizes is a list 
-    of vars/subvars that add to the size of the var vector and 
-    nosizes is a list of subvars that are flattenable but do not, 
-    and noflat is a list of vars/subvars that are not flattenable.
-
-    The items in each list will have the same ordering as they
-    had in the original list of names.
-    """
-    nosizes = []
-    sizes = []
-    noflats = []
-    nameset = set(vardict.keys())
-
-    for name, info in vardict.items():
-        if not info.get('flat', True):
-            noflats.append(name)
-        elif '[' in name:
-            base = name.split('[', 1)[0]
-            if base in nameset:
-                nosizes.append(name)
-                #mpiprint("adding %s to nosizes, %s" % (name, nameset))
-            else:
-                sizes.append(name)
-        else:
-            base = name
-            if '.' in name and base.rsplit('.', 1)[0] in nameset:
-                nosizes.append(name)
-                #mpiprint("adding %s to nosizes, %s" % (name, nameset))
-            else:
-                sizes.append(name)
-
-    return (sizes, nosizes, noflats)
-
-
 def get_comm_if_active(obj, comm):
     if comm is None or comm == MPI.COMM_NULL:
         return comm
@@ -1104,7 +1114,7 @@ def get_full_nodeset(depgraph, scope, group):
     for name in simple_node_iter(group):
         obj = getattr(scope, name)
         if hasattr(obj, 'get_full_nodeset'):
-            names.update(obj.get_full_nodeset(depgraph))
+            names.update(obj.get_full_nodeset())
         else:
             names.update(name)
-    return names
+    return depgraph.find_prefixed_nodes(names)

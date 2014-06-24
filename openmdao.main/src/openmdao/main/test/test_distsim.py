@@ -127,7 +127,7 @@ class BoxDriver(Driver):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     self._logger.debug('w,h,d %s, %s, %s', width, height, depth)
-                    self.set_parameters((width, height, depth))
+                    self.set_parameters((float(width), float(height), float(depth)))
                     self.workflow.run()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)

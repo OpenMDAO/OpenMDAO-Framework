@@ -427,8 +427,8 @@ class PseudoComponent(object):
     def _input_updated(self, name, fullpath=None):
         pass
 
-    def get_full_nodeset(self, depgraph):
+    def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
         belonging to this component.
         """
-        return set(depgraph.find_prefixed_nodes((self.name,)))
+        return set((self.name,))

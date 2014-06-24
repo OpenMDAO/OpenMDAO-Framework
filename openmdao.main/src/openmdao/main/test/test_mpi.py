@@ -278,7 +278,7 @@ if __name__ == '__main__':
     try:
         if MPI is not None and not run:
             top._setup()
-            mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
+            mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
 
             mpiprint("setup DONE")
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
             top.run()
 
             mpiprint('-'*50)
-            #mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
+            #mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
 
             if expected:
                 mpiprint('-'*50)

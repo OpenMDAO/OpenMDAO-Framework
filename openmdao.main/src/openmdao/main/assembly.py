@@ -733,6 +733,7 @@ class Assembly(Component):
 
         self._pre_driver = None
         self.J_input_keys = self.J_output_keys = None
+        self._system = None
 
     def _set_failed(self, path, value, index=None, force=False):
         parts = path.split('.', 1)
@@ -1410,9 +1411,13 @@ class Assembly(Component):
         conts = [getattr(self, n) for n in sorted(self.list_containers())]
         return [c for c in conts if has_interface(c, IComponent)]
 
+    @rbac(('owner', 'user'))
     def setup_systems(self):
         #self._top_driver.setup_systems()
         self._system = InnerAssemblySystem(self)
+        return self._system
+
+    def get_system(self):
         return self._system
 
     @rbac(('owner', 'user'))

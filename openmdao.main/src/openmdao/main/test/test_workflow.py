@@ -89,7 +89,7 @@ class CaseDriver(Driver):
 
     def execute(self):
         for i in range(self.max_iterations):
-            self.set_parameters([i])
+            self.set_parameters([float(i)])
             super(CaseDriver, self).execute()
             self.eval_objective()
 

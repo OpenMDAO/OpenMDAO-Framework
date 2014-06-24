@@ -280,7 +280,8 @@ class Parameter(ParameterBase):
 
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
-        self._expreval.set(self._transform(val), scope, force=True)
+        transval = self._transform(val)
+        self._expreval.set(transval, scope, force=True, tovector=True)
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -714,7 +715,8 @@ class ArrayParameter(ParameterBase):
                                  % (value.size, self._size))
         else:
             value = value * ones(self.shape, self.dtype)
-        self._expreval.set(self._transform(value), scope, force=True)
+        transval = self._transform(value)
+        self._expreval.set(transval, scope, force=True, tovector=True)
 
     def copy(self):
         """Return a copy of this parameter."""
@@ -889,6 +891,12 @@ class HasParameters(object):
             except Exception:
                 self.parent.reraise_exception()
 
+        # add a graph connection from the driver to the param target
+        dgraph = self.parent.get_depgraph()
+        for name in target.targets:
+            dgraph.add_edge(self.parent.name, dgraph.add_subvar(name),
+                            drv_conn=self.parent.name)
+
         self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,
@@ -908,11 +916,6 @@ class HasParameters(object):
             val = None  # Let Parameter code sort out why.
 
         name = key[0] if isinstance(key, tuple) else key
-
-        # add a graph connection from the driver to the param target
-        dgraph = self.parent.get_depgraph()
-        dgraph.add_edge(self.parent.name, dgraph.add_subvar(target),
-                        drv_conn=self.parent.name)
 
         if isinstance(val, ndarray):
             return ArrayParameter(target, low=low, high=high,

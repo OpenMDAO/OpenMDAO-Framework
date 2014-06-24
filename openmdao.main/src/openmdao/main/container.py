@@ -1148,7 +1148,9 @@ class Container(SafeHasTraits):
         else:
             if '[' in path or '(' in path:
                 # caller has put indexing in the string instead of
-                # using the indexing protocol
+                # using the indexing protocol.
+                # FIXME: this will make an extra call to set() from
+                #        ExprEvaluator.set()
                 expr = self._exprcache.get(path)
                 if expr is None:
                     expr = ExprEvaluator(path, scope=self)
@@ -1164,13 +1166,13 @@ class Container(SafeHasTraits):
             obj = self.get(name, index[:-1])
         idx = index[-1]
 
-        try:
-            if isinstance(idx, tuple):
-                old = _index_functs[idx[0]](obj, idx)
-            else:
-                old = obj[idx]
-        except KeyError:
-            old = _missing
+        # try:
+        #     if isinstance(idx, tuple):
+        #         old = _index_functs[idx[0]](obj, idx)
+        #     else:
+        #         old = obj[idx]
+        # except KeyError:
+        #     old = _missing
 
         if isinstance(idx, tuple):
             if idx[0] == INDEX:

@@ -26,16 +26,19 @@ class VecWrapper(object):
         else:
             vset = set(inputs)
 
+        ## top conserve memory, connected sources and dests will occupy the same entries in the
+        ## vector (assuming both are present)
+        #self._dups = dict([(v,u) for u,v in system.in_edges if u != v and u in vector_vars])
+
         # first, add views for vars whose sizes are added to the total,
-        # i.e., their basevars are not included in the vector.
+        # i.e., either they are basevars or their basevars are not included 
+        # in the vector.
         start, end = 0, 0
         for i, (name, var) in enumerate(vector_vars.items()):
-            if name not in vset:
+            if name not in vset: # or name in self._dups:
                 continue
             sz = var['size']
-            if sz != system.local_var_sizes[system.mpi.rank,i]:
-                raise RuntimeError("ERROR: sz (%d) != local_var_sizes (%d) in %s" % 
-                          (sz,system.local_var_sizes[system.mpi.rank,i],system.name))
+            assert(sz == system.local_var_sizes[system.mpi.rank,i])
             if sz > 0:
                 end += sz
                 if self.array.size < (end-start):
@@ -52,7 +55,7 @@ class VecWrapper(object):
         for name, var in allvars.items():
             if name not in vector_vars and name in vset:
                 sz = var['size']
-                if sz > 0 and not var.get('flat', True):
+                if sz > 0 and var.get('flat', True):
                     idx = var['flat_idx']
                     try:
                         basestart = self.start(var['basevar'])
@@ -70,6 +73,13 @@ class VecWrapper(object):
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
 
+        ## now add entries for any connected destinations
+        #for dest, src in self._dups.items():
+            #if dest in self._info:
+                #continue
+            #if src in self._info:
+                #self._info[dest] = self._info[src]
+
         # create the PETSc vector
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
 
@@ -77,6 +87,9 @@ class VecWrapper(object):
 
     def __getitem__(self, name):
         return self._info[name][0]
+
+    def __setitem__(self, name, value):
+        self._info[name][0][:] = value.flat
 
     def __contains__(self, name):
         return name in self._info

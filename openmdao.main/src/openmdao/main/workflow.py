@@ -13,7 +13,6 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   get_full_nodeset
 from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped, TracedError
-from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 
@@ -46,7 +45,7 @@ class Workflow(object):
         self._comp_count = 0     # Component index in workflow.
         self._wf_comp_graph = None
         self._var_graph = None
-        self._subsystem = None
+        self._system = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -139,8 +138,8 @@ class Workflow(object):
         err = None
         scope = self.scope
         try:
-            self._subsystem.scatter('u', 'p')
-            self._subsystem.run(iterbase=iterbase, ffd_order=ffd_order, 
+            self._system.scatter('u', 'p')
+            self._system.run(iterbase=iterbase, ffd_order=ffd_order, 
                                 case_uuid=case_uuid)
 
             if self._stop:
@@ -359,7 +358,7 @@ class Workflow(object):
         Stop all Components in this Workflow.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        self._subsystem.stop()
+        self._system.stop()
         self._stop = True
 
     def add(self, compnames, index=None, check=False):
@@ -372,7 +371,7 @@ class Workflow(object):
         """
         self._wf_comp_graph = None
         self._var_graph = None
-        self._subsystem = None
+        self._system = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
@@ -429,30 +428,30 @@ class Workflow(object):
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._subsystem = SerialSystem(scope, depgraph, cgraph, tuple(cgraph.nodes()))
+                    self._system = SerialSystem(scope, depgraph, cgraph, tuple(cgraph.nodes()))
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._subsystem = ParallelSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
+                    self._system = ParallelSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
             elif len(cgraph) == 1:
                 name = cgraph.nodes()[0]
-                self._subsystem = cgraph.node[name].get('system')
+                self._system = cgraph.node[name].get('system')
             else:
                 raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
                                     self.parent.get_pathname())
         else:
-            self._subsystem = SerialSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
+            self._system = SerialSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
 
-        self._subsystem.set_ordering([c.name for c in self])
+        self._system.set_ordering([c.name for c in self])
             
         for comp in self:
             comp.setup_systems()
             
     def get_req_cpus(self):
         """Return requested_cpus"""
-        if self._subsystem is None:
+        if self._system is None:
             return 1
         else:
-            return self._subsystem.get_req_cpus()
+            return self._system.get_req_cpus()
 
     def setup_communicators(self, comm):
         """Allocate communicators from here down to all of our
@@ -461,31 +460,30 @@ class Workflow(object):
         self.mpi.comm = get_comm_if_active(self, comm)
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self._subsystem.setup_communicators(self.mpi.comm)
+        self._system.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        return self._subsystem.setup_variables()
+        return self._system.setup_variables()
 
     def setup_sizes(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        return self._subsystem.setup_sizes()
+        return self._system.setup_sizes()
 
     def setup_vectors(self, arrays=None):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self._subsystem.setup_vectors(arrays)
+        self._system.setup_vectors(arrays)
 
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self._subsystem.setup_scatters()
+        self._system.setup_scatters()
 
-    def get_full_nodeset(self, depgraph):
+    def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
         belonging to this driver (inlcudes full iteration set).
         """
-        return get_full_nodeset(depgraph, self.scope, 
-                                self.get_names(full=True))
+        return set(self.get_names(full=True))

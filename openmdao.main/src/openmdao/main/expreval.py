@@ -12,6 +12,7 @@ from openmdao.main.printexpr import _get_attr_node, _get_long_name, \
                                     transform_expression, ExprPrinter, \
                                     print_node
 from openmdao.main.index import INDEX, ATTR, CALL, SLICE, EXTSLICE
+from openmdao.main.array_helpers import flattened_value
 
 def _import_functs(mod, dct, names=None):
     if names is None:
@@ -794,7 +795,7 @@ class ExprEvaluator(object):
 
         return gradient
 
-    def set(self, val, scope=None, force=False):
+    def set(self, val, scope=None, force=False, tovector=False):
         """Set the value of the referenced object to the specified value."""
         scope = self._get_updated_scope(scope)
 
@@ -807,6 +808,17 @@ class ExprEvaluator(object):
         if self._assignment_code is None:
             _, self._assignment_code = self._parse_set()
         exec(self._assignment_code, _expr_dict, locals())
+
+        # also set the value into the 'u' vector if it's there
+        # FIXME: take another look at this when we optimize the data
+        #        passing process between the VecWrappers and the scope
+        if tovector and hasattr(scope, 'get_system'):
+            system = scope.get_system()
+            if system is not None:
+                uvec = system.vec.get('u')
+                if uvec and self.text in uvec:
+                    uvec[self.text][:] = flattened_value(self.text, val)
+        
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.

@@ -1875,8 +1875,9 @@ def collapse_driver(g, driver, excludes=()):
     driver's iteration set nodes into a single driver
     system node.
     """
+    nodes = driver.get_full_nodeset()
     nodes = [n for n in 
-                driver.get_full_nodeset(driver.get_depgraph())
+                driver.get_depgraph().find_prefixed_nodes(nodes)
                 if n not in excludes]
 
     return collapse_nodes(g, driver.name, nodes)
