@@ -108,7 +108,7 @@
             "pcomp_name": "_pseudo_1"
         }
     }, 
-    "uuid": "76952d46-f0af-11e3-b712-005056000100", 
+    "uuid": "7c76d65c-fbdf-11e3-8bdf-005056000100", 
     "variable_metadata": {
         "asm2.asm3.comp1.directory": {
             "deriv_ignore": true, 
@@ -697,7 +697,7 @@
     }
 }
 , "driver_info_1": {
-    "_id": 78582512, 
+    "_id": 59351888, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -708,10 +708,17 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0", 
+        "_pseudo_1", 
+        "comp1.z", 
+        "driver.workflow.itername"
     ]
 }
 , "driver_info_2": {
-    "_id": 78581840, 
+    "_id": 59186736, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -722,10 +729,18 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0", 
+        "_pseudo_1", 
+        "asm3.z", 
+        "comp1.z", 
+        "driver.workflow.itername"
     ]
 }
 , "driver_info_3": {
-    "_id": 76991664, 
+    "_id": 59187024, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -736,12 +751,20 @@
     ], 
     "parameters": [
         "comp1.y"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "_pseudo_0", 
+        "_pseudo_1", 
+        "comp1.z", 
+        "asm2.z", 
+        "driver.workflow.itername"
     ]
 }
 , "iteration_case_1": {
-    "_driver_id": 78582512, 
-    "_id": "7696bb14-f0af-11e3-8040-005056000100", 
-    "_parent_id": "76967fc0-f0af-11e3-803f-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c788fa6-fbdf-11e3-8040-005056000100", 
+    "_parent_id": "7c784a4f-fbdf-11e3-803f-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -751,12 +774,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.079431
+    "timestamp": 1403642303.581734
 }
 , "iteration_case_2": {
-    "_driver_id": 78582512, 
-    "_id": "76970bf3-f0af-11e3-8041-005056000100", 
-    "_parent_id": "76967fc0-f0af-11e3-803f-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c78e2c5-fbdf-11e3-8041-005056000100", 
+    "_parent_id": "7c784a4f-fbdf-11e3-803f-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -766,12 +789,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.08026
+    "timestamp": 1403642303.582515
 }
 , "iteration_case_3": {
-    "_driver_id": 78581840, 
-    "_id": "76967fc0-f0af-11e3-803f-005056000100", 
-    "_parent_id": "76965f0f-f0af-11e3-803e-005056000100", 
+    "_driver_id": 59186736, 
+    "_id": "7c784a4f-fbdf-11e3-803f-005056000100", 
+    "_parent_id": "7c782a0a-fbdf-11e3-803e-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -782,12 +805,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.085268
+    "timestamp": 1403642303.587788
 }
 , "iteration_case_4": {
-    "_driver_id": 78582512, 
-    "_id": "7697f1b5-f0af-11e3-8043-005056000100", 
-    "_parent_id": "7697e519-f0af-11e3-8042-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c79d597-fbdf-11e3-8043-005056000100", 
+    "_parent_id": "7c79c86b-fbdf-11e3-8042-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -797,12 +820,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.086129
+    "timestamp": 1403642303.588718
 }
 , "iteration_case_5": {
-    "_driver_id": 78582512, 
-    "_id": "76980533-f0af-11e3-8044-005056000100", 
-    "_parent_id": "7697e519-f0af-11e3-8042-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c79e9e6-fbdf-11e3-8044-005056000100", 
+    "_parent_id": "7c79c86b-fbdf-11e3-8042-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -812,12 +835,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.086633
+    "timestamp": 1403642303.589262
 }
 , "iteration_case_6": {
-    "_driver_id": 78581840, 
-    "_id": "7697e519-f0af-11e3-8042-005056000100", 
-    "_parent_id": "76965f0f-f0af-11e3-803e-005056000100", 
+    "_driver_id": 59186736, 
+    "_id": "7c79c86b-fbdf-11e3-8042-005056000100", 
+    "_parent_id": "7c782a0a-fbdf-11e3-803e-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -828,12 +851,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.087986
+    "timestamp": 1403642303.590751
 }
 , "iteration_case_7": {
-    "_driver_id": 76991664, 
-    "_id": "76965f0f-f0af-11e3-803e-005056000100", 
-    "_parent_id": "76952d46-f0af-11e3-b712-005056000100", 
+    "_driver_id": 59187024, 
+    "_id": "7c782a0a-fbdf-11e3-803e-005056000100", 
+    "_parent_id": "7c76d65c-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -844,12 +867,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.094863
+    "timestamp": 1403642303.598162
 }
 , "iteration_case_8": {
-    "_driver_id": 78582512, 
-    "_id": "76997161-f0af-11e3-8047-005056000100", 
-    "_parent_id": "76996640-f0af-11e3-8046-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c7b73ba-fbdf-11e3-8047-005056000100", 
+    "_parent_id": "7c7b6707-fbdf-11e3-8046-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -859,12 +882,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.096002
+    "timestamp": 1403642303.599316
 }
 , "iteration_case_9": {
-    "_driver_id": 78582512, 
-    "_id": "769986ab-f0af-11e3-8048-005056000100", 
-    "_parent_id": "76996640-f0af-11e3-8046-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c7b885c-fbdf-11e3-8048-005056000100", 
+    "_parent_id": "7c7b6707-fbdf-11e3-8046-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -874,12 +897,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.09649
+    "timestamp": 1403642303.599846
 }
 , "iteration_case_10": {
-    "_driver_id": 78581840, 
-    "_id": "76996640-f0af-11e3-8046-005056000100", 
-    "_parent_id": "76995c40-f0af-11e3-8045-005056000100", 
+    "_driver_id": 59186736, 
+    "_id": "7c7b6707-fbdf-11e3-8046-005056000100", 
+    "_parent_id": "7c7b5b51-fbdf-11e3-8045-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -890,12 +913,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.099528
+    "timestamp": 1403642303.603152
 }
 , "iteration_case_11": {
-    "_driver_id": 78582512, 
-    "_id": "769a1e14-f0af-11e3-804a-005056000100", 
-    "_parent_id": "769a10e8-f0af-11e3-8049-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c7c2bc0-fbdf-11e3-804a-005056000100", 
+    "_parent_id": "7c7c1f05-fbdf-11e3-8049-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -905,12 +928,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.100367
+    "timestamp": 1403642303.60404
 }
 , "iteration_case_12": {
-    "_driver_id": 78582512, 
-    "_id": "769a31d7-f0af-11e3-804b-005056000100", 
-    "_parent_id": "769a10e8-f0af-11e3-8049-005056000100", 
+    "_driver_id": 59351888, 
+    "_id": "7c7c4061-fbdf-11e3-804b-005056000100", 
+    "_parent_id": "7c7c1f05-fbdf-11e3-8049-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -920,12 +943,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.100869
+    "timestamp": 1403642303.604554
 }
 , "iteration_case_13": {
-    "_driver_id": 78581840, 
-    "_id": "769a10e8-f0af-11e3-8049-005056000100", 
-    "_parent_id": "76995c40-f0af-11e3-8045-005056000100", 
+    "_driver_id": 59186736, 
+    "_id": "7c7c1f05-fbdf-11e3-8049-005056000100", 
+    "_parent_id": "7c7b5b51-fbdf-11e3-8045-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -936,12 +959,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.102197
+    "timestamp": 1403642303.606008
 }
 , "iteration_case_14": {
-    "_driver_id": 76991664, 
-    "_id": "76995c40-f0af-11e3-8045-005056000100", 
-    "_parent_id": "76952d46-f0af-11e3-b712-005056000100", 
+    "_driver_id": 59187024, 
+    "_id": "7c7b5b51-fbdf-11e3-8045-005056000100", 
+    "_parent_id": "7c76d65c-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0, 
@@ -952,6 +975,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412215.105533
+    "timestamp": 1403642303.609693
 }
 }

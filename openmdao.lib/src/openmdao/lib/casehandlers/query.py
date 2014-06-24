@@ -27,18 +27,19 @@ class CaseDataset(object):
 
         cases = cds.data.parent_case(parent_id).driver(driver_name).fetch()
 
-    or
+    or::
 
         cases = cds.data.driver(driver_name).parent_case(parent_id).fetch()
 
     Other possibilities exist, see :class:`Query`.
     """
 
-    def __init__(self, dataset_filename, dataset_format):
-        if dataset_format.lower() == 'bson':
-            self._reader = _BSONReader(dataset_filename)
-        elif dataset_format.lower() == 'json':
-            self._reader = _JSONReader(dataset_filename)
+    def __init__(self, filename, format):
+        format = format.lower()
+        if format == 'bson':
+            self._reader = _BSONReader(filename)
+        elif format == 'json':
+            self._reader = _JSONReader(filename)
         else:
             raise ValueError("dataset format must be 'json' or 'bson'")
 
@@ -49,20 +50,29 @@ class CaseDataset(object):
 
     def _fetch(self, query):
         """ Return data based on `query`. """
-        drivers = dict()
-        for driver_info in self._reader.drivers():
-            prefix, _, name = driver_info['name'].rpartition('.')
-            driver_info['prefix'] = prefix
-            drivers[driver_info['_id']] = driver_info
+        vnames = query.vnames
+        local = query.local_only
+        return_names = query.names
 
+        all_names = []
+        drivers = {}
         driver_id = None
-        if query.driver_name:
-            for _id, info in drivers.items():
-                if info['name'] == query.driver_name:
-                    driver_id = _id
-                    break
-            else:
-                raise ValueError('No driver named %r' % query.driver)
+        for driver_info in self._reader.drivers():
+            _id = driver_info['_id']
+            name = driver_info['name']
+            if query.driver_name and name == query.driver_name:
+                driver_id = _id
+            prefix, _, name = name.rpartition('.')
+            if prefix:
+                prefix += '.'
+            driver_info['prefix'] = prefix
+            drivers[_id] = driver_info
+            if not vnames:
+                all_names.extend([prefix+name
+                                  for name in driver_info['recording']])
+
+        if query.driver_name and driver_id is None:
+            raise ValueError('No driver named %r' % query.driver_name)
 
         case_ids = None
         parent_id = None
@@ -70,12 +80,15 @@ class CaseDataset(object):
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
             parent_id = query.parent_id
-            cases = dict()
+            cases = {}
             for case_data in self._reader.cases():
                 _id = case_data['_id']
+                _driver_id = case_data['_driver_id']
                 _parent_id = case_data['_parent_id']
+
                 if _id in cases:
                     node = cases[_id]
+                    node.driver_id = _driver_id
                     if node.parent is None:
                         if _parent_id in cases:
                             node.parent = cases[_parent_id]
@@ -90,20 +103,24 @@ class CaseDataset(object):
                     else:
                         parent = _CaseNode(_parent_id)
                         cases[_parent_id] = parent
-                    child = _CaseNode(_id, parent)
+                    child = _CaseNode(_id, _driver_id, parent)
                     cases[_id] = parent.add_child(child)
 
                 if _id == parent_id:
                     break  # Parent is last case recorded.
 
             # Determine subtree of interest.
-            root = cases[parent_id]
-            case_ids = set([child.case_id for child in root.get_children()])
-            case_ids.add(parent_id)
-
-        vnames = query.vnames
-        local = query.local_only
-        return_names = query.names
+            if parent_id in cases:
+                root = cases[parent_id]
+                case_ids = set(parent_id)
+                if not vnames:
+                    all_names = drivers[root.driver_id]['recording']
+                for child in root.get_children():
+                    case_ids.add(child.case_id)
+                    if not vnames:
+                        all_names.extend(drivers[child.driver_id]['recording'])
+            else:
+                raise ValueError('No case with _id %s', parent_id)
 
         metadata_names = ['_id', '_parent_id', '_driver_id', 'error_status',
                           'error_message', 'timestamp']
@@ -113,10 +130,17 @@ class CaseDataset(object):
                 if name in vnames:
                     tmp.append(name)
             metadata_names = tmp
+            names = vnames
+        else:
+            names = sorted(all_names+metadata_names)
+
+        if return_names:
+            # Returning single row, not list of rows.
+            return names
 
         nan = float('NaN')
         rows = []
-        state = dict()  # Retains last seen values.
+        state = {}  # Retains last seen values.
         for case_data in self._reader.cases():
             data = case_data['data']
             case_id = case_data['_id']
@@ -124,11 +148,12 @@ class CaseDataset(object):
 
             prefix = drivers[case_driver_id]['prefix']
             if prefix:
-                prefix += '.'
+                # Make names absolute.
                 tmp = dict([(prefix+name, value)
                             for name, value in data.items()])
                 data = tmp
 
+            # Update state.
             if vnames:
                 for name in vnames:
                     if name in data:
@@ -136,29 +161,26 @@ class CaseDataset(object):
             else:
                 state.update(data)
 
+            # Filter on driver.
             if driver_id is not None and case_driver_id != driver_id:
                 continue
 
             if case_ids is None or case_id in case_ids:
+                # Record this case.
                 for name in metadata_names:
                     data[name] = case_data[name]
 
-                names = vnames if vnames else sorted(data)
-
-                if local:
-                    names = [None if '.' in name else name for name in names]
-
-                if return_names:
-                    row = ['' if name is None else name for name in names]
-                else:
-                    row = []
-                    for name in names:
-                        if name is None:
-                            row.append(nan)
-                        elif name in state:
-                            row.append(state[name])
-                        else:
-                            row.append(data[name])
+                row = []
+                for name in names:
+                    if local and not (name.startswith(prefix) or \
+                                      name in metadata_names):
+                        row.append(nan)
+                    elif name in state:
+                        row.append(state[name])
+                    elif name in data:
+                        row.append(data[name])
+                    else:
+                        row.append(nan)
                 rows.append(row)
 
             if case_id == parent_id:
@@ -179,7 +201,7 @@ class Query(object):
         self.names = False
 
     def fetch(self):
-        """ Return rows of data, one for each selected case. """
+        """ Return a list of rows of data, one for each selected case. """
         return self._dataset._fetch(self)
 
     def driver(self, driver_name):
@@ -200,14 +222,14 @@ class Query(object):
     def local(self):
         """
         Restrict the variables returned to only those in the specific driver's
-        local set. This means that if ther are cases from more than one driver,
-        variables not local to that driver will be set to NaN.
+        local set. This means that if there are cases from more than one driver,
+        variables not local to that driver will be set to ``NaN``.
         """
         self.local_only = True
         return self
 
     def var_names(self):
-        """ Return the names of the variables in the cases, not the values. """
+        """ Return  a list of the names of the variables in the cases. """
         self.names = True
         return self
 
@@ -215,8 +237,9 @@ class Query(object):
 class _CaseNode(object):
     """ Represents a node in a tree of cases. """
 
-    def __init__(self, case_id, parent=None):
+    def __init__(self, case_id, driver_id=None, parent=None):
         self.case_id = case_id
+        self.driver_id = driver_id
         self._parent = None
         self.parent = parent
         self.children = []
@@ -332,28 +355,32 @@ def _print(cases):
 if __name__ == '__main__':
 
     cds = CaseDataset('test/nested.json', 'json')
-    parent = '76995c40-f0af-11e3-8045-005056000100'
+    parent = '7c7b6707-fbdf-11e3-8046-005056000100'
     vnames = ('asm2.asm3.driver.workflow.itername',
               'asm2.asm3.comp1.y', 'asm2.asm3.comp1.z',
               '_driver_id', '_parent_id')
 
     print '\nFull dataset:'
-    _print([cds.data.var_names().fetch()[0]])
+    _print([cds.data.var_names().fetch()])
     _print(cds.data.fetch())
 
     print '\nFull dataset, var_names:'
-    _print([cds.data.vars(vnames).var_names().fetch()[0]])
+    _print([cds.data.vars(vnames).var_names().fetch()])
     _print(cds.data.vars(vnames).fetch())
 
+    print '\nFull dataset, local:'
+    _print([cds.data.local().var_names().fetch()])
+    _print(cds.data.local().fetch())
+
     print '\nParent specified:'
-    _print([cds.data.parent_case(parent).var_names().fetch()[0]])
+    _print([cds.data.parent_case(parent).var_names().fetch()])
     _print(cds.data.parent_case(parent).fetch())
 
     print '\nDriver specified:'
-    _print([cds.data.driver('asm2.driver').var_names().fetch()[0]])
+    _print([cds.data.driver('asm2.driver').var_names().fetch()])
     _print(cds.data.driver('asm2.driver').fetch())
 
     print '\nDriver and parent specified:'
-    _print([cds.data.driver('asm2.driver').parent_case(parent).var_names().fetch()[0]])
+    _print([cds.data.driver('asm2.driver').parent_case(parent).var_names().fetch()])
     _print(cds.data.driver('asm2.driver').parent_case(parent).fetch())
 

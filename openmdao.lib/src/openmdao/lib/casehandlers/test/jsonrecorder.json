@@ -68,7 +68,7 @@
             "pcomp_name": "_pseudo_1"
         }
     }, 
-    "uuid": "fe875996-f0ae-11e3-a434-005056000100", 
+    "uuid": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
@@ -306,11 +306,20 @@
     }
 }
 , "driver_info_1": {
-    "_id": 55884976, 
+    "_id": 59186448, 
     "name": "driver", 
     "parameters": [
         "comp1.y", 
         "comp1.x"
+    ], 
+    "recording": [
+        "comp1.y", 
+        "comp1.x", 
+        "_pseudo_0", 
+        "_pseudo_1", 
+        "comp1.z", 
+        "comp2.z", 
+        "driver.workflow.itername"
     ], 
     "responses": [
         "comp1.z", 
@@ -318,9 +327,9 @@
     ]
 }
 , "iteration_case_1": {
-    "_driver_id": 55884976, 
-    "_id": "fe8930c2-f0ae-11e3-8033-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c640acc-fbdf-11e3-801f-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": 1.0, 
@@ -332,12 +341,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.664842
+    "timestamp": 1403642303.447986
 }
 , "iteration_case_2": {
-    "_driver_id": 55884976, 
-    "_id": "fe898de1-f0ae-11e3-8034-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c646b28-fbdf-11e3-8020-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 3.0, 
         "_pseudo_1": 4.0, 
@@ -349,12 +358,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.665406
+    "timestamp": 1403642303.448552
 }
 , "iteration_case_3": {
-    "_driver_id": 55884976, 
-    "_id": "fe89a1e3-f0ae-11e3-8035-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c648005-fbdf-11e3-8021-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 6.0, 
         "_pseudo_1": 7.0, 
@@ -366,12 +375,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.665899
+    "timestamp": 1403642303.449087
 }
 , "iteration_case_4": {
-    "_driver_id": 55884976, 
-    "_id": "fe89b538-f0ae-11e3-8036-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c6495dc-fbdf-11e3-8022-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 9.0, 
         "_pseudo_1": 10.0, 
@@ -383,12 +392,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.666389
+    "timestamp": 1403642303.449623
 }
 , "iteration_case_5": {
-    "_driver_id": 55884976, 
-    "_id": "fe89c8e8-f0ae-11e3-8037-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c64aa4a-fbdf-11e3-8023-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 12.0, 
         "_pseudo_1": 13.0, 
@@ -400,12 +409,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.666917
+    "timestamp": 1403642303.450158
 }
 , "iteration_case_6": {
-    "_driver_id": 55884976, 
-    "_id": "fe89dc8f-f0ae-11e3-8038-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c64c0ab-fbdf-11e3-8024-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 15.0, 
         "_pseudo_1": 16.0, 
@@ -417,12 +426,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.667404
+    "timestamp": 1403642303.450745
 }
 , "iteration_case_7": {
-    "_driver_id": 55884976, 
-    "_id": "fe89ef8a-f0ae-11e3-8039-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c64d65c-fbdf-11e3-8025-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 18.0, 
         "_pseudo_1": 19.0, 
@@ -434,12 +443,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.667927
+    "timestamp": 1403642303.451276
 }
 , "iteration_case_8": {
-    "_driver_id": 55884976, 
-    "_id": "fe8a04b5-f0ae-11e3-803a-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c64ec78-fbdf-11e3-8026-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 21.0, 
         "_pseudo_1": 22.0, 
@@ -451,12 +460,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.668431
+    "timestamp": 1403642303.451836
 }
 , "iteration_case_9": {
-    "_driver_id": 55884976, 
-    "_id": "fe8a185c-f0ae-11e3-803b-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c65009e-fbdf-11e3-8027-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 24.0, 
         "_pseudo_1": 25.0, 
@@ -468,12 +477,12 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.668932
+    "timestamp": 1403642303.452384
 }
 , "iteration_case_10": {
-    "_driver_id": 55884976, 
-    "_id": "fe8a2b9e-f0ae-11e3-803c-005056000100", 
-    "_parent_id": "fe875996-f0ae-11e3-a434-005056000100", 
+    "_driver_id": 59186448, 
+    "_id": "7c65164c-fbdf-11e3-8028-005056000100", 
+    "_parent_id": "7c620786-fbdf-11e3-8bdf-005056000100", 
     "data": {
         "_pseudo_0": 27.0, 
         "_pseudo_1": 28.0, 
@@ -485,6 +494,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1402412013.669423
+    "timestamp": 1403642303.452931
 }
 }

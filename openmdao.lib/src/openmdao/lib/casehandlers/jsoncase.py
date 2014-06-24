@@ -120,7 +120,8 @@ class _BaseRecorder(object):
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
-            info = dict(name=driver.get_pathname(), _id=id(driver))
+            info = dict(name=driver.get_pathname(), _id=id(driver),
+                        recording=ins+outs)
             if hasattr(driver, 'get_parameters'):
                 info['parameters'] = \
                     [str(param) for param in driver.get_parameters().values()]

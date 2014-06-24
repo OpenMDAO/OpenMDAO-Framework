@@ -25,4 +25,5 @@ from openmdao.lib.casehandlers.caseset import CaseArray, CaseSet, \
 from openmdao.lib.casehandlers.filters import SequenceCaseFilter, \
                                               SliceCaseFilter, ExprCaseFilter
 
+from openmdao.lib.casehandlers.query import CaseDataset
 
