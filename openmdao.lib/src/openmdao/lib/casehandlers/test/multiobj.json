@@ -39,23 +39,48 @@
             "pcomp_name": "_pseudo_3"
         }
     }, 
-    "uuid": "7c6a922a-fbdf-11e3-8bdf-005056000100", 
+    "uuid": "54237f4e-fc9c-11e3-85b1-005056000100", 
     "variable_metadata": {
         "comp1.data": {
             "copy": "deep", 
             "iotype": "in", 
             "vartypename": "Instance"
         }, 
+        "comp1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "comp1.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "comp1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "comp1.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "comp1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "comp1.missing_deriv_policy": {
             "assumed_default": false, 
@@ -88,16 +113,41 @@
             "low": null, 
             "vartypename": "Float"
         }, 
+        "comp2.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "comp2.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "comp2.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "comp2.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "comp2.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "comp2.missing_deriv_policy": {
             "assumed_default": false, 
@@ -230,7 +280,7 @@
     }
 }
 , "driver_info_1": {
-    "_id": 59351984, 
+    "_id": 71380432, 
     "eq_constraints": [], 
     "ineq_constraints": [], 
     "name": "driver", 
@@ -247,23 +297,35 @@
         "_pseudo_3", 
         "comp1.z", 
         "comp2.z", 
+        "comp1.derivative_exec_count", 
+        "comp1.exec_count", 
+        "comp1.itername", 
+        "comp2.derivative_exec_count", 
+        "comp2.exec_count", 
+        "comp2.itername", 
         "driver.workflow.itername"
     ]
 }
 , "iteration_case_1": {
-    "_driver_id": 59351984, 
-    "_id": "7c6b36d9-fbdf-11e3-8033-005056000100", 
-    "_parent_id": "7c6a922a-fbdf-11e3-8bdf-005056000100", 
+    "_driver_id": 71380432, 
+    "_id": "5424238f-fc9c-11e3-8033-005056000100", 
+    "_parent_id": "54237f4e-fc9c-11e3-85b1-005056000100", 
     "data": {
         "_pseudo_2": 0.0, 
         "_pseudo_3": 1.0, 
+        "comp1.derivative_exec_count": 0, 
+        "comp1.exec_count": 1, 
+        "comp1.itername": "1-comp1", 
         "comp1.x": 0.0, 
         "comp1.z": 0.0, 
+        "comp2.derivative_exec_count": 0, 
+        "comp2.exec_count": 1, 
+        "comp2.itername": "1-comp2", 
         "comp2.z": 1.0, 
         "driver.workflow.itername": "1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1403642303.494413
+    "timestamp": 1403723410.801604
 }
 }

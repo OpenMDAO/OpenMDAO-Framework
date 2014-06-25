@@ -62,7 +62,7 @@
         "sub.missing_deriv_policy": "assume_zero"
     }, 
     "expressions": {}, 
-    "uuid": "4bcfc794-fc7e-11e3-998b-005056000100", 
+    "uuid": "543e0eea-fc9c-11e3-85b1-005056000100", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -175,16 +175,41 @@
             ], 
             "vartypename": "Enum"
         }, 
+        "sub.comp.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "sub.comp.directory": {
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Str"
+        }, 
+        "sub.comp.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "sub.comp.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
+        }, 
+        "sub.comp.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
         }, 
         "sub.comp.loads_out": {
             "copy": "deep", 
@@ -204,6 +229,16 @@
                 "assume_zero"
             ], 
             "vartypename": "Enum"
+        }, 
+        "sub.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
         }, 
         "sub.directory": {
             "deriv_ignore": true, 
@@ -295,6 +330,16 @@
             "iotype": "in", 
             "vartypename": "List"
         }, 
+        "sub.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
         "sub.force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -306,11 +351,22 @@
             "iotype": "in", 
             "vartypename": "List"
         }, 
+        "sub.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
+        }, 
         "sub.loads_in.loads": {
             "copy": "deep", 
             "instance_handler": "_list_changed_handler", 
             "iotype": "", 
             "vartypename": "List"
+        }, 
+        "sub.loads_out": {
+            "copy": "deep", 
+            "iotype": "out", 
+            "target": "comp.loads_out", 
+            "vartypename": "VarTree"
         }, 
         "sub.missing_deriv_policy": {
             "assumed_default": false, 
@@ -325,25 +381,35 @@
     }
 }
 , "driver_info_1": {
-    "_id": 73527760, 
+    "_id": 71377360, 
     "name": "driver", 
     "recording": [
+        "sub.derivative_exec_count", 
+        "sub.exec_count", 
+        "sub.loads_out", 
+        "sub.itername", 
         "driver.workflow.itername"
     ]
 }
 , "driver_info_2": {
-    "_id": 73527952, 
+    "_id": 71377552, 
     "name": "sub.driver", 
     "recording": [
         "comp.loads_out", 
+        "comp.derivative_exec_count", 
+        "comp.exec_count", 
+        "comp.itername", 
         "driver.workflow.itername"
     ]
 }
 , "iteration_case_1": {
-    "_driver_id": 73527952, 
-    "_id": "4bd0892b-fc7e-11e3-8057-005056000100", 
-    "_parent_id": "4bd08378-fc7e-11e3-8056-005056000100", 
+    "_driver_id": 71377552, 
+    "_id": "543ed763-fc9c-11e3-8057-005056000100", 
+    "_parent_id": "543ed1d4-fc9c-11e3-8056-005056000100", 
     "data": {
+        "comp.derivative_exec_count": 0, 
+        "comp.exec_count": 1, 
+        "comp.itername": "1-sub.1-comp", 
         "comp.loads_out": {
             "loads": [
                 {
@@ -369,17 +435,41 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1403710511.930087
+    "timestamp": 1403723410.976395
 }
 , "iteration_case_2": {
-    "_driver_id": 73527760, 
-    "_id": "4bd08378-fc7e-11e3-8056-005056000100", 
-    "_parent_id": "4bcfc794-fc7e-11e3-998b-005056000100", 
+    "_driver_id": 71377360, 
+    "_id": "543ed1d4-fc9c-11e3-8056-005056000100", 
+    "_parent_id": "543e0eea-fc9c-11e3-85b1-005056000100", 
     "data": {
-        "driver.workflow.itername": "1"
+        "driver.workflow.itername": "1", 
+        "sub.derivative_exec_count": 0, 
+        "sub.exec_count": 1, 
+        "sub.itername": "1-sub", 
+        "sub.loads_out": {
+            "loads": [
+                {
+                    "Fx": [
+                        1, 
+                        2, 
+                        3
+                    ], 
+                    "Fy": [
+                        4, 
+                        5, 
+                        6
+                    ], 
+                    "Fz": [
+                        7, 
+                        8, 
+                        9
+                    ]
+                }
+            ]
+        }
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1403710511.931693
+    "timestamp": 1403723410.977761
 }
 }
