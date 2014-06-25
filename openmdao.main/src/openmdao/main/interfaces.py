@@ -3,7 +3,7 @@
 Interfaces for the OpenMDAO project.
 """
 
-# pylint: disable-msg=E0213,E0211,W0232
+# pylint: disable=E0213,E0211,W0232
 
 from zope.interface import implements, classImplements, Attribute, Interface
 
@@ -46,26 +46,9 @@ class IContainer(Interface):
         Returns the added Container object.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
     def contains(path):
         """Return True if the child specified by the given dotted path
         name is contained in this Container.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
         """
 
     def get_dyn_trait(pathname, iotype=None, trait=None):
@@ -98,17 +81,6 @@ class IContainer(Interface):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
-
-    # def get_wrapped_attr(name, index=None):
-    #     """If the named Variable can return an AttrWrapper, then this
-    #     function will return that, with the value set to the current value of
-    #     the variable. Otherwise, it functions like *getattr*, just
-    #     returning the value of the variable. Raises an exception if the
-    #     variable cannot be found. The value will be copied if the variable has
-    #     a 'copy' metadata attribute that is not None. Possible values for
-    #     'copy' are 'shallow' and 'deep'.  index, if not None, should be of
-    #     the same form as described in the get() function.
-    #     """
 
     def items(recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
@@ -193,20 +165,16 @@ class IComponent(IContainer):
     its output variables based on the values of its input variables.
     """
 
-    def check_configuration():
+    def check_config(strict=False):
         """Verify that this component is properly configured to execute.
-        Classes inheriting from Component should not override this function,
-        but instead override check_config().
-        Bad configurations should raise an exception.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.  
         """
 
     def run(force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-
-    def is_valid():
-        """Return False if any of our variables is invalid."""
 
     def list_inputs(valid=None):
         """Return a list of names of input values. If valid is not None,
@@ -218,31 +186,9 @@ class IComponent(IContainer):
         the the list will contain names of outputs with matching validity.
         """
 
-    def connect(srcpath, destpath):
-        """Connects one source variable to one destination variable.
-        When a pathname begins with 'parent.', that indicates
-        that it is referring to a variable outside of this object's scope.
-
-        srcpath: str
-            Pathname of source variable.
-
-        destpath: str
-            Pathname of destination variable.
-        """
-
-    def disconnect(srcpath, destpath):
-        """Removes the connection between one source variable and one
-        destination variable.
-        """
-
     def get_expr_depends():
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
         for each dependency resulting from ExprEvaluators in this Component.
-        """
-
-    def get_expr_sources():
-        """Return a list of tuples containing the names of all upstream components that are
-        referenced in any of our objectives, along with an initial exec_count of 0.
         """
 
     def get_abs_directory():
@@ -263,34 +209,8 @@ class IComponent(IContainer):
         """Return list of (filevarname, filevarvalue, file trait) owned by this
         component."""
 
-    def step():
-        """For Components that run other components (e.g., Assembly or Drivers),
-        this will run one Component and return. For simple components, it is
-        the same as *run()*.
-        """
-
     def stop():
         """Stop this component."""
-
-    def get_valid(names):
-        """Get the value of the validity flag for each of the named io traits."""
-
-    def set_valid(names, valid):
-        """Mark the io traits with the given names as valid or invalid."""
-
-    def invalidate_deps(varnames=None, force=False):
-        """Invalidate all of our outputs if they're not invalid already.
-        For a typical Component, this will always be all or nothing, meaning
-        there will never be partial validation of outputs.  Components
-        supporting partial output validation must override this function.
-
-        Returns None, indicating that all outputs are invalidated.
-        """
-
-    def update_outputs(outnames):
-        """Do what is necessary to make the specified output Variables valid.
-        For a simple Component, this will result in a *run()*.
-        """
 
 
 class IImplicitComponent(IComponent):
@@ -346,6 +266,21 @@ class IAssembly(IComponent):
 
     driver = Attribute("object that manage's the iteration of a workflow")
 
+    def connect(srcpath, destpath):
+        """Connects one source variable to one destination variable.
+
+        srcpath: str
+            Name of source variable.
+
+        destpath: str
+            Name of destination variable.
+        """
+
+    def disconnect(srcpath, destpath):
+        """Removes the connection between one source variable and one
+        destination variable.
+        """
+
     def get_dataflow(self):
         """ Get a dictionary of components and the connections between them
             that make up the data flow for the assembly;
@@ -353,7 +288,7 @@ class IAssembly(IComponent):
         """
 
 
-class IFactory (Interface):
+class IFactory(Interface):
     """An object that creates and returns objects based on a type string."""
 
     def create(self, typname, version=None, server=None,
@@ -393,7 +328,7 @@ class IFactory (Interface):
         """
 
 
-class IResourceAllocator (Interface):
+class IResourceAllocator(Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
 
@@ -439,8 +374,14 @@ class ICaseRecorder(Interface):
     def startup():
         """Perform any operations required to start-up this recorder."""
 
-    def record(case):
-        """Record the given Case."""
+    def register(driver, inputs, outputs):
+        """Register names for input and output data coming from `driver`."""
+
+    def record_constants(constants):
+        """Record constant data."""
+
+    def record(driver, inputs, outputs, exc, case_uuid, parent_uuid):
+        """Record input and output data from `driver`."""
 
     def get_iterator():
         """Return an iterator that matches the format that this recorder uses."""
@@ -794,6 +735,38 @@ class IHasObjective(IHasObjectives):
         """Returns the value of the evaluated objective."""
 
 
+class IHasResponses(Interface):
+    """An Interface for objects having a responses."""
+
+    def add_responses(response_iter):
+        """Takes an iterator of response strings and creates
+        responses for them in the driver.
+        """
+
+    def add_response(expr):
+        """Adds an response to the driver.
+
+        expr: string
+            String containing the response expression.
+         """
+
+    def remove_response(expr):
+        """Removes the specified response expression. Spaces within
+        the expression are ignored.
+        """
+
+    def clear_responses():
+        """Removes all responses."""
+
+    def eval_responses():
+        """Returns a list of values of the evaluated responses."""
+
+    def get_expr_depends():
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by our responses.
+        """
+
+
 class IVariable(Interface):
     def validate(obj, name, value):
         """ Validates that the specified value is valid and can be assigned
@@ -854,7 +827,7 @@ class IStaticGeometry(Interface):
     These are created by Parametric Geometry objects.
     """
 
-    def get_visualization_data(wv_wrapper,  **kwargs):
+    def get_visualization_data(wv_wrapper, **kwargs):
         """Populate the wv_wrapper object with data for faces and edges by
         calling the following methods on wv_wrapper:
 

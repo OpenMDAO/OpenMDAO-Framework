@@ -75,7 +75,7 @@ class ConsoleServerTestCase(unittest.TestCase):
 
         child = assembly['children'][0]
         self.assertEqual(child['pathname'], 'prob.driver')
-        self.assertEqual(child['type'], 'Run_Once')
+        self.assertEqual(child['type'], 'Driver')
         self.assertEqual(child['interfaces'],
             ['IDriver', 'IHasEvents', 'IComponent', 'IContainer'])
 
@@ -110,7 +110,6 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Objectives' in attributes)
         self.assertTrue('Parameters' in attributes)
         self.assertTrue('Constraints' in attributes)
-        self.assertTrue('Slots' in attributes)
         self.assertTrue('Workflow' in attributes)
 
         self.assertEqual(attributes['Workflow']['pathname'],
@@ -132,14 +131,13 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertTrue('Inputs' in attributes)
         inputs = attributes['Inputs']
         names = sorted([input['name'] for input in inputs])
-        self.assertEqual(names, ['directory', 'force_execute', 'force_fd',
+        self.assertEqual(names, ['directory', 'force_fd',
                                  'missing_deriv_policy', 'x', 'y'])
         found_x = found_y = False
         for item in inputs:
             self.assertTrue('desc' in item)
             self.assertTrue('name' in item)
             self.assertTrue('type' in item)
-            self.assertTrue('valid' in item)
             self.assertTrue('value' in item)
             if item['name'] == 'x':
                 found_x = True
@@ -160,7 +158,6 @@ class ConsoleServerTestCase(unittest.TestCase):
             self.assertTrue('desc' in output)
             self.assertTrue('name' in output)
             self.assertTrue('type' in output)
-            self.assertTrue('valid' in output)
             self.assertTrue('value' in output)
             if output['name'] == 'f_xy':
                 found_f_xy = True
@@ -171,7 +168,7 @@ class ConsoleServerTestCase(unittest.TestCase):
         # DATAFLOW
         dataflow = json.loads(self.cserver.get_dataflow('prob'))
 
-        self.assertEqual(len(dataflow), 5)
+        self.assertEqual(len(dataflow), 6)
 
         self.assertTrue('components' in dataflow)
         components = dataflow['components']
@@ -208,6 +205,10 @@ class ConsoleServerTestCase(unittest.TestCase):
         objectives = dataflow['objectives']
         self.assertEqual(len(objectives), 0)
 
+        self.assertTrue('responses' in dataflow)
+        responses = dataflow['responses']
+        self.assertEqual(len(responses), 0)
+
         # WORKFLOW
         self.cserver.onecmd('prob.driver.workflow.add("p")')
         driver_flow = json.loads(self.cserver.get_workflow('prob.driver'))[0]
@@ -220,9 +221,8 @@ class ConsoleServerTestCase(unittest.TestCase):
         self.assertEqual(workflow[0]['type'], 'paraboloid.Paraboloid')
 
     def test_execfile(self):
-        ''' execfile an input file (with a __main__) and make sure you
-            can save the project without any errors
-        '''
+        # execfile an input file (with a __main__) and make sure you
+        #    can save the project without any errors
         proj_file = os.path.join(self.path, 'simple_1.proj')
         proj_copy = os.path.join(self.tdir, 'simple_2.proj')
         shutil.copyfile(proj_file, proj_copy)

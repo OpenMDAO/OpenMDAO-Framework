@@ -1,60 +1,79 @@
 """ A simple driver that runs cases from a CaseIterator and records them
 with a CaseRecorder. """
 
-# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Driver
-from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.datatypes.api import Slot
-testdict = {}
+from openmdao.main.expreval import ExprEvaluator
+from openmdao.main.hasparameters import HasVarTreeParameters
+from openmdao.main.hasresponses import HasVarTreeResponses
+from openmdao.main.interfaces import IHasResponses, IHasParameters, implements
+from openmdao.main.variable import is_legal_name, make_legal_path
 
+from openmdao.util.decorators import add_delegate
+
+
+@add_delegate(HasVarTreeParameters, HasVarTreeResponses)
 class SimpleCaseIterDriver(Driver):
     """
-    A Driver that sequentially runs a set of cases provided by an :class:`ICaseIterator`
-    and optionally records the results in a :class:`CaseRecorder`. This is
-    intended for test cases or very simple models only. For a more full-featured Driver 
-    with similar functionality, see :class:`CaseIteratorDriver`.
-
-    - The `iterator` socket provides the cases to be evaluated.
-    - The `recorders` socket is used to record results. This is inherited from the :class:`Driver` class.
-    
-    For each case coming from the `iterator`, the workflow will
-    be executed once.
+    A Driver that sequentially runs each parameter set. This is intended for
+    test cases or very simple models only. For a more full-featured Driver with
+    similar functionality, see :class:`CaseIteratorDriver`.
     """
 
-    # pylint: disable-msg=E1101
-    iterator = Slot(ICaseIterator, desc='Source of Cases.', required=True)
-    
-    def __init__(self):
-        super(SimpleCaseIterDriver, self).__init__()
-        self._iter = None  # Set to None when iterator is empty.
-        self.on_trait_change(self._iterator_modified, 'iterator')
+    implements(IHasParameters, IHasResponses)
 
-    def _iterator_modified(self, obj, name, value):
-        self._call_execute = True
-    
-    def _pre_execute(self, force=False):
-        super(SimpleCaseIterDriver, self)._pre_execute(force)
-        
     def execute(self):
-        """ Run each case in `iterator` and record results in `recorder`. """
-        for case in self.iterator:
-            self._run_case(case)
-            for recorder in self.recorders:
-                recorder.record(case)
+        """ Run each parameter set. """
 
-    def _run_case(self, case):
-        msg = None
-        case.parent_uuid = self._case_id
-        case.apply_inputs(self.parent)
-        try:
-            self.workflow.run(case_id=case.uuid)
-        except Exception as err:
-            msg = str(err)
-        try:
-            case.update_outputs(self.parent, msg)
-        except Exception as err:
-            if msg is None:
-                case.msg = str(err)
+        # Prepare parameters and responses.
+        exprs = {}
+        case_paths = {}
+        inputs = []
+        values = []
+        for path in self.get_parameters():
+            if isinstance(path, tuple):
+                for target in path:
+                    inputs.append(target)
+                    if not is_legal_name(target):
+                        exprs[target] = ExprEvaluator(target)
+                path = path[0]
             else:
-                case.msg = msg + ":" + str(err)
+                inputs.append(path)
+                if not is_legal_name(path):
+                    exprs[path] = ExprEvaluator(path)
+
+            path = make_legal_path(path)
+            values.append(self.get('case_inputs.'+path))
+
+        for path in self.get_responses():
+            if not is_legal_name(path):
+                exprs[path] = ExprEvaluator(path)
+            case_paths[path] = make_legal_path(path)
+
+        length = len(values[0]) if values else 0
+        self.init_responses(length)
+
+        # Run each parameter set.
+        for i in range(length):
+
+            # Set inputs.
+            for j, path in enumerate(inputs):
+                value = values[j][i]
+                expr = exprs.get(path)
+                if expr:
+                    expr.set(value, self.parent)
+                else:
+                    self.parent.set(path, value)
+
+            # Run workflow.
+            self.workflow.run()
+
+            # Get outputs.
+            for path in self.get_responses():
+                expr = exprs.get(path)
+                if expr:
+                    value = expr.evaluate(self.parent)
+                else:
+                    value = self.parent.get(path)
+                path = case_paths[path]
+                self.set('case_outputs.'+path, value, index=(i,), force=True)
 

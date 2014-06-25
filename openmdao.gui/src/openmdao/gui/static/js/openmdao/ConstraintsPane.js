@@ -47,7 +47,7 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
     if (editable) {
         constraints.onCellChange.subscribe(function(e,args) {
             // TODO: better way to do this (e.g. project.setProperty(path,name,value)
-            cmd = pathname+'.'+args.item.name+'='+args.item.value;
+            var cmd = pathname+'.'+args.item.name+' = '+args.item.value;
             project.issueCommand(cmd);
         });
     }
@@ -56,7 +56,7 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
         var cell = constraints.getCellFromEvent(e);
         if (cell.cell === 0) {
             var delname = constraints.getData()[cell.row].name;
-            cmd = pathname+'.remove_constraint("'+delname+'");';
+            var cmd = pathname+'.remove_constraint("'+delname+'")';
             project.issueCommand(cmd);
         }
     });
@@ -67,11 +67,11 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
 
     /** add a new constraint */
     function addConstraint(expr, name) {
-        cmd = pathname+".add_constraint('"+expr+"'";
+        var cmd = pathname+".add_constraint('"+expr+"'";
         if (name) {
-            cmd = cmd + ",name='"+name+"'";
+            cmd = cmd + ", name='"+name+"'";
         }
-        cmd = cmd + ");";
+        cmd = cmd + ")";
         project.issueCommand(cmd);
     }
 
@@ -120,7 +120,7 @@ openmdao.ConstraintsPane = function(elm, project, pathname, name, editable) {
 
     /** clear all constraints */
     function clearConstraints() {
-        cmd = pathname+".clear_constraints();";
+        var cmd = pathname+".clear_constraints()";
         project.issueCommand(cmd);
     }
 

@@ -122,7 +122,8 @@ class TestCase(unittest.TestCase):
             n_cpus = multiprocessing.cpu_count()
         except (AttributeError, NotImplementedError):
             n_cpus = 1
-        self.assertEqual(n_servers, self.local.max_load * n_cpus)
+        # Default server_limit limits to just n_cpus.
+        self.assertEqual(n_servers, n_cpus)
 
         n_servers, criteria = \
             self.local.max_servers({'min_cpus': 1000})

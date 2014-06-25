@@ -6,7 +6,7 @@ import unittest
 
 from openmdao.main.api import Component, Assembly
 from openmdao.main.datatypes.api import Float, List, Array
-from openmdao.main.numpy_fallback import array, zeros
+from numpy import array, zeros
     
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')
@@ -35,12 +35,9 @@ class SetDefaultsTestCase(unittest.TestCase):
         comp.f_in = 42.
         comp.arr_in = array([88., 32.])
         comp.list_in = [1,2,3]
-        self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
-        self.assertEqual(comp.get_valid(['f_out']), [True])
         comp.revert_to_defaults()
         # make sure reverting to defaults invalidates our outputs
-        self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(0., comp.f_in)
         self.assertTrue(all(zeros(0,'d')==comp.arr_in))
         self.assertEqual([], comp.list_in)
@@ -51,12 +48,9 @@ class SetDefaultsTestCase(unittest.TestCase):
         comp.f_in = 42.
         comp.arr_in = array([88., 32.])
         self.assertFalse(array([1.,2.,3.])==comp.arr_in)
-        self.assertEqual(comp.get_valid(['f_out']), [False])
         comp.run()
-        self.assertEqual(comp.get_valid(['f_out']), [True])
         comp.revert_to_defaults()
         # make sure reverting to defaults invalidates our outputs
-        self.assertEqual(comp.get_valid(['f_out']), [False])
         self.assertEqual(3.14, comp.f_in)
         self.assertTrue(all(array([1.,2.,3.])==comp.arr_in))
         

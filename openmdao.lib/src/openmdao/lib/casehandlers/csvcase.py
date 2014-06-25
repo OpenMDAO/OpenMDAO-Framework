@@ -1,12 +1,13 @@
 """A CaseRecorder and CaseIterator that store the cases in a CSV file.
 """
 
-import csv, datetime, glob, os, shutil
+import csv, datetime, glob, os, shutil, time
 import cStringIO, StringIO
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
-from openmdao.main.case import Case
+from openmdao.main.case import Case, flatten_obj
+
 
 class CSVCaseIterator(object):
     """An iterator that returns :class:`Case` objects from a passed-in iterator
@@ -24,24 +25,23 @@ class CSVCaseIterator(object):
     implements(ICaseIterator)
 
     def __init__(self, filename='cases.csv', headers=None):
-
         self.data = []
         self.headers = headers
-        self.label_field = None
+        self.timestamp_field = None
+        self._need_fieldnames = True
 
         #Open Input file
+        self._filename = None
         self.filename = filename
 
     @property
     def filename(self):
         """Get the name of the CSV file."""
-
         return self._filename
 
     @filename.setter
     def filename(self, name):
         """Set the CSV file name."""
-
         self._filename = name
 
         with open(self.filename, 'r') as infile:
@@ -56,13 +56,13 @@ class CSVCaseIterator(object):
                 self.data.append(row)
 
             if self.headers is None:
-                self.need_fieldnames = True
+                self._need_fieldnames = True
             else:
-                self.need_fieldnames = False
-                if 'label' in self.headers.values():
+                self._need_fieldnames = False
+                if 'timestamp' in self.headers.values():
                     for key, value in self.headers.iteritems():
-                        if value == 'label':
-                            self.label_field = key
+                        if value == 'timestamp':
+                            self.timestamp_field = key
                             del self.headers[key]
                             break
 
@@ -71,13 +71,8 @@ class CSVCaseIterator(object):
 
     def _next_case(self):
         """ Generator which returns Cases one at a time. """
-
-        # Default case label for external csv files that don't have labels.
-        label = "External Case"
-
-        retries = max_retries = 0
-        parent_uuid = msg = ""
-        retries_field = None
+        uuid = parent_uuid = msg = ""
+        uuid_field = parent_uuid_field = msg_field = None
         if self.headers is None:
             input_fields = {}
         else:
@@ -87,43 +82,32 @@ class CSVCaseIterator(object):
         for row in self.data:
 
             # Get fieldnames from file
-            if self.need_fieldnames:
+            if self._need_fieldnames:
 
                 # OpenMDAO-style CSV file
                 if '/INPUTS' in row:
                     input_fields, output_fields = self._parse_fieldnames(row)
 
-                    self.label_field = 1
-                    retries_field = row.index('/METADATA') + 1
-                    max_retries_field = retries_field + 1
-                    parent_uuid_field = retries_field + 2
-                    msg_field = retries_field + 3
+                    self.timestamp_field = 1
+                    uuid_field = row.index('/METADATA') + 1
+                    parent_uuid_field = uuid_field + 1
+                    msg_field = uuid_field + 2
 
                 # Read headers from file
                 elif self.headers is None:
                     for i, field in enumerate(row):
-                        if field == 'label':
-                            self.label_field = i
+                        if field == 'timestamp':
+                            self.timestamp_field = i
                         else:
                             input_fields[i] = field
 
-                self.need_fieldnames = False
+                self._need_fieldnames = False
                 continue
 
-            if self.label_field is not None:
-                label = row[self.label_field]
-
-            if retries_field is not None:
-                retries = row[retries_field]
-                max_retries = row[max_retries_field]
+            if uuid_field is not None:
+                uuid = row[uuid_field]
                 parent_uuid = row[parent_uuid_field]
                 msg = row[msg_field]
-
-                # For some reason, default for these in a case is None
-                if not retries:
-                    retries = None
-                if not max_retries:
-                    max_retries = None
 
             inputs = []
             for i, field in input_fields.iteritems():
@@ -133,22 +117,21 @@ class CSVCaseIterator(object):
                 if row[i] in ['True', 'False']:
                     row[i] = bool(row[i])
 
-                inputs.append( (field, row[i]) )
+                inputs.append((field, row[i]))
 
             outputs = []
             for i, field in output_fields.iteritems():
-                outputs.append( (field, row[i]) )
+                outputs.append((field, row[i]))
 
-            yield Case(inputs=inputs, outputs=outputs, label=label,
-                       retries=retries, max_retries=max_retries,
-                       parent_uuid=parent_uuid, msg=msg)
+            exc = None if not msg else Exception(msg)
 
-        self.need_fieldnames = True
+            yield Case(inputs=inputs, outputs=outputs, exc=exc,
+                       parent_uuid=parent_uuid)
+
+        self._need_fieldnames = True
 
     def _parse_fieldnames(self, row):
-        ''' Parse our input and output fieldname dictionaries
-        '''
-
+        """Parse our input and output fieldname dictionaries."""
         input_fields = {}
         output_fields = {}
 
@@ -195,12 +178,12 @@ class CSVCaseIterator(object):
         attr['type'] = type(self.headers).__name__
         attr['value'] = str(self.headers)
         attr['connected'] = ''
-        attr['desc'] = 'Optional dictionary of header labels, where the key is the column number.'
+        attr['desc'] = 'Optional dictionary of header labels,'\
+                       ' where the key is the column number.'
         variables.append(attr)
 
         attrs["Inputs"] = variables
         return attrs
-
 
 
 class CSVCaseRecorder(object):
@@ -209,7 +192,7 @@ class CSVCaseRecorder(object):
     implements(ICaseRecorder)
 
     def __init__(self, filename='cases.csv', append=False, delimiter=',',
-                 quotechar = '"'):
+                 quotechar='"'):
 
         self.delimiter = delimiter
         self.quotechar = quotechar
@@ -218,9 +201,11 @@ class CSVCaseRecorder(object):
         self.csv_writer = None
         self.num_backups = 5
         self._header_size = 0
+        self._cfg_map = {}
 
         #Open output file
         self._write_headers = False
+        self._filename = None
         self.filename = filename
 
     def __getstate__(self):
@@ -239,18 +224,15 @@ class CSVCaseRecorder(object):
     @property
     def filename(self):
         """Get the name of the CSV file."""
-
         return self._filename
 
     @filename.setter
     def filename(self, name):
         """Set the CSV file name."""
-
         self._filename = name
 
     def startup(self):
         """ Opens the CSV file for recording."""
-
         if self.append:
             self.outfile = open(self.filename, 'a')
         else:
@@ -260,16 +242,32 @@ class CSVCaseRecorder(object):
             # of headers. These won't be available until the first
             # case is passed to self.record.
             self._write_headers = True
+            self._cfg_map = {}
 
         self.csv_writer = csv.writer(self.outfile, delimiter=self.delimiter,
                                      quotechar=self.quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
 
-    def record(self, case):
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        if hasattr(driver, 'parent'):
+            prefix = driver.parent.get_pathname()
+            if prefix:
+                prefix += '.'
+        else:
+            prefix = ''
+        self._cfg_map[driver] = ([prefix+name for name in inputs],
+                                 [prefix+name for name in outputs])
+
+    def record_constants(self, constants):
+        """Record constant data - currently ignored."""
+        pass
+
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """Store the case in a csv file. The format for a line of data
         follows:
 
-        Field 1      - label
+        Field 1      - timestamp
         Field 2      - [Empty]
         Field 3      - Input 1
         ...
@@ -279,21 +277,29 @@ class CSVCaseRecorder(object):
         ...
         Field i+j+4  - Output j
         Field i+j+5  - [Empty]
-        Field i+j+6  - retries
-        Field i+j+7  - max_retries
-        Field i+j+8  - parent_uuid
-        Field i+j+9  - msg
+        Field i+j+6  - uuid
+        Field i+j+7  - parent_uuid
+        Field i+j+8  - msg
         """
-
         sorted_input_keys = []
         sorted_input_values = []
         sorted_output_keys = []
         sorted_output_values = []
 
-        input_keys = case.keys(iotype='in', flatten=True)
-        input_values = case.values(iotype='in', flatten=True)
-        output_keys = case.keys(iotype='out', flatten=True)
-        output_values = case.values(iotype='out', flatten=True)
+        in_cfg, out_cfg = self._cfg_map[driver]
+        input_keys = []
+        input_values = []
+        for name, obj in zip(in_cfg, inputs):
+            for key, value in flatten_obj(name, obj):
+                input_keys.append(key)
+                input_values.append(value)
+
+        output_keys = []
+        output_values = []
+        for name, obj in zip(out_cfg, outputs):
+            for key, value in flatten_obj(name, obj):
+                output_keys.append(key)
+                output_values.append(value)
 
         # This should not be necessary, however python's csv writer
         # is not writing boolean variables correctly as strings.
@@ -319,42 +325,35 @@ class CSVCaseRecorder(object):
         if self.outfile is None:
             raise RuntimeError('Attempt to record on closed recorder')
 
-        if self._write_headers:
-
-            headers = ['timestamp', 'label', '/INPUTS']
-
+        if self._write_headers or self._header_size == 0:
+            headers = ['timestamp', '/INPUTS']
             headers.extend(sorted_input_keys)
-
             headers.append('/OUTPUTS')
-
             headers.extend(sorted_output_keys)
-
-            headers.extend(['/METADATA', 'retries', 'max_retries',
-                            'parent_uuid', 'msg'])
+            headers.extend(['/METADATA', 'uuid', 'parent_uuid', 'msg'])
 
             self.csv_writer.writerow(headers)
             self._write_headers = False
             self._header_size = len(headers)
 
-        data = [case.timestamp, case.label]
+        msg = '' if exc is None else str(exc)
 
+        data = [time.time()]
         data.append('')
         data.extend(sorted_input_values)
         data.append('')
         data.extend(sorted_output_values)
-
-        data.extend(['', case.retries, case.max_retries,
-                     case.parent_uuid, case.msg])
+        data.extend(['', case_uuid, parent_uuid, msg])
 
         if self._header_size != len(data):
-            raise RuntimeError("number of data points doesn't match header"
-                               " size in CSV recorder")
+            raise RuntimeError("number of data points (%d) doesn't match header"
+                               " size (%d) in CSV recorder"
+                               % (len(data), self._header_size))
 
         self.csv_writer.writerow(data)
 
     def close(self):
         """Closes the file."""
-
         if self.csv_writer is not None:
             if not isinstance(self.outfile,
                               (StringIO.StringIO, cStringIO.OutputType)):
@@ -365,8 +364,8 @@ class CSVCaseRecorder(object):
 
         # Save off a backup copy if requested.
         if self.num_backups > 0:
-
             timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
             parts = self.filename.split('.')
             if len(parts) > 1:
                 name = ''.join(parts[:-1])
@@ -377,7 +376,8 @@ class CSVCaseRecorder(object):
                 backup_name = '%s_%s' % (self.filename, timestamp)
                 globname = self.filename
 
-            shutil.copyfile(self.filename, backup_name)
+            if os.path.isfile(self.filename):
+                shutil.copyfile(self.filename, backup_name)
 
             # Clean up old backups if we exceed our max
             backups = glob.glob(globname + '_*')

@@ -189,7 +189,7 @@ class TestCase(unittest.TestCase):
         # Set illegal path (during execution of sink), verify error message.
         self.model.sink.bogus_path = '/illegal'
         code = 'self.model.run()'
-        msg = "middle.passthrough (1-2.1-1): Illegal path '/illegal'," \
+        msg = "middle.passthrough (1-middle.1-passthrough): Illegal path '/illegal'," \
               " not a descendant of"
         assert_raises(self, code, globals(), locals(), ValueError, msg)
 
@@ -276,4 +276,3 @@ if __name__ == '__main__':
     import nose
     sys.argv.append('--cover-package=openmdao.main')
     nose.runmodule()
-

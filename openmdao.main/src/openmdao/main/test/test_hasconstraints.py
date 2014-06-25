@@ -8,7 +8,6 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
-import openmdao.main.pseudocomp as pcompmod
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -62,7 +61,6 @@ class Simple(Component):
 class HasConstraintsTestCase(unittest.TestCase):
 
     def setUp(self):
-        pcompmod._count = 0  # keeps names of pseudocomps consistent
         self.asm = set_as_top(Assembly())
         self.asm.add('comp1', Simple())
         self.asm.add('comp2', Simple())
@@ -72,12 +70,8 @@ class HasConstraintsTestCase(unittest.TestCase):
     def test_list_constraints(self):
         drv = self.asm.add('driver', MyDriver())
         self.asm.run()
-        self.assertEqual(self.asm.driver.is_valid(), True)
-        self.assertEqual(self.asm.driver._exec_state, 'VALID')
         drv.add_constraint('comp1.a < comp1.b')
         drv.add_constraint('comp1.c = comp1.d')
-        self.assertEqual(self.asm.driver.is_valid(), False)
-        self.assertEqual(self.asm.driver._exec_state, 'INVALID')
         self.assertEqual(drv.list_constraints(),
             ['comp1.c=comp1.d', 'comp1.a<comp1.b'])
 
@@ -224,6 +218,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm.comp1.c = 9
         self.asm.comp1.d = -1
 
+        self.asm.run()
         vals = drv.eval_eq_constraints()
         self.assertEqual(len(vals), 1)
         self.assertEqual(vals[0], 10.)
@@ -245,6 +240,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm.comp1.c = 9
         self.asm.comp1.d = -1
 
+        self.asm.run()
         vals = drv.eval_ineq_constraints()
         self.assertEqual(len(vals), 1)
         self.assertEqual(vals[0], 1)
@@ -258,6 +254,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.asm.comp1.a = 3000
         self.asm.comp1.b = 5000
         drv.add_constraint('(comp1.a-4000.)/1000.0 < comp1.b')
+        self.asm.run()
         result = drv.eval_ineq_constraints()
 
         self.assertEqual(result[0], -5001.0)
@@ -333,7 +330,7 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_pseudocomps(self):
         self.asm.add('driver', MyDriver())
-        self.asm.driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        self.asm.driver.workflow.add(['comp1','comp2'])
         self.assertEqual(self.asm._depgraph.list_connections(),
                          [])
         self.asm.driver.add_constraint('comp1.c-comp2.a>5.')

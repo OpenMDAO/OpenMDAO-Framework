@@ -231,6 +231,9 @@ def main(args=None):
         absbin = os.path.abspath(bin_dir)
         openmdao_packages = %s
         try:
+            if is_darwin:
+                extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+
             for pkg, pdir, _ in openmdao_packages:
                 if not options.gui and pkg == 'openmdao.gui':
                     continue
@@ -238,7 +241,10 @@ def main(args=None):
                 cmdline = [join(absbin, 'python'), 'setup.py',
                            'develop', '-N'] + cmds
                 try:
-                    call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+                    if is_darwin:
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+                    else:
+                        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
                 except OSError:
                     failures.append(pkg)
         finally:
@@ -336,6 +342,11 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         extarg = %(extarg1)s
     else:
         extarg = %(extarg2)s
+
+    #To get rid of OSX 10.9 compiler errors by turning them to warnings.
+    if is_darwin:
+        extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
+
     # If there are spaces in the install path, the easy_install script
     # will have an invalid shebang line (Linux/Mac only).
     cmdline = [] if is_win else [join(bin_dir, 'python')]
@@ -344,7 +355,10 @@ def _single_install(cmds, req, bin_dir, failures, dodeps=False):
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     #logger.debug("running command: %%s" %% ' '.join(cmdline))
     try:
-        call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
+        if is_darwin:
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True, extra_env=extra_env)
+        else:
+            call_subprocess(cmdline, show_stdout=True, raise_on_returncode=True)
     except OSError:
         failures.append(req)
 
@@ -476,6 +490,15 @@ def after_install(options, home_dir, activated=False):
             __import__(pkg)
         except ImportError:
             failed_imports.append(pkg)
+
+        #Hack to make sure scipy is up to date.   
+        try:
+            from scipy.optimize import minimize
+        except:
+            if "scipy" in failed_imports:
+                failed_imports.remove("scipy")
+            failed_imports.append("scipy>=0.11.0")
+
     if failed_imports:
         if options.noprereqs:
             print "\\n**** The following prerequisites could not be imported: %%s." %% failed_imports

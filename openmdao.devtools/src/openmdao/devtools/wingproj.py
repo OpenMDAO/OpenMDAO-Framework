@@ -33,6 +33,12 @@ def _find_wing():
                     fnmatch.filter(os.listdir(tdir), r'Wing IDE ?.?')]
         except:
             locs = []
+        tdir = r'C:\Program Files'
+        try:
+            locs.extend([os.path.join(tdir, p, 'bin') for p in 
+                    fnmatch.filter(os.listdir(tdir), r'Wing IDE ?.?')])
+        except:
+            pass
     elif sys.platform == 'darwin':
         wname = 'wing'
         locs = ['/Applications/WingIDE.app/Contents/MacOS',

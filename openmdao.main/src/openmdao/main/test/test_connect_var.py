@@ -236,7 +236,7 @@ class VariableTestCase(unittest.TestCase):
         for item in inputs:
             if item['name'] == 'arrinp':
                 self.assertEqual(self._parse_list(item['connected']),
-                    self._parse_list("['parent.oneout.arrout[1]', 'parent.oneout.arrout[0]']"))
+                    self._parse_list("['oneout.arrout[1]', 'oneout.arrout[0]']"))
                 break
         else:
             self.fail('No arrinp item!')

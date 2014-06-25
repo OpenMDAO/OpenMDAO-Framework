@@ -18,13 +18,9 @@ _EXPR_DICT = {'math': math}
 for name in dir(math):
     if not name.startswith('_'):
         _EXPR_DICT[name] = getattr(math, name)
-# Make numpy functions available if possible.
-try:
-    import numpy
-except ImportError:
-    pass
-else:
-    _EXPR_DICT['numpy'] = numpy
+
+import numpy
+_EXPR_DICT['numpy'] = numpy
 
 
 class IteratorCaseFilter(object):
@@ -117,7 +113,6 @@ class ExprCaseFilter(object):
         Boolean expression referring to the case data or ``seqno``.
 
     Examples:
-        - Select failed cases ``'case.msg'``.
         - Select first 3 cases: ``'seqno < 3'``.
         - Select case with 'param' between 2 and 2.5: \
         ``'case["param"] > 2 and case["param"] < 2.5'``.

@@ -1,8 +1,10 @@
 '''The PseudoAssembly is used to aggregate blocks of components that cannot
 provide derivatives, and thus must be finite differenced.'''
 
+# pylint: disable=E0611,F0401
 import networkx as nx
 
+from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
@@ -10,7 +12,7 @@ from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
 
 def to_PA_var(name, pa_name):
     ''' Converts an input to a unique input name on a pseudoassembly.'''
-    assert(not name.startswith('~'))
+    assert not name.startswith('~')
     return pa_name + '.' + name.replace('.', '|')
 
 
@@ -40,6 +42,7 @@ class PseudoAssembly(object):
                                                   boundary_params)
 
         self.comps = wflow.scope._depgraph.order_components(set(comps))
+        self._depgraph = wflow.scope._depgraph.full_subgraph(self.comps)
 
         self.name = name
         self.boundary_params = list(boundary_params)
@@ -74,7 +77,18 @@ class PseudoAssembly(object):
             self.ffd_order = 0
 
         if fd:
-            self.itercomps = [c.name for c in wflow]
+
+            # Support for taking the deriative of a subset of our
+            # workflow. This breaks down if we have subdrivers,
+            # so we have to revert back to full workflow if any
+            # are relevant.
+            itercomps = set([c.name for c in wflow])
+            comps = set(self.comps)
+            if comps.issubset(itercomps):
+                self.itercomps = self.comps
+            else:
+                self.itercomps = [c.name for c in wflow]
+
         elif drv_name is not None:
             self.itercomps = [drv_name]
         else:
@@ -93,16 +107,19 @@ class PseudoAssembly(object):
         allnodes = dgraph.find_prefixed_nodes(self._orig_group_nodes)
         out_edges = nx.edge_boundary(dgraph, allnodes)
         in_edges = nx.edge_boundary(dgraph,
-                            set(dgraph.nodes()).difference(allnodes))
+                                    set(dgraph.nodes()).difference(allnodes))
         solver_states = []
         if fd is False:
             for comp in group:
-                solver_states.extend([node for node in dgraph.predecessors(comp)
+
+                # Keep any node marked 'solver_state'. Note, only inputs can
+                # be solver_states.
+                solver_states.extend([node for node in dgraph.find_prefixed_nodes([comp])
                                       if 'solver_state' in dgraph.node[node]])
 
         pa_inputs = edges_to_dict(in_edges).values()
         pa_inputs.extend(solver_states)
-        pa_outputs = set([a for a, b in out_edges])
+        pa_outputs = set([a[0] for a in out_edges])
 
         renames = {}
 
@@ -126,28 +143,39 @@ class PseudoAssembly(object):
         components."""
         self.itername = name
 
-    def run(self, ffd_order=0, case_id=''):
+    def run(self, ffd_order=0):
         """Run all components contained in this assy. Used by finite
-        difference."""
+        difference.
+        """
 
         # Override fake finite difference if requested. This enables a pure
         # finite-differences for check_derivatives.
         if self.ffd_order == 0:
             ffd_order = 0
 
+        scope = self.wflow.scope
+
         for name in self.itercomps:
-            comp = self.wflow.scope.get(name)
+            comp = scope.get(name)
             comp.set_itername(self.itername+'-fd')
-            comp.run(ffd_order=ffd_order, case_id=case_id)
+            scope.update_inputs(name, graph=self._depgraph)
+            comp.run(ffd_order=ffd_order)
 
     def calc_derivatives(self, first=False, second=False, savebase=True,
                          required_inputs=None, required_outputs=None):
         """Calculate the derivatives for this non-differentiable block using
         Finite Difference."""
+
+        # Directional finite difference doesn't pre-generate a Jacobian
+        if self.wflow.parent.gradient_options.directional_fd == True:
+            if self.fd is None:
+                self.fd = DirectionalFD(self)
+                self.apply_deriv = self._apply_deriv
+            return None
+
         # We don't do this in __init__ because some inputs and outputs
         # are added after creation (for nested driver support).
         if self.fd is None:
-            from openmdao.main.derivatives import FiniteDifference
             self.fd = FiniteDifference(self)
 
         if hasattr(self.wflow, '_severed_edges'):
@@ -158,64 +186,64 @@ class PseudoAssembly(object):
             # Note: Only needed for differentiable islands, which are handled
             # with Fake Finite Difference.
             # Don't do this for full-model finite difference.
-            if first and self.ffd_order > 0:
-                for name in self.comps:
+            #if first and self.ffd_order > 0:
+                #for name in self.comps:
 
-                    # TODO: I think the cache is blown away each time before
-                    # this is called
-                    if name in self.wflow._J_cache:
-                        continue
+                    ## TODO: I think the cache is blown away each time before
+                    ## this is called
+                    #if name in self.wflow._J_cache:
+                        #continue
 
-                    comp = self.wflow.scope.get(name)
+                    #comp = self.wflow.scope.get(name)
 
-                    # Assemblies need some required inputs and outputs
-                    # to calculate the Jacobians
-                    if has_interface(comp, IAssembly):
+                    ## Assemblies need some required inputs and outputs
+                    ## to calculate the Jacobians
+                    #if has_interface(comp, IAssembly):
 
-                        # Need to know which assy bdry variables are
-                        # required, and pass them in. Cache this once.
-                        if name not in self.ffd_cache:
-                            dgraph = self.wflow.scope._depgraph
-                            inputs = [dgraph.base_var(inp)
-                                       for inp in flatten_list_of_iters(self.inputs)]
-                            outputs = [dgraph.base_var(outp)
-                                       for outp in self.outputs]
-                            from openmdao.main.depgraph import _get_inner_edges
-                            edges = _get_inner_edges(dgraph, inputs, outputs)
+                        ## Need to know which assy bdry variables are
+                        ## required, and pass them in. Cache this once.
+                        #if name not in self.ffd_cache:
+                            #dgraph = self.wflow.scope._depgraph
+                            #inputs = [dgraph.base_var(inp)
+                                       #for inp in flatten_list_of_iters(self.inputs)]
+                            #outputs = [dgraph.base_var(outp)
+                                       #for outp in self.outputs]
+                            #from openmdao.main.depgraph import _get_inner_edges
+                            #edges = _get_inner_edges(dgraph, inputs, outputs)
 
-                            req_inputs = []
-                            req_outputs = []
-                            for inp in inputs:
-                                comp_str, _, var_str = inp.partition('.')
-                                if comp_str == name:
-                                    req_inputs.append(var_str)
+                            #req_inputs = []
+                            #req_outputs = []
+                            #for inp in inputs:
+                                #comp_str, _, var_str = inp.partition('.')
+                                #if comp_str == name:
+                                    #req_inputs.append(var_str)
 
-                            for inp in outputs:
-                                comp_str, _, var_str = inp.partition('.')
-                                if comp_str == name:
-                                    req_outputs.append(var_str)
+                            #for inp in outputs:
+                                #comp_str, _, var_str = inp.partition('.')
+                                #if comp_str == name:
+                                    #req_outputs.append(var_str)
 
-                            for edge in edges:
-                                src, target = edge
-                                comp_str, _, var_str = src.partition('.')
-                                if comp_str == name:
-                                    req_outputs.append(var_str)
-                                comp_str, _, var_str = target.partition('.')
-                                if comp_str == name:
-                                    req_inputs.append(var_str)
+                            #for edge in edges:
+                                #src, target = edge
+                                #comp_str, _, var_str = src.partition('.')
+                                #if comp_str == name:
+                                    #req_outputs.append(var_str)
+                                #comp_str, _, var_str = target.partition('.')
+                                #if comp_str == name:
+                                    #req_inputs.append(var_str)
 
-                            self.ffd_cache[name] = (req_inputs, req_outputs)
+                            #self.ffd_cache[name] = (req_inputs, req_outputs)
 
-                        req_inputs, req_outputs = self.ffd_cache[name]
+                        #req_inputs, req_outputs = self.ffd_cache[name]
 
-                        comp.calc_derivatives(first, second, savebase=True,
-                                              required_inputs=req_inputs,
-                                              required_outputs=req_outputs)
+                        #comp.calc_derivatives(first, second, savebase=True,
+                                              #required_inputs=req_inputs,
+                                              #required_outputs=req_outputs)
 
-                    # Comp list contains full graph, so don't double up on
-                    # the subdrivers.
-                    elif not has_interface(comp, IDriver):
-                        comp.calc_derivatives(first, second, True)
+                    ## Comp list contains full graph, so don't double up on
+                    ## the subdrivers.
+                    #elif not has_interface(comp, IDriver):
+                        #comp.calc_derivatives(first, second, True)
 
             self.J = self.fd.calculate()
         finally:
@@ -225,8 +253,13 @@ class PseudoAssembly(object):
         return self.J
 
     def provideJ(self):
-        """Jacobian for this block"""
+        """Return Jacobian for this block"""
         return self.J
+
+    def _apply_deriv(self, arg, result):
+        """Matrix vector product only used if we are doing a directional
+        derivative."""
+        self.fd.calculate(arg, result)
 
     def list_deriv_vars(self):
         """Derivative inputs and outputs for this block"""

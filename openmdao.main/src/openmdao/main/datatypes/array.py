@@ -5,9 +5,7 @@ Trait for numpy array variables, with optional units.
 #public symbols
 __all__ = ["Array"]
 
-import logging
-
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
@@ -15,37 +13,8 @@ from openmdao.main.index import get_indexed_value
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 
-try:
-    from numpy import array, zeros, ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import array, zeros, ndarray
-    from openmdao.main.variable import Variable
-
-    class TraitArray(Variable):
-        '''Simple fallback array class for when numpy is not available'''
-
-        def __init__(self, **metadata):
-            self._shape = metadata.get('shape')
-            self._dtype = metadata.get('dtype')
-            super(TraitArray, self).__init__(**metadata)
-
-        def validate(self, obj, name, value):
-            ''' Simple validation'''
-            try:
-                it = iter(value)
-            except:
-                msg = "attempted to assign non-iterable value to an array"
-                raise ValueError(msg)
-
-            # FIXME: improve type checking
-            if self._dtype:
-                return array(value, dtype=self._dtype)
-            else:
-                return array(value)
-else:
-    from traits.api import Array as TraitArray
-
+from numpy import array, zeros, ndarray
+from traits.api import Array as TraitArray
 
 
 class Array(TraitArray):
@@ -133,27 +102,33 @@ class Array(TraitArray):
                     raise ValueError("Shape of the default value does not "
                                      "match the shape attribute.")
 
-        super(Array, self).__init__(dtype=dtype, value=default_value, assumed_default=assumed_default, 
-                                    **metadata)
+        if 'assumed_default' in metadata:
+            del metadata['assumed_default']
+
+        super(Array, self).__init__(dtype=dtype, value=default_value,
+                                    assumed_default=assumed_default, **metadata)
 
     def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         Units are converted as needed.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         # If both source and target have units, we need to process differently
         if isinstance(value, AttrWrapper):
+            value = value.value
             if self.units:
                 valunits = value.metadata.get('units')
                 if valunits and isinstance(valunits, basestring) and \
                    self.units != valunits:
-                    return self._validate_with_metadata(obj, name,
-                                                        value.value,
-                                                        valunits)
-            value = value.value
+                    value = self._validate_with_metadata(obj, name,
+                                                         value.value, valunits)
+        try:
+            new_val = super(Array, self).validate(obj, name, value)
+        except Exception:
+            self.error(obj, name, value)
 
-        return super(Array, self).validate(obj, name, value)
+        return new_val
 
     def error(self, obj, name, value):
         """Returns an informative and descriptive error string."""
@@ -162,7 +137,7 @@ class Array(TraitArray):
         wvalue = value
         info = "an array-like object"
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if self.shape and hasattr(value, 'shape') and value.shape:
             if self.shape != value.shape:
                 info += " of shape %s" % str(self.shape)
@@ -181,7 +156,7 @@ class Array(TraitArray):
         """Return a UnitsAttrWrapper object.  Its value attribute
         will be filled in by the caller.
         """
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         if index is not None:
             value = get_indexed_value(value, None, index)
         if self.units:
@@ -194,7 +169,7 @@ class Array(TraitArray):
         the source trait.
         """
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         dst_units = self.units
 
         try:
@@ -213,11 +188,9 @@ class Array(TraitArray):
                    "with assigning units of '%s'" % (dst_units)
             raise TypeError(msg)
 
-        try:
-            value *= pq.value
-            return super(Array, self).validate(obj, name, value)
-        except Exception:
-            self.error(obj, name, value)
+        value *= pq.value
+
+        return value
 
     def get_attribute(self, name, value, trait, meta):
         """Return the attribute dictionary for this variable. This dict is

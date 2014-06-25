@@ -46,11 +46,6 @@ def _test_grid(browser):
     eq(inputs[2].units.value, "")
     eq(inputs[2].description.value, "If non-blank, the directory to execute in.")
 
-    eq(inputs[3].name.value, "force_execute")
-    eq(inputs[3].value.value, "False")
-    eq(inputs[3].units.value, "")
-    eq(inputs[3].description.value, "If True, always execute even if all IO traits are valid.")
-
     eq(inputs[0].name.value, "x")
     eq(inputs[0].value.value, "0")
     eq(inputs[0].units.value, "")

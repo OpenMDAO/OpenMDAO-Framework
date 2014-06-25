@@ -81,13 +81,12 @@ class Simulation(Assembly):
         self.driver.add_parameter(('preproc.x_in[0]', 'preproc.x_in[1]',
                                    'preproc.x_in[2]', 'preproc.x_in[3]'))
 
-        # pylint: disable-msg=C0301
+        # pylint: disable=C0301
         map(self.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
-        self.driver.recorders = [ListCaseRecorder()]
-        self.driver.printvars = ['comp.opt_objective']
+        self.recorders = [ListCaseRecorder()]
 
 
 class NestedSimulation(Assembly):

@@ -32,7 +32,7 @@ from optparse import OptionParser
 
 from openmdao.util.network import get_unused_ip_port
 from openmdao.util.fileutil import onerror
-from openmdao.gui.util import find_chrome
+from openmdao.gui.util import find_chrome, chrome_version
 
 from pageobjects.project import ProjectsPage
 from pageobjects.util import SafeDriver, abort
@@ -66,29 +66,26 @@ def broken_chrome():
 def setup_chrome():
     """ Initialize the Chrome browser. """
     global _chrome_version
-    if sys.platform == 'win32':  # No command-line version capability.
-        pattern = os.path.join(os.path.dirname(find_chrome()), '[0-9]*')
-        _chrome_version = os.path.basename(sorted(glob.glob(pattern),
-                                                  reverse=True)[0])
-    else:
-        _chrome_version = subprocess.check_output([find_chrome(), '--version'])
-        _chrome_version = _chrome_version.strip().split()
-        if _chrome_version[0] == 'Chromium':
-            _chrome_version = _chrome_version[1]
-        else:
-            _chrome_version = _chrome_version[-1]
-    _chrome_version = int(_chrome_version.split('.')[0])
+    _chrome_version = int(chrome_version().split('.')[0])
 
     exe = 'chromedriver'
     path = find_executable(exe)
     if not path:
         # Download, unpack, and install chromedriver into OpenMDAO 'bin'.
-        if _chrome_version > 29:
-            version = 2.8
+        # Note: As new versions of Chrome & chromedriver are released, the
+        #       following should be updated.  Refer to the URL:
+        #       https://chromedriver.storage.googleapis.com/index.html
+        #       and see notes.txt of the latest version for Chrome compatibility
+        if _chrome_version > 32:
+            version = '2.10'
+        elif _chrome_version > 30:
+            version = '2.9'
+        elif _chrome_version > 29:
+            version = '2.8'
         elif _chrome_version > 28:
-            version = 2.6
+            version = '2.6'
         else:
-            version = 2.3
+            version = '2.3'
 
         if sys.platform == 'darwin':
             flavor = 'mac32'
@@ -105,7 +102,7 @@ def setup_chrome():
         os.chdir(os.path.dirname(sys.executable))
 
         prefix = 'http://chromedriver.storage.googleapis.com'
-        url = '/'.join([prefix, str(version), filename])
+        url = '/'.join([prefix, version, filename])
         logging.critical('Downloading %s for chrome version %d to %s',
                          url, _chrome_version, os.getcwd())
         try:
@@ -124,7 +121,16 @@ def setup_chrome():
             os.remove(filename)
         finally:
             os.chdir(orig_dir)
-    driver = webdriver.Chrome(executable_path=path)
+    """
+    Adding code here to eliminate warning banner in Chrome (as of
+    version 35)  The banner pushes the display downward and makes some 
+    items unclickable in Selenium.  Adding the test-type flag turns off the banner 
+    """
+    from selenium.webdriver.chrome.options import Options
+    chrome_options = Options()
+    chrome_options.add_argument("--test-type")
+    driver = webdriver.Chrome(executable_path=path, chrome_options=chrome_options)
+
     driver.implicitly_wait(15)
     TEST_CONFIG['browsers'].append(driver)
     return driver

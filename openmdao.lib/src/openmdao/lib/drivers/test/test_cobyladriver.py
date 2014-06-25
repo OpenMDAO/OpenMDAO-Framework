@@ -5,7 +5,7 @@ Test the COBYLA optimizer driver
 import unittest
 import numpy
 
-# pylint: disable-msg=F0401,E0611
+# pylint: disable=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.datatypes.api import Float, Array, Str
 from openmdao.lib.casehandlers.api import ListCaseRecorder
@@ -47,7 +47,7 @@ class OptRosenSuzukiComponent(Component):
     opt_objective = Float(iotype='out')
     g = Array([1., 1., 1.], iotype='out')
 
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     def __init__(self):
         super(OptRosenSuzukiComponent, self).__init__()
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
@@ -89,17 +89,16 @@ class COBYLAdriverTestCase(unittest.TestCase):
     def test_opt1(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
 
-        # pylint: disable-msg=C0301
+        # pylint: disable=C0301
         map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3] < 8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3] < 10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3] < 5'])
-        self.top.driver.recorders = [ListCaseRecorder()]
-        self.top.driver.printvars = ['comp.opt_objective']
+        self.top.recorders = [ListCaseRecorder()]
         self.top.run()
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective,
                                self.top.driver.eval_objective(), places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
@@ -111,18 +110,18 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[3], places=1)
 
-        cases = self.top.driver.recorders[0].get_iterator()
+        cases = self.top.recorders[0].get_iterator()
         end_case = cases[-1]
 
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x[1]'))
-        self.assertEqual(self.top.comp.opt_objective,
-                         end_case.get_output('comp.opt_objective'))
+        self.assertEqual(self.top.comp.result,
+                         end_case.get_output('_pseudo_0'))
 
     def test_max_iter(self):
         self.top.driver.add_objective('comp.result')
         map(self.top.driver.add_parameter,
-            ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
+            ['comp.x[0]', 'comp.x[1]', 'comp.x[2]', 'comp.x[3]'])
         self.top.driver.maxfun = 2
 
         self.top.run()
@@ -133,11 +132,10 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_constraint('comp.g <= 0')
-        self.top.driver.recorders = [ListCaseRecorder()]
-        self.top.driver.printvars = ['comp.opt_objective']
+        self.top.recorders = [ListCaseRecorder()]
         self.top.run()
 
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective,
                                self.top.driver.eval_objective(), places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0],
@@ -149,13 +147,13 @@ class COBYLAdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3],
                                self.top.comp.x[3], places=1)
 
-        cases = self.top.driver.recorders[0].get_iterator()
+        cases = self.top.recorders[0].get_iterator()
         end_case = cases[-1]
 
         self.assertEqual(self.top.comp.x[1],
                          end_case.get_input('comp.x')[1])
-        self.assertEqual(self.top.comp.opt_objective,
-                         end_case.get_output('comp.opt_objective'))
+        self.assertEqual(self.top.comp.result,
+                         end_case.get_output('_pseudo_0'))
 
     def test_initial_run(self):
         # Test the fix that puts a run_iteration call

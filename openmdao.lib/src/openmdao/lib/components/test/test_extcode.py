@@ -319,16 +319,12 @@ class TestCase(unittest.TestCase):
         # Set command to nonexistant path.
         extcode = set_as_top(ExternalCode())
         extcode.command = ['no-such-command']
+
         try:
             extcode.run()
-        except OSError as exc:
-            if sys.platform == 'win32':
-                # Apparently XP doesn't include the explanatory text.
-                #'[Error 2] The system cannot find the file specified'
-                self.assertTrue(str(exc).startswith('[Error 2]'))
-            else:
-                msg = '[Errno 2] No such file or directory'
-                self.assertEqual(str(exc), msg)
+        except ValueError as exc:
+            msg = ": The command to be executed, 'no-such-command', cannot be found"
+            self.assertEqual(str(exc), msg)
             self.assertEqual(extcode.return_code, -999999)
         else:
             self.fail('Expected OSError')
@@ -408,21 +404,15 @@ class TestCase(unittest.TestCase):
             else:
                 self.fail('Expected RemoteError')
 
-            exec_comp.set('command', ['this-should-pass'])
-
-            # Try to set via remote-looking access.
-            creds = get_credentials()
-            creds.client_creds = Credentials()
-            logging.debug('    using %s', creds)
+            # Try to set via set() on remote instance.
             try:
                 exec_comp.set('command', ['this-should-fail'])
             except RemoteError as exc:
                 fragment = ": 'command' may not be set() remotely"
                 if fragment not in str(exc):
                     self.fail('%s not in %s' % (fragment, exc))
-            finally:
-                creds.client_creds = None
-
+            else:
+                self.fail('Expected RemoteError')
         finally:
             if factory is not None:
                 factory.cleanup()
