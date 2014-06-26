@@ -375,7 +375,8 @@ def run_openmdao_suite(argv=None):
     nose.run_exit(argv=args)
 
 
-setattr(nose.loader.TestLoader, 'loadTestsFromModule', loadTestsFromModule)
+if sys.platform == 'win32':
+    setattr(nose.loader.TestLoader, 'loadTestsFromModule', loadTestsFromModule)
 
 if __name__ == '__main__':
     run_openmdao_suite()

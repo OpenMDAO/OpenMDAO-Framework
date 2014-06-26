@@ -153,9 +153,13 @@ class EarlyTestInfo(Plugin):
         self.stream.writeln(self.formatErr(err))
 
     def addSuccess(self, test, capt=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         self._show_test(self._tests[id(test)])
         
     def addSkip(self, test, *args, **kwargs):
+        if id(test) not in self._tests:
+            self.startTest(test)
         self._show_test(self._tests[id(test)])
 
     def finalize(self, result):
