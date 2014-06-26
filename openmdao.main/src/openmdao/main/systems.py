@@ -10,7 +10,7 @@ import networkx as nx
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent
+from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_graph_partition, \
                                    is_driver_node, get_all_deps, gsort
@@ -128,11 +128,11 @@ class System(object):
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
                 self.all_variables[vname] = self._get_var_info(vname)
 
-        # check both ends of each connection.  If either side is not flattenable,
+        # check both ends of each input connection.  If either side is not flattenable,
         # then leave both vars out of the scatter vectors by marking them as flat=False
         myvars = self.all_variables
         for sub in self.local_subsystems():
-            for u,v in chain(sub.in_edges, sub.out_edges):
+            for u,v in sub.in_edges:
                 if u in myvars:
                     if not myvars[u].get('flat') and v in myvars:
                         myvars[v]['flat'] = False
@@ -226,16 +226,16 @@ class System(object):
             arrays = {}
             # create top level vectors
             size = numpy.sum(self.local_var_sizes[rank, :])
-            for name in ['u', 'f']: #, 'du', 'df']:
+            for name in ['u', 'f', 'du', 'df']:
                 arrays[name] = numpy.zeros(size)
 
         insize = self.input_sizes[rank]
         inputs = self.get_inputs(local=True)
 
-        for name in ['u', 'f']: #, 'du', 'df']:
+        for name in ['u', 'f', 'du', 'df']:
             self.vec[name] = VecWrapper(self, arrays[name])
 
-        for name in ['p']:#, 'dp']:
+        for name in ['p', 'dp']:
             self.vec[name] = VecWrapper(self, numpy.zeros(insize), 
                                         inputs=inputs)
 
@@ -252,7 +252,7 @@ class System(object):
                 raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
                             (start,end,arrays['u'][start:end].size,self.name,sub.name))
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
-                                        ['u', 'f']])) #,'du', 'df']]))
+                                        ['u', 'f','du', 'df']]))
             start += sz
 
         return self.vec
@@ -307,7 +307,8 @@ class System(object):
             world_rank = MPI.COMM_WORLD.rank
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'DriverSystem': 'drv',
+                     'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
+                     'SolverSystem': 'slv', 'BoundarySystem': 'bnd',
                      'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner' }
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
@@ -389,24 +390,13 @@ class System(object):
         return (sizes, nosizes, noflats)
 
 
-
 class SimpleSystem(System):
     """A System for a single Component."""
     def __init__(self, depgraph, scope, name):
-        if isinstance(name, basestring):
-            comp = getattr(scope, name)
-            super(SimpleSystem, self).__init__(scope, depgraph, 
-                          depgraph.find_prefixed_nodes(comp.get_full_nodeset()), 
-                          name)
-        else: # system for a bunch of boundary vars
-            super(SimpleSystem, self).__init__(scope, depgraph, name, str(name))
-            comp = None
-
-        if has_interface(comp, IImplicitComponent):
-            self._apply_F = self._implicit_apply_F
-        else:
-            self._apply_F = self._explicit_apply_F
-
+        comp = getattr(scope, name)
+        super(SimpleSystem, self).__init__(scope, depgraph, 
+                      depgraph.find_prefixed_nodes(comp.get_full_nodeset()), 
+                      name)
         self._comp = comp
         if comp is None:
             self.mpi.requested_cpus = 1
@@ -417,59 +407,21 @@ class SimpleSystem(System):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         comp = self._comp
         mpiprint("running simple system %s" % self.name)
-        # if not isinstance(comp, PseudoComponent):
-        #     comp.set_itername('%s-%d' % (iterbase, 1))
 
         #mpiprint("%s.run  (system)" % comp.name)
         self.scatter('u','p')
-        if comp is not None:
-            if self._comp.parent is not None and 'p' in self.vec:
-                self.vec['p'].set_to_scope(comp.parent)
-                #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
-            comp.set_itername('%s-%s' % (iterbase, comp.name))
-            comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            if self._comp.parent is not None and 'u' in self.vec:
-                self.vec['u'].set_from_scope(comp.parent)
-            #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
-            # for vname in chain(comp.list_inputs(connected=True), comp.list_outputs(connected=True)):
-            #     mpiprint("%s.%s = %s" % (comp.name,vname,getattr(comp,vname)))
+        if 'p' in self.vec:
+            self.vec['p'].set_to_scope(self.scope)
+        comp.set_itername('%s-%s' % (iterbase, comp.name))
+        comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+        if 'u' in self.vec:
+            self.vec['u'].set_from_scope(self.scope)
 
     def stop(self):
-        if self._comp is not None:
-            self._comp.stop()
+        self._comp.stop()
 
     def setup_communicators(self, comm):
-        #size = comm.size if MPI else 1
-        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self.mpi.comm = comm
-
-    #def setup_variables(self):
-        ##mpiprint("setup_variables: %s" % self.name)
-
-        #super(SimpleSystem, self).setup_variables()
-
-        #for name, vdict in self.all_variables.items():
-            #parts = name.split('.',1)
-            #if len(parts) > 1:
-                #cname, vname = parts
-                #child = getattr(self.scope, cname)
-            #else:
-                #cname, vname = '', name
-                #child = self.scope
-            #info = child.get_float_var_info(vname)
-            #if info is None:
-                #vdict['flat'] = False
-            #else:  # variable is flattenable to a float array
-                #sz, flat_idx, base = info
-                #vdict['size'] = sz
-                #if flat_idx is not None:
-                    #vdict['flat_idx'] = flat_idx
-                #if base is not None:
-                    #if cname:
-                        #bname = '.'.join((cname, base))
-                    #else:
-                        #bname = base
-                    #vdict['basevar'] = bname
 
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
@@ -501,20 +453,39 @@ class SimpleSystem(System):
                                              scatter_conns, other_conns)
 
     def apply_F(self):
-        return self._apply_F()
-
-    def _implicit_apply_F(self):
         self.scatter('u','p')
         comp = self._comp
-        if self._comp.parent is not None:
-            self.vec['p'].set_to_scope(self._comp.parent)
-            #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+        self.vec['p'].set_to_scope(self.scope)
         comp.evaluate()
-        if self._comp.parent is not None:
-            self.vec['u'].set_from_scope(self._comp.parent)
+        self.vec['u'].set_from_scope(self.scope)
         #vec['f'].array[:] = vec['u'].array
 
-    def _explicit_apply_F(self):
+
+class BoundarySystem(SimpleSystem):
+    """A SimpleSystem that has no component to execute. It just
+    performs data transfer between a set of boundary variables and the rest 
+    of the system.
+    """
+    def __init__(self, depgraph, scope, name):
+        super(SimpleSystem, self).__init__(scope, depgraph, name, str(name))
+        self.mpi.requested_cpus = 1
+
+    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        mpiprint("running boundary system %s" % self.name)
+        self.scatter('u', 'p')
+        self.vec['p'].set_to_scope(self.scope)
+
+    def stop(self):
+        pass
+
+    def apply_F(self):
+        self.scatter('u','p')
+        self.vec['p'].set_to_scope(self.scope)
+        self.vec['u'].set_from_scope(self.scope)
+    
+
+class ExplicitSystem(SimpleSystem):
+    def apply_F(self):
         """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
         #mpiprint("%s.apply_F" % self.name)
         vec = self.vec
@@ -534,8 +505,7 @@ class SimpleSystem(System):
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
 
-
-class AssemblySystem(SimpleSystem):
+class AssemblySystem(ExplicitSystem):
     """A System to handle an Assembly."""
 
     def setup_communicators(self, comm):
@@ -890,43 +860,70 @@ class ParallelSystem(CompoundSystem):
             for name, var in sub.all_variables.items():
                 self.all_variables[name] = var
 
-class DriverSystem(SimpleSystem):
-#class DriverSystem(SerialSystem):
-    """A System for a Driver component."""
+
+class NonSolverDriverSystem(ExplicitSystem):
+    """A System for a Driver component that is not a Solver."""
 
     def __init__(self, driver):
         driver.setup_systems()
         depgraph = driver.get_depgraph()
         scope = driver.parent
-        #subg = depgraph.subgraph(driver.name).copy()
-        #subg.node[driver.name]['system'] = driver.workflow._system
-        #super(DriverSystem, self).__init__(scope, depgraph, subg, driver.name)
-        super(DriverSystem, self).__init__(depgraph, scope, driver.name)
+        super(NonSolverDriverSystem, self).__init__(depgraph, scope, driver.name)
         driver._system = self
         
-    #def set_ordering(self, ordering):
-        #self._ordering = [self.name]  
-        ## our workflow will set the order of its subsystem
-
     def setup_communicators(self, comm):
-        #size = comm.size if MPI else 1
-        #mpiprint("setup_communicators (size=%d): %s" % (size,self.name))
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
-        super(DriverSystem, self).setup_variables()
+        super(NonSolverDriverSystem, self).setup_variables()
         self._comp.setup_variables()
 
     def setup_sizes(self):
-        super(DriverSystem, self).setup_sizes()
+        super(NonSolverDriverSystem, self).setup_sizes()
         self._comp.setup_sizes()
 
     def setup_vectors(self, arrays):
-        super(DriverSystem, self).setup_vectors(arrays)
+        super(NonSolverDriverSystem, self).setup_vectors(arrays)
         self._comp.setup_vectors(arrays)
 
     def setup_scatters(self):
-        super(DriverSystem, self).setup_scatters()
+        super(NonSolverDriverSystem, self).setup_scatters()
+        self._comp.setup_scatters()
+      
+    def local_subsystems(self):
+        return self.all_subsystems()
+
+    def all_subsystems(self):
+        return (self._comp.workflow._system,)
+
+
+class SolverSystem(SimpleSystem):  # Implicit
+    """A System for a Solver component."""
+
+    def __init__(self, driver):
+        driver.setup_systems()
+        depgraph = driver.get_depgraph()
+        scope = driver.parent
+        super(SolverSystem, self).__init__(depgraph, scope, driver.name)
+        driver._system = self
+        
+    def setup_communicators(self, comm):
+        self._comp.setup_communicators(self.mpi.comm)
+
+    def setup_variables(self):
+        super(SolverSystem, self).setup_variables()
+        self._comp.setup_variables()
+
+    def setup_sizes(self):
+        super(SolverSystem, self).setup_sizes()
+        self._comp.setup_sizes()
+
+    def setup_vectors(self, arrays):
+        super(SolverSystem, self).setup_vectors(arrays)
+        self._comp.setup_vectors(arrays)
+
+    def setup_scatters(self):
+        super(SolverSystem, self).setup_scatters()
         self._comp.setup_scatters()
       
     def local_subsystems(self):
@@ -955,7 +952,8 @@ class InnerAssemblySystem(SerialSystem):
 
         g = nx.DiGraph()
         g.add_node(drvname)
-        g.node[drvname]['system'] = DriverSystem(scope._top_driver)
+        g.node[drvname]['system'] = _create_simple_sys(depgraph, scope,
+                                                       scope._top_driver)
 
         self.bins = bins = tuple(bndry_ins)
         self.bouts = bouts = tuple(bndry_outs)
@@ -965,7 +963,7 @@ class InnerAssemblySystem(SerialSystem):
         if bins:
             g.add_node(bins)
             g.add_edge(bins, drvname)
-            g.node[bins]['system'] = SimpleSystem(depgraph, scope, bins)
+            g.node[bins]['system'] = BoundarySystem(depgraph, scope, bins)
             ordering.append(bins)
         
         ordering.append(drvname)
@@ -973,7 +971,7 @@ class InnerAssemblySystem(SerialSystem):
         if bouts:
             g.add_node(bouts)
             g.add_edge(drvname, bouts)       
-            g.node[bouts]['system'] = SimpleSystem(depgraph, scope, bouts)
+            g.node[bouts]['system'] = BoundarySystem(depgraph, scope, bouts)
             ordering.append(bouts)
 
         super(InnerAssemblySystem, self).__init__(scope, depgraph, g, '_inner_asm')
@@ -985,15 +983,18 @@ class InnerAssemblySystem(SerialSystem):
                                              case_label, case_uuid)
         self.vec['u'].set_to_scope(self.scope, self.bouts)
 
-def _create_simple_sys(depgraph, scope, name):
-    comp = getattr(scope, name)
+def _create_simple_sys(depgraph, scope, comp):
 
-    if has_interface(comp, IDriver):
-        sub = DriverSystem(comp)
+    if has_interface(comp, ISolver):
+        sub = SolverSystem(comp)
+    elif has_interface(comp, IDriver):
+        sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(depgraph, scope, name)
+        sub = AssemblySystem(depgraph, scope, comp.name)
+    elif has_interface(comp, IImplicitComponent):
+        sub = SimpleSystem(depgraph, scope, comp.name)
     else:
-        sub = SimpleSystem(depgraph, scope, name)
+        sub = ExplicitSystem(depgraph, scope, comp.name)
     return sub
 
 def partition_mpi_subsystems(depgraph, cgraph, scope):

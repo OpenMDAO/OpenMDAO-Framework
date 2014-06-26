@@ -1448,20 +1448,33 @@ class Assembly(Component):
 
     def setup_scatters(self):
         self._system.setup_scatters()
+        
+    def pre_setup(self):
+        self.save_dg = self._depgraph
+        self._depgraph = self.save_dg.subgraph(self.save_dg.nodes())
+        self._depgraph.prune_unconnected_vars()
+        
+        for comp in self.get_comps():
+            comp.pre_setup()
+    
+    def post_setup(self):
+        self._depgraph = self.save_dg
+        self.save_dg = None
+        
+        for comp in self.get_comps():
+            comp.post_setup()
 
     def _setup(self):
         """This is called automatically on the top level Assembly
         prior to execution.
         """
-        save_dg = self._depgraph
-        self._depgraph = save_dg.subgraph(save_dg.nodes())
-        self._depgraph.prune_unconnected_vars()
 
         try:
             if MPI:
                 try:
                     MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
 
+                    self.pre_setup()
                     self.setup_systems()
                     self.setup_communicators(MPI.COMM_WORLD)
                     self.setup_variables()
@@ -1471,6 +1484,7 @@ class Assembly(Component):
                 except Exception:
                     mpiprint(traceback.format_exc())
             else:
+                self.pre_setup()
                 self.setup_systems()
                 self.setup_communicators(None)
                 self.setup_variables()
@@ -1478,8 +1492,7 @@ class Assembly(Component):
                 self.setup_vectors()
                 self.setup_scatters()
         finally:
-            self._depgraph = save_dg # go back to full depgraph to allow
-                                     # doing connects, etc. later
+            self.post_setup()                
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

@@ -246,10 +246,11 @@ class DataTransfer(object):
                                           self.noflat_vars) # FIXME
             else:
                 for src, dest in self.noflat_vars:
-                    try:
-                        system.scope.set(dest, system.scope.get_attr(src))
-                    except Exception:
-                        system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
+                    if src != dest:
+                        try:
+                            system.scope.set(dest, system.scope.get_attr(src))
+                        except Exception:
+                            system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
         #elif system.mode == 'rev':
         #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
         #else:
@@ -313,4 +314,6 @@ class SerialScatter(object):
             #for s,d in zip(self.src_idxs, self.dest_idxs):
                 #print "%s (%s) -> %s (%s)" % (sk[s], srcvec[s], dk[d], destvec[d])
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
+            self.svec.dump()
+            self.dvec.dump()
             #print "post-scatter, dest = %s" % destvec

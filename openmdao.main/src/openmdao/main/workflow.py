@@ -136,7 +136,6 @@ class Workflow(object):
             record_case = False
 
         err = None
-        scope = self.scope
         try:
             self._system.scatter('u', 'p')
             self._system.run(iterbase=iterbase, ffd_order=ffd_order, 
@@ -157,6 +156,11 @@ class Workflow(object):
 
         if err is not None:
             err.reraise(with_traceback=False)
+
+    def calc_gradient(self, inputs=None, outputs=None, 
+                      upscope=False, mode='auto'):
+        #self._system.calc_gradient(inputs, outputs, mode)
+        pass
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
@@ -418,7 +422,7 @@ class Workflow(object):
         # create systems for all simple components
         for node, data in cgraph.nodes_iter(data=True):
             if isinstance(node, basestring):
-                data['system'] = _create_simple_sys(depgraph, scope, node)
+                data['system'] = _create_simple_sys(depgraph, scope, getattr(scope, node))
 
         # collapse the graph (recursively) into nodes representing
         # subsystems
@@ -483,7 +487,7 @@ class Workflow(object):
         self._system.setup_scatters()
 
     def get_full_nodeset(self):
-        """Return the full set of nodes in the depgraph
+        """Return the set of nodes in the depgraph
         belonging to this driver (inlcudes full iteration set).
         """
-        return set(self.get_names(full=True))
+        return set([c.name for c in self.parent.iteration_set()])

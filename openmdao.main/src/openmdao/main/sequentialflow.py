@@ -1037,410 +1037,410 @@ class SequentialWorkflow(Workflow):
 
         return info
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
-        """ Calculate derivatives and save baseline states for all components
-        in this workflow.
-        """
-
-        self._stop = False
-
-        dgraph = self.derivative_graph(required_inputs, required_outputs)
-        comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()),
-                                              self.get_implicit_info())
-        for compname, data in comps.iteritems():
-            if '~' in compname:
-                comp = self._derivative_graph.node[compname]['pa_object']
-            elif compname.startswith('@'):
-                continue
-            else:
-                comp = self.scope.get(compname)
-
-            J = self._J_cache.get(compname)
-            if compname not in self._shape_cache:
-                self._shape_cache[compname] = {}
-            if J is None and hasattr(comp, 'calc_derivatives'):
-                J = comp.calc_derivatives(first, second, savebase,
-                                          data['inputs'], data['outputs'])
-                if J is not None:
-                    self._J_cache[compname] = J
-
-            if self._stop:
-                raise RunStopped('Stop requested')
-        return comps
-
-    def calc_gradient(self, inputs=None, outputs=None, upscope=False, mode='auto'):
-        """Returns the gradient of the passed outputs with respect to
-        all passed inputs.
-
-        inputs: list of strings or tuples of strings
-            List of input variables that we are taking derivatives with respect
-            to. They must be within this workflow's scope. If no inputs are
-            given, the parent driver's parameters are used. A tuple can be used
-            to link inputs together.
-
-        outputs: list of strings
-            List of output variables that we are taking derivatives of.
-            They must be within this workflow's scope. If no outputs are
-            given, the parent driver's objectives and constraints are used.
-
-        upscope: boolean
-            This is set to True when our workflow is part of a subassembly that
-            lies in a workflow that needs a gradient with respect to variables
-            outside of this workflow, so that the caches can be reset.
-
-        mode: string
-            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
-            'fd' for full-model finite difference (with fake finite
-            difference disabled), or 'auto' to let OpenMDAO determine the
-            correct mode.
-        """
-
-        self._J_cache = {}
-        parent = self.parent
-
-        # User may request full-model finite difference.
-        if parent.gradient_options.force_fd is True:
-            mode = 'fd'
-
-        # This function can be called from a parent driver's workflow for
-        # assembly recursion. We have to clear our cache if that happens.
-        # We also have to clear it next time we arrive back in our workflow.
-        if upscope or self._upscoped:
-            self._derivative_graph = None
-            self._edges = None
-            self._comp_edges = None
-            self.res = None
-            self._upscoped = upscope
-
-        dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
-
-        inputs = dgraph.graph['mapped_inputs']
-        outputs = dgraph.graph['mapped_outputs']
-
-        n_edge = self.initialize_residual()
-
-        # cache Jacobians for comps that return them from provideJ
-
-        bounds = self._bounds_cache
-
-        # Size our Jacobian
-        num_in = 0
-        for item in inputs:
-
-            # For parameter groups, only size the first
-            if not isinstance(item, basestring):
-                item = item[0]
-
-            try:
-                i1, i2 = bounds[item]
-                if isinstance(i1, list):
-                    num_in += len(i1)
-                else:
-                    num_in += i2-i1
-            except KeyError:
-                num_in += self.get_width(item)
-
-        num_out = 0
-        for item in outputs:
-            try:
-                i1, i2 = bounds[item]
-                if isinstance(i1, list):
-                    num_out += len(i1)
-                else:
-                    num_out += i2-i1
-            except KeyError:
-                num_out += self.get_width(item)
-
-        shape = (num_out, num_in)
-
-        # Auto-determine which direction to use based on Jacobian shape.
-        if mode == 'auto':
-
-            # TODO - additional determination based on presence of
-            # apply_derivT
-
-            # User-controlled setting in the driver. This takes precedence
-            # over OpenMDAO's automatic choice.
-            opt = parent.gradient_options
-
-            if opt.derivative_direction == 'forward':
-                mode = 'forward'
-            elif opt.derivative_direction == 'adjoint':
-                mode = 'adjoint'
-
-            # OpenMDAO's automatic direction determination
-            elif num_in > num_out:
-                mode = 'adjoint'
-            else:
-                mode = 'forward'
-
-        # Make sure we have all the derivatives we are asking for.
-        if mode != 'fd':
-
-            comps = self._comp_edge_list()
-
-            for comp_name in comps:
-
-                if '~' in comp_name:
-                    continue
-
-                comp = self.scope.get(comp_name)
-
-                if mode == 'forward':
-                    if hasattr(comp, 'apply_derivT') and \
-                       not hasattr(comp, 'apply_deriv'):
-                        msg = "Attempting to calculate derivatives in " + \
-                              "forward mode, but component %s" % comp.name
-                        msg += " only has adjoint derivatives defined."
-                        self.scope.raise_exception(msg, RuntimeError)
-
-                elif mode == 'adjoint':
-                    if hasattr(comp, 'apply_deriv') and \
-                       not hasattr(comp, 'apply_derivT'):
-                        msg = "Attempting to calculate derivatives in " + \
-                              "adjoint mode, but component %s" % comp.name
-                        msg += " only has forward derivatives defined."
-                        self.scope.raise_exception(msg, RuntimeError)
-
-        #print len(self.res), len(self._edges), len(self._comp_edge_list())
-
-        if mode == 'adjoint':
-            if parent.gradient_options.directional_fd is True:
-                msg = "Directional derivatives can only be used with forward "
-                msg += "mode."
-                self.scope.raise_exception(msg, RuntimeError)
-
-            J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
-        elif mode in ['forward', 'fd']:
-            J = calc_gradient(self, inputs, outputs, n_edge, shape)
-        else:
-            msg = "In calc_gradient, mode must be 'forward', 'adjoint', " + \
-                  "'auto', or 'fd', but a value of %s was given." % mode
-            self.scope.raise_exception(msg, RuntimeError)
-
-        # Finally, we need to untransform the jacobian if any parameters have
-        # scalers.
-        #print 'edges:', self._edges
-        if not hasattr(parent, 'get_parameters'):
-            return J
-
-        params = parent.get_parameters()
-
-        if len(params) == 0:
-            return J
-
-        i = 0
-        for group in inputs:
-
-            if isinstance(group, str):
-                group = [group]
-
-            name = group[0]
-            if len(group) > 1:
-                pname = tuple([from_PA_var(aname) for aname in group])
-            else:
-                pname = from_PA_var(name)
-
-            try:
-                i1, i2 = bounds[name]
-            except KeyError:
-                continue
-
-            if isinstance(i1, list):
-                width = len(i1)
-            else:
-                width = i2-i1
-
-            if pname in params:
-                scaler = params[pname].scaler
-                if scaler != 1.0:
-                    J[:, i:i+width] = J[:, i:i+width]*scaler
-
-            i += width
-        #print J
-        return J
-
-    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
-        """Compare the OpenMDAO-calculated gradient with one calculated
-        by straight finite-difference. This provides the user with a way
-        to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
-
-        inputs: (optional) iter of str or None
-            Names of input variables. The calculated gradient will be
-            the matrix of values of the output variables with respect
-            to these input variables. If no value is provided for inputs,
-            they will be determined based on the parameters of
-            the Driver corresponding to this workflow.
-
-        outputs: (optional) iter of str or None
-            Names of output variables. The calculated gradient will be
-            the matrix of values of these output variables with respect
-            to the input variables. If no value is provided for outputs,
-            they will be determined based on the objectives and constraints
-            of the Driver corresponding to this workflow.
-
-        stream: (optional) file-like object or str
-            Where to write to, default stdout. If a string is supplied,
-            that is used as a filename. If None, no output is written.
-
-        mode: (optional) str
-            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
-            or 'auto' to let OpenMDAO determine the correct mode.
-            Defaults to 'auto'.
-
-        Returns the finite difference gradient, the OpenMDAO-calculated
-        gradient, and a list of suspect inputs/outputs.
-        """
-        parent = self.parent
-
-        # tuples cause problems
-        if inputs:
-            inputs = list(inputs)
-        if outputs:
-            outputs = list(outputs)
-
-        if isinstance(stream, basestring):
-            stream = open(stream, 'w')
-            close_stream = True
-        else:
-            close_stream = False
-            if stream is None:
-                stream = StringIO()
-
-        self.config_changed()
-        J = self.calc_gradient(inputs, outputs, mode=mode)
-
-        self.config_changed()
-        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
-
-        print >> stream, 24*'-'
-        print >> stream, 'Calculated Gradient'
-        print >> stream, 24*'-'
-        print >> stream, J
-        print >> stream, 24*'-'
-        print >> stream, 'Finite Difference Comparison'
-        print >> stream, 24*'-'
-        print >> stream, Jbase
-
-        # This code duplication is needed so that we print readable names for
-        # the constraints and objectives.
-
-        if inputs is None:
-            if hasattr(parent, 'list_param_group_targets'):
-                inputs = parent.list_param_group_targets()
-                input_refs = []
-                for item in inputs:
-                    if len(item) < 2:
-                        input_refs.append(item[0])
-                    else:
-                        input_refs.append(item)
-            # Should be caught in calc_gradient()
-            else:  # pragma no cover
-                msg = "No inputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            input_refs = inputs
-
-        if outputs is None:
-            outputs = []
-            output_refs = []
-            if hasattr(parent, 'get_objectives'):
-                obj = ["%s.out0" % item.pcomp_name for item in
-                       parent.get_objectives().values()]
-                outputs.extend(obj)
-                output_refs.extend(parent.get_objectives().keys())
-            if hasattr(parent, 'get_constraints'):
-                con = ["%s.out0" % item.pcomp_name for item in
-                       parent.get_constraints().values()]
-                outputs.extend(con)
-                output_refs.extend(parent.get_constraints().keys())
-
-            if len(outputs) == 0:  # pragma no cover
-                msg = "No outputs given for derivatives."
-                self.scope.raise_exception(msg, RuntimeError)
-        else:
-            output_refs = outputs
-
-        out_width = 0
-
-        for output, oref in zip(outputs, output_refs):
-            out_val = self.scope.get(output)
-            out_names = _flattened_names(oref, out_val)
-            out_width = max(out_width, max([len(out) for out in out_names]))
-
-        inp_width = 0
-        for input_tup, iref in zip(inputs, input_refs):
-            if isinstance(input_tup, str):
-                input_tup = [input_tup]
-            inp_val = self.scope.get(input_tup[0])
-            inp_names = _flattened_names(str(iref), inp_val)
-            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
-
-        label_width = out_width + inp_width + 4
-
-        print >> stream
-        print >> stream, label_width*' ', \
-              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
-        print >> stream, (label_width+(3*18)+3)*'-'
-
-        suspect_limit = 1e-5
-        error_n = error_sum = 0
-        error_max = error_loc = None
-        suspects = []
-        i = -1
-
-        io_pairs = []
-
-        for output, oref in zip(outputs, output_refs):
-            out_val = self.scope.get(output)
-            for out_name in _flattened_names(oref, out_val):
-                i += 1
-                j = -1
-                for input_tup, iref in zip(inputs, input_refs):
-                    if isinstance(input_tup, basestring):
-                        input_tup = (input_tup,)
-
-                    inp_val = self.scope.get(input_tup[0])
-                    for inp_name in _flattened_names(iref, inp_val):
-                        j += 1
-                        calc = J[i, j]
-                        finite = Jbase[i, j]
-                        if finite and calc:
-                            error = (calc - finite) / finite
-                        else:
-                            error = calc - finite
-                        error_n += 1
-                        error_sum += abs(error)
-                        if error_max is None or abs(error) > abs(error_max):
-                            error_max = error
-                            error_loc = (out_name, inp_name)
-                        if abs(error) > suspect_limit or isnan(error):
-                            suspects.append((out_name, inp_name))
-                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
-                              % (out_width, out_name, inp_width, inp_name,
-                                 calc, finite, error)
-                        io_pairs.append("%*s / %*s"
-                                        % (out_width, out_name,
-                                           inp_width, inp_name))
-        print >> stream
-        if error_n:
-            print >> stream, 'Average RelError:', error_sum / error_n
-            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
-        if suspects:
-            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
-            for out_name, inp_name in suspects:
-                print >> stream, '%*s / %*s' \
-                      % (out_width, out_name, inp_width, inp_name)
-        print >> stream
-
-        if close_stream:
-            stream.close()
-
-        # return arrays and suspects to make it easier to check from a test
-        return Jbase.flatten(), J.flatten(), io_pairs, suspects
+    # def calc_derivatives(self, first=False, second=False, savebase=False,
+    #                      required_inputs=None, required_outputs=None):
+    #     """ Calculate derivatives and save baseline states for all components
+    #     in this workflow.
+    #     """
+
+    #     self._stop = False
+
+    #     dgraph = self.derivative_graph(required_inputs, required_outputs)
+    #     comps = dgraph.edge_dict_to_comp_list(edges_to_dict(dgraph.list_connections()),
+    #                                           self.get_implicit_info())
+    #     for compname, data in comps.iteritems():
+    #         if '~' in compname:
+    #             comp = self._derivative_graph.node[compname]['pa_object']
+    #         elif compname.startswith('@'):
+    #             continue
+    #         else:
+    #             comp = self.scope.get(compname)
+
+    #         J = self._J_cache.get(compname)
+    #         if compname not in self._shape_cache:
+    #             self._shape_cache[compname] = {}
+    #         if J is None and hasattr(comp, 'calc_derivatives'):
+    #             J = comp.calc_derivatives(first, second, savebase,
+    #                                       data['inputs'], data['outputs'])
+    #             if J is not None:
+    #                 self._J_cache[compname] = J
+
+    #         if self._stop:
+    #             raise RunStopped('Stop requested')
+    #     return comps
+
+    # def calc_gradient(self, inputs=None, outputs=None, upscope=False, mode='auto'):
+    #     """Returns the gradient of the passed outputs with respect to
+    #     all passed inputs.
+
+    #     inputs: list of strings or tuples of strings
+    #         List of input variables that we are taking derivatives with respect
+    #         to. They must be within this workflow's scope. If no inputs are
+    #         given, the parent driver's parameters are used. A tuple can be used
+    #         to link inputs together.
+
+    #     outputs: list of strings
+    #         List of output variables that we are taking derivatives of.
+    #         They must be within this workflow's scope. If no outputs are
+    #         given, the parent driver's objectives and constraints are used.
+
+    #     upscope: boolean
+    #         This is set to True when our workflow is part of a subassembly that
+    #         lies in a workflow that needs a gradient with respect to variables
+    #         outside of this workflow, so that the caches can be reset.
+
+    #     mode: string
+    #         Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
+    #         'fd' for full-model finite difference (with fake finite
+    #         difference disabled), or 'auto' to let OpenMDAO determine the
+    #         correct mode.
+    #     """
+
+    #     self._J_cache = {}
+    #     parent = self.parent
+
+    #     # User may request full-model finite difference.
+    #     if parent.gradient_options.force_fd is True:
+    #         mode = 'fd'
+
+    #     # This function can be called from a parent driver's workflow for
+    #     # assembly recursion. We have to clear our cache if that happens.
+    #     # We also have to clear it next time we arrive back in our workflow.
+    #     if upscope or self._upscoped:
+    #         self._derivative_graph = None
+    #         self._edges = None
+    #         self._comp_edges = None
+    #         self.res = None
+    #         self._upscoped = upscope
+
+    #     dgraph = self.derivative_graph(inputs, outputs, fd=(mode == 'fd'))
+
+    #     inputs = dgraph.graph['mapped_inputs']
+    #     outputs = dgraph.graph['mapped_outputs']
+
+    #     n_edge = self.initialize_residual()
+
+    #     # cache Jacobians for comps that return them from provideJ
+
+    #     bounds = self._bounds_cache
+
+    #     # Size our Jacobian
+    #     num_in = 0
+    #     for item in inputs:
+
+    #         # For parameter groups, only size the first
+    #         if not isinstance(item, basestring):
+    #             item = item[0]
+
+    #         try:
+    #             i1, i2 = bounds[item]
+    #             if isinstance(i1, list):
+    #                 num_in += len(i1)
+    #             else:
+    #                 num_in += i2-i1
+    #         except KeyError:
+    #             num_in += self.get_width(item)
+
+    #     num_out = 0
+    #     for item in outputs:
+    #         try:
+    #             i1, i2 = bounds[item]
+    #             if isinstance(i1, list):
+    #                 num_out += len(i1)
+    #             else:
+    #                 num_out += i2-i1
+    #         except KeyError:
+    #             num_out += self.get_width(item)
+
+    #     shape = (num_out, num_in)
+
+    #     # Auto-determine which direction to use based on Jacobian shape.
+    #     if mode == 'auto':
+
+    #         # TODO - additional determination based on presence of
+    #         # apply_derivT
+
+    #         # User-controlled setting in the driver. This takes precedence
+    #         # over OpenMDAO's automatic choice.
+    #         opt = parent.gradient_options
+
+    #         if opt.derivative_direction == 'forward':
+    #             mode = 'forward'
+    #         elif opt.derivative_direction == 'adjoint':
+    #             mode = 'adjoint'
+
+    #         # OpenMDAO's automatic direction determination
+    #         elif num_in > num_out:
+    #             mode = 'adjoint'
+    #         else:
+    #             mode = 'forward'
+
+    #     # Make sure we have all the derivatives we are asking for.
+    #     if mode != 'fd':
+
+    #         comps = self._comp_edge_list()
+
+    #         for comp_name in comps:
+
+    #             if '~' in comp_name:
+    #                 continue
+
+    #             comp = self.scope.get(comp_name)
+
+    #             if mode == 'forward':
+    #                 if hasattr(comp, 'apply_derivT') and \
+    #                    not hasattr(comp, 'apply_deriv'):
+    #                     msg = "Attempting to calculate derivatives in " + \
+    #                           "forward mode, but component %s" % comp.name
+    #                     msg += " only has adjoint derivatives defined."
+    #                     self.scope.raise_exception(msg, RuntimeError)
+
+    #             elif mode == 'adjoint':
+    #                 if hasattr(comp, 'apply_deriv') and \
+    #                    not hasattr(comp, 'apply_derivT'):
+    #                     msg = "Attempting to calculate derivatives in " + \
+    #                           "adjoint mode, but component %s" % comp.name
+    #                     msg += " only has forward derivatives defined."
+    #                     self.scope.raise_exception(msg, RuntimeError)
+
+    #     #print len(self.res), len(self._edges), len(self._comp_edge_list())
+
+    #     if mode == 'adjoint':
+    #         if parent.gradient_options.directional_fd is True:
+    #             msg = "Directional derivatives can only be used with forward "
+    #             msg += "mode."
+    #             self.scope.raise_exception(msg, RuntimeError)
+
+    #         J = calc_gradient_adjoint(self, inputs, outputs, n_edge, shape)
+    #     elif mode in ['forward', 'fd']:
+    #         J = calc_gradient(self, inputs, outputs, n_edge, shape)
+    #     else:
+    #         msg = "In calc_gradient, mode must be 'forward', 'adjoint', " + \
+    #               "'auto', or 'fd', but a value of %s was given." % mode
+    #         self.scope.raise_exception(msg, RuntimeError)
+
+    #     # Finally, we need to untransform the jacobian if any parameters have
+    #     # scalers.
+    #     #print 'edges:', self._edges
+    #     if not hasattr(parent, 'get_parameters'):
+    #         return J
+
+    #     params = parent.get_parameters()
+
+    #     if len(params) == 0:
+    #         return J
+
+    #     i = 0
+    #     for group in inputs:
+
+    #         if isinstance(group, str):
+    #             group = [group]
+
+    #         name = group[0]
+    #         if len(group) > 1:
+    #             pname = tuple([from_PA_var(aname) for aname in group])
+    #         else:
+    #             pname = from_PA_var(name)
+
+    #         try:
+    #             i1, i2 = bounds[name]
+    #         except KeyError:
+    #             continue
+
+    #         if isinstance(i1, list):
+    #             width = len(i1)
+    #         else:
+    #             width = i2-i1
+
+    #         if pname in params:
+    #             scaler = params[pname].scaler
+    #             if scaler != 1.0:
+    #                 J[:, i:i+width] = J[:, i:i+width]*scaler
+
+    #         i += width
+    #     #print J
+    #     return J
+
+    # def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
+    #     """Compare the OpenMDAO-calculated gradient with one calculated
+    #     by straight finite-difference. This provides the user with a way
+    #     to validate his derivative functions (apply_deriv and provideJ.)
+    #     Note that fake finite difference is turned off so that we are
+    #     doing a straight comparison.
+
+    #     inputs: (optional) iter of str or None
+    #         Names of input variables. The calculated gradient will be
+    #         the matrix of values of the output variables with respect
+    #         to these input variables. If no value is provided for inputs,
+    #         they will be determined based on the parameters of
+    #         the Driver corresponding to this workflow.
+
+    #     outputs: (optional) iter of str or None
+    #         Names of output variables. The calculated gradient will be
+    #         the matrix of values of these output variables with respect
+    #         to the input variables. If no value is provided for outputs,
+    #         they will be determined based on the objectives and constraints
+    #         of the Driver corresponding to this workflow.
+
+    #     stream: (optional) file-like object or str
+    #         Where to write to, default stdout. If a string is supplied,
+    #         that is used as a filename. If None, no output is written.
+
+    #     mode: (optional) str
+    #         Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
+    #         or 'auto' to let OpenMDAO determine the correct mode.
+    #         Defaults to 'auto'.
+
+    #     Returns the finite difference gradient, the OpenMDAO-calculated
+    #     gradient, and a list of suspect inputs/outputs.
+    #     """
+    #     parent = self.parent
+
+    #     # tuples cause problems
+    #     if inputs:
+    #         inputs = list(inputs)
+    #     if outputs:
+    #         outputs = list(outputs)
+
+    #     if isinstance(stream, basestring):
+    #         stream = open(stream, 'w')
+    #         close_stream = True
+    #     else:
+    #         close_stream = False
+    #         if stream is None:
+    #             stream = StringIO()
+
+    #     self.config_changed()
+    #     J = self.calc_gradient(inputs, outputs, mode=mode)
+
+    #     self.config_changed()
+    #     Jbase = self.calc_gradient(inputs, outputs, mode='fd')
+
+    #     print >> stream, 24*'-'
+    #     print >> stream, 'Calculated Gradient'
+    #     print >> stream, 24*'-'
+    #     print >> stream, J
+    #     print >> stream, 24*'-'
+    #     print >> stream, 'Finite Difference Comparison'
+    #     print >> stream, 24*'-'
+    #     print >> stream, Jbase
+
+    #     # This code duplication is needed so that we print readable names for
+    #     # the constraints and objectives.
+
+    #     if inputs is None:
+    #         if hasattr(parent, 'list_param_group_targets'):
+    #             inputs = parent.list_param_group_targets()
+    #             input_refs = []
+    #             for item in inputs:
+    #                 if len(item) < 2:
+    #                     input_refs.append(item[0])
+    #                 else:
+    #                     input_refs.append(item)
+    #         # Should be caught in calc_gradient()
+    #         else:  # pragma no cover
+    #             msg = "No inputs given for derivatives."
+    #             self.scope.raise_exception(msg, RuntimeError)
+    #     else:
+    #         input_refs = inputs
+
+    #     if outputs is None:
+    #         outputs = []
+    #         output_refs = []
+    #         if hasattr(parent, 'get_objectives'):
+    #             obj = ["%s.out0" % item.pcomp_name for item in
+    #                    parent.get_objectives().values()]
+    #             outputs.extend(obj)
+    #             output_refs.extend(parent.get_objectives().keys())
+    #         if hasattr(parent, 'get_constraints'):
+    #             con = ["%s.out0" % item.pcomp_name for item in
+    #                    parent.get_constraints().values()]
+    #             outputs.extend(con)
+    #             output_refs.extend(parent.get_constraints().keys())
+
+    #         if len(outputs) == 0:  # pragma no cover
+    #             msg = "No outputs given for derivatives."
+    #             self.scope.raise_exception(msg, RuntimeError)
+    #     else:
+    #         output_refs = outputs
+
+    #     out_width = 0
+
+    #     for output, oref in zip(outputs, output_refs):
+    #         out_val = self.scope.get(output)
+    #         out_names = _flattened_names(oref, out_val)
+    #         out_width = max(out_width, max([len(out) for out in out_names]))
+
+    #     inp_width = 0
+    #     for input_tup, iref in zip(inputs, input_refs):
+    #         if isinstance(input_tup, str):
+    #             input_tup = [input_tup]
+    #         inp_val = self.scope.get(input_tup[0])
+    #         inp_names = _flattened_names(str(iref), inp_val)
+    #         inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
+
+    #     label_width = out_width + inp_width + 4
+
+    #     print >> stream
+    #     print >> stream, label_width*' ', \
+    #           '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
+    #     print >> stream, (label_width+(3*18)+3)*'-'
+
+    #     suspect_limit = 1e-5
+    #     error_n = error_sum = 0
+    #     error_max = error_loc = None
+    #     suspects = []
+    #     i = -1
+
+    #     io_pairs = []
+
+    #     for output, oref in zip(outputs, output_refs):
+    #         out_val = self.scope.get(output)
+    #         for out_name in _flattened_names(oref, out_val):
+    #             i += 1
+    #             j = -1
+    #             for input_tup, iref in zip(inputs, input_refs):
+    #                 if isinstance(input_tup, basestring):
+    #                     input_tup = (input_tup,)
+
+    #                 inp_val = self.scope.get(input_tup[0])
+    #                 for inp_name in _flattened_names(iref, inp_val):
+    #                     j += 1
+    #                     calc = J[i, j]
+    #                     finite = Jbase[i, j]
+    #                     if finite and calc:
+    #                         error = (calc - finite) / finite
+    #                     else:
+    #                         error = calc - finite
+    #                     error_n += 1
+    #                     error_sum += abs(error)
+    #                     if error_max is None or abs(error) > abs(error_max):
+    #                         error_max = error
+    #                         error_loc = (out_name, inp_name)
+    #                     if abs(error) > suspect_limit or isnan(error):
+    #                         suspects.append((out_name, inp_name))
+    #                     print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+    #                           % (out_width, out_name, inp_width, inp_name,
+    #                              calc, finite, error)
+    #                     io_pairs.append("%*s / %*s"
+    #                                     % (out_width, out_name,
+    #                                        inp_width, inp_name))
+    #     print >> stream
+    #     if error_n:
+    #         print >> stream, 'Average RelError:', error_sum / error_n
+    #         print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+    #     if suspects:
+    #         print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
+    #         for out_name, inp_name in suspects:
+    #             print >> stream, '%*s / %*s' \
+    #                   % (out_width, out_name, inp_width, inp_name)
+    #     print >> stream
+
+    #     if close_stream:
+    #         stream.close()
+
+    #     # return arrays and suspects to make it easier to check from a test
+    #     return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
 
 def _flattened_names(name, val, names=None):

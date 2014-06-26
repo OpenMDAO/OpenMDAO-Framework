@@ -154,6 +154,36 @@ class Testcase_provideJ(unittest.TestCase):
             for j in range(2):
                 self.assertEqual(outputs['vvt.vt1.d1'].flat[j], comp.J[9+j, i])
 
+class Rosenbrock(Component):
+    x = Float(0.0, iotype='in', desc='The variable x')
+    y = Float(0.0, iotype='in', desc='The variable y')
+
+    f_xy = Float(iotype='out', desc='F(x,y)')
+
+    def execute(self):
+        x = self.x
+        self.f_xy = (1-x)**2 + 100*(self.y-x*x)**2
+
+    def apply_J(self, args):
+        vec = self.vec
+        p, dp, du, dg = vec['p'], vec['dp'], vec['du'], vec['dg']
+        x, y = p('x'), p('y')
+        dx, dy, df = dp('x'), dp('y'), dg('f')
+
+        dfdx = -2*(1-x[0]) - 400*x[0]*(y[0] - x[0]*x[0])
+        dfdy = 200*(y[0] - x[0]**2)
+        if self.mode == 'fwd':
+            df[0] = 0
+            if self.get_id('x') in args:
+                df[0] += dfdx*dx[0]
+            if self.get_id('y') in args:
+                df[0] += dfdy*dy[0]
+        else:
+            if self.get_id('x') in args:
+                dx[0] = dfdx*df[0]
+            if self.get_id('y') in args:
+                dy[0] = dfdy*df[0]
+
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -689,6 +719,25 @@ class Testcase_derivatives(unittest.TestCase):
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
             openmdao.main.derivatives.logger = orig_logger
+
+    def test_single_comp(self):
+
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+
+        top.comp.x = 3
+        top.comp.y = 5
+        top.comp.run()
+
+        J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
+                                              mode='forward')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)    
 
     def test_first_derivative(self):
 

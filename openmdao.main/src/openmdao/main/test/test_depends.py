@@ -474,7 +474,7 @@ class DependsTestCase2(unittest.TestCase):
         top.c1.ain = [55.,44.,33.]
             
         #from openmdao.util.dotgraph import plot_graph
-        #plot_graph(top._depgraph)
+        #plot_graph(top.sub._depgraph)
         top.run()
         
         self.assertEqual(top.c1.aout[1], 88.)

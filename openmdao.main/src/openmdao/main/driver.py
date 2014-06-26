@@ -156,7 +156,7 @@ class Driver(Component):
             driver's graph.
         """
         allcomps = set()
-        for child in self.workflow.get_components(full=True):
+        for child in self.workflow:
             allcomps.add(child)
             if has_interface(child, IDriver):
                 if solver_only and not has_interface(child, ISolver):

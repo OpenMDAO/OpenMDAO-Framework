@@ -1882,7 +1882,15 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
-        """Return the full set of nodes in the depgraph
+        """Return the node in the depgraph
         belonging to this component.
         """
         return set((self.name,))
+
+    @rbac(('owner', 'user'))
+    def pre_setup(self):
+        pass
+    
+    @rbac(('owner', 'user'))
+    def post_setup(self):
+        pass
