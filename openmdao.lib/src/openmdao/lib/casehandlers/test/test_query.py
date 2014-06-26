@@ -191,10 +191,12 @@ class TestCase(unittest.TestCase):
             "dis1.z2": 2.0,
         }
         for name, val in zip(names, cases[68]):
-            assert_rel_error(self, val, iteration_case_69[name], 0.001)
+            self.assertEqual(val, iteration_case_69[name])
 
+        self.assertEqual(cases[68]['dis1.y1'], iteration_case_69['dis1.y1'])
+       
         # Transposed.
-        vars = self.cds.data.local().vars(names).transposed().fetch()
+        vars = self.cds.data.local().vars(names).by_variable().fetch()
         self.assertEqual(len(vars), len(names))
         self.assertEqual(len(vars[0]), 1826)
 
@@ -209,6 +211,8 @@ class TestCase(unittest.TestCase):
             self.assertTrue(math.isnan(var[0]))  # localopt2
             self.assertTrue(math.isnan(var[-1])) # top
             assert_rel_error(self, var[68], iteration_case_69[names[i]], 0.001)
+
+        self.assertEqual(vars['dis1.y1'][68], iteration_case_69['dis1.y1'])
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.

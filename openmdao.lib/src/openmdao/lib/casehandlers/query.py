@@ -193,7 +193,7 @@ class CaseDataset(object):
                 for name in metadata_names:
                     data[name] = case_data[name]
 
-                row = []
+                row = DictList(names)
                 for name in names:
                     if local:
                         if name in metadata_names:
@@ -217,7 +217,7 @@ class CaseDataset(object):
                 break  # Parent is last case recorded.
 
         if query.transpose:
-            tmp = []
+            tmp = DictList(names)
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
             return tmp
@@ -270,7 +270,14 @@ class Query(object):
         self.local_only = True
         return self
 
-    def transposed(self):
+    def by_case(self):
+        """
+        Have :meth:`fetch` return data as ``[case][var]`` (the default).
+        """
+        self.transpose = False
+        return self
+
+    def by_variable(self):
         """
         Have :meth:`fetch` return data as ``[var][case]`` rather than the
         default of ``[case][var]``.
@@ -282,6 +289,22 @@ class Query(object):
         """ Return  a list of the names of the variables in the cases. """
         self.names = True
         return self
+
+
+class DictList(list): 
+
+    def __init__(self, var_names, seq=None): 
+        if seq is None:
+            super(DictList, self).__init__()
+        else:
+            super(DictList, self).__init__(seq)
+        self.name_map = dict([(v, i) for i, v in enumerate(var_names)])
+
+    def __getitem__(self, key): 
+        if isinstance(key, int): 
+            return super(DictList, self).__getitem__(key)
+        else: 
+            return super(DictList, self).__getitem__(self.name_map[key])
 
 
 class _CaseNode(object):
