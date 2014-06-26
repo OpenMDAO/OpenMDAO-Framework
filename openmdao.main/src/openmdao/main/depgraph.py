@@ -1,8 +1,12 @@
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
+from functools import cmp_to_key
+from heapq import merge
 
 import networkx as nx
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
@@ -15,8 +19,6 @@ from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
 from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
-from networkx.algorithms.dag import is_directed_acyclic_graph
-from networkx.algorithms.components import strongly_connected_components
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -188,7 +190,7 @@ def is_connection(graph, src, dest):
     except KeyError:
         return False
 
-def is_drv_connection(graph, src, dest, driver):
+def is_drv_connection(graph, src, dest, driver=True):
     try:
         if driver is True: # True for any driver
             return 'drv_conn' in graph.edge[src][dest]
@@ -298,8 +300,8 @@ class DependencyGraph(nx.DiGraph):
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
         old_outs = set(self.list_outputs(cname))
-        old_states = set([n for n in old_outs if self.node[n]['iotype'] == 'state'])
-        old_resids = set([n for n in old_outs if self.node[n]['iotype'] == 'residual'])
+        old_states = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'state'])
+        old_resids = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'residual'])
 
         # remove states from old_ins
         old_ins -= old_states
@@ -705,8 +707,9 @@ class DependencyGraph(nx.DiGraph):
 
         full = []
         for node in nodes:
-            full.extend(self._all_child_vars(node))
-            full.append(node)
+            if node in self:
+                full.extend(self._all_child_vars(node))
+                full.append(node)
 
         if data:
             sn = self.node
@@ -812,44 +815,24 @@ class DependencyGraph(nx.DiGraph):
         """Return a subgraph containing only Components
         and PseudoComponents and edges between them.
         """
-        if self._component_graph is not None:
-            return self._component_graph
+        if self._component_graph is None:
+            compset = set(self.all_comps())
 
-        compset = set(self.all_comps())
+            g = nx.DiGraph()
 
-        g = nx.DiGraph()
-        g.graph['boundary_ins'] = {}  # for edges from Assembly boundary
-        g.graph['boundary_outs'] = {}  # for edges to Assembly boundary
+            for comp in compset:
+                g.add_node(comp, self.node[comp].copy())
 
-        for comp in compset:
-            g.add_node(comp, self.node[comp].copy())
-            g.node[comp]['inputs'] = set()
-            g.node[comp]['outputs'] = set()
+            for src, dest in self.list_connections():
+                destcomp = dest.split('.', 1)[0]
+                srccomp =  src.split('.', 1)[0]
 
-        # create 'var_edges' metadata in graph edges to 
-        # indicate which edges from the variable graph have
-        # been collapsed, and mark active inputs and outputs
-        # in node metadata.
-        for src, dest in self.list_connections():
-            destcomp = dest.split('.', 1)[0]
-            srccomp =  src.split('.', 1)[0]
+                if srccomp in compset and destcomp in compset:
+                    g.add_edge(srccomp, destcomp)
 
-            if srccomp in compset and destcomp in compset:
-                g.add_edge(srccomp, destcomp)
-                g[srccomp][destcomp].setdefault('var_edges',[]).append((src,dest))
-            elif is_boundary_node(self, src):
-                g.graph['boundary_ins'].setdefault(destcomp, []).append((src,dest))
-            elif is_boundary_node(self, dest):
-                g.graph['boundary_outs'].setdefault(srccomp, []).append((src,dest))
+            self._component_graph = g
 
-            if srccomp in compset:
-                g.node[srccomp]['outputs'].add(src)
-
-            if destcomp in compset:
-                g.node[destcomp]['inputs'].add(dest)
-        
-        self._component_graph = g
-        return g
+        return self._component_graph
 
     def order_components(self, comps):
         """Return a list of the given components, sorted in
@@ -928,10 +911,10 @@ class DependencyGraph(nx.DiGraph):
             except StopIteration:
                 queue.popleft()
 
-    def update_boundary_outputs(self, scope):
-        """Update destination vars on our boundary."""
-        for out in self.get_boundary_outputs():
-            self.update_destvar(scope, out)
+    # def update_boundary_outputs(self, scope):
+    #     """Update destination vars on our boundary."""
+    #     for out in self.get_boundary_outputs():
+    #         self.update_destvar(scope, out)
 
     def update_destvar(self, scope, vname):
         """Update the value of the given variable in the
@@ -1036,6 +1019,10 @@ class DependencyGraph(nx.DiGraph):
         to_remove = [v for v in self.nodes_iter()
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
+
+    # The following group of methods are overridden so we can
+    # call config_changed when the graph structure is modified
+    # in any way.
 
     def add_node(self, n, attr_dict=None, **attr):
         super(DependencyGraph, self).add_node(n,
@@ -1817,8 +1804,7 @@ def get_missing_derivs(obj, recurse=True):
 
 def break_cycles(graph):
     """Breaks up a cyclic graph and returns a list of severed
-    edges. Also sets that list of edges into the top level
-    graph metadata as 'severed_edges'. The severed edges list
+    edges. The severed edges list
     is a list of tuples of the form [(u,v,metadata), ...]
     """
     severed_edges = []
@@ -1847,7 +1833,117 @@ def break_cycles(graph):
                 severed_edges.append((u,v,meta))
                 break
 
-    graph.graph['severed_edges'] = severed_edges[:]
-
     return severed_edges
 
+def get_graph_partition(g, nodes):
+    """Returns a tuple of the form (in_edges, out_edges),
+    where in_edges and out_edges are boundary
+    edges between the nodes and the rest of the full graph.
+    """
+    others = set(g.nodes_iter()).difference(nodes)
+    # print "get_graph_partition: %s" % list(nodes)
+    # print "others: %s" % list(others)
+    out_edges = nx.edge_boundary(g, nodes)
+    in_edges = nx.edge_boundary(g, others)
+    
+    return in_edges, out_edges
+     
+def collapse_nodes(g, collapsed_name, nodes):
+    """Collapse the given set of nodes into a single
+    node with the specified name.
+    """
+    in_edges, out_edges = \
+                  get_graph_partition(g, nodes)
+    
+    # create new connections to collapsed node
+    for u,v in in_edges:
+        g.add_edge(u, collapsed_name)
+        # create our own copy of edge metadata
+        g[u][collapsed_name] = g[u][v].copy()
+
+    for u,v in out_edges:
+        g.add_edge(collapsed_name, v)
+        # create our own copy of edge metadata
+        g[collapsed_name][v] = g[u][v].copy()
+
+    g.remove_nodes_from(nodes)
+
+    return in_edges, out_edges
+    
+def collapse_driver(g, driver, excludes=()):
+    """For the given driver object, collapse the
+    driver's iteration set nodes into a single driver
+    system node.
+    """
+    nodes = driver.get_full_nodeset()
+    nodes = [n for n in 
+                driver.get_depgraph().find_prefixed_nodes(nodes)
+                if n not in excludes]
+
+    return collapse_nodes(g, driver.name, nodes)
+        
+def get_all_deps(g):
+    """Return a set of edge tuples where the
+    existence of a tuple (u,v) means that v depends 
+    on u, either directly or indirectly.  Note that this will 
+    be slow for large dense graphs.
+    """
+    edges = set()
+    dfs = nx.dfs_edges
+
+    for node in g.nodes_iter():
+        edges.update([(node, v) for u,v in dfs(g, node)])
+
+    return edges
+
+# this could be optimized a bit for speed, but we only use it
+# for small graphs, so performance isn't an issue
+def gsort(deps, names):
+    """Return a sorted version of the given names
+    iterator, based on dependency specified by the
+    given set of dependencies.
+    """
+    
+    def gorder(n1, n2):
+        if (n1,n2) in deps:
+            return -1
+        elif (n2,n1) in deps:
+            return 1
+        return 0
+
+    # get all names that actually have a graph dependency
+    depnames = set([u for u,v in deps])
+    depnames.update([v for u,v in deps])
+    
+    ordered = [n for n in names if n in depnames]
+    
+    # get the sorted list of names with dependencies. Note that this
+    # is a stable sort, so original order of the list will be
+    # preserved unless there's a dependency violation.
+    sortlist = sorted(ordered, key=cmp_to_key(gorder))
+    
+    # reverse the list so we can pop from it below
+    rev = sortlist[::-1]
+    
+    # now take the names without dependencies and insert them in the 
+    # proper location in the list.  Since they have no dependencies,
+    # they can be inserted anywhere in the list without messing up 
+    # the sort
+    
+    final = [None]*len(names)
+    for i,n in enumerate(names):
+        if n in depnames:
+            final[i] = rev.pop()
+        else:
+            final[i] = n
+    
+    return final
+        
+    #key = cmp_to_key(gorder)    
+    #data = [key(n) for n in names]
+    
+    #slist = []
+    #for d in data:
+        #insort(slist, d)
+
+    #return [s.obj for s in slist]

@@ -10,12 +10,12 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.mpiwrap import mpiprint, set_print_rank
 from openmdao.util.decorators import add_delegate
-from openmdao.main.distsolve import MPINonlinearGS
+from openmdao.main.distsolve import MPINonlinearSolver
 from openmdao.test.execcomp import ExecComp
 
 from openmdao.lib.optproblems import sellar
 
-class NTimes(MPINonlinearGS):
+class NTimes(MPINonlinearSolver):
     def __init__(self, maxiter=1):
         super(NTimes, self).__init__()
         self.max_iteration = maxiter
@@ -34,7 +34,7 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        #mpiprint("%s: c = %s" % (self.name, self.c))
+        mpiprint("%s: c = %s" % (self.name, self.c))
         
 def _get_model():
     """1 component"""
@@ -161,7 +161,25 @@ def _get_model5():
     top.driver.add_constraint('C8.d[0]=0') 
     
     return top
-    
+
+def _get_modelsimple():
+    """2 comps"""
+    top = set_as_top(Assembly())
+    top.add('driver', MPINonlinearSolver())
+    top.driver.max_iteration = 3
+
+    for i in range(1,3):
+        name = 'C%d' % i
+        top.add(name, ABCDArrayComp())
+        top.driver.workflow.add(name)
+        getattr(top, name).mpi.requested_cpus = 1
+
+    top.connect('C1.c', 'C2.a')
+    #top.connect('C2.c', 'C1.a')
+    top.driver.add_parameter('C1.a', low=-1e99, high=1e99)
+    top.driver.add_constraint('C2.c = C1.a')
+    return top
+
 def _get_modelsellar():
     """Sellar (serial)"""
     prob = set_as_top(SellarMDF(parallel=False, use_params=False))
@@ -190,7 +208,7 @@ class SellarMDF(Assembly):
         Optimal Objective = 3.18339"""
         
         #self.add('driver', FixedPointIterator())
-        self.add('driver', NTimes(9))
+        self.add('driver', MPINonlinearSolver())
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         C1 = self.add('C1', sellar.Discipline1())
@@ -216,18 +234,20 @@ class SellarMDF(Assembly):
             # Iteration loop
             if self.use_params:
                 self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-                self.driver.add_constraint('C2.y2 = C1.y2')
+                #self.driver.add_constraint('C2.y2 = C1.y2')
+                self.driver.add_constraint('C1.y2 = C2.y2')
             else:  # use circular connection
                 self.connect('C2.y2', 'C1.y2')
         
         # Solver settings
-        self.driver.max_iteration = 100
+        self.driver.max_iteration = 5
         self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
         
 
 if __name__ == '__main__':
     import sys
+    import traceback
     from openmdao.main.mpiwrap import MPI
 
     """
@@ -253,27 +273,31 @@ if __name__ == '__main__':
         top = ret
         expected = None
 
-    dump_iteration_tree(top)
+    #dump_iteration_tree(top)
 
-    if MPI is not None and not run:
-        top._setup()
-        mpiprint(top.driver.workflow._subsystem.dump_subsystem_tree(stream=None))
+    try:
+        if MPI is not None and not run:
+            top._setup()
+            mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
 
-        #top.driver.workflow._subsystem._dump_graph(recurse=True)
+            mpiprint("setup DONE")
 
-        mpiprint("setup DONE")
+        if run:
+            mpiprint('-'*50)
+            top.run()
 
-    if run:
-        mpiprint('-'*50)
-        top.run()
+            mpiprint('-'*50)
+            #mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
 
-        if expected:
-            print "{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
-                                                           "Expected",
-                                                           "Actual",
-                                                           "Error")
-            for name, expval in expected.items():
-                val = top.get(name)
-                err = expval - val
-                print "{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err)
-
+            if expected:
+                mpiprint('-'*50)
+                mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
+                                                               "Expected",
+                                                               "Actual",
+                                                               "Error"))
+                for name, expval in expected.items():
+                    val = top.get(name)
+                    err = expval - val
+                    mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
+    except Exception as err:
+        mpiprint(traceback.format_exc())

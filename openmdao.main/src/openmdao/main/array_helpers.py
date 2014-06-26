@@ -43,7 +43,10 @@ def get_index(name):
     idx = _idx_cache.get(idxstr)
     if idx is None:
         newstr = idxstr.replace('][',',')
-        # eval will fail if index contains any non-literals
+        # _eval_globals dict contains nothing but _idx_getter, so
+        # eval will fail if index contains any non-literals. This
+        # is intentional since we want to avoid caching any indices
+        # that aren't constant.
         _idx_cache[idxstr] = idx = eval('_idx_getter'+newstr, _eval_globals)
     return idx
     
@@ -149,6 +152,8 @@ def get_var_shape(name, scope):
         return meta
     val = scope.get(name)
     if isinstance(val, ndarray):
+        if val.shape == ():
+            return (1,)
         return val.shape
     if isinstance(val, real_types):
         return (1,)
@@ -231,9 +236,7 @@ def flattened_size(name, val, scope=None):
 
     elif isinstance(val, TraitListObject):
         sz = len(val)
-        if sz == 0:
-            return 0
-        elif not isinstance(val[0], int_types) and isinstance(val[0], real_types):
+        if sz != 0 and not isinstance(val[0], int_types) and isinstance(val[0], real_types):
             return len(val)
         # else fall through and exception
     else:

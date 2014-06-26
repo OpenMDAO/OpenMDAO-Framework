@@ -609,7 +609,7 @@ class Rethore(unittest.TestCase):
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = True
-        a.execute()
+        a.run()
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
@@ -619,7 +619,7 @@ class Rethore(unittest.TestCase):
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = False
-        a.execute()
+        a.run()
         concurrent = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
@@ -633,7 +633,7 @@ class Rethore(unittest.TestCase):
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = True
-        a.execute()
+        a.run()
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
@@ -643,7 +643,7 @@ class Rethore(unittest.TestCase):
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = False
-        a.execute()
+        a.run()
         concurrent = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
@@ -935,16 +935,58 @@ class ParameterTarget(unittest.TestCase):
 
     def test_parameter_target(self):
         # Test that replacing a parameter target is handled.
-        a1 = PTAssembly()
+        a1 = set_as_top(PTAssembly())
         a1.run()
         self.assertEqual(a1.driver.case_outputs.c.o,
                          [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
-        a2 = PTAssembly()
+        a2 = set_as_top(PTAssembly())
         a2.configure()
         a2.replace('c', PTReplacement())
         a2.run()
         self.assertEqual(a2.driver.case_outputs.c.o,
                          [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
+
+
+# Test bug reported by Frederik Zahle. Sequential version would fail.
+
+class OutputVT(VariableTree):
+
+    a = Float()
+
+class AComp(Component):
+
+    inp = Float(iotype='in')
+    out = VarTree(OutputVT(), iotype='out')
+
+    def execute(self):
+        self.out.a = 2 * self.inp
+
+class CaseIter(Assembly):
+
+    def configure(self):
+        self.add('driver', CaseIteratorDriver())
+        self.add('acomp', AComp())
+        self.driver.workflow.add('acomp')
+        self.driver.add_parameter('acomp.inp')
+        self.driver.add_response('acomp.out')
+        self.driver.case_inputs.acomp.inp = [0, 1, 2]
+
+class Zahle(unittest.TestCase):
+
+    def test_sequential(self):
+        top = CaseIter()
+        top.run()
+        out = top.driver.case_outputs.acomp.out
+        out = [out[i].a for i in range(len(out))]
+        self.assertEqual(out, [0, 2, 4])
+
+    def test_concurrent(self):
+        top = CaseIter()
+        top.driver.sequential = False
+        top.run()
+        out = top.driver.case_outputs.acomp.out
+        out = [out[i].a for i in range(len(out))]
+        self.assertEqual(out, [0, 2, 4])
 
 
 if __name__ == '__main__':

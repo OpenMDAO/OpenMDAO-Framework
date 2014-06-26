@@ -1,4 +1,5 @@
 import ordereddict
+import weakref
 
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import List, VarTree
@@ -13,7 +14,7 @@ class Response(ConnectedExprEvaluator):
         super(Response, self).__init__(*args, **kwargs)
         self.pcomp_name = None
 
-    def activate(self):
+    def activate(self, driver):
         """Make this response active by creating the appropriate
         connections in the dependency graph.
         """
@@ -21,7 +22,8 @@ class Response(ConnectedExprEvaluator):
             pseudo = PseudoComponent(self.scope, self, pseudo_type='objective')
             self.pcomp_name = pseudo.name
             self.scope.add(pseudo.name, pseudo)
-        getattr(self.scope, self.pcomp_name).make_connections(self.scope)
+        getattr(self.scope, self.pcomp_name).make_connections(self.scope,
+                                                              driver)
 
     def deactivate(self):
         """Remove this response from the dependency graph and remove
@@ -47,7 +49,22 @@ class HasResponses(object):
 
     def __init__(self, parent):
         self._responses = ordereddict.OrderedDict()
-        self._parent = parent
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_parent'] = self.parent
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        parent = state['_parent']
+        self._parent = None if parent is None else weakref.ref(parent)
+
+    @property
+    def parent(self):
+        """ The object we are a delegate of. """
+        return None if self._parent is None else self._parent()
 
     def _item_count(self):
         """This is used by the replace function to determine if a delegate from
@@ -61,10 +78,10 @@ class HasResponses(object):
         responses for them in the driver.
         """
         if isinstance(response_iter, basestring):
-            self._parent.raise_exception("add_responses requires an iterator of"
-                                         " expression strings.", ValueError)
+            self.parent.raise_exception("add_responses requires an iterator of"
+                                        " expression strings.", ValueError)
         for expr in response_iter:
-            self._parent.add_response(expr, scope=scope)
+            self.parent.add_response(expr, scope=scope)
 
     def add_response(self, expr, name=None, scope=None):
         """Adds a response to the driver.
@@ -79,18 +96,17 @@ class HasResponses(object):
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
 
-         """
+        """
         expr = _remove_spaces(expr)
         if expr in self._responses:
-            self._parent.raise_exception("Trying to add response '%s' to"
-                                         " driver, but it's already there"
-                                         % expr, AttributeError)
+            self.parent.raise_exception("Trying to add response '%s' to"
+                                        " driver, but it's already there"
+                                        % expr, AttributeError)
         if name is not None and name in self._responses:
-            self._parent.raise_exception("Trying to add response '%s' to"
-                                         " driver using name '%s', but name is"
-                                         " already used" % (expr, name),
-                                         AttributeError)
-
+            self.parent.raise_exception("Trying to add response '%s' to"
+                                        " driver using name '%s', but name is"
+                                        " already used" % (expr, name),
+                                        AttributeError)
 
         scope = self._get_scope(scope)
         expreval = Response(expr, scope)
@@ -99,14 +115,14 @@ class HasResponses(object):
             msg = "Can't add response '{0}' because of invalid variables {1}"
             error = ConnectedExprEvaluator._invalid_expression_error(unresolved_vars,
                                                                      expreval.text, msg)
-            self._parent.raise_exception(str(error), type(error))
+            self.parent.raise_exception(str(error), type(error))
 
         name = expr if name is None else name
 
-        expreval.activate()
+        expreval.activate(self.parent)
 
         self._responses[name] = expreval
-        self._parent.config_changed()
+        self.parent.config_changed()
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within
@@ -118,10 +134,10 @@ class HasResponses(object):
             response.deactivate()
             del self._responses[expr]
         else:
-            self._parent.raise_exception("Trying to remove response '%s' "
-                                         "that is not in this driver." % expr,
-                                         AttributeError)
-        self._parent.config_changed()
+            self.parent.raise_exception("Trying to remove response '%s' "
+                                        "that is not in this driver." % expr,
+                                        AttributeError)
+        self.parent.config_changed()
 
     def get_references(self, name):
         """Return references to component `name` in preparation for subsequent
@@ -163,8 +179,8 @@ class HasResponses(object):
             try:
                 self.add_response(str(response), name, response.scope)
             except Exception as err:
-                self._parent._logger.warning("Couldn't restore response '%s':"
-                                             " %s" % (name, err))
+                self.parent._logger.warning("Couldn't restore response '%s':"
+                                            " %s" % (name, err))
 
     def get_responses(self):
         """Returns an OrderedDict of response expressions."""
@@ -184,6 +200,13 @@ class HasResponses(object):
             responses.append(pcomp.out0)
         return responses
 
+    def eval_response(self, name):
+        """Returns the value of response `name`."""
+        scope = self._get_scope()
+        response = self._responses[name]
+        pcomp = getattr(scope, response.pcomp_name)
+        return pcomp.out0
+
     def list_pseudocomps(self):
         """Returns a list of pseudocomponent names associated with our
         parameters.
@@ -201,7 +224,7 @@ class HasResponses(object):
         for each component referenced by our responses. Note that this does not
         include pseudo-components.
         """
-        pname = self._parent.name
+        pname = self.parent.name
         conn_list = []
         for response in self._responses.values():
             conn_list.extend([(c, pname)
@@ -225,7 +248,7 @@ class HasResponses(object):
     def _get_scope(self, scope=None):
         if scope is None:
             try:
-                return self._parent.get_expr_scope()
+                return self.parent.get_expr_scope()
             except AttributeError:
                 pass
         return scope
@@ -246,7 +269,7 @@ class HasVarTreeResponses(HasResponses):
 
         path = _remove_spaces(expr) if name is None else name
         path = make_legal_path(path)
-        obj = self._parent
+        obj = self.parent
         names = ['case_outputs'] + path.split('.')
         for name in names[:-1]:
             if obj.get_trait(name):
@@ -264,7 +287,7 @@ class HasVarTreeResponses(HasResponses):
         nans = [float('NaN')] * length
         for path in self._responses:
             path = make_legal_path(path)
-            self._parent.set('case_outputs.'+path, list(nans), force=True)
+            self.parent.set('case_outputs.'+path, list(nans), force=True)
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within
@@ -273,7 +296,7 @@ class HasVarTreeResponses(HasResponses):
         super(HasVarTreeResponses, self).remove_response(expr)
 
         path = make_legal_path(_remove_spaces(expr))
-        obj = self._parent
+        obj = self.parent
         names = ['case_outputs'] + path.split('.')
         for name in names[:-1]:
             obj = obj.get(name)

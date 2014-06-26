@@ -81,10 +81,10 @@ class CyclicWorkflow(SequentialWorkflow):
                     # can use them as its independents/dependents.
                     depgraph = self.scope._depgraph
                     edge_set = set(depgraph.get_directional_interior_edges(strong[-1],
-                                                                            strong[0]))
+                                                                           strong[0]))
 
                     self._severed_edges.update(edge_set)
-                    
+
             if self._severed_edges:
                 self._var_graph = self.scope._depgraph.copy()
                 self._var_graph.remove_edges_from(self._severed_edges)
@@ -208,8 +208,8 @@ class CyclicWorkflow(SequentialWorkflow):
 
     def derivative_graph(self, inputs=None, outputs=None, fd=False,
                          group_nondif=True, add_implicit=True):
-        """Returns the local graph that we use for derivatives. For cyclic flows,
-        we need to sever edges and use them as inputs/outputs.
+        """Returns the local graph that we use for derivatives. For cyclic
+        flows, we need to sever edges and use them as inputs/outputs.
         """
 
         if self._derivative_graph is None or group_nondif is False:
@@ -223,13 +223,13 @@ class CyclicWorkflow(SequentialWorkflow):
             if add_implicit is True:
 
                 # Solver can specify parameters
-                if hasattr(self._parent, 'list_param_group_targets'):
-                    inputs.extend(self._parent.list_param_group_targets())
+                if hasattr(self.parent, 'list_param_group_targets'):
+                    inputs.extend(self.parent.list_param_group_targets())
 
                 # Solver can specify equality constraints
-                if hasattr(self._parent, 'get_eq_constraints'):
+                if hasattr(self.parent, 'get_eq_constraints'):
                     outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                   self._parent.get_constraints().values()])
+                                    self.parent.get_constraints().values()])
 
             # Cyclic flows need to be severed before derivatives are calculated.
             self._get_topsort()
@@ -259,8 +259,8 @@ class CyclicWorkflow(SequentialWorkflow):
             for edge in self._mapped_severed_edges:
                 cyclic_edges[edge[0]] = edge[1]
 
-            # Finally, modify our edge list to include the severed edges, and exclude
-            # the boundary edges.
+            # Finally, modify our edge list to include the severed edges, and
+            # exclude the boundary edges.
             for src, targets in self._edges.iteritems():
                 if '@in' not in src or \
                    not any(edge in cyclic_edges.values() for edge in targets):
@@ -291,7 +291,7 @@ class CyclicWorkflow(SequentialWorkflow):
             signs on the constraints.
         """
 
-        parent = self._parent
+        parent = self.parent
         deps = array(parent.eval_eq_constraints(self.scope))
         # Reorder for fixed point
         if fixed_point is True:
@@ -300,31 +300,32 @@ class CyclicWorkflow(SequentialWorkflow):
             rhs = {}
             lhs = {}
             i = 0
-            for key, value in eqcons.iteritems(): #make a mapping of position of each constraint
+            for value in eqcons.itervalues():
+                #make a mapping of position of each constraint
                 rhs[value.rhs.text] = (i, value.size)
                 lhs[value.lhs.text] = (i, value.size)
-                i+=value.size
+                i += value.size
 
-
-            new_dep_index = empty(len(deps),dtype="int")
-            new_dep_sign = empty(len(deps),dtype="int")
+            new_dep_index = empty(len(deps), dtype="int")
+            new_dep_sign = empty(len(deps), dtype="int")
             k = 0
-            for params in parent.list_param_group_targets(): #for each param, grab the right map value and set the sign convention
-                try: 
-                    j,size = rhs[params[0]]
-                    new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
+            for params in parent.list_param_group_targets():
+                #for each param, grab the right map value and set the sign convention
+                try:
+                    j, size = rhs[params[0]]
+                    new_dep_index[k:k+size] = j+arange(0, size, dtype="int")
                     new_dep_sign[k:k+size] = ones((size,))
-                    k+=size
+                    k += size
                 except KeyError: #wasn't in the rhs dict, try the lhs
-                    try: 
-                        j,size = lhs[params[0]]
-                        new_dep_index[k:k+size] = j+arange(0,size,dtype="int")
+                    try:
+                        j, size = lhs[params[0]]
+                        new_dep_index[k:k+size] = j+arange(0, size, dtype="int")
                         new_dep_sign[k:k+size] = -1*ones(size)
-                        k+=size
-                    except KeyError: 
+                        k += size
+                    except KeyError:
                         pass #TODO: need to throw an error here. Why was there a param that didn't show up in the constraint
-            
-            #reset the deps array to the new order and sign 
+
+            #reset the deps array to the new order and sign
             deps = deps[new_dep_index]*new_dep_sign
 
         sev_deps = []
@@ -348,7 +349,7 @@ class CyclicWorkflow(SequentialWorkflow):
         both parameters and severed targets.
         """
 
-        indeps = self._parent.eval_parameters(self.scope)
+        indeps = self.parent.eval_parameters(self.scope)
         sev_indeps = []
         for _, target in self._severed_edges:
 
@@ -367,9 +368,9 @@ class CyclicWorkflow(SequentialWorkflow):
         `val`. This includes both parameters and severed targets.
         """
         bounds = self._bounds_cache
-        nparam = self._parent.total_parameters()
+        nparam = self.parent.total_parameters()
         if nparam > 0:
-            self._parent.set_parameters(val[:nparam].flatten())
+            self.parent.set_parameters(val[:nparam].flatten())
 
         if len(self._severed_edges) > 0:
             i = nparam

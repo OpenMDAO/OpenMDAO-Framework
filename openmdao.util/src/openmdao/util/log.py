@@ -38,17 +38,18 @@ __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
 
 import atexit
-import cPickle
 import logging.config
 import logging.handlers
 import os.path
 import select
 import socket
 import SocketServer
-import struct
 import sys
 import threading
 import datetime
+
+from cPickle import loads
+from struct import unpack
 
 LOG_DEBUG    = logging.DEBUG
 LOG_INFO     = logging.INFO
@@ -81,10 +82,10 @@ def _configure_root():
     except IOError:
         filename = 'openmdao_log_%d.txt' % os.getpid()
     else:
-        tmplog.write('\n\n*********** BEGIN NEW LOG ************** (%s) PID=%s\n\n'
-                     % (datetime.datetime.now(), os.getpid()))
+        tmplog.write('\n\n*********** BEGIN NEW LOG ************** (%s)'
+                     ' PID=%s\n\n' % (datetime.datetime.now(), os.getpid()))
         tmplog.close()
-    
+
     msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
     date_fmt = '%b %d %H:%M:%S'
     formatter = logging.Formatter(msg_fmt, date_fmt)
@@ -114,7 +115,7 @@ if os.path.exists('logging.cfg'):
 def getLogger(name):
     """ Return the named logger. """
     return logging.getLogger(name)
-    
+
 
 # Optional handler which writes messages to sys.stderr
 CONSOLE = None
@@ -185,15 +186,16 @@ class Logger(object):
             self.level = self._logger.getEffectiveLevel()
         else:
             self.level = level
-            
+
     def __eq__(self, other):
         try:
-            if self._name == other._name and self._logger == other._logger and self._level == other._level:
+            if self._name == other._name and self._logger == other._logger and \
+               self._level == other._level:
                 return True
         except AttributeError:
             pass
         return False
-    
+
     def __ne__(self, other):
         return not self.__eq__(other)
 
@@ -340,8 +342,8 @@ def install_remote_handler(host, port, prefix=None):  # pragma no cover
                 except KeyError:  # Apparently it's not there anymore.
                     pass
                 except Exception as exc:
-                    logging.warning("Can't remove inherited remote log handler: %s",
-                                    str(exc) or repr(exc))
+                    logging.warning("Can't remove inherited remote log handler:"
+                                    " %s", str(exc) or repr(exc))
             del _REMOTE_HANDLERS[pid]
         _REMOTE_HANDLERS[my_pid] = []
     _REMOTE_HANDLERS[my_pid].append(handler)
@@ -502,7 +504,7 @@ class _LogServer(SocketServer.ThreadingTCPServer):
         self._shutdown_request = True
         self._is_shut_down.wait(2)
 
-    
+
 class _LogHandler(SocketServer.StreamRequestHandler):
     """ Handler for a stream of logging requests. """
 
@@ -510,12 +512,15 @@ class _LogHandler(SocketServer.StreamRequestHandler):
         """ Handle log requests until connection closed. """
         # An initial 'unused' connection will be made by the client to see
         # if it can connect. We reduce logging noise by ignoring these.
+        makeLogRecord = logging.makeLogRecord
+        logger = logging.getLogger('remote')
         conn = self.connection
+        recv = conn.recv
         peer = None
 
         while True:
             try:
-                data = conn.recv(4)
+                data = recv(4)
             except Exception:
                 return  # Typically [Errno 10054] on Windows.
             if len(data) < 4:
@@ -526,31 +531,35 @@ class _LogHandler(SocketServer.StreamRequestHandler):
                 try:
                     host, aliases, addrs = socket.gethostbyaddr(host)
                 except Exception as exc:
-                    logging.debug('gethostbyaddr(%s) failed: %s',
-                                  host, str(exc) or repr(exc))
+                    logger.debug('gethostbyaddr(%s) failed: %s',
+                                 host, str(exc) or repr(exc))
                 peer = '%s:%s' % (host, port)
-                logging.info('New logging connection from %s', peer)
+                logger.info('New logging connection from %s', peer)
 
-            slen = struct.unpack('>L', data)[0]
-            data = conn.recv(slen)
+            slen = unpack('>L', data)[0]
+            data = recv(slen)
             slen -= len(data)
             msg = data
             while slen:
-                data = conn.recv(slen)
+                data = recv(slen)
                 slen -= len(data)
                 msg = ''.join((msg, data))
 
             try:
-                obj = cPickle.loads(msg)
-                record = logging.makeLogRecord(obj)
+                obj = loads(msg)
+                record = makeLogRecord(obj)
             except Exception as exc:
-                logging.exception("Can't process log request from %s: %s",
-                                  peer, exc)
+                logger.exception("Can't process log request from %s: %s",
+                                 peer, exc)
             else:
                 prefix = record.prefix
-                record.name = '[%s] %s' % (prefix, record.name)
-                logging.getLogger(prefix).handle(record)
+                name = record.name
+                if name != prefix:
+                    record.name = '[%s] %s' % (prefix, name)
+                else:
+                    record.name = '[%s]' % prefix
+                logger.handle(record)
 
         conn.close()
         if peer is not None:
-            logging.info('Logging connection from %s closed', peer)
+            logger.info('Logging connection from %s closed', peer)

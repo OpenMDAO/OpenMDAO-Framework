@@ -46,13 +46,15 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'Pyevolve==0.6',
+          'pytz>=2011',  # To avoid problems with 2010o vs. 2010b in bson req.
+          'bson',
           'ordereddict',
           'conmin==1.0.1',
           'newsumt==1.1.0',
           'cobyla==1.0.1',
           'slsqp==1.0.1',
           'numpy',
-          'scipy',
+          'scipy>=0.11.0',
           ],
       entry_points="""
       [openmdao.driver]
@@ -104,6 +106,8 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.casehandlers.csvcase.CSVCaseRecorder = openmdao.lib.casehandlers.csvcase:CSVCaseRecorder
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+      openmdao.lib.casehandlers.jsoncase.JSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:JSONCaseRecorder
+      openmdao.lib.casehandlers.jsoncase.BSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:BSONCaseRecorder
 
       [openmdao.caseiterator]
       openmdao.lib.casehandlers.listcase.ListCaseIterator = openmdao.lib.casehandlers.listcase:ListCaseIterator

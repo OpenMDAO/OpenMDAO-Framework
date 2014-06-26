@@ -26,7 +26,8 @@ class FiniteDifference(object):
         self.pa = pa
         self.scope = pa.wflow.scope
 
-        options = pa.wflow._parent.gradient_options
+        driver = self.pa.wflow.parent
+        options = driver.gradient_options
 
         self.fd_step = options.fd_step*ones((len(self.inputs)))
         self.low = [None] * len(self.inputs)
@@ -38,13 +39,12 @@ class FiniteDifference(object):
         self.step_type_custom = {}
         self.relative_threshold = 1.0e-4
 
-        driver = self.pa.wflow._parent
         dgraph = self.scope._depgraph
         driver_params = []
         driver_targets = []
 
         if hasattr(driver, 'get_parameters'):
-            driver_params = self.pa.wflow._parent.get_parameters()
+            driver_params = driver.get_parameters()
             driver_targets = driver.list_param_targets()
 
         in_size = 0
@@ -63,9 +63,9 @@ class FiniteDifference(object):
                 self.fd_step[j] = meta['fd_step']
 
             if 'low' in meta:
-                low = meta[ 'low' ]
+                low = meta['low']
             if 'high' in meta:
-                high = meta[ 'high' ]
+                high = meta['high']
 
             param_srcs = [item for item in srcs if item in driver_targets]
             if param_srcs:
@@ -102,22 +102,22 @@ class FiniteDifference(object):
 
             # Bounds scaled
             if step_type == 'bounds_scaled':
-                if low is None and high is None :
+                if low is None and high is None:
                     raise RuntimeError("For variable '%s', a finite "
                                        "difference step type of bounds_scaled "
                                        "is used but required low and "
-                                       "high values are not set" % srcs[0] )
+                                       "high values are not set" % srcs[0])
                 if low == - float_info.max:
                     raise RuntimeError("For variable '%s', a finite "
                                        "difference step type of "
                                        "bounds_scaled is used but required "
-                                       "low value is not set" % srcs[0] )
+                                       "low value is not set" % srcs[0])
                 if high == float_info.max:
                     raise RuntimeError("For variable '%s', a finite "
                                        "difference step type of "
                                        "bounds_scaled is used but required "
-                                       "high value is not set" % srcs[0] )
-                self.fd_step[j] = ( high - low ) * self.fd_step[j]
+                                       "high value is not set" % srcs[0])
+                self.fd_step[j] = (high - low) * self.fd_step[j]
 
             if 'fd_form' in meta:
                 self.form_custom[j] = meta['fd_form']
@@ -480,7 +480,7 @@ class DirectionalFD(object):
 
         self.get_outputs(self.y_base)
 
-        options = self.pa.wflow._parent.gradient_options
+        options = self.pa.wflow.parent.gradient_options
         fd_step = options.fd_step
         form = options.fd_form
 

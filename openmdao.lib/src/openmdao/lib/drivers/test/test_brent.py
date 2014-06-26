@@ -177,7 +177,7 @@ class TestBrentResizeBracket(unittest.TestCase):
 
 
     def test_case1(self):
-        """normal usage"""
+        #normal usage
 
         self.assembly.a = 0.3
         self.assembly.ap = 0.01
@@ -194,7 +194,7 @@ class TestBrentResizeBracket(unittest.TestCase):
 
 
     def test_case2(self):
-        """alternate bracket"""
+        #alternate bracket
 
         self.assembly.a = 1.5
         self.assembly.ap = 0.01
@@ -282,7 +282,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
 
     def test_case1(self):
-        """normal"""
+        #normal
 
         Vin = 3.0
         Vout = 25.0
@@ -298,7 +298,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
 
     def test_case2(self):
-        """solution does not contain bracket"""
+        #solution does not contain bracket
 
         Vin = 3.0
         Vout = 25.0
@@ -315,7 +315,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
 
     def test_case3(self):
-        """solution does not contain bracket"""
+        #solution does not contain bracket
 
         Vin = 3.0
         Vout = 25.0
@@ -332,7 +332,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
 
     def test_case4(self):
-        """solution does not contain bracket"""
+        #solution does not contain bracket
 
         Vin = 3.0
         Vout = 25.0

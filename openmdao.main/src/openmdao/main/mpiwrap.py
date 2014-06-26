@@ -1,8 +1,6 @@
 import os
 import sys
 
-from openmdao.main.interfaces import IAssembly
-
 # if this has a rank value, then all mpiprints, unless explicitly
 # specified in the call, will print results from that rank only
 MPI_PRINT_RANK = None

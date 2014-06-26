@@ -127,7 +127,7 @@ class BoxDriver(Driver):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     self._logger.debug('w,h,d %s, %s, %s', width, height, depth)
-                    self.set_parameters((width, height, depth))
+                    self.set_parameters((float(width), float(height), float(depth)))
                     self.workflow.run()
                     volume, area = self.eval_objectives()
                     self._logger.debug('    v,a %s, %s', volume, area)
@@ -432,7 +432,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('Objective_0'),
+                    self.assertEqual(case.get_output('_pseudo_0'),
                                      width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
@@ -527,7 +527,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('Objective_0'),
+                    self.assertEqual(case.get_output('_pseudo_0'),
                                      width*height*depth)
 
         # Check access protections.
@@ -613,7 +613,7 @@ class TestCase(unittest.TestCase):
                 for height in range(1, 3):
                     for depth in range(1, 4):
                         case = model.recorders[0].cases.pop(0)
-                        self.assertEqual(case.get_output('Objective_0'),
+                        self.assertEqual(case.get_output('_pseudo_0'),
                                          width*height*depth)
         finally:
             if factory is not None:

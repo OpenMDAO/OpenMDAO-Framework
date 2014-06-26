@@ -97,9 +97,7 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
       
       [openmdao.driver]
-      openmdao.main.distsolve.MPINonlinearGS=openmdao.main.distsolve:MPINonlinearGS
       openmdao.main.distsolve.MPINonlinearSolver=openmdao.main.distsolve:MPINonlinearSolver
       openmdao.main.distsolve.MPISolver=openmdao.main.distsolve:MPISolver
-      openmdao.main.distsolve.MPINonlinearJacobi=openmdao.main.distsolve:MPINonlinearJacobi
       """,
       )

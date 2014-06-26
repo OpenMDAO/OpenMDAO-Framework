@@ -10,7 +10,6 @@ class MyComp(Component):
     
     def execute(self):
         self.y = 2.0*self.x
-        print 'ran', self.parent.name + '.' + self.name
         
 class Sub(Assembly):
     

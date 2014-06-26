@@ -7,6 +7,7 @@ from openmdao.main.hasparameters import HasVarTreeParameters
 from openmdao.main.hasresponses import HasVarTreeResponses
 from openmdao.main.interfaces import IHasResponses, IHasParameters, implements
 from openmdao.main.variable import is_legal_name, make_legal_path
+from openmdao.main.array_helpers import flattened_value
 
 from openmdao.util.decorators import add_delegate
 
@@ -60,9 +61,17 @@ class SimpleCaseIterDriver(Driver):
                 value = values[j][i]
                 expr = exprs.get(path)
                 if expr:
-                    expr.set(value, self.parent)
+                    expr.set(value, self.parent, tovector=True)
                 else:
                     self.parent.set(path, value)
+                    # FIXME: this extra setting of the vector is messy...
+                    scope = self.parent
+                    if hasattr(scope, 'get_system'):
+                        system = scope.get_system()
+                        if system is not None:
+                            uvec = system.vec.get('u')
+                            if uvec and path in uvec:
+                                uvec[path][:] = flattened_value(path, value)
 
             # Run workflow.
             self.workflow.run()

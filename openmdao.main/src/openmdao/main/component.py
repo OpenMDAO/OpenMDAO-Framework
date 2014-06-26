@@ -14,13 +14,7 @@ import sys
 import weakref
 import re
 
-try:
-    from numpy import ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray
-
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
@@ -49,6 +43,7 @@ from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
 from openmdao.main.array_helpers import flattened_size_info
+#from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
 
@@ -400,7 +395,7 @@ class Component(Container):
 
         if self._new_config:
             self.check_config()
-            if self.parent is None:
+            if self.parent is None and has_interface(self, IAssembly):
                 self._setup()  # only call _setup from top level
             self._new_config = False
 
@@ -537,6 +532,8 @@ class Component(Container):
         self.ffd_order = ffd_order
         self._case_uuid = case_uuid
 
+        if self.parent is None:
+            self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
@@ -580,6 +577,12 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+
+    @rbac(('owner', 'user'))
+    def _run_begins(self):
+        """ Executed at start of top-level run. """
+        if hasattr(self, 'recorders'):
+            self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):
@@ -805,7 +808,7 @@ class Component(Container):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).
         """
-# pylint: disable-msg=E1101
+# pylint: disable=E1101
         if not SimulationRoot.legal_path(path):
             self.raise_exception("Illegal path '%s', not a descendant of '%s'."
                                  % (path, SimulationRoot.get_root()),
@@ -814,7 +817,7 @@ class Component(Container):
             self.raise_exception(
                 "Execution directory path '%s' is not a directory."
                 % path, ValueError)
-# pylint: enable-msg=E1101
+# pylint: enable=E1101
         return path
 
     @rbac('owner')
@@ -1851,10 +1854,12 @@ class Component(Container):
                                               fd_form=fd_form, fd_step=fd_step,
                                               fd_step_type=fd_step_type)
 
+    @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.mpi.requested_cpus
 
+    @rbac(('owner', 'user'))
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info
         of the value of the named variable, if the flattened value 
@@ -1871,5 +1876,21 @@ class Component(Container):
                 
         return info
 
+    @rbac(('owner', 'user'))
     def setup_systems(self):
+        pass
+
+    @rbac(('owner', 'user'))
+    def get_full_nodeset(self):
+        """Return the node in the depgraph
+        belonging to this component.
+        """
+        return set((self.name,))
+
+    @rbac(('owner', 'user'))
+    def pre_setup(self):
+        pass
+    
+    @rbac(('owner', 'user'))
+    def post_setup(self):
         pass
