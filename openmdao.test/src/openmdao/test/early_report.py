@@ -133,9 +133,9 @@ class EarlyTestInfo(Plugin):
             self.stream.writeln('SKIP')
 
     def addError(self, test, err, capt=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         if err[0] == SkipTest:
-            if id(test) not in self._tests:
-                self.startTest(test)
             self._tests[id(test)].status = 'S'
         else:
             self._tests[id(test)].status = 'E'
@@ -143,6 +143,8 @@ class EarlyTestInfo(Plugin):
         self.stream.writeln(self.formatErr(err))
 
     def addFailure(self, test, err, capt=None, tb_info=None):
+        if id(test) not in self._tests:
+            self.startTest(test)
         if err[0] == SkipTest:
             self._tests[id(test)].status = 'S'
         else:
