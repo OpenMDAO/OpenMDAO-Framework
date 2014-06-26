@@ -97,6 +97,7 @@ class Credentials(object):
     def __init__(self, encoded=None):
         # We don't use cPickle to create or parse .data because we'd rather not
         # have to trust a source until after we've checked their credentials.
+        self.remote = False
         if encoded is None:
             # Create our credentials.
             self.user = Credentials.user_host
@@ -196,6 +197,7 @@ class Credentials(object):
                                            % credentials.user)
 
         credentials.client_creds = client_creds
+        credentials.remote = True
         return credentials
 
 
@@ -219,9 +221,7 @@ def remote_access():
     except AttributeError:
         return False
     else:
-        # Not remote if acting on the local user's behalf.
-        return creds.user != Credentials.user_host or \
-               creds.client_creds is not None
+        return creds.remote
 
 
 # For some reason use of a class as a decorator doesn't count as coverage.

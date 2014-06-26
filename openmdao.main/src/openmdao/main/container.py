@@ -1036,7 +1036,7 @@ class Container(SafeHasTraits):
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
                     return self._get_failed(path, index)
-                return obj
+            return obj
         else:  # has an index
             obj = getattr(self, path, Missing)
             if obj is Missing:

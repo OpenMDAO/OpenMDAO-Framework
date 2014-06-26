@@ -404,21 +404,15 @@ class TestCase(unittest.TestCase):
             else:
                 self.fail('Expected RemoteError')
 
-            exec_comp.set('command', ['this-should-pass'])
-
-            # Try to set via remote-looking access.
-            creds = get_credentials()
-            creds.client_creds = Credentials()
-            logging.debug('    using %s', creds)
+            # Try to set via set() on remote instance.
             try:
                 exec_comp.set('command', ['this-should-fail'])
             except RemoteError as exc:
                 fragment = ": 'command' may not be set() remotely"
                 if fragment not in str(exc):
                     self.fail('%s not in %s' % (fragment, exc))
-            finally:
-                creds.client_creds = None
-
+            else:
+                self.fail('Expected RemoteError')
         finally:
             if factory is not None:
                 factory.cleanup()
