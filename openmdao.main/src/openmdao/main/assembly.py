@@ -871,22 +871,6 @@ class Assembly(Component):
         return conns
 
     @rbac(('owner', 'user'))
-    def update_inputs(self, compname, graph=None):
-        """Transfer input data to input expressions on the specified component.
-        The inputs iterator is assumed to contain strings that reference
-        component variables relative to the component, e.g., 'abc[3][1]' rather
-        than 'comp1.abc[3][1]'.
-        """
-        if Container._interactive:
-            if graph is None:
-                graph = self._depgraph
-            try:
-                for vname in graph.list_inputs(compname, connected=True):
-                    graph.update_destvar(self, vname)
-            except Exception as err:
-                self.raise_exception(str(err), type(err))
-
-    @rbac(('owner', 'user'))
     def child_run_finished(self, childname, outs=None):
         """Called by a child when it completes its run() function."""
         self._depgraph.child_run_finished(childname, outs)
@@ -1426,7 +1410,6 @@ class Assembly(Component):
         return self._top_driver.get_req_cpus()
 
     def setup_communicators(self, comm):
-        Container._interactive = False
         self._system.setup_communicators(comm)
         
     def setup_variables(self):

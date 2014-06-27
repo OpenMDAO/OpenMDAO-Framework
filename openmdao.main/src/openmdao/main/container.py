@@ -153,8 +153,6 @@ class Container(SafeHasTraits):
 
     implements(IContainer)
 
-    _interactive = True # if True, perform certain checks at runtime
-
     def __init__(self):
         self._parent = None  # Define these now for easier debugging during
         self._name = None    # deepcopy operations of superclass.
