@@ -1166,14 +1166,6 @@ class Container(SafeHasTraits):
             obj = self.get(name, index[:-1])
         idx = index[-1]
 
-        # try:
-        #     if isinstance(idx, tuple):
-        #         old = _index_functs[idx[0]](obj, idx)
-        #     else:
-        #         old = obj[idx]
-        # except KeyError:
-        #     old = _missing
-
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
                 obj[idx[1]] = value
@@ -1183,30 +1175,6 @@ class Container(SafeHasTraits):
                 obj.__setitem__(slice(idx[1][0], idx[1][1], idx[1][2]), value)
         else:
             obj[idx] = value
-
-        ## setting of individual Array entries or sub attributes doesn't seem to
-        ## trigger _input_trait_modified, so do it manually
-        ## FIXME: if people register other callbacks on a trait, they won't
-        ##        be called if we do it this way
-        #eq = (old == value)
-        #if not isinstance(eq, bool):
-            #try:
-                #eq = all(eq)
-            #except TypeError:
-                #pass
-
-        #if not eq:
-            ## need to find first item going up the parent tree that is a Component
-            #item = self
-            #path = name
-            #full = name
-            #while item:
-                #if has_interface(item, IComponent):
-                    #item._input_updated(path, fullpath=full)
-                    #break
-                #path = item.name
-                #full = '.'.join((path, full))
-                #item = item.parent
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""

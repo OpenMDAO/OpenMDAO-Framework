@@ -309,7 +309,8 @@ class System(object):
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
                      'SolverSystem': 'slv', 'BoundarySystem': 'bnd',
-                     'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner' }
+                     'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner',
+                     'ExplicitSystem': 'exp' }
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" % 
@@ -335,7 +336,7 @@ class System(object):
             noflats = self.scatter_full.noflat_vars
         else:
             noflats = ()
-        if self.noflats:
+        if noflats:
             stream.write(' '*(nest+2) + "= noflats =\n")
 
         for src, dest in noflats:
@@ -942,8 +943,8 @@ class InnerAssemblySystem(SerialSystem):
         depgraph = scope.get_depgraph()
 
         conns = scope.list_connections()
-        srcset = set([u for u,v in conns])
-        destset = set([v for u,v in conns])
+        srcset = set([depgraph.base_var(u) for u,v in conns])
+        destset = set([depgraph.base_var(v) for u,v in conns])
         
         bndry_outs = [v for v in scope.list_outputs() if v in destset]
         bndry_ins = [v for v in scope.list_inputs() if v in srcset]
@@ -953,8 +954,8 @@ class InnerAssemblySystem(SerialSystem):
         g.node[drvname]['system'] = _create_simple_sys(depgraph, scope,
                                                        scope._top_driver)
 
-        self.bins = bins = tuple(bndry_ins)
-        self.bouts = bouts = tuple(bndry_outs)
+        self.bins = bins = tuple(depgraph.find_prefixed_nodes(bndry_ins))
+        self.bouts = bouts = tuple(depgraph.find_prefixed_nodes(bndry_outs))
 
         ordering = []
 
@@ -1111,8 +1112,8 @@ def simple_node_iter(nodes):
 def get_full_nodeset(depgraph, scope, group):
     names = set()
     for name in simple_node_iter(group):
-        obj = getattr(scope, name)
-        if hasattr(obj, 'get_full_nodeset'):
+        obj = getattr(scope, name, None)
+        if obj is not None and hasattr(obj, 'get_full_nodeset'):
             names.update(obj.get_full_nodeset())
         else:
             names.update(name)
