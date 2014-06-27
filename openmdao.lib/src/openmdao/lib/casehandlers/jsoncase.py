@@ -166,7 +166,7 @@ class JSONCaseRecorder(_BaseRecorder):
     If `out` is None, cases will be ignored.
     """
 
-    def __init__(self, out='stdout', indent=4, sort_keys=True):
+    def __init__(self, out='cases.json', indent=4, sort_keys=True):
         super(JSONCaseRecorder, self).__init__()
         if isinstance(out, basestring):
             if out == 'stdout':
@@ -369,7 +369,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     """
 
-    def __init__(self, out):
+    def __init__(self, out='cases.bson'):
         super(BSONCaseRecorder, self).__init__()
         if isinstance(out, basestring):
             out = open(out, 'w')
