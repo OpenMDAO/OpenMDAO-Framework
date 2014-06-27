@@ -10,6 +10,7 @@ from openmdao.main.vartree import VariableTree
 from openmdao.util.typegroups import real_types, int_types
 
 from numpy import array, ndarray, ndindex, ones
+from openmdao.main.mpiwrap import mpiprint, MPI
 
 __missing = object()
 
@@ -281,6 +282,7 @@ class Parameter(ParameterBase):
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
+        mpiprint("setting param %s to %s" % (self.names, transval))
         self._expreval.set(transval, scope, force=True, tovector=True)
 
     def copy(self):

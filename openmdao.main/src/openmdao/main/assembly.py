@@ -744,7 +744,8 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
-        self._system.run(self.itername, ffd_order=self.ffd_order, case_uuid=self._case_uuid)
+        self._system.run(self.itername, ffd_order=self.ffd_order, 
+                         case_uuid=self._case_uuid)
 
     def configure_recording(self, includes=None, excludes=None, inputs=None):
         """Called at start of top-level run to configure case recording.

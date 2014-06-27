@@ -124,7 +124,7 @@ class MPINonlinearSolver(MPISolver):
     def add_constraint_residuals(self):
         uvec = self.workflow._system.vec['u']
         for param, cnst, sign in self.pairs:
-            if sign > 0:
+            if sign < 0:
                 uvec[param][:] += uvec[cnst]
             else:
                 uvec[param][:] -= uvec[cnst]

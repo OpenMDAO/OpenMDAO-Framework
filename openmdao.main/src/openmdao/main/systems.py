@@ -72,6 +72,9 @@ class System(object):
     def set_ordering(self, ordering):
         pass
 
+    def is_active(self):
+        return MPI is None or self.mpi.comm != MPI.COMM_NULL
+
     def local_subsystems(self):
         return ()
 
@@ -150,7 +153,7 @@ class System(object):
         #mpiprint("setup_sizes: %s" % self.name)
         comm = self.mpi.comm
 
-        if MPI and comm == MPI.COMM_NULL:
+        if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
             self.input_sizes = numpy.zeros(0, int)
             return
@@ -218,7 +221,7 @@ class System(object):
         distributed vectors need to solve the distributed system.
         """
         #mpiprint("setup_vectors: %s" % self.name)
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
             return
 
         rank = self.mpi.rank
@@ -297,7 +300,7 @@ class System(object):
         else:
             getval = False
 
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
             mpiprint("returning early for %s" % str(self.name))
             return stream.getvalue() if getval else None
         
@@ -403,17 +406,18 @@ class SimpleSystem(System):
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        comp = self._comp
-        mpiprint("running simple system %s" % self.name)
+        if self.is_active():
+            comp = self._comp
+            mpiprint("running simple system %s" % self.name)
 
-        #mpiprint("%s.run  (system)" % comp.name)
-        self.scatter('u','p')
-        if 'p' in self.vec:
-            self.vec['p'].set_to_scope(self.scope)
-        comp.set_itername('%s-%s' % (iterbase, comp.name))
-        comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-        if 'u' in self.vec:
-            self.vec['u'].set_from_scope(self.scope)
+            #mpiprint("%s.run  (system)" % comp.name)
+            self.scatter('u','p')
+            if 'p' in self.vec:
+                self.vec['p'].set_to_scope(self.scope)
+            comp.set_itername('%s-%s' % (iterbase, comp.name))
+            comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+            if 'u' in self.vec:
+                self.vec['u'].set_from_scope(self.scope)
 
     def stop(self):
         self._comp.stop()
@@ -422,7 +426,7 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def setup_scatters(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
             return
         #mpiprint("setup_scatters: %s" % self.name)
         rank = self.mpi.rank
@@ -469,9 +473,10 @@ class BoundarySystem(SimpleSystem):
         self.mpi.requested_cpus = 1
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        mpiprint("running boundary system %s" % self.name)
-        self.scatter('u', 'p')
-        self.vec['p'].set_to_scope(self.scope)
+        if self.is_active():
+            mpiprint("running boundary system %s" % self.name)
+            self.scatter('u', 'p')
+            self.vec['p'].set_to_scope(self.scope)
 
     def stop(self):
         pass
@@ -575,7 +580,7 @@ class CompoundSystem(System):
 
     def setup_scatters(self):
         """ Defines a scatter for args at this system's level """
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
             return
         #mpiprint("setup_scatters: %s" % self.name)
         var_sizes = self.local_var_sizes
@@ -617,7 +622,7 @@ class CompoundSystem(System):
         # FIXME: not sure why this loops over all subsystems and not
         #        just local...
         for subsystem in self.all_subsystems():
-            if MPI and subsystem.mpi.comm == MPI.COMM_NULL:
+            if not subsystem.is_active():
                 continue
             #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
             src_partial = []
@@ -713,13 +718,14 @@ class SerialSystem(CompoundSystem):
         return self.mpi.requested_cpus
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
-        self._stop = False
-        for sub in self.local_subsystems():
-            self.scatter('u', 'p', sub)
-            sub.run(iterbase, ffd_order, case_label, case_uuid)
-            if self._stop:
-                raise RunStopped('Stop requested')
+        if self.is_active():
+            mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
+            self._stop = False
+            for sub in self.local_subsystems():
+                self.scatter('u', 'p', sub)
+                sub.run(iterbase, ffd_order, case_label, case_uuid)
+                if self._stop:
+                    raise RunStopped('Stop requested')
 
     def setup_communicators(self, comm):
         if comm is not None:
@@ -727,7 +733,7 @@ class SerialSystem(CompoundSystem):
         self._local_subsystems = []
 
         self.mpi.comm = get_comm_if_active(self, comm)
-        if self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
            return
 
         for sub in self.all_subsystems():
@@ -751,7 +757,7 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
         # don't scatter unless we contain something that's actually 
         # going to run
-        if not self.local_subsystems():
+        if not self.local_subsystems() or not self.is_active():
             return
 
         self.scatter('u', 'p')
@@ -832,7 +838,7 @@ class ParallelSystem(CompoundSystem):
         """ Determine variables from local subsystems """
         #mpiprint("setup_variables: %s" % self.name)
         self.all_variables = OrderedDict()
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
+        if not self.is_active():
             return
 
         for sub in self.local_subsystems():
@@ -976,10 +982,11 @@ class InnerAssemblySystem(SerialSystem):
         self.set_ordering(ordering)
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        self.vec['u'].set_from_scope(self.scope, self.bins)
-        super(InnerAssemblySystem, self).run(iterbase, ffd_order, 
-                                             case_label, case_uuid)
-        self.vec['u'].set_to_scope(self.scope, self.bouts)
+        if self.is_active():
+            self.vec['u'].set_from_scope(self.scope, self.bins)
+            super(InnerAssemblySystem, self).run(iterbase, ffd_order, 
+                                                 case_label, case_uuid)
+            self.vec['u'].set_to_scope(self.scope, self.bouts)
 
 def _create_simple_sys(depgraph, scope, comp):
 
