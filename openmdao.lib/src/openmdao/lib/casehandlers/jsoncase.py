@@ -15,6 +15,7 @@ from numpy  import ndarray
 from struct import pack
 from uuid   import uuid1
 
+from openmdao.main.api import VariableTree
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.releaseinfo import __version__
 
@@ -79,7 +80,7 @@ class _BaseRecorder(object):
         # Collect expression data.
         expressions = {}
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
-                                                 key=lambda item: item[1][0]):
+                                          key=lambda item: item[1][0]):
             prefix = driver.parent.get_pathname()
             if prefix:
                 prefix += '.'
@@ -120,7 +121,8 @@ class _BaseRecorder(object):
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
-            info = dict(name=driver.get_pathname(), _id=id(driver))
+            info = dict(name=driver.get_pathname(), _id=id(driver),
+                        recording=ins+outs)
             if hasattr(driver, 'get_parameters'):
                 info['parameters'] = \
                     [str(param) for param in driver.get_parameters().values()]
@@ -179,7 +181,7 @@ class JSONCaseRecorder(_BaseRecorder):
 
     def record_constants(self, constants):
         """ Record constant data. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         info = self.get_simulation_info(constants)
@@ -201,7 +203,7 @@ class JSONCaseRecorder(_BaseRecorder):
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data in a "pretty" form. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         info = self.get_case_info(driver, inputs, outputs, exc,
@@ -304,14 +306,33 @@ class _Encoder(json.JSONEncoder):
     """ Special encoder to deal with types not handled by default encoder. """
 
     def default(self, obj):
-        if isinstance(obj, ndarray):
-            return obj.tolist()
-        elif hasattr(obj, 'json_encode'):
-            return obj.json_encode()
-        elif hasattr(obj, '__dict__'):
-            return obj.__dict__
-        else:
-            return super(_Encoder, self).default(obj)
+        fixed = _fixup(obj)
+        if fixed is obj:
+            super(_Encoder, self).default(obj)
+        return fixed
+
+
+def _fixup(value):
+    """
+    Fix object for json encoder, also bson. Stock bson doesn't handle a lot
+    of types, just skips them.
+    """
+    if isinstance(value, dict):
+        for key, val in value.items():
+            value[key] = _fixup(val)
+        return value
+    elif isinstance(value, (list, tuple, set, frozenset)):
+        return [_fixup(val) for val in value]
+    elif isinstance(value, ndarray):
+        return value.tolist()
+    elif isinstance(value, VariableTree):
+        return dict([(name, _fixup(getattr(value, name)))
+                     for name in value.list_vars()])
+    elif hasattr(value, 'json_encode') and callable(value.json_encode):
+        return value.json_encode()
+    elif hasattr(value, '__dict__'):
+        return _fixup(value.__dict__)
+    return value
 
 
 class BSONCaseRecorder(_BaseRecorder):
@@ -356,7 +377,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def record_constants(self, constants):
         """ Record constant data. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         data = self._dump(self.get_simulation_info(constants))
@@ -374,7 +395,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data in a "pretty" form. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         info = self.get_case_info(driver, inputs, outputs, exc,
@@ -387,22 +408,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def _dump(self, info):
         """ Return BSON data, report any bad keys & values encountered. """
-        info = BSONCaseRecorder._fixup(info)
-        return bson.dumps(info)
-
-    @staticmethod
-    def _fixup(info):
-        """ Stock bson doesn't handle a lot of types, just skips them. """
-        for key, value in info.items():
-            if isinstance(value, dict):
-                info[key] = BSONCaseRecorder._fixup(value)
-            if isinstance(value, ndarray):
-                info[key] = value.tolist()
-            elif hasattr(value, 'json_encode'):
-                info[key] = value.json_encode()
-            elif hasattr(value, '__dict__'):
-                info[key] = value.__dict__
-        return info
+        return bson.dumps(_fixup(info))
 
     def close(self):
         """
