@@ -287,7 +287,7 @@ class System(object):
     def dump_subsystem_tree(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
         execution graph (with groups of component nodes collapsed
-        into SerialSystems and ParallelSystems).  It shows which
+        into Systems).  It shows which
         components run on the current processor.
         """
         #mpiprint("dump_subsystem_tree: %s" % self.name)
@@ -606,7 +606,7 @@ class CompoundSystem(System):
         src_full = []
         dest_full = []
         scatter_conns_full = []
-        other_conns_full = []
+        noflat_conns_full = []
         noflats = set([k for k,v in self.all_variables.items()
                            if not v.get('flat',True)])
 
@@ -625,18 +625,16 @@ class CompoundSystem(System):
             src_partial = []
             dest_partial = []
             scatter_conns = []
-            other_conns = []  # non-flattenable vars
+            noflat_conns = []  # non-flattenable vars
             if subsystem in self.local_subsystems():
                 for src, dest in subsystem.in_edges:
                     if dest in noflats:
-                        other_conns.append((src, dest))
-                        other_conns_full.append((src, dest))
+                        noflat_conns.append((src, dest))
+                        noflat_conns_full.append((src, dest))
                     else:
                         try:
                             isrc = varkeys.index(src)
                         except (ValueError, KeyError):
-                            # other_conns.append((src, dest))
-                            # other_conns_full.append((src, dest))
                             pass # scatter should have already happened at higher level
                         else:
                             dest_idxs = self.vec['p'].indices(dest)
@@ -654,14 +652,14 @@ class CompoundSystem(System):
 
             #mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
             #                                                  src_partial, dest_partial))
-            if scatter_conns or other_conns:
+            if scatter_conns or noflat_conns:
                 subsystem.scatter_partial = DataTransfer(self, src_partial, 
                                                          dest_partial, 
-                                                         scatter_conns, other_conns)
+                                                         scatter_conns, noflat_conns)
 
-        if scatter_conns_full or other_conns_full:
+        if scatter_conns_full or noflat_conns_full:
             self.scatter_full = DataTransfer(self, src_full, dest_full, 
-                                             scatter_conns_full, other_conns_full)
+                                             scatter_conns_full, noflat_conns_full)
 
         for sub in self.local_subsystems():
             sub.setup_scatters()

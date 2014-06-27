@@ -137,7 +137,7 @@ class Workflow(object):
 
         err = None
         try:
-            self._system.scatter('u', 'p')
+            #self._system.scatter('u', 'p')
             self._system.run(iterbase=iterbase, ffd_order=ffd_order, 
                                 case_uuid=case_uuid)
 
