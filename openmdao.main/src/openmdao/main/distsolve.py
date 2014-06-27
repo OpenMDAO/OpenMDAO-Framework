@@ -116,7 +116,7 @@ class MPINonlinearSolver(MPISolver):
 
     def run_iteration(self):
         #mpiprint("NLGS running")
-        self.workflow._system.run()
+        self.workflow._system.run(self.workflow._iterbase())
         #mpiprint("updating u vector with residuals")
         self.add_constraint_residuals()
         #mpiprint("UVEC: %s" % self.workflow._system.vec['u'].items())

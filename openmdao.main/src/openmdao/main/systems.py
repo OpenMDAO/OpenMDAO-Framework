@@ -25,7 +25,7 @@ def call_if_found(obj, fname, *args, **kwargs):
 class System(object):
     def __init__(self, scope, depgraph, nodes, name):
         self.scope = scope
-        self.name = name
+        self.name = str(name)
 
         # get our I/O edges from the depgraph
         self.in_edges, self.out_edges = \
@@ -298,7 +298,7 @@ class System(object):
             getval = False
 
         if MPI and self.mpi.comm == MPI.COMM_NULL:
-            mpiprint("returning early for %s" % self.name)
+            mpiprint("returning early for %s" % str(self.name))
             return stream.getvalue() if getval else None
         
         if MPI is None:
@@ -399,10 +399,7 @@ class SimpleSystem(System):
                       depgraph.find_prefixed_nodes(comp.get_full_nodeset()), 
                       name)
         self._comp = comp
-        if comp is None:
-            self.mpi.requested_cpus = 1
-        else:
-            self.mpi.requested_cpus = self._comp.get_req_cpus()
+        self.mpi.requested_cpus = self._comp.get_req_cpus()
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
@@ -726,15 +723,15 @@ class SerialSystem(CompoundSystem):
 
     def setup_communicators(self, comm):
         if comm is not None:
-            mpiprint("setting up comms for %s (size=%d)" % (self.name,comm.size))
+            mpiprint("<Serial> setting up comms for %s (size=%d)" % (self.name,comm.size))
         self._local_subsystems = []
 
-        #mpiprint("setup_comms Split (serial)")
-        self.mpi.comm = comm #get_comm_if_active(self, comm)
-        #if self.mpi.comm == MPI.COMM_NULL:
-        #    return
+        self.mpi.comm = get_comm_if_active(self, comm)
+        if self.mpi.comm == MPI.COMM_NULL:
+           return
 
         for sub in self.all_subsystems():
+            mpiprint("calling on sub %s" % sub.name)
             self._local_subsystems.append(sub)
             sub.setup_communicators(self.mpi.comm)
 
@@ -871,6 +868,7 @@ class NonSolverDriverSystem(ExplicitSystem):
         driver._system = self
         
     def setup_communicators(self, comm):
+        super(NonSolverDriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
@@ -907,6 +905,7 @@ class SolverSystem(SimpleSystem):  # Implicit
         driver._system = self
         
     def setup_communicators(self, comm):
+        super(SolverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):
@@ -1084,14 +1083,14 @@ def get_comm_if_active(obj, comm):
         color = 1
 
     newcomm = comm.Split(color)
-    # if isinstance(obj, System):
-    #     name = obj.name
-    # else:
-    #     name = obj._parent.name
-    # if newcomm == MPI.COMM_NULL:
-    #     mpiprint("NULL COMM for %s" % name)
-    # else:
-    #     mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
+    if isinstance(obj, System):
+        name = obj.name
+    else:
+        name = obj.parent.name
+    if newcomm == MPI.COMM_NULL:
+        mpiprint("NULL COMM for %s" % name)
+    else:
+        mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
     return newcomm
 
 
