@@ -236,12 +236,10 @@ class DepGraphTestCase(unittest.TestCase):
         self.dep.connect(self.scope, 'D.c', 'B.b[5]')
     
     def test_get_boundary_inputs(self):
-        self.assertEqual(self.dep.get_boundary_inputs(connected=True), [])
         self.assertEqual(set(self.dep.get_boundary_inputs()), 
                          set(['a','b']))
     
-    def test_get_boundar_outputs(self):
-        self.assertEqual(self.dep.get_boundary_outputs(connected=True), [])
+    def test_get_boundary_outputs(self):
         self.assertEqual(set(self.dep.get_boundary_outputs()), 
                          set(['c','d']))
     

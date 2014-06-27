@@ -284,8 +284,8 @@ class DependencyGraph(nx.DiGraph):
             self._saved_loops = None
             self._saved_comp_graph = None
             self._chvars = {}
-            self._bndryins = {}
-            self._bndryouts = {}
+            self._bndryins = None
+            self._bndryouts = None
             self._extrnsrcs = None
             self._extrndsts = None
             self._srcs = {}
@@ -718,9 +718,8 @@ class DependencyGraph(nx.DiGraph):
             return full
 
     def full_subgraph(self, nodes):
-        """Returns the subgraph specified by the given component
-        or pseudocomp nodes and any variable or expr nodes
-        corresponding to those nodes.
+        """Returns the subgraph specified by the given nodes and any 
+        variable or subvar nodes belonging to those nodes.
         """
         return self.subgraph(self.find_prefixed_nodes(nodes))
 
@@ -734,47 +733,23 @@ class DependencyGraph(nx.DiGraph):
                 conns.extend(self._var_connections(inp, 'in'))
         return conns
 
-    def get_boundary_inputs(self, connected=False):
+    def get_boundary_inputs(self):
         """Returns inputs that are on the component boundary.
-        If connected is True, return a list of only those nodes
-        that are connected externally.
         """
-        ret = self._bndryins.get(connected)
-        if ret is not None:
-            return ret
+        if self._bndryins is None:
+            self._bndryins = [n for n in self.nodes_iter()
+                                if is_boundary_node(self, n) and
+                                   is_input_base_node(self, n)]
+        return self._bndryins[:]
 
-        ins = []
-        for node in self.nodes_iter():
-            if is_boundary_node(self, node) and \
-               is_input_base_node(self, node):
-                if connected:
-                    if self.in_degree(node) > 0:
-                        ins.append(node)
-                else:
-                    ins.append(node)
-        self._bndryins[connected] = ins
-        return ins[:]
-
-    def get_boundary_outputs(self, connected=False):
+    def get_boundary_outputs(self):
         """Returns outputs that are on the component boundary.
-        If connected is True, return a list of only those nodes
-        that are connected externally.
         """
-        ret = self._bndryouts.get(connected)
-        if ret is not None:
-            return ret
-
-        outs = []
-        for node in self.nodes_iter():
-            if is_boundary_node(self, node) and \
-               is_output_base_node(self, node):
-                if connected:
-                    if self.out_degree(node) > 0:
-                        outs.append(node)
-                else:
-                    outs.append(node)
-        self._bndryouts[connected] = outs
-        return outs[:]
+        if self._bndryouts is None:
+            self._bndryouts = [n for n in self.nodes_iter()
+                                if is_boundary_node(self, n) and
+                                   is_output_base_node(self, n)]
+        return self._bndryouts[:]
 
     def list_inputs(self, cname, connected=None):
         """Return a list of names of input nodes to a component.

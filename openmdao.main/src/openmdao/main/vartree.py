@@ -281,13 +281,13 @@ class VariableTree(Container):
         # Connection information found in parent comp's parent assy
         if not self.parent or not self.parent._parent or \
            isinstance(self.parent, VariableTree):
-            connected = []
+            boundary_vars = []
         else:
             graph = self.parent._parent._depgraph
             if self_io == 'in':
-                connected = graph.get_boundary_inputs(connected=True)
+                boundary_vars = graph.get_boundary_inputs()
             else:
-                connected = graph.get_boundary_outputs(connected=True)
+                boundary_vars = graph.get_boundary_outputs()
 
         variables = []
         for name in self.list_vars():
@@ -314,16 +314,17 @@ class VariableTree(Container):
                 attr['parent'] = parent
 
             attr['connected'] = ''
-            if name in connected:
-                connections = self.parent._depgraph.connections_to(name)
+            if name in boundary_vars:
+                connections = graph.connections_to(name)
 
-                if self_io == 'in':
-                    # there can be only one connection to an input
-                    attr['connected'] = str([src for src, dst in
-                                             connections])
-                else:
-                    attr['connected'] = str([dst for src, dst in
-                                             connections])
+                if connections:
+                    if self_io == 'in':
+                        # there can be only one connection to an input
+                        attr['connected'] = str([src for src, dst in
+                                                 connections])
+                    else:
+                        attr['connected'] = str([dst for src, dst in
+                                                 connections])
             variables.append(attr)
 
             # For variables trees only: recursively add the inputs and outputs
