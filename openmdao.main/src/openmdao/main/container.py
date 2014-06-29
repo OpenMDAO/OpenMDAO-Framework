@@ -13,14 +13,14 @@ import weakref
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
 # regarding this, but it isn't fixed yet.
 
-# pylint: disable-msg=W0212
+# pylint: disable=W0212
 copy._copy_dispatch[weakref.ref] = copy._copy_immutable
 copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
-# pylint: enable-msg=W0212
+# pylint: enable=W0212
 
 # pylint apparently doesn't understand namespace packages...
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 
 from zope.interface import Interface, implements
 
@@ -35,7 +35,7 @@ from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, IComponent
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
@@ -125,8 +125,8 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True and \
-           not trait.assumed_default and trait._illegal_default_ is True:
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True \
+       and not trait.assumed_default and trait._illegal_default_ is True:
 
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
@@ -466,7 +466,8 @@ class Container(SafeHasTraits):
         _check_bad_default(name, trait, self)
 
         #FIXME: saving our own list of added traits shouldn't be necessary...
-        self._added_traits[name] = trait
+        if name not in self._added_traits:
+            self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
@@ -765,7 +766,8 @@ class Container(SafeHasTraits):
                 # so check for them here and skip them if they don't point to
                 # anything.
                 if obj is not Missing:
-                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
+                    if is_instance(obj, (Container, VarTree)) and \
+                       id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
@@ -1109,7 +1111,7 @@ class Container(SafeHasTraits):
                 pass
 
         if not eq:
-            # need to find first item going up the parent tree that is a Component
+            # need to find first item going up the tree that is a Component
             item = self
             path = name
             full = name

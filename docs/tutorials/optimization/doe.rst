@@ -240,6 +240,33 @@ For instance, here is some code that uses matplotlib to generate a surface plot 
 
 
 
+While ListCaseRecorder is often sufficient in what it records,
+:ref:`JSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` and
+:ref:`BSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` record much
+more. This includes variable, expression, and driver configuration as well as
+variable values. To use JSONCaseRecorder in place of ListCaseRecorder::
+
+    self.recorders = [JSONCaseRecorder('doe.json'),]
+
+After the run, :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` is used
+to query the recorded data::
+
+    cds = CaseDataset('doe.json', 'json')
+    vnames = ('paraboloid.x', 'paraboloid.y', 'paraboloid.f_xy')
+    vars = cds.data.vars(vnames).by_variable().fetch()
+
+    X = sorted(set(vars['paraboloid.x']))
+    Y = sorted(set(vars['paraboloid.y']))
+    xi,yi = p.meshgrid(X,Y)
+    zi = array(vars['paraboloid.f_xy']).reshape((len(X), len(Y)))
+
+    fig=p.figure()
+    ax = p3.Axes3D(fig)
+    ax.plot_surface(xi,yi,zi,rstride=1,cstride=1,cmap=cm.jet,linewidth=0)
+
+    p.show()
+
+
 At times it's necessary to rerun an analysis. This can be a problem if the
 DOE generator used has a random component. To handle this, DOEdriver records
 the normalized DOE values to a CSV file. This file can be read in later by

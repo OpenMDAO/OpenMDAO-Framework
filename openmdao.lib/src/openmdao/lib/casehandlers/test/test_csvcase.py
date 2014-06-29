@@ -306,6 +306,10 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.a_array[0]: 1.0',
             '      comp1.a_array[1]: 3.0',
             '      comp1.a_array[2]: 5.5',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0.0',
+            '      comp1.exec_count: 1.0',
+            '      comp1.itername: 1-comp1',
             '      comp1.vt.data: ',
             '      comp1.vt.v1: 1.0',
             '      comp1.vt.v2: 2.0',
@@ -315,6 +319,11 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.vt.vt2.vt3.data: ',
             '      comp1.vt.vt2.x: -1.0',
             '      comp1.vt.vt2.y: -2.0',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0.0',
+            '      comp2.exec_count: 1.0',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
             '      driver.workflow.itername: 1',
             ]
 
@@ -349,6 +358,17 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '   outputs:',
             '      _pseudo_4: [ 1.   3.   5.5]',
             '      _pseudo_5: <openmdao.main.test.test_vartree.DumbVT object',
+            '      comp1.a_array: [ 1.   3.   5.5]',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0',
+            '      comp1.exec_count: 2',
+            '      comp1.itername: 1-comp1',
+            '      comp1.vt: <openmdao.main.test.test_vartree.DumbVT object',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0',
+            '      comp2.exec_count: 2',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
             '      driver.workflow.itername: 1',
             ]
         lines = sout.getvalue().split('\n')
@@ -359,7 +379,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
                     elif expected[i].startswith('   timestamp:'):
                         self.assertTrue(lines[index+i].startswith('   timestamp:'))
-                    elif expected[i].startswith('      _pseudo_5:'):
+                    elif expected[i].startswith('      _pseudo_5:') or \
+                         expected[i].startswith('      comp1.vt:'):
                         self.assertTrue(lines[index+i].startswith(expected[i]))
                     else:
                         self.assertEqual(lines[index+i], expected[i])

@@ -84,12 +84,17 @@ Case:
    outputs:
       _pseudo_0: 24.0
       _pseudo_1: 25.0
+      comp1.derivative_exec_count: 0
+      comp1.exec_count: 9
+      comp1.itername: 9-comp1
       comp1.z: 24.0
+      comp2.derivative_exec_count: 0
+      comp2.exec_count: 9
+      comp2.itername: 9-comp2
       comp2.z: 25.0
       driver.workflow.itername: 9"""
 
 #        print sout1.getvalue()
-
         expected = expected_constants.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
@@ -155,7 +160,13 @@ Case:
    outputs:
       _pseudo_2: 0.0
       _pseudo_3: 1.0
+      comp1.derivative_exec_count: 0
+      comp1.exec_count: 1
+      comp1.itername: 1-comp1
       comp1.z: 0.0
+      comp2.derivative_exec_count: 0
+      comp2.exec_count: 1
+      comp2.itername: 1-comp2
       comp2.z: 1.0
       driver.workflow.itername: 1"""
 
