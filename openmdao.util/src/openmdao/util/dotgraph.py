@@ -56,7 +56,7 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
     f.write('%s}\n' % tab)
 
-def write_system_clusters(f, system, indent):
+def write_system_cluster(f, system, indent, counts, alledges):
     global _cluster_count
 
     tab = ' '*indent
@@ -67,7 +67,18 @@ def write_system_clusters(f, system, indent):
     tab = ' '*indent
 
     for sub, data in system.graph.nodes_iter(data=True):
-        write_system_clusters(f, data['system'], indent)
+        if hasattr(sub, 'graph'):
+            write_system_cluster(f, data['system'], indent, counts, alledges)
+
+    write_nodes(f, system.graph, indent, counts, system.name)
+
+    for u, v in system.graph.edges_iter():
+        alledges.add((u,v))
+        if counts[u] > 0:
+            u = '"%s@%s"' % (u, system.name)
+        if counts[v] > 0:
+            v = '"%s@%s"' % (v, system.name)
+        f.write('%s%s -> %s;\n' % (tab, u, v))
 
     f.write('%s}\n' % tab)
 
@@ -98,6 +109,25 @@ def _get_comp_counts(drv, counts):
         counts[comp.name] += 1
         if IDriver.providedBy(comp):
             _get_comp_counts(comp, counts)
+
+def write_system_dot(system, dotfile):
+    with open(dotfile, 'w') as f:
+        indent = 3
+
+        f.write("strict digraph {\n")
+
+        # find any components that appear in multiple workflows
+        counts = dict([(n,0) for n in system.graph.nodes_iter()])
+
+        alledges = set()
+        write_system_cluster(f, system, indent, counts, alledges)
+
+        # # now include any cross system connections
+        # for u,v in G.edges_iter():
+        #     if (u,v) not in alledges:
+        #         f.write("   %s -> %s;\n" % (u, v))
+
+        f.write("}\n")
 
 def write_workflow_dot(G, dotfile, scope=None, excludes=()):
 
@@ -149,7 +179,7 @@ def _update_graph_metadata(G, scope):
                 for pcomp in driver.list_pseudocomps():
                     conns.append((pcomp, node))
                 if hasattr(driver, 'list_param_targets'):
-                   conns.extend([(node, p) for p in driver.list_param_targets()])
+                    conns.extend([(node, p) for p in driver.list_param_targets()])
         elif 'comp' in data:
             data['shape'] = 'box'
         else: # var node
@@ -167,6 +197,28 @@ def _update_graph_metadata(G, scope):
         data['margin'] = '0.0'
 
     G.add_edges_from(conns, style='dotted')
+
+def plot_system(system, fmt='pdf', outfile=None):
+    G = system.graph
+
+    _update_graph_metadata(G, None)
+
+    if outfile is None:
+        outfile = 'graph.'+fmt
+
+    dotfile = os.path.splitext(outfile)[0]+'.dot'
+
+    write_system_dot(system, dotfile)
+
+    os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
+
+    if sys.platform == 'darwin':
+        os.system('open %s' % outfile)
+    else:
+        webbrowser.get().open(outfile)
+
+    #os.remove(dotfile)
+
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
                excludes=()):
