@@ -242,22 +242,33 @@ class System(object):
             self.vec[name] = VecWrapper(self, numpy.zeros(insize), 
                                         inputs=inputs)
 
-        #mpiprint("UVEC for %s" % self.name)
-        #self.vec['u'].dump('u')
-        #mpiprint("PVEC for %s" % self.name)
-        #self.vec['p'].dump('p')
+        #start, end = 0, 0
+        #for sub in self.local_subsystems():
+            #sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
+            #end += sz
+            #if end-start > arrays['u'][start:end].size:
+                #raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
+                            #(start,end,arrays['u'][start:end].size,self.name,sub.name))
+            #sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
+                                        #['u', 'f','du', 'df']]))
+            #start += sz
 
-        start, end = 0, 0
         for sub in self.local_subsystems():
-            sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
-            end += sz
-            if end-start > arrays['u'][start:end].size:
-                raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
-                            (start,end,arrays['u'][start:end].size,self.name,sub.name))
+            #sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
+            #end += sz
+            #if end-start > arrays['u'][start:end].size:
+                #raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
+                            #(start,end,arrays['u'][start:end].size,self.name,sub.name))
+            subvecvars = sub.vector_vars.keys()
+            if subvecvars:
+                start, end = self.vec['u'].bounds(subvecvars)
+            else:
+                start, end = 0, 0
+                
             sub.setup_vectors(dict([(n,arrays[n][start:end]) for n in
                                         ['u', 'f','du', 'df']]))
-            start += sz
-
+            #start += sz
+        
         return self.vec
 
     def scatter(self, srcvecname, destvecname, subsystem=None):
@@ -688,8 +699,7 @@ class SerialSystem(CompoundSystem):
         self._ordering = None
 
     def all_subsystems(self):
-        for node in self._ordering:
-            yield self.graph.node[node]['system']
+        return [self.graph.node[node]['system'] for node in self._ordering]
 
     def set_ordering(self, ordering):
         """Return the execution order of our subsystems."""

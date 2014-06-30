@@ -112,13 +112,19 @@ class VecWrapper(object):
         """
         return self._info[name][1]
 
-    def bounds(self, name):
+    def bounds(self, names):
         """Return the bounds corresponding to the slice occupied
-        by the named variable within the flattened array.
-        name may contain array indexing.
+        by the named variable(s) within the flattened array.
+        name may contain array indexing.  Note that if all of the
+        names given are not contiguous, the bounds will encompass
+        the named variables AND any variables between them.
         """
-        view, start = self._info[name]
-        return (start, start + view.size)
+        if isinstance(names, basestring):
+            view, start = self._info[names]
+            return (start, start + view.size)
+
+        bnds = [self.bounds(n) for n in names]
+        return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
     def indices(self, name):
         """Return the set of indices corresponding to name

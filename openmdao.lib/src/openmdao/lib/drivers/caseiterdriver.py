@@ -98,7 +98,10 @@ class _Case(object):
         to the specified scope.
         """
         for name, value in self._inputs.items():
-            expr = self._exprs.get(name)
+            if self._exprs is None:
+                expr = None
+            else:
+                expr = self._exprs.get(name)
             if expr:
                 expr.set(value, scope, tovector=True)
             else:
