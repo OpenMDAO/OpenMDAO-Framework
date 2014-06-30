@@ -728,16 +728,17 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
 
         top.comp.x = 3
         top.comp.y = 5
-        top.comp.run()
+        top.run()
 
         J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)    
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
     def test_first_derivative(self):
 
