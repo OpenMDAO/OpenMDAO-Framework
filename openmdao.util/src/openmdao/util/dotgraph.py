@@ -11,12 +11,12 @@ from openmdao.main.problem_formulation import ArchitectureAssembly
 _cluster_count = 0
 
 def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
-    global _cluster_count, IDriver
+    global _cluster_count
     show = driver.name not in excludes
     comps = list(driver.workflow)
     subG = G.subgraph([c.name for c in comps])
     tab = ' '*indent
-    
+
     if show:
         f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
         _cluster_count += 1
@@ -36,7 +36,7 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
         subG = G.subgraph([c.name for c in comps])
         edges = subG.edges()
-        
+
         # now remove subdrivers
         subG.remove_nodes_from([c.name for c in comps if IDriver.providedBy(c)])
 
@@ -56,6 +56,21 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
     f.write('%s}\n' % tab)
 
+def write_system_clusters(f, system, indent):
+    global _cluster_count
+
+    tab = ' '*indent
+
+    f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
+    _cluster_count += 1
+    indent += 3
+    tab = ' '*indent
+
+    for sub, data in system.graph.nodes_iter(data=True):
+        write_system_clusters(f, data['system'], indent)
+
+    f.write('%s}\n' % tab)
+
 def write_nodes(f, G, indent, counts, parent):
     for node, data in G.nodes_iter(data=True):
         counts[node] -= 1
@@ -71,7 +86,7 @@ def write_node(f, G, node, indent):
     data = G.node[node]
     assigns = ['%s=%s' % (k,v) for k,v in data.items()]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
-    
+
 def _get_comp_counts(drv, counts):
     for comp in drv.workflow:
         counts[comp.name] += 1
@@ -99,7 +114,7 @@ def write_workflow_dot(G, dotfile, scope=None, excludes=()):
         if scope and isinstance(scope, ArchitectureAssembly):
             for pcomp in scope.list_pseudocomps():
                 write_node(f, G, pcomp, indent)
-            
+
         alledges = set()
         write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=excludes)
 
@@ -135,9 +150,12 @@ def _update_graph_metadata(G, scope):
             parts = node.split('.', 1)
             if len(parts) > 1 and not is_var_node(G, parts[0]):
                 data['label'] = parts[1]
-            base = G.base_var(node)
-            if G.node[base].get('iotype') == 'state':
-                data['shape'] = 'doubleoctagon'
+            if hasattr(G, 'base_var'):
+                base = G.base_var(node)
+                if G.node[base].get('iotype') == 'state':
+                    data['shape'] = 'doubleoctagon'
+                else:
+                    data['shape'] = 'ellipse'
             else:
                 data['shape'] = 'ellipse'
         data['margin'] = '0.0'
