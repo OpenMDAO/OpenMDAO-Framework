@@ -108,9 +108,10 @@ def flatten_list_of_iters(lst):
                 ret.extend(entry)
         return ret
 
+# FIXME: move this somewhere else...
 def list_deriv_vars(comp):
     """A wrapper around the call to list_deriv_vars on the given
-    Component that checks the return value to make sure it's a 
+    Component that checks the return value to make sure it's a
     tuple.
     """
     tup = orig_tup = comp.list_deriv_vars()
