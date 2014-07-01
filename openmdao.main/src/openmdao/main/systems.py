@@ -9,6 +9,7 @@ import networkx as nx
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.linearsolver import ScipyGMRES
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
@@ -436,6 +437,8 @@ class System(object):
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
 
+        solver = ScipyGMRES()
+        solver.solve()
 
     def apply_dFdpu(self, arguments):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
@@ -817,7 +820,7 @@ class SerialSystem(CompoundSystem):
 
         self.mpi.comm = get_comm_if_active(self, comm)
         if not self.is_active():
-           return
+            return
 
         for sub in self.all_subsystems():
             mpiprint("calling on sub %s" % sub.name)
