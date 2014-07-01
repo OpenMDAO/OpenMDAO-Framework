@@ -466,7 +466,7 @@ class Workflow(object):
         self.mpi.comm = get_comm_if_active(self, comm)
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        mpiprint("workflow for %s: setup_comms" % self.parent.name)
+        #mpiprint("workflow for %s: setup_comms" % self.parent.name)
         self._system.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):

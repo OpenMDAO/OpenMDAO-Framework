@@ -156,7 +156,7 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
+                #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
            
     def set_to_vec(self, vec, vnames=None):
@@ -169,7 +169,7 @@ class VecWrapper(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None and name not in self._subvars:
-                mpiprint("setting %s (%s) to vector" % (name, array_val))
+                #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
            
     def dump(self, vecname=''):
@@ -195,7 +195,8 @@ class DataTransfer(object):
         self.var_idxs = idx_merge(var_idxs)
         self.input_idxs = idx_merge(input_idxs)
         
-        if not (scatter_conns or noflat_vars):
+        if not (MPI or scatter_conns or noflat_vars):
+            #mpiprint("RETURNING (no xfer) for %s" % system.name)
             return  # no data to xfer
 
         #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
@@ -210,6 +211,7 @@ class DataTransfer(object):
                                                    comm=system.mpi.comm)
             input_idx_set = PETSc.IS().createGeneral(self.input_idxs, 
                                                      comm=system.mpi.comm)
+
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
     
@@ -230,7 +232,7 @@ class DataTransfer(object):
     def __call__(self, system, srcvec, destvec, reverse=False):
 
         if self.scatter is None and not self.noflat_vars:
-            mpiprint("dataxfer is a noop for system %s" % system.name)
+            #mpiprint("dataxfer is a noop for system %s" % system.name)
             return
         
         if MPI:

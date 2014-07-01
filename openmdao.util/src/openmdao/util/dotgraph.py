@@ -11,12 +11,12 @@ from openmdao.main.problem_formulation import ArchitectureAssembly
 _cluster_count = 0
 
 def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
-    global _cluster_count, IDriver
+    global _cluster_count
     show = driver.name not in excludes
     comps = list(driver.workflow)
     subG = G.subgraph([c.name for c in comps])
     tab = ' '*indent
-    
+
     if show:
         f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
         _cluster_count += 1
@@ -36,7 +36,7 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
         subG = G.subgraph([c.name for c in comps])
         edges = subG.edges()
-        
+
         # now remove subdrivers
         subG.remove_nodes_from([c.name for c in comps if IDriver.providedBy(c)])
 
@@ -56,6 +56,37 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
     f.write('%s}\n' % tab)
 
+def write_system_cluster(f, system, indent):#, counts, alledges):
+    global _cluster_count
+
+    tab = ' '*indent
+
+    f.write('%ssubgraph cluster%s {\n' % (tab, _cluster_count))
+    _cluster_count += 1
+    indent += 3
+    tab = ' '*indent
+
+    for sub in system.local_subsystems():
+        write_system_cluster(f, sub, indent)#, counts, alledges)
+
+    if hasattr(system, 'graph'):
+        for u, v in system.graph.edges_iter():
+            # alledges.add((u,v))
+            # if counts[u] > 0:
+            #     u = '"%s@%s"' % (u, system.name)
+            # if counts[v] > 0:
+            #     v = '"%s@%s"' % (v, system.name)
+            f.write('%s"%s" -> "%s";\n' % (tab, u, v))
+
+
+    if ',' not in system.name:
+        write_node(f, {}, system.name, indent)
+
+    #write_nodes(f, system.graph, indent, counts, system.name)
+
+
+    f.write('%s}\n' % tab)
+
 def write_nodes(f, G, indent, counts, parent):
     for node, data in G.nodes_iter(data=True):
         counts[node] -= 1
@@ -65,24 +96,44 @@ def write_nodes(f, G, indent, counts, parent):
             data['style'] = 'filled'
             data['fillcolor'] = 'gray'
 
-        write_node(f, G, node, indent)
+        write_node(f, G.node[node], node, indent)
 
 _meta_excludes = set([
     'inputs',
     'outputs',
+    'system',
 ])
 
-def write_node(f, G, node, indent):
-    data = G.node[node]
-    assigns = ['%s=%s' % (k,v) for k,v in data.items() 
+def write_node(f, meta, node, indent):
+    assigns = ['%s=%s' % (k,v) for k,v in meta.items() 
                     if k not in _meta_excludes]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
-    
+
 def _get_comp_counts(drv, counts):
     for comp in drv.workflow:
         counts[comp.name] += 1
         if IDriver.providedBy(comp):
             _get_comp_counts(comp, counts)
+
+def write_system_dot(system, dotfile):
+    with open(dotfile, 'w') as f:
+        indent = 3
+
+        f.write("strict digraph {\n")
+
+        # # find any components that appear in multiple workflows
+        # counts = dict([(n,0) for n in system.graph.nodes_iter()])
+
+        # alledges = set()
+        # write_system_cluster(f, system, indent, counts, alledges)
+        write_system_cluster(f, system, indent)
+
+        # # now include any cross system connections
+        # for u,v in G.edges_iter():
+        #     if (u,v) not in alledges:
+        #         f.write("   %s -> %s;\n" % (u, v))
+
+        f.write("}\n")
 
 def write_workflow_dot(G, dotfile, scope=None, excludes=()):
 
@@ -104,8 +155,8 @@ def write_workflow_dot(G, dotfile, scope=None, excludes=()):
 
         if scope and isinstance(scope, ArchitectureAssembly):
             for pcomp in scope.list_pseudocomps():
-                write_node(f, G, pcomp, indent)
-            
+                write_node(f, G.node[pcomp], pcomp, indent)
+
         alledges = set()
         write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=excludes)
 
@@ -134,21 +185,46 @@ def _update_graph_metadata(G, scope):
                 for pcomp in driver.list_pseudocomps():
                     conns.append((pcomp, node))
                 if hasattr(driver, 'list_param_targets'):
-                   conns.extend([(node, p) for p in driver.list_param_targets()])
+                    conns.extend([(node, p) for p in driver.list_param_targets()])
         elif 'comp' in data:
             data['shape'] = 'box'
         else: # var node
             parts = node.split('.', 1)
             if len(parts) > 1 and not is_var_node(G, parts[0]):
                 data['label'] = parts[1]
-            base = G.base_var(node)
-            if G.node[base].get('iotype') == 'state':
-                data['shape'] = 'doubleoctagon'
+            if hasattr(G, 'base_var'):
+                base = G.base_var(node)
+                if G.node[base].get('iotype') == 'state':
+                    data['shape'] = 'doubleoctagon'
+                else:
+                    data['shape'] = 'ellipse'
             else:
                 data['shape'] = 'ellipse'
         data['margin'] = '0.0'
 
     G.add_edges_from(conns, style='dotted')
+
+def plot_system(system, fmt='pdf', outfile=None):
+    #G = system.graph
+
+    # _update_graph_metadata(G, None)
+
+    if outfile is None:
+        outfile = 'graph.'+fmt
+
+    dotfile = os.path.splitext(outfile)[0]+'.dot'
+
+    write_system_dot(system, dotfile)
+
+    os.system("dot -T%s -o %s %s" % (fmt, outfile, dotfile))
+
+    if sys.platform == 'darwin':
+        os.system('open %s' % outfile)
+    else:
+        webbrowser.get().open(outfile)
+
+    #os.remove(dotfile)
+
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
                excludes=()):

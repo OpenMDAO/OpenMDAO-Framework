@@ -143,6 +143,9 @@ def _get_model5():
         top.driver.workflow.add(name)
         getattr(top, name).mpi.requested_cpus = 1
 
+    top.create_passthrough('C2.a')
+    top.create_passthrough('C7.d')
+
     conns = [
         ('C1.c','C4.a'),
         ('C2.c','C5.a'),
@@ -276,7 +279,7 @@ if __name__ == '__main__':
     #dump_iteration_tree(top)
 
     try:
-        if MPI is not None and not run:
+        if not run:
             top._setup()
             mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
 

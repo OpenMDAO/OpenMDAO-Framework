@@ -1816,8 +1816,6 @@ def get_graph_partition(g, nodes):
     edges between the nodes and the rest of the full graph.
     """
     others = set(g.nodes_iter()).difference(nodes)
-    # print "get_graph_partition: %s" % list(nodes)
-    # print "others: %s" % list(others)
     out_edges = nx.edge_boundary(g, nodes)
     in_edges = nx.edge_boundary(g, others)
     
@@ -1913,12 +1911,3 @@ def gsort(deps, names):
             final[i] = n
     
     return final
-        
-    #key = cmp_to_key(gorder)    
-    #data = [key(n) for n in names]
-    
-    #slist = []
-    #for d in data:
-        #insort(slist, d)
-
-    #return [s.obj for s in slist]
