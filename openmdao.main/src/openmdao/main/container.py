@@ -7,7 +7,6 @@ import copy
 import pprint
 import socket
 import sys
-import logging
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -24,11 +23,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import Interface, implements
 
-try:
-    from numpy import ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray
+from numpy import ndarray
 
 from traits.api import HasTraits, Missing, Python, \
                        push_exception_handler, TraitType, CTrait

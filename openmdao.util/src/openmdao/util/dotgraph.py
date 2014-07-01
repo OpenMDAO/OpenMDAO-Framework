@@ -56,7 +56,7 @@ def write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=()):
 
     f.write('%s}\n' % tab)
 
-def write_system_cluster(f, system, indent, counts, alledges):
+def write_system_cluster(f, system, indent):#, counts, alledges):
     global _cluster_count
 
     tab = ' '*indent
@@ -66,19 +66,24 @@ def write_system_cluster(f, system, indent, counts, alledges):
     indent += 3
     tab = ' '*indent
 
-    for sub, data in system.graph.nodes_iter(data=True):
-        if hasattr(sub, 'graph'):
-            write_system_cluster(f, data['system'], indent, counts, alledges)
+    for sub in system.local_subsystems():
+        write_system_cluster(f, sub, indent)#, counts, alledges)
 
-    write_nodes(f, system.graph, indent, counts, system.name)
+    if hasattr(system, 'graph'):
+        for u, v in system.graph.edges_iter():
+            # alledges.add((u,v))
+            # if counts[u] > 0:
+            #     u = '"%s@%s"' % (u, system.name)
+            # if counts[v] > 0:
+            #     v = '"%s@%s"' % (v, system.name)
+            f.write('%s"%s" -> "%s";\n' % (tab, u, v))
 
-    for u, v in system.graph.edges_iter():
-        alledges.add((u,v))
-        if counts[u] > 0:
-            u = '"%s@%s"' % (u, system.name)
-        if counts[v] > 0:
-            v = '"%s@%s"' % (v, system.name)
-        f.write('%s%s -> %s;\n' % (tab, u, v))
+
+    if ',' not in system.name:
+        write_node(f, {}, system.name, indent)
+
+    #write_nodes(f, system.graph, indent, counts, system.name)
+
 
     f.write('%s}\n' % tab)
 
@@ -91,16 +96,16 @@ def write_nodes(f, G, indent, counts, parent):
             data['style'] = 'filled'
             data['fillcolor'] = 'gray'
 
-        write_node(f, G, node, indent)
+        write_node(f, G.node[node], node, indent)
 
 _meta_excludes = set([
     'inputs',
     'outputs',
+    'system',
 ])
 
-def write_node(f, G, node, indent):
-    data = G.node[node]
-    assigns = ['%s=%s' % (k,v) for k,v in data.items() 
+def write_node(f, meta, node, indent):
+    assigns = ['%s=%s' % (k,v) for k,v in meta.items() 
                     if k not in _meta_excludes]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
 
@@ -116,11 +121,12 @@ def write_system_dot(system, dotfile):
 
         f.write("strict digraph {\n")
 
-        # find any components that appear in multiple workflows
-        counts = dict([(n,0) for n in system.graph.nodes_iter()])
+        # # find any components that appear in multiple workflows
+        # counts = dict([(n,0) for n in system.graph.nodes_iter()])
 
-        alledges = set()
-        write_system_cluster(f, system, indent, counts, alledges)
+        # alledges = set()
+        # write_system_cluster(f, system, indent, counts, alledges)
+        write_system_cluster(f, system, indent)
 
         # # now include any cross system connections
         # for u,v in G.edges_iter():
@@ -149,7 +155,7 @@ def write_workflow_dot(G, dotfile, scope=None, excludes=()):
 
         if scope and isinstance(scope, ArchitectureAssembly):
             for pcomp in scope.list_pseudocomps():
-                write_node(f, G, pcomp, indent)
+                write_node(f, G.node[pcomp], pcomp, indent)
 
         alledges = set()
         write_driver_cluster(f, G, driver, indent, counts, alledges, excludes=excludes)
@@ -199,9 +205,9 @@ def _update_graph_metadata(G, scope):
     G.add_edges_from(conns, style='dotted')
 
 def plot_system(system, fmt='pdf', outfile=None):
-    G = system.graph
+    #G = system.graph
 
-    _update_graph_metadata(G, None)
+    # _update_graph_metadata(G, None)
 
     if outfile is None:
         outfile = 'graph.'+fmt
