@@ -40,13 +40,15 @@ class LinearSolver(object):
         #system.sol_vec.array[:] = system.sol_buf.array[:]
 
 class ScipyGMRES(LinearSolver):
-    """ Scipy's GMRES Solver."""
+    """ Scipy's GMRES Solver. This is a serial solver, so should never be used
+    in an MPI setting."""
 
     def __init__(self, system):
-        """ Set up KSP object """
+        """ Set up ScipyGMRES object """
 
     def solve(self):
         """ Run GMRES solver """
+
         system = self._system
         self.ksp.setTolerances(max_it=ilimit, atol=atol, rtol=rtol)
         self._initialize()

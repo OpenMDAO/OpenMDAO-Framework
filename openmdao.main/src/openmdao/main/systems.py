@@ -260,7 +260,7 @@ class System(object):
                 sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
                 end += sz
                 if end-start > arrays['u'][start:end].size:
-                    raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" % 
+                    raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" %
                                 (start,end,arrays['u'][start:end].size,self.name,sub.name))
             else:
                 subvecvars = sub.vector_vars.keys()
@@ -268,7 +268,7 @@ class System(object):
                     start, end = self.vec['u'].bounds(subvecvars)
                 else:
                     start, end = 0, 0
-                    
+
             subarrays = {}
             for n in ('u', 'f', 'du', 'df'):
                 subarrays[n] = arrays[n][start:end]
@@ -277,7 +277,7 @@ class System(object):
 
             if MPI:
                 start += sz
-        
+
         return self.vec
 
     def scatter(self, srcvecname, destvecname, subsystem=None):
@@ -289,7 +289,7 @@ class System(object):
             scatter = self.scatter_full
         else:
             scatter = subsystem.scatter_partial
-  
+
         if scatter is not None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
@@ -496,9 +496,9 @@ class SimpleSystem(System):
                                 (len(src_idxs), len(dest_idxs), src_idxs, dest_idxs, self.name))
 
         other_conns = [(n,n) for n in self.get_inputs() if n not in pkeys]
-        
+
         if MPI or scatter_conns or other_conns:
-            self.scatter_full = DataTransfer(self, src_idxs, dest_idxs, 
+            self.scatter_full = DataTransfer(self, src_idxs, dest_idxs,
                                              scatter_conns, other_conns)
 
     def apply_F(self):
@@ -659,7 +659,7 @@ class CompoundSystem(System):
             return self.all_subsystems()
 
     def all_subsystems(self):
-        return [data['system'] for node, data in 
+        return [data['system'] for node, data in
                      self.graph.nodes_iter(data=True)]
 
     def setup_scatters(self):
@@ -684,11 +684,11 @@ class CompoundSystem(System):
 
             if app_idxs:
                 app_idxs = numpy.concatenate(app_idxs)
-    
+
             app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
             petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
             #mpiprint("creating petsc AO for %s" % self.name)
-            self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set, 
+            self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
                                                        comm=self.mpi.comm)
 
         # mpiprint("app indices:   %s\npetsc indices: %s" %
@@ -744,14 +744,14 @@ class CompoundSystem(System):
             # mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
             #                                                       src_partial, dest_partial))
             if MPI or scatter_conns or noflat_conns:
-                subsystem.scatter_partial = DataTransfer(self, src_partial, 
-                                                         dest_partial, 
+                subsystem.scatter_partial = DataTransfer(self, src_partial,
+                                                         dest_partial,
                                                          scatter_conns, noflat_conns)
 
         if MPI or scatter_conns_full or noflat_conns_full:
-            self.scatter_full = DataTransfer(self, src_full, dest_full, 
+            self.scatter_full = DataTransfer(self, src_full, dest_full,
                                              scatter_conns_full, noflat_conns_full)
-     
+
         for sub in self.local_subsystems():
             sub.setup_scatters()
 
@@ -760,11 +760,21 @@ class CompoundSystem(System):
     def apply_F(self):
         """ Delegate to subsystems """
         #mpiprint("%s.apply_F" % self.name)
-        self.scatter('u','p')
+        self.scatter('u', 'p')
         for subsystem in self.local_subsystems():
             subsystem.apply_F()
         #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
         #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))
+
+    def apply_dFdpu(self, arguments):
+        """ Delegate to subsystems """
+
+        if self.mode == 'forward':
+            self.scatter('u', 'p')
+        for subsystem in self.local_subsystems():
+            subsystem.apply_dFdpu(arguments)
+        if self.mode == 'adjoint':
+            self.scatter('u', 'p')
 
     def stop(self):
         for s in self.all_subsystems():
