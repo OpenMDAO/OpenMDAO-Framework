@@ -137,7 +137,7 @@ class Workflow(object):
 
         err = None
         try:
-            self._system.run(iterbase=iterbase, ffd_order=ffd_order, 
+            self._system.run(iterbase=iterbase, ffd_order=ffd_order,
                                 case_uuid=case_uuid)
 
             if self._stop:
@@ -156,10 +156,13 @@ class Workflow(object):
         if err is not None:
             err.reraise(with_traceback=False)
 
-    def calc_gradient(self, inputs=None, outputs=None, 
-                      upscope=False, mode='auto'):
-        #self._system.calc_gradient(inputs, outputs, mode)
-        pass
+    def calc_gradient(self, inputs=None, outputs=None,
+                      upscope=False, mode='forward'):
+
+        # TODO - Support automatic determination of mode
+
+        return self._system.calc_gradient(inputs, outputs, mode)
+
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
@@ -399,12 +402,12 @@ class Workflow(object):
 
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
-     
+
     ## MPI stuff ##
 
     def setup_systems(self):
         """Get the subsystem for this workflow. Each
-        subsystem contains a subgraph of this workflow's component 
+        subsystem contains a subgraph of this workflow's component
         graph, which contains components and/or other subsystems.
         """
         scope = self.scope
@@ -445,10 +448,10 @@ class Workflow(object):
             self._system = SerialSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
 
         self._system.set_ordering([c.name for c in self])
-            
+
         for comp in self:
             comp.setup_systems()
-            
+
     def get_req_cpus(self):
         """Return requested_cpus"""
         if self._system is None:

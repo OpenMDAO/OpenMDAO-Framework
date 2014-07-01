@@ -276,9 +276,9 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
-    for key in result:
-        if key not in residual:
-            result[key] = -arg[key]
+    #for key in result:
+        #if key not in residual:
+            #result[key] = -arg[key]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
@@ -378,9 +378,9 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
     residual, and calls into the function hook "apply_derivT".
     """
 
-    for key in arg:
-        if key not in residual:
-            result[key] = -arg[key]
+    #for key in arg:
+        #if key not in residual:
+            #result[key] = -arg[key]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False

@@ -64,6 +64,11 @@ class System(object):
         self.scatter_full = None
         self.scatter_partial = None
 
+        # Derivatives stuff
+        self.mode = None
+        self.sol_vec = None
+        self.rhs_vec = None
+
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
 
@@ -87,7 +92,7 @@ class System(object):
 
     def _get_var_info(self, name):
         vdict = { 'size': 0 }
-        
+
         parts = name.split('.',1)
         if len(parts) > 1:
             cname, vname = parts
@@ -110,7 +115,7 @@ class System(object):
                 else:
                     bname = base
                 vdict['basevar'] = bname
-                
+
         return vdict
 
     def setup_variables(self):
@@ -126,7 +131,7 @@ class System(object):
         #mpiprint("%s: inputs = %s" % (self.name, self.get_inputs(local=True)))
         #mpiprint("%s: outputs = %s" % (self.name, self.get_outputs()))
 
-        for vname in chain(sorted(self.get_inputs(local=True)), 
+        for vname in chain(sorted(self.get_inputs(local=True)),
                            sorted(self.get_outputs())):
             if vname not in self.all_variables:
                 #mpiprint("%s ADDING zero size for %s" % (self.name, vname))
@@ -140,7 +145,7 @@ class System(object):
                 if u in myvars:
                     if not myvars[u].get('flat') and v in myvars:
                         myvars[v]['flat'] = False
-                        
+
                 if v in myvars:
                     if not myvars[v].get('flat') and u in myvars:
                         myvars[u]['flat'] = False
@@ -148,7 +153,7 @@ class System(object):
         #mpiprint("=== %s: all_variables = %s" % (self.name, self.all_variables.keys()))
 
     def setup_sizes(self):
-        """Given a dict of variables, set the sizes for 
+        """Given a dict of variables, set the sizes for
         those that are local.
         """
         #mpiprint("setup_sizes: %s" % self.name)
@@ -164,12 +169,12 @@ class System(object):
 
         self.vector_vars = OrderedDict()
 
-        # create a (1 x nproc) vector for the sizes of all of our 
+        # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
         # pass the call down to any subdrivers/subsystems
-        # and subassemblies. 
+        # and subassemblies.
         for sub in self.local_subsystems():
             sub.setup_sizes()
 
@@ -177,7 +182,7 @@ class System(object):
 
         #mpiprint("in %s, add=%s, noadd = %s, noflat=%s" % (self.name,sizes_add,sizes_noadd,noflats))
 
-        # create an (nproc x numvars) var size vector containing 
+        # create an (nproc x numvars) var size vector containing
         # local sizes across all processes in our comm
         self.local_var_sizes = numpy.zeros((size, len(sizes_add)), int)
 
@@ -191,7 +196,7 @@ class System(object):
             self.noflat_vars[name] = self.all_variables[name]
 
         #mpiprint("%s setup_sizes: vars = %s" % (self.name, self.vector_vars.keys()))
-        
+
         for i, (name, var) in enumerate(self.vector_vars.items()):
             self.local_var_sizes[rank, i] = var['size']
 
@@ -202,13 +207,13 @@ class System(object):
         # only have a slice of each of the component's variables.
         #mpiprint("setup_sizes Allgather (var sizes) %s: %d" % (self.name,comm.size))
         if MPI:
-            comm.Allgather(self.local_var_sizes[rank,:], 
+            comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
 
         inputs = self.get_inputs(local=True)
 
-        self.input_sizes[rank] = sum([v['size'] 
-                                        for n,v in self.vector_vars.items() 
+        self.input_sizes[rank] = sum([v['size']
+                                        for n,v in self.vector_vars.items()
                                            if n in inputs])
 
         #mpiprint("setup_sizes Allgather (input sizes)")
@@ -242,7 +247,7 @@ class System(object):
         inputs = self.get_inputs(local=True)
 
         for name in ['p', 'dp']:
-            self.vec[name] = VecWrapper(self, numpy.zeros(insize), 
+            self.vec[name] = VecWrapper(self, numpy.zeros(insize),
                                         inputs=inputs)
 
         start, end = 0, 0
@@ -276,23 +281,15 @@ class System(object):
 
     def scatter(self, srcvecname, destvecname, subsystem=None):
         """ Perform data transfer (partial or full scatter or
-        send/receive for data that isn't flattenable to a 
+        send/receive for data that isn't flattenable to a
         float array.
         """
         if subsystem is None:
             scatter = self.scatter_full
         else:
             scatter = subsystem.scatter_partial
-
-        # if scatter is None:
-        #     mpiprint("NO scatter for %s" % self.name)
-        #else:   
+  
         if scatter is not None:
-            # if subsystem is None:
-            #     mpiprint("full scatter for %s" % self.name)
-            # else:
-            #     mpiprint("scatter %s --> %s" % (self.name, subsystem.name))
-
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
@@ -317,7 +314,7 @@ class System(object):
         if not self.is_active():
             #mpiprint("returning early for %s" % str(self.name))
             return stream.getvalue() if getval else None
-        
+
         if MPI is None:
             world_rank = 0
         else:
@@ -330,9 +327,9 @@ class System(object):
                      'ExplicitSystem': 'exp' }
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
-        stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" % 
-                                          (name_map[self.__class__.__name__], 
-                                           self.get_req_cpus(), 
+        stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
+                                          (name_map[self.__class__.__name__],
+                                           self.get_req_cpus(),
                                            world_rank,
                                            self.vec['u'].array.size,
                                            self.input_sizes[self.mpi.rank]))
@@ -341,7 +338,7 @@ class System(object):
         for v, (arr, start) in self.vec['u']._info.items():
             stream.write(" "*(nest+2))
             if v in inputs:
-                stream.write("u['%s'] (%s)   p['%s'] (%s)\n" % 
+                stream.write("u['%s'] (%s)   p['%s'] (%s)\n" %
                                  (v, list(self.vec['u'].bounds(v)),
                                   v, list(self.vec['p'].bounds(v))))
             else:
@@ -373,9 +370,9 @@ class System(object):
         is already included in its basevar size. Also, unflattenable
         vars must be handled separately from the var vector.
 
-        This method returns (sizes, nosizes, noflat), where sizes is a list 
-        of vars/subvars that add to the size of the var vector and 
-        nosizes is a list of subvars that are flattenable but do not, 
+        This method returns (sizes, nosizes, noflat), where sizes is a list
+        of vars/subvars that add to the size of the var vector and
+        nosizes is a list of subvars that are flattenable but do not,
         and noflat is a list of vars/subvars that are not flattenable.
 
         The items in each list will have the same ordering as they
@@ -407,13 +404,44 @@ class System(object):
 
         return (sizes, nosizes, noflats)
 
+    def set_mode(self, mode):
+        """ Sets the mode for this system and all subsystems. """
+
+        self.mode = mode
+
+        self.sol_vec = self.vec[{'forward': 'du', 'adjoint': 'df'}[mode]]
+        self.rhs_vec = self.vec[{'forward': 'df', 'adjoint': 'du'}[mode]]
+
+    def linearize(self):
+        """ Linearize all subsystems. """
+
+        for subsystem in self.local_subsystems():
+            subsystem.linearize()
+
+    def calc_gradient(self, inputs, outputs, mode='auto'):
+        """ Return the gradient for this system. """
+
+        # TODO - Add support for specifying inputs and outputs. Right now, it only
+        # returns the gradient of obj+con wrt param.
+
+        self.set_mode(mode)
+
+        self.linearize()
+
+        self.rhs_vec.array[:] = 0.0
+        self.vec['df'].array[:] = 0.0
+
+
+    def apply_dFdpu(self, arguments):
+        """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
+        pass
 
 class SimpleSystem(System):
     """A System for a single Component."""
     def __init__(self, depgraph, scope, name):
         comp = getattr(scope, name)
-        super(SimpleSystem, self).__init__(scope, depgraph, 
-                      depgraph.find_prefixed_nodes(comp.get_full_nodeset()), 
+        super(SimpleSystem, self).__init__(scope, depgraph,
+                      depgraph.find_prefixed_nodes(comp.get_full_nodeset()),
                       name)
         self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
@@ -461,9 +489,9 @@ class SimpleSystem(System):
             src_idxs.append(numpy.sum(self.local_var_sizes[:, :ivar]) + # ??? args[arg] - user really needs to be able to define size for multi-proc comps
                                   petsc_linspace(0, self.local_var_sizes[rank,ivar]))
         if len(idx_merge(src_idxs)) != len(idx_merge(dest_idxs)):
-            raise RuntimeError("ERROR: setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" % 
+            raise RuntimeError("ERROR: setting up scatter: (%d != %d) srcs: %s,  dest: %s in %s" %
                                 (len(src_idxs), len(dest_idxs), src_idxs, dest_idxs, self.name))
-        
+
         other_conns = [(n,n) for n in self.get_inputs() if n not in pkeys]
         
         if MPI or scatter_conns or other_conns:
@@ -471,17 +499,22 @@ class SimpleSystem(System):
                                              scatter_conns, other_conns)
 
     def apply_F(self):
-        self.scatter('u','p')
+        self.scatter('u', 'p')
         comp = self._comp
         self.vec['p'].set_to_scope(self.scope)
         comp.evaluate()
         self.vec['u'].set_from_scope(self.scope)
         #vec['f'].array[:] = vec['u'].array
 
+    def linearize(self):
+        """ Linearize this component. """
+
+        self._comp.linearize(first=True)
+
 
 class BoundarySystem(SimpleSystem):
     """A SimpleSystem that has no component to execute. It just
-    performs data transfer between a set of boundary variables and the rest 
+    performs data transfer between a set of boundary variables and the rest
     of the system.
     """
     def __init__(self, depgraph, scope, name):
@@ -501,14 +534,16 @@ class BoundarySystem(SimpleSystem):
         self.scatter('u','p')
         self.vec['p'].set_to_scope(self.scope)
         self.vec['u'].set_from_scope(self.scope)
-    
+
 
 class ExplicitSystem(SimpleSystem):
+    """ Simple System with inputs and outputs, but no states or residuals. """
+
     def apply_F(self):
         """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
         #mpiprint("%s.apply_F" % self.name)
         vec = self.vec
-        self.scatter('u','p')
+        self.scatter('u', 'p')
         comp = self._comp
         vec['f'].array[:] = vec['u'].array[:]
         if self._comp.parent is not None:
@@ -522,6 +557,36 @@ class ExplicitSystem(SimpleSystem):
         vec['f'].array[:] -= vec['u'].array[:]
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
+
+    def apply_dFdpu(self, arguments):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        vec = self.vec
+        comp = self._comp
+
+        # Forward Mode
+        if self.mode == 'forward':
+
+            self.scatter('du', 'dp')
+
+            vec['df'].array[:] = 0.0
+            comp.applyJ(arguments)
+            vec['df'].array[:] *= -1.0
+            for var in self.variables:
+                if var in arguments:
+                    vec['df'][var][:] += vec['du'][var][:]
+
+        # Adjoint Mode
+        elif self.mode == 'adjoint':
+            vec['df'].array[:] *= -1.0
+            comp.applyJ(arguments)
+            vec['df'].array[:] *= -1.0
+            vec['du'].array[:] = 0.0
+            for var in self.variables:
+                if var in arguments:
+                    vec['du'][var][:] += vec['df'][var][:]
+
+            self.scatter('du', 'dp')
 
 
 class AssemblySystem(ExplicitSystem):
@@ -542,7 +607,7 @@ class AssemblySystem(ExplicitSystem):
     def setup_vectors(self, arrays):
         super(AssemblySystem, self).setup_vectors(arrays)
         # internal Assembly will create new vectors
-        self._comp.setup_vectors() 
+        self._comp.setup_vectors()
 
     def setup_scatters(self):
         super(AssemblySystem, self).setup_scatters()
@@ -552,8 +617,8 @@ class AssemblySystem(ExplicitSystem):
 class CompoundSystem(System):
     """A System that has subsystems."""
 
-    def __init__(self, scope, depgraph, subg, name=None):        
-        super(CompoundSystem, self).__init__(scope, depgraph, 
+    def __init__(self, scope, depgraph, subg, name=None):
+        super(CompoundSystem, self).__init__(scope, depgraph,
                                              get_full_nodeset(depgraph, scope, subg.nodes()), name)
         self.driver = None
         self.graph = subg
@@ -572,7 +637,7 @@ class CompoundSystem(System):
         return inputs
 
     def get_outputs(self, local=False):
-        # the full set of outputs is stored in the 
+        # the full set of outputs is stored in the
         # metadata of this System's graph.
         if local:
             systems = self.local_subsystems()
@@ -583,7 +648,7 @@ class CompoundSystem(System):
         for sub in systems:
             outputs.update(sub.get_outputs())
         return outputs
-        
+
     def local_subsystems(self):
         if MPI:
             return self._local_subsystems
@@ -607,7 +672,7 @@ class CompoundSystem(System):
             start = numpy.sum(var_sizes[:rank, :])
             end = numpy.sum(var_sizes[:rank+1, :])
             petsc_idxs = petsc_linspace(start, end)
-    
+
             app_idxs = []
             for ivar in xrange(len(self.vector_vars)):
                 start = numpy.sum(var_sizes[:, :ivar]) + numpy.sum(var_sizes[:rank, ivar])
@@ -634,7 +699,7 @@ class CompoundSystem(System):
 
         start = end = numpy.sum(input_sizes[:rank])
         varkeys = self.vector_vars.keys()
-        
+
         if varkeys != self.vec['u'].keys():
             raise RuntimeError("varkeys != u vector!")
 
@@ -769,10 +834,10 @@ class ParallelSystem(CompoundSystem):
             cpus += data['system'].get_req_cpus()
         self.mpi.requested_cpus = cpus
         return cpus
- 
+
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
-        # don't scatter unless we contain something that's actually 
+        # don't scatter unless we contain something that's actually
         # going to run
         if not self.local_subsystems() or not self.is_active():
             return
@@ -850,7 +915,7 @@ class ParallelSystem(CompoundSystem):
 
         for sub in self.local_subsystems():
             sub.setup_communicators(sub_comm)
-             
+
     def setup_variables(self):
         """ Determine variables from local subsystems """
         mpiprint("setup_variables: %s" % self.name)
@@ -889,7 +954,7 @@ class NonSolverDriverSystem(ExplicitSystem):
         scope = driver.parent
         super(NonSolverDriverSystem, self).__init__(depgraph, scope, driver.name)
         driver._system = self
-        
+
     def setup_communicators(self, comm):
         super(NonSolverDriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
@@ -909,7 +974,7 @@ class NonSolverDriverSystem(ExplicitSystem):
     def setup_scatters(self):
         super(NonSolverDriverSystem, self).setup_scatters()
         self._comp.setup_scatters()
-      
+
     def local_subsystems(self):
         return self.all_subsystems()
 
@@ -926,7 +991,7 @@ class SolverSystem(SimpleSystem):  # Implicit
         scope = driver.parent
         super(SolverSystem, self).__init__(depgraph, scope, driver.name)
         driver._system = self
-        
+
     def setup_communicators(self, comm):
         super(SolverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
@@ -946,7 +1011,7 @@ class SolverSystem(SimpleSystem):  # Implicit
     def setup_scatters(self):
         super(SolverSystem, self).setup_scatters()
         self._comp.setup_scatters()
-      
+
     def local_subsystems(self):
         return self.all_subsystems()
 
@@ -967,7 +1032,7 @@ class InnerAssemblySystem(SerialSystem):
         conns = scope.list_connections()
         srcset = set([depgraph.base_var(u) for u,v in conns])
         destset = set([depgraph.base_var(v) for u,v in conns])
-        
+
         bndry_outs = [v for v in scope.list_outputs() if v in destset]
         bndry_ins = [v for v in scope.list_inputs() if v in srcset]
 
@@ -986,12 +1051,12 @@ class InnerAssemblySystem(SerialSystem):
             g.add_edge(bins, drvname)
             g.node[bins]['system'] = BoundarySystem(depgraph, scope, bins)
             ordering.append(bins)
-        
+
         ordering.append(drvname)
 
         if bouts:
             g.add_node(bouts)
-            g.add_edge(drvname, bouts)       
+            g.add_edge(drvname, bouts)
             g.node[bouts]['system'] = BoundarySystem(depgraph, scope, bouts)
             ordering.append(bouts)
 
@@ -1001,7 +1066,7 @@ class InnerAssemblySystem(SerialSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self.bins)
-            super(InnerAssemblySystem, self).run(iterbase, ffd_order, 
+            super(InnerAssemblySystem, self).run(iterbase, ffd_order,
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
@@ -1023,7 +1088,7 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
     """Return a nested system graph with metadata for parallel
     and serial subworkflows.  Graph must acyclic. All subdriver
     iterations sets must have already been collapsed.
-    
+
     """
     if len(cgraph) < 2:
         return cgraph
@@ -1034,9 +1099,9 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
 
     #mpiprint("transforming graph %d: %s" % (id(g),g.nodes()))
     while len(gcopy) > 1:
-        # find all nodes with in degree 0. If we find 
+        # find all nodes with in degree 0. If we find
         # more than one, we can execute them in parallel
-        zero_in_nodes = [n for n in gcopy.nodes_iter() 
+        zero_in_nodes = [n for n in gcopy.nodes_iter()
                             if gcopy.in_degree(n)==0]
 
         if len(zero_in_nodes) > 1: # start of parallel chunk
@@ -1087,7 +1152,7 @@ def update_system_node(G, system, name):
 
 def get_branch(g, node, visited=None):
     """Return the full list of nodes that branch *exclusively*
-    from the given node.  The starting node is included in 
+    from the given node.  The starting node is included in
     the list.
     """
     if visited is None:
@@ -1126,12 +1191,12 @@ def get_comm_if_active(obj, comm):
     return newcomm
 
 def simple_node_iter(nodes):
-    """Return individual nodes from an iterator containing nodes and 
+    """Return individual nodes from an iterator containing nodes and
     iterators of nodes.
     """
     if isinstance(nodes, basestring):
         nodes = (nodes,)
-        
+
     for node in nodes:
         if isinstance(node, basestring):
             yield node

@@ -19,6 +19,7 @@ from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
@@ -266,7 +267,7 @@ class Component(Container):
                 obj = getattr(self, name)
                 if is_instance(obj, VariableTree):
                     if self.name:
-                        req.extend(['.'.join((self.name, n)) 
+                        req.extend(['.'.join((self.name, n))
                                      for n in obj.get_req_default(trait.required)])
                     else:
                         req.extend(obj.get_req_default(trait.required))
@@ -429,7 +430,7 @@ class Component(Container):
 
                 self.set(out_name, y)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
+    def linearize(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
@@ -497,6 +498,20 @@ class Component(Container):
                 self._ffd_outputs[name] = self.get(name)
 
         return J
+
+    def applyJ(arg, result, residual, shape_cache, J=None):
+        """ Wrapper for component derivative specification methods.
+        Forward Mode.
+        """
+        applyJ(arg, result, residual, shape_cache, J)
+
+
+    def applyJT(arg, result, residual, shape_cache, J=None):
+        """ Wrapper for component derivative specification methods.
+        Adjoint Mode.
+        """
+        applyJT(arg, result, residual, shape_cache, J)
+
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -1862,8 +1877,8 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value 
-        can be expressed as an array of floats.  Otherwise, None is 
+        of the value of the named variable, if the flattened value
+        can be expressed as an array of floats.  Otherwise, None is
         returned.
         """
         info = self._var_sizes.get(name, __missing__)
@@ -1873,7 +1888,7 @@ class Component(Container):
             except TypeError:
                 info = None
             self._var_sizes[name] = info
-                
+
         return info
 
     @rbac(('owner', 'user'))
@@ -1890,7 +1905,7 @@ class Component(Container):
     @rbac(('owner', 'user'))
     def pre_setup(self):
         pass
-    
+
     @rbac(('owner', 'user'))
     def post_setup(self):
         pass
