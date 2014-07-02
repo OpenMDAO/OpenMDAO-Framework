@@ -71,6 +71,15 @@ class CaseDataset(object):
     def _fetch(self, query):
         """ Return data based on `query`. """
         vnames = query.vnames
+        if vnames is not None:
+            bad = []
+            metadata = self.simulation_info['variable_metadata']
+            for name in vnames:
+                if name not in metadata:
+                    bad.append(name)
+            if bad:
+                raise RuntimeError('Names not found in the dataset: %s' % bad)
+
         local = query.local_only
         return_names = query.names
 
@@ -256,9 +265,14 @@ class Query(object):
         self.parent_id = parent_case_id
         return self
 
-    def vars(self, vnames):
+    def vars(self, *args):
         """ Filter the variable columns returned in the row. """
-        self.vnames = vnames
+        self.vnames = []
+        for arg in args:
+            if isinstance(arg, basestring):
+                self.vnames.append(arg)
+            else:
+                self.vnames.extend(arg)
         return self
 
     def local(self):

@@ -329,13 +329,13 @@ class TestCase(unittest.TestCase):
 
     def test_bson(self):
         # Simple check of _BSONReader.
-        names = ['dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2']
+        names = ('dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2')
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.bson')
-        bson_cases = CaseDataset(path, 'bson').data.vars(names).fetch()
+        bson_cases = CaseDataset(path, 'bson').data.vars(*names).fetch()
 
         for json_case, bson_case in zip(json_cases, bson_cases):
             for json_val, bson_val in zip(json_case, bson_case):
