@@ -161,6 +161,25 @@ class Workflow(object):
 
         # TODO - Support automatic determination of mode
 
+        parent = self.parent
+
+        if inputs is None:
+            if hasattr(parent, 'list_param_group_targets'):
+                inputs = parent.list_param_group_targets()
+            else:
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+
+        # If outputs aren't specified, use the objectives and constraints
+        if outputs is None:
+            outputs = []
+            if hasattr(parent, 'get_objectives'):
+                outputs.extend(["%s.out0" % item.pcomp_name for item in
+                                parent.get_objectives().values()])
+            if hasattr(parent, 'get_constraints'):
+                outputs.extend(["%s.out0" % item.pcomp_name for item in
+                                parent.get_constraints().values()])
+
         return self._system.calc_gradient(inputs, outputs, mode)
 
 

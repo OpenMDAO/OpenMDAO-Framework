@@ -84,7 +84,7 @@ class PseudoComponent(object):
     """
     implements(IComponent)
 
-    def __init__(self, parent, srcexpr, destexpr=None, 
+    def __init__(self, parent, srcexpr, destexpr=None,
                  translate=True, pseudo_type=None):
         if destexpr is None:
             destexpr = DummyExpr()
@@ -171,7 +171,7 @@ class PseudoComponent(object):
         else:
             self._srcunits = None
 
-        self._srcexpr = ConnectedExprEvaluator(xformed_src, 
+        self._srcexpr = ConnectedExprEvaluator(xformed_src,
                                                scope=self)
 
         # this is just the equation string (for debugging)
@@ -299,8 +299,8 @@ class PseudoComponent(object):
     def set_itername(self, itername):
         self._itername = itername
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
+    def linearize(self, first=False, second=False, savebase=False,
+                  required_inputs=None, required_outputs=None):
         if first:
             return self.provideJ()
         if second:
@@ -336,14 +336,14 @@ class PseudoComponent(object):
         return J
 
     def ensure_init(self):
-        """Make sure our inputs and outputs have been 
+        """Make sure our inputs and outputs have been
         initialized.
         """
         if not self._initialized:
             # set the current value of the connected variable
             # into our input
             for ref, in_name in self._inmap.items():
-                setattr(self, in_name, 
+                setattr(self, in_name,
                         ExprEvaluator(ref).evaluate(self.parent))
 
             # set the initial value of the output
@@ -374,8 +374,8 @@ class PseudoComponent(object):
 
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value 
-        can be expressed as an array of floats.  Otherwise, None is 
+        of the value of the named variable, if the flattened value
+        can be expressed as an array of floats.  Otherwise, None is
         returned.
         """
         if name in self._var_sizes:
@@ -387,7 +387,7 @@ class PseudoComponent(object):
             except TypeError:
                 info = None
             self._var_sizes[name] = info
-                
+
             return info
 
     def get_flattened_value(self, path):
@@ -403,7 +403,7 @@ class PseudoComponent(object):
     def set_flattened_value(self, path, value):
         val = getattr(self, path.split('[',1)[0])
         idx = get_index(path)
-        if isinstance(val, int_types): 
+        if isinstance(val, int_types):
             pass  # fall through to exception
         if isinstance(val, real_types):
             if idx is None:

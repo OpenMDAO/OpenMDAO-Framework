@@ -45,15 +45,12 @@ class ScipyGMRES(LinearSolver):
 
     def __init__(self, system):
         """ Set up ScipyGMRES object """
+        self._system = system
 
     def solve(self):
         """ Run GMRES solver """
 
         system = self._system
-        self.ksp.setTolerances(max_it=ilimit, atol=atol, rtol=rtol)
-        self._initialize()
-        self.ksp.solve(system.rhs_buf, system.sol_buf)
-        self._finalize()
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the

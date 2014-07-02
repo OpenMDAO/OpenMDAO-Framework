@@ -70,6 +70,8 @@ class System(object):
         self.sol_vec = None
         self.rhs_vec = None
 
+        self.solver = ScipyGMRES(self)
+
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
 
@@ -432,8 +434,7 @@ class System(object):
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
 
-        solver = ScipyGMRES()
-        solver.solve()
+        self.solver.solve()
 
     def apply_dFdpu(self, arguments):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
