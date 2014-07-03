@@ -139,7 +139,9 @@ class TestCase(unittest.TestCase):
 
         for i in range(len(expected)):
             expect = expected[i]
-            if expect.startswith(', "__length_'):
+            if expect.startswith('"__length_'):
+                self.assertTrue(lines[i].startswith('"__length_'))
+            elif expect.startswith(', "__length_'):
                 self.assertTrue(lines[i].startswith(', "__length_'))
             elif expect.startswith('    "_driver_id":'):
                 self.assertTrue(lines[i].startswith('    "_driver_id":'))

@@ -82,8 +82,8 @@ Case:
       comp1.x: 8.0
       comp1.y: 16.0
    outputs:
-      _pseudo_0: 24.0
-      _pseudo_1: 25.0
+      Response(comp1.z): 24.0
+      Response(comp2.z): 25.0
       comp1.derivative_exec_count: 0
       comp1.exec_count: 9
       comp1.itername: 9-comp1
@@ -158,8 +158,8 @@ Case:
    inputs:
       comp1.x: 0.0
    outputs:
-      _pseudo_2: 0.0
-      _pseudo_3: 1.0
+      Objective(comp1.z): 0.0
+      Objective(comp2.z): 1.0
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
