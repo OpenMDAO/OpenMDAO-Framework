@@ -48,7 +48,7 @@ from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.main.array_helpers import flattened_value, get_val_and_index, \
-                                        get_index
+                                        get_index, flattened_size_info
 from openmdao.main.pseudocomp import PseudoComponent
 
 from openmdao.util.log import Logger, logger
@@ -64,6 +64,7 @@ _copydict = {
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+__missing__ = object()
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -155,6 +156,8 @@ class Container(SafeHasTraits):
 
         self._call_cpath_updated = True
         self._call_configure = True
+
+        self._var_sizes = {}
 
         self._managers = {}  # Object manager for remote access by authkey.
 
@@ -618,6 +621,11 @@ class Container(SafeHasTraits):
         else:
             setattr(self, name, obj)
 
+        try:
+            del self._var_sizes[name]
+        except KeyError:
+            pass
+
         return obj
 
     def _check_recursion(self, obj):
@@ -692,6 +700,11 @@ class Container(SafeHasTraits):
             obj = getattr(self, name)
         except AttributeError:
             return None
+
+        try:
+            del self._var_sizes[name]
+        except KeyError:
+            pass
 
         trait = self.get_trait(name)
         if trait is None:
@@ -1089,6 +1102,23 @@ class Container(SafeHasTraits):
                 raise NotImplementedError("no support for setting flattened values into vartrees")
 
             self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
+
+    @rbac(('owner', 'user'))
+    def get_float_var_info(self, name):
+        """Returns the local flattened size, index and basevar info
+        of the value of the named variable, if the flattened value
+        can be expressed as an array of floats.  Otherwise, None is
+        returned.
+        """
+        info = self._var_sizes.get(name, __missing__)
+        if info is __missing__:
+            try:
+                info = flattened_size_info(name, self)
+            except TypeError:
+                info = None
+            self._var_sizes[name] = info
+
+        return info
                 
     def _set_failed(self, path, value, index=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
