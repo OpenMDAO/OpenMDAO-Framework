@@ -79,11 +79,12 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
-            "      _pseudo_0: 5.5",
-            "      _pseudo_1: Hello',;','",
-            '      _pseudo_2: 24.2',
-            '      _pseudo_3: 25.2',
+            '      Response(comp1.a_array[2]): 5.5',
+            "      Response(comp1.a_string): Hello',;','",
+            '      Response(comp1.z): 24.2',
+            '      Response(comp2.z): 25.2',
             ]
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
@@ -149,11 +150,12 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 99.88',
             '      comp1.y: 16.1',
             '   outputs:',
-            "      _pseudo_0: 5.5",
-            "      _pseudo_1: Hello',;','",
-            '      _pseudo_2: 24.2',
-            '      _pseudo_3: 25.2',
+            '      Response(comp1.a_array[2]): 5.5',
+            "      Response(comp1.a_string): Hello',;','",
+            '      Response(comp1.z): 24.2',
+            '      Response(comp2.z): 25.2',
             ]
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         count = 0
         for index, line in enumerate(lines):
@@ -295,21 +297,25 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 2.0',
             '      comp1.x_array[2]: 2.0',
             '   outputs:',
-            '      _pseudo_4[0]: 1.0',
-            '      _pseudo_4[1]: 3.0',
-            '      _pseudo_4[2]: 5.5',
-            '      _pseudo_5.data: ',
-            '      _pseudo_5.v1: 1.0',
-            '      _pseudo_5.v2: 2.0',
-            '      _pseudo_5.vt2.data: ',
-            '      _pseudo_5.vt2.vt3.a: 1.0',
-            '      _pseudo_5.vt2.vt3.b: 12.0',
-            '      _pseudo_5.vt2.vt3.data: ',
-            '      _pseudo_5.vt2.x: -1.0',
-            '      _pseudo_5.vt2.y: -2.0',
+            '      Response(comp1.a_array)[0]: 1.0',
+            '      Response(comp1.a_array)[1]: 3.0',
+            '      Response(comp1.a_array)[2]: 5.5',
+            '      Response(comp1.vt).data: ',
+            '      Response(comp1.vt).v1: 1.0',
+            '      Response(comp1.vt).v2: 2.0',
+            '      Response(comp1.vt).vt2.data: ',
+            '      Response(comp1.vt).vt2.vt3.a: 1.0',
+            '      Response(comp1.vt).vt2.vt3.b: 12.0',
+            '      Response(comp1.vt).vt2.vt3.data: ',
+            '      Response(comp1.vt).vt2.x: -1.0',
+            '      Response(comp1.vt).vt2.y: -2.0',
             '      comp1.a_array[0]: 1.0',
             '      comp1.a_array[1]: 3.0',
             '      comp1.a_array[2]: 5.5',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0.0',
+            '      comp1.exec_count: 1.0',
+            '      comp1.itername: 1-comp1',
             '      comp1.vt.data: ',
             '      comp1.vt.v1: 1.0',
             '      comp1.vt.v2: 2.0',
@@ -319,9 +325,15 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.vt.vt2.vt3.data: ',
             '      comp1.vt.vt2.x: -1.0',
             '      comp1.vt.vt2.y: -2.0',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0.0',
+            '      comp2.exec_count: 1.0',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
             '      driver.workflow.itername: 1',
             ]
 
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case:'):
@@ -351,10 +363,22 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 2.0',
             '      comp1.x_array[2]: 2.0',
             '   outputs:',
-            '      _pseudo_4: [ 1.   3.   5.5]',
-            '      _pseudo_5: <openmdao.main.test.test_vartree.DumbVT object',
+            '      Response(comp1.a_array): [ 1.   3.   5.5]',
+            '      Response(comp1.vt): <openmdao.main.test.test_vartree.DumbVT object',
+            '      comp1.a_array: [ 1.   3.   5.5]',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0',
+            '      comp1.exec_count: 2',
+            '      comp1.itername: 1-comp1',
+            '      comp1.vt: <openmdao.main.test.test_vartree.DumbVT object',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0',
+            '      comp2.exec_count: 2',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
             '      driver.workflow.itername: 1',
             ]
+#        print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case:'):
@@ -363,7 +387,8 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
                     elif expected[i].startswith('   timestamp:'):
                         self.assertTrue(lines[index+i].startswith('   timestamp:'))
-                    elif expected[i].startswith('      _pseudo_5:'):
+                    elif expected[i].startswith('      Response(comp1.vt):') or \
+                         expected[i].startswith('      comp1.vt:'):
                         self.assertTrue(lines[index+i].startswith(expected[i]))
                     else:
                         self.assertEqual(lines[index+i], expected[i])

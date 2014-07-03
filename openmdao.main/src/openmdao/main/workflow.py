@@ -267,7 +267,6 @@ class Workflow(object):
                         for constraint in driver.get_ineq_constraints().values())
 
         graph = scope._depgraph
-#        graph = scope._depgraph.full_subgraph(self.get_names(full=True))
         for src, dst in _get_inner_connections(graph, srcs, dsts):
             if scope.get_metadata(src)['iotype'] == 'in':
                 continue
@@ -276,6 +275,15 @@ class Workflow(object):
                self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
                 outputs.append(src)
+
+        for comp in self.get_components():
+            for name in comp.list_outputs():
+                src = '%s.%s' % (comp.name, name)
+                path = prefix+src
+                if src not in outputs and \
+                   self._check_path(path, includes, excludes):
+                    self._rec_outputs.append(src)
+                    outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name

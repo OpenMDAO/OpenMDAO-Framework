@@ -15,6 +15,7 @@ from numpy  import ndarray
 from struct import pack
 from uuid   import uuid1
 
+from openmdao.main.api import VariableTree
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.releaseinfo import __version__
 
@@ -79,7 +80,7 @@ class _BaseRecorder(object):
         # Collect expression data.
         expressions = {}
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
-                                                 key=lambda item: item[1][0]):
+                                          key=lambda item: item[1][0]):
             prefix = driver.parent.get_pathname()
             if prefix:
                 prefix += '.'
@@ -120,7 +121,8 @@ class _BaseRecorder(object):
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
-            info = dict(name=driver.get_pathname(), _id=id(driver))
+            info = dict(name=driver.get_pathname(), _id=id(driver),
+                        recording=ins+outs)
             if hasattr(driver, 'get_parameters'):
                 info['parameters'] = \
                     [str(param) for param in driver.get_parameters().values()]
@@ -164,7 +166,7 @@ class JSONCaseRecorder(_BaseRecorder):
     If `out` is None, cases will be ignored.
     """
 
-    def __init__(self, out='stdout', indent=4, sort_keys=True):
+    def __init__(self, out='cases.json', indent=4, sort_keys=True):
         super(JSONCaseRecorder, self).__init__()
         if isinstance(out, basestring):
             if out == 'stdout':
@@ -176,32 +178,37 @@ class JSONCaseRecorder(_BaseRecorder):
         self.out = out
         self.indent = indent
         self.sort_keys = sort_keys
+        self._count = 0
 
     def record_constants(self, constants):
         """ Record constant data. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         info = self.get_simulation_info(constants)
         category = 'simulation_info'
         data = self._dump(info, category,
                           ('variable_metadata', 'expressions', 'constants'))
-        self.out.write('{\n"%s": ' % category)
+        self._count += 1
+        self.out.write('{\n"__length_%s": %s\n, "%s": '
+                       % (self._count, len(data), category))
         self.out.write(data)
         self.out.write('\n')
 
         for i, info in enumerate(self.get_driver_info()):
             category = 'driver_info_%s' % (i+1)
             data = self._dump(info, category)
-            self.out.write(', "%s": ' % category)
+            self._count += 1
+            self.out.write(', "__length_%s": %s\n, "%s": '
+                           % (self._count, len(data), category))
             self.out.write(data)
             self.out.write('\n')
 
         self.out.flush()
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
-        """ Dump the given run data in a "pretty" form. """
-        if not self.out:  # if self.out is None, just do nothing
+        """ Dump the given run data. """
+        if not self.out:
             return
 
         info = self.get_case_info(driver, inputs, outputs, exc,
@@ -209,7 +216,9 @@ class JSONCaseRecorder(_BaseRecorder):
         self._cases += 1
         category = 'iteration_case_%s' % self._cases
         data = self._dump(info, category, ('data',))
-        self.out.write(', "%s": ' % category)
+        self._count += 1
+        self.out.write(', "__length_%s": %s\n, "%s": '
+                       % (self._count, len(data), category))
         self.out.write(data)
         self.out.write('\n')
         self.out.flush()
@@ -304,14 +313,33 @@ class _Encoder(json.JSONEncoder):
     """ Special encoder to deal with types not handled by default encoder. """
 
     def default(self, obj):
-        if isinstance(obj, ndarray):
-            return obj.tolist()
-        elif hasattr(obj, 'json_encode'):
-            return obj.json_encode()
-        elif hasattr(obj, '__dict__'):
-            return obj.__dict__
-        else:
-            return super(_Encoder, self).default(obj)
+        fixed = _fixup(obj)
+        if fixed is obj:
+            super(_Encoder, self).default(obj)
+        return fixed
+
+
+def _fixup(value):
+    """
+    Fix object for json encoder, also bson. Stock bson doesn't handle a lot
+    of types, just skips them.
+    """
+    if isinstance(value, dict):
+        for key, val in value.items():
+            value[key] = _fixup(val)
+        return value
+    elif isinstance(value, (list, tuple, set, frozenset)):
+        return [_fixup(val) for val in value]
+    elif isinstance(value, ndarray):
+        return value.tolist()
+    elif isinstance(value, VariableTree):
+        return dict([(name, _fixup(getattr(value, name)))
+                     for name in value.list_vars()])
+    elif hasattr(value, 'json_encode') and callable(value.json_encode):
+        return value.json_encode()
+    elif hasattr(value, '__dict__'):
+        return _fixup(value.__dict__)
+    return value
 
 
 class BSONCaseRecorder(_BaseRecorder):
@@ -348,7 +376,7 @@ class BSONCaseRecorder(_BaseRecorder):
 
     """
 
-    def __init__(self, out):
+    def __init__(self, out='cases.bson'):
         super(BSONCaseRecorder, self).__init__()
         if isinstance(out, basestring):
             out = open(out, 'w')
@@ -356,20 +384,16 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def record_constants(self, constants):
         """ Record constant data. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
-        info = self.get_simulation_info(constants)
-        category = 'simulation_info'
-        data = self._dump(info, category,
-                          ('variable_metadata', 'expressions', 'constants'))
+        data = self._dump(self.get_simulation_info(constants))
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
 
-        for i, info in enumerate(self.get_driver_info()):
-            category = 'driver_info_%s' % (i+1)
-            data = self._dump(info, category)
+        for info in self.get_driver_info():
+            data = self._dump(info)
             reclen = pack('<L', len(data))
             self.out.write(reclen)
             self.out.write(data)
@@ -378,51 +402,20 @@ class BSONCaseRecorder(_BaseRecorder):
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
         """ Dump the given run data in a "pretty" form. """
-        if not self.out:  # if self.out is None, just do nothing
+        if not self.out:
             return
 
         info = self.get_case_info(driver, inputs, outputs, exc,
                                   case_uuid, parent_uuid)
-        self._cases += 1
-        category = 'iteration_case_%s' % self._cases
-        data = self._dump(info, category, ('data',))
+        data = self._dump(info)
         reclen = pack('<L', len(data))
         self.out.write(reclen)
         self.out.write(data)
         self.out.flush()
 
-    def _dump(self, info, category, subcategories=None):
+    def _dump(self, info):
         """ Return BSON data, report any bad keys & values encountered. """
-        try:
-            return bson.dumps(info)
-        except Exception as exc:
-            # Log bad keys & values.
-            bad = []
-            for key in sorted(info):
-                try:
-                    bson.dumps(info[key])
-                except Exception:
-                    bad.append(key)
-
-            # If it's in a subcategory we only report the first subcategory.
-            if subcategories is not None and bad[0] in subcategories:
-                key = bad[0]
-                category = '.'.join((category, key))
-                info = info[key]
-                bad = []
-                for key in sorted(info):
-                    try:
-                        bson.dumps(info[key])
-                    except Exception:
-                        bad.append(key)
-
-            msg = 'BSON write failed for %s:' % category
-            logging.error(msg)
-            for key in bad:
-                logging.error('    %s: %s', key, info[key])
-
-            msg = '%s keys %s: %s' % (msg, bad, exc)
-            raise RuntimeError(msg)
+        return bson.dumps(_fixup(info))
 
     def close(self):
         """

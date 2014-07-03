@@ -78,6 +78,20 @@ class System(object):
     def get_outputs(self, local=False):
         return [u for u,v in self.out_edges]
 
+    def get_size(self, names):
+        """Return the total size of the variables 
+        corresponding to the given names.
+        """
+        # TODO: names may at some point contain tuples (param groups)
+        #       and only the first name in the tuple should be sized
+        size = 0
+        uvec = self.vec['u']
+        for name in names:
+            # Not sure if derivatives will need local size or global
+            # size, but for now, assuming local and using VecWrapper
+            size += uvec[name].size
+        return size
+
     def set_ordering(self, ordering):
         pass
 

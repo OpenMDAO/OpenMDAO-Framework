@@ -164,18 +164,48 @@ Case:
    timestamp: 1400606208.869153
    parent_uuid: 87001ef0-e042-11e3-8004-005056000100
    outputs:
+      nested.doublenest.comp1.derivative_exec_count: 0
+      nested.doublenest.comp1.exec_count: 1
+      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
+      nested.doublenest.comp1.y1: 1.0
+      nested.doublenest.comp2.derivative_exec_count: 0
+      nested.doublenest.comp2.exec_count: 1
+      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
+      nested.doublenest.comp2.y1: 101.0
+      nested.doublenest.comp3.derivative_exec_count: 0
+      nested.doublenest.comp3.exec_count: 1
+      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
+      nested.doublenest.comp3.y1: 10101.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
    uuid: 87001ef0-e042-11e3-8004-005056000100
    timestamp: 1400606208.869368
    parent_uuid: 870019e8-e042-11e3-8003-005056000100
    outputs:
+      nested.comp1.derivative_exec_count: 0
+      nested.comp1.exec_count: 1
+      nested.comp1.itername: 1-nested.1-comp1
+      nested.comp1.y1: 1.0
+      nested.comp2.derivative_exec_count: 0
+      nested.comp2.exec_count: 1
+      nested.comp2.itername: 1-nested.1-comp2
+      nested.comp2.y1: 101.0
+      nested.comp3.derivative_exec_count: 0
+      nested.comp3.exec_count: 1
+      nested.comp3.itername: 1-nested.1-comp3
+      nested.comp3.y1: 10101.0
+      nested.doublenest.derivative_exec_count: 0
+      nested.doublenest.exec_count: 1
+      nested.doublenest.itername: 1-nested.1-doublenest
       nested.driver.workflow.itername: 1-nested.1
 Case:
    uuid: 870019e8-e042-11e3-8003-005056000100
    timestamp: 1400606208.869599
    outputs:
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+      nested.derivative_exec_count: 0
+      nested.exec_count: 1
+      nested.itername: 1-nested"""
 
         expected = expected.split('\n')
 #        print sout.getvalue()
@@ -281,18 +311,48 @@ Case:
    timestamp: 1400606634.601406
    parent_uuid: 84c1b666-e043-11e3-8007-005056000100
    outputs:
+      nested.doublenest.comp1.derivative_exec_count: 0
+      nested.doublenest.comp1.exec_count: 1
+      nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
+      nested.doublenest.comp1.y1: 1.0
+      nested.doublenest.comp2.derivative_exec_count: 0
+      nested.doublenest.comp2.exec_count: 1
+      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
+      nested.doublenest.comp2.y1: 101.0
+      nested.doublenest.comp3.derivative_exec_count: 0
+      nested.doublenest.comp3.exec_count: 1
+      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
+      nested.doublenest.comp3.y1: 10101.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
    uuid: 84c1b666-e043-11e3-8007-005056000100
    timestamp: 1400606634.601622
    parent_uuid: 84c1b0f8-e043-11e3-8006-005056000100
    outputs:
+      nested.comp1.derivative_exec_count: 0
+      nested.comp1.exec_count: 1
+      nested.comp1.itername: 1-nested.1-comp1
+      nested.comp1.y1: 1.0
+      nested.comp2.derivative_exec_count: 0
+      nested.comp2.exec_count: 1
+      nested.comp2.itername: 1-nested.1-comp2
+      nested.comp2.y1: 101.0
+      nested.comp3.derivative_exec_count: 0
+      nested.comp3.exec_count: 1
+      nested.comp3.itername: 1-nested.1-comp3
+      nested.comp3.y1: 10101.0
+      nested.doublenest.derivative_exec_count: 0
+      nested.doublenest.exec_count: 1
+      nested.doublenest.itername: 1-nested.1-doublenest
       nested.driver.workflow.itername: 1-nested.1
 Case:
    uuid: 84c1b0f8-e043-11e3-8006-005056000100
    timestamp: 1400606634.601857
    outputs:
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+      nested.derivative_exec_count: 0
+      nested.exec_count: 1
+      nested.itername: 1-nested"""
 
         expected = expected.split('\n')
 #        print sout.getvalue()
@@ -350,6 +410,14 @@ Case:
    uuid: 0d85f3c5-e044-11e3-8001-005056000100
    timestamp: 1400606864.054437
    outputs:
+      comp1.derivative_exec_count: 0
+      comp1.exec_count: 1
+      comp1.itername: 1-comp1
+      comp1.y1: 1.0
+      comp2.derivative_exec_count: 0
+      comp2.exec_count: 1
+      comp2.itername: 1-comp2
+      comp2.y1: 101.0
       driver.workflow.itername: 1"""
 
         expected = expected.split('\n')
@@ -401,6 +469,10 @@ Case:
    uuid: 4f3ca163-e044-11e3-8002-005056000100
    timestamp: 1400606974.301962
    outputs:
+      comp1.derivative_exec_count: 0
+      comp1.exec_count: 1
+      comp1.itername: 1-comp1
+      comp1.string: Testing
       driver.workflow.itername: 1"""
 
         expected = expected.split('\n')
@@ -463,7 +535,8 @@ Case:
          'driverB.workflow.itername: 1-driverB.4',
          'driver.workflow.itername: 1'
          ]
-        lines = [l.strip() for l in sout.getvalue().split('\n') if 'itername' in l]
+        lines = [l.strip() for l in sout.getvalue().split('\n')
+                                 if 'workflow.itername' in l]
         for i, line in enumerate(lines):
             self.assertEqual(line, expected[i])
 

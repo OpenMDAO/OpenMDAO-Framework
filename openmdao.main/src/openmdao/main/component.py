@@ -179,7 +179,6 @@ class Component(Container):
         self._provideJ_bounds = None
 
         self._case_id = ''
-        self._var_sizes = {}
 
         self._complex_step = False
 
@@ -698,7 +697,6 @@ class Component(Container):
         self._container_names = None
         self._new_config = True
         self._provideJ_bounds = None
-        self._var_sizes = {}
 
     @rbac(('owner', 'user'))
     def list_inputs(self):
@@ -1873,23 +1871,6 @@ class Component(Container):
     def get_req_cpus(self):
         """Return requested_cpus"""
         return self.mpi.requested_cpus
-
-    @rbac(('owner', 'user'))
-    def get_float_var_info(self, name):
-        """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value
-        can be expressed as an array of floats.  Otherwise, None is
-        returned.
-        """
-        info = self._var_sizes.get(name, __missing__)
-        if info is __missing__:
-            try:
-                info = flattened_size_info(name, self)
-            except TypeError:
-                info = None
-            self._var_sizes[name] = info
-
-        return info
 
     @rbac(('owner', 'user'))
     def setup_systems(self):
