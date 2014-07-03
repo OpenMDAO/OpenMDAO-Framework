@@ -412,8 +412,15 @@ class System(object):
 
         self.mode = mode
 
-        self.sol_vec = self.vec[{'forward': 'du', 'adjoint': 'df'}[mode]]
-        self.rhs_vec = self.vec[{'forward': 'df', 'adjoint': 'du'}[mode]]
+        if mode == 'forward':
+            self.sol_vec = self.vec['du']
+            self.rhs_vec = self.vec['df']
+        else:
+            self.sol_vec = self.vec['df']
+            self.rhs_vec = self.vec['du']
+
+        for subsystem in self.local_subsystems():
+            subsystem.set_mode(mode)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -424,9 +431,6 @@ class System(object):
     def calc_gradient(self, inputs, outputs, mode='auto'):
         """ Return the gradient for this system. """
 
-        # TODO - Add support for specifying inputs and outputs. Right now, it only
-        # returns the gradient of obj+con wrt param.
-
         self.set_mode(mode)
 
         self.linearize()
@@ -434,7 +438,7 @@ class System(object):
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
 
-        self.solver.solve()
+        self.solver.solve(inputs, outputs)
 
     def apply_dFdpu(self, arguments):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
