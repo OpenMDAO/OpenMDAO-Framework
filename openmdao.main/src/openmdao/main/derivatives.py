@@ -294,7 +294,7 @@ def applyJ(system):
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
     for key, value in arg.iteritems():
-        if key not in result and any(value != 0):
+        if any(value != 0):
             nonzero = True
             break
 

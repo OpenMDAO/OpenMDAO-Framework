@@ -64,7 +64,7 @@ class ScipyGMRES(LinearSolver):
         num_output = system.get_size(outputs)
         n_edge = system.vec['f'].array.size
 
-        J = zeros((num_input, num_output))
+        J = zeros((num_output, num_input))
         RHS = zeros((n_edge, 1))
         A = LinearOperator((n_edge, n_edge),
                            matvec=self.mult,
@@ -127,6 +127,7 @@ class ScipyGMRES(LinearSolver):
                 j += 1
 
         #print inputs, '\n', outputs, '\n', J
+        print 'dx', dx
         return J
 
     def mult(self, arg):
@@ -138,7 +139,11 @@ class ScipyGMRES(LinearSolver):
         system.applyJ('nothing')
 
         for varname in self.inputs:
-            system.rhs_vec[varname] += system.sol_vec[varname]
+            system.rhs_vec[varname] = system.sol_vec[varname]
+
+        # HACK for test. Remove this
+        system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
+        system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
 
         print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]

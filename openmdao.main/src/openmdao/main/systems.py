@@ -596,7 +596,7 @@ class ExplicitSystem(SimpleSystem):
             vec['df'].array[:] = 0.0
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
-            for var in self.get_inputs():
+            for var in self.get_outputs():
                 vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode

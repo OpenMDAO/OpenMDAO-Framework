@@ -734,7 +734,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp.y = 5
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp.x'],
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward')
 

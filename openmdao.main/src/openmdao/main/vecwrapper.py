@@ -17,7 +17,7 @@ class VecWrapper(object):
 
         allvars = system.all_variables
         vector_vars = system.vector_vars
-        
+
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subvars = set()  # set of all names representing subviews of other views
 
@@ -31,7 +31,7 @@ class VecWrapper(object):
         #self._dups = dict([(v,u) for u,v in system.in_edges if u != v and u in vector_vars])
 
         # first, add views for vars whose sizes are added to the total,
-        # i.e., either they are basevars or their basevars are not included 
+        # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
         for i, (name, var) in enumerate(vector_vars.items()):
@@ -46,7 +46,7 @@ class VecWrapper(object):
                                          (system.name,start,end,self.array.size))
                 self._info[name] = (self.array[start:end], start)
                 if end-start > self.array[start:end].size:
-                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" % 
+                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                  (system.name,name, [start,end],self[name].size))
                 start += sz
 
@@ -68,8 +68,8 @@ class VecWrapper(object):
                     self._info[name] = (self.array[sub_idx], substart)
                     self._subvars.add(name)
                     if self.array[sub_idx].size != sz:
-                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" % 
-                                             (system.name, name, 
+                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                             (system.name, name,
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
 
@@ -105,7 +105,7 @@ class VecWrapper(object):
             else:
                 lst.append((name, view))
         return lst
-        
+
     def start(self, name):
         """Return the starting index for the array view belonging
         to the given name. name may contain array indexing.
@@ -158,7 +158,7 @@ class VecWrapper(object):
             if start is not None and name not in self._subvars:
                 #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
-           
+
     def set_to_vec(self, vec, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given array.
@@ -171,7 +171,7 @@ class VecWrapper(object):
             if start is not None and name not in self._subvars:
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
-           
+
     def dump(self, vecname=''):
         for name, (array_val, start) in self._info.items():
             mpiprint("%s - %s: (%d,%d) %s" % (vecname,name, start, start+len(array_val),array_val))
@@ -181,7 +181,7 @@ class VecWrapper(object):
 
 class DataTransfer(object):
     """A wrapper object that manages data transfer between
-    systems via scatters (and possibly send/receive for 
+    systems via scatters (and possibly send/receive for
     non-array values)
     """
     def __init__(self, system, var_idxs, input_idxs, scatter_conns, noflat_vars):
@@ -194,7 +194,7 @@ class DataTransfer(object):
         # TODO: remove the following attrs (used for debugging only)
         self.var_idxs = idx_merge(var_idxs)
         self.input_idxs = idx_merge(input_idxs)
-        
+
         if not (MPI or scatter_conns or noflat_vars):
             #mpiprint("RETURNING (no xfer) for %s" % system.name)
             return  # no data to xfer
@@ -202,26 +202,26 @@ class DataTransfer(object):
         #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
 
         if len(self.var_idxs) != len(self.input_idxs):
-            raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" % 
+            raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
                                 (len(self.var_idxs), len(self.input_idxs),
                                   self.var_idxs, self.input_idxs, system.name))
 
         if MPI:
-            var_idx_set = PETSc.IS().createGeneral(self.var_idxs, 
+            var_idx_set = PETSc.IS().createGeneral(self.var_idxs,
                                                    comm=system.mpi.comm)
-            input_idx_set = PETSc.IS().createGeneral(self.input_idxs, 
+            input_idx_set = PETSc.IS().createGeneral(self.input_idxs,
                                                      comm=system.mpi.comm)
 
             if system.app_ordering is not None:
                 var_idx_set = system.app_ordering.app2petsc(var_idx_set)
-    
+
             try:
                 # note that scatter created here can be reused for other vectors as long
                 # as their sizes are the same as 'u' and 'p'
                 self.scatter = PETSc.Scatter().create(system.vec['u'].petsc_vec, var_idx_set,
                                                       system.vec['p'].petsc_vec, input_idx_set)
             except Exception as err:
-                raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" % 
+                raise RuntimeError("ERROR in %s (var_idxs=%s, input_idxs=%s, usize=%d, psize=%d): %s" %
                                       (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
                                        system.vec['p'].array.size, str(err)))
         else:  # serial execution
@@ -234,7 +234,7 @@ class DataTransfer(object):
         if self.scatter is None and not self.noflat_vars:
             #mpiprint("dataxfer is a noop for system %s" % system.name)
             return
-        
+
         if MPI:
             src = srcvec.petsc_vec
             dest = destvec.petsc_vec
@@ -301,7 +301,7 @@ def petsc_linspace(start, end):
         dtype = PETSc.IntType
     else:
         dtype = 'i'
-    return numpy.array(numpy.linspace(start, end-1, end-start), 
+    return numpy.array(numpy.linspace(start, end-1, end-start),
                        dtype=dtype)
 
 
@@ -322,6 +322,6 @@ class SerialScatter(object):
             #for s,d in zip(self.src_idxs, self.dest_idxs):
                 #print "%s (%s) -> %s (%s)" % (sk[s], srcvec[s], dk[d], destvec[d])
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
-            self.svec.dump()
-            self.dvec.dump()
+            #self.svec.dump()
+            #self.dvec.dump()
             #print "post-scatter, dest = %s" % destvec
