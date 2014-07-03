@@ -4,6 +4,8 @@ import json
 from struct import unpack
 from weakref import ref
 
+from openmdao.main.api import Assembly
+
 
 class CaseDataset(object):
     """
@@ -109,8 +111,13 @@ class CaseDataset(object):
             all_names = driver_names
 
         case_ids = None
+        query_id = None
         parent_id = None
-        if query.parent_id is not None:
+        if query.case_id is not None:
+            query_id = query.case_id
+            case_ids = set([query_id])
+            driver_id = None
+        elif query.parent_id is not None:
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
             parent_id = query.parent_id
@@ -222,16 +229,75 @@ class CaseDataset(object):
                         row.append(nan)
                 rows.append(row)
 
-            if case_id == parent_id:
+            if case_id == query_id or case_id == parent_id:
                 break  # Parent is last case recorded.
+
+        if query_id and not rows:
+            raise ValueError('No case with _id %s', query_id)
 
         if query.transpose:
             tmp = DictList(names)
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
             return tmp
-        else:
-            return rows
+        elif query_id:
+            return rows[0]
+        return rows
+
+    def restore(self, assembly, case_id):
+        """ Restore case `case_id` into `assembly`. """
+        case = self.data.case(case_id).fetch()
+
+#        print '\nRestore:'
+        # Restore constant inputs.
+        constants = self.simulation_info['constants']
+        for name in sorted(constants.keys()):
+#            print 'constant set(%r, %s)' % (name, constants[name])
+            assembly.set(name, constants[name])
+
+        # Restore case data.
+        global_dict = dict(__builtins__=None)
+        metadata = self.simulation_info['variable_metadata']
+        for name, value in case.items():
+            if name in metadata:
+                iotype = metadata[name]['iotype']
+            elif name.startswith('_pseudo_'):
+                name += '.out0'
+                iotype = 'out'
+            else:
+#                print 'case skip %s' % name
+                continue
+
+#            print 'case set(%r, %s) %s' % (name, value, iotype)
+            if '[' in name:
+                exec('assembly.%s = value' % name, global_dict, locals())
+            else:
+                assembly.set(name, value)
+
+            if iotype == 'out':
+                # Find connected inputs and set those as well.
+                asm = assembly
+                src = name
+                for name in src.split('.')[:-1]:
+                    obj = getattr(asm, name)
+                    if not isinstance(obj, Assembly):
+                        break
+                    asm = obj
+                prefix = asm.get_pathname()
+                if prefix:
+                    prefix += '.'
+                src = src[len(prefix):]
+#                print '    asm %r' % prefix
+#                print '    var %r' % src
+#                print '    node', asm._depgraph.node[src]
+#                print '    edges', asm._depgraph.out_edges(src)
+                for src, dst in asm._depgraph.out_edges(src):
+                    dst = prefix+dst
+#                    print '    dst set(%r, %s)' % (dst, value)
+                    if '[' in dst:
+                        exec('assembly.%s = value' % dst, global_dict, locals())
+                    else:
+                        assembly.set(dst, value)
 
 
 class Query(object):
@@ -245,6 +311,7 @@ class Query(object):
     def __init__(self, dataset):
         self._dataset = dataset
         self.driver_name = None
+        self.case_id = None
         self.parent_id = None
         self.vnames = None
         self.local_only = False
@@ -260,9 +327,16 @@ class Query(object):
         self.driver_name = driver_name
         return self
 
+    def case(self, case_id):
+        """ Return this case. """
+        self.case_id = case_id
+        self.parent_id = None
+        return self
+
     def parent_case(self, parent_case_id):
         """ Filter the cases to only include this case and its children. """
         self.parent_id = parent_case_id
+        self.case_id = None
         return self
 
     def vars(self, *args):
@@ -319,6 +393,15 @@ class DictList(list):
             return super(DictList, self).__getitem__(key)
         else:
             return super(DictList, self).__getitem__(self.name_map[key])
+
+    def keys(self):
+        return self.name_map.keys()
+
+    def items(self):
+        return [(key, self[key]) for key in self.name_map]
+
+    def values(self):
+        return [self[key] for key in self.name_map]
 
 
 class _CaseNode(object):

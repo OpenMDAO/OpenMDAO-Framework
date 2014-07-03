@@ -2,6 +2,7 @@
 Test query of case recorder file.
 """
 
+import glob
 import os.path
 import unittest
 
@@ -23,6 +24,10 @@ class SellarCO(Assembly):
     local_des_var_targets = Array([1.0], iotype='in')
     coupling_var_targets = Array([3.16, 0.0], iotype='in')
 
+    def __init__(self, ext='.new'):
+        self._ext = ext
+        super(SellarCO, self).__init__()
+
     def configure(self):
         """ Creates a new Assembly with this problem
 
@@ -30,8 +35,8 @@ class SellarCO(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        self.recorders = [JSONCaseRecorder('sellar_json.new'),
-                          BSONCaseRecorder('sellar_bson.new')]
+        self.recorders = [JSONCaseRecorder('sellar_json'+self._ext),
+                          BSONCaseRecorder('sellar_bson'+self._ext)]
 
         # Global Optimization
         self.add('driver', SLSQPdriver())
@@ -131,6 +136,9 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         self.cds = None
+        for path in glob.glob(os.path.join(os.path.dirname(__file__),
+                                           'sellar_*.restore')):
+            os.remove(path)
 
     def test_query(self):
         # Full dataset.
@@ -353,6 +361,41 @@ class TestCase(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), 'truncated.json')
         cases = CaseDataset(path, 'json').data.fetch()
         self.assertEqual(len(cases), 7)
+
+    def test_restore(self):
+        # Restore from case, run, verify outputs match expected.
+        case_id = '7bd00c94-012c-11e4-9566-005056000100'  # iteration_case_1825
+        top = set_as_top(SellarCO('.restore'))
+        self.cds.restore(top, case_id)
+
+        top.run()
+
+        path = os.path.join(os.path.dirname(__file__), 'sellar_json.restore')
+        cds = CaseDataset(path, 'json')
+        vnames = cds.data.var_names().fetch()
+        cases = cds.data.fetch()
+        self.assertEqual(len(cases), 322)
+
+        iteration_case_322 = {
+            "_pseudo_0": 3.1833911345239598,
+            "_pseudo_1": 7.1329259991714449e-08,
+            "_pseudo_2": 1.0159265073590318e-07,
+            "coupling_var_targets[0]": 3.159999999989676,
+            "coupling_var_targets[1]": 3.7553981923553157,
+            "driver.workflow.itername": "24",
+            "global_des_var_targets[0]": 1.9776544546085641,
+            "global_des_var_targets[1]": -4.9291780851978736e-11,
+            "local_des_var_targets[0]": -1.0245069227736856e-09,
+            "localopt1.derivative_exec_count": 0,
+            "localopt1.error_code": 0,
+            "localopt1.exec_count": 320,
+            "localopt1.itername": "24-localopt1",
+            "localopt2.derivative_exec_count": 0,
+            "localopt2.error_code": 0,
+            "localopt2.exec_count": 278,
+            "localopt2.itername": "24-localopt2"
+        }
+        self.verify(vnames, cases[-1], iteration_case_322)
 
 
 if __name__ == '__main__':
