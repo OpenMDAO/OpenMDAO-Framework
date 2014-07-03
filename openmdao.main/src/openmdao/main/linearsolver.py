@@ -64,6 +64,7 @@ class ScipyGMRES(LinearSolver):
         n_edge = system.vec['f'].array.size
 
         J = zeros((num_input, num_output))
+        RHS = zeros((n_edge, 1))
         A = LinearOperator((n_edge, n_edge),
                            matvec=self.mult,
                            dtype=float)
@@ -89,13 +90,12 @@ class ScipyGMRES(LinearSolver):
 
             for irhs in in_range:
 
-                RHS = zeros((n_edge, 1))
                 RHS[irhs, 0] = 1.0
 
                 # Call GMRES to solve the linear system
-                dx, info = gmres(A, RHS,
-                                 tol=options.gmres_tolerance,
-                                 maxiter=options.gmres_maxiter)
+                dx, info = gmres(A, RHS)
+                                 #tol=options.gmres_tolerance,
+                                 #maxiter=options.gmres_maxiter)
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"
@@ -104,6 +104,8 @@ class ScipyGMRES(LinearSolver):
                     msg = "ERROR in calc_gradient in '%s': gmres failed " \
                           "for parameter '%s' at index %d"
                     logger.error(msg, wflow.parent.get_pathname(), param, irhs)
+
+                RHS[irhs, 0] = 0.0
 
                 i = 0
                 for item in outputs:
