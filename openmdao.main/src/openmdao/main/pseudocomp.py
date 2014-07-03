@@ -6,6 +6,7 @@ from numpy import ndarray, zeros
 
 from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
                                         flattened_value, get_val_and_index, get_index
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
 from openmdao.main.interfaces import implements, IComponent, IVariableTree, IAssembly
 from openmdao.main.printexpr import transform_expression, print_node
@@ -432,3 +433,16 @@ class PseudoComponent(object):
         belonging to this component.
         """
         return set((self.name,))
+
+    def applyJ(self, system):
+        """ Wrapper for component derivative specification methods.
+        Forward Mode.
+        """
+        applyJ(system)
+
+    def applyJT(self, system):
+        """ Wrapper for component derivative specification methods.
+        Adjoint Mode.
+        """
+        applyJT(system)
+

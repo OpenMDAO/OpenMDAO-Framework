@@ -79,7 +79,7 @@ class System(object):
         return [u for u,v in self.out_edges]
 
     def get_size(self, names):
-        """Return the total size of the variables 
+        """Return the total size of the variables
         corresponding to the given names.
         """
         # TODO: names may at some point contain tuples (param groups)
@@ -452,9 +452,9 @@ class System(object):
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
 
-        self.solver.solve(inputs, outputs)
+        return self.solver.solve(inputs, outputs)
 
-    def apply_dFdpu(self, arguments):
+    def applyJ(self, arguments):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -468,6 +468,8 @@ class SimpleSystem(System):
         self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
         #mpiprint("%s simple inputs = %s" % (self.name, self.get_inputs()))
+
+        self.J = None
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
@@ -531,7 +533,7 @@ class SimpleSystem(System):
     def linearize(self):
         """ Linearize this component. """
 
-        self._comp.linearize(first=True)
+        self.J = self._comp.linearize(first=True)
 
 
 class BoundarySystem(SimpleSystem):
@@ -580,7 +582,7 @@ class ExplicitSystem(SimpleSystem):
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
-    def apply_dFdpu(self, arguments):
+    def applyJ(self, arguments):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -592,21 +594,19 @@ class ExplicitSystem(SimpleSystem):
             self.scatter('du', 'dp')
 
             vec['df'].array[:] = 0.0
-            comp.applyJ(arguments)
+            comp.applyJ(self)
             vec['df'].array[:] *= -1.0
-            for var in self.variables:
-                if var in arguments:
-                    vec['df'][var][:] += vec['du'][var][:]
+            for var in self.get_inputs():
+                vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
             vec['df'].array[:] *= -1.0
-            comp.applyJ(arguments)
+            comp.applyJ(self)
             vec['df'].array[:] *= -1.0
             vec['du'].array[:] = 0.0
-            for var in self.variables:
-                if var in arguments:
-                    vec['du'][var][:] += vec['df'][var][:]
+            for var in self.get_inputs():
+                vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
 
@@ -785,13 +785,13 @@ class CompoundSystem(System):
         #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
         #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))
 
-    def apply_dFdpu(self, arguments):
+    def applyJ(self, arguments):
         """ Delegate to subsystems """
 
         if self.mode == 'forward':
             self.scatter('u', 'p')
         for subsystem in self.local_subsystems():
-            subsystem.apply_dFdpu(arguments)
+            subsystem.applyJ(arguments)
         if self.mode == 'adjoint':
             self.scatter('u', 'p')
 

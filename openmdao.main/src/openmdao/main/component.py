@@ -498,18 +498,18 @@ class Component(Container):
 
         return J
 
-    def applyJ(arg, result, residual, shape_cache, J=None):
+    def applyJ(self, system):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(arg, result, residual, shape_cache, J)
+        applyJ(system)
 
 
-    def applyJT(arg, result, residual, shape_cache, J=None):
+    def applyJT(self, system):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(arg, result, residual, shape_cache, J)
+        applyJT(system)
 
 
     def _post_execute(self):

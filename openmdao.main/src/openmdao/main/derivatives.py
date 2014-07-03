@@ -4,7 +4,6 @@ differentiation capability.
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 
@@ -271,7 +270,7 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(obj, arg, result, residual, shape_cache, J=None):
+def applyJ(system):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -279,6 +278,18 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
     #for key in result:
         #if key not in residual:
             #result[key] = -arg[key]
+
+    J = system.J
+    obj = system._comp
+    arg = {}
+    for item in system.get_inputs():
+        key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    result = {}
+    for item in system.get_outputs():
+        key = item.partition('.')[-1]
+        result[key] = system.rhs_vec[item]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
@@ -342,8 +353,6 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
         tmp = result[okey]
         used = set()
         for ikey in arg:
-            if ikey in result:
-                continue
 
             idx = None
             if ikey in ibounds:
@@ -364,13 +373,15 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            #if isinstance(obj, PseudoComponent) and \
+               #obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
+                #tmp += Jsub[0][0] * arg[ikey]
+            #else:
+                #tmp += Jsub.dot(arg[ikey])
+            # TODO - Unit conversion array pseudocomps are NOT SUPPORTED now
+            tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJ', arg, result
+    print 'applyJ', arg, result
 
 def applyJT(obj, arg, result, residual, shape_cache, J=None):
     """Multiply an input vector by the transposed Jacobian.
@@ -466,11 +477,13 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            #if isinstance(obj, PseudoComponent) and \
+               #obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
+                #tmp += Jsub[0][0] * arg[ikey]
+            #else:
+                #tmp += Jsub.dot(arg[ikey])
+            # TODO - Unit conversion array pseudocomps are NOT SUPPORTED now
+            tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJT', arg, result
 

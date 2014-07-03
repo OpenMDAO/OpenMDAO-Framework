@@ -17,7 +17,7 @@ class LinearSolver(object):
         pass
         #system = self._system
         #system.rhs_vec.array[:] = 0.0
-        #system.apply_dFdpu(system.variables.keys())
+        #system.applyJ(system.variables.keys())
         #system.rhs_vec.array[:] *= -1.0
         #system.rhs_vec.array[:] += system.rhs_buf.array[:]
         #system.rhs_vec.petsc.assemble()
@@ -57,10 +57,11 @@ class ScipyGMRES(LinearSolver):
         """ Run GMRES solver """
 
         system = self._system
+        self.inputs = inputs
 
         # Size the problem
-        num_input = system.vec['p'].array.size
-        num_output = system.vec['u'].array.size - num_input
+        num_input = system.get_size(inputs)
+        num_output = system.get_size(outputs)
         n_edge = system.vec['f'].array.size
 
         J = zeros((num_input, num_output))
@@ -81,14 +82,14 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            i1, i2 = system.get_var_info()
-
-            if isinstance(i1, list):
-                in_range = i1
+            indices = system.vec['u'].indices(param)
+            i1 = indices[0]
+            if len(indices) == 2:
+                i2 = indices[1]
             else:
-                in_range = range(i1, i2)
+                i2 = i1 + 1
 
-            for irhs in in_range:
+            for irhs in range(i1, i2):
 
                 RHS[irhs, 0] = 1.0
 
@@ -109,18 +110,19 @@ class ScipyGMRES(LinearSolver):
 
                 i = 0
                 for item in outputs:
-                    try:
-                        k1, k2 = bounds[item]
-                    except KeyError:
-                        i += wflow.get_width(item)
-                        continue
 
-                    if isinstance(k1, list):
-                        J[i:i+(len(k1)), j] = dx[k1]
-                        i += len(k1)
+                    if isinstance(item, tuple):
+                        item = item[0]
+
+                    indices = system.vec['u'].indices(item)
+                    k1 = indices[0]
+                    if len(indices) == 2:
+                        k2 = indices[1]
                     else:
-                        J[i:i+(k2-k1), j] = dx[k1:k2]
-                        i += k2-k1
+                        k2 = k1 + 1
+
+                    J[i:i+(k2-k1), j] = dx[k1:k2]
+                    i += k2-k1
 
                 j += 1
 
@@ -133,6 +135,11 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-        system.apply_dFdpu(system.variables.keys())
+        system.applyJ('nothing')
+
+        for varname in self.inputs:
+            system.rhs_vec[varname] += system.sol_vec[varname]
+
+        print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]
 
