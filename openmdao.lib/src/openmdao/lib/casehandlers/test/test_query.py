@@ -2,13 +2,15 @@
 Test query of case recorder file.
 """
 
-import math
 import os.path
 import unittest
 
-from openmdao.main.api import Assembly
+from math import isnan
+
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.main.datatypes.api import Array
-from openmdao.lib.casehandlers.api import CaseDataset, JSONCaseRecorder
+from openmdao.lib.casehandlers.api import CaseDataset, \
+                                          JSONCaseRecorder, BSONCaseRecorder
 from openmdao.lib.drivers.api import SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error
@@ -28,7 +30,8 @@ class SellarCO(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        self.recorders = [JSONCaseRecorder('sellar.new')]
+        self.recorders = [JSONCaseRecorder('sellar_json.new'),
+                          BSONCaseRecorder('sellar_bson.new')]
 
         # Global Optimization
         self.add('driver', SLSQPdriver())
@@ -97,9 +100,9 @@ class SellarCO(Assembly):
         self.localopt2.iprint = 0
 
 
-def create_file():
-    """ Create/update test data file. """
-    prob = SellarCO()
+def create_files():
+    """ Create/update test data files. """
+    prob = set_as_top(SellarCO())
 
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0
@@ -122,7 +125,7 @@ def create_file():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-#        create_file()  # Uncomment to create 'sellar.new'
+#        create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -178,10 +181,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(cases), 1826)
         self.assertEqual(len(cases[0]), len(names))
         for val in cases[0]:  # localopt2
-            self.assertTrue(math.isnan(val))
+            self.assertTrue(isnan(val))
         self.assertEqual(len(cases[-1]), len(names))
         for val in cases[-1]: # top
-            self.assertTrue(math.isnan(val))
+            self.assertTrue(isnan(val))
 
         iteration_case_69 = { # localopt1
             "dis1.x1": 1.0,
@@ -194,7 +197,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(val, iteration_case_69[name])
 
         self.assertEqual(cases[68]['dis1.y1'], iteration_case_69['dis1.y1'])
-       
+
         # Transposed.
         vars = self.cds.data.local().vars(names).by_variable().fetch()
         self.assertEqual(len(vars), len(names))
@@ -208,15 +211,15 @@ class TestCase(unittest.TestCase):
             "dis1.z2": 2.0,
         }
         for i, var in enumerate(vars):
-            self.assertTrue(math.isnan(var[0]))  # localopt2
-            self.assertTrue(math.isnan(var[-1])) # top
+            self.assertTrue(isnan(var[0]))  # localopt2
+            self.assertTrue(isnan(var[-1])) # top
             assert_rel_error(self, var[68], iteration_case_69[names[i]], 0.001)
 
         self.assertEqual(vars['dis1.y1'][68], iteration_case_69['dis1.y1'])
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '245db09c-fc9f-11e3-8001-005056000100'  # iteration_case_78
+        parent = '796bf5d1-012c-11e4-8e45-005056000100'  # iteration_case_78
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
@@ -323,6 +326,33 @@ class TestCase(unittest.TestCase):
         cases = self.cds.data.driver('localopt1').fetch()
         self.assertEqual(len(cases), 735)
         self.assertEqual(len(cases[0]), len(expected))
+
+    def test_bson(self):
+        # Simple check of _BSONReader.
+        names = ('dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2')
+
+        path = os.path.join(os.path.dirname(__file__), 'sellar.json')
+        json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
+
+        path = os.path.join(os.path.dirname(__file__), 'sellar.bson')
+        bson_cases = CaseDataset(path, 'bson').data.vars(*names).fetch()
+
+        for json_case, bson_case in zip(json_cases, bson_cases):
+            for json_val, bson_val in zip(json_case, bson_case):
+                if isnan(json_val):
+                    self.assertTrue(isnan(bson_val))
+                else:
+                    self.assertEqual(bson_val, json_val)
+
+    def test_json(self):
+        # Simple check of _JSONReader.
+        path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
+        cases = CaseDataset(path, 'json').data.fetch()
+        self.assertEqual(len(cases), 10)
+
+        path = os.path.join(os.path.dirname(__file__), 'truncated.json')
+        cases = CaseDataset(path, 'json').data.fetch()
+        self.assertEqual(len(cases), 7)
 
 
 if __name__ == '__main__':
