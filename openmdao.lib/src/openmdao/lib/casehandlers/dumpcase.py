@@ -6,6 +6,8 @@ import time
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.exceptions import traceback_str
 
+from openmdao.lib.casehandlers.util import driver_map
+
 
 class DumpCaseRecorder(object):
     """Dumps cases in a "pretty" form to `out`, which may be a string or a
@@ -34,11 +36,7 @@ class DumpCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        prefix = driver.parent.get_pathname()
-        if prefix:
-            prefix += '.'
-        self._cfg_map[driver] = ([prefix+name for name in inputs],
-                                 [prefix+name for name in outputs])
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data."""

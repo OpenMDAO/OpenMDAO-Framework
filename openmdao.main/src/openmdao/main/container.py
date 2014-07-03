@@ -12,14 +12,14 @@ import weakref
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
 # regarding this, but it isn't fixed yet.
 
-# pylint: disable-msg=W0212
+# pylint: disable=W0212
 copy._copy_dispatch[weakref.ref] = copy._copy_immutable
 copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
-# pylint: enable-msg=W0212
+# pylint: enable=W0212
 
 # pylint apparently doesn't understand namespace packages...
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 
 from zope.interface import Interface, implements
 
@@ -36,7 +36,7 @@ from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, \
                                      IComponent, IVariableTree
@@ -132,8 +132,8 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True and \
-           not trait.assumed_default and trait._illegal_default_ is True:
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True \
+       and not trait.assumed_default and trait._illegal_default_ is True:
 
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
@@ -473,7 +473,8 @@ class Container(SafeHasTraits):
         _check_bad_default(name, trait, self)
 
         #FIXME: saving our own list of added traits shouldn't be necessary...
-        self._added_traits[name] = trait
+        if name not in self._added_traits:
+            self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
@@ -555,7 +556,7 @@ class Container(SafeHasTraits):
 
     def _add_after_parent_set(self, name, obj):
         pass
-    
+
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
         object in preparation for insertion into self.
@@ -567,7 +568,7 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
-            
+
         removed = False
         if has_interface(obj, IContainer):
             # if an old child with that name exists, remove it
@@ -584,13 +585,13 @@ class Container(SafeHasTraits):
             obj.name = name
 
             self._add_after_parent_set(name, obj)
-            
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
-                
+
         return removed
 
     def _post_container_add(self, name, obj, removed):
@@ -780,7 +781,8 @@ class Container(SafeHasTraits):
                 # so check for them here and skip them if they don't point to
                 # anything.
                 if obj is not Missing:
-                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
+                    if is_instance(obj, (Container, VarTree)) and \
+                       id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
