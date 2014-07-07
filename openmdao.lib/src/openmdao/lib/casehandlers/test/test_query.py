@@ -12,8 +12,9 @@ from openmdao.main.api import Assembly, set_as_top
 from openmdao.main.datatypes.api import Array
 from openmdao.lib.casehandlers.api import CaseDataset, \
                                           JSONCaseRecorder, BSONCaseRecorder
-from openmdao.lib.drivers.api import SLSQPdriver
+from openmdao.lib.drivers.api import NewtonSolver, SLSQPdriver
 from openmdao.lib.optproblems import sellar
+from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -105,6 +106,38 @@ class SellarCO(Assembly):
         self.localopt2.iprint = 0
 
 
+class NewtonTest(Assembly):
+    """ Solve ``a*x**n + b*x - c = 0`` using multiple components. """
+
+    def __init__(self, ext='.json'):
+        self._ext = ext
+        super(NewtonTest, self).__init__()
+
+    def configure(self):
+        sub = Assembly()
+        sub.add('y_axn', ExecComp(exprs=['y = a * x**n']))
+        sub.add('y_bx', ExecComp(exprs=['y = b * x']))
+        sub.add('y_x1x2c', ExecComp(exprs=['y = x1 + x2 - c']))
+        sub.connect('y_axn.y', 'y_x1x2c.x1')
+        sub.connect('y_bx.y', 'y_x1x2c.x2')
+        sub.connect('y_axn.x', 'y_bx.x')
+        sub.driver.workflow.add(('y_axn', 'y_bx', 'y_x1x2c'))
+        sub.create_passthrough('y_axn.x')
+        sub.create_passthrough('y_x1x2c.y')
+
+        self.add('sub', sub)
+        driver = self.add('driver', NewtonSolver())
+        driver.add_parameter('sub.x', 0, 100)
+        driver.add_constraint('sub.y = 0')
+
+        sub.y_axn.a = 1.
+        sub.y_axn.n = 77. / 27.
+        sub.y_bx.b = 1.
+        sub.y_x1x2c.c = 10.
+
+        self.recorders = [JSONCaseRecorder('newton'+self._ext)]
+
+
 def create_files():
     """ Create/update test data files. """
     prob = set_as_top(SellarCO())
@@ -136,8 +169,7 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         self.cds = None
-        for path in glob.glob(os.path.join(os.path.dirname(__file__),
-                                           'sellar_*.restore')):
+        for path in glob.glob('newton.*'):
             os.remove(path)
 
     def test_query(self):
@@ -364,38 +396,23 @@ class TestCase(unittest.TestCase):
 
     def test_restore(self):
         # Restore from case, run, verify outputs match expected.
-        case_id = '7bd00c94-012c-11e4-9566-005056000100'  # iteration_case_1825
-        top = set_as_top(SellarCO('.restore'))
-        self.cds.restore(top, case_id)
-
+        top = set_as_top(NewtonTest())
         top.run()
+        assert_rel_error(self, top.sub.x, 2.06720359226, .0001)
+        assert_rel_error(self, top.sub.y, 0, .0001)
 
-        path = os.path.join(os.path.dirname(__file__), 'sellar_json.restore')
-        cds = CaseDataset(path, 'json')
-        vnames = cds.data.var_names().fetch()
+        cds = CaseDataset('newton.json', 'json')
         cases = cds.data.fetch()
-        self.assertEqual(len(cases), 322)
+        self.assertEqual(len(cases), 32)
 
-        iteration_case_322 = {
-            "_pseudo_0": 3.1833911345239598,
-            "_pseudo_1": 7.1329259991714449e-08,
-            "_pseudo_2": 1.0159265073590318e-07,
-            "coupling_var_targets[0]": 3.159999999989676,
-            "coupling_var_targets[1]": 3.7553981923553157,
-            "driver.workflow.itername": "24",
-            "global_des_var_targets[0]": 1.9776544546085641,
-            "global_des_var_targets[1]": -4.9291780851978736e-11,
-            "local_des_var_targets[0]": -1.0245069227736856e-09,
-            "localopt1.derivative_exec_count": 0,
-            "localopt1.error_code": 0,
-            "localopt1.exec_count": 320,
-            "localopt1.itername": "24-localopt1",
-            "localopt2.derivative_exec_count": 0,
-            "localopt2.error_code": 0,
-            "localopt2.exec_count": 278,
-            "localopt2.itername": "24-localopt2"
-        }
-        self.verify(vnames, cases[-1], iteration_case_322)
+        top = set_as_top(NewtonTest('.restore'))
+        cds.restore(top, cases[-1]['_id'])
+        top.run()
+        assert_rel_error(self, top.sub.x, 2.06720359226, .0001)
+        assert_rel_error(self, top.sub.y, 0, .0001)
+
+        cases = CaseDataset('newton.restore', 'json').data.fetch()
+        self.assertEqual(len(cases), 10)
 
 
 if __name__ == '__main__':

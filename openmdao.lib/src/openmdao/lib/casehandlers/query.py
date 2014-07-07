@@ -248,11 +248,9 @@ class CaseDataset(object):
         """ Restore case `case_id` into `assembly`. """
         case = self.data.case(case_id).fetch()
 
-#        print '\nRestore:'
         # Restore constant inputs.
         constants = self.simulation_info['constants']
         for name in sorted(constants.keys()):
-#            print 'constant set(%r, %s)' % (name, constants[name])
             assembly.set(name, constants[name])
 
         # Restore case data.
@@ -265,39 +263,31 @@ class CaseDataset(object):
                 name += '.out0'
                 iotype = 'out'
             else:
-#                print 'case skip %s' % name
                 continue
 
-#            print 'case set(%r, %s) %s' % (name, value, iotype)
             if '[' in name:
                 exec('assembly.%s = value' % name, global_dict, locals())
             else:
                 assembly.set(name, value)
 
-            if iotype == 'out':
-                # Find connected inputs and set those as well.
-                asm = assembly
-                src = name
-                for name in src.split('.')[:-1]:
-                    obj = getattr(asm, name)
-                    if not isinstance(obj, Assembly):
-                        break
-                    asm = obj
-                prefix = asm.get_pathname()
-                if prefix:
-                    prefix += '.'
-                src = src[len(prefix):]
-#                print '    asm %r' % prefix
-#                print '    var %r' % src
-#                print '    node', asm._depgraph.node[src]
-#                print '    edges', asm._depgraph.out_edges(src)
-                for src, dst in asm._depgraph.out_edges(src):
-                    dst = prefix+dst
-#                    print '    dst set(%r, %s)' % (dst, value)
-                    if '[' in dst:
-                        exec('assembly.%s = value' % dst, global_dict, locals())
-                    else:
-                        assembly.set(dst, value)
+            # Find connected inputs and set those as well.
+            asm = assembly
+            src = name
+            for name in src.split('.')[:-1]:
+                obj = getattr(asm, name)
+                if not isinstance(obj, Assembly):
+                    break
+                asm = obj
+            prefix = asm.get_pathname()
+            if prefix:
+                prefix += '.'
+            src = src[len(prefix):]
+            for src, dst in asm._depgraph.out_edges(src):
+                dst = prefix+dst
+                if '[' in dst:
+                    exec('assembly.%s = value' % dst, global_dict, locals())
+                else:
+                    assembly.set(dst, value)
 
 
 class Query(object):
@@ -478,6 +468,8 @@ class _Reader(object):
         """ Return sequence of 'iteration_case' dictionaries. """
         if self._state != 'cases' or self._info is None:
             self.drivers()  # Read up to first case.
+            if self._state != 'cases':
+                return
 
         yield self._info  # Read when looking for drivers.
         self._info = None
