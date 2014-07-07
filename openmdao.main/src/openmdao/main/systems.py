@@ -9,7 +9,7 @@ import networkx as nx
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.linearsolver import ScipyGMRES
+from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
@@ -69,8 +69,20 @@ class System(object):
         self.mode = None
         self.sol_vec = None
         self.rhs_vec = None
+        self.solver = None
+        self.sol_buf = None
+        self.rhs_buf = None
 
-        self.solver = ScipyGMRES(self)
+    def initialize_gradient_solver(self):
+        """ Initialize the solver that will be used to calculate the
+        gradeint. """
+
+        if self.solver is None:
+            if MPI:
+                self.solver = PETSc_KSP(self)
+            else:
+                self.solver = ScipyGMRES(self)
+                self.solver = PETSc_KSP(self)
 
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
@@ -82,13 +94,13 @@ class System(object):
         """Return the total size of the variables
         corresponding to the given names.
         """
-        # TODO: names may at some point contain tuples (param groups)
-        #       and only the first name in the tuple should be sized
         size = 0
         uvec = self.vec['u']
         for name in names:
             # Not sure if derivatives will need local size or global
             # size, but for now, assuming local and using VecWrapper
+            if isinstance(name, tuple):
+                name = name[0]
             size += uvec[name].size
         return size
 
@@ -446,7 +458,7 @@ class System(object):
         """ Return the gradient for this system. """
 
         self.set_mode(mode)
-
+        self.initialize_gradient_solver()
         self.linearize()
 
         self.rhs_vec.array[:] = 0.0
@@ -454,7 +466,7 @@ class System(object):
 
         return self.solver.solve(inputs, outputs)
 
-    def applyJ(self, arguments):
+    def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -582,7 +594,7 @@ class ExplicitSystem(SimpleSystem):
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
 
-    def applyJ(self, arguments):
+    def applyJ(self):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -601,6 +613,7 @@ class ExplicitSystem(SimpleSystem):
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
+
             vec['du'].array[:] = 0.0
             comp.applyJT(self)
             vec['du'].array[:] *= -1.0
@@ -689,7 +702,9 @@ class CompoundSystem(System):
         input_sizes = self.input_sizes
         rank = self.mpi.rank
 
-        if MPI:
+        # TODO - This should only run with MPI
+        # Bret - don't let me keep this.
+        if MPI or not MPI:
             start = numpy.sum(var_sizes[:rank, :])
             end = numpy.sum(var_sizes[:rank+1, :])
             petsc_idxs = petsc_linspace(start, end)
@@ -784,13 +799,13 @@ class CompoundSystem(System):
         #mpiprint("=== U vector for %s after: %s" % (self.name,self.vec['u'].items()))
         #mpiprint("=== F vector for %s after: %s" % (self.name,self.vec['f'].items()))
 
-    def applyJ(self, arguments):
+    def applyJ(self):
         """ Delegate to subsystems """
 
         if self.mode == 'forward':
             self.scatter('u', 'p')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ(arguments)
+            subsystem.applyJ()
         if self.mode == 'adjoint':
             self.scatter('u', 'p')
 

@@ -25,7 +25,7 @@ if _under_mpirun():
     COMM_NULL = MPI.COMM_NULL
 
     def create_petsc_vec(comm, arr):
-        return PETSc.Vec().createWithArray(arr, comm=comm) 
+        return PETSc.Vec().createWithArray(arr, comm=comm)
 
     def mpiprint(msg, rank=-1):
         if rank < 0:
@@ -41,31 +41,36 @@ else:
     MPI = None
     PETSc = None
     COMM_NULL = None
-    
+
     # def MPI_run(top):
     #     return top.run()
 
+    # TODO - THis is for testing only (so i can debug in serial).
+    # Bret - Don't let this get in.
+    from petsc4py import PETSc
     def create_petsc_vec(comm, arr):
-        return None
+        return PETSc.Vec().createWithArray(arr, comm=comm)
+    #def create_petsc_vec(comm, arr):
+    #    return None
 
     def mpiprint(msg, rank=-1):
         print msg
-        
+
 class MPI_info(object):
     def __init__(self):
         self.requested_cpus = 1
-        self.cpus = 0  # actual number of CPUs assigned. 
+        self.cpus = 0  # actual number of CPUs assigned.
 
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
-      
-    @property 
+
+    @property
     def size(self):
         if MPI:
             return self.comm.size
         return 1
 
-    @property 
+    @property
     def rank(self):
         if MPI:
             return self.comm.rank
