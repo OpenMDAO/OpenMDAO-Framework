@@ -121,7 +121,10 @@ class ScipyGMRES(LinearSolver):
                     else:
                         k2 = k1 + 1
 
-                    J[i:i+(k2-k1), j] = dx[k1:k2]
+                    if system.mode == 'forward':
+                        J[i:i+(k2-k1), j] = dx[k1:k2]
+                    else:
+                        J[j, i:i+(k2-k1)] = dx[k1:k2]
                     i += k2-k1
 
                 j += 1
@@ -138,12 +141,17 @@ class ScipyGMRES(LinearSolver):
         system.sol_vec.array[:] = arg[:]
         system.applyJ('nothing')
 
+        # Extra equation for all requested inputs.
         for varname in self.inputs:
-            system.rhs_vec[varname] = system.sol_vec[varname]
+            system.rhs_vec[varname] += system.sol_vec[varname]
 
         # HACK for test. Remove this
-        system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
-        system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        if system.mode == 'forward':
+            system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
+            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        else:
+            system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
+            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
 
         print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]

@@ -383,7 +383,7 @@ def applyJ(system):
 
     print 'applyJ', arg, result
 
-def applyJT(obj, arg, result, residual, shape_cache, J=None):
+def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
@@ -392,6 +392,18 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
     #for key in arg:
         #if key not in residual:
             #result[key] = -arg[key]
+
+    J = system.J
+    obj = system._comp
+    arg = {}
+    for item in system.get_outputs():
+        key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    result = {}
+    for item in system.get_inputs():
+        key = item.partition('.')[-1]
+        result[key] = system.rhs_vec[item]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
@@ -445,8 +457,6 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
     used = set()
     for okey in result:
-        if okey in arg:
-            continue
 
         odx = None
         if okey in obounds:
@@ -485,7 +495,7 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
             # TODO - Unit conversion array pseudocomps are NOT SUPPORTED now
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJT', arg, result
+    print 'applyJT', arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

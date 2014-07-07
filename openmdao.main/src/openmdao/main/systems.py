@@ -601,11 +601,10 @@ class ExplicitSystem(SimpleSystem):
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
-            vec['df'].array[:] *= -1.0
-            comp.applyJ(self)
-            vec['df'].array[:] *= -1.0
             vec['du'].array[:] = 0.0
-            for var in self.get_inputs():
+            comp.applyJT(self)
+            vec['du'].array[:] *= -1.0
+            for var in self.get_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
