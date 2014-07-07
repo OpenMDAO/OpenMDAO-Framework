@@ -8,6 +8,8 @@ import cStringIO, StringIO
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case, flatten_obj
 
+from openmdao.lib.casehandlers.util import driver_map
+
 
 class CSVCaseIterator(object):
     """An iterator that returns :class:`Case` objects from a passed-in iterator
@@ -250,14 +252,7 @@ class CSVCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        if hasattr(driver, 'parent'):
-            prefix = driver.parent.get_pathname()
-            if prefix:
-                prefix += '.'
-        else:
-            prefix = ''
-        self._cfg_map[driver] = ([prefix+name for name in inputs],
-                                 [prefix+name for name in outputs])
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""
