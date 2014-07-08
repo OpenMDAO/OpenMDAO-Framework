@@ -169,7 +169,7 @@ To run this analysis, you would do the following:
 
 The only new stuff here is the bit at the end where we loop over all the cases that were run. To keep
 things simple, we just spit out the data to the screen. But the key thing to recognize here is  how you
-work with cases. Creating a `CaseDataset` object allows you to open the data from the 'doe.json' file. The `data` attribute of `CaseDataset` objects can be used to specify what information to read from the open file. Using this feature, you could read in a specific case, a range of cases, specific varaibles, combinations of the above, and more. In the above example, we use `by_variable()` to only read the recorded parameters and responses. 
+work with cases. Creating a `CaseDataset` object allows you to open the data from the 'doe.json' file. The `data` attribute of `CaseDataset` objects can be used to specify what information to read from the open file. Using this feature, you could read in a specific case, a range of cases, specific varaibles, combinations of the above, and more. In the above example, we use `by_variable()` to only read the recorded parameters and responses and `fetch()` to return the data.  
 
 Documentation for the CaseDataset query API can be read here: <../srcdocs/packages/openmdao.lib.html#openmdao.lib.casehandlers.query.CaseDataset>
 
@@ -235,8 +235,6 @@ Below is an example that uses matplotlib and the parameters and responses read f
 For writing data to a CSV file, OpenMDAO provides a built in `CSVPostProcessor` that takes the data returned by a `CaseDataset` and writes it to a CSV file. 
 
 .. code-block python
-    
-    import numpy as np
 
     from openmdao.lib.casehandlers.api import CaseDataSet
     from openmdao.lib.postprocessors.api import CSVPostProcessor
@@ -245,6 +243,16 @@ For writing data to a CSV file, OpenMDAO provides a built in `CSVPostProcessor` 
     data = cds.by_variable().fetch()
     CSVPostProcessor(data, 'doe.csv')
 
+OpenMDAO also offers a `DumpCasePostProcessor` that prints the data to the console. Using this is almost identical to the `CSVPostProcessor`.
+
+.. code-block python
+
+    from openmdao.lib.casehandlers.api import CaseDataSet
+    from openmdao.lib.postprocessors.api import DumpCasePostProcessor
+
+    cds = CaseDataset('doe.json', 'json')
+    data = cds.by_variable().fetch()
+    DumpCasePostProcessor(data)
 
 At times it's necessary to rerun an analysis. This can be a problem if the
 DOE generator used has a random component. To handle this, DOEdriver records
