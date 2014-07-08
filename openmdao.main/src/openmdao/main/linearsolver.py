@@ -4,10 +4,17 @@
 
 # pylint: disable=E0611, F0401
 import numpy as np
-from petsc4py import PETSc
 from scipy.sparse.linalg import gmres, LinearOperator
 
+from openmdao.main.mpiwrap import MPI
 from openmdao.util.log import logger
+
+if MPI:
+    from petsc4py import PETSc
+else:
+    class PETSc(object):
+        # Dummy class so things parse.
+        pass
 
 class LinearSolver(object):
     """ A base class for linear solvers """
