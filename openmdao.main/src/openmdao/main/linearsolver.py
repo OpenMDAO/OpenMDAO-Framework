@@ -193,6 +193,8 @@ class PETSc_KSP(LinearSolver):
 
             for irhs in range(i1, i2):
 
+                system.rhs_vec.array[:] = 0.0
+
                 ind = np.sum(system.local_var_sizes[:, :irhs])
                 ind_set = PETSc.IS().createGeneral([ind], comm=system.mpi.comm)
                 if system.app_ordering is not None:
@@ -208,6 +210,7 @@ class PETSc_KSP(LinearSolver):
 
                 system.rhs_vec.petsc_vec.setValue(ind, 0.0, addv=False)
                 dx = system.sol_vec.array
+                print 'dx', dx
 
                 i = 0
                 for item in outputs:
@@ -231,7 +234,6 @@ class PETSc_KSP(LinearSolver):
                 j += 1
 
         #print inputs, '\n', outputs, '\n', J
-        print 'dx', dx
         return J
 
 
