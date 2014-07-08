@@ -81,8 +81,13 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         cds = CaseDataset(self.filename_json, 'json')
 
         q = cds.data # is Query object
+        data = cds.data.fetch() # results
 
-        caseset_query_to_csv( q )
+        #caseset_query_to_csv( cds, q, 'from_json.csv')
+        caseset_query_to_csv( data, cds, 'from_json.csv')
+
+        cases = cds.data.fetch()
+        #import pdb; pdb.set_trace()
 
         print cds.data.var_names().fetch()
 
