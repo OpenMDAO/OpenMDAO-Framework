@@ -11,8 +11,7 @@ from types import NoneType
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flattened_size, \
                                         flatten_slice, is_differentiable_val
-from openmdao.main.derivatives import calc_gradient, calc_gradient_adjoint, \
-                                      applyJ, applyJT, applyMinvT
+from openmdao.main.derivatives import applyJ, applyJT, applyMinvT
 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
