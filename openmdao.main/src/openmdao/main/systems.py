@@ -82,7 +82,6 @@ class System(object):
                 self.solver = PETSc_KSP(self)
             else:
                 self.solver = ScipyGMRES(self)
-                self.solver = PETSc_KSP(self)
 
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
@@ -702,9 +701,7 @@ class CompoundSystem(System):
         input_sizes = self.input_sizes
         rank = self.mpi.rank
 
-        # TODO - This should only run with MPI
-        # Bret - don't let me keep this.
-        if MPI or not MPI:
+        if MPI:
             start = numpy.sum(var_sizes[:rank, :])
             end = numpy.sum(var_sizes[:rank+1, :])
             petsc_idxs = petsc_linspace(start, end)

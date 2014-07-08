@@ -47,11 +47,11 @@ else:
 
     # TODO - THis is for testing only (so i can debug in serial).
     # Bret - Don't let this get in.
-    from petsc4py import PETSc
-    def create_petsc_vec(comm, arr):
-        return PETSc.Vec().createWithArray(arr, comm=comm)
+    #from petsc4py import PETSc
     #def create_petsc_vec(comm, arr):
-    #    return None
+    #    return PETSc.Vec().createWithArray(arr, comm=comm)
+    def create_petsc_vec(comm, arr):
+        return None
 
     def mpiprint(msg, rank=-1):
         print msg
