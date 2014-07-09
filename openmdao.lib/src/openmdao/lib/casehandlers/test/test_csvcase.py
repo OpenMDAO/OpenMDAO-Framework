@@ -284,6 +284,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         sout = StringIO.StringIO()
         for case in cases:
             print >>sout, case
+        import pdb; pdb.set_trace()
         expected = [
             'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
