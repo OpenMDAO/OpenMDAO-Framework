@@ -75,25 +75,26 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
 
         csv_data = []
 
-        csv_data.append( row[ var_names.index( 'timestamp' ) ] )
+        csv_data.append( row[ row.name_map[ 'timestamp' ] ] )
         csv_data.append('')
         if inputs:
             for name in sorted_inputs:
-                value = row[var_names.index(name)]
-                if value in [True, False]:
+                value = row[row.name_map[name]]
+                import pdb; pdb.set_trace()
+                if value in ['True','False']:
                     value = str(value)
                 csv_data.append( value )
         csv_data.append('')
         if outputs:
             for name in sorted_outputs:
                 if name == '_driver_id':
-                    value = drivers[row[var_names.index(name)]]
+                    value = drivers[row[row.name_map[name]]]
                 else:
-                    value = row[var_names.index(name)]
-                csv_data.append( row[var_names.index(name)] )
-        case_uuid = row[ var_names.index( '_id' ) ]
-        parent_uuid = row[ var_names.index( '_parent_id' ) ]
-        msg = row[ var_names.index( 'error_message' ) ]
+                    value = row[row.name_map[name]]
+                csv_data.append( row[row.name_map[name]] )
+        case_uuid = row[ row.name_map[ '_id' ] ]
+        parent_uuid = row[ row.name_map[ '_parent_id' ] ]
+        msg = row[ row.name_map[ 'error_message' ] ]
         csv_data.extend(['', case_uuid, parent_uuid, msg])
 
         csv_writer.writerow(csv_data)
