@@ -1,39 +1,22 @@
 """
-Post-processing function that takes a case_data_set and outputs a csv file
-
- 
-
-Should be able to pass tests of current csv case recorder (column ordering, meta column, etc...)
-
-Assume query by case (not variable)
-
-
+    Post-processing function that takes a case_data_set and outputs a csv file
 """
 
-import cStringIO
-import StringIO
-import logging
-import sys
-import time
-import csv, datetime, glob, os, shutil, time
-
-
-import json
-import bson
-
-from numpy  import ndarray
-from struct import pack
-from uuid   import uuid1
-
-from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
-                                          DumpCaseRecorder
-
-from openmdao.lib.casehandlers.api import CaseDataset, \
-                                          JSONCaseRecorder, BSONCaseRecorder
-
-from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
+import csv
 
 def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotechar='"'):
+    """
+    Post-processing function that takes a case_data_set and outputs a csv file
+    Should be able to pass tests of current csv case recorder (column ordering, meta column, etc...)
+    Assume query by case (not variable)
+
+    Inputs:
+
+    data - results of fetch on Query object
+    cds - CaseDataset
+
+    """
+
     drivers = {}
     for driver in cds.drivers:
         drivers[driver['_id']] = driver['name']
@@ -45,8 +28,6 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     inputs = []
     outputs = []
     pseudos = {}
-    #import pdb; pdb.set_trace()
-    #for name in sorted(data[0].keys()):
     for name in sorted(metadata.keys()):
         if name in constants_names:
             continue
@@ -66,11 +47,22 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         else:
             outputs.append(name)
 
+    sorted_inputs = sorted( inputs )
+    sorted_outputs = sorted( outputs )
+
     # Open CSV file
     outfile = open(filename, 'w')
     csv_writer = csv.writer(outfile, delimiter=delimiter,
                                      quotechar=quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
+
+    # Write the headers
+    headers = ['timestamp', '/INPUTS']
+    headers.extend(sorted_inputs)
+    headers.append('/OUTPUTS')
+    headers.extend(sorted_outputs)
+    headers.extend(['/METADATA', 'uuid', 'parent_uuid', 'msg'])
+    csv_writer.writerow(headers)
 
     # Dump data.
     # data is a list of lists where the inner list is the values and metadata for a case
@@ -83,12 +75,12 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         csv_data.append( row[ var_names.index( 'timestamp' ) ] )
         csv_data.append('')
         if inputs:
-            for name in inputs:
+            for name in sorted_inputs:
                 csv_data.append( row[var_names.index(name)] )
         #data.extend(sorted_input_values)
         csv_data.append('')
         if outputs:
-            for name in outputs:
+            for name in sorted_outputs:
                 if name == '_driver_id':
                     value = drivers[row[var_names.index(name)]]
                 else:
