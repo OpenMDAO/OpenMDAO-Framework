@@ -75,14 +75,11 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(system):
+def applyJ(system, pseudo=False):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
-    #for key in result:
-        #if key not in residual:
-            #result[key] = -arg[key]
 
     J = system.J
     obj = system._comp
@@ -178,25 +175,19 @@ def applyJ(system):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            #if isinstance(obj, PseudoComponent) and \
-               #obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                #tmp += Jsub[0][0] * arg[ikey]
-            #else:
-                #tmp += Jsub.dot(arg[ikey])
-            # TODO - Unit conversion array pseudocomps are NOT SUPPORTED now
-            tmp += Jsub.dot(arg[ikey])
+            if pseudo is True and obj._pseudo_type == 'units' \
+               and Jsub.shape == (1, 1):
+                tmp += Jsub[0][0] * arg[ikey]
+            else:
+                tmp += Jsub.dot(arg[ikey])
 
     print 'applyJ', arg, result
 
-def applyJT(system):
+def applyJT(system, pseudo=False):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
     """
-
-    #for key in arg:
-        #if key not in residual:
-            #result[key] = -arg[key]
 
     J = system.J
     obj = system._comp
@@ -292,13 +283,11 @@ def applyJT(system):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            #if isinstance(obj, PseudoComponent) and \
-               #obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                #tmp += Jsub[0][0] * arg[ikey]
-            #else:
-                #tmp += Jsub.dot(arg[ikey])
-            # TODO - Unit conversion array pseudocomps are NOT SUPPORTED now
-            tmp += Jsub.dot(arg[ikey])
+            if pseudo is True and obj._pseudo_type == 'units' \
+               and Jsub.shape == (1, 1):
+                tmp += Jsub[0][0] * arg[ikey]
+            else:
+                tmp += Jsub.dot(arg[ikey])
 
     print 'applyJT', arg, result
 

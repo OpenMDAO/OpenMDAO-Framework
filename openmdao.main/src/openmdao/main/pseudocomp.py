@@ -438,11 +438,11 @@ class PseudoComponent(object):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system)
+        applyJ(system, pseudo=True)
 
     def applyJT(self, system):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system)
+        applyJT(system, pseudo=True)
 
