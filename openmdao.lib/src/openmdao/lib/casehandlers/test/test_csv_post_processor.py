@@ -59,13 +59,15 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         driver.add_responses(sorted(outputs))
 
         self.filename_json = "openmdao_test_csv_case_iterator.json"
-        self.filename = "openmdao_test_csv_case_iterator.csv"
+        self.filename_csv = "openmdao_test_csv_case_iterator.csv"
 
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename):
-            os.remove(self.filename)
+        if os.path.exists(self.filename_csv):
+            os.remove(self.filename_csv)
+        if os.path.exists(self.filename_json):
+            os.remove(self.filename_json)
 
     def test_inoutCSV_using_JSON(self):
 
@@ -90,6 +92,93 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         #import pdb; pdb.set_trace()
 
         print cds.data.var_names().fetch()
+
+    def test_flatten(self):
+        # create some Cases
+
+        outputs = ['comp1.a_array', 'comp1.vt']
+        inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
+        cases = [Case(inputs=inputs, outputs=outputs)]
+        self.top.driver.clear_parameters()
+        Case.set_vartree_inputs(self.top.driver, cases)
+        self.top.driver.clear_responses()
+        self.top.driver.add_responses(outputs)
+        self.top.recorders = [JSONCaseRecorder(self.filename_json)]
+        #self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
+        self.top.recorders[0].num_backups = 0
+        self.top.run()
+
+        cds = CaseDataset(self.filename_json, 'json')
+        q = cds.data # is Query object
+        data = cds.data.fetch() # results
+        caseset_query_to_csv( data, cds, self.filename_csv)
+
+        # check recorded cases
+        cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
+        #cases = [case for case in self.top.recorders[0].get_iterator()]
+        sout = StringIO.StringIO()
+        for case in cases:
+            print >>sout, case
+        expected = [
+            'Case:',
+            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383238593.781986',
+            '   inputs:',
+            '      comp1.x_array[0]: 2.0',
+            '      comp1.x_array[1]: 2.0',
+            '      comp1.x_array[2]: 2.0',
+            '   outputs:',
+            '      Response(comp1.a_array)[0]: 1.0',
+            '      Response(comp1.a_array)[1]: 3.0',
+            '      Response(comp1.a_array)[2]: 5.5',
+            '      Response(comp1.vt).data: ',
+            '      Response(comp1.vt).v1: 1.0',
+            '      Response(comp1.vt).v2: 2.0',
+            '      Response(comp1.vt).vt2.data: ',
+            '      Response(comp1.vt).vt2.vt3.a: 1.0',
+            '      Response(comp1.vt).vt2.vt3.b: 12.0',
+            '      Response(comp1.vt).vt2.vt3.data: ',
+            '      Response(comp1.vt).vt2.x: -1.0',
+            '      Response(comp1.vt).vt2.y: -2.0',
+            '      comp1.a_array[0]: 1.0',
+            '      comp1.a_array[1]: 3.0',
+            '      comp1.a_array[2]: 5.5',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0.0',
+            '      comp1.exec_count: 1.0',
+            '      comp1.itername: 1-comp1',
+            '      comp1.vt.data: ',
+            '      comp1.vt.v1: 1.0',
+            '      comp1.vt.v2: 2.0',
+            '      comp1.vt.vt2.data: ',
+            '      comp1.vt.vt2.vt3.a: 1.0',
+            '      comp1.vt.vt2.vt3.b: 12.0',
+            '      comp1.vt.vt2.vt3.data: ',
+            '      comp1.vt.vt2.x: -1.0',
+            '      comp1.vt.vt2.y: -2.0',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0.0',
+            '      comp2.exec_count: 1.0',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
+            '      driver.workflow.itername: 1',
+            ]
+
+#        print sout.getvalue()
+        lines = sout.getvalue().split('\n')
+        for index, line in enumerate(lines):
+            if line.startswith('Case:'):
+                for i in range(len(expected)):
+                    if expected[i].startswith('   uuid:'):
+                        self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   timestamp:'):
+                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
+                    else:
+                        self.assertEqual(lines[index+i], expected[i])
+                break
+        else:
+            self.fail("couldn't find the expected Case")
+
 
 
 
