@@ -67,8 +67,12 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
 
     # Write the data
     # data is a list of lists where the inner list is the values and metadata for a case
-    var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
-    for row in data:
+    #var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
+
+    for i, row in enumerate( data ):
+        if i == 0:
+            var_names = row.name_map.keys()
+
         csv_data = []
 
         csv_data.append( row[ var_names.index( 'timestamp' ) ] )

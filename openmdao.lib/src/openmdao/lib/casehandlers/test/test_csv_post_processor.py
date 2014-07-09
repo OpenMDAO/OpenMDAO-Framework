@@ -111,11 +111,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         sout = StringIO.StringIO()
         for case in cases:
             print >>sout, case
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         expected = [
             'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   timestamp: 1383238593.781986',
+            '   parent_uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
             '   inputs:',
             '      comp1.x_array[0]: 2.0',
             '      comp1.x_array[1]: 2.0',
@@ -164,6 +165,8 @@ class CSVPostProcessorTestCase(unittest.TestCase):
                 for i in range(len(expected)):
                     if expected[i].startswith('   uuid:'):
                         self.assertTrue(lines[index+i].startswith('   uuid:'))
+                    elif expected[i].startswith('   parent_uuid:'):
+                        self.assertTrue(lines[index+i].startswith('   parent_uuid:'))
                     elif expected[i].startswith('   timestamp:'):
                         self.assertTrue(lines[index+i].startswith('   timestamp:'))
                     else:
