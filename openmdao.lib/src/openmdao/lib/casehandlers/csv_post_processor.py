@@ -64,20 +64,17 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     headers.extend(['/METADATA', 'uuid', 'parent_uuid', 'msg'])
     csv_writer.writerow(headers)
 
-    # Dump data.
+    # Write the data
     # data is a list of lists where the inner list is the values and metadata for a case
-    # 
-    #csv_data.append(row[var_names.index(name))
-    #write("Case:\n")
     var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
     for row in data:
         csv_data = []
+        
         csv_data.append( row[ var_names.index( 'timestamp' ) ] )
         csv_data.append('')
         if inputs:
             for name in sorted_inputs:
                 csv_data.append( row[var_names.index(name)] )
-        #data.extend(sorted_input_values)
         csv_data.append('')
         if outputs:
             for name in sorted_outputs:
@@ -90,7 +87,6 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         parent_uuid = row[ var_names.index( '_parent_id' ) ]
         msg = row[ var_names.index( 'error_message' ) ]
         csv_data.extend(['', case_uuid, parent_uuid, msg])
-
 
         csv_writer.writerow(csv_data)
 
