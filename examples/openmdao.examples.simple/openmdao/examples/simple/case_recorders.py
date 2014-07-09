@@ -40,13 +40,12 @@ if __name__ == "__main__": # pragma: no cover
     # Set up our CaseRecorders
     #-----------------------------
     import os
-    if os.path.exists('converge.db'):
-        os.remove('converge.db')
+    if os.path.exists('converge.json'):
+        os.remove('converge.json')
 
-    from openmdao.lib.casehandlers.api import CSVCaseRecorder, DBCaseRecorder
+    from openmdao.lib.casehandlers.api import JSONCaseRecorder
 
-    opt_problem.recorders = [CSVCaseRecorder(filename='converge.csv'),
-                             DBCaseRecorder(dbfile='converge.db', append=False)]
+    opt_problem.recorders = [JSONCaseRecorder(filename='converge.json')]
 
     #-----------------------------
     # Run problem
@@ -58,7 +57,10 @@ if __name__ == "__main__": # pragma: no cover
     # Print out history of our objective for inspection
     #----------------------------------------------------
 
-    for case in opt_problem.recorders[0].get_iterator():
+    case_dataset = CaseDataset('converge.json', 'json')
+    data = case_dataset.by_case().fetch()
+
+    for case in data:
         print case
 
     print "\n"

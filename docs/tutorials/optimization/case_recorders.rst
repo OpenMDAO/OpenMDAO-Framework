@@ -3,8 +3,7 @@
 Recording Your Inputs and Outputs
 =====================================
 
-The previous section showed you how you can record output from OpenMDAO using a case recorder. This
-next lesson will show you the available case recorders in more detail.
+In the previous example, we showed how to use a `DOEdriver` to vary parameters and reference the recorder values for parameters and responses using the `case_input` and `case_output` variable trees. Another way to record information is with `CaseRecorders`. By default, `CaseRecorders` will record as much information about a case as possible.
 
 OpenMDAO contains the following case recorders:
 
@@ -25,46 +24,32 @@ Name                  Output Type
 ==================== ====================================================================
 
 The recorders are interchangeable, so you can use any of them in the top-level
-assembly's ``recorders`` list. All assemblies contain a ``recorders`` variable,
-however only the top-level assembly's recorders are used.
-Why a list? It's so you can have the same case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
-output data to the screen and use the DBCaseRecorder to save the same data to a database. 
+assembly's ``recorders`` list. Since ``recoders`` is a list, it allows for recording
+cases in multiple formats at once. All assemblies contain a ``recorders`` variable,
+however only the top-level assembly's recorders are used. 
 
-At the end of each workflow's execution, output variables in that workflow
-satisfying the top-level assembly's ``includes`` and ``excludes`` specification
-are recorded. These variables hold lists of patterns of variables to be
-included or excluded from the data recorded.
+Although a `CaseRecorder` will record as much information by default, the
+top-level assembly's ``includes`` and ``excluses`` variables can be used to 
+limit which output varaibles are recorded. These variables hold lists of
+patterns of variables to be included or excluded from the data recorded.
 By default ``includes`` is ``['*']``, including everything.
 By default ``excludes`` is ``[]``, excluding nothing.
 
-The CSVCaseRecorder outputs the selected variables into a file in the csv
-(Comma Separated Value) format. The DBCaseRecorder stores the selected
-variables in an SQLite database, which can be stored in memory or on disc as
-a binary file. The DumpCaseRecorder is used to output the selected
-variables into a file-like object in a human-readable format. The default
-object is ``sys.stdout``, which redirects the output to STDOUT. It can also take
-a filename as an argument. The ListCaseRecorder stores the cases in a Python
-list. The JSONCaseRecorder and BSONCaseRecorders store variable, expression,
-and driver configuration as well as case data to a file.
-
-Of these recorders, the CSVCaseRecorder is the most useful
+Of these recorders, the JSONCaseRecorder and BSONCaseRecorder are the most useful
 for passing data to other applications, such as an external post-processing
-tool. The DBCaseRecorder is the most useful for saving data for later use.
-The BSONCaseRecorder will record everything JSONCaseRecorder does, but in a
+tool. The BSONCaseRecorder will record everything JSONCaseRecorder does, but in a
 more compact form. To perform JSON and BSON case recorder post-processing,
-:ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` is typically used.
+:ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` is typically used. We'll 
+introduce `CaseDataset` later in this tutorial.
 
 At the end of the top-level assembly's ``run()``, all case recorders are closed.
 Each type of recorder defines its own implementation of ``close()``,
 but the general idea is to specify that the recording process is complete.
-For example, the CSVCaseRecorder will close the file being written so that
+For example, the JSONCaseRecorder will close the file being written so that
 other applications can use it. Note that in some cases you cannot record to
 a closed recorder.
 
-Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
-like to print out the convergence history of the variables, objective, and constraint into a csv
-file, which we can read into Excel for some post processing. Additionally, we'd like to save an
-SQLite database for future use. The code for this should look like:
+Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would like to print out the convergence history of the variables, objective, and constraint into a JSON file which we can read into Excel for some post processing.
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
