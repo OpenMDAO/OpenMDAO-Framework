@@ -55,6 +55,7 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     csv_writer = csv.writer(outfile, delimiter=delimiter,
                                      quotechar=quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
+    # No automatic data type conversion is performed unless the QUOTE_NONNUMERIC format option is specified (in which case unquoted fields are transformed into floats).
 
     # Write the headers
     headers = ['timestamp', '/INPUTS']
@@ -69,12 +70,15 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
     for row in data:
         csv_data = []
-        
+
         csv_data.append( row[ var_names.index( 'timestamp' ) ] )
         csv_data.append('')
         if inputs:
             for name in sorted_inputs:
-                csv_data.append( row[var_names.index(name)] )
+                value = row[var_names.index(name)]
+                if value in [True, False]:
+                    value = str(value)
+                csv_data.append( value )
         csv_data.append('')
         if outputs:
             for name in sorted_outputs:

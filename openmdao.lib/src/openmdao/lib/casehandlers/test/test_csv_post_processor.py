@@ -31,6 +31,8 @@ from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_raises
 from openmdao.main.test.test_vartree import DumbVT
 
+from openmdao.lib.casehandlers.api import CSVCaseIterator
+
 
 class CSVPostProcessorTestCase(unittest.TestCase):
 
@@ -64,34 +66,25 @@ class CSVPostProcessorTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        if os.path.exists(self.filename_csv):
-            os.remove(self.filename_csv)
+        #if os.path.exists(self.filename_csv):
+            #os.remove(self.filename_csv)
         if os.path.exists(self.filename_json):
             os.remove(self.filename_json)
 
-    def test_inoutCSV_using_JSON(self):
+    def test_simple(self):
 
-        #This test runs some cases, puts them in a file using a
-        #JSONCaseRecorder, converts that to CSV, then runs the model again using the same cases,
-        #pulled out of the CSV file by a CSVCaseIterator.  Finally the cases
-        #are dumped to a string after being run for the second time.
+        # Make sure the CSV file can be read and has the correct number of cases
 
         self.top.recorders = [JSONCaseRecorder(self.filename_json)]
         self.top.recorders[0].num_backups = 0
         self.top.run()
 
         cds = CaseDataset(self.filename_json, 'json')
-
-        q = cds.data # is Query object
         data = cds.data.fetch() # results
+        caseset_query_to_csv( data, cds, self.filename_csv)
 
-        #caseset_query_to_csv( cds, q, 'from_json.csv')
-        caseset_query_to_csv( data, cds, 'from_json.csv')
-
-        cases = cds.data.fetch()
-        #import pdb; pdb.set_trace()
-
-        print cds.data.var_names().fetch()
+        cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
+        self.assertEqual(len(cases), 10)
 
     def test_flatten(self):
         # create some Cases
@@ -109,7 +102,6 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         self.top.run()
 
         cds = CaseDataset(self.filename_json, 'json')
-        q = cds.data # is Query object
         data = cds.data.fetch() # results
         caseset_query_to_csv( data, cds, self.filename_csv)
 
@@ -119,6 +111,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         sout = StringIO.StringIO()
         for case in cases:
             print >>sout, case
+        import pdb; pdb.set_trace()
         expected = [
             'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -179,74 +172,6 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         else:
             self.fail("couldn't find the expected Case")
 
-
-
-
-    def qqq_test_inoutCSV(self):
-
-        #This test runs some cases, puts them in a CSV file using a
-        #CSVCaseRecorder, then runs the model again using the same cases,
-        #pulled out of the CSV file by a CSVCaseIterator.  Finally the cases
-        #are dumped to a string after being run for the second time.
-
-        self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
-        self.top.recorders[0].num_backups = 0
-        self.top.run()
-
-        # now use the CSV recorder as source of Cases
-        cases = [case for case in self.top.recorders[0].get_iterator()]
-        Case.set_vartree_inputs(self.top.driver, cases)
-
-        sout = StringIO.StringIO()
-        self.top.recorders = [DumpCaseRecorder(sout)]
-        self.top.run()
-        expected = [
-            'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383239074.309192',
-            '   inputs:',
-            '      comp1.b_bool: True',
-            '      comp1.x: 8.1',
-            '      comp1.x_array[1]: 99.88',
-            '      comp1.y: 16.1',
-            '   outputs:',
-            '      Response(comp1.a_array[2]): 5.5',
-            "      Response(comp1.a_string): Hello',;','",
-            '      Response(comp1.z): 24.2',
-            '      Response(comp2.z): 25.2',
-            ]
-#        print sout.getvalue()
-        lines = sout.getvalue().split('\n')
-        count = 0
-        for index, line in enumerate(lines):
-            if line.startswith('Case:'):
-                count += 1
-                if count != 9:
-                    continue
-                for i in range(len(expected)):
-                    if expected[i].startswith('   uuid:'):
-                        self.assertTrue(lines[index+i].startswith('   uuid:'))
-                    elif expected[i].startswith('   timestamp:'):
-                        self.assertTrue(lines[index+i].startswith('   timestamp:'))
-                    else:
-                        self.assertEqual(lines[index+i], expected[i])
-                break
-        else:
-            self.fail("couldn't find the expected Case")
-
-
-
-class TestCase(unittest.TestCase):
-
-    def setUp(self):
-        path = os.path.join(os.path.dirname(__file__), 'sellar.json')
-        self.cds = CaseDataset(path, 'json')
-
-    def tearDown(self):
-        self.cds = None
-
-    def qqqtest_csv_post_processor(self):
-        caseset_query_to_csv( self.cds.data )
 
 if __name__ == '__main__':
     unittest.main()
