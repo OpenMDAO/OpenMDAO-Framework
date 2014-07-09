@@ -2,15 +2,19 @@
 Test query of case recorder file.
 """
 
-import math
+import glob
 import os.path
 import unittest
 
-from openmdao.main.api import Assembly
+from math import isnan
+
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.main.datatypes.api import Array
-from openmdao.lib.casehandlers.api import CaseDataset, JSONCaseRecorder
-from openmdao.lib.drivers.api import SLSQPdriver
+from openmdao.lib.casehandlers.api import CaseDataset, \
+                                          JSONCaseRecorder, BSONCaseRecorder
+from openmdao.lib.drivers.api import NewtonSolver, SLSQPdriver
 from openmdao.lib.optproblems import sellar
+from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
 
 
@@ -21,6 +25,10 @@ class SellarCO(Assembly):
     local_des_var_targets = Array([1.0], iotype='in')
     coupling_var_targets = Array([3.16, 0.0], iotype='in')
 
+    def __init__(self, ext='.new'):
+        self._ext = ext
+        super(SellarCO, self).__init__()
+
     def configure(self):
         """ Creates a new Assembly with this problem
 
@@ -28,7 +36,8 @@ class SellarCO(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        self.recorders = [JSONCaseRecorder('sellar.new')]
+        self.recorders = [JSONCaseRecorder('sellar_json'+self._ext),
+                          BSONCaseRecorder('sellar_bson'+self._ext)]
 
         # Global Optimization
         self.add('driver', SLSQPdriver())
@@ -97,9 +106,41 @@ class SellarCO(Assembly):
         self.localopt2.iprint = 0
 
 
-def create_file():
-    """ Create/update test data file. """
-    prob = SellarCO()
+class NewtonTest(Assembly):
+    """ Solve ``a*x**n + b*x - c = 0`` using multiple components. """
+
+    def __init__(self, ext='.json'):
+        self._ext = ext
+        super(NewtonTest, self).__init__()
+
+    def configure(self):
+        sub = Assembly()
+        sub.add('y_axn', ExecComp(exprs=['y = a * x**n']))
+        sub.add('y_bx', ExecComp(exprs=['y = b * x']))
+        sub.add('y_x1x2c', ExecComp(exprs=['y = x1 + x2 - c']))
+        sub.connect('y_axn.y', 'y_x1x2c.x1')
+        sub.connect('y_bx.y', 'y_x1x2c.x2')
+        sub.connect('y_axn.x', 'y_bx.x')
+        sub.driver.workflow.add(('y_axn', 'y_bx', 'y_x1x2c'))
+        sub.create_passthrough('y_axn.x')
+        sub.create_passthrough('y_x1x2c.y')
+
+        self.add('sub', sub)
+        driver = self.add('driver', NewtonSolver())
+        driver.add_parameter('sub.x', 0, 100)
+        driver.add_constraint('sub.y = 0')
+
+        sub.y_axn.a = 1.
+        sub.y_axn.n = 77. / 27.
+        sub.y_bx.b = 1.
+        sub.y_x1x2c.c = 10.
+
+        self.recorders = [JSONCaseRecorder('newton'+self._ext)]
+
+
+def create_files():
+    """ Create/update test data files. """
+    prob = set_as_top(SellarCO())
 
     prob.dis1.z1 = 5.0
     prob.dis2.z1 = 5.0
@@ -122,12 +163,14 @@ def create_file():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-#        create_file()  # Uncomment to create 'sellar.new'
+#        create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
     def tearDown(self):
         self.cds = None
+        for path in glob.glob('newton.*'):
+            os.remove(path)
 
     def test_query(self):
         # Full dataset.
@@ -178,10 +221,10 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(cases), 1826)
         self.assertEqual(len(cases[0]), len(names))
         for val in cases[0]:  # localopt2
-            self.assertTrue(math.isnan(val))
+            self.assertTrue(isnan(val))
         self.assertEqual(len(cases[-1]), len(names))
         for val in cases[-1]: # top
-            self.assertTrue(math.isnan(val))
+            self.assertTrue(isnan(val))
 
         iteration_case_69 = { # localopt1
             "dis1.x1": 1.0,
@@ -194,7 +237,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(val, iteration_case_69[name])
 
         self.assertEqual(cases[68]['dis1.y1'], iteration_case_69['dis1.y1'])
-       
+
         # Transposed.
         vars = self.cds.data.local().vars(names).by_variable().fetch()
         self.assertEqual(len(vars), len(names))
@@ -208,15 +251,15 @@ class TestCase(unittest.TestCase):
             "dis1.z2": 2.0,
         }
         for i, var in enumerate(vars):
-            self.assertTrue(math.isnan(var[0]))  # localopt2
-            self.assertTrue(math.isnan(var[-1])) # top
+            self.assertTrue(isnan(var[0]))  # localopt2
+            self.assertTrue(isnan(var[-1])) # top
             assert_rel_error(self, var[68], iteration_case_69[names[i]], 0.001)
 
         self.assertEqual(vars['dis1.y1'][68], iteration_case_69['dis1.y1'])
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '245db09c-fc9f-11e3-8001-005056000100'  # iteration_case_78
+        parent = '796bf5d1-012c-11e4-8e45-005056000100'  # iteration_case_78
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
@@ -323,6 +366,53 @@ class TestCase(unittest.TestCase):
         cases = self.cds.data.driver('localopt1').fetch()
         self.assertEqual(len(cases), 735)
         self.assertEqual(len(cases[0]), len(expected))
+
+    def test_bson(self):
+        # Simple check of _BSONReader.
+        names = ('dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2')
+
+        path = os.path.join(os.path.dirname(__file__), 'sellar.json')
+        json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
+
+        path = os.path.join(os.path.dirname(__file__), 'sellar.bson')
+        bson_cases = CaseDataset(path, 'bson').data.vars(*names).fetch()
+
+        for json_case, bson_case in zip(json_cases, bson_cases):
+            for json_val, bson_val in zip(json_case, bson_case):
+                if isnan(json_val):
+                    self.assertTrue(isnan(bson_val))
+                else:
+                    self.assertEqual(bson_val, json_val)
+
+    def test_json(self):
+        # Simple check of _JSONReader.
+        path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
+        cases = CaseDataset(path, 'json').data.fetch()
+        self.assertEqual(len(cases), 10)
+
+        path = os.path.join(os.path.dirname(__file__), 'truncated.json')
+        cases = CaseDataset(path, 'json').data.fetch()
+        self.assertEqual(len(cases), 7)
+
+    def test_restore(self):
+        # Restore from case, run, verify outputs match expected.
+        top = set_as_top(NewtonTest())
+        top.run()
+        assert_rel_error(self, top.sub.x, 2.06720359226, .0001)
+        assert_rel_error(self, top.sub.y, 0, .0001)
+
+        cds = CaseDataset('newton.json', 'json')
+        cases = cds.data.fetch()
+        self.assertEqual(len(cases), 32)
+
+        top = set_as_top(NewtonTest('.restore'))
+        cds.restore(top, cases[-1]['_id'])
+        top.run()
+        assert_rel_error(self, top.sub.x, 2.06720359226, .0001)
+        assert_rel_error(self, top.sub.y, 0, .0001)
+
+        cases = CaseDataset('newton.restore', 'json').data.fetch()
+        self.assertEqual(len(cases), 10)
 
 
 if __name__ == '__main__':

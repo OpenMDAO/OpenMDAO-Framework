@@ -178,6 +178,7 @@ class JSONCaseRecorder(_BaseRecorder):
         self.out = out
         self.indent = indent
         self.sort_keys = sort_keys
+        self._count = 0
 
     def record_constants(self, constants):
         """ Record constant data. """
@@ -188,21 +189,25 @@ class JSONCaseRecorder(_BaseRecorder):
         category = 'simulation_info'
         data = self._dump(info, category,
                           ('variable_metadata', 'expressions', 'constants'))
-        self.out.write('{\n"%s": ' % category)
+        self._count += 1
+        self.out.write('{\n"__length_%s": %s\n, "%s": '
+                       % (self._count, len(data), category))
         self.out.write(data)
         self.out.write('\n')
 
         for i, info in enumerate(self.get_driver_info()):
             category = 'driver_info_%s' % (i+1)
             data = self._dump(info, category)
-            self.out.write(', "%s": ' % category)
+            self._count += 1
+            self.out.write(', "__length_%s": %s\n, "%s": '
+                           % (self._count, len(data), category))
             self.out.write(data)
             self.out.write('\n')
 
         self.out.flush()
 
     def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
-        """ Dump the given run data in a "pretty" form. """
+        """ Dump the given run data. """
         if not self.out:
             return
 
@@ -211,7 +216,9 @@ class JSONCaseRecorder(_BaseRecorder):
         self._cases += 1
         category = 'iteration_case_%s' % self._cases
         data = self._dump(info, category, ('data',))
-        self.out.write(', "%s": ' % category)
+        self._count += 1
+        self.out.write(', "__length_%s": %s\n, "%s": '
+                       % (self._count, len(data), category))
         self.out.write(data)
         self.out.write('\n')
         self.out.flush()

@@ -4,6 +4,8 @@ import json
 from struct import unpack
 from weakref import ref
 
+from openmdao.main.api import Assembly
+
 
 class CaseDataset(object):
     """
@@ -71,6 +73,15 @@ class CaseDataset(object):
     def _fetch(self, query):
         """ Return data based on `query`. """
         vnames = query.vnames
+        if vnames is not None:
+            bad = []
+            metadata = self.simulation_info['variable_metadata']
+            for name in vnames:
+                if name not in metadata:
+                    bad.append(name)
+            if bad:
+                raise RuntimeError('Names not found in the dataset: %s' % bad)
+
         local = query.local_only
         return_names = query.names
 
@@ -100,8 +111,13 @@ class CaseDataset(object):
             all_names = driver_names
 
         case_ids = None
+        query_id = None
         parent_id = None
-        if query.parent_id is not None:
+        if query.case_id is not None:
+            query_id = query.case_id
+            case_ids = set([query_id])
+            driver_id = None
+        elif query.parent_id is not None:
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
             parent_id = query.parent_id
@@ -213,16 +229,65 @@ class CaseDataset(object):
                         row.append(nan)
                 rows.append(row)
 
-            if case_id == parent_id:
+            if case_id == query_id or case_id == parent_id:
                 break  # Parent is last case recorded.
+
+        if query_id and not rows:
+            raise ValueError('No case with _id %s', query_id)
 
         if query.transpose:
             tmp = DictList(names)
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
             return tmp
-        else:
-            return rows
+        elif query_id:
+            return rows[0]
+        return rows
+
+    def restore(self, assembly, case_id):
+        """ Restore case `case_id` into `assembly`. """
+        case = self.data.case(case_id).fetch()
+
+        # Restore constant inputs.
+        constants = self.simulation_info['constants']
+        for name in sorted(constants.keys()):
+            assembly.set(name, constants[name])
+
+        # Restore case data.
+        global_dict = dict(__builtins__=None)
+        metadata = self.simulation_info['variable_metadata']
+        for name, value in case.items():
+            if name in metadata:
+                iotype = metadata[name]['iotype']
+            elif name.startswith('_pseudo_'):
+                name += '.out0'
+                iotype = 'out'
+            else:
+                continue
+
+            if '[' in name:
+                exec('assembly.%s = value' % name, global_dict, locals())
+            else:
+                assembly.set(name, value)
+
+            # Find connected inputs and set those as well.
+            asm = assembly
+            src = name
+            for name in src.split('.')[:-1]:
+                obj = getattr(asm, name)
+                if not isinstance(obj, Assembly):
+                    break
+                asm = obj
+            prefix = asm.get_pathname()
+            if prefix:
+                prefix += '.'
+            src = src[len(prefix):]
+            for src, dst in asm._depgraph.out_edges(src):
+                dst = prefix+dst
+                if '[' in dst:
+                    exec('assembly.%s = value' % dst, global_dict, locals())
+                else:
+                    assembly.set(dst, value)
 
 
 class Query(object):
@@ -236,6 +301,7 @@ class Query(object):
     def __init__(self, dataset):
         self._dataset = dataset
         self.driver_name = None
+        self.case_id = None
         self.parent_id = None
         self.vnames = None
         self.local_only = False
@@ -251,14 +317,26 @@ class Query(object):
         self.driver_name = driver_name
         return self
 
+    def case(self, case_id):
+        """ Return this case. """
+        self.case_id = case_id
+        self.parent_id = None
+        return self
+
     def parent_case(self, parent_case_id):
         """ Filter the cases to only include this case and its children. """
         self.parent_id = parent_case_id
+        self.case_id = None
         return self
 
-    def vars(self, vnames):
+    def vars(self, *args):
         """ Filter the variable columns returned in the row. """
-        self.vnames = vnames
+        self.vnames = []
+        for arg in args:
+            if isinstance(arg, basestring):
+                self.vnames.append(arg)
+            else:
+                self.vnames.extend(arg)
         return self
 
     def local(self):
@@ -291,20 +369,29 @@ class Query(object):
         return self
 
 
-class DictList(list): 
+class DictList(list):
 
-    def __init__(self, var_names, seq=None): 
+    def __init__(self, var_names, seq=None):
         if seq is None:
             super(DictList, self).__init__()
         else:
             super(DictList, self).__init__(seq)
         self.name_map = dict([(v, i) for i, v in enumerate(var_names)])
 
-    def __getitem__(self, key): 
-        if isinstance(key, int): 
+    def __getitem__(self, key):
+        if isinstance(key, int):
             return super(DictList, self).__getitem__(key)
-        else: 
+        else:
             return super(DictList, self).__getitem__(self.name_map[key])
+
+    def keys(self):
+        return self.name_map.keys()
+
+    def items(self):
+        return [(key, self[key]) for key in self.name_map]
+
+    def values(self):
+        return [self[key] for key in self.name_map]
 
 
 class _CaseNode(object):
@@ -340,50 +427,18 @@ class _CaseNode(object):
         return kids
 
 
-class _JSONReader(object):
-    """ Reads a :class:`JSONCaseRecorder` file. """
+class _Reader(object):
+    """ Base class for JSON/BSON readers. """
 
-    def __init__(self, filename):
-        with open(filename, 'r') as inp:
-            self._run_data = json.load(inp)
-
-    @property
-    def simulation_info(self):
-        """ Simulation info dictionary. """
-        return self._run_data['simulation_info']
-
-    def drivers(self):
-        """ Return list of 'driver_info' dictionaries. """
-        driver_info = []
-        count = 0
-        while True:
-            count += 1
-            driver_key = 'driver_info_%s' % count
-            if driver_key not in self._run_data:
-                break
-            driver_info.append(self._run_data[driver_key])
-        return driver_info
-
-    def cases(self):
-        """ Return sequence of 'iteration_case' dictionaries. """
-        count = 0
-        while True:
-            count += 1
-            case_key = 'iteration_case_%s' % count
-            if case_key not in self._run_data:
-                break
-            yield self._run_data[case_key]
-
-
-class _BSONReader(object):
-    """ Reads a :class:`BSONCaseRecorder` file. """
-
-    def __init__(self, filename):
-        self._inp = open(filename, 'rb')
-        reclen = unpack('<L', self._inp.read(4))[0]
-        self._simulation_info = bson.loads(self._inp.read(reclen))
+    def __init__(self, filename, mode):
+        self._inp = open(filename, mode)
+        self._simulation_info = self._next()
         self._state = 'drivers'
         self._info = None
+
+    def _next(self):
+        """ Return next dictionary of data. """
+        raise NotImplementedError('_next')
 
     @property
     def simulation_info(self):
@@ -394,36 +449,70 @@ class _BSONReader(object):
         """ Return list of 'driver_info' dictionaries. """
         if self._state != 'drivers':
             self._inp.seek(0)
-            reclen = unpack('<L', self._inp.read(4))[0]
-            self._inp.read(reclen)  # Re-read 'simulation_info'.
+            self._next()  # Re-read 'simulation_info'.
 
         driver_info = []
-        data = self._inp.read(4)
-        while data:
-            reclen = unpack('<L', data)[0]
-            info = bson.loads(self._inp.read(reclen))
+        info = self._next()
+        while info:
             if '_driver_id' not in info:
                 driver_info.append(info)
             else:
                 self._info = info
                 self._state = 'cases'
                 return driver_info
-            data = self._inp.read(4)
+            info = self._next()
         self._state = 'eof'
         return driver_info
 
     def cases(self):
         """ Return sequence of 'iteration_case' dictionaries. """
-        if self._state != 'cases':
+        if self._state != 'cases' or self._info is None:
             self.drivers()  # Read up to first case.
+            if self._state != 'cases':
+                return
 
         yield self._info  # Read when looking for drivers.
         self._info = None
 
-        data = self._inp.read(4)
-        while data:
-            reclen = unpack('<L', data)[0]
-            yield bson.loads(self._inp.read(reclen))
-            data = self._inp.read(4)
+        info = self._next()
+        while info:
+            yield info
+            info = self._next()
         self._state = 'eof'
+
+
+class _JSONReader(_Reader):
+    """ Reads a :class:`JSONCaseRecorder` file. """
+
+    def __init__(self, filename):
+        super(_JSONReader, self).__init__(filename, 'rU')
+
+    def _next(self):
+        """ Return next dictionary of data. """
+        data = self._inp.readline()
+        while '__length_' not in data:
+            if not data:
+                return None
+            data = self._inp.readline()
+
+        key, _, value = data.partition(':')  # '"__length_1": NNN'
+        reclen = int(value) - 1
+        data = self._inp.readline()  # ', "dictname": {'
+        data = '{\n' + self._inp.read(reclen)
+        return json.loads(data)
+
+
+class _BSONReader(_Reader):
+    """ Reads a :class:`BSONCaseRecorder` file. """
+
+    def __init__(self, filename):
+        super(_BSONReader, self).__init__(filename, 'rb')
+
+    def _next(self):
+        """ Return next dictionary of data. """
+        data = self._inp.read(4)
+        if not data:
+            return None
+        reclen = unpack('<L', data)[0]
+        return bson.loads(self._inp.read(reclen))
 
