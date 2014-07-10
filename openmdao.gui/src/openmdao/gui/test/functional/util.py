@@ -12,6 +12,7 @@ import socket
 import stat
 import subprocess
 import sys
+import threading
 import time
 import urllib2
 import zipfile
@@ -160,6 +161,7 @@ _browsers_to_test = dict(
     Chrome=(check_for_chrome, setup_chrome),
     #Firefox=(check_for_firefox, setup_firefox),
 )
+_browser = None
 
 
 def setup_server(virtual_display=True):
@@ -299,7 +301,7 @@ def teardown_server():
 
 def generate(modname):
     """ Generates tests for all configured browsers for `modname`. """
-    global _display_set
+    global _display_set, _browser
 
     # Check if functional tests are to be skipped.
     if int(os.environ.get('OPENMDAO_SKIP_GUI', '0')):
@@ -314,7 +316,7 @@ def generate(modname):
 
     # Check if any configured browsers are available.
     available_browsers = []
-    for name in sorted(_browsers_to_test.keys()):
+    for name in sorted(_browsers_to_test):
         if _browsers_to_test[name][0]():
             available_browsers.append(name)
     if not available_browsers:
@@ -330,9 +332,21 @@ def generate(modname):
         setup_server()
 
     for name in available_browsers:
+        # Setup browser with timeout.
+        _browser = None
+        worker = threading.Thread(target=_start_browser,
+                                  args=(_browsers_to_test[name][1],))
+        worker.daemon = True
+        worker.start()
+        worker.join(60)
+        if worker.is_alive() or _browser is None:
+            msg = 'Browser startup timeout'
+            yield _Runner(tests[0]), SkipTest(msg)
+            return
+
         try:
             # Open browser and verify we can get page title.
-            browser = SafeDriver(_browsers_to_test[name][1]())
+            browser = SafeDriver(_browser)
             browser.title
         except Exception as exc:
             msg = '%s setup failed: %s' % (name, exc)
@@ -387,6 +401,11 @@ def generate(modname):
                 except Exception as exc:
                     print 'Could not delete chromedriver.log: %s' % exc
 
+def _start_browser(setup):
+    """ Run in a thread to start a browser with potential timeout. """
+    global _browser
+    _browser = setup()
+
 
 class _Runner(object):
     """
@@ -413,7 +432,7 @@ class _Runner(object):
         except Exception as exc:
             saved_exc = sys.exc_info()
             self.failed = True
-            package, dot, module = self.test.__module__.rpartition('.')
+            package, _, module = self.test.__module__.rpartition('.')
             testname = '%s.%s' % (module, self.test.__name__)
             logging.exception(testname)
             TEST_CONFIG['failed'].append(testname)
