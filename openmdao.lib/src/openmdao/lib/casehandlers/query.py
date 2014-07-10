@@ -4,7 +4,9 @@ import json
 from struct import unpack
 from weakref import ref
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, VariableTree
+
+_GLOBAL_DICT = dict(__builtins__=None)
 
 
 class CaseDataset(object):
@@ -44,6 +46,11 @@ class CaseDataset(object):
         cases = cds.data.driver(driver_name).parent_case(parent_id).fetch()
 
     Other possibilities exist, see :class:`Query`.
+
+    To restore from the last recorded case::
+
+        cds.restore(assembly, cds.data.fetch()[-1]['_id'])
+
     """
 
     def __init__(self, filename, format):
@@ -97,7 +104,7 @@ class CaseDataset(object):
                 prefix += '.'
             driver_info['prefix'] = prefix
             drivers[_id] = driver_info
-            if query.driver_name and name == query.driver_name:
+            if driver_info['name'] == query.driver_name:
                 driver_id = _id
                 driver_names = [prefix+name
                                 for name in driver_info['recording']]
@@ -155,12 +162,18 @@ class CaseDataset(object):
                 root = cases[parent_id]
                 case_ids = set((parent_id,))
                 if not vnames:
-                    all_names = list(drivers[root.driver_id]['recording'])
-                recorded = set()
+                    driver_info = drivers[root.driver_id]
+                    prefix = driver_info['prefix']
+                    all_names = [prefix+name
+                                 for name in driver_info['recording']]
+                recorded = set([root.driver_id])
                 for child in root.get_children():
                     case_ids.add(child.case_id)
                     if not vnames and child.driver_id not in recorded:
-                        all_names.extend(drivers[child.driver_id]['recording'])
+                        driver_info = drivers[child.driver_id]
+                        prefix = driver_info['prefix']
+                        all_names.extend([prefix+name
+                                          for name in driver_info['recording']])
                         recorded.add(child.driver_id)
             else:
                 raise ValueError('No case with _id %s', parent_id)
@@ -254,21 +267,17 @@ class CaseDataset(object):
             assembly.set(name, constants[name])
 
         # Restore case data.
-        global_dict = dict(__builtins__=None)
         metadata = self.simulation_info['variable_metadata']
         for name, value in case.items():
             if name in metadata:
                 iotype = metadata[name]['iotype']
-            elif name.startswith('_pseudo_'):
+            elif '_pseudo_' in name:
                 name += '.out0'
                 iotype = 'out'
             else:
                 continue
 
-            if '[' in name:
-                exec('assembly.%s = value' % name, global_dict, locals())
-            else:
-                assembly.set(name, value)
+            self._set(assembly, name, value)
 
             # Find connected inputs and set those as well.
             asm = assembly
@@ -283,11 +292,26 @@ class CaseDataset(object):
                 prefix += '.'
             src = src[len(prefix):]
             for src, dst in asm._depgraph.out_edges(src):
+                if src.startswith(dst):
+                    continue  # Weird VarTree edge.
                 dst = prefix+dst
-                if '[' in dst:
-                    exec('assembly.%s = value' % dst, global_dict, locals())
-                else:
-                    assembly.set(dst, value)
+                self._set(assembly, dst, value)
+
+    def _set(self, assembly, name, value):
+        """ Set `name` in `assembly` to `value`. """
+        if isinstance(value, dict):
+            curr = assembly.get(name)
+            if isinstance(curr, VariableTree):
+                for key, val in value.items():
+                    self._set(assembly, '.'.join((name, key)), val)
+            elif '[' in name:
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                assembly.set(name, value)
+        elif '[' in name:
+            exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+        else:
+            assembly.set(name, value)
 
 
 class Query(object):
