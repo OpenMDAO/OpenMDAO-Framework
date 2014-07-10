@@ -158,17 +158,27 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         # Direct comparison of a csv file to a reference. Use the nested case
         # from the JSON file test.
 
-        cds = CaseDataset('nested.json', 'json')
+        self.generate_and_compare('nested')
+
+    def test_multiobj(self):
+        # Direct comparison of a csv file to a reference. Use the nested case
+        # from the JSON file test.
+
+        self.generate_and_compare('multiobj')
+
+    def generate_and_compare(self, name):
+
+        cds = CaseDataset(name + '.json', 'json')
         data = cds.data.fetch()
         caseset_query_to_csv(data, cds, self.filename_csv)
 
-        with open('nested.csv', 'r') as inp1:
+        with open(name + '.csv', 'r') as inp1:
             expected = inp1.readlines()
         with open(self.filename_csv, 'r') as inp2:
             actual = inp2.readlines()
 
         for exp, act in zip(expected, actual):
-            self.assertEqual(exp, act)
+            self.assertEqual(exp.rstrip(), act.rstrip())
 
 if __name__ == '__main__':
     unittest.main()

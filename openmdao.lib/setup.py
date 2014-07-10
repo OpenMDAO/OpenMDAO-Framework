@@ -37,6 +37,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       package_dir={'': 'src'},
       package_data={'openmdao.lib': ['casehandlers/test/*.bson',
                                      'casehandlers/test/*.json',
+                                     'casehandlers/test/*.csv',
                                      'components/test/*.inp',
                                      'datatypes/domain/test/grid.in',
                                      'datatypes/domain/test/q.save',
