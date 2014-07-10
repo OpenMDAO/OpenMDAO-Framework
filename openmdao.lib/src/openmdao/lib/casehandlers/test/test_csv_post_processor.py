@@ -1,38 +1,19 @@
-import bson
-import json
 import os.path
-import re
-import sys
 import unittest
+import StringIO
 
 from numpy import array
 
-
-from struct import unpack
-#from cStringIO import StringIO
-import StringIO
-
-from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
-from openmdao.main.datatypes.api import Array, Instance, List, VarTree
-from openmdao.test.execcomp import ExecComp
-from openmdao.lib.casehandlers.api import CaseDataset, \
-                                          JSONCaseRecorder, BSONCaseRecorder
-from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
-                                     SLSQPdriver
-from openmdao.util.testutil import assert_raises
-
-from openmdao.lib.casehandlers.api import caseset_query_to_csv
-from openmdao.lib.casehandlers.api import CSVCaseIterator, CSVCaseRecorder, \
-                                          DumpCaseRecorder
-from openmdao.main.datatypes.api import Array, Str, Bool, VarTree
-from openmdao.lib.drivers.api import SimpleCaseIterDriver
 from openmdao.main.api import Assembly, Case, set_as_top
-from openmdao.test.execcomp import ExecComp
-from openmdao.util.testutil import assert_raises
+from openmdao.main.datatypes.api import Str, Bool, Array, VarTree
 from openmdao.main.test.test_vartree import DumbVT
 
-from openmdao.lib.casehandlers.api import CSVCaseIterator
+from openmdao.lib.casehandlers.api import JSONCaseRecorder
+from openmdao.lib.casehandlers.api import CSVCaseIterator, CaseDataset, caseset_query_to_csv
 
+from openmdao.lib.drivers.api import SimpleCaseIterDriver
+
+from openmdao.test.execcomp import ExecComp
 
 class CSVPostProcessorTestCase(unittest.TestCase):
 
@@ -66,10 +47,10 @@ class CSVPostProcessorTestCase(unittest.TestCase):
     def tearDown(self):
         for recorder in self.top.recorders:
             recorder.close()
-        #if os.path.exists(self.filename_csv):
-            #os.remove(self.filename_csv)
-        #if os.path.exists(self.filename_json):
-            #os.remove(self.filename_json)
+        if os.path.exists(self.filename_csv):
+            os.remove(self.filename_csv)
+        if os.path.exists(self.filename_json):
+            os.remove(self.filename_json)
 
     def test_simple(self):
 
@@ -83,12 +64,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         data = cds.data.fetch() # results
         caseset_query_to_csv( data, cds, self.filename_csv)
 
-        #import pdb; pdb.set_trace()
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
         self.assertEqual(len(cases), 10)
 
     def test_flatten(self):
-        # create some Cases
+        # try it after creating some Cases
+        # more rigorous checking of the csv
 
         outputs = ['comp1.a_array', 'comp1.vt']
         inputs = [('comp1.x_array', array([2.0, 2.0, 2.0]))]
@@ -98,7 +79,6 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         self.top.driver.clear_responses()
         self.top.driver.add_responses(outputs)
         self.top.recorders = [JSONCaseRecorder(self.filename_json)]
-        #self.top.recorders = [CSVCaseRecorder(filename=self.filename)]
         self.top.recorders[0].num_backups = 0
         self.top.run()
 
@@ -108,56 +88,9 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
         # check recorded cases
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
-        #cases = [case for case in self.top.recorders[0].get_iterator()]
         sout = StringIO.StringIO()
         for case in cases:
             print >>sout, case
-        #import pdb; pdb.set_trace()
-        expected = [
-            'Case:',
-            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   timestamp: 1383238593.781986',
-            '   parent_uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
-            '   inputs:',
-            '      comp1.x_array[0]: 2.0',
-            '      comp1.x_array[1]: 2.0',
-            '      comp1.x_array[2]: 2.0',
-            '   outputs:',
-            '      Response(comp1.a_array)[0]: 1.0',
-            '      Response(comp1.a_array)[1]: 3.0',
-            '      Response(comp1.a_array)[2]: 5.5',
-            '      Response(comp1.vt).data: ',
-            '      Response(comp1.vt).v1: 1.0',
-            '      Response(comp1.vt).v2: 2.0',
-            '      Response(comp1.vt).vt2.data: ',
-            '      Response(comp1.vt).vt2.vt3.a: 1.0',
-            '      Response(comp1.vt).vt2.vt3.b: 12.0',
-            '      Response(comp1.vt).vt2.vt3.data: ',
-            '      Response(comp1.vt).vt2.x: -1.0',
-            '      Response(comp1.vt).vt2.y: -2.0',
-            '      comp1.a_array[0]: 1.0',
-            '      comp1.a_array[1]: 3.0',
-            '      comp1.a_array[2]: 5.5',
-            "      comp1.a_string: Hello',;','",
-            '      comp1.derivative_exec_count: 0.0',
-            '      comp1.exec_count: 1.0',
-            '      comp1.itername: 1-comp1',
-            '      comp1.vt.data: ',
-            '      comp1.vt.v1: 1.0',
-            '      comp1.vt.v2: 2.0',
-            '      comp1.vt.vt2.data: ',
-            '      comp1.vt.vt2.vt3.a: 1.0',
-            '      comp1.vt.vt2.vt3.b: 12.0',
-            '      comp1.vt.vt2.vt3.data: ',
-            '      comp1.vt.vt2.x: -1.0',
-            '      comp1.vt.vt2.y: -2.0',
-            '      comp1.z: 0.0',
-            '      comp2.derivative_exec_count: 0.0',
-            '      comp2.exec_count: 1.0',
-            '      comp2.itername: 1-comp2',
-            '      comp2.z: 1.0',
-            '      driver.workflow.itername: 1',
-            ]
         expected = [
             'Case:',
             '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
@@ -192,7 +125,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             '      driver.workflow.itername: 1',
             ]
 
-#        print sout.getvalue()
+        #print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for index, line in enumerate(lines):
             if line.startswith('Case:'):
