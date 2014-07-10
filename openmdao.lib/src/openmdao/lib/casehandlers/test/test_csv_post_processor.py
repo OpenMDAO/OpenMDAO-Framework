@@ -68,8 +68,8 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             recorder.close()
         #if os.path.exists(self.filename_csv):
             #os.remove(self.filename_csv)
-        if os.path.exists(self.filename_json):
-            os.remove(self.filename_json)
+        #if os.path.exists(self.filename_json):
+            #os.remove(self.filename_json)
 
     def test_simple(self):
 
@@ -83,6 +83,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         data = cds.data.fetch() # results
         caseset_query_to_csv( data, cds, self.filename_csv)
 
+        #import pdb; pdb.set_trace()
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
         self.assertEqual(len(cases), 10)
 
@@ -134,6 +135,39 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             '      Response(comp1.vt).vt2.vt3.data: ',
             '      Response(comp1.vt).vt2.x: -1.0',
             '      Response(comp1.vt).vt2.y: -2.0',
+            '      comp1.a_array[0]: 1.0',
+            '      comp1.a_array[1]: 3.0',
+            '      comp1.a_array[2]: 5.5',
+            "      comp1.a_string: Hello',;','",
+            '      comp1.derivative_exec_count: 0.0',
+            '      comp1.exec_count: 1.0',
+            '      comp1.itername: 1-comp1',
+            '      comp1.vt.data: ',
+            '      comp1.vt.v1: 1.0',
+            '      comp1.vt.v2: 2.0',
+            '      comp1.vt.vt2.data: ',
+            '      comp1.vt.vt2.vt3.a: 1.0',
+            '      comp1.vt.vt2.vt3.b: 12.0',
+            '      comp1.vt.vt2.vt3.data: ',
+            '      comp1.vt.vt2.x: -1.0',
+            '      comp1.vt.vt2.y: -2.0',
+            '      comp1.z: 0.0',
+            '      comp2.derivative_exec_count: 0.0',
+            '      comp2.exec_count: 1.0',
+            '      comp2.itername: 1-comp2',
+            '      comp2.z: 1.0',
+            '      driver.workflow.itername: 1',
+            ]
+        expected = [
+            'Case:',
+            '   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   timestamp: 1383238593.781986',
+            '   parent_uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe',
+            '   inputs:',
+            '      comp1.x_array[0]: 2.0',
+            '      comp1.x_array[1]: 2.0',
+            '      comp1.x_array[2]: 2.0',
+            '   outputs:',
             '      comp1.a_array[0]: 1.0',
             '      comp1.a_array[1]: 3.0',
             '      comp1.a_array[2]: 5.5',

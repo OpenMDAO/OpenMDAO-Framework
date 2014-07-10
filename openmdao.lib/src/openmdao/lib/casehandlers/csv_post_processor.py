@@ -3,6 +3,7 @@
 """
 
 import csv
+from openmdao.main.case import flatten_obj
 
 def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotechar='"'):
     """
@@ -47,9 +48,6 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         else:
             outputs.append(name)
 
-    sorted_inputs = sorted( inputs )
-    sorted_outputs = sorted( outputs )
-
     # Open CSV file
     outfile = open(filename, 'w')
     csv_writer = csv.writer(outfile, delimiter=delimiter,
@@ -57,45 +55,87 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
                                      quoting=csv.QUOTE_NONNUMERIC)
     # No automatic data type conversion is performed unless the QUOTE_NONNUMERIC format option is specified (in which case unquoted fields are transformed into floats).
 
-    # Write the headers
-    headers = ['timestamp', '/INPUTS']
-    headers.extend(sorted_inputs)
-    headers.append('/OUTPUTS')
-    headers.extend(sorted_outputs)
-    headers.extend(['/METADATA', 'uuid', 'parent_uuid', 'msg'])
-    csv_writer.writerow(headers)
 
     # Write the data
     # data is a list of lists where the inner list is the values and metadata for a case
     #var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
 
+    sorted_input_keys = []
+    sorted_input_values = []
+    sorted_output_keys = []
+    sorted_output_values = []
+
     for i, row in enumerate( data ):
         if i == 0:
             var_names = row.name_map.keys()
 
-        csv_data = []
+        input_keys = []
+        input_values = []
+        for name in inputs:
+            obj = row[ row.name_map[ name ] ]
+            for key, value in flatten_obj(name, obj):
+                input_keys.append(key)
+                input_values.append(value)
 
-        csv_data.append( row[ row.name_map[ 'timestamp' ] ] )
+        output_keys = []
+        output_values = []
+        for name in outputs:
+            obj = row[ row.name_map[ name ] ]
+            for key, value in flatten_obj(name, obj):
+                output_keys.append(key)
+                output_values.append(value)
+
+        # This should not be necessary, however python's csv writer
+        # is not writing boolean variables correctly as strings.
+
+        for index, item in enumerate(input_values):
+            if isinstance(item, bool):
+                input_values[index] = str(item)
+
+        for index, item in enumerate(output_values):
+            if isinstance(item, bool):
+                output_values[index] = str(item)
+
+        # Sort the columns alphabetically.
+
+        if len(input_keys) > 0:
+            sorted_input_keys, sorted_input_values = \
+                (list(item) for item in zip(*sorted(zip(input_keys,
+                                                        input_values))))
+        if len(output_keys) > 0:
+            sorted_output_keys, sorted_output_values = \
+                (list(item) for item in zip(*sorted(zip(output_keys,
+                                                        output_values))))
+        if outfile is None:
+            raise RuntimeError('Attempt to record on closed recorder')
+
+        if i == 0:
+            headers = ['timestamp', '/INPUTS']
+            headers.extend(sorted_input_keys)
+            headers.append('/OUTPUTS')
+            headers.extend(sorted_output_keys)
+            headers.extend(['/METADATA', 'uuid', 'parent_uuid', 'msg'])
+
+            csv_writer.writerow(headers)
+            header_size = len(headers)
+
+
+        timestamp = row[ row.name_map[ 'timestamp' ] ]
+        csv_data = [timestamp]
         csv_data.append('')
-        if inputs:
-            for name in sorted_inputs:
-                value = row[row.name_map[name]]
-                import pdb; pdb.set_trace()
-                if value in ['True','False']:
-                    value = str(value)
-                csv_data.append( value )
+        csv_data.extend(sorted_input_values)
         csv_data.append('')
-        if outputs:
-            for name in sorted_outputs:
-                if name == '_driver_id':
-                    value = drivers[row[row.name_map[name]]]
-                else:
-                    value = row[row.name_map[name]]
-                csv_data.append( row[row.name_map[name]] )
+        csv_data.extend(sorted_output_values)
+        exc = row[ row.name_map[ 'error_message' ] ]
+        msg = '' if exc is None else str(exc)
         case_uuid = row[ row.name_map[ '_id' ] ]
         parent_uuid = row[ row.name_map[ '_parent_id' ] ]
-        msg = row[ row.name_map[ 'error_message' ] ]
         csv_data.extend(['', case_uuid, parent_uuid, msg])
+
+        if header_size != len(csv_data):
+            raise RuntimeError("number of data points (%d) doesn't match header"
+                               " size (%d) in CSV recorder"
+                               % (len(csv_data), header_size))
 
         csv_writer.writerow(csv_data)
 
