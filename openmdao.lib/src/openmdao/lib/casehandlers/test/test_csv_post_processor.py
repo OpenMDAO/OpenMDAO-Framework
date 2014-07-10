@@ -161,7 +161,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         self.generate_and_compare('nested')
 
     def test_multiobj(self):
-        # Direct comparison of a csv file to a reference. Use the nested case
+        # Direct comparison of a csv file to a reference. Use the multiobj case
         # from the JSON file test.
 
         self.generate_and_compare('multiobj')
