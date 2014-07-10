@@ -25,6 +25,7 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     # Determine inputs & outputs, map pseudos to expression names.
     expressions = cds.simulation_info['expressions']
     metadata = cds.simulation_info['variable_metadata']
+    expressions = cds.simulation_info['expressions']
     constants_names = cds.simulation_info['constants'].keys()
     inputs = []
     outputs = []
@@ -47,6 +48,11 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
             outputs.append(name)
         else:
             outputs.append(name)
+
+    # Include objectives and constraints from all simulation levels.
+    for name in sorted(expressions.keys()):
+        print name
+        outputs.append(name)
 
     # Open CSV file
     outfile = open(filename, 'w')
@@ -80,6 +86,10 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         output_keys = []
         output_values = []
         for name in outputs:
+
+            if name in expressions:
+                name = expressions[name]['pcomp_name']
+
             obj = row[ row.name_map[ name ] ]
             for key, value in flatten_obj(name, obj):
                 output_keys.append(key)
