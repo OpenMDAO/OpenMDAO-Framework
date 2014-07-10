@@ -168,6 +168,9 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
     def generate_and_compare(self, name):
 
+        directory = os.path.dirname(__file__)
+        name = os.path.join(directory, name)
+
         cds = CaseDataset(name + '.json', 'json')
         data = cds.data.fetch()
         caseset_query_to_csv(data, cds, self.filename_csv)
