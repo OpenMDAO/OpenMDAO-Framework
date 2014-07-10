@@ -101,6 +101,18 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             '      comp1.x_array[1]: 2.0',
             '      comp1.x_array[2]: 2.0',
             '   outputs:',
+            '      Response(comp1.a_array)[0]: 1.0',
+            '      Response(comp1.a_array)[1]: 3.0',
+            '      Response(comp1.a_array)[2]: 5.5',
+            '      Response(comp1.vt).data: ',
+            '      Response(comp1.vt).v1: 1.0',
+            '      Response(comp1.vt).v2: 2.0',
+            '      Response(comp1.vt).vt2.data: ',
+            '      Response(comp1.vt).vt2.vt3.a: 1.0',
+            '      Response(comp1.vt).vt2.vt3.b: 12.0',
+            '      Response(comp1.vt).vt2.vt3.data: ',
+            '      Response(comp1.vt).vt2.x: -1.0',
+            '      Response(comp1.vt).vt2.y: -2.0',
             '      comp1.a_array[0]: 1.0',
             '      comp1.a_array[1]: 3.0',
             '      comp1.a_array[2]: 5.5',
@@ -142,6 +154,34 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         else:
             self.fail("couldn't find the expected Case")
 
+    def test_nested(self):
+        # Direct comparison of a csv file to a reference. Use the nested case
+        # from the JSON file test.
+
+        self.generate_and_compare('nested')
+
+    def test_multiobj(self):
+        # Direct comparison of a csv file to a reference. Use the multiobj case
+        # from the JSON file test.
+
+        self.generate_and_compare('multiobj')
+
+    def generate_and_compare(self, name):
+
+        directory = os.path.dirname(__file__)
+        name = os.path.join(directory, name)
+
+        cds = CaseDataset(name + '.json', 'json')
+        data = cds.data.fetch()
+        caseset_query_to_csv(data, cds, self.filename_csv)
+
+        with open(name + '.csv', 'r') as inp1:
+            expected = inp1.readlines()
+        with open(self.filename_csv, 'r') as inp2:
+            actual = inp2.readlines()
+
+        for exp, act in zip(expected, actual):
+            self.assertEqual(exp.rstrip(), act.rstrip())
 
 if __name__ == '__main__':
     unittest.main()

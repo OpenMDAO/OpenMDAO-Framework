@@ -3,13 +3,15 @@
 """
 
 import csv
+
+# pylint: disable=E0611,F0401
 from openmdao.main.case import flatten_obj
 
 def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotechar='"'):
     """
-    Post-processing function that takes a case_data_set and outputs a csv file
-    Should be able to pass tests of current csv case recorder (column ordering, meta column, etc...)
-    Assume query by case (not variable)
+    Post-processing function that takes a case_data_set and outputs a csv
+    file Should be able to pass tests of current csv case recorder (column
+    ordering, meta column, etc...) Assume query by case (not variable)
 
     Inputs:
 
@@ -29,14 +31,20 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     inputs = []
     outputs = []
     pseudos = {}
-    for name in sorted(metadata.keys()):
+    for name in sorted(data[0].keys()):
+
+        # Don't write constants to csv file
         if name in constants_names:
             continue
+
+        # All inputs and outputs that change.
         if name in metadata:
             if metadata[name]['iotype'] == 'in':
                 inputs.append(name)
             else:
                 outputs.append(name)
+
+        # Include objectives and constraints from all simulation levels.
         elif '_pseudo_' in name:
             for exp_name, exp_dict in expressions.items():
                 if exp_dict['pcomp_name'] == name:
@@ -45,7 +53,9 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
             else:
                 raise RuntimeError('Cannot find %r in expressions' % name)
             outputs.append(name)
-        else:
+
+        # Allow private vars from components.
+        elif '.' in name:
             outputs.append(name)
 
     # Open CSV file
@@ -53,12 +63,13 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     csv_writer = csv.writer(outfile, delimiter=delimiter,
                                      quotechar=quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
-    # No automatic data type conversion is performed unless the QUOTE_NONNUMERIC format option is specified (in which case unquoted fields are transformed into floats).
-
+    # No automatic data type conversion is performed unless the
+    # QUOTE_NONNUMERIC format option is specified (in which case unquoted
+    # fields are transformed into floats).
 
     # Write the data
-    # data is a list of lists where the inner list is the values and metadata for a case
-    #var_names = cds.data.var_names().fetch() # the list of names of the values in the case list
+    # data is a list of lists where the inner list is the values and metadata
+    # for a case
 
     sorted_input_keys = []
     sorted_input_values = []
@@ -66,8 +77,6 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     sorted_output_values = []
 
     for i, row in enumerate( data ):
-        if i == 0:
-            var_names = row.name_map.keys()
 
         input_keys = []
         input_values = []
@@ -80,7 +89,11 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
         output_keys = []
         output_values = []
         for name in outputs:
+
             obj = row[ row.name_map[ name ] ]
+            if name in pseudos:
+                name = pseudos[name]
+
             for key, value in flatten_obj(name, obj):
                 output_keys.append(key)
                 output_values.append(value)
