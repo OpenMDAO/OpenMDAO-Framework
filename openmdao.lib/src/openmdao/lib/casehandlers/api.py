@@ -27,3 +27,5 @@ from openmdao.lib.casehandlers.filters import SequenceCaseFilter, \
 
 from openmdao.lib.casehandlers.query import CaseDataset
 
+from openmdao.lib.casehandlers.csv_post_processor import caseset_query_to_csv
+
