@@ -247,7 +247,7 @@ class CaseDataset(object):
                 break  # Parent is last case recorded.
 
         if query_id and not rows:
-            raise ValueError('No case with _id %s', query_id)
+            raise ValueError('No case with _id %s' % query_id)
 
         if query.transpose:
             tmp = DictList(names)

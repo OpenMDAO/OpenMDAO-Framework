@@ -45,7 +45,7 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
                 outputs.append(name)
 
         # Include objectives and constraints from all simulation levels.
-        elif '_pseudo_' in name:
+        elif '_pseudo_' in name and not name.endswith('.out0'):
             for exp_name, exp_dict in expressions.items():
                 if exp_dict['pcomp_name'] == name:
                     pseudos[name] = '%s(%s)' % (exp_dict['data_type'], exp_name)
