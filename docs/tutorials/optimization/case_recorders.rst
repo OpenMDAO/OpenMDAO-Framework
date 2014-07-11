@@ -151,7 +151,7 @@ by case order. Notice that we're using the exact same data file, without re-runn
         ax.plot_trisurf(x[:i],y[:i],f_xy[:i], cmap=cm.jet, linewidth=0.2)
 
         p.draw()
-        time.sleep(.1)
+        time.sleep(.005) #slow things down so you can see the changes
 
     p.ioff()
 
