@@ -95,7 +95,7 @@ let you interperate your data. The next script just prints the data to your scre
 
         analysis.run()
 
-.. testcode:: case_recorders_post_processing 
+.. ::  
 
     from openmdao.lib.casehandlers.api import CaseDataset
 
@@ -117,7 +117,7 @@ In the DOE tutorial, we showed how to generate a 3D surface plot using the `case
 Retrive the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than 
 by case order. Notice that we're using the exact same data file, without re-running to get it again. 
 
-.. testcode:: case_recorders_post_processing
+.. ::
 
     import time
 
@@ -155,9 +155,9 @@ by case order. Notice that we're using the exact same data file, without re-runn
 
     p.ioff()
 
-OpenMDAO has convenience functions for two common post processing steps: writing data to a CSV file or printing out detailed information about cases. These functions, :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` and ref:`caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>`, both require the data returned from executing a query. `caseset_query_to_csv` allows for an additional argument to specify the name of the CSV file to be created.
+OpenMDAO has convenience functions for two common post processing steps: writing data to a CSV file or printing out detailed information about cases. These functions, :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` and :ref:`caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>`, both require the data returned from executing a query. `caseset_query_to_csv` allows for an additional argument to specify the name of the CSV file to be created.
 
-.. testcode:: case_recorders_post_processing
+.. ::
 
     from openmdao.lib.casehandlers.api import CaseDataset
     from openmdao.lib.casehandlers.api import caseset_query_to_csv
@@ -168,4 +168,6 @@ OpenMDAO has convenience functions for two common post processing steps: writing
 
     caseset_query_to_csv(data, filename='doe.csv')
     caseset_query_dump(data)
+
+
   
