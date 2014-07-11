@@ -1,8 +1,13 @@
 import bson
 import json
+import logging
 
 from struct import unpack
 from weakref import ref
+
+from openmdao.main.api import Assembly, VariableTree
+
+_GLOBAL_DICT = dict(__builtins__=None)
 
 
 class CaseDataset(object):
@@ -42,6 +47,11 @@ class CaseDataset(object):
         cases = cds.data.driver(driver_name).parent_case(parent_id).fetch()
 
     Other possibilities exist, see :class:`Query`.
+
+    To restore from the last recorded case::
+
+        cds.restore(assembly, cds.data.fetch()[-1]['_id'])
+
     """
 
     def __init__(self, filename, format):
@@ -95,7 +105,7 @@ class CaseDataset(object):
                 prefix += '.'
             driver_info['prefix'] = prefix
             drivers[_id] = driver_info
-            if query.driver_name and name == query.driver_name:
+            if driver_info['name'] == query.driver_name:
                 driver_id = _id
                 driver_names = [prefix+name
                                 for name in driver_info['recording']]
@@ -109,8 +119,13 @@ class CaseDataset(object):
             all_names = driver_names
 
         case_ids = None
+        query_id = None
         parent_id = None
-        if query.parent_id is not None:
+        if query.case_id is not None:
+            query_id = query.case_id
+            case_ids = set([query_id])
+            driver_id = None
+        elif query.parent_id is not None:
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
             parent_id = query.parent_id
@@ -148,12 +163,18 @@ class CaseDataset(object):
                 root = cases[parent_id]
                 case_ids = set((parent_id,))
                 if not vnames:
-                    all_names = list(drivers[root.driver_id]['recording'])
-                recorded = set()
+                    driver_info = drivers[root.driver_id]
+                    prefix = driver_info['prefix']
+                    all_names = [prefix+name
+                                 for name in driver_info['recording']]
+                recorded = set([root.driver_id])
                 for child in root.get_children():
                     case_ids.add(child.case_id)
                     if not vnames and child.driver_id not in recorded:
-                        all_names.extend(drivers[child.driver_id]['recording'])
+                        driver_info = drivers[child.driver_id]
+                        prefix = driver_info['prefix']
+                        all_names.extend([prefix+name
+                                          for name in driver_info['recording']])
                         recorded.add(child.driver_id)
             else:
                 raise ValueError('No case with _id %s', parent_id)
@@ -222,16 +243,94 @@ class CaseDataset(object):
                         row.append(nan)
                 rows.append(row)
 
-            if case_id == parent_id:
+            if case_id == query_id or case_id == parent_id:
                 break  # Parent is last case recorded.
+
+        if query_id and not rows:
+            raise ValueError('No case with _id %s' % query_id)
 
         if query.transpose:
             tmp = DictList(names)
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
             return tmp
+        elif query_id:
+            return rows[0]
+        return rows
+
+    def restore(self, assembly, case_id):
+        """ Restore case `case_id` into `assembly`. """
+        case = self.data.case(case_id).fetch()
+
+        # Restore constant inputs.
+        constants = self.simulation_info['constants']
+        for name in sorted(constants):
+            self._set(assembly, name, constants[name])
+
+        # Restore case data.
+        # Sorted order gets comp.arr set before comp.arr[[1, 3, 5]].
+        metadata = self.simulation_info['variable_metadata']
+        for name in sorted(case.keys()):
+            value = case[name]
+            if name in metadata:
+                iotype = metadata[name]['iotype']
+            elif '_pseudo_' in name:
+                if not name.endswith('.out0'):
+                    name += '.out0'
+                iotype = 'out'
+            else:
+                continue
+
+            try:
+                self._set(assembly, name, value)
+            except Exception as exc:
+                raise RuntimeError("Can't set %s to %s: %s" % (name, value, exc))
+
+            # Find connected inputs and set those as well.
+            asm = assembly
+            src = name
+            for name in src.split('.')[:-1]:
+                obj = getattr(asm, name)
+                if not isinstance(obj, Assembly):
+                    break
+                asm = obj
+            prefix = asm.get_pathname()
+            if prefix:
+                prefix += '.'
+            src = src[len(prefix):]
+            for src, dst in asm._depgraph.out_edges(src):
+                if src.startswith(dst):
+                    continue  # Weird VarTree edge.
+                dst = prefix+dst
+                try:
+                    self._set(assembly, dst, value)
+                except Exception as exc:
+                    logging.warning("Can't set %s to %s: %s", dst, value, exc)
+
+    def _set(self, assembly, name, value):
+        """ Set `name` in `assembly` to `value`. """
+        # Translating unicode to str to avoid issues like pyOpt option checks.
+        if isinstance(value, dict):
+            curr = assembly.get(name)
+            if isinstance(curr, VariableTree):
+                for key, val in value.items():
+                    self._set(assembly, '.'.join((name, key)), val)
+            elif '[' in name:
+                if isinstance(value, unicode):
+                    value = str(value)
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                for key, val in value.items():
+                    if isinstance(val, unicode):
+                        value[key] = str(val)
+                assembly.set(name, value)
         else:
-            return rows
+            if isinstance(value, unicode):
+                value = str(value)
+            if '[' in name:
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                assembly.set(name, value)
 
 
 class Query(object):
@@ -245,6 +344,7 @@ class Query(object):
     def __init__(self, dataset):
         self._dataset = dataset
         self.driver_name = None
+        self.case_id = None
         self.parent_id = None
         self.vnames = None
         self.local_only = False
@@ -260,9 +360,16 @@ class Query(object):
         self.driver_name = driver_name
         return self
 
+    def case(self, case_id):
+        """ Return this case. """
+        self.case_id = case_id
+        self.parent_id = None
+        return self
+
     def parent_case(self, parent_case_id):
         """ Filter the cases to only include this case and its children. """
         self.parent_id = parent_case_id
+        self.case_id = None
         return self
 
     def vars(self, *args):
@@ -319,6 +426,15 @@ class DictList(list):
             return super(DictList, self).__getitem__(key)
         else:
             return super(DictList, self).__getitem__(self.name_map[key])
+
+    def keys(self):
+        return self.name_map.keys()
+
+    def items(self):
+        return [(key, self[key]) for key in self.name_map]
+
+    def values(self):
+        return [self[key] for key in self.name_map]
 
 
 class _CaseNode(object):
@@ -395,6 +511,8 @@ class _Reader(object):
         """ Return sequence of 'iteration_case' dictionaries. """
         if self._state != 'cases' or self._info is None:
             self.drivers()  # Read up to first case.
+            if self._state != 'cases':
+                return
 
         yield self._info  # Read when looking for drivers.
         self._info = None

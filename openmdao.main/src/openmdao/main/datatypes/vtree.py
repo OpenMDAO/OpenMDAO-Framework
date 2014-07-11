@@ -43,9 +43,10 @@ class VarTree(Variable):
         try:
             value = self._instance.validate(obj, name, value)
         except Exception:
-            obj.raise_exception('%r must be an instance of %s.%s' %
+            obj.raise_exception('%r must be an instance of %s.%s, not %r' %
                                 (name, self._instance.klass.__module__,
-                                 self._instance.klass.__name__), TypeError)
+                                 self._instance.klass.__name__, type(value)),
+                                TypeError)
         return value
 
     def post_setattr(self, obj, name, value):
