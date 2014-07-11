@@ -71,7 +71,6 @@ For example, to run this analysis and use the `case_input` and `case_output` var
 
     from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder
 
-
     class Analysis(Assembly):
 
         def configure(self):
