@@ -1,11 +1,11 @@
 import sys
 
-from query import DictList
+from query import DictList, ListResult
 
 
 def caseset_query_dump(data, out=None):
     """
-    Dump `data`, the result of a query on :class:`CaseDataset` `cds`.
+    Dump `data`, the result of a query on :class:`CaseDataset`.
     `out` is an object with a :meth:`write` method, or a filename string.
     Default output is ``sys.stdout``.
     """
@@ -13,18 +13,10 @@ def caseset_query_dump(data, out=None):
     cds = data.cds
     by_variable = False
     if isinstance(data, DictList):
-        # by_variable() or single case.
-        # Assuming DictList of all lists => by_variable().
-        for item in data:
-            if not isinstance(item, list):
-                break
-        else:
-            by_variable = True
+        by_variable = True
         keys = data.keys()
-        rows = [data]
-    elif isinstance(data, list) and hasattr(data[0], 'keys'): # by_case()
+    elif isinstance(data, list) and hasattr(data[0], 'keys'):
         keys = data[0].keys()
-        rows = data
     else:
         raise ValueError("'data' is of unexpected type %s" % type(data))
 
@@ -81,7 +73,7 @@ def caseset_query_dump(data, out=None):
                         value = drivers[value]
                     write('        %s\n' % value)
     else:  # by_case
-        for row in rows:
+        for row in data:
             write('Case:\n')
             if inputs:
                 write('   inputs:\n')
@@ -102,7 +94,8 @@ def caseset_query_dump(data, out=None):
 if __name__ == '__main__':
     from query import CaseDataset
     cds = CaseDataset('test/nested.json', 'json')
-    caseset_query_dump(cds.data.fetch(), cds)
-    caseset_query_dump(cds.data.by_variable().fetch(), cds)
-    caseset_query_dump(cds.data.fetch()[-1], cds)
+    caseset_query_dump(cds.data.fetch())
+    caseset_query_dump(cds.data.by_variable().fetch())
+    case_id = cds.data.fetch()[-1]['_id']
+    caseset_query_dump(cds.data.case(case_id).fetch())
 

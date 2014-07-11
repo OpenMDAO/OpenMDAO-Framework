@@ -10,13 +10,12 @@ from openmdao.main.case import flatten_obj
 def caseset_query_to_csv(data, filename='cases.csv', delimiter=',', quotechar='"'):
     """
     Post-processing function that takes a case_data_set and outputs a csv
-    file Should be able to pass tests of current csv case recorder (column
-    ordering, meta column, etc...) Assume query by case (not variable)
+    file. Should be able to pass tests of current csv case recorder (column
+    ordering, meta column, etc...) Assume query by case (not variable).
 
     Inputs:
 
     data - results of fetch on Query object
-    cds - CaseDataset
 
     """
 
