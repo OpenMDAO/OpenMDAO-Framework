@@ -5,34 +5,11 @@ Recording Your Inputs and Outputs
 
 In the previous example, we showed how to use a `DOEdriver` to vary parameters and reference the recorder values for parameters and responses using the `case_input` and `case_output` variable trees. Another way to record information is with `CaseRecorders`. By default, `CaseRecorders` will record as much information about a case as possible.
 
-OpenMDAO contains the following case recorders:
+Let's consider our simple constrained optimization of the Paraboloid component with SLSQP. We would like to print out the convergence history of the variables, objective, and constraint into a JSON file.
 
-==================== ====================================================================
-Name                  Output Type
-==================== ====================================================================
-``JSONCaseRecorder``  JSON file, defaults to cases.json
--------------------- --------------------------------------------------------------------
-``BSONCaseRecorder``  BSON file, defaults to cases.bson
-==================== ====================================================================
+.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
-The recorders are interchangeable, so you can use any of them in the top-level
-assembly's ``recorders`` list. Since ``recoders`` is a list, it allows for recording
-cases in multiple formats at once. All assemblies contain a ``recorders`` variable,
-however only the top-level assembly's recorders are used. 
-
-Although a `CaseRecorder` will record as much information by default, the
-top-level assembly's ``includes`` and ``excludes`` variables can be used to 
-limit which output varaibles are recorded. These variables hold lists of
-patterns of variables to be included or excluded from the data recorded.
-By default ``includes`` is ``['*']``, including everything.
-By default ``excludes`` is ``[]``, excluding nothing.
-
-Of these recorders, the JSONCaseRecorder and BSONCaseRecorder are the most useful
-for passing data to other applications, such as an external post-processing
-tool. The BSONCaseRecorder will record everything JSONCaseRecorder does, but in a
-more compact form. To perform JSON and BSON case recorder post-processing,
-:ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` is typically used. We'll 
-introduce `CaseDataset` later in this tutorial.
+Here, we set ``opt_problem.recorders`` to be a list that contains the JSON recorder. OpenMDAO also constains a BSON recorder which records the data in a more compact format. The `JSONCaseRecorder` takes a filename as an argument and the file will be written in the directory where you execute this Python file. To open the file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety of methods for controlling what information is read from the file. In this example, we use `by_case` to specify that the data should be ordered by case number and`fecth` to read the data into memory. For simplicity, we just print each case to the console.
 
 At the end of the top-level assembly's ``run()``, all case recorders are closed.
 Each type of recorder defines its own implementation of ``close()``,
@@ -41,14 +18,7 @@ For example, the JSONCaseRecorder will close the file being written so that
 other applications can use it. Note that in some cases you cannot record to
 a closed recorder.
 
-Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would like to print out the convergence history of the variables, objective, and constraint into a JSON file.
-
-.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
-
-Here, we set ``opt_problem.recorders`` to be a list that contains the JSON recorder. The JSONCaseRecorder takes a filename as an argument.
-These files will be written in the directory where you execute this Python file. To open the file, we use a `CaseDataset` object. The arguments for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety of methods for controlling what information is read from the file. In this example, we use `by_case` to specify that the data should be ordered by case number and`fecth` to read the data into memory. For simplicity, we just print each case to the console.
-
-`CaseDataset` was designed with postprocessing in mind. In the previous example, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseRecorders` and `CaseDataset` objects instead. 
+`CaseDataset` was designed to make postprocessing of data simple. In the DOE tutorial, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseRecorders` and `CaseDataset` objects. 
 
 First, we setup a DOE identical to the one in the previous tutorial. What's new is that we add a `JSONCaseRecorder` to the `Analysis` assembly.
 
@@ -123,7 +93,7 @@ Next, we create a 3D surface plot but we retrive the data using a `CaseDataset` 
 
         p.ioff()
 
-Because the creation of CSV files or printing detailed results to a console are common, OpenMDAO provides a `CSVPostProcessor` and `DumpCasePostProcessor`.
+Other common forms of postprocessing are writing data to an CSV file or printing detailed information about cases to a console. OpenMDAO contains convenience methods for doing both.
 
 .. testsetup:: simple_doe_caserecorder
   from openmdao.main.api import Assembly, Component
@@ -149,4 +119,19 @@ Because the creation of CSV files or printing detailed results to a console are 
 
           self.recorders = [JSONCaseRecorder('doe.json')]
 
+.. testcode:: simple_doe_caserecorder
 
+  if __name__ == "__main__":
+    from openmdao.lib.casehandlers.api import CaseDataset
+    from openmdao.lib.casehandlers.api import caseset_query_to_csv, caseset_query_dump
+    
+    analysis = Analysis()
+
+    analysis.run()
+    case_dataset = CaseDataSet('doe.json', 'json')
+    data = case_dataset.by_case().fetch()
+
+    caseset_query_to_csv(data, case_dataset, filename='doe.csv')
+    caseset_query_dump(data, case_dataset)
+
+We use :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` to create a csv file and :ref: `caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>` to show case information in a console. Both functions require the data to be processed and a `CaseDataset` object. `caseset_query_to_csv` uses 'cases.csv' as the default file name.   
