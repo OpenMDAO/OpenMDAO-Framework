@@ -196,7 +196,7 @@ class CaseDataset(object):
             return names
 
         nan = float('NaN')
-        rows = []
+        rows = ListResult()
         state = {}  # Retains last seen values.
         for case_data in self._reader.cases():
             data = case_data['data']
@@ -253,7 +253,12 @@ class CaseDataset(object):
             tmp = DictList(names)
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
+            # Keep CDS as attribute for post-processing
+            tmp.cds = self
             return tmp
+
+        # Keep CDS as attribute for post-processing
+        rows.cds = self
         return rows
 
     def restore(self, assembly, case_id):
@@ -437,6 +442,13 @@ class DictList(list):
     def values(self):
         """ Return values in key order. """
         return [self[key] for key in self.name_map]
+
+
+class ListResult(list):
+    """ Simply a list that allows us to save a reference to the
+    original CaseDataSet.
+    """
+    pass
 
 
 class _CaseNode(object):

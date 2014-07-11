@@ -62,7 +62,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
         cds = CaseDataset(self.filename_json, 'json')
         data = cds.data.fetch() # results
-        caseset_query_to_csv( data, cds, self.filename_csv)
+        caseset_query_to_csv( data, self.filename_csv)
 
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
         self.assertEqual(len(cases), 10)
@@ -84,7 +84,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
         cds = CaseDataset(self.filename_json, 'json')
         data = cds.data.fetch() # results
-        caseset_query_to_csv( data, cds, self.filename_csv)
+        caseset_query_to_csv( data, self.filename_csv)
 
         # check recorded cases
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
@@ -173,7 +173,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
         cds = CaseDataset(name + '.json', 'json')
         data = cds.data.fetch()
-        caseset_query_to_csv(data, cds, self.filename_csv)
+        caseset_query_to_csv(data, self.filename_csv)
 
         with open(name + '.csv', 'r') as inp1:
             expected = inp1.readlines()
