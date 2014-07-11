@@ -1,4 +1,4 @@
-# pylint: disable-msg=F0401
+# pylint: disable=F0401
 
 import os
 import sys
@@ -32,10 +32,13 @@ Component, Driver, Variable and other plugins for OpenMDAO
       author_email='',
       url='http://openmdao.org',
       license='Apache License, Version 2.0',
-      namespace_packages=["openmdao"],
+      namespace_packages=['openmdao'],
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      package_data={'openmdao.lib': ['components/test/*.inp',
+      package_data={'openmdao.lib': ['casehandlers/test/*.bson',
+                                     'casehandlers/test/*.json',
+                                     'casehandlers/test/*.csv',
+                                     'components/test/*.inp',
                                      'datatypes/domain/test/grid.in',
                                      'datatypes/domain/test/q.save',
                                      'datatypes/domain/test/lpc-test.*']},

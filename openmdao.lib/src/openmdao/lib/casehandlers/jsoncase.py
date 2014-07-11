@@ -45,13 +45,14 @@ class _BaseRecorder(object):
         top = self._cfg_map.keys()[0].parent
         while top.parent:
             top = top.parent
+        prefix_drop = len(top.name)+1 if top.name else 0
 
         # Collect variable metadata.
         cruft = ('desc', 'framework_var', 'type', 'validation_trait')
         variable_metadata = {}
         for driver, (ins, outs) in self._cfg_map.items():
             scope = driver.parent
-            prefix = scope.get_pathname()
+            prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
             if prefix:
                 prefix += '.'
 
@@ -59,6 +60,7 @@ class _BaseRecorder(object):
                 if '_pseudo_' in name or name.endswith('.workflow.itername'):
                     pass  # No metadata.
                 else:
+                    name, _, rest = name.partition('[')
                     try:
                         metadata = scope.get_metadata(name)
                     except AttributeError:
@@ -71,6 +73,7 @@ class _BaseRecorder(object):
                         variable_metadata[prefix+name] = metadata
 
         for name in constants:
+            name, _, rest = name.partition('[')
             metadata = top.get_metadata(name).copy()
             for key in cruft:
                 if key in metadata:
@@ -81,7 +84,8 @@ class _BaseRecorder(object):
         expressions = {}
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[1][0]):
-            prefix = driver.parent.get_pathname()
+            scope = driver.parent
+            prefix = '' if scope is top else scope.get_pathname()[prefix_drop:]
             if prefix:
                 prefix += '.'
 
@@ -113,16 +117,24 @@ class _BaseRecorder(object):
         return dict(variable_metadata=variable_metadata,
                     expressions=expressions,
                     constants=constants,
+                    name=top.name,
                     OpenMDAO_Version=__version__,
                     uuid=self._uuid)
 
     def get_driver_info(self):
         """ Return list of driver info dictionaries. """
+
+        # Locate top level assembly from first driver registered.
+        top = self._cfg_map.keys()[0].parent
+        while top.parent:
+            top = top.parent
+        prefix_drop = len(top.name) + 1 if top.name else 0
+
         driver_info = []
         for driver, (ins, outs) in sorted(self._cfg_map.items(),
                                           key=lambda item: item[0].get_pathname()):
-            info = dict(name=driver.get_pathname(), _id=id(driver),
-                        recording=ins+outs)
+            name = driver.get_pathname()[prefix_drop:]
+            info = dict(name=name, _id=id(driver), recording=ins+outs)
             if hasattr(driver, 'get_parameters'):
                 info['parameters'] = \
                     [str(param) for param in driver.get_parameters().values()]
