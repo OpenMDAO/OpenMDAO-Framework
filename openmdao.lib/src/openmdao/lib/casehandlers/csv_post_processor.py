@@ -7,7 +7,7 @@ import csv
 # pylint: disable=E0611,F0401
 from openmdao.main.case import flatten_obj
 
-def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotechar='"'):
+def caseset_query_to_csv(data, filename='cases.csv', delimiter=',', quotechar='"'):
     """
     Post-processing function that takes a case_data_set and outputs a csv
     file Should be able to pass tests of current csv case recorder (column
@@ -20,6 +20,7 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
 
     """
 
+    cds = data.cds
     drivers = {}
     for driver in cds.drivers:
         drivers[driver['_id']] = driver['name']
@@ -27,15 +28,10 @@ def caseset_query_to_csv(data, cds, filename='cases.csv', delimiter=',', quotech
     # Determine inputs & outputs, map pseudos to expression names.
     expressions = cds.simulation_info['expressions']
     metadata = cds.simulation_info['variable_metadata']
-    constants_names = cds.simulation_info['constants'].keys()
     inputs = []
     outputs = []
     pseudos = {}
     for name in sorted(data[0].keys()):
-
-        # Don't write constants to csv file
-        if name in constants_names:
-            continue
 
         # All inputs and outputs that change.
         if name in metadata:

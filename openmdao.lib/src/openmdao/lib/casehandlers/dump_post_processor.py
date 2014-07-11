@@ -3,12 +3,14 @@ import sys
 from query import DictList
 
 
-def caseset_query_dump(data, cds, out=None):
+def caseset_query_dump(data, out=None):
     """
     Dump `data`, the result of a query on :class:`CaseDataset` `cds`.
     `out` is an object with a :meth:`write` method, or a filename string.
     Default output is ``sys.stdout``.
     """
+
+    cds = data.cds
     by_variable = False
     if isinstance(data, DictList):
         # by_variable() or single case.
