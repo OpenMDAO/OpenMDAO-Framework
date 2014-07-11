@@ -48,7 +48,7 @@ Or download our version of the file
 :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.
 
 To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`. To specify the particular type of DOE, you set the ``DOEgenerator``
-attribute. In this case we used :ref:`Uniform <Uniform.py>`, but any of the DOEgenerators
+attribute. In this case we used :ref:`Uniform <openmdao.lib.doegenerators.uniform.py>`, but any of the DOEgenerators
 would work.
 
 You can see that this code does not look a whole lot different from the code in the previous
@@ -156,9 +156,11 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
 
         p.ioff()
 
-.. figure:: doe.png
-   :align: center
-   :alt: Multi-colored graph of output from the execution of the DOE
+.. raw:: html
+   <video controls>
+      <source src="../../_images/doe_parab.webm" type="video/mp4">
+    Your browser does not support the video tag.
+    </video>
 
 
    A Graph of the Output from the Execution of the DOE
