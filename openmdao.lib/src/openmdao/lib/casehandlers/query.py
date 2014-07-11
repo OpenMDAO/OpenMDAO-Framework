@@ -1,5 +1,6 @@
 import bson
 import json
+import logging
 
 from struct import unpack
 from weakref import ref
@@ -263,21 +264,27 @@ class CaseDataset(object):
 
         # Restore constant inputs.
         constants = self.simulation_info['constants']
-        for name in sorted(constants.keys()):
-            assembly.set(name, constants[name])
+        for name in sorted(constants):
+            self._set(assembly, name, constants[name])
 
         # Restore case data.
+        # Sorted order gets comp.arr set before comp.arr[[1, 3, 5]].
         metadata = self.simulation_info['variable_metadata']
-        for name, value in case.items():
+        for name in sorted(case.keys()):
+            value = case[name]
             if name in metadata:
                 iotype = metadata[name]['iotype']
             elif '_pseudo_' in name:
-                name += '.out0'
+                if not name.endswith('.out0'):
+                    name += '.out0'
                 iotype = 'out'
             else:
                 continue
 
-            self._set(assembly, name, value)
+            try:
+                self._set(assembly, name, value)
+            except Exception as exc:
+                raise RuntimeError("Can't set %s to %s: %s" % (name, value, exc))
 
             # Find connected inputs and set those as well.
             asm = assembly
@@ -295,23 +302,35 @@ class CaseDataset(object):
                 if src.startswith(dst):
                     continue  # Weird VarTree edge.
                 dst = prefix+dst
-                self._set(assembly, dst, value)
+                try:
+                    self._set(assembly, dst, value)
+                except Exception as exc:
+                    logging.warning("Can't set %s to %s: %s", dst, value, exc)
 
     def _set(self, assembly, name, value):
         """ Set `name` in `assembly` to `value`. """
+        # Translating unicode to str to avoid issues like pyOpt option checks.
         if isinstance(value, dict):
             curr = assembly.get(name)
             if isinstance(curr, VariableTree):
                 for key, val in value.items():
                     self._set(assembly, '.'.join((name, key)), val)
             elif '[' in name:
+                if isinstance(value, unicode):
+                    value = str(value)
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                for key, val in value.items():
+                    if isinstance(val, unicode):
+                        value[key] = str(val)
+                assembly.set(name, value)
+        else:
+            if isinstance(value, unicode):
+                value = str(value)
+            if '[' in name:
                 exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
             else:
                 assembly.set(name, value)
-        elif '[' in name:
-            exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
-        else:
-            assembly.set(name, value)
 
 
 class Query(object):
