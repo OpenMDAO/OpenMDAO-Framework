@@ -60,6 +60,7 @@ class _BaseRecorder(object):
                 if '_pseudo_' in name or name.endswith('.workflow.itername'):
                     pass  # No metadata.
                 else:
+                    name, _, rest = name.partition('[')
                     try:
                         metadata = scope.get_metadata(name)
                     except AttributeError:
@@ -72,6 +73,7 @@ class _BaseRecorder(object):
                         variable_metadata[prefix+name] = metadata
 
         for name in constants:
+            name, _, rest = name.partition('[')
             metadata = top.get_metadata(name).copy()
             for key in cruft:
                 if key in metadata:
