@@ -180,8 +180,12 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         with open(self.filename_csv, 'r') as inp2:
             actual = inp2.readlines()
 
+        # Strip off trailing whitespace (newlines and carriage returns)
+        # Don't check time-stamp because some OS round it.
         for exp, act in zip(expected, actual):
-            self.assertEqual(exp.rstrip(), act.rstrip())
+            self.assertEqual(exp.rstrip().partition(",")[2],
+                             act.rstrip().partition(",")[2])
+
 
 if __name__ == '__main__':
     unittest.main()
