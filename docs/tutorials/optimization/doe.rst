@@ -47,9 +47,7 @@ data points. Create a file called ``doe.py`` and copy the following into it:
 Or download our version of the file
 :download:`here </../examples/openmdao.examples.simple/openmdao/examples/simple/doe.py>`.
 
-To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`. To specify the particular type of DOE, you set the ``DOEgenerator``
-
-attribute. In this case we used :ref:`Uniform <openmdao.lib.doegenerators.uniform.py>`, but any of the DOEgenerators would work.
+To run a DOE we use the :ref:`DOEdriver <DOEdriver.py>`. To specify the particular type of DOE, you set the ``DOEgenerator`` attribute. In this case we used :ref:`Uniform <openmdao.lib.doegenerators.uniform.py>`, but any of the DOEgenerators would work.
 
 You can see that this code does not look a whole lot different from the code in the previous
 tutorials  on :ref:`unconstrained <using-CONMIN>` and :ref:`constrained <constrained-optimization>`

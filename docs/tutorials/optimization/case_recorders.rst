@@ -9,7 +9,7 @@ Let's consider our simple constrained optimization of the Paraboloid component w
 
 .. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
 
-Here, we set ``opt_problem.recorders`` to be a list that contains the JSON recorder. OpenMDAO also constains a BSON recorder which records the data in a more compact format. The `JSONCaseRecorder` takes a filename as an argument and the file will be written in the directory where you execute this Python file. To open the file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety of methods for controlling what information is read from the file. In this example, we use `by_case` to specify that the data should be ordered by case number and`fecth` to read the data into memory. For simplicity, we just print each case to the console.
+Here, we set ``opt_problem.recorders`` to be a list that contains the JSON recorder. OpenMDAO also constains a BSON recorder which records the data in a more compact format. :ref:`JSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` takes a filename as an argument and the file will be written in the directory where you execute this Python file. To open the file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety of methods for controlling what information is read from the file. In this example, we use `by_case` to specify that the data should be ordered by case number and`fecth` to read the data into memory. For simplicity, we just print each case to the console.
 
 At the end of the top-level assembly's ``run()``, all case recorders are closed.
 Each type of recorder defines its own implementation of ``close()``,
@@ -96,6 +96,7 @@ Next, we create a 3D surface plot but we retrive the data using a `CaseDataset` 
 Other common forms of postprocessing are writing data to an CSV file or printing detailed information about cases to a console. OpenMDAO contains convenience methods for doing both.
 
 .. testsetup:: simple_doe_caserecorder
+
   from openmdao.main.api import Assembly, Component
   from openmdao.lib.drivers.api import DOEdriver
   from openmdao.lib.doegenerators.api import Uniform
@@ -134,4 +135,4 @@ Other common forms of postprocessing are writing data to an CSV file or printing
     caseset_query_to_csv(data, case_dataset, filename='doe.csv')
     caseset_query_dump(data, case_dataset)
 
-We use :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` to create a csv file and :ref: `caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>` to show case information in a console. Both functions require the data to be processed and a `CaseDataset` object. `caseset_query_to_csv` uses 'cases.csv' as the default file name.   
+We use :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` to create a csv file and :ref:`caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>` to show case information in a console. Both functions require the data to be processed and a `CaseDataset` object.`caseset_query_to_csv` uses 'cases.csv' as the default file name.   
