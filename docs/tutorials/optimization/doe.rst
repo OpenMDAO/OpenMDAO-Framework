@@ -155,15 +155,17 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
 
 
         p.ioff()
+        
 
 .. raw:: html
+
    <video controls>
-      <source src="../../_images/doe_parab.webm" type="video/mp4">
+      <source src="../../_downloads/doe_parab.webm" type="video/mp4">
     Your browser does not support the video tag.
     </video>
 
+You can download this movie :download:`here <doe_parab.webm>`.
 
-   A Graph of the Output from the Execution of the DOE
 
 At times it's necessary to rerun an analysis. This can be a problem if the
 DOE generator used has a random component. To handle this, DOEdriver records
