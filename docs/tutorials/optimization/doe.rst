@@ -115,6 +115,7 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
 .. testcode:: simple_model_doe_run
 
     if __name__ == "__main__":
+        import time
 
         from mpl_toolkits.mplot3d import Axes3D
         from matplotlib import cm
@@ -134,10 +135,10 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
         #ax = p.gca()
 
         slices = range(3,len(X))[::10]
+        every_10 = range(3,len(x))[::10]
 
-        freq = 10/float(len(slices))
 
-        for i in slices: 
+        for i in every_10: 
             ax.clear()
             ax.set_xlim(-60,60)
             ax.set_ylim(-60,60)
@@ -148,8 +149,7 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
             ax.plot_trisurf(x[:i],y[:i],f_xy[:i], cmap=cm.jet, linewidth=0.2)
 
             p.draw()
-            time.sleep(freq)
-
+            time.sleep(.005) #slow it down so you can see the changes
 
         p.ioff()
         
