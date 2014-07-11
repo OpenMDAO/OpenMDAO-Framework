@@ -254,13 +254,11 @@ class CaseDataset(object):
             for i in range(len(rows[0])):
                 tmp.append([row[i] for row in rows])
             return tmp
-        elif query_id:
-            return rows[0]
         return rows
 
     def restore(self, assembly, case_id):
         """ Restore case `case_id` into `assembly`. """
-        case = self.data.case(case_id).fetch()
+        case = self.data.case(case_id).fetch()[0]
 
         # Restore constant inputs.
         constants = self.simulation_info['constants']
@@ -413,6 +411,7 @@ class Query(object):
 
 
 class DictList(list):
+    """ List that can be indexed by index or 'var_name'. """
 
     def __init__(self, var_names, seq=None):
         if seq is None:
@@ -428,12 +427,15 @@ class DictList(list):
             return super(DictList, self).__getitem__(self.name_map[key])
 
     def keys(self):
+        """ Return list of dictionary keys. """
         return self.name_map.keys()
 
     def items(self):
+        """ Return list of ``(key, value)``. """
         return [(key, self[key]) for key in self.name_map]
 
     def values(self):
+        """ Return values in key order. """
         return [self[key] for key in self.name_map]
 
 
