@@ -2,26 +2,42 @@
 Test query of case recorder file.
 """
 
+import glob
 import os.path
 import unittest
 
 from math import isnan
 
-from openmdao.main.api import Assembly, set_as_top
-from openmdao.main.datatypes.api import Array
+from openmdao.main.api import Assembly, Component, VariableTree, set_as_top
+from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.lib.casehandlers.api import CaseDataset, \
                                           JSONCaseRecorder, BSONCaseRecorder
-from openmdao.lib.drivers.api import SLSQPdriver
+from openmdao.lib.drivers.api import FixedPointIterator, SLSQPdriver
 from openmdao.lib.optproblems import sellar
 from openmdao.util.testutil import assert_rel_error
 
 
-class SellarCO(Assembly):
-    """ Solution of the sellar analytical problem using CO. """
+class States(VariableTree):
 
-    global_des_var_targets = Array([5.0, 2.0], iotype='in')
-    local_des_var_targets = Array([1.0], iotype='in')
-    coupling_var_targets = Array([3.16, 0.0], iotype='in')
+    y = Array([0.0, 0.0])
+
+class Globals(VariableTree):
+
+    z1 = Float(0.0)
+    z2 = Float(0.0)
+
+class Half(Component):
+
+    z2a = Float(0.0, iotype = 'in')
+    z2b = Float(0.0, iotype = 'out')
+
+    def execute(self):
+        self.z2b = 0.5*self.z2a
+
+class SellarMDF(Assembly):
+    """ Optimization of the Sellar problem using MDF
+    Disciplines coupled with FixedPointIterator.
+    """
 
     def configure(self):
         """ Creates a new Assembly with this problem
@@ -30,95 +46,72 @@ class SellarCO(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        self.recorders = [JSONCaseRecorder('sellar_json.new'),
-                          BSONCaseRecorder('sellar_bson.new')]
+        # Sub assembly
+        sub = self.add('sub', Assembly())
+
+        # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
+        sub.add('driver', FixedPointIterator())
+        sub.add('dis1', sellar.Discipline1())
+        sub.add('dis2', sellar.Discipline2())
+        sub.driver.workflow.add(['dis1', 'dis2'])
+
+        # Make all connections
+        sub.connect('dis1.y1', 'dis2.y1')
+        sub.connect('dis1.z1', 'dis2.z1')
+
+        # Iteration loop
+        sub.driver.add_parameter('dis1.y2')
+        sub.driver.add_constraint('dis2.y2 = dis1.y2')
+
+        # Solver settings
+        sub.driver.max_iteration = 100
+        sub.driver.tolerance = .00001
+        sub.driver.print_convergence = False
+
+        # Subassy boundaries
+        sub.add('globals', VarTree(Globals(), iotype='in'))
+        sub.add('states', VarTree(States(), iotype='out'))
+        sub.connect('globals.z1', 'dis1.z1')
+        # Note, dis1.z2 is connected by input-input conn
+        sub.connect('globals.z2', 'dis1.z2')
+        sub.connect('globals.z2', 'dis2.z2')
+        sub.create_passthrough('dis1.x1')
+        sub.connect('dis1.y1', 'states.y[0]')
+        sub.connect('dis2.y2', 'states.y[1]')
 
         # Global Optimization
         self.add('driver', SLSQPdriver())
-        self.add('localopt1', SLSQPdriver())
-        self.add('localopt2', SLSQPdriver())
-        self.driver.workflow.add(['localopt2',
-                                  'localopt1'])
+        self.driver.gradient_options.force_fd = True
+        #self.driver.iprint = 3
 
-        # Local Optimization 1
-        self.add('dis1', sellar.Discipline1())
+        # Extra comp
+        self.add('half', Half())
+        self.connect('half.z2b', 'sub.globals.z2')
 
-        # Local Optimization 2
-        self.add('dis2', sellar.Discipline2())
+        self.driver.workflow.add(['half', 'sub'])
 
-        #Parameters - Global Optimization
-        self.driver.add_objective('(local_des_var_targets[0])**2 + '
-                                  'global_des_var_targets[1] + '
-                                  'coupling_var_targets[0] + '
-                                  'math.exp(-coupling_var_targets[1])')
+        # Add Parameters to optimizer
+        self.driver.add_parameter('sub.globals.z1', low=-10.0, high=10.0)
+        self.driver.add_parameter('half.z2a', low= 0.0,  high=10.0)
+        self.driver.add_parameter('sub.x1', low=0.0, high=10.0)
 
-        self.driver.add_parameter('global_des_var_targets[0]', low=-10.0, high=10.0)
-        self.driver.add_parameter('global_des_var_targets[1]', low=0.0, high=10.0)
-        self.driver.add_parameter('local_des_var_targets[0]', low=0.0, high=10.0)
-        self.driver.add_parameter('coupling_var_targets[0]', low=3.16, high=10.0)
-        self.driver.add_parameter('coupling_var_targets[1]', low=-10.0, high=24.0)
+        # Optimization parameters
+        self.driver.add_objective('(sub.x1)**2 + sub.globals.z2 + sub.states.y[0] + math.exp(-sub.states.y[1])')
 
-        con1 = '(global_des_var_targets[0] - dis1.z1)**2 + ' \
-               '(global_des_var_targets[1] - dis1.z2)**2 + ' \
-               '(local_des_var_targets[0] - dis1.x1)**2 + ' \
-               '(coupling_var_targets[0] - dis1.y1)**2 + ' \
-               '(coupling_var_targets[1] - dis1.y2)**2 <= 0'
+        self.driver.add_constraint('3.16 < sub.states.y[0]')
+        self.driver.add_constraint('sub.states.y[1] < 24.0')
 
-        con2 = '(global_des_var_targets[0] - dis2.z1)**2 + ' \
-               '(global_des_var_targets[1] - dis2.z2)**2 + ' \
-               '(coupling_var_targets[0] - dis2.y1)**2 + ' \
-               '(coupling_var_targets[1] - dis2.y2)**2 <= 0'
-
-        self.driver.add_constraint(con1)
-        self.driver.add_constraint(con2)
-
-        self.driver.iprint = 0
-
-        # Parameters - Local Optimization 1
-        self.localopt1.add_objective('(global_des_var_targets[0] - dis1.z1)**2 + '
-                                     '(global_des_var_targets[1] - dis1.z2)**2 + '
-                                     '(local_des_var_targets[0] - dis1.x1)**2 + '
-                                     '(coupling_var_targets[0] - dis1.y1)**2 + '
-                                     '(coupling_var_targets[1] - dis1.y2)**2')
-
-        self.localopt1.add_parameter('dis1.x1', low=0.0, high=10.0)
-        self.localopt1.add_parameter('dis1.z1', low=-10.0, high=10.0)
-        self.localopt1.add_parameter('dis1.z2', low=0.0, high=10.0)
-        self.localopt1.add_parameter('dis1.y2', low=-1e99, high=1e99)
-        self.localopt1.add_constraint('dis1.y1 > 3.16')
-        self.localopt1.iprint = 0
-
-        # Parameters - Local Optimization 2
-        self.localopt2.add_objective('(global_des_var_targets[0] - dis2.z1)**2 + ' \
-                                     '(global_des_var_targets[1] - dis2.z2)**2 + ' \
-                                     '(coupling_var_targets[0] - dis2.y1)**2 + ' \
-                                     '(coupling_var_targets[1] - dis2.y2)**2')
-        self.localopt2.add_parameter('dis2.z1', low=-10.0, high=10.0)
-        self.localopt2.add_parameter('dis2.z2', low=0.0, high=10.0)
-        self.localopt2.add_parameter('dis2.y1', low=-1e99, high=1e99)
-        self.localopt2.add_constraint('dis2.y2 < 24.0')
-        self.localopt2.iprint = 0
+        self.sub.globals.z1 = 5.0
+        self.half.z2a = 2.0
+        self.sub.x1 = 1.0
 
 
 def create_files():
     """ Create/update test data files. """
-    prob = set_as_top(SellarCO())
-
-    prob.dis1.z1 = 5.0
-    prob.dis2.z1 = 5.0
-
-    prob.dis1.z2 = 2.0
-    prob.dis2.z2 = 2.0
-
-    prob.dis1.x1 = 1.0
-
-    prob.dis1.y2 = 1.0
-    prob.dis2.y1 = 1.0
-
-    prob.global_des_var_targets = [5.0, 2.0]
-    prob.local_des_var_targets = [1.0,]
-    prob.coupling_var_targets = [1.0, 1.0]
-
+    prob = set_as_top(SellarMDF())
+    prob.name = "top"
+    prob.recorders = [JSONCaseRecorder('sellar_json.new'),
+                      BSONCaseRecorder('sellar_bson.new')]
     prob.run()
 
 
@@ -131,178 +124,149 @@ class TestCase(unittest.TestCase):
 
     def tearDown(self):
         self.cds = None
+        for path in glob.glob('cases.*'):
+            try:
+                os.remove(path)
+            except WindowsError:
+                # Still in use (recorder or dataset hasn't been deleted yet).
+                pass
 
     def test_query(self):
         # Full dataset.
         vnames = self.cds.data.var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
-            '_pseudo_2', '_pseudo_3', '_pseudo_4', '_pseudo_5', '_pseudo_6',
-            'coupling_var_targets[0]', 'coupling_var_targets[1]',
-            'dis1.derivative_exec_count', 'dis1.exec_count', 'dis1.itername',
-            'dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2',
-            'dis2.derivative_exec_count', 'dis2.exec_count', 'dis2.itername',
-            'dis2.y1', 'dis2.y2', 'dis2.z1', 'dis2.z2',
-            'driver.workflow.itername', 'error_message', 'error_status',
-            'global_des_var_targets[0]', 'global_des_var_targets[1]',
-            'local_des_var_targets[0]', 'localopt1.derivative_exec_count',
-            'localopt1.error_code', 'localopt1.exec_count',
-            'localopt1.itername', 'localopt1.workflow.itername',
-            'localopt2.derivative_exec_count', 'localopt2.error_code',
-            'localopt2.exec_count', 'localopt2.itername',
-            'localopt2.workflow.itername', 'timestamp']
+            '_pseudo_2', 'driver.workflow.itername', 'error_message',
+            'error_status', 'half.derivative_exec_count', 'half.exec_count',
+            'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
+            'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
+            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
+            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
+            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
+            'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
+            'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
+            'sub.x1', 'timestamp']
         self.assertEqual(vnames, expected)
 
         cases = self.cds.data.fetch()
-        self.assertEqual(len(cases), 1826)
+        self.assertEqual(len(cases), 142)
         self.assertEqual(len(cases[0]), len(expected))
 
         # Specific variables.
-        names = ['dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2']
+        names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
         vnames = self.cds.data.vars(names).var_names().fetch()
         self.assertEqual(vnames, names)
 
         cases = self.cds.data.vars(names).fetch()
-        self.assertEqual(len(cases), 1826)
+        self.assertEqual(len(cases), 142)
         self.assertEqual(len(cases[0]), len(names))
 
-        iteration_case_1826 = {
-            "dis1.x1": 0.0094360174925073158,
-            "dis1.y1": 3.1600005559017141,
-            "dis1.y2": 3.7528188943779459,
-            "dis1.z1": 1.9750937573344864,
-            "dis1.z2": 0.00013296702313628215,
+        iteration_case_142 = {
+            "half.z2a": 3.2649235987085278e-15,
+            "sub.dis1.y1": 3.1600041592009194,
+            "sub.dis2.y2": 3.755280110989017,
+            "sub.x1": 2.8984826597319301e-15
         }
         for name, val in zip(names, cases[-1]):
-            assert_rel_error(self, val, iteration_case_1826[name], 0.001)
+            assert_rel_error(self, val, iteration_case_142[name], 0.001)
 
         # Local to driver.
+        # For some reason the top-level driver isn't the last recorded.
         cases = self.cds.data.local().vars(names).fetch()
-        self.assertEqual(len(cases), 1826)
-        self.assertEqual(len(cases[0]), len(names))
-        for val in cases[0]:  # localopt2
-            self.assertTrue(isnan(val))
-        self.assertEqual(len(cases[-1]), len(names))
-        for val in cases[-1]: # top
-            self.assertTrue(isnan(val))
-
-        iteration_case_69 = { # localopt1
-            "dis1.x1": 1.0,
-            "dis1.y1": 27.8,
-            "dis1.y2": 1.0,
-            "dis1.z1": 5.0,
-            "dis1.z2": 2.0,
-        }
-        for name, val in zip(names, cases[68]):
-            self.assertEqual(val, iteration_case_69[name])
-
-        self.assertEqual(cases[68]['dis1.y1'], iteration_case_69['dis1.y1'])
+        self.assertEqual(len(cases), 142)
+        last = cases[-1]
+        self.assertEqual(len(last), len(names))
+        for name in ('half.z2a', 'sub.x1'):
+            self.assertTrue(isnan(last[name]))
+        for name in ('sub.dis1.y1', 'sub.dis2.y2'):
+            assert_rel_error(self, last[name], iteration_case_142[name], 0.001)
 
         # Transposed.
         vars = self.cds.data.local().vars(names).by_variable().fetch()
         self.assertEqual(len(vars), len(names))
-        self.assertEqual(len(vars[0]), 1826)
-
-        iteration_case_69 = { # localopt1
-            "dis1.x1": 1.0,
-            "dis1.y1": 27.8,
-            "dis1.y2": 1.0,
-            "dis1.z1": 5.0,
-            "dis1.z2": 2.0,
-        }
-        for i, var in enumerate(vars):
-            self.assertTrue(isnan(var[0]))  # localopt2
-            self.assertTrue(isnan(var[-1])) # top
-            assert_rel_error(self, var[68], iteration_case_69[names[i]], 0.001)
-
-        self.assertEqual(vars['dis1.y1'][68], iteration_case_69['dis1.y1'])
+        for name in ('half.z2a', 'sub.x1'):
+            self.assertEqual(len(vars[name]), 142)
+            self.assertTrue(isnan(vars[name][-1]))
+        for name in ('sub.dis1.y1', 'sub.dis2.y2'):
+            self.assertEqual(len(vars[name]), 142)
+            assert_rel_error(self, vars[name][-1], iteration_case_142[name], 0.001)
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '796bf5d1-012c-11e4-8e45-005056000100'  # iteration_case_78
+        parent = '8207760f-078c-11e4-82c7-0800279081d0'  # iteration_case_6
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
-            '_pseudo_2', '_pseudo_3', '_pseudo_4', '_pseudo_5', '_pseudo_6',
-            'coupling_var_targets[0]', 'coupling_var_targets[1]',
-            'dis1.derivative_exec_count', 'dis1.exec_count', 'dis1.itername',
-            'dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2',
-            'dis2.derivative_exec_count', 'dis2.exec_count', 'dis2.itername',
-            'dis2.y1', 'dis2.y2', 'dis2.z1', 'dis2.z2',
-            'driver.workflow.itername', 'error_message', 'error_status',
-            'global_des_var_targets[0]', 'global_des_var_targets[1]',
-            'local_des_var_targets[0]', 'localopt1.derivative_exec_count',
-            'localopt1.error_code', 'localopt1.exec_count',
-            'localopt1.itername', 'localopt1.workflow.itername',
-            'localopt2.derivative_exec_count', 'localopt2.error_code',
-            'localopt2.exec_count', 'localopt2.itername',
-            'localopt2.workflow.itername', 'timestamp']
+            '_pseudo_2', 'driver.workflow.itername', 'error_message',
+            'error_status', 'half.derivative_exec_count', 'half.exec_count',
+            'half.itername', 'half.z2a', 'half.z2b', 'sub._pseudo_0',
+            'sub.derivative_exec_count', 'sub.dis1.derivative_exec_count',
+            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
+            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
+            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
+            'sub.driver.workflow.itername', 'sub.exec_count', 'sub.globals.z1',
+            'sub.itername', 'sub.states', 'sub.states.y[0]', 'sub.states.y[1]',
+            'sub.x1', 'timestamp']
         self.assertEqual(vnames, expected)
 
         cases = self.cds.data.parent_case(parent).fetch()
-        self.assertEqual(len(cases), 78)
+        self.assertEqual(len(cases), 6)
         self.assertEqual(len(cases[0]), len(expected))
 
         iteration_case_1 = {
-            "_pseudo_5": 49.0,
-            "_pseudo_6": -16.0,
-            "dis2.derivative_exec_count": 0,
-            "dis2.exec_count": 1,
-            "dis2.itername": "1-localopt2.1-dis2",
-            "dis2.y1": 1.0,
-            "dis2.y2": 8.0,
-            "dis2.z1": 5.0,
-            "dis2.z2": 2.0,
-            "localopt2.workflow.itername": "1-localopt2.1"
+            "sub._pseudo_0": 10.176871642217915,
+            "sub.dis1.derivative_exec_count": 0,
+            "sub.dis1.exec_count": 1,
+            "sub.dis1.itername": "1-sub.1-dis1",
+            "sub.dis1.y1": 26.8,
+            "sub.dis1.y2": 1.0,
+            "sub.dis2.derivative_exec_count": 0,
+            "sub.dis2.exec_count": 1,
+            "sub.dis2.itername": "1-sub.1-dis2",
+            "sub.dis2.y2": 11.176871642217915,
+            "sub.driver.workflow.itername": "1-sub.1"
         }
         self.verify(vnames, cases[0], iteration_case_1)
 
-        iteration_case_78 = {
+        iteration_case_6 = {
             # Data from parent.
-            "_pseudo_0": 4.3678794411714428,
-            "_pseudo_1": 18.603650790259696,
-            "_pseudo_2": 13.004546217033543,
-            "coupling_var_targets[0]": 1.0,
-            "coupling_var_targets[1]": 1.0,
+            "_pseudo_0": 26.803946487677322,
+            "_pseudo_1": -21.643929454616536,
+            "_pseudo_2": -13.019645649693533,
             "driver.workflow.itername": "1",
-            "global_des_var_targets[0]": 5.0,
-            "global_des_var_targets[1]": 2.0,
-            "local_des_var_targets[0]": 1.0,
-            "localopt1.derivative_exec_count": 0,
-            "localopt1.error_code": 0,
-            "localopt1.exec_count": 1,
-            "localopt1.itername": "1-localopt1",
-            "localopt2.derivative_exec_count": 0,
-            "localopt2.error_code": 0,
-            "localopt2.exec_count": 1,
-            "localopt2.itername": "1-localopt2",
+            "half.derivative_exec_count": 0,
+            "half.exec_count": 1,
+            "half.itername": "1-half",
+            "half.z2a": 2.0,
+            "half.z2b": 1.0,
+            "sub.derivative_exec_count": 0,
+            "sub.exec_count": 1,
+            "sub.globals.z1": 5.0,
+            "sub.itername": "1-sub",
+            "sub.states": {
+                "y": [
+                    24.803929454616537,
+                    10.980354350306467
+                ]
+            },
+            "sub.states.y[0]": 24.803929454616537,
+            "sub.states.y[1]": 10.980354350306467,
+            "sub.x1": 1.0,
 
-            # Last data from localopt1.
-            "_pseudo_3": 18.603650790259696,
-            "_pseudo_4": -2.0914426634988104e-08,
-            "dis1.derivative_exec_count": 0,
-            "dis1.exec_count": 37,
-            "dis1.itername": "1-localopt1.9-dis1",
-            "dis1.x1": -2.5171596376597159e-16,
-            "dis1.y1": 3.1600000209144268,
-            "dis1.y2": 1.2169731313990237,
-            "dis1.z1": 1.577422040870375,
-            "dis1.z2": 0.91513435217057326,
-            "localopt1.workflow.itername": "1-localopt1.9",
-
-            # Last data from localopt2.
-            "_pseudo_5": 13.004546217033543,
-            "_pseudo_6": -20.961798034144564,
-            "dis2.derivative_exec_count": 0,
-            "dis2.exec_count": 107,
-            "dis2.itername": "1-localopt2.68-dis2",
-            "dis2.y1": -2.3511537015279333e-07,
-            "dis2.y2": 3.0382019658554338,
-            "dis2.z1": 3.0336152281330477,
-            "dis2.z2": 0.004101850756019077,
-            "localopt2.workflow.itername": "1-localopt2.68"
+            # Last data from sub.
+            "sub._pseudo_0": 1.6233891457773097e-06,
+            "sub.dis1.derivative_exec_count": 0,
+            "sub.dis1.exec_count": 5,
+            "sub.dis1.itername": "1-sub.5-dis1",
+            "sub.dis1.y1": 24.803929454616537,
+            "sub.dis1.y2": 10.980352726917321,
+            "sub.dis2.derivative_exec_count": 0,
+            "sub.dis2.exec_count": 5,
+            "sub.dis2.itername": "1-sub.5-dis2",
+            "sub.dis2.y2": 10.980354350306467,
+            "sub.driver.workflow.itername": "1-sub.5"
         }
-        self.verify(vnames, cases[-1], iteration_case_78)
+        self.verify(vnames, cases[-1], iteration_case_6)
 
     def verify(self, names, case, expected):
         for name, value in expected.items():
@@ -314,22 +278,23 @@ class TestCase(unittest.TestCase):
 
     def test_driver(self):
         # Dataset of a driver.
-        vnames = self.cds.data.driver('localopt1').var_names().fetch()
+        vnames = self.cds.data.driver('sub.driver').var_names().fetch()
         expected = [
-            '_driver_id', '_id', '_parent_id', '_pseudo_3', '_pseudo_4',
-            'dis1.derivative_exec_count', 'dis1.exec_count', 'dis1.itername',
-            'dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2',
-            'error_message', 'error_status', 'localopt1.workflow.itername',
-            'timestamp']
+            '_driver_id', '_id', '_parent_id', 'error_message', 'error_status',
+            'sub._pseudo_0', 'sub.dis1.derivative_exec_count',
+            'sub.dis1.exec_count', 'sub.dis1.itername', 'sub.dis1.y1',
+            'sub.dis1.y2', 'sub.dis2.derivative_exec_count',
+            'sub.dis2.exec_count', 'sub.dis2.itername', 'sub.dis2.y2',
+            'sub.driver.workflow.itername', 'timestamp']
         self.assertEqual(vnames, expected)
 
-        cases = self.cds.data.driver('localopt1').fetch()
-        self.assertEqual(len(cases), 735)
+        cases = self.cds.data.driver('sub.driver').fetch()
+        self.assertEqual(len(cases), 126)
         self.assertEqual(len(cases[0]), len(expected))
 
     def test_bson(self):
         # Simple check of _BSONReader.
-        names = ('dis1.x1', 'dis1.y1', 'dis1.y2', 'dis1.z1', 'dis1.z2')
+        names = ['half.z2a', 'sub.dis1.y1', 'sub.dis2.y2', 'sub.x1']
 
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         json_cases = CaseDataset(path, 'json').data.vars(names).fetch()
@@ -353,6 +318,38 @@ class TestCase(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), 'truncated.json')
         cases = CaseDataset(path, 'json').data.fetch()
         self.assertEqual(len(cases), 7)
+
+    def test_restore(self):
+        # Restore from case, run, verify outputs match expected.
+        top = set_as_top(SellarMDF())
+        top.name = 'top'
+        top.recorders = [JSONCaseRecorder()]
+        top.run()
+        assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)
+        assert_rel_error(self, top.half.z2a, 0., .0001)
+        assert_rel_error(self, top.sub.x1, 0., .0001)
+        assert_rel_error(self, top.sub.states.y[0], 3.160004, .0001)
+        assert_rel_error(self, top.sub.states.y[1], 3.755280, .0001)
+        assert_rel_error(self, top.driver.eval_objective(), 3.18339413394, .0001)
+
+        cds = CaseDataset('cases.json', 'json')
+        cases = cds.data.fetch()
+        n_orig = len(cases)  # Typically 142
+
+        top = set_as_top(SellarMDF())
+        cds.restore(top, cases[-1]['_id'])
+        top.recorders = [JSONCaseRecorder('cases.restored')]
+        top.run()
+        assert_rel_error(self, top.sub.globals.z1, 1.977639, .0001)
+        assert_rel_error(self, top.half.z2a, 0., .0001)
+        assert_rel_error(self, top.sub.x1, 0., .0001)
+        assert_rel_error(self, top.sub.states.y[0], 3.160000, .0001)
+        assert_rel_error(self, top.sub.states.y[1], 3.755278, .0001)
+        assert_rel_error(self, top.driver.eval_objective(), 3.18339397762, .0001)
+
+        cases = CaseDataset('cases.restored', 'json').data.fetch()
+        # Exact case counts are unreliable, just assure restore was quicker.
+        self.assertTrue(len(cases) < n_orig/4)   # Typically 15
 
 
 if __name__ == '__main__':

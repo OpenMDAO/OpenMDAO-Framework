@@ -3,169 +3,171 @@
 Recording Your Inputs and Outputs
 =====================================
 
-The previous section showed you how you can record output from OpenMDAO using a case recorder. This
-next lesson will show you the available case recorders in more detail.
+In the previous example, we showed how to use a `DOEdriver` to vary parameters and plot the values from the DOE using the `case_input` and `case_output` variable trees. Another way to work with the DOE data is to record it to a file, and then make your plots in a 
+post processing step. 
 
-OpenMDAO contains the following case recorders:
+Let's re-run the DOE example from the previous tutorial: a Unifrom DOE of a Paraboloid component. The 
+only difference from before is that we will specify a :ref:`JSONCaseRecorder 
+<openmdao.lib.casehandlers.jsoncase.py>`, which will save off all the data from our run into a 
+file, named by the `filename` argument. The following `script </../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py>` will run the DOE for you, and should result 
+in a file being created called `doe.json`. 
 
-==================== ====================================================================
-Name                  Output Type
-==================== ====================================================================
-``CSVCaseRecorder``   CSV file, defaults to cases.csv
--------------------- --------------------------------------------------------------------
-``DBCaseRecorder``    SQLite database, default ``':memory:'``; can also be stored in file
--------------------- --------------------------------------------------------------------
-``DumpCaseRecorder``  File-like object, defaults to ``sys.stdout``
--------------------- --------------------------------------------------------------------
-``ListCaseRecorder``  Python List
--------------------- --------------------------------------------------------------------
-``JSONCaseRecorder``  JSON file, defaults to cases.json
--------------------- --------------------------------------------------------------------
-``BSONCaseRecorder``  BSON file, defaults to cases.bson
-==================== ====================================================================
+.. note:: 
 
-The recorders are interchangeable, so you can use any of them in the top-level
-assembly's ``recorders`` list. All assemblies contain a ``recorders`` variable,
-however only the top-level assembly's recorders are used.
-Why a list? It's so you can have the same case data recorded in multiple ways if you want to. For example, you could use the DumpCaseRecorder to 
-output data to the screen and use the DBCaseRecorder to save the same data to a database. 
+    OpenMDAO also constains a :ref:`BSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` recorder 
+    which records the data in a more compact format.
 
-At the end of each workflow's execution, output variables in that workflow
-satisfying the top-level assembly's ``includes`` and ``excludes`` specification
-are recorded. These variables hold lists of patterns of variables to be
-included or excluded from the data recorded.
-By default ``includes`` is ``['*']``, including everything.
-By default ``excludes`` is ``[]``, excluding nothing.
+.. testcode:: case_recorders
 
-The CSVCaseRecorder outputs the selected variables into a file in the csv
-(Comma Separated Value) format. The DBCaseRecorder stores the selected
-variables in an SQLite database, which can be stored in memory or on disc as
-a binary file. The DumpCaseRecorder is used to output the selected
-variables into a file-like object in a human-readable format. The default
-object is ``sys.stdout``, which redirects the output to STDOUT. It can also take
-a filename as an argument. The ListCaseRecorder stores the cases in a Python
-list. The JSONCaseRecorder and BSONCaseRecorders store variable, expression,
-and driver configuration as well as case data to a file.
+    from openmdao.main.api import Assembly, Component
+    from openmdao.lib.drivers.api import DOEdriver
+    from openmdao.lib.doegenerators.api import Uniform
 
-Of these recorders, the CSVCaseRecorder is the most useful
-for passing data to other applications, such as an external post-processing
-tool. The DBCaseRecorder is the most useful for saving data for later use.
-The BSONCaseRecorder will record everything JSONCaseRecorder does, but in a
-more compact form. To perform JSON and BSON case recorder post-processing,
-:ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` is typically used.
+    from openmdao.examples.simple.paraboloid import Paraboloid
 
-At the end of the top-level assembly's ``run()``, all case recorders are closed.
-Each type of recorder defines its own implementation of ``close()``,
-but the general idea is to specify that the recording process is complete.
-For example, the CSVCaseRecorder will close the file being written so that
-other applications can use it. Note that in some cases you cannot record to
-a closed recorder.
+    from openmdao.lib.casehandlers.api import JSONCaseRecorder
 
-Let's consider our simple unconstrained optimization of the Paraboloid component with SLSQP. We would
-like to print out the convergence history of the variables, objective, and constraint into a csv
-file, which we can read into Excel for some post processing. Additionally, we'd like to save an
-SQLite database for future use. The code for this should look like:
+    class Analysis(Assembly):
 
-.. literalinclude:: ../../../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py
+        def configure(self):
+            self.add('parabloid', Paraboloid)
 
-Here, we set ``opt_problem.recorders`` to be a list that contains the csv and db case
-recorders. The CSVCaseRecorder takes a filename as an argument, as does the DBCaseRecorder.
-These files will be written in the directory where you execute this Python file.
+            self.add('driver', DOEdriver())
+            self.driver.DOEgenerator = Uniform(1000)
 
-OpenMDAO has a data structure for storing case information. This structure includes the variable
-names, their status as an input or output, and a number of other metadata fields. Run the above
-code, and inspect the resulting file ``converge.csv``.
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
+
+            self.driver.add_response('paraboloid.f_xy')
+
+            self.recorders = [JSONCaseRecorder(filename='doe.json')]
+
+    if __name__ == "__main__": 
+        #-----------------------------
+        # Run analysis
+        #-----------------------------
+        import os
+        if os.path.exists('doe.json'):
+            os.remove('doe.json')
+
+        analysis = Analysis()
+
+        analysis.run()
+
+
+Once you have the `doe.json` file, then you can start to set up some post processing scripts to 
+let you interperate your data. The next script just prints the data to your screen.
+
+.. testsetup:: case_recorders_post_processing
+
+    from openmdao.main.api import Assembly, Component
+    from openmdao.lib.drivers.api import DOEdriver
+    from openmdao.lib.doegenerators.api import Uniform
+
+    from openmdao.examples.simple.paraboloid import Paraboloid
+
+    from openmdao.lib.casehandlers.api import JSONCaseRecorder
+
+    class Analysis(Assembly):
+
+        def configure(self):
+            self.add('parabloid', Paraboloid)
+
+            self.add('driver', DOEdriver())
+            self.driver.DOEgenerator = Uniform(1000)
+
+            self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+            self.driver.add_parameter('paraboloid.y', low=-50, high=50)
+
+            self.driver.add_response('paraboloid.f_xy')
+
+            self.recorders = [JSONCaseRecorder(filename='doe.json')]
+
+    if __name__ == "__main__": 
+        #-----------------------------
+        # Run analysis
+        #-----------------------------
+        import os
+        if os.path.exists('doe.json'):
+            os.remove('doe.json')
+
+        analysis = Analysis()
+
+        analysis.run()
+
+::  
+
+    from openmdao.lib.casehandlers.api import CaseDataset
+
+    #----------------------------------------------------
+    # Print out history of our objective for inspection
+    #----------------------------------------------------
+    case_dataset = CaseDataset('doe.json', 'json')
+    data = case_dataset.data.by_case().fetch()
+
+    for case in data:
+        print "x: %f, y:%f, f_xy:%s"%(case['paraboloid.x'], case['paraboloid.y'], case['paraboloid.f_xy'])
+
+To open the data file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments 
+for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety 
+of methods for controlling what information is read from the file. In this example, we use `by_case` 
+to specify that the data should be returned as a list of dictionaries, where each item of the list is a single case and variables can be accessed by row. The `fetch` executes the query to read the data into memory. 
+
+In the DOE tutorial, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseDataset` objects. 
+Retrive the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than 
+by case order. Notice that we're using the exact same data file, without re-running to get it again. 
 
 ::
 
-   "timestamp","/INPUTS","paraboloid.x","paraboloid.y","/OUTPUTS","_pseudo_0","_pseudo_1","driver.workflow.itername","paraboloid.derivative_exec_count","paraboloid.exec_count","paraboloid.f_xy","paraboloid.itername","/METADATA","uuid","parent_uuid","msg"
-   1403884288.956539,"",0.0,0.0,"",22.0,15.0,"1",0,1,22.0,"1-paraboloid","","e6fe4819-fe12-11e3-8001-005056000100","",""
-   1403884288.961565,"",0.0,0.0,"",22.0,15.0,"2",0,2,22.0,"2-paraboloid","","e6ff6478-fe12-11e3-8002-005056000100","",""
-   1403884288.976972,"",6.4999990006594981,-8.5000009993404984,"",-25.749996002635005,3.5527136788005009e-15,"3",0,5,-25.749996002635005,"3-paraboloid","","e701c311-fe12-11e3-8003-005056000100","",""
-   1403884288.983514,"",8.2629979802763209,-6.7370020197236782,"",-23.477506285730119,0.0,"4",0,8,-23.477506285730119,"4-paraboloid","","e702c3de-fe12-11e3-8004-005056000100","",""
-   1403884288.986463,"",7.1666665854829459,-7.8333334145170523,"",-27.083333333333314,1.7763568394002505e-15,"5",0,9,-27.083333333333314,"5-paraboloid","","e7033878-fe12-11e3-8005-005056000100","",""
+    import time
+
+    from mpl_toolkits.mplot3d import Axes3D
+    from matplotlib import cm
+    from matplotlib import pyplot as p
+
+    from openmdao.lib.casehandlers.api import CaseDataset
+
+    case_dataset = CaseDataset('doe.json', 'json')
+    data = case_dataset.data.by_variable().fetch()
+    x    = data['paraboloid.x']
+    y    = data['paraboloid.y']
+    f_xy    = data['paraboloid.f_xy']
+
+    p.ion()
+    fig = p.figure()
+    ax = Axes3D(fig)
+
+    every_10 = range(3,len(x))[::10]
 
 
-This file should be readable into an application that accepts a csv input file. The first line is a
-header that contains the variable names for the values that are printed. Notice that the objective
-and constraints are printed for an optimizer driver.
-Columns with a section header (``"/INPUTS", "/OUTPUTS", "/METADATA"``)
-do not contain any data. The final columns in the file contain  some metadata associated with the
-case. None of these are set by SLSQPdriver. Note that in OpenMDAO's flavor of csv, string data
-will always be enclosed in double quotes.
+    for i in every_10: 
+        ax.clear()
+        ax.set_xlim(-60,60)
+        ax.set_ylim(-60,60)
+        ax.set_zlim(-1000,6000)
+        ax.grid(False)
 
-The CSVCaseRecorder supports simple data types -- integers, floats, and strings. It also supports
-single elements of an array. The chosen element becomes a column in the csv file. Some of the more
-complicated data types -- dictionaries, lists, multi-dimensional arrays, custom data objects -- are
-not yet supported by the CSVCaseRecorder, and it is not clear how some of these could best be
-represented in a comma-separated format. However, the other case recorders should support every type
-of variable, provided that it can be serialized.
+        #3d surface plot
+        ax.plot_trisurf(x[:i],y[:i],f_xy[:i], cmap=cm.jet, linewidth=0.2)
 
-The CSVCaseRecorder also saves the csv output files from previous runs. These backup files are given
-unique names that contain the current date and time. The user can specify the number of backups
-to keep for each CSVCaseRecorder object by adding the following line to the above example.
+        p.draw()
+        time.sleep(.005) #slow things down so you can see the changes
+
+    p.ioff()
+
+OpenMDAO has convenience functions for two common post processing steps: writing data to a CSV file or printing out detailed information about cases. These functions, :ref:`caseset_query_to_csv <openmdao.lib.casehandlers.csv_post_processor.py>` and :ref:`caseset_query_dump <openmdao.lib.casehandlers.dump_post_processor.py>`, both require the data returned from executing a query. `caseset_query_to_csv` allows for an additional argument to specify the name of the CSV file to be created.
 
 ::
 
-   opt_problem.recorders[0].num_backups = 3
-
-If you set the number of backups to 0, no backup files are saved. The default number of backup
-files is 5. Note that it is a rolling save, so the oldest files are deleted as the newest ones 
-are saved so that the total is kept at the desired number.
-
-The DumpCaseRecorder is generally used to write readable text to a
-file or to STDOUT. Let's try using a DumpCaseRecorder to output a history
-of our parameters, constraints, and objectives to a file named ``'data.txt'``.
-
-::
-
-    from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
-    from openmdao.lib.casehandlers.api import DumpCaseRecorder
+    from openmdao.lib.casehandlers.api import CaseDataset
+    from openmdao.lib.casehandlers.api import caseset_query_to_csv
+    from openmdao.lib.casehandlers.api import caseset_query_dump
     
-    opt_problem = OptimizationConstrained()
-    
-    outfile = open('data.txt', 'w')
-    opt_problem.recorders = [DumpCaseRecorder(outfile)]
-    opt_problem.run()
+    case_dataset = CaseDataset('doe.json', 'json')
+    data = case_dataset.data.by_case().fetch()
 
-            
-You should now have a file called ``'data.txt'`` that contains output that looks
-like this:
-
-::
-
-   Case:
-      uuid: e704a187-fe12-11e3-800a-005056000100
-      timestamp: 1403884288.995384
-      inputs:
-         paraboloid.x: 7.16666658548
-         paraboloid.y: -7.83333341452
-      outputs:
-         _pseudo_0: -27.0833333333
-         _pseudo_1: 1.7763568394e-15
-         driver.workflow.itername: 5
-         paraboloid.derivative_exec_count: 0.0
-         paraboloid.exec_count: 9.0
-         paraboloid.f_xy: -27.0833333333
-         paraboloid.itername: 5-paraboloid
+    caseset_query_to_csv(data, filename='doe.csv')
+    caseset_query_dump(data)
 
 
-The ``_pseudo_N`` variables relate to objectives, responses, and constraints.
-         
-You can use partial wildcard matches and include multiple wildcards in the 
-``includes`` or ``excludes`` lists, so scenarios like this
-
-::
-
-      opt_problem.includes = ['comp1.*', 'comp2.*', *error*]
-
-are possible. This will return a set of cases with all variables from ``comp1,
-comp2`` as well as any variable with "error" in its name.
-
-The wildcard "?" is also supported for matching single characters, so you could
-rewrite the previous line like this:
-
-::
-
-      opt_problem.includes = ['comp?.*', *error*]
-
+  

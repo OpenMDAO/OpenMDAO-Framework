@@ -1,66 +1,46 @@
-from openmdao.main.api import Assembly
-from openmdao.lib.drivers.api import SLSQPdriver
+from openmdao.main.api import Assembly, Component
+from openmdao.lib.drivers.api import DOEdriver
+from openmdao.lib.doegenerators.api import Uniform
 
 from openmdao.examples.simple.paraboloid import Paraboloid
 
-class OptimizationConstrained(Assembly):
-    """Constrained optimization of the Paraboloid component."""
+from openmdao.lib.casehandlers.api import JSONCaseRecorder
+
+class Analysis(Assembly):
 
     def configure(self):
-        """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-
-        # Create Paraboloid component instances
         self.add('paraboloid', Paraboloid())
 
-        # Create Optimizer instance
-        self.add('driver', SLSQPdriver())
+        self.add('driver', DOEdriver())
+        self.driver.DOEgenerator = Uniform(1000)
 
-        # Driver process definition
-        self.driver.workflow.add('paraboloid')
+        self.driver.add_parameter('paraboloid.x', low=-50, high=50)
+        self.driver.add_parameter('paraboloid.y', low=-50, high=50)
 
-        # Optimzier Flags
-        self.driver.iprint = 0
+        self.driver.add_response('paraboloid.f_xy')
 
-        # Objective
-        self.driver.add_objective('paraboloid.f_xy')
+        self.recorders = [JSONCaseRecorder(out='doe.json')]
 
-        # Design Variables
-        self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
-        self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
-
-        # Constraints
-        self.driver.add_constraint('paraboloid.x-paraboloid.y >= 15.0')
-
-
-if __name__ == "__main__": # pragma: no cover
-
-    opt_problem = OptimizationConstrained()
+if __name__ == "__main__":
 
     #-----------------------------
-    # Set up our CaseRecorders
+    # Run analysis
     #-----------------------------
     import os
-    if os.path.exists('converge.db'):
-        os.remove('converge.db')
+    if os.path.exists('doe.json'):
+        os.remove('doe.json')
 
-    from openmdao.lib.casehandlers.api import CSVCaseRecorder, DBCaseRecorder
+    from openmdao.lib.casehandlers.api import CaseDataset
 
-    opt_problem.recorders = [CSVCaseRecorder(filename='converge.csv'),
-                             DBCaseRecorder(dbfile='converge.db', append=False)]
+    analysis = Analysis()
 
-    #-----------------------------
-    # Run problem
-    #-----------------------------
-
-    opt_problem.run()
+    analysis.run()
 
     #----------------------------------------------------
     # Print out history of our objective for inspection
     #----------------------------------------------------
+    case_dataset = CaseDataset('doe.json', 'json')
+    data = case_dataset.data.by_variable().fetch()
 
-    for case in opt_problem.recorders[0].get_iterator():
+    for case in data:
         print case
-
-    print "\n"
-    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.x,
-                                         opt_problem.paraboloid.y)
