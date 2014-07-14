@@ -8,8 +8,9 @@ import unittest
 from struct import unpack
 from cStringIO import StringIO
 
-from openmdao.main.api import Assembly, Case, set_as_top
-from openmdao.main.datatypes.api import Instance
+from openmdao.main import __version__
+from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
+from openmdao.main.datatypes.api import Array, Instance, List, VarTree
 from openmdao.test.execcomp import ExecComp
 from openmdao.lib.casehandlers.api import JSONCaseRecorder, BSONCaseRecorder
 from openmdao.lib.drivers.api import SensitivityDriver, CaseIteratorDriver, \
@@ -20,6 +21,25 @@ from openmdao.util.testutil import assert_raises
 class TExecComp(ExecComp):
 
     data = Instance(iotype='in', desc='Used to check bad JSON data')
+
+
+class Loads(VariableTree):
+
+    Fx = Array()
+    Fy = Array()
+    Fz = Array()
+
+class LoadsArray(VariableTree):
+
+    loads = List(Loads)
+
+class LoadsComp(Component):
+
+    loads_in = VarTree(LoadsArray(), iotype='in')
+    loads_out = VarTree(LoadsArray(), iotype='out')
+
+    def execute(self):
+        self.loads_out = self.loads_in
 
 
 class TestCase(unittest.TestCase):
@@ -120,7 +140,14 @@ class TestCase(unittest.TestCase):
 
         for i in range(len(expected)):
             expect = expected[i]
-            if expect.startswith('    "_driver_id":'):
+            if expect.startswith('"__length_'):
+                self.assertTrue(lines[i].startswith('"__length_'))
+            elif expect.startswith(', "__length_'):
+                self.assertTrue(lines[i].startswith(', "__length_'))
+            elif expect.startswith('    "OpenMDAO_Version":'):
+                expect_fixed = expect[:25] + __version__ + '", '
+                self.assertEqual(lines[i], expect_fixed)
+            elif expect.startswith('    "_driver_id":'):
                 self.assertTrue(lines[i].startswith('    "_driver_id":'))
             elif expect.startswith('    "_id":'):
                 self.assertTrue(lines[i].startswith('    "_id":'))
@@ -209,6 +236,32 @@ class TestCase(unittest.TestCase):
                 driver_count += 1
 
             data = inp.read(4)
+
+    def test_vtree(self):
+        top = Assembly()
+        sub = top.add('sub', Assembly())
+        sub.add('comp', LoadsComp())
+        sub.driver.workflow.add('comp')
+        sub.create_passthrough('comp.loads_in')
+        sub.create_passthrough('comp.loads_out')
+        top.driver.workflow.add('sub')
+
+        sout = StringIO()
+        top.recorders = [JSONCaseRecorder(sout)]
+
+        loads = Loads()
+        loads.Fx = [1, 2, 3]
+        loads.Fy = [4, 5, 6]
+        loads.Fz = [7, 8, 9]
+        arr = LoadsArray()
+        arr.loads = [loads]
+        top.sub.loads_in = arr
+
+        top.run()
+
+#        with open('vtree.new', 'w') as out:
+#            out.write(sout.getvalue())
+        self.verify(sout, 'vtree.json')
 
 
 if __name__ == '__main__':
