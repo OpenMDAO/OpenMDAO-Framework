@@ -24,6 +24,22 @@ _Missing = MissingValue()
 def _simpleflatten(name, obj):
     return [(name, obj)]
 
+
+def _flatten_dict(name, dct):
+    ret = []
+
+    def _recurse_flatten(ret, name, keys, dct):
+        for k,v in dct.items():
+            new_keys = keys+[k]
+            if isinstance(v, (dict)):
+                _recurse_flatten(ret, name, new_keys, v)
+            else:
+                keystr = '.'.join(['%s' % j for j in new_keys])
+                ret.append(("%s.%s" % (name, keystr), v))
+    _recurse_flatten(ret, name, [], dct)
+    return ret
+
+
 def _flatten_lst(name, lst):
     ret = []
 
@@ -31,9 +47,14 @@ def _flatten_lst(name, lst):
         for i, entry in enumerate(lst):
             new_idx = idx+[i]
             if isinstance(entry, (tuple, list, array)):
+                # ret is flattened list so far
+                # name is the name of the current object that needs to be flattened
+                # new_idx is a list of indices for the dimensions of the item, e.g. [3,0] is the first item in the third item
                 _recurse_flatten(ret, name, new_idx, entry)
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
+                # qqq returns the current flattened list if items
+                # idxstr is a string representing what element in the list this is referring to, e.g. '[3][0]'
                 ret.append(("%s%s" % (name, idxstr), entry))
 
     _recurse_flatten(ret, name, [], lst)
@@ -47,6 +68,7 @@ flatteners = {
        list: _flatten_lst,
        tuple: _flatten_lst,
        array: _flatten_lst,
+       dict: _flatten_dict,
        MissingValue: _simpleflatten,
     }
 
@@ -87,9 +109,8 @@ class Case(object):
         Case._uuid_seq += 1
         return str(uuid1(node=Case._uuid_node, clock_seq=Case._uuid_seq))
 
-    def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, label='', case_uuid=None, parent_uuid='',
-                 msg=None):
+    def __init__(self, inputs=None, outputs=None, exc=None,
+                 case_uuid=None, parent_uuid=''):
         """If inputs are supplied to the constructor, it must be an
         iterator that returns (name,value) tuples, where name is allowed
         to contain array notation and/or function calls. Outputs must be
@@ -99,13 +120,8 @@ class Case(object):
         self._exprs = None
         self._outputs = None
         self._inputs = {}
+        self.exc = exc  # Typically a TracedError.
 
-        self.max_retries = max_retries  # times to retry after error(s)
-        self.retries = retries          # times case was retried
-        self.msg = msg                  # If non-null, error message.
-                                        # Implies outputs are invalid.
-        self.exc = None                 # Exception during execution.
-        self.label = label              # Optional label.
         if case_uuid:
             self.uuid = str(case_uuid)
         else:
@@ -119,6 +135,16 @@ class Case(object):
         if outputs:
             self.add_outputs(outputs)
 
+    @property
+    def msg(self):
+        """Exception message."""
+        return '' if self.exc is None else str(self.exc)
+
+    @property
+    def traceback(self):
+        """Exception traceback."""
+        return '' if self.exc is None else traceback_str(self.exc)
+
     def __str__(self):
         if self._outputs:
             outs = self._outputs.items()
@@ -127,37 +153,32 @@ class Case(object):
             outs = []
         ins = self._inputs.items()
         ins.sort()
-        stream = StringIO()
-        stream.write("Case: %s\n" % self.label)
-        stream.write("   uuid: %s\n" % self.uuid)
-        stream.write("   timestamp: %15f\n" % self.timestamp)
-        if self.parent_uuid:
-            stream.write("   parent_uuid: %s\n" % self.parent_uuid)
 
+        stream = StringIO()
+        write = stream.write
+        write("Case:\n")
+        write("   uuid: %s\n" % self.uuid)
+        write("   timestamp: %15f\n" % self.timestamp)
+        if self.parent_uuid:
+            write("   parent_uuid: %s\n" % self.parent_uuid)
         if ins:
-            stream.write("   inputs:\n")
+            write("   inputs:\n")
             for name, val in ins:
-                stream.write("      %s: %s\n" % (name, val))
+                write("      %s: %s\n" % (name, val))
         if outs:
-            stream.write("   outputs:\n")
+            write("   outputs:\n")
             for name, val in outs:
-                stream.write("      %s: %s\n" % (name, val))
-        if self.max_retries is not None:
-            stream.write("   max_retries: %s\n" % self.max_retries)
-        if self.retries is not None:
-            stream.write("   retries: %s\n" % self.retries)
-        if self.msg:
-            stream.write("   msg: %s\n" % self.msg)
-        if self.exc is not None:
-            stream.write("   exc: %s\n" % traceback_str(self.exc))
+                write("      %s: %s\n" % (name, val))
+        if self.exc:
+            stream.write("   exc: %s\n" % self.exc)
+            stream.write("        %s\n" % traceback_str(self.exc))
+
         return stream.getvalue()
 
     def __eq__(self, other):
         if self is other:
             return True
         try:
-            if self.msg != other.msg or self.label != other.label:
-                return False
             if len(self) != len(other):
                 return False
             for selftup, othertup in zip(self.items(flatten=True),
@@ -269,14 +290,12 @@ class Case(object):
         return [v for k, v in self.items(iotype, flatten=flatten)]
 
     def reset(self):
-        """Remove any saved output values, set retries to None, get a new uuid
-        and reset the parent_uuid.  Essentially this Case becomes like a new
-        Case with the same set of inputs and outputs that hasn't been executed
-        yet.
+        """Remove any saved output values, get a new uuid and reset the
+        parent_uuid.  Essentially this Case becomes like a new Case with the
+        same set of inputs and outputs that hasn't been executed yet.
         """
         self.parent_uuid = ''
         self.uuid = str(uuid1())
-        self.retries = None
         for key in self._outputs.keys():
             self._outputs[key] = _Missing
 
@@ -296,10 +315,9 @@ class Case(object):
             for name, value in self._inputs.items():
                 scope.set(name, value)
 
-    def update_outputs(self, scope, msg=None):
+    def update_outputs(self, scope):
         """Update the value of all outputs in this Case, using the given scope.
         """
-        self.msg = msg
         last_excpt = None
         outputs = self._outputs
         if outputs is not None:
@@ -315,10 +333,6 @@ class Case(object):
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
                         outputs[name] = _Missing
-                        if self.msg is None:
-                            self.msg = str(err)
-                        else:
-                            self.msg = self.msg + " %s" % err
             else:
                 for name in outputs.keys():
                     try:
@@ -326,10 +340,6 @@ class Case(object):
                     except Exception as err:
                         last_excpt = TracedError(err, traceback.format_exc())
                         outputs[name] = _Missing
-                        if self.msg is None:
-                            self.msg = str(err)
-                        else:
-                            self.msg = self.msg + " %s" % err
 
         self.timestamp = time.time()
 
@@ -396,8 +406,7 @@ class Case(object):
                 outs.append((name, self._outputs[name]))
             else:
                 raise KeyError("'%s' is not part of this Case" % name)
-        sc = Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid,
-                  max_retries=self.max_retries)
+        sc = Case(inputs=ins, outputs=outs, parent_uuid=self.parent_uuid)
         sc.timestamp = self.timestamp
         return sc
 

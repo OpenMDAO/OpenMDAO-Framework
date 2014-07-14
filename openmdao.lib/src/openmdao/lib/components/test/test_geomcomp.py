@@ -8,6 +8,8 @@ import tempfile
 import unittest
 from nose import SkipTest
 
+from openmdao.main.interfaces import IStaticGeometry, implements
+from openmdao.main.geom import ParametricGeometry
 from openmdao.main.vartree import VariableTree
 from openmdao.main.datatypes.api import Enum, Python
 from openmdao.lib.components.geomcomp import GeomComponent
@@ -16,6 +18,121 @@ from openmdao.util.fileutil import onerror
 
 import numpy
 
+class Box(ParametricGeometry):
+    
+    def __init__(self):
+        super(Box, self).__init__()
+        self.volume = 1.0
+        self.dimensions = 1.0
+
+        # color array.  one color per face in this case
+        self.colors = numpy.array([
+               [0, 0, 255],    # v0-v1-v2-v3
+               [255, 0, 0],    # v0-v3-v4-v5
+               [0, 255, 0],    # v0-v5-v6-v1
+               [255, 255, 0],  # v1-v6-v7-v2
+               [255, 0, 255],  # v7-v4-v3-v2
+               [0, 255, 255],  # v4-v7-v6-v5
+        ], dtype=numpy.float32)
+
+        # index array
+        # each face has 2 triangles
+        self.triangles = numpy.array([0, 1, 2,   0, 2, 3], dtype=numpy.int32)
+        self.vertices = self.get_vertices()
+        self.regen_model()
+
+    def get_vertices(self):
+        x = self.dimensions
+
+        return numpy.array([
+          [ x, x, x,  -x, x, x,  -x,-x, x,   x,-x, x],  # v0-v1-v2-v3 front
+          [ x, x, x,   x,-x, x,   x,-x,-x,   x, x,-x],  # v0-v3-v4-v5 right
+          [ x, x, x,   x, x,-x,  -x, x,-x,  -x, x, x],  # v0-v5-v6-v1 top
+          [-x, x, x,  -x, x,-x,  -x,-x,-x,  -x,-x, x],  # v1-v6-v7-v2 left
+          [-x,-x,-x,   x,-x,-x,   x,-x, x,  -x,-x, x],  # v7-v4-v3-v2 bottom
+          [ x,-x,-x,  -x,-x,-x,  -x, x,-x,   x, x,-x],  # v4-v7-v6-v5 back
+        ], dtype=numpy.float32)
+
+    def regen_model(self):
+        self.dimensions = pow(self.volume, 1.0/3.0)
+        self.vertices = self.get_vertices()
+
+    def list_parameters(self):
+        """Return a list of parameters (inputs and outputs) for this model.
+        """
+
+        return [
+                ('volume', {
+                    'value' : self.volume,
+                    'iotype' : 'in',
+                    }
+                ),
+                ('dimensions.length', {
+                     'value' : self.dimensions,
+                     'iotype' : 'out',
+                     },
+                ),
+                ('dimensions.width', {
+                     'value' : self.dimensions,
+                     'iotype' : 'out',
+                     },
+                ),
+                ('dimensions.height', {
+                     'value' : self.dimensions,
+                     'iotype' : 'out',
+                     },
+                ),
+               ]
+        
+    def set_parameter(self, name, val):
+        """Set new value for a driving parameter.
+
+        """
+        self.volume = val
+        
+    def get_parameters(self, names):
+        """Get parameter values"""
+
+        things = []
+        for name in names:
+            if name.startswith('dimensions'):
+                things.append(self.dimensions)
+            else:
+                things.append(getattr(self, name))
+
+        return things
+
+    def get_static_geometry(self):
+        return BoxGeometry(self)
+
+
+class BoxGeometry(object):
+    '''A static (non-parametric) box geometry.'''
+
+    implements(IStaticGeometry)
+    
+    def __init__(self, parametric_geom):
+        self.parametric_geom = parametric_geom
+
+    def get_visualization_data(self, wv):
+        '''Fills the given WV_Wrapper object with data for faces,
+        edges, colors, etc.
+        
+        wv: WV_Wrapper object 
+        '''
+        pgeom = self.parametric_geom
+
+        for i in range(6):  # 6 faces
+            wv.set_face_data(points=pgeom.vertices[i], 
+                             tris=pgeom.triangles, 
+                             colors=pgeom.colors[i],
+                             #normals=pgeom.normals[i],
+                             #bbox=pgeom.bbox,
+                             name="Face %d"%(i+1))
+
+            wv.set_edge_data(points=pgeom.vertices[i],
+                             #bbox=pgeom.bbox,
+                             name="Edge %d"%(i+1))
 class GeomCompTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -277,6 +394,20 @@ end
         except Exception as err:
             self.assertEqual("myvt.subvt: Variable 'en' must be in ['yes', 'no'], but a value of foo <type 'str'> was specified.", 
                              str(err))
+
+    def test_vartree_outputs(self):
+        self.geomcomp.add('parametric_geometry', Box())
+        self.geomcomp.volume = 8
+        self.geomcomp.run()
+        self.assertEqual(self.geomcomp.dimensions.length, 2)
+        self.assertEqual(self.geomcomp.dimensions.width, 2)
+        self.assertEqual(self.geomcomp.dimensions.height, 2)
+
+        self.geomcomp.volume = 27
+        self.geomcomp.run()
+        self.assertEqual(self.geomcomp.dimensions.length, 3)
+        self.assertEqual(self.geomcomp.dimensions.width, 3)
+        self.assertEqual(self.geomcomp.dimensions.height, 3)
 
 if __name__ == "__main__":
     unittest.main()

@@ -104,8 +104,6 @@ class Driver(Component):
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
 
-        self._evaluators = {}  # Used to evaluate variables to e recorded.
-
     def __deepcopy__(self, memo):
         """For some reason `missing_deriv_policy` gets resurrected."""
         result = super(Driver, self).__deepcopy__(memo)
@@ -308,6 +306,12 @@ class Driver(Component):
         # Reset the workflow.
         self.workflow.reset()
         super(Driver, self).run(ffd_order, case_uuid)
+
+    @rbac(('owner', 'user'))
+    def configure_recording(self, includes, excludes):
+        """Called at start of top-level run to configure case recording.
+        Returns set of paths for changing inputs."""
+        return self.workflow.configure_recording(includes, excludes)
 
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):

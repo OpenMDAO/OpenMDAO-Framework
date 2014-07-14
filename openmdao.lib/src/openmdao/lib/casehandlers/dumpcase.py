@@ -1,8 +1,12 @@
 import cStringIO
 import StringIO
 import sys
+import time
 
 from openmdao.main.interfaces import implements, ICaseRecorder
+from openmdao.main.exceptions import traceback_str
+
+from openmdao.lib.casehandlers.util import driver_map
 
 
 class DumpCaseRecorder(object):
@@ -24,15 +28,53 @@ class DumpCaseRecorder(object):
             else:
                 out = open(out, 'w')
         self.out = out
+        self._cfg_map = {}
 
     def startup(self):
         """ Nothing needed for a dumpcase."""
         pass
 
-    def record(self, case):
-        """Dump the given Case in a "pretty" form."""
-        if self.out:  # if self.out is None, just do nothing
-            self.out.write(str(case))
+    def register(self, driver, inputs, outputs):
+        """Register names for later record call from `driver`."""
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
+
+    def record_constants(self, constants):
+        """Record constant data."""
+        if not self.out:  # if self.out is None, just do nothing
+            return
+
+        write = self.out.write
+        write("Constants:\n")
+        for path in sorted(constants.keys()):
+            write("   %s: %s\n" % (path, constants[path]))
+
+    def record(self, driver, inputs, outputs, exc, case_uuid, parent_uuid):
+        """Dump the given run data in a "pretty" form."""
+        if not self.out:  # if self.out is None, just do nothing
+            return
+
+        in_names, out_names = self._cfg_map[driver]
+        ins = sorted(zip(in_names, inputs))
+        outs = sorted(zip(out_names, outputs))
+
+        write = self.out.write
+        write("Case:\n")
+        write("   uuid: %s\n" % case_uuid)
+        write("   timestamp: %15f\n" % time.time())
+        if parent_uuid:
+            write("   parent_uuid: %s\n" % parent_uuid)
+
+        if ins:
+            write("   inputs:\n")
+            for name, val in ins:
+                write("      %s: %s\n" % (name, val))
+        if outs:
+            write("   outputs:\n")
+            for name, val in outs:
+                write("      %s: %s\n" % (name, val))
+        if exc:
+            write("   exc: %s\n" % exc)
+            write("        %s\n" % traceback_str(exc))
 
     def close(self):
         """Closes `out` unless it's ``sys.stdout`` or ``sys.stderr``.

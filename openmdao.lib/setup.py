@@ -1,4 +1,4 @@
-# pylint: disable-msg=F0401
+# pylint: disable=F0401
 
 import os
 import sys
@@ -32,10 +32,13 @@ Component, Driver, Variable and other plugins for OpenMDAO
       author_email='',
       url='http://openmdao.org',
       license='Apache License, Version 2.0',
-      namespace_packages=["openmdao"],
+      namespace_packages=['openmdao'],
       packages=find_packages('src'),
       package_dir={'': 'src'},
-      package_data={'openmdao.lib': ['components/test/*.inp',
+      package_data={'openmdao.lib': ['casehandlers/test/*.bson',
+                                     'casehandlers/test/*.json',
+                                     'casehandlers/test/*.csv',
+                                     'components/test/*.inp',
                                      'datatypes/domain/test/grid.in',
                                      'datatypes/domain/test/q.save',
                                      'datatypes/domain/test/lpc-test.*']},
@@ -46,6 +49,8 @@ Component, Driver, Variable and other plugins for OpenMDAO
           'setuptools',
           'openmdao.main',
           'Pyevolve==0.6',
+          'pytz>=2011',  # To avoid problems with 2010o vs. 2010b in bson req.
+          'bson',
           'ordereddict',
           'conmin==1.0.1',
           'newsumt==1.1.0',
@@ -104,6 +109,8 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.casehandlers.csvcase.CSVCaseRecorder = openmdao.lib.casehandlers.csvcase:CSVCaseRecorder
       openmdao.lib.casehandlers.caseset.CaseArray = openmdao.lib.casehandlers.caseset:CaseArray
       openmdao.lib.casehandlers.caseset.CaseSet = openmdao.lib.casehandlers.caseset:CaseSet
+      openmdao.lib.casehandlers.jsoncase.JSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:JSONCaseRecorder
+      openmdao.lib.casehandlers.jsoncase.BSONCaseRecorder = openmdao.lib.casehandlers.jsoncase:BSONCaseRecorder
 
       [openmdao.caseiterator]
       openmdao.lib.casehandlers.listcase.ListCaseIterator = openmdao.lib.casehandlers.listcase:ListCaseIterator

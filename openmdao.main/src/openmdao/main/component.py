@@ -14,7 +14,7 @@ import sys
 import weakref
 import re
 
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 from traits.trait_base import not_event
 from traits.api import Property
 
@@ -525,6 +525,8 @@ class Component(Container):
         self.ffd_order = ffd_order
         self._case_uuid = case_uuid
 
+        if self.parent is None:
+            self._run_begins()
         try:
             self._pre_execute()
             self._set_exec_state('RUNNING')
@@ -568,6 +570,12 @@ class Component(Container):
                 self._run_terminated()
             if self.directory:
                 self.pop_dir()
+
+    @rbac(('owner', 'user'))
+    def _run_begins(self):
+        """ Executed at start of top-level run. """
+        if hasattr(self, 'recorders'):
+            self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):
@@ -793,7 +801,7 @@ class Component(Container):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).
         """
-# pylint: disable-msg=E1101
+# pylint: disable=E1101
         if not SimulationRoot.legal_path(path):
             self.raise_exception("Illegal path '%s', not a descendant of '%s'."
                                  % (path, SimulationRoot.get_root()),
@@ -802,7 +810,7 @@ class Component(Container):
             self.raise_exception(
                 "Execution directory path '%s' is not a directory."
                 % path, ValueError)
-# pylint: enable-msg=E1101
+# pylint: enable=E1101
         return path
 
     @rbac('owner')
