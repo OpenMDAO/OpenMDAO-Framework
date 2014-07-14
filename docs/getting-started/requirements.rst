@@ -83,9 +83,9 @@ use it, you must have compilers (C and Fortran) on your system.
 
    1. Download the packages from SourceForge.net 
    
-      - SciPy: http://sourceforge.net/projects/scipy/files/scipy/ 
+      - `SciPy <http://sourceforge.net/projects/scipy/files/scipy/>`__
 
-      - Numpy: http://sourceforge.net/projects/numpy/files/NumPy/ 
+      - `Numpy <http://sourceforge.net/projects/numpy/files/NumPy/>`__
 
    2. ``sudo python setup.py install`` from each package. At this point, you're close, but Numpy
       and SciPy aren't importable by Python yet, because the Python installer restricts default
@@ -101,21 +101,20 @@ use it, you must have compilers (C and Fortran) on your system.
 	sudo find numpy -type d -exec chmod o=rx {} \;
 	sudo find numpy -type f -exec chmod o=r {} \;
 
-    **Please note**: Some users have reported that this method of installation may somehow
-    uninstall Matplotlib. In the event that occurs, you may have to install Matplotlib
-    (http://sourceforge.net/projects/matplotlib/) in the same fashion as the packages above. 
+    **Please note**: Some users have reported that this method of installation may somehow uninstall
+    Matplotlib. In the event that occurs, you may have to install `Matplotlib
+    <http://sourceforge.net/projects/matplotlib/files/matlab>`__ in the same fashion as the packages above. 
 
 
 **Windows**: 
 
 - `Python 2.7.x <https://www.python.org/download/releases/>`_
 
-- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`_ 
+- `NumPy <http://sourceforge.net/projects/numpy/files/NumPy/>`__ 
 
-- `SciPy <http://sourceforge.net/projects/scipy/files/>`_
+- `SciPy <http://sourceforge.net/projects/scipy/files/>`__
 
-- `Matplotlib <http://matplotlib.org/downloads.html>`_
-
+- `Matplotlib <http://matplotlib.org/downloads.html>`__
 
 .. note:: 
 
