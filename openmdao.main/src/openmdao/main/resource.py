@@ -567,7 +567,7 @@ class ResourceAllocationManager(object):
             req_limits = base.get('resource_limits', {}).copy()
             for item in ('core_file_size', 'data_seg_size', 'file_size',
                          'open_files', 'stack_size', 'virtual_memory',
-                         'cpu_time', 'wallclock_time') :
+                         'cpu_time', 'wallclock_time'):
                 if item in new_limits:
                     req_limits[item] = max(req_limits.get(item, 0),
                                            new_limits[item])
@@ -1015,6 +1015,7 @@ class FactoryAllocator(ResourceAllocator):
         allowed_users = {credentials.user: credentials.public_key}
         try:
             server = self.factory.create(typname='', name=name,
+                                         res_desc=resource_desc,
                                          allowed_users=allowed_users)
         # Shouldn't happen...
         except Exception:  #pragma no cover
@@ -1069,7 +1070,7 @@ class LocalAllocator(FactoryAllocator):
     argument can be used to avoid overcommiting memory, especially if
     `max_load` has been used to reduce the effect of system load on server
     count.
-    
+
     Resource configuration file entry equivalent to the default
     `LocalHost` allocator::
 
@@ -1506,8 +1507,8 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
         if cfg.has_option(self.name, 'method'):
             method = cfg.get(self.name, 'method')
             if method not in self._methods:
-                self._logger.error('method specification %r not one of %s'
-                                   % (method, self._methods.keys()))
+                self._logger.error('method specification %r not one of %s',
+                                   method, self._methods.keys())
             else:
                 self._method = method
             self._logger.debug('    method: %s', self._method)
@@ -1823,7 +1824,7 @@ class ClusterAllocator(ResourceAllocator):  #pragma no cover
                     best_host = host
                     best_estimate = estimate
                     best_criteria = criteria
-                elif (best_estimate == 0 and estimate == 0):
+                elif best_estimate == 0 and estimate == 0:
                     if 'loadavgs' in best_criteria:
                         best_load = best_criteria['loadavgs'][0]
                         if load < best_load:
