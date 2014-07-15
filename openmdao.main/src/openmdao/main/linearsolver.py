@@ -19,9 +19,10 @@ else:
 class LinearSolver(object):
     """ A base class for linear solvers """
 
-    def __init__(self, system):
+    def __init__(self, system, options):
         """ Set up any LinearSolver object """
         self._system = system
+        self.options = options
         self.inputs = None
 
 class ScipyGMRES(LinearSolver):
@@ -32,6 +33,7 @@ class ScipyGMRES(LinearSolver):
         """ Run GMRES solver """
 
         system = self._system
+        options = self.options
         self.inputs = inputs
 
         # Size the problem
@@ -69,9 +71,9 @@ class ScipyGMRES(LinearSolver):
                 RHS[irhs, 0] = 1.0
 
                 # Call GMRES to solve the linear system
-                dx, info = gmres(A, RHS)
-                                 #tol=options.gmres_tolerance,
-                                 #maxiter=options.gmres_maxiter)
+                dx, info = gmres(A, RHS,
+                                 tol=options.gmres_tolerance,
+                                 maxiter=options.gmres_maxiter)
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"

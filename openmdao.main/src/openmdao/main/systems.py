@@ -79,9 +79,9 @@ class System(object):
 
         if self.solver is None:
             if MPI:
-                self.solver = PETSc_KSP(self)
+                self.solver = PETSc_KSP(self, self.options)
             else:
-                self.solver = ScipyGMRES(self)
+                self.solver = ScipyGMRES(self, self.options)
 
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
@@ -437,6 +437,7 @@ class System(object):
         subsystems. """
 
         self.mode = mode
+        self.options = options
 
         if mode == 'forward':
             self.sol_vec = self.vec['du']
