@@ -432,20 +432,21 @@ class System(object):
 
         return (sizes, nosizes, noflats)
 
-    def set_mode(self, mode):
-        """ Sets the mode for this system and all subsystems. """
+    def set_options(self, mode, options):
+        """ Sets all user-configurable options for this system and all
+        subsystems. """
 
         self.mode = mode
 
         if mode == 'forward':
             self.sol_vec = self.vec['du']
             self.rhs_vec = self.vec['df']
-        else:
+        elif mode == 'adjoint':
             self.sol_vec = self.vec['df']
             self.rhs_vec = self.vec['du']
 
         for subsystem in self.local_subsystems():
-            subsystem.set_mode(mode)
+            subsystem.set_options(mode, options)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -453,10 +454,14 @@ class System(object):
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
-    def calc_gradient(self, inputs, outputs, mode='auto'):
+    def calc_gradient(self, inputs, outputs, mode='auto', options=None):
         """ Return the gradient for this system. """
 
-        self.set_mode(mode)
+        # User-specified option takes precedence.
+        if options.derivative_direction != 'auto':
+            mode = options.derivative_direction
+
+        self.set_options(mode, options)
         self.initialize_gradient_solver()
         self.linearize()
 
