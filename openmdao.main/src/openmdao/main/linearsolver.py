@@ -19,10 +19,10 @@ else:
 class LinearSolver(object):
     """ A base class for linear solvers """
 
-    def __init__(self, system, options):
+    def __init__(self, system):
         """ Set up any LinearSolver object """
         self._system = system
-        self.options = options
+        self.options = system.options
         self.inputs = None
 
 class ScipyGMRES(LinearSolver):

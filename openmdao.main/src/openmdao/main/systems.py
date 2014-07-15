@@ -9,6 +9,7 @@ import networkx as nx
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
@@ -78,10 +79,11 @@ class System(object):
         gradeint. """
 
         if self.solver is None:
+
             if MPI:
-                self.solver = PETSc_KSP(self, self.options)
+                self.solver = PETSc_KSP(self)
             else:
-                self.solver = ScipyGMRES(self, self.options)
+                self.solver = ScipyGMRES(self)
 
     def get_inputs(self, local=False):
         return [v for u,v in self.in_edges]
@@ -458,9 +460,15 @@ class System(object):
     def calc_gradient(self, inputs, outputs, mode='auto', options=None):
         """ Return the gradient for this system. """
 
-        # User-specified option takes precedence.
-        if options.derivative_direction != 'auto':
+        # Mode Precedence
+        # -- 1. Direct call argument
+        # -- 2. Gradient Options
+        # -- 3. Auto determination (when implemented)
+        if mode == 'auto':
             mode = options.derivative_direction
+
+        if options.force_fd is True:
+            mode == 'fd'
 
         self.set_options(mode, options)
         self.initialize_gradient_solver()
@@ -468,6 +476,11 @@ class System(object):
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
+
+        if mode == 'fd':
+            if not isinstance(self.solver, FiniteDifference):
+                self.solver = FiniteDifference(self, inputs, outputs)
+            return self.solver.solve()
 
         return self.solver.solve(inputs, outputs)
 
