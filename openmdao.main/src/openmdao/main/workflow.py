@@ -181,7 +181,8 @@ class Workflow(object):
                                 parent.get_constraints().values()])
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
-                                          options=self.parent.gradient_options)
+                                          options=self.parent.gradient_options,
+                                          iterbase=self._iterbase())
 
 
     def configure_recording(self, includes, excludes):

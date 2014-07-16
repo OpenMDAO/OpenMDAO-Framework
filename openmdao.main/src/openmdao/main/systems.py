@@ -457,7 +457,8 @@ class System(object):
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
-    def calc_gradient(self, inputs, outputs, mode='auto', options=None):
+    def calc_gradient(self, inputs, outputs, mode='auto', options=None,
+                      iterbase=''):
         """ Return the gradient for this system. """
 
         # Mode Precedence
@@ -480,7 +481,7 @@ class System(object):
         if mode == 'fd':
             if not isinstance(self.solver, FiniteDifference):
                 self.solver = FiniteDifference(self, inputs, outputs)
-            return self.solver.solve()
+            return self.solver.solve(iterbase=iterbase)
 
         return self.solver.solve(inputs, outputs)
 
