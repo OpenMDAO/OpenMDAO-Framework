@@ -9,6 +9,7 @@ import networkx as nx
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped
+from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
@@ -78,6 +79,7 @@ class System(object):
         gradeint. """
 
         if self.solver is None:
+
             if MPI:
                 self.solver = PETSc_KSP(self)
             else:
@@ -432,20 +434,22 @@ class System(object):
 
         return (sizes, nosizes, noflats)
 
-    def set_mode(self, mode):
-        """ Sets the mode for this system and all subsystems. """
+    def set_options(self, mode, options):
+        """ Sets all user-configurable options for this system and all
+        subsystems. """
 
         self.mode = mode
+        self.options = options
 
         if mode == 'forward':
             self.sol_vec = self.vec['du']
             self.rhs_vec = self.vec['df']
-        else:
+        elif mode == 'adjoint':
             self.sol_vec = self.vec['df']
             self.rhs_vec = self.vec['du']
 
         for subsystem in self.local_subsystems():
-            subsystem.set_mode(mode)
+            subsystem.set_options(mode, options)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -453,15 +457,30 @@ class System(object):
         for subsystem in self.local_subsystems():
             subsystem.linearize()
 
-    def calc_gradient(self, inputs, outputs, mode='auto'):
+    def calc_gradient(self, inputs, outputs, mode='auto', options=None):
         """ Return the gradient for this system. """
 
-        self.set_mode(mode)
+        # Mode Precedence
+        # -- 1. Direct call argument
+        # -- 2. Gradient Options
+        # -- 3. Auto determination (when implemented)
+        if mode == 'auto':
+            mode = options.derivative_direction
+
+        if options.force_fd is True:
+            mode == 'fd'
+
+        self.set_options(mode, options)
         self.initialize_gradient_solver()
         self.linearize()
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
+
+        if mode == 'fd':
+            if not isinstance(self.solver, FiniteDifference):
+                self.solver = FiniteDifference(self, inputs, outputs)
+            return self.solver.solve()
 
         return self.solver.solve(inputs, outputs)
 

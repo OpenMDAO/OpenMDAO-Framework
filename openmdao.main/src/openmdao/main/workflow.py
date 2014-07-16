@@ -180,7 +180,8 @@ class Workflow(object):
                 outputs.extend(["%s.out0" % item.pcomp_name for item in
                                 parent.get_constraints().values()])
 
-        return self._system.calc_gradient(inputs, outputs, mode)
+        return self._system.calc_gradient(inputs, outputs, mode=mode,
+                                          options=self.parent.gradient_options)
 
 
     def configure_recording(self, includes, excludes):

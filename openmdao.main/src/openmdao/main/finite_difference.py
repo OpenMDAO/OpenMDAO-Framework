@@ -15,19 +15,17 @@ class FiniteDifference(object):
     """ Helper object for performing finite difference on a portion of a model.
     """
 
-    def __init__(self, pa):
+    def __init__(self, system, inputs, outputs):
         """ Performs finite difference on the components in a given
         pseudo_assembly. """
 
-        self.inputs = pa.inputs
-        self.outputs = pa.outputs
+        self.inputs = inputs
+        self.outputs = outputs
         self.in_bounds = {}
         self.out_bounds = {}
-        self.pa = pa
-        self.scope = pa.wflow.scope
+        self.system = system
 
-        driver = self.pa.wflow.parent
-        options = driver.gradient_options
+        options = system.options
 
         self.fd_step = options.fd_step*ones((len(self.inputs)))
         self.low = [None] * len(self.inputs)
@@ -39,112 +37,101 @@ class FiniteDifference(object):
         self.step_type_custom = {}
         self.relative_threshold = 1.0e-4
 
-        dgraph = self.scope._depgraph
-        driver_params = []
-        driver_targets = []
+        #dgraph = self.scope._depgraph
+        #driver_params = []
+        #driver_targets = []
 
-        if hasattr(driver, 'get_parameters'):
-            driver_params = driver.get_parameters()
-            driver_targets = driver.list_param_targets()
+        #if hasattr(driver, 'get_parameters'):
+            #driver_params = driver.get_parameters()
+            #driver_targets = driver.list_param_targets()
 
-        in_size = 0
-        for j, srcs in enumerate(self.inputs):
+        #for j, srcs in enumerate(self.inputs):
 
-            low = high = None
+            #low = high = None
 
-            # Support for parameter groups
-            if isinstance(srcs, basestring):
-                srcs = [srcs]
+            ## Support for parameter groups
+            #if isinstance(srcs, basestring):
+                #srcs = [srcs]
 
-            # Local stepsize support
-            meta = self.scope.get_metadata(dgraph.base_var(srcs[0]))
+            ## Local stepsize support
+            #meta = self.scope.get_metadata(dgraph.base_var(srcs[0]))
 
-            if 'fd_step' in meta:
-                self.fd_step[j] = meta['fd_step']
+            #if 'fd_step' in meta:
+                #self.fd_step[j] = meta['fd_step']
 
-            if 'low' in meta:
-                low = meta['low']
-            if 'high' in meta:
-                high = meta['high']
+            #if 'low' in meta:
+                #low = meta['low']
+            #if 'high' in meta:
+                #high = meta['high']
 
-            param_srcs = [item for item in srcs if item in driver_targets]
-            if param_srcs:
-                if param_srcs[0] in driver_params:
-                    param = driver_params[param_srcs[0]]
-                    if param.fd_step is not None:
-                        self.fd_step[j] = param.fd_step
-                    if param.low is not None:
-                        low = param.low
-                    if param.high is not None:
-                        high = param.high
-                else:
-                    # have to check through all the param groups
-                    for param_group in driver_params:
-                        is_fd_step_not_set = is_low_not_set = is_high_not_set = True
-                        if not isinstance(param_group, str) and \
-                           param_srcs[0] in param_group:
-                            param = driver_params[param_group]
-                            if is_fd_step_not_set and param.fd_step is not None:
-                                self.fd_step[j] = param.fd_step
-                                is_fd_step_not_set = False
-                            if is_low_not_set and param.low is not None:
-                                low = param.low
-                                is_low_not_set = False
-                            if is_high_not_set and param.high is not None:
-                                high = param.high
-                                is_high_not_set = False
+            #param_srcs = [item for item in srcs if item in driver_targets]
+            #if param_srcs:
+                #if param_srcs[0] in driver_params:
+                    #param = driver_params[param_srcs[0]]
+                    #if param.fd_step is not None:
+                        #self.fd_step[j] = param.fd_step
+                    #if param.low is not None:
+                        #low = param.low
+                    #if param.high is not None:
+                        #high = param.high
+                #else:
+                    ## have to check through all the param groups
+                    #for param_group in driver_params:
+                        #is_fd_step_not_set = is_low_not_set = is_high_not_set = True
+                        #if not isinstance(param_group, str) and \
+                           #param_srcs[0] in param_group:
+                            #param = driver_params[param_group]
+                            #if is_fd_step_not_set and param.fd_step is not None:
+                                #self.fd_step[j] = param.fd_step
+                                #is_fd_step_not_set = False
+                            #if is_low_not_set and param.low is not None:
+                                #low = param.low
+                                #is_low_not_set = False
+                            #if is_high_not_set and param.high is not None:
+                                #high = param.high
+                                #is_high_not_set = False
 
-            if 'fd_step_type' in meta:
-                self.step_type_custom[j] = meta['fd_step_type']
-                step_type = self.step_type_custom[j]
-            else:
-                step_type = self.step_type
+            #if 'fd_step_type' in meta:
+                #self.step_type_custom[j] = meta['fd_step_type']
+                #step_type = self.step_type_custom[j]
+            #else:
+                #step_type = self.step_type
 
-            # Bounds scaled
-            if step_type == 'bounds_scaled':
-                if low is None and high is None:
-                    raise RuntimeError("For variable '%s', a finite "
-                                       "difference step type of bounds_scaled "
-                                       "is used but required low and "
-                                       "high values are not set" % srcs[0])
-                if low == - float_info.max:
-                    raise RuntimeError("For variable '%s', a finite "
-                                       "difference step type of "
-                                       "bounds_scaled is used but required "
-                                       "low value is not set" % srcs[0])
-                if high == float_info.max:
-                    raise RuntimeError("For variable '%s', a finite "
-                                       "difference step type of "
-                                       "bounds_scaled is used but required "
-                                       "high value is not set" % srcs[0])
-                self.fd_step[j] = (high - low) * self.fd_step[j]
+            ## Bounds scaled
+            #if step_type == 'bounds_scaled':
+                #if low is None and high is None:
+                    #raise RuntimeError("For variable '%s', a finite "
+                                       #"difference step type of bounds_scaled "
+                                       #"is used but required low and "
+                                       #"high values are not set" % srcs[0])
+                #if low == - float_info.max:
+                    #raise RuntimeError("For variable '%s', a finite "
+                                       #"difference step type of "
+                                       #"bounds_scaled is used but required "
+                                       #"low value is not set" % srcs[0])
+                #if high == float_info.max:
+                    #raise RuntimeError("For variable '%s', a finite "
+                                       #"difference step type of "
+                                       #"bounds_scaled is used but required "
+                                       #"high value is not set" % srcs[0])
+                #self.fd_step[j] = (high - low) * self.fd_step[j]
 
-            if 'fd_form' in meta:
-                self.form_custom[j] = meta['fd_form']
+            #if 'fd_form' in meta:
+                #self.form_custom[j] = meta['fd_form']
 
-            val = self.scope.get(srcs[0])
-            width = flattened_size(srcs[0], val, self.scope)
+            #self.high[j] = high
+            #self.low[j] = low
 
-            for src in srcs:
-                self.in_bounds[src] = (in_size, in_size+width)
-            in_size += width
-
-            self.high[j] = high
-            self.low[j] = low
-
-        out_size = 0
-        for src in self.outputs:
-            val = self.scope.get(src)
-            width = flattened_size(src, val)
-            self.out_bounds[src] = (out_size, out_size+width)
-            out_size += width
+        # Size the problem
+        in_size = system.get_size(inputs)
+        out_size = system.get_size(outputs)
 
         self.J = zeros((out_size, in_size))
         self.y_base = zeros((out_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
 
-    def calculate(self):
+    def solve(self):
         """Return Jacobian for all inputs and outputs."""
         self.get_outputs(self.y_base)
 
