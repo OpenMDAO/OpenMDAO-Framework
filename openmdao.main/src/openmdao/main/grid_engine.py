@@ -280,9 +280,9 @@ class GridEngineServer(ObjServer):
         ========================= =========================
         ``submit_as_hold``        -h
         ------------------------- -------------------------
-        rerunnable                -r yes|no
+        ``rerunnable``            -r yes|no
         ------------------------- -------------------------
-        ``working_directory``     -wd `value`
+        ``working_directory``     Ignored
         ------------------------- -------------------------
         ``job_category``          Sets parallel environment
         ------------------------- -------------------------
@@ -292,7 +292,7 @@ class GridEngineServer(ObjServer):
         ------------------------- -------------------------
         ``min_phys_memory``       Ignored
         ------------------------- -------------------------
-        email                     -M `value`
+        ``email``                 -M `value`
         ------------------------- -------------------------
         ``email_on_started``      -m b
         ------------------------- -------------------------
@@ -312,7 +312,7 @@ class GridEngineServer(ObjServer):
         ------------------------- -------------------------
         ``queue_name``            -q `value`
         ------------------------- -------------------------
-        priority                  -p `value`
+        ``priority``              -p `value`
         ------------------------- -------------------------
         ``start_time``            -a `value`
         ------------------------- -------------------------
@@ -323,7 +323,9 @@ class GridEngineServer(ObjServer):
 
         Where `value` is the corresponding resource value.
 
-        If 'working_directory' is not specified, add ``-cwd``.
+        The 'working_directory' key is ignored since the server has been
+        started in this directory.  ``-cwd`` is used in the `qsub` command.
+
         If 'input_path' is not specified, add ``-i /dev/null``.
         If 'output_path' is not specified, add ``-o <remote_command>.stdout``.
         If 'error_path' is not specified, add ``-j yes``.
@@ -361,21 +363,12 @@ class GridEngineServer(ObjServer):
         Output from `qsub` itself is routed to ``qsub.out``.
         """
         self.home_dir = os.path.expanduser('~')
-        self.work_dir = ''
+        self.work_dir = os.getcwd()  # Server started in working directory.
 
         cmd = list(self._QSUB)
-        cmd.extend(('-V', '-sync', 'yes', '-b', 'yes'))
+        cmd.extend(('-V', '-sync', 'yes', '-b', 'yes', '-cwd'))
         env = None
         inp, out, err = None, None, None
-
-        # Set working directory now, for possible path fixing.
-        try:
-            value = resource_desc['working_directory']
-        except KeyError:
-            pass
-        else:
-            self.work_dir = self._fix_path(value)
-            cmd.extend(('-wd', value))
 
         # Process description in fixed, repeatable order.
         keys = ('submit_as_hold',
@@ -470,8 +463,6 @@ class GridEngineServer(ObjServer):
                 cmd.extend(('-l', 'h_rt=%s' % self._timelimit(wall_time)))
 
         # Set default command configuration.
-        if not self.work_dir:
-            cmd.append('-cwd')
         if inp is None:
             cmd.extend(('-i', DEV_NULL))
         if out is None:
