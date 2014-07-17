@@ -53,6 +53,19 @@ class TestCase(unittest.TestCase):
             # Create a component.
             exec_comp = factory.create('openmdao.test.execcomp.ExecComp')
             exec_comp.run()
+            directory = 'Server_1'+os.sep
+            if sys.platform == 'win32':
+                directory = directory.lower()
+            self.assertTrue(exec_comp.get_abs_directory().endswith(directory))
+
+            # Create another in specified directory.
+            exec_comp = factory.create('openmdao.test.execcomp.ExecComp',
+                                       res_desc={'working_directory': 'floyd'})
+            exec_comp.run()
+            directory = 'floyd'+os.sep
+            if sys.platform == 'win32':
+                directory = directory.lower()
+            self.assertTrue(exec_comp.get_abs_directory().endswith(directory))
 
             # Start server, connect, stop.
             server, cfg = start_server()
