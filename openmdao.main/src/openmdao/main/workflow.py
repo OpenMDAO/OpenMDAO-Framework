@@ -166,19 +166,17 @@ class Workflow(object):
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
                 inputs = parent.list_param_group_targets()
-            else:
+            if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
 
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
             outputs = []
-            if hasattr(parent, 'get_objectives'):
-                outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                parent.get_objectives().values()])
-            if hasattr(parent, 'get_constraints'):
-                outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                parent.get_constraints().values()])
+            if hasattr(parent, 'get_objective_targets'):
+                outputs.extend(parent.get_objective_targets())
+            if hasattr(parent, 'get_constraint_targets'):
+                outputs.extend(parent.get_constraint_targets())
 
         return self._system.calc_gradient(inputs, outputs, mode)
 
@@ -506,7 +504,7 @@ class Workflow(object):
             return
         return self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, parent_vec=None):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
         self._system.setup_vectors(arrays)

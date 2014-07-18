@@ -1414,7 +1414,6 @@ class Assembly(Component):
         self._system.setup_communicators(comm)
         
     def setup_variables(self):
-        #self._system.setup_variables(self.get_depgraph())
         self._system.setup_variables()
  
     def setup_sizes(self):
@@ -1424,7 +1423,7 @@ class Assembly(Component):
         # # this will calculate sizes for all subsystems
         self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, parent_vec=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
@@ -1467,6 +1466,7 @@ class Assembly(Component):
                     self.setup_scatters()
                 except Exception:
                     mpiprint(traceback.format_exc())
+                    raise
             else:
                 self.pre_setup()
                 self.setup_systems()

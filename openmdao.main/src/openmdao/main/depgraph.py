@@ -995,6 +995,70 @@ class DependencyGraph(nx.DiGraph):
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
 
+    def _get_compname(self, node):
+        """Return the component name for the given node, or
+        None if the node denotes a boundary variable.
+        """
+        cname = node.split('.', 1)[0]
+        if is_comp_node(self, cname):
+            return cname
+        return None
+
+    def collapse_connections(self):
+        """Returns a new graph with each variable
+        connection collapsed into a single node.
+        """
+        src2dests = {}
+        dest2src = {}
+
+        conns = set(self.list_connections())
+        drvconns = [(u,v) for u,v in self.list_connections(driver=True)
+                               if (u,v) not in conns]
+
+        for u,v in conns:
+            src2dests.setdefault(u, set()).add(v)
+            dest2src[v] = u
+
+        # driver comps connect directly to params/obj/constraints,
+        # so change the driver name to include the variable in order
+        # to behave the same as other comp nodes.
+        for u,v in drvconns:
+            if is_driver_node(self, u):
+                u = '.'.join((u,v))
+            else:
+                v = '.'.join((v,u))
+            src2dests.setdefault(u, set()).add(v)
+            dest2src[v] = u
+            
+        g = nx.DiGraph()
+        g.add_nodes_from(self.all_comps())
+
+        # find any connected inputs used as srces and connect their
+        # dests to the true source
+        for src, dests in src2dests.items():
+            if src in dest2src and not is_driver_node(self, src):
+                truesrc = dest2src[src]
+                src2dests[truesrc].update(dests)
+
+        for src, dests in src2dests.items():
+            newname = (src,tuple(dests))
+            g.add_node(newname)
+
+            cname = self._get_compname(src)
+            if cname is not None:
+                g.add_edge(cname, newname)
+
+            for dest in dests:
+                dcname = self._get_compname(dest)
+                if dcname is not None:
+                    g.add_edge(newname, dcname)
+                else:
+                    g.add_edge(newname, dest)
+
+            # TODO: grab node/edge metadata from original graph???
+
+        return g
+
     # The following group of methods are overridden so we can
     # call config_changed when the graph structure is modified
     # in any way.

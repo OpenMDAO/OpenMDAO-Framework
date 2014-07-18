@@ -370,7 +370,7 @@ class PseudoComponent(object):
     def setup_sizes(self):
         pass
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, parent_vec=None):
         pass
 
     def get_float_var_info(self, name):

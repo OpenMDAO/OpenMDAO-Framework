@@ -492,15 +492,6 @@ class Driver(Component):
         """
         self.workflow.setup_communicators(comm)
 
-    def setup_variables(self):
-        return self.workflow.setup_variables()
-
-    def setup_sizes(self):
-        return self.workflow.setup_sizes()
-
-    def setup_vectors(self, arrays=None):
-        self.workflow.setup_vectors(arrays)
-
     def setup_scatters(self):
         self.workflow.setup_scatters()
 

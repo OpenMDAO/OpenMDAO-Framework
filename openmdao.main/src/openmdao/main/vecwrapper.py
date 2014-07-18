@@ -19,7 +19,7 @@ class VecWrapper(object):
         vector_vars = system.vector_vars
 
         self._info = OrderedDict() # dict of (start_idx, view)
-        self._subvars = set()  # set of all names representing subviews of other views
+        self._subviews = set()  # set of all names representing subviews of other views
 
         if inputs is None:
             vset = allvars
@@ -66,7 +66,7 @@ class VecWrapper(object):
                     sub_idx = offset_flat_index(idx, basestart)
                     substart = get_flat_index_start(sub_idx)
                     self._info[name] = (self.array[sub_idx], substart)
-                    self._subvars.add(name)
+                    self._subviews.add(name)
                     if self.array[sub_idx].size != sz:
                         raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
                                              (system.name, name,
@@ -83,8 +83,6 @@ class VecWrapper(object):
         # create the PETSc vector
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
 
-        #mpiprint("SCATTER VEC: %s" % self._info.keys())
-
     def __getitem__(self, name):
         return self._info[name][0]
 
@@ -94,16 +92,26 @@ class VecWrapper(object):
     def __contains__(self, name):
         return name in self._info
 
-    def keys(self):
-        return self._info.keys()
+    def keys(self, subviews=False):
+        """Return list of names of views. If subviews is
+        True, include names of views that are subviews of other views.
+        """
+        if subviews:
+            return self._info.keys()
+        else:
+            return [k for k in self._info.keys() if k not in self._subviews]
 
-    def items(self):
+    def items(self, subviews=False):
+        """Return list of (name, view) for each view. If subviews is
+        True, include views that are subviews of other views.
+        """
         lst = []
         for name, (view, start) in self._info.items():
-            if len(view) == 1:
-                lst.append((name, view[0]))
-            else:
-                lst.append((name, view))
+            if subviews or name not in self._subviews:
+                if len(view) == 1:
+                    lst.append((name, view[0]))
+                else:
+                    lst.append((name, view))
         return lst
 
     def start(self, name):
@@ -142,7 +150,7 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subvars:
+            if start is not None and name not in self._subviews:
                 array_val[:] = scope.get_flattened_value(name)
                 #mpiprint("getting %s (%s) from scope" % (name, array_val))
 
@@ -155,7 +163,7 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subvars:
+            if start is not None and name not in self._subviews:
                 #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 scope.set_flattened_value(name, array_val)
 
@@ -168,15 +176,27 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subvars:
+            if start is not None and name not in self._subviews:
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 
     def dump(self, vecname=''):
         for name, (array_val, start) in self._info.items():
-            mpiprint("%s - %s: (%d,%d) %s" % (vecname,name, start, start+len(array_val),array_val))
+            mpiprint("%s - %s: (%d,%d) %s" % 
+                       (vecname,name, start, start+len(array_val),array_val))
         if self.petsc_vec is not None:
             mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
+
+    def check(self, parent_vec):
+        """Debugging method to check consistency of indexing between a child
+        vecwrapper and its parent.
+        """
+        retval = True
+        for name in self._info.keys():
+            if not all(self[name] == parent_vec[name]):
+                mpiprint("%s not the same in parent (%s) and child (%s)" % (name, parent_vec[name], self[name]))
+                retval = False
+        return retval
 
 
 class DataTransfer(object):
@@ -265,20 +285,8 @@ class DataTransfer(object):
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
 
-        # # copy dest vector values back into local src vector after
-        # # scatter since other systems share parts of the src
-        # # vector (via shared views) with this system.
-        # # FIXME: make sure we're not duplicating copy operation because
-        # #        in some cases we copy vector values back and forth from
-        # #        scoping Assembly...
-        # subvars = destvec._subvars
-        # for name, (array, start) in destvec._info.items():
-        #     if name not in subvars:
-        #         #mpiprint("copying %s (%s) back into vector %s" % (name, array, srcvecname))
-        #         srcvec[name][:] = array
-
-        for _, dvar in self.scatter_conns:
-            srcvec[dvar][:] = destvec[dvar][:]
+        #for _, dvar in self.scatter_conns:
+            #srcvec[dvar][:] = destvec[dvar][:]
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an

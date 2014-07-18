@@ -188,7 +188,7 @@ def _update_graph_metadata(G, scope):
                     conns.extend([(node, p) for p in driver.list_param_targets()])
         elif 'comp' in data:
             data['shape'] = 'box'
-        else: # var node
+        elif 'var' in data or 'basevar' in data: # var node
             parts = node.split('.', 1)
             if len(parts) > 1 and not is_var_node(G, parts[0]):
                 data['label'] = parts[1]

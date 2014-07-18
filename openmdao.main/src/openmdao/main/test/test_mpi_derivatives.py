@@ -92,7 +92,7 @@ if __name__ == '__main__':
     try:
         if not run:
             top._setup()
-            mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
+            mpiprint(top.driver.workflow._system.dump(stream=None))
 
             mpiprint("setup DONE")
 
