@@ -773,12 +773,18 @@ class Assembly(Component):
         if not includes:
             return (inputs, constants)
 
+        # Locate top level assembly.
+        top = self
+        while top.parent:
+            top = top.parent
+        prefix_drop = len(top.name)+1 if top.name else 0
+
         # Determine constant inputs.
         objs = [self]
         objs.extend(getattr(self, name) for name in self.list_containers())
         for obj in objs:
             if has_interface(obj, IComponent):
-                prefix = obj.get_pathname()
+                prefix = obj.get_pathname()[prefix_drop:]
                 if prefix:
                     prefix += '.'
 

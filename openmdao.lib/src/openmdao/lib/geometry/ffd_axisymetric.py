@@ -276,6 +276,7 @@ class Shell(object):
         
         self.delta_Cc = delta_Cc
         self.delta_Cc[:,0]*=self.x_mag
+
         self.Cc_bar = self.Cc+self.delta_Cc
         delta_Pc_o = self.bsc_o.calc(self.Cc_bar)
         delta_Pc_i = self.bsc_i.calc(self.Cc_bar)

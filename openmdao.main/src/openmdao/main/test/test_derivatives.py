@@ -747,6 +747,12 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='fd')
+
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
     def test_first_derivative(self):
 
         top = set_as_top(Assembly())

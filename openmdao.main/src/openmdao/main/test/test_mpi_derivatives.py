@@ -104,13 +104,17 @@ if __name__ == '__main__':
 
             mpiprint(top.driver.workflow._system.vec['df'].keys())
 
-            J1 = top.driver.workflow.calc_gradient(mode='forward')
+            J = top.driver.workflow.calc_gradient(mode='forward')
             mpiprint('Gradient - forward')
-            mpiprint(J1)
+            mpiprint(J)
 
-            J2 = top.driver.workflow.calc_gradient(mode='adjoint')
+            J = top.driver.workflow.calc_gradient(mode='adjoint')
             mpiprint('Gradient - adjoint')
-            mpiprint(J2)
+            mpiprint(J)
+
+            J = top.driver.workflow.calc_gradient(mode='fd')
+            mpiprint('Gradient - finite difference')
+            mpiprint(J)
 
             if expected:
                 mpiprint('-'*50)

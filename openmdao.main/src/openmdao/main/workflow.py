@@ -178,7 +178,9 @@ class Workflow(object):
             if hasattr(parent, 'get_constraint_targets'):
                 outputs.extend(parent.get_constraint_targets())
 
-        return self._system.calc_gradient(inputs, outputs, mode)
+        return self._system.calc_gradient(inputs, outputs, mode=mode,
+                                          options=self.parent.gradient_options,
+                                          iterbase=self._iterbase())
 
 
     def configure_recording(self, includes, excludes):
