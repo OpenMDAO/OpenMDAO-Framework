@@ -449,20 +449,20 @@ class Workflow(object):
         # create systems for all simple components
         for node, data in cgraph.nodes_iter(data=True):
             if isinstance(node, basestring):
-                data['system'] = _create_simple_sys(depgraph, scope, getattr(scope, node))
+                data['system'] = _create_simple_sys(scope, getattr(scope, node))
 
         # collapse the graph (recursively) into nodes representing
         # subsystems
         if MPI:
-            cgraph = partition_mpi_subsystems(depgraph, cgraph, scope)
+            cgraph = partition_mpi_subsystems(cgraph, scope)
 
             if len(cgraph) > 1:
                 if len(cgraph.edges()) > 0:
                     #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._system = SerialSystem(scope, depgraph, cgraph, tuple(cgraph.nodes()))
+                    self._system = SerialSystem(scope, cgraph, tuple(cgraph.nodes()))
                 else:
                     #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._system = ParallelSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
+                    self._system = ParallelSystem(scope, cgraph, str(tuple(cgraph.nodes())))
             elif len(cgraph) == 1:
                 name = cgraph.nodes()[0]
                 self._system = cgraph.node[name].get('system')
@@ -470,7 +470,7 @@ class Workflow(object):
                 raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
                                     self.parent.get_pathname())
         else:
-            self._system = SerialSystem(scope, depgraph, cgraph, str(tuple(cgraph.nodes())))
+            self._system = SerialSystem(scope, cgraph, str(tuple(cgraph.nodes())))
 
         self._system.set_ordering([c.name for c in self])
 

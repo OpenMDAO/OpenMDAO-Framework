@@ -189,17 +189,21 @@ def _update_graph_metadata(G, scope):
         elif 'comp' in data:
             data['shape'] = 'box'
         elif 'var' in data or 'basevar' in data: # var node
-            parts = node.split('.', 1)
-            if len(parts) > 1 and not is_var_node(G, parts[0]):
-                data['label'] = parts[1]
-            if hasattr(G, 'base_var'):
-                base = G.base_var(node)
-                if G.node[base].get('iotype') == 'state':
-                    data['shape'] = 'doubleoctagon'
+            try:
+                parts = node.split('.', 1)
+            except AttributeError:
+                pass
+            else:
+                if len(parts) > 1 and not is_var_node(G, parts[0]):
+                    data['label'] = parts[1]
+                if hasattr(G, 'base_var'):
+                    base = G.base_var(node)
+                    if G.node[base].get('iotype') == 'state':
+                        data['shape'] = 'doubleoctagon'
+                    else:
+                        data['shape'] = 'ellipse'
                 else:
                     data['shape'] = 'ellipse'
-            else:
-                data['shape'] = 'ellipse'
         data['margin'] = '0.0'
 
     G.add_edges_from(conns, style='dotted')

@@ -1433,17 +1433,17 @@ class Assembly(Component):
         self._system.setup_scatters()
         
     def pre_setup(self):
-        self.save_dg = self._depgraph
-        self._depgraph = self.save_dg.subgraph(self.save_dg.nodes())
-        self._depgraph.prune_unconnected_vars()
+        """Create the graph we need to do the breakdown of the model
+        into Systems.
+        """
+        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
+        dgraph.prune_unconnected_vars()
+        self._reduced_graph = dgraph.collapse_connections()
         
         for comp in self.get_comps():
             comp.pre_setup()
     
     def post_setup(self):
-        self._depgraph = self.save_dg
-        self.save_dg = None
-        
         for comp in self.get_comps():
             comp.post_setup()
 
@@ -1452,29 +1452,23 @@ class Assembly(Component):
         prior to execution.
         """
 
-        try:
-            if MPI:
-                try:
-                    MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+        if MPI:
+            MPI.COMM_WORLD.Set_errhandler(MPI.ERRORS_ARE_FATAL)
+            comm = MPI.COMM_WORLD
+        else:
+            comm = None
 
-                    self.pre_setup()
-                    self.setup_systems()
-                    self.setup_communicators(MPI.COMM_WORLD)
-                    self.setup_variables()
-                    self.setup_sizes()
-                    self.setup_vectors()
-                    self.setup_scatters()
-                except Exception:
-                    mpiprint(traceback.format_exc())
-                    raise
-            else:
-                self.pre_setup()
-                self.setup_systems()
-                self.setup_communicators(None)
-                self.setup_variables()
-                self.setup_sizes()
-                self.setup_vectors()
-                self.setup_scatters()
+        try:
+            self.pre_setup()
+            self.setup_systems()
+            self.setup_communicators(comm)
+            self.setup_variables()
+            self.setup_sizes()
+            self.setup_vectors()
+            self.setup_scatters()
+        except Exception:
+            mpiprint(traceback.format_exc())
+            raise
         finally:
             self.post_setup()                
 

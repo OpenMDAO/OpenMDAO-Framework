@@ -26,24 +26,17 @@ class VecWrapper(object):
         else:
             vset = set(inputs)
 
-        ## top conserve memory, connected sources and dests will occupy the same entries in the
-        ## vector (assuming both are present)
-        #self._dups = dict([(v,u) for u,v in system.in_edges if u != v and u in vector_vars])
-
         # first, add views for vars whose sizes are added to the total,
         # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
         for i, (name, var) in enumerate(vector_vars.items()):
-            if name not in vset: # or name in self._dups:
+            if name not in vset:
                 continue
             sz = var['size']
             assert(sz == system.local_var_sizes[system.mpi.rank,i])
             if sz > 0:
                 end += sz
-                if self.array.size < (end-start):
-                    raise RuntimeError("size mismatch: in system %s, can't create a view of [%d,%d] from a %d size array" %
-                                         (system.name,start,end,self.array.size))
                 self._info[name] = (self.array[start:end], start)
                 if end-start > self.array[start:end].size:
                     raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
@@ -131,7 +124,8 @@ class VecWrapper(object):
             view, start = self._info[names]
             return (start, start + view.size)
 
-        bnds = [self.bounds(n) for n in names]
+        infos = [self._info[n] for n in names]
+        bnds = [(start, start+view.size) for view,start in infos]
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
     def indices(self, name):
@@ -150,8 +144,11 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subviews:
-                array_val[:] = scope.get_flattened_value(name)
+            if start is not None:
+                if isinstance(name, tuple):
+                    array_val[:] = scope.get_flattened_value(name[0])
+                else:
+                    array_val[:] = scope.get_flattened_value(name)
                 #mpiprint("getting %s (%s) from scope" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
@@ -163,9 +160,14 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subviews:
+            if start is not None:
                 #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
-                scope.set_flattened_value(name, array_val)
+                if isinstance(name, tuple):
+                    scope.set_flattened_value(name[0], array_val)
+                    for dest in name[1]:
+                        scope.set_flattened_value(dest, array_val)                        
+                else:
+                    scope.set_flattened_value(name, array_val)
 
     def set_to_vec(self, vec, vnames=None):
         """Pull values for the given set of names out of our array
@@ -176,7 +178,7 @@ class VecWrapper(object):
 
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
-            if start is not None and name not in self._subviews:
+            if start is not None:
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 

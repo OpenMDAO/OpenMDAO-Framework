@@ -985,24 +985,24 @@ class DependencyGraph(nx.DiGraph):
 
         return comps
 
-    def prune_unconnected_vars(self):
-        """Remove unconnected variable nodes"""
-        conns = self.list_connections(driver=True)
-        convars = set([u for u,v in conns])
-        convars.update([v for u,v in conns])
-        convars.update([self.base_var(v) for v in convars])
-        to_remove = [v for v in self.nodes_iter()
-                         if v not in convars and is_var_node(self,v)]
-        self.remove_nodes_from(to_remove)
-
     def _get_compname(self, node):
-        """Return the component name for the given node, or
-        None if the node denotes a boundary variable.
+        """Return the name of the component that owns the given node
+        if there is one.  Otherwise, just return the node name.
         """
         cname = node.split('.', 1)[0]
         if is_comp_node(self, cname):
             return cname
-        return None
+        return node
+
+    def _add_collapsed_node(self, g, newname, src, dests, meta):
+        g.add_node(newname, meta)
+
+        cname = self._get_compname(src)
+        if cname != src:
+            g.add_edge(cname, newname)
+
+        for dest in dests:
+            g.add_edge(newname, self._get_compname(dest))
 
     def collapse_connections(self):
         """Returns a new graph with each variable
@@ -1019,45 +1019,42 @@ class DependencyGraph(nx.DiGraph):
             src2dests.setdefault(u, set()).add(v)
             dest2src[v] = u
 
-        # driver comps connect directly to params/obj/constraints,
-        # so change the driver name to include the variable in order
-        # to behave the same as other comp nodes.
-        for u,v in drvconns:
-            if is_driver_node(self, u):
-                u = '.'.join((u,v))
-            else:
-                v = '.'.join((v,u))
-            src2dests.setdefault(u, set()).add(v)
-            dest2src[v] = u
-            
         g = nx.DiGraph()
-        g.add_nodes_from(self.all_comps())
-
+        for node in self.all_comps():
+            g.add_node(node, self.node[node].copy())  # copying metadata
+    
         # find any connected inputs used as srces and connect their
         # dests to the true source
         for src, dests in src2dests.items():
-            if src in dest2src and not is_driver_node(self, src):
+            if src in dest2src:
                 truesrc = dest2src[src]
                 src2dests[truesrc].update(dests)
 
         for src, dests in src2dests.items():
             newname = (src,tuple(dests))
-            g.add_node(newname)
+            self._add_collapsed_node(g, newname, src, dests, self.node[src].copy())
 
-            cname = self._get_compname(src)
-            if cname is not None:
-                g.add_edge(cname, newname)
-
-            for dest in dests:
-                dcname = self._get_compname(dest)
-                if dcname is not None:
-                    g.add_edge(newname, dcname)
-                else:
-                    g.add_edge(newname, dest)
-
-            # TODO: grab node/edge metadata from original graph???
+        # driver connections are slightly different.  Name their
+        # param/obj/constrataint nodes as (src,(src,)), or (dest, (dest,))
+        for src,dest in drvconns:
+            if is_driver_node(self, src):
+                self._add_collapsed_node(g, tuple(dest, (dest,)), 
+                                         src, (dest,), self.node[dest].copy())
+            else:
+                self._add_collapsed_node(g, tuple(src, (src,)), 
+                                         src, (dest,), self.node[src].copy())
 
         return g
+
+    def prune_unconnected_vars(self):
+        """Remove unconnected variable nodes"""
+        conns = self.list_connections(driver=True)
+        convars = set([u for u,v in conns])
+        convars.update([v for u,v in conns])
+        convars.update([self.base_var(v) for v in convars])
+        to_remove = [v for v in self.nodes_iter()
+                         if v not in convars and is_var_node(self,v)]
+        self.remove_nodes_from(to_remove)
 
     # The following group of methods are overridden so we can
     # call config_changed when the graph structure is modified
@@ -1874,7 +1871,7 @@ def break_cycles(graph):
 
     return severed_edges
 
-def get_graph_partition(g, nodes):
+def get_edge_boundary(g, nodes):
     """Returns a tuple of the form (in_edges, out_edges),
     where in_edges and out_edges are boundary
     edges between the nodes and the rest of the full graph.
@@ -1885,12 +1882,21 @@ def get_graph_partition(g, nodes):
     
     return in_edges, out_edges
      
+def get_node_boundary(g, nodes):
+    """Returns a tuple of the form (in_nodes, out_nodes),
+    where in_nodes and out_nodes are boundary
+    nodes between the given nodes and the rest of the full graph.
+    """
+    ins, outs = get_edge_boundary(g, nodes)
+    
+    return [u for u,v in ins], [v for u,v in outs]
+     
 def collapse_nodes(g, collapsed_name, nodes):
     """Collapse the given set of nodes into a single
     node with the specified name.
     """
     in_edges, out_edges = \
-                  get_graph_partition(g, nodes)
+                  get_edge_boundary(g, nodes)
     
     # create new connections to collapsed node
     for u,v in in_edges:
@@ -1913,8 +1919,8 @@ def collapse_driver(g, driver, excludes=()):
     system node.
     """
     nodes = driver.get_full_nodeset()
-    nodes = [n for n in 
-                driver.get_depgraph().find_prefixed_nodes(nodes)
+    nodes = [n for n in nodes
+                #driver.get_depgraph().find_prefixed_nodes(nodes)
                 if n not in excludes]
 
     return collapse_nodes(g, driver.name, nodes)
@@ -1975,3 +1981,4 @@ def gsort(deps, names):
             final[i] = n
     
     return final
+

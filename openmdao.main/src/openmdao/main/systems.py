@@ -13,7 +13,7 @@ from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
 from openmdao.main.vecwrapper import VecWrapper, DataTransfer, idx_merge, petsc_linspace
-from openmdao.main.depgraph import break_cycles, get_graph_partition, \
+from openmdao.main.depgraph import break_cycles, get_node_boundary, \
                                    is_driver_node, get_all_deps, gsort, \
                                    collapse_nodes
 
@@ -25,7 +25,7 @@ def call_if_found(obj, fname, *args, **kwargs):
         return getattr(obj, fname)(*args, **kwargs)
 
 class System(object):
-    def __init__(self, scope, depgraph, nodes, name):
+    def __init__(self, scope, nodes, name):
         self.scope = scope
         self.name = str(name)
 
@@ -35,31 +35,31 @@ class System(object):
         self.vector_noadds = OrderedDict() # all vars in vectors that do not contribute to their size
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
 
-        # get our I/O edges from the depgraph
-        self._in_edges, self._out_edges = \
-                         get_graph_partition(depgraph, nodes)
+        # get our I/O nodes from the depgraph
+        self._in_nodes, self._out_nodes = \
+                         get_node_boundary(scope._reduced_graph, nodes)
 
-        # if a src or dest is a driver, rename it to the
-        # variable on the other side. Scatters for driver
-        # params/obj/constraints use same var name in u and
-        # p vector.
-        for i,(u,v) in enumerate(self._in_edges):
-            if is_driver_node(depgraph, u):
-                u = v
-            elif is_driver_node(depgraph, v):
-                v = u
-            self._in_edges[i] = (u,v)
+        # # if a src or dest is a driver, rename it to the
+        # # variable on the other side. Scatters for driver
+        # # params/obj/constraints use same var name in u and
+        # # p vector.
+        # for i,(u,v) in enumerate(self._in_edges):
+        #     if is_driver_node(depgraph, u):
+        #         u = v
+        #     elif is_driver_node(depgraph, v):
+        #         v = u
+        #     self._in_edges[i] = (u,v)
 
-        for i,(u,v) in enumerate(self._out_edges):
-            if is_driver_node(depgraph, u):
-                u = v
-            elif is_driver_node(depgraph, v):
-                v = u
-            self._out_edges[i] = (u,v)
+        # for i,(u,v) in enumerate(self._out_edges):
+        #     if is_driver_node(depgraph, u):
+        #         u = v
+        #     elif is_driver_node(depgraph, v):
+        #         v = u
+        #     self._out_edges[i] = (u,v)
 
-        # in and out edges local to this System
-        self._out_edges = sorted(self._out_edges) # put sources in alphabetical order
-        self._in_edges = sorted(self._in_edges)  # sort in the order of the connected source
+        # # in and out edges local to this System
+        # self._out_edges = sorted(self._out_edges) # put sources in alphabetical order
+        # self._in_edges = sorted(self._in_edges)  # sort in the order of the connected source
 
         #mpiprint("%s %s: in_edges = %s" % (self.__class__.__name__, self.name, self._in_edges))
         #mpiprint("%s %s: out_edges = %s" % (self.__class__.__name__, self.name, self._out_edges))
@@ -94,60 +94,50 @@ class System(object):
             return self.local_subsystems()
         return self.all_subsystems()
         
-    def get_srcs(self, local=False, names=None):
-        srcs = []
-        srcset = set()
+    # def get_srcs(self, local=False, names=None):
+    #     srcs = []
+    #     srcset = set()
 
-        if names is None:
-            names = self.get_inputs(local=local)
+    #     if names is None:
+    #         names = self.get_inputs(local=local)
 
-        # srcs can connect to multiple destinations, so just
-        # return unique ones (in order)
-        for u,v in self.in_edges(recurse=True):
-            if u not in srcset:
-                srcset.add(u)
-                if v in names:
-                    srcs.append(u)
+    #     # srcs can connect to multiple destinations, so just
+    #     # return unique ones (in order)
+    #     for u,v in self.in_edges(recurse=True):
+    #         if u not in srcset:
+    #             srcset.add(u)
+    #             if v in names:
+    #                 srcs.append(u)
 
-        return srcs
+    #     return srcs
 
     def get_inputs(self, local=False):
-        return [v for u,v in self.in_edges(recurse=True)]
+        return self._in_nodes[:]
 
     def get_outputs(self, local=False):
-        outs = []
-        outset = set()
+        return self._out_nodes[:]
 
-        # outs can connect to multiple destinations, so just
-        # return unique ones (in order)
-        for u,v in self._out_edges:
-            if u not in outset:
-                outset.add(u)
-                outs.append(u)
+    # def in_edges(self, local=False, recurse=False):
+    #     edges = self._in_edges[:]
+    #     if recurse:
+    #         s = set(edges)
+    #         for sub in self.subsystems(local):
+    #             for edge in sub.in_edges(recurse=recurse):
+    #                 if edge not in s:
+    #                     s.add(edge)
+    #                     edges.append(edge)
+    #     return edges
 
-        return outs
-
-    def in_edges(self, local=False, recurse=False):
-        edges = self._in_edges[:]
-        if recurse:
-            s = set(edges)
-            for sub in self.subsystems(local):
-                for edge in sub.in_edges(recurse=recurse):
-                    if edge not in s:
-                        s.add(edge)
-                        edges.append(edge)
-        return edges
-
-    def out_edges(self, local=False, recurse=False):
-        edges = self._out_edges[:]
-        if recurse:
-            s = set(edges)
-            for sub in self.subsystems(local):
-                for edge in sub.out_edges(recurse=recurse):
-                    if edge not in s:
-                        s.add(edge)
-                        edges.append(edge)
-        return edges
+    # def out_edges(self, local=False, recurse=False):
+    #     edges = self._out_edges[:]
+    #     if recurse:
+    #         s = set(edges)
+    #         for sub in self.subsystems(local):
+    #             for edge in sub.out_edges(recurse=recurse):
+    #                 if edge not in s:
+    #                     s.add(edge)
+    #                     edges.append(edge)
+    #     return edges
 
     def get_size(self, names):
         """Return the total size of the variables
@@ -178,9 +168,12 @@ class System(object):
     def get_req_cpus(self):
         return self.mpi.requested_cpus
 
-    def _get_var_info(self, name):
+    def _get_var_info(self, node):
         vdict = { 'size': 0 }
 
+        # use the name of the src
+        name = node[0]
+        
         parts = name.split('.',1)
         if len(parts) > 1:
             cname, vname = parts
@@ -206,23 +199,23 @@ class System(object):
 
         return vdict
 
-    def get_src_map(self):
-        """Returns a dict mapping all destinations to their true sources."""
+    # def get_src_map(self):
+    #     """Returns a dict mapping all destinations to their true sources."""
 
-        # find source for any var (src for a src is itself)
-        srcs = dict([(dest,src) for src,dest in self.in_edges(recurse=True)])
-        srcs.update([(src,src) for src,dest in self.out_edges(recurse=True)])
+    #     # find source for any var (src for a src is itself)
+    #     srcs = dict([(dest,src) for src,dest in self.in_edges(recurse=True)])
+    #     srcs.update([(src,src) for src,dest in self.out_edges(recurse=True)])
 
-        # # now identify any inputs that are used as srcs, and map their
-        # # destinations to their source
-        # true_srcs = dict([(src,srcs[src]) for dest,src in srcs.items() 
-        #                                       if srcs.get(src, src) != src])
-        # if true_srcs:
-        #     for dest,src in srcs.items():
-        #         if dest in true_srcs:
-        #             srcs[dest] = true_srcs[dest]
+    #     # # now identify any inputs that are used as srcs, and map their
+    #     # # destinations to their source
+    #     # true_srcs = dict([(src,srcs[src]) for dest,src in srcs.items() 
+    #     #                                       if srcs.get(src, src) != src])
+    #     # if true_srcs:
+    #     #     for dest,src in srcs.items():
+    #     #         if dest in true_srcs:
+    #     #             srcs[dest] = true_srcs[dest]
             
-        return srcs
+    #     return srcs
 
     def _flat_only(self, names):
         """Return only those names that are flattenable variables."""
@@ -251,32 +244,32 @@ class System(object):
             if vname not in self.all_variables:
                 self.all_variables[vname] = self._get_var_info(vname)
 
-        # check both ends of each input connection.  If either side is not flattenable,
-        # then leave both vars out of the scatter vectors by marking them as flat=False
-        myvars = self.all_variables
-        for sub in self.local_subsystems():
-            for u,v in sub._in_edges:
-                if u in myvars:
-                    if not myvars[u].get('flat') and v in myvars:
-                        myvars[v]['flat'] = False
+        # # check both ends of each input connection.  If either side is not flattenable,
+        # # then leave both vars out of the scatter vectors by marking them as flat=False
+        # myvars = self.all_variables
+        # for sub in self.local_subsystems():
+        #     for u,v in sub._in_edges:
+        #         if u in myvars:
+        #             if not myvars[u].get('flat') and v in myvars:
+        #                 myvars[v]['flat'] = False
 
-                if v in myvars:
-                    if not myvars[v].get('flat') and u in myvars:
-                        myvars[u]['flat'] = False
+        #         if v in myvars:
+        #             if not myvars[v].get('flat') and u in myvars:
+        #                 myvars[u]['flat'] = False
 
-        # get our source map and cache it
-        self._src_map = self.get_src_map()
+        # # get our source map and cache it
+        # self._src_map = self.get_src_map()
 
-        self._setup_ext_var_info()
+        # self._setup_ext_var_info()
 
-    def _setup_ext_var_info(self):
-        # now add all srcs to all_vars_plus_ext
-        self._all_vars_plus_ext = self.all_variables.copy()
-        for dest, src in self._src_map.items():
-            if src not in self._all_vars_plus_ext:
-                self._all_vars_plus_ext[src] = self._get_var_info(src)
+    # def _setup_ext_var_info(self):
+    #     # now add all srcs to all_vars_plus_ext
+    #     self._all_vars_plus_ext = self.all_variables.copy()
+    #     for dest, src in self._src_map.items():
+    #         if src not in self._all_vars_plus_ext:
+    #             self._all_vars_plus_ext[src] = self._get_var_info(src)
 
-        #mpiprint("=== %s: all_variables = %s" % (self.name, self.all_variables.keys()))
+    #     #mpiprint("=== %s: all_variables = %s" % (self.name, self.all_variables.keys()))
 
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
@@ -311,14 +304,13 @@ class System(object):
         self.local_var_sizes = numpy.zeros((size, len(adds)), int)
 
         for name in adds:
-            if name in self.all_variables:
-                self.vector_vars[name] = self.all_variables[name]
+            self.vector_vars[name] = self.all_variables[name]
 
         for name in noadds:
-            self.vector_noadds[name] = self._all_vars_plus_ext[name]
+            self.vector_noadds[name] = self.all_variables[name]
 
-        for name in self._get_flat_vars(self._all_vars_plus_ext):
-            self.flat_vars[name] = self._all_vars_plus_ext[name]
+        for name in self._get_flat_vars(self.all_variables):
+            self.flat_vars[name] = self.all_variables[name]
 
         for name, info in self.all_variables.items():
             if name not in self.flat_vars:
@@ -339,16 +331,16 @@ class System(object):
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
 
-        sz = 0
-        for dest in self._flat_only(self.get_inputs(local=True)):
-            src = self._src_map[dest]
-            sz += self._all_vars_plus_ext[src]['size']
+        #sz = 0
+        #for dest in self._flat_only(self.get_inputs(local=True)):
+            #src = self._src_map[dest]
+            #sz += self._all_vars_plus_ext[src]['size']
                     
-        self.input_sizes[rank] = sz
+        #self.input_sizes[rank] = sz
 
-        #self.input_sizes[rank] = sum([v['size']
-                                        #for n,v in self.vector_vars.items()
-                                           #if n in inputs])
+        self.input_sizes[rank] = sum([v['size']
+                                        for n,v in self.vector_vars.items()
+                                           if n in self._in_nodes])
 
         #mpiprint("setup_sizes Allgather (input sizes)")
         if MPI:
@@ -375,19 +367,19 @@ class System(object):
 
         #mpiprint("given uvec size is %d for %s" % (arrays['u'].size, self.name))
         for name in ['u', 'f', 'du', 'df']:
-            self.vec[name] = VecWrapper(self, arrays[name], parent_vec)
+            self.vec[name] = VecWrapper(self, arrays[name])
 
         insize = self.input_sizes[rank]
 
         for name in ['p', 'dp']:
-            self.vec[name] = InputVecWrapper(self, numpy.zeros(insize), self.vec['u'])
+            self.vec[name] = VecWrapper(self, numpy.zeros(insize), inputs=self._in_nodes)
 
         start, end = 0, 0
         for sub in self.local_subsystems():
-            ## FIXME: not sure if driver systems with overlapping iteration sets
-            ## will work at all in MPI, so for now, if MPI is active, assume
-            ## no systems have any overlapping array views, else raise an exception.
-            ##if MPI:
+            # FIXME: not sure if driver systems with overlapping iteration sets
+            # will work at all in MPI, so for now, if MPI is active, assume
+            # no systems have any overlapping array views, else raise an exception.
+            #if MPI:
             #sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
             #end += sz
             #if end-start > arrays['u'][start:end].size:
@@ -414,7 +406,7 @@ class System(object):
             sub.setup_vectors(subarrays, parent_vec)
 
             #if MPI:
-                #start += sz
+            #start += sz
 
         return self.vec
 
@@ -434,8 +426,6 @@ class System(object):
 
             #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
             scatter(self, srcvec, destvec) #, reverse=??)
-            self.vec['u'].dump('u')
-            self.vec['p'].dump('p')
 
         return scatter
 
@@ -516,36 +506,38 @@ class System(object):
         contribute to the size, e.g. subvars that have a basevar in the vector
         or connected destination vars.
         """
-        adds = []
-        noadds = []
-        visited = set()
-        for name in self._get_flat_vars(vardict):
-            src = self._src_map.get(name, name)
-            if src != name:
-                if src not in vardict:
-                    adds.append(name)
-                    continue
-                elif name not in visited:
-                    noadds.append(name)
-                    visited.add(name)
-                    continue
-            name = src
-            if name not in visited:
-                visited.add(name)
-                if '[' in name:
-                    base = name.split('[', 1)[0]
-                    if base in vardict:
-                        noadds.append(name)
-                    else:
-                        adds.append(name)
-                else:
-                    base = name
-                    if '.' in name and base.rsplit('.', 1)[0] in vardict:
-                        noadds.append(name)
-                    else:
-                        adds.append(name)
+        # FIXME: for now, ignore slicing
+        return self._get_flat_vars(vardict), []
+        #adds = []
+        #noadds = []
+        #visited = set()
+        #for name in self._get_flat_vars(vardict):
+            #src = self._src_map.get(name, name)
+            #if src != name:
+                #if src not in vardict:
+                    #adds.append(name)
+                    #continue
+                #elif name not in visited:
+                    #noadds.append(name)
+                    #visited.add(name)
+                    #continue
+            #name = src
+            #if name not in visited:
+                #visited.add(name)
+                #if '[' in name:
+                    #base = name.split('[', 1)[0]
+                    #if base in vardict:
+                        #noadds.append(name)
+                    #else:
+                        #adds.append(name)
+                #else:
+                    #base = name
+                    #if '.' in name and base.rsplit('.', 1)[0] in vardict:
+                        #noadds.append(name)
+                    #else:
+                        #adds.append(name)
 
-        return (adds, noadds)
+        #return (adds, noadds)
 
     def set_mode(self, mode):
         """ Sets the mode for this system and all subsystems. """
@@ -586,10 +578,11 @@ class System(object):
 
 class SimpleSystem(System):
     """A System for a single Component."""
-    def __init__(self, depgraph, scope, name):
+    def __init__(self, scope, name):
         comp = getattr(scope, name)
-        super(SimpleSystem, self).__init__(scope, depgraph,
-                      depgraph.find_prefixed_nodes(comp.get_full_nodeset()),
+        super(SimpleSystem, self).__init__(scope,
+                      #depgraph.find_prefixed_nodes(
+                        comp.get_full_nodeset(), #),
                       name)
         self._comp = comp
         self.mpi.requested_cpus = self._comp.get_req_cpus()
@@ -631,7 +624,7 @@ class SimpleSystem(System):
         ukeys = self.vec['u'].keys()
         scatter_conns = []
         other_conns = []
-        srcmap = self.get_src_map()
+        #srcmap = self.get_src_map()
         flat_inputs = self._flat_only(self.get_inputs(local=True))
         for dest in flat_inputs:
             ivar = ukeys.index(dest)
@@ -668,8 +661,8 @@ class BoundarySystem(SimpleSystem):
     performs data transfer between a set of boundary variables and the rest
     of the system.
     """
-    def __init__(self, depgraph, scope, name):
-        super(SimpleSystem, self).__init__(scope, depgraph, name, str(name))
+    def __init__(self, scope, name):
+        super(SimpleSystem, self).__init__(scope, name, str(name))
         self.mpi.requested_cpus = 1
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
@@ -766,9 +759,9 @@ class AssemblySystem(ExplicitSystem):
 class CompoundSystem(System):
     """A System that has subsystems."""
 
-    def __init__(self, scope, depgraph, subg, name=None):
-        super(CompoundSystem, self).__init__(scope, depgraph,
-                                             get_full_nodeset(depgraph, scope, subg.nodes()), name)
+    def __init__(self, scope, subg, name=None):
+        super(CompoundSystem, self).__init__(scope,
+                                             get_full_nodeset(scope, subg.nodes()), name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -855,27 +848,23 @@ class CompoundSystem(System):
             noflat_conns = []  # non-flattenable vars
 
             if subsystem in self.local_subsystems():
-                for dest in subsystem.get_inputs(local=True):
-                    src = self._src_map[dest]
-                    if dest in noflats:
-                        noflat_conns.append((src, dest))
-                        noflat_conns_full.append((src, dest))
+                for node in subsystem.get_inputs(local=True):
+                    #src = self._src_map[dest]
+                    
+                    if node in noflats:
+                        noflat_conns.append(node)
+                        noflat_conns_full.append(node)
                     else:
-                        try:
-                            isrc = varkeys.index(src)
-                        except (ValueError, KeyError):
-                            pass # scatter should have already happened at higher level
-                        else:
-                            #self.vec['p'].dump('p')
-                            dest_idxs = self.vec['p'].indices(dest)
-                            #mpiprint("dest indices of %s = %s" % (dest, dest_idxs))
-                            src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
-                                              petsc_linspace(0, dest_idxs.shape[0]) #args[arg]
-                            #mpiprint("src indices of %s = %s" % (src, src_idxs))
-                            scatter_conns.append((src,dest))
-                            scatter_conns_full.append((src,dest))
-                            src_partial.append(src_idxs)
-                            dest_partial.append(dest_idxs)
+                        isrc = varkeys.index(node)
+                        
+                        #dest_idxs = self.vec['p'].indices(dest)
+                        dest_idxs = self.vec['p'].indices(node)
+                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
+                                          petsc_linspace(0, dest_idxs.shape[0]) #args[arg]
+                        scatter_conns.append(node)
+                        scatter_conns_full.append(node)
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
 
                 src_full.extend(src_partial)
                 dest_full.extend(dest_partial)
@@ -917,8 +906,8 @@ class CompoundSystem(System):
 
 class SerialSystem(CompoundSystem):
 
-    def __init__(self, scope, depgraph, subg, name=None):
-        super(SerialSystem, self).__init__(scope, depgraph, subg, name)
+    def __init__(self, scope, subg, name=None):
+        super(SerialSystem, self).__init__(scope, subg, name)
 
     def all_subsystems(self):
         return [self.graph.node[node]['system'] for node in self._ordering]
@@ -1103,9 +1092,8 @@ class NonSolverDriverSystem(ExplicitSystem):
 
     def __init__(self, driver):
         driver.setup_systems()
-        depgraph = driver.get_depgraph()
         scope = driver.parent
-        super(NonSolverDriverSystem, self).__init__(depgraph, scope, driver.name)
+        super(NonSolverDriverSystem, self).__init__(scope, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
@@ -1131,9 +1119,8 @@ class SolverSystem(SimpleSystem):  # Implicit
 
     def __init__(self, driver):
         driver.setup_systems()
-        depgraph = driver.get_depgraph()
         scope = driver.parent
-        super(SolverSystem, self).__init__(depgraph, scope, driver.name)
+        super(SolverSystem, self).__init__(scope, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
@@ -1159,29 +1146,27 @@ class InnerAssemblySystem(SerialSystem):
     """
     def __init__(self, scope):
         drvname = scope._top_driver.name
-        depgraph = scope.get_depgraph()
 
         conns = scope.list_connections()
-        srcset = set([depgraph.base_var(u) for u,v in conns])
-        destset = set([depgraph.base_var(v) for u,v in conns])
+        srcset = set([scope._depgraph.base_var(u) for u,v in conns])
+        destset = set([scope._depgraph.base_var(v) for u,v in conns])
 
         bndry_outs = [v for v in scope.list_outputs() if v in destset]
         bndry_ins = [v for v in scope.list_inputs() if v in srcset]
 
         g = nx.DiGraph()
         g.add_node(drvname)
-        g.node[drvname]['system'] = _create_simple_sys(depgraph, scope,
-                                                       scope._top_driver)
+        g.node[drvname]['system'] = _create_simple_sys(scope, scope._top_driver)
 
-        self.bins = bins = tuple(depgraph.find_prefixed_nodes(bndry_ins))
-        self.bouts = bouts = tuple(depgraph.find_prefixed_nodes(bndry_outs))
+        self.bins = bins = tuple(scope._depgraph.find_prefixed_nodes(bndry_ins))
+        self.bouts = bouts = tuple(scope._depgraph.find_prefixed_nodes(bndry_outs))
 
         ordering = []
 
         if bins:
             g.add_node(bins)
             g.add_edge(bins, drvname)
-            g.node[bins]['system'] = BoundarySystem(depgraph, scope, bins)
+            g.node[bins]['system'] = BoundarySystem(scope, bins)
             ordering.append(bins)
 
         ordering.append(drvname)
@@ -1189,10 +1174,10 @@ class InnerAssemblySystem(SerialSystem):
         if bouts:
             g.add_node(bouts)
             g.add_edge(drvname, bouts)
-            g.node[bouts]['system'] = BoundarySystem(depgraph, scope, bouts)
+            g.node[bouts]['system'] = BoundarySystem(scope, bouts)
             ordering.append(bouts)
 
-        super(InnerAssemblySystem, self).__init__(scope, depgraph, g, '_inner_asm')
+        super(InnerAssemblySystem, self).__init__(scope, g, '_inner_asm')
         self.set_ordering(ordering)
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
@@ -1202,21 +1187,21 @@ class InnerAssemblySystem(SerialSystem):
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
-def _create_simple_sys(depgraph, scope, comp):
+def _create_simple_sys(scope, comp):
 
     if has_interface(comp, ISolver):
         sub = SolverSystem(comp)
     elif has_interface(comp, IDriver):
         sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(depgraph, scope, comp.name)
+        sub = AssemblySystem(scope, comp.name)
     elif has_interface(comp, IImplicitComponent):
-        sub = SimpleSystem(depgraph, scope, comp.name)
+        sub = SimpleSystem(scope, comp.name)
     else:
-        sub = ExplicitSystem(depgraph, scope, comp.name)
+        sub = ExplicitSystem(scope, comp.name)
     return sub
 
-def partition_mpi_subsystems(depgraph, cgraph, scope):
+def partition_mpi_subsystems(cgraph, scope):
     """Return a nested system graph with metadata for parallel
     and serial subworkflows.  Graph must acyclic. All subdriver
     iterations sets must have already been collapsed.
@@ -1249,9 +1234,9 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
                 if isinstance(branch, tuple):
                     to_remove.extend(branch)
                     subg = cgraph.subgraph(branch)  #_precollapse(scope, g, branch)
-                    partition_mpi_subsystems(depgraph, subg, scope)
+                    partition_mpi_subsystems(subg, scope)
                     #mpiprint("%d adding system for %s %s" % (id(g),type(branch),str(branch)))
-                    system=SerialSystem(scope, depgraph, subg, str(branch))
+                    system=SerialSystem(scope, subg, str(branch))
                     update_system_node(cgraph, system, branch)
 
                     gcopy.remove_nodes_from(branch)
@@ -1263,7 +1248,7 @@ def partition_mpi_subsystems(depgraph, cgraph, scope):
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)  #_precollapse(scope, g, parallel_group)
             #mpiprint("%d adding system for %s %s" % (id(g),type(parallel_group),str(parallel_group)))
-            system=ParallelSystem(scope, depgraph, subg, str(parallel_group))
+            system=ParallelSystem(scope, subg, str(parallel_group))
             update_system_node(cgraph, system, parallel_group)
 
         elif len(zero_in_nodes) == 1:  # serial
@@ -1335,7 +1320,7 @@ def simple_node_iter(nodes):
             for n in simple_node_iter(node):
                 yield n
 
-def get_full_nodeset(depgraph, scope, group):
+def get_full_nodeset(scope, group):
     names = set()
     for name in simple_node_iter(group):
         obj = getattr(scope, name, None)
@@ -1343,4 +1328,4 @@ def get_full_nodeset(depgraph, scope, group):
             names.update(obj.get_full_nodeset())
         else:
             names.update(name)
-    return depgraph.find_prefixed_nodes(names)
+    return names
