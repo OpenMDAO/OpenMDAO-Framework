@@ -153,7 +153,7 @@ class Workflow(object):
                 self.parent._logger.error("Can't record case: %s", exc)
 
         if err is not None:
-            err.reraise(with_traceback=False)
+            err.reraise(with_traceback=True)
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.

@@ -132,7 +132,7 @@ class ImplicitComponent(Component):
                         self.raise_exception("Trying to set a scalar value '%s' with a ")
                     setattr(self, name, newval[0])
             else:
-                setattr(self, name, flatval)
+                setattr(self, name, newval.copy())
 
         if unused != 0:
             self.raise_exception("State vector size does not match flattened size of state variables.",
@@ -189,7 +189,7 @@ class ImplicitComponent(Component):
                 msg = "ERROR in '%s': gmres failed to converge after %d iterations at index %d"
                 self._logger.error(msg % (self.get_pathname(), info, irhs))
             elif info < 0:
-                self._logger.error("ERROR in '%s': gmres failed at index %d" % 
+                self._logger.error("ERROR in '%s': gmres failed at index %d" %
                                    (self.get_pathname(),irhs))
 
             J[:, irhs] = dx[n_res:]
