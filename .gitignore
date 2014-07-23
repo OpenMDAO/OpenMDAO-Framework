@@ -15,8 +15,6 @@ build.out
 *~
 *.egg-info
 *.egg
-*.katos
-
 # Compiled source #
 ###################
 *.com
