@@ -95,8 +95,8 @@ class System(object):
     def get_owned_args(self):
         args = []
         for sub in self.simple_subsystems(local=True):
-            args.extend([arg for arg in sub._in_nodes 
-                            if arg in self.variables and 
+            args.extend([arg for arg in sub._in_nodes
+                            if arg in self.variables and
                                (arg not in sub.variables or sub is self)])
         return args
 
@@ -157,7 +157,7 @@ class System(object):
 
         # use the name of the src
         name = node[0]
-        
+
         parts = name.split('.',1)
         if len(parts) > 1:
             cname, vname = parts
@@ -210,7 +210,7 @@ class System(object):
                 self.all_args[vname[0]] = self.all_args[vname]
                 for n in vname[1]:
                     self.all_args[n] = self.all_args[vname]
-        
+
         # add any driver inputs
         for vname in self._in_nodes:
             src, dests = vname
@@ -278,14 +278,14 @@ class System(object):
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
 
-        #self.input_sizes[rank] = sum([self.scope._system.variables[n]['size'] 
+        #self.input_sizes[rank] = sum([self.scope._system.variables[n]['size']
                                        #for n in self._in_nodes])
         for sub in self.simple_subsystems(local=True):
             for arg in sub._in_nodes:
                 if (sub is self and arg in sub.variables) or \
                    (arg not in sub.variables and arg in self.variables):
                     self.input_sizes[rank] += self.scope._system.variables[arg]['size']
-            
+
         #mpiprint("setup_sizes Allgather (input sizes)")
         if MPI:
             comm.Allgather(self.input_sizes[rank], self.input_sizes)
@@ -335,11 +335,11 @@ class System(object):
             #     start, end = self.vec['u'].bounds(subvecvars)
             # else:
             #     start, end = 0, 0
-                
+
             # if end-start != numpy.sum(sub.local_var_sizes[sub.mpi.rank, :]):
             #     raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" %
             #                        (start,end,arrays['u'][start:end].size,self.name,sub.name))
-                
+
 
             subarrays = {}
             for n in ('u', 'f', 'du', 'df'):
@@ -474,7 +474,7 @@ class System(object):
 
     def _get_vector_vars_and_subs(self, vardict):
         """Return (adds, noadds), where adds are those vars that size the
-        vectors, and noadds are vars that are in the vectors but don't 
+        vectors, and noadds are vars that are in the vectors but don't
         contribute to the size, e.g. subvars that have a basevar in the vector
         or connected destination vars.
         """
@@ -849,13 +849,13 @@ class CompoundSystem(System):
 
             if subsystem in simple_subs:
                 for node in subsystem._in_nodes:
-                    if node in owned_args:                    
+                    if node in owned_args:
                         if node in noflats:
                             noflat_conns.append(node)
                             noflat_conns_full.append(node)
                         else:
                             isrc = varkeys.index(node)
-                            
+
                             dest_idxs = self.vec['p'].indices(node)
                             src_idxs = numpy.sum(var_sizes[:, :isrc]) + \
                                               petsc_linspace(0, dest_idxs.shape[0]) #args[arg]
@@ -1095,7 +1095,7 @@ class NonSolverDriverSystem(ExplicitSystem):
         self._comp.setup_communicators(self.mpi.comm)
 
     # FIXME: I'm inconsistent in the way that base methods are handled.  The System
-    # base class should call setup methods on subsystems or local_subsystems in 
+    # base class should call setup methods on subsystems or local_subsystems in
     # order to avoid overriding setup methods like this one in derived classes.
     def setup_scatters(self):
         super(NonSolverDriverSystem, self).setup_scatters()
