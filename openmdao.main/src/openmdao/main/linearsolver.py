@@ -78,11 +78,11 @@ class ScipyGMRES(LinearSolver):
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"
-                    logger.error(msg, wflow.parent.get_pathname(), info, param, irhs)
+                    logger.error(msg, system.name, info, param, irhs)
                 elif info < 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed " \
                           "for parameter '%s' at index %d"
-                    logger.error(msg, wflow.parent.get_pathname(), param, irhs)
+                    logger.error(msg, system.name, param, irhs)
 
                 RHS[irhs, 0] = 0.0
 
@@ -117,6 +117,7 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
+        system.rhs_vec.array[:] = 0
         system.applyJ()
 
         # Extra equation for all requested inputs.

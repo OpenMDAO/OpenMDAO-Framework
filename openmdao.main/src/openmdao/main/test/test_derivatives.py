@@ -784,12 +784,12 @@ class Testcase_derivatives(unittest.TestCase):
                                                    ('_pseudo_0.out0', ('_pseudo_0.out0',))])
 
 
-        #J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
-                                              #outputs=['comp.f_xy'],
-                                              #mode='forward')
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              outputs=['comp.f_xy'],
+                                              mode='forward')
 
-        #assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        #assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
         J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint')

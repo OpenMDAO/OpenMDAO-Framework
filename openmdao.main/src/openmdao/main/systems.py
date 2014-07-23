@@ -707,18 +707,24 @@ class ExplicitSystem(SimpleSystem):
 
             self.scatter('du', 'dp')
 
-            vec['df'].array[:] = 0.0
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
+
             for var in self.get_outputs():
                 vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
 
-            vec['du'].array[:] = 0.0
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'u' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # out local 'arg' by -1, and then revert it afterwards.
+            vec['df'].array[:] *= -1.0
             comp.applyJT(self)
-            vec['du'].array[:] *= -1.0
+            vec['df'].array[:] *= -1.0
+
             for var in self.get_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
             self.scatter('du', 'dp')
