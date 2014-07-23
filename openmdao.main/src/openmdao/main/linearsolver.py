@@ -114,7 +114,7 @@ class ScipyGMRES(LinearSolver):
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
         system."""
-        print 'first arg', arg
+
         system = self._system
         system.sol_vec.array[:] = arg[:]
         system.applyJ()
