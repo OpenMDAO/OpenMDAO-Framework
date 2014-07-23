@@ -173,10 +173,10 @@ class Workflow(object):
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
             outputs = []
-            if hasattr(parent, 'get_objective_targets'):
-                outputs.extend(parent.get_objective_targets())
-            if hasattr(parent, 'get_constraint_targets'):
-                outputs.extend(parent.get_constraint_targets())
+            if hasattr(parent, 'list_objective_targets'):
+                outputs.extend(parent.list_objective_targets())
+            if hasattr(parent, 'list_constraint_targets'):
+                outputs.extend(parent.list_constraint_targets())
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,

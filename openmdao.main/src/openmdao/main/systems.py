@@ -124,17 +124,17 @@ class System(object):
         corresponding to the given names.
         """
         size = 0
-        #uvec = self.vec['u']
+        uvec = self.vec['u']
         for name in names:
             # Not sure if derivatives will need local size or global
             # size, but for now, assuming local and using VecWrapper
-            if isinstance(name, tuple):
-                name = name[0]
-            if name in self.variables:
-                size += self.variables[name]['size']
-            else:
-                size += self.all_args[name]['size']
-            #size += uvec[name].size
+            #if isinstance(name, tuple):
+                #name = name[0]
+            #if name in self.variables:
+                #size += self.variables[name]['size']
+            #else:
+                #size += self.all_args[name]['size']
+            size += uvec[name].size
         return size
 
     def set_ordering(self, ordering):
@@ -721,7 +721,6 @@ class ExplicitSystem(SimpleSystem):
             vec['du'].array[:] *= -1.0
             for var in self.get_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
-
             self.scatter('du', 'dp')
 
 

@@ -106,7 +106,7 @@ class ScipyGMRES(LinearSolver):
 
                 j += 1
 
-        #print inputs, '\n', outputs, '\n', J
+        print inputs, '\n', outputs, '\n', J
         print 'dx', dx
         return J
 
@@ -262,13 +262,13 @@ class PETSc_KSP(LinearSolver):
 
             system.rhs_vec[varname] += system.sol_vec[varname]
 
-        # HACK for test. Remove this
-        if system.mode == 'forward':
-            system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
-            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
-        else:
-            system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
-            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        # # HACK for test. Remove this
+        # if system.mode == 'forward':
+        #     system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
+        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        # else:
+        #     system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
+        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         print 'arg, result', sol_vec.array, rhs_vec.array

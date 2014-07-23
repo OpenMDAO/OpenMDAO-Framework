@@ -144,13 +144,14 @@ class VecWrapperBase(object):
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 
-    def dump(self, vecname=''):
+    def dump(self, vecname='', verbose=True):
         for name, (array_val, start) in self._info.items():
-            if start is None:
-                start = 0
-                mpiprint("bad start idx")
-            mpiprint("%s - %s: (%d,%d) %s" % 
-                       (vecname,name, start, start+len(array_val),array_val))
+            if verbose or name not in self._subviews:
+                if start is None:
+                    start = 0
+                    mpiprint("bad start idx")
+                mpiprint("%s - %s: (%d,%d) %s" % 
+                           (vecname,name, start, start+len(array_val),array_val))
         if self.petsc_vec is not None:
             mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
 
