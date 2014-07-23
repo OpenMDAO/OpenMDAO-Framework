@@ -994,12 +994,12 @@ class DependencyGraph(nx.DiGraph):
             return cname
         return node
 
-    def _add_collapsed_node(self, g, newname, src, dests, meta):
+    def _add_collapsed_node(self, g, newname, src, dests, meta, driver=False):
         g.add_node(newname, meta)
 
         cname = self._get_compname(src)
         if cname == src:
-            if 'comp' in meta:
+            if driver:
                 g.add_edge(cname, newname)
         elif g.node[cname].get('comp'):
             g.add_edge(cname, newname)
@@ -1042,10 +1042,10 @@ class DependencyGraph(nx.DiGraph):
         for src,dest in drvconns:
             if is_driver_node(self, src):
                 self._add_collapsed_node(g, (dest, (dest,)), 
-                                         src, (dest,), self.node[dest].copy())
+                                         src, (dest,), self.node[dest].copy(), driver=True)
             else:
                 self._add_collapsed_node(g, (src, (src,)), 
-                                         src, (dest,), self.node[src].copy())
+                                         src, (dest,), self.node[src].copy(), driver=True)
 
         return g
 

@@ -770,18 +770,18 @@ class Testcase_derivatives(unittest.TestCase):
                                                   ('comp.y', ('comp.y',)),                                            
                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))])
         
-        #self.assertEqual(drvsys._in_nodes, [])
-        #self.assertEqual(drvsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
-        #self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)), 
-                                            #('comp.f_xy', ('_pseudo_0.in0',)),
-                                            #('comp.x', ('comp.x',)),
-                                            #('comp.y', ('comp.y',))])
-        #self.assertEqual(drvsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
+        self.assertEqual(drvsys._in_nodes, [])
+        self.assertEqual(drvsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
+        self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)), 
+                                            ('comp.f_xy', ('_pseudo_0.in0',)),
+                                            ('comp.x', ('comp.x',)),
+                                            ('comp.y', ('comp.y',))])
+        self.assertEqual(drvsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
         
-        #self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                   #('comp.x', ('comp.x',)), 
-                                                   #('comp.y', ('comp.y',)),                                            
-                                                   #('_pseudo_0.out0', ('_pseudo_0.out0',))])
+        self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
+                                                   ('comp.x', ('comp.x',)), 
+                                                   ('comp.y', ('comp.y',)),                                            
+                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))])
         
         
         J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
