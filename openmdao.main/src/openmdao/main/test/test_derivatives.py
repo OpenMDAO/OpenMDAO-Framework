@@ -733,7 +733,57 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp.x = 3
         top.comp.y = 5
         top.run()
+        
+        self.assertEqual(top.comp.f_xy, 93.)
+        self.assertEqual(top._pseudo_0.out0, 93.)
+        
+        # test some System stuff first
+        drvsys = top._system.find('driver')
+        wfsys = drvsys.find("('comp', '_pseudo_0')")
+        compsys = wfsys.find("comp")
+        pseudosys = wfsys.find("_pseudo_0")
+        
+        self.assertEqual(compsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
+        self.assertEqual(compsys.get_inputs(), ['comp.x', 'comp.y'])
+        self.assertEqual(compsys._out_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
+        self.assertEqual(compsys.get_outputs(), ['comp.f_xy'])
+        
+        self.assertEqual(compsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
+                                                    ('comp.x', ('comp.x',)), 
+                                                    ('comp.y', ('comp.y',))])
 
+        self.assertEqual(pseudosys._in_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
+        self.assertEqual(pseudosys.get_inputs(), ['_pseudo_0.in0'])
+        self.assertEqual(pseudosys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',))])
+        self.assertEqual(pseudosys.get_outputs(), ['_pseudo_0.out0'])
+        
+        self.assertEqual(pseudosys.variables.keys(), [('_pseudo_0.out0', ('_pseudo_0.out0',))])
+
+        self.assertEqual(wfsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
+        self.assertEqual(wfsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
+        self.assertEqual(wfsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
+                                            ('comp.f_xy', ('_pseudo_0.in0',))])
+        self.assertEqual(wfsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
+        
+        self.assertEqual(wfsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
+                                                  ('comp.x', ('comp.x',)), 
+                                                  ('comp.y', ('comp.y',)),                                            
+                                                  ('_pseudo_0.out0', ('_pseudo_0.out0',))])
+        
+        #self.assertEqual(drvsys._in_nodes, [])
+        #self.assertEqual(drvsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
+        #self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)), 
+                                            #('comp.f_xy', ('_pseudo_0.in0',)),
+                                            #('comp.x', ('comp.x',)),
+                                            #('comp.y', ('comp.y',))])
+        #self.assertEqual(drvsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
+        
+        #self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
+                                                   #('comp.x', ('comp.x',)), 
+                                                   #('comp.y', ('comp.y',)),                                            
+                                                   #('_pseudo_0.out0', ('_pseudo_0.out0',))])
+        
+        
         J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               outputs=['comp.f_xy'],
                                               mode='forward')

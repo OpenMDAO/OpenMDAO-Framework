@@ -1435,6 +1435,9 @@ class Assembly(Component):
         """
         self._system.setup_vectors(None)
 
+    def setup_args(self):
+        self._system.setup_args()
+
     def setup_scatters(self):
         self._system.setup_scatters()
         
@@ -1471,6 +1474,7 @@ class Assembly(Component):
             self.setup_variables()
             self.setup_sizes()
             self.setup_vectors()
+            self.setup_args()
             self.setup_scatters()
         except Exception:
             mpiprint(traceback.format_exc())

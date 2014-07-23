@@ -126,13 +126,13 @@ class ScipyGMRES(LinearSolver):
 
             system.rhs_vec[varname] += system.sol_vec[varname]
 
-        # HACK for test. Remove this
-        if system.mode == 'forward':
-            system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
-            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
-        else:
-            system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
-            system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        # # HACK for test. Remove this
+        # if system.mode == 'forward':
+        #     system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
+        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
+        # else:
+        #     system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
+        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
 
         print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]

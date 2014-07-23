@@ -998,7 +998,10 @@ class DependencyGraph(nx.DiGraph):
         g.add_node(newname, meta)
 
         cname = self._get_compname(src)
-        if cname != src:
+        if cname == src:
+            if 'comp' in meta:
+                g.add_edge(cname, newname)
+        elif g.node[cname].get('comp'):
             g.add_edge(cname, newname)
 
         for dest in dests:
@@ -1035,13 +1038,13 @@ class DependencyGraph(nx.DiGraph):
             self._add_collapsed_node(g, newname, src, dests, self.node[src].copy())
 
         # driver connections are slightly different.  Name their
-        # param/obj/constrataint nodes as (src,(src,)), or (dest, (dest,))
+        # param/obj/constraint nodes as (src,(src,)), or (dest, (dest,))
         for src,dest in drvconns:
             if is_driver_node(self, src):
-                self._add_collapsed_node(g, tuple(dest, (dest,)), 
+                self._add_collapsed_node(g, (dest, (dest,)), 
                                          src, (dest,), self.node[dest].copy())
             else:
-                self._add_collapsed_node(g, tuple(src, (src,)), 
+                self._add_collapsed_node(g, (src, (src,)), 
                                          src, (dest,), self.node[src].copy())
 
         return g

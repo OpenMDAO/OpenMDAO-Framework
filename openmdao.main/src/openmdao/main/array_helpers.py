@@ -160,9 +160,10 @@ def get_var_shape(name, scope):
 
     if IVariableTree.providedBy(val):
         raise NotImplementedError("get_var_shape not supported for vartrees")
-        sz = flattened_size(name, val, scope)
-        if sz:
-            return (sz,)
+    
+    sz = flattened_size(name, val, scope)
+    if sz:
+        return (sz,)
 
     return None
 

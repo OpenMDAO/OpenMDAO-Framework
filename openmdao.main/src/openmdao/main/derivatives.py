@@ -86,7 +86,7 @@ def applyJ(system, pseudo=False):
     arg = {}
     for item in system.get_inputs():
         key = item.partition('.')[-1]
-        arg[key] = system.sol_vec[item]
+        arg[key] = system.vec['p'][item]
 
     result = {}
     for item in system.get_outputs():
@@ -199,7 +199,7 @@ def applyJT(system, pseudo=False):
     result = {}
     for item in system.get_inputs():
         key = item.partition('.')[-1]
-        result[key] = system.rhs_vec[item]
+        result[key] = system.vec['p'][item]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False

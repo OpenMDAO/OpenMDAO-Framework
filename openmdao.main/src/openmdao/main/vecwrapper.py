@@ -7,80 +7,45 @@ from openmdao.main.array_helpers import offset_flat_index, \
 from openmdao.util.typegroups import int_types
 
 
-class VecWrapper(object):
+class VecWrapperBase(object):
     """A wrapper object for a local vector, a distributed PETSc vector,
     and info about what var maps to what range within the distributed
     vector.
     """
-    def __init__(self, system, array, inputs=None):
+    def __init__(self, system, array):
         self.array = array
-
-        allvars = system.all_variables
-        vector_vars = system.vector_vars
-
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subviews = set()  # set of all names representing subviews of other views
 
-        if inputs is None:
-            vset = allvars
-        else:
-            vset = set(inputs)
+        self._initialize(system)
 
-        # first, add views for vars whose sizes are added to the total,
-        # i.e., either they are basevars or their basevars are not included
-        # in the vector.
-        start, end = 0, 0
-        for i, (name, var) in enumerate(vector_vars.items()):
-            if name not in vset:
-                continue
-            sz = var['size']
-            assert(sz == system.local_var_sizes[system.mpi.rank,i])
-            if sz > 0:
-                end += sz
-                self._info[name] = (self.array[start:end], start)
-                if end-start > self.array[start:end].size:
-                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-                                 (system.name,name, [start,end],self[name].size))
-                start += sz
-
-        # now add views for subvars that are subviews of their
-        # basevars
-        for name, var in allvars.items():
-            if name not in vector_vars and name in vset:
-                sz = var['size']
-                if sz > 0 and var.get('flat', True):
-                    idx = var['flat_idx']
-                    try:
-                        basestart = self.start(var['basevar'])
-                    except KeyError:
-                        mpiprint("name: %s, base: %s, vars: %s" %
-                                 (name, var['basevar'], self._info.keys()))
-                        raise
-                    sub_idx = offset_flat_index(idx, basestart)
-                    substart = get_flat_index_start(sub_idx)
-                    self._info[name] = (self.array[sub_idx], substart)
-                    self._subviews.add(name)
-                    if self.array[sub_idx].size != sz:
-                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                             (system.name, name,
-                                             list(self.bounds(name)),
-                                             sub_idx,self.array[sub_idx].size))
-
-        ## now add entries for any connected destinations
-        #for dest, src in self._dups.items():
-            #if dest in self._info:
-                #continue
-            #if src in self._info:
-                #self._info[dest] = self._info[src]
+        self._add_tuple_members(self._info.keys())
 
         # create the PETSc vector
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
+
+    def _add_tuple_members(self, tups):
+        # now add all srcs and dests from var tuples so that views for particular openmdao variables
+        # can be accessed.
+        for tup in tups:
+            info = self._info[tup]
+            names = set([tup[0]])  # src
+            names.update(tup[1]) # adding dests
+            for name in names:
+                self._info[name] = info
+                self._subviews.add(name)
 
     def __getitem__(self, name):
         return self._info[name][0]
 
     def __setitem__(self, name, value):
-        self._info[name][0][:] = value.flat
+        if name in self._info:
+            self._info[name][0][:] = value.flat
+        else:
+            # FIXME: this makes me nervous...  certain uses will be broken for this new item
+            self._info[name] = (value, None)
+            self._subviews.add(name)
+            self._add_tuple_members([name])
 
     def __contains__(self, name):
         return name in self._info
@@ -101,10 +66,7 @@ class VecWrapper(object):
         lst = []
         for name, (view, start) in self._info.items():
             if subviews or name not in self._subviews:
-                if len(view) == 1:
-                    lst.append((name, view[0]))
-                else:
-                    lst.append((name, view))
+                lst.append((name, view))
         return lst
 
     def start(self, name):
@@ -184,6 +146,9 @@ class VecWrapper(object):
 
     def dump(self, vecname=''):
         for name, (array_val, start) in self._info.items():
+            if start is None:
+                start = 0
+                mpiprint("bad start idx")
             mpiprint("%s - %s: (%d,%d) %s" % 
                        (vecname,name, start, start+len(array_val),array_val))
         if self.petsc_vec is not None:
@@ -200,6 +165,90 @@ class VecWrapper(object):
                 retval = False
         return retval
 
+class VecWrapper(VecWrapperBase):
+    def _initialize(self, system):
+        allvars = system.variables
+        vector_vars = system.vector_vars
+
+        # first, add views for vars whose sizes are added to the total,
+        # i.e., either they are basevars or their basevars are not included
+        # in the vector.
+        start, end = 0, 0
+        for i, (name, var) in enumerate(vector_vars.items()):
+            sz = var['size']
+            assert(sz == system.local_var_sizes[system.mpi.rank,i])
+            if sz > 0:
+                end += sz
+                self._info[name] = (self.array[start:end], start)
+                if end-start > self.array[start:end].size:
+                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                 (system.name,name, [start,end],self[name].size))
+                start += sz
+
+        # now add views for subvars that are subviews of their
+        # basevars
+        for name, var in allvars.items():
+            if name not in vector_vars:
+                sz = var['size']
+                if sz > 0 and var.get('flat', True):
+                    idx = var['flat_idx']
+                    try:
+                        basestart = self.start(var['basevar'])
+                    except KeyError:
+                        mpiprint("name: %s, base: %s, vars: %s" %
+                                 (name, var['basevar'], self._info.keys()))
+                        raise
+                    sub_idx = offset_flat_index(idx, basestart)
+                    substart = get_flat_index_start(sub_idx)
+                    self._info[name] = (self.array[sub_idx], substart)
+                    self._subviews.add(name)
+                    if self.array[sub_idx].size != sz:
+                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                             (system.name, name,
+                                             list(self.bounds(name)),
+                                             sub_idx,self.array[sub_idx].size))
+
+
+class InputVecWrapper(VecWrapperBase):
+    def _initialize(self, system):
+
+        start, end = 0, 0
+        for sub in system.simple_subsystems(local=True):
+            for i, name in enumerate(sub._in_nodes):
+                if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
+                    var = system.variables[name]
+                    sz = var['size']
+                    assert(sz == system.local_var_sizes[system.mpi.rank,i])
+                    if sz > 0:
+                        end += sz
+                        self._info[name] = (self.array[start:end], start)
+                        if end-start > self.array[start:end].size:
+                            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                         (system.name,name, [start,end],self[name].size))
+                        start += sz
+
+        # # now add views for subvars that are subviews of their
+        # # basevars
+        # for name, var in allvars.items():
+        #     if name not in vector_vars and name in vset:
+        #         sz = var['size']
+        #         if sz > 0 and var.get('flat', True):
+        #             idx = var['flat_idx']
+        #             try:
+        #                 basestart = self.start(var['basevar'])
+        #             except KeyError:
+        #                 mpiprint("name: %s, base: %s, vars: %s" %
+        #                          (name, var['basevar'], self._info.keys()))
+        #                 raise
+        #             sub_idx = offset_flat_index(idx, basestart)
+        #             substart = get_flat_index_start(sub_idx)
+        #             self._info[name] = (self.array[sub_idx], substart)
+        #             self._subviews.add(name)
+        #             if self.array[sub_idx].size != sz:
+        #                 raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+        #                                      (system.name, name,
+        #                                      list(self.bounds(name)),
+        #                                      sub_idx,self.array[sub_idx].size))
 
 class DataTransfer(object):
     """A wrapper object that manages data transfer between
