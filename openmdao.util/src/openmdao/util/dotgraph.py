@@ -231,7 +231,7 @@ def plot_system(system, fmt='pdf', outfile=None):
 
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
-               excludes=()):
+               excludes=(), prune=True):
     """Create a plot of the given graph"""
 
     G = G.subgraph(G.nodes_iter())
@@ -246,7 +246,8 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
                     if hasattr(comp, 'list_param_targets'):
                         for target in comp.list_param_targets():
                             G.node[target]['param'] = True
-            G.prune_unconnected_vars()
+            if prune:
+                G.prune_unconnected_vars()
 
     if not pseudos:
         nodes = [n for n in G.nodes() if '_pseudo_' in n]
