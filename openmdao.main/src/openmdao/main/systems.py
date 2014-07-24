@@ -63,6 +63,7 @@ class System(object):
         self.sol_vec = None
         self.rhs_vec = None
         self.solver = None
+        self.fd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
 
@@ -134,6 +135,11 @@ class System(object):
                 #size += self.variables[name]['size']
             #else:
                 #size += self.all_args[name]['size']
+
+            # Param target support.
+            if isinstance(name, tuple):
+                name = name[0]
+
             size += uvec[name].size
         return size
 
@@ -543,7 +549,10 @@ class System(object):
         # -- 2. Gradient Options
         # -- 3. Auto determination (when implemented)
         if mode == 'auto':
-            mode = options.derivative_direction
+
+            # TODO - Support automatic determination of mode
+            mode = 'forward'
+            #mode = options.derivative_direction
 
         if options.force_fd is True:
             mode == 'fd'
@@ -556,9 +565,9 @@ class System(object):
         self.vec['df'].array[:] = 0.0
 
         if mode == 'fd':
-            if not isinstance(self.solver, FiniteDifference):
-                self.solver = FiniteDifference(self, inputs, outputs)
-            return self.solver.solve(iterbase=iterbase)
+            if self.fd_solver is None:
+                self.fd_solver = FiniteDifference(self, inputs, outputs)
+            return self.fd_solver.solve(iterbase=iterbase)
 
         return self.solver.solve(inputs, outputs)
 

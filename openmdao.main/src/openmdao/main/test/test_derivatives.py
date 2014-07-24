@@ -638,13 +638,14 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
 
         top.comp.x = 3
         top.comp.y = 5
-        top.comp.run()
+        top.run()
 
-        orig_gmres = openmdao.main.derivatives.gmres
-        orig_logger = openmdao.main.derivatives.logger
+        orig_gmres = openmdao.main.linearsolver.gmres
+        orig_logger = openmdao.main.linearsolver.logger
 
         # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
@@ -653,8 +654,8 @@ class Testcase_derivatives(unittest.TestCase):
                                   xtype, M, callback, restrt)
             return dx, 13
 
-        openmdao.main.derivatives.gmres = my_gmres
-        openmdao.main.derivatives.logger = mocklogger = Mock()
+        openmdao.main.linearsolver.gmres = my_gmres
+        openmdao.main.linearsolver.logger = mocklogger = Mock()
 
         try:
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
@@ -674,8 +675,8 @@ class Testcase_derivatives(unittest.TestCase):
                 'driver', 13, 'comp.f_xy', 2)
 
         finally:
-            openmdao.main.derivatives.gmres = orig_gmres
-            openmdao.main.derivatives.logger = orig_logger
+            openmdao.main.linearsolver.gmres = orig_gmres
+            openmdao.main.linearsolver.logger = orig_logger
 
     def test_error_logging2(self):
 
@@ -811,10 +812,11 @@ class Testcase_derivatives(unittest.TestCase):
         top.driver.workflow.add(['comp'])
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
 
         top.comp.x = 3
         top.comp.y = 5
-        top.comp.run()
+        top.run()
 
         J = top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='forward')
@@ -2704,7 +2706,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
                                               mode='forward')
         assert_rel_error(self, J[0, 0], 48.0, .001)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 48.0, .001)
 

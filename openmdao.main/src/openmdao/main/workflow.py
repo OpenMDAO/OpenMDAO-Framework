@@ -1,6 +1,8 @@
 """ Base class for all workflows. """
 
 from fnmatch import fnmatch
+from math import isnan
+import sys
 from traceback import format_exc
 import weakref
 
@@ -15,6 +17,28 @@ from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped, TracedError
 
 __all__ = ['Workflow']
+
+
+def _flattened_names(name, val, names=None):
+    """ Return list of names for values in `val`.
+    Note that this expands arrays into an entry for each index!.
+    """
+    if names is None:
+        names = []
+    if isinstance(val, float):
+        names.append(name)
+    elif isinstance(val, ndarray):
+        for i in range(len(val)):
+            value = val[i]
+            _flattened_names('%s[%s]' % (name, i), value, names)
+    elif isinstance(val, VariableTree):
+        for key in sorted(val.list_vars()):  # Force repeatable order.
+            value = getattr(val, key)
+            _flattened_names('.'.join((name, key)), value, names)
+    else:
+        raise TypeError('Variable %s is of type %s which is not convertable'
+                        ' to a 1D float array.' % (name, type(val)))
+    return names
 
 
 class Workflow(object):
@@ -157,7 +181,7 @@ class Workflow(object):
             err.reraise()
 
     def calc_gradient(self, inputs=None, outputs=None,
-                      upscope=False, mode='forward'):
+                      upscope=False, mode='auto'):
 
         # TODO - Support automatic determination of mode
 
@@ -182,6 +206,183 @@ class Workflow(object):
                                           options=self.parent.gradient_options,
                                           iterbase=self._iterbase())
 
+    def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):
+        """Compare the OpenMDAO-calculated gradient with one calculated
+        by straight finite-difference. This provides the user with a way
+        to validate his derivative functions (apply_deriv and provideJ.)
+        Note that fake finite difference is turned off so that we are
+        doing a straight comparison.
+
+        inputs: (optional) iter of str or None
+            Names of input variables. The calculated gradient will be
+            the matrix of values of the output variables with respect
+            to these input variables. If no value is provided for inputs,
+            they will be determined based on the parameters of
+            the Driver corresponding to this workflow.
+
+        outputs: (optional) iter of str or None
+            Names of output variables. The calculated gradient will be
+            the matrix of values of these output variables with respect
+            to the input variables. If no value is provided for outputs,
+            they will be determined based on the objectives and constraints
+            of the Driver corresponding to this workflow.
+
+        stream: (optional) file-like object or str
+            Where to write to, default stdout. If a string is supplied,
+            that is used as a filename. If None, no output is written.
+
+        mode: (optional) str
+            Set to 'forward' for forward mode, 'adjoint' for adjoint mode,
+            or 'auto' to let OpenMDAO determine the correct mode.
+            Defaults to 'auto'.
+
+        Returns the finite difference gradient, the OpenMDAO-calculated
+        gradient, and a list of suspect inputs/outputs.
+        """
+        parent = self.parent
+
+        # tuples cause problems
+        if inputs:
+            inputs = list(inputs)
+        if outputs:
+            outputs = list(outputs)
+
+        if isinstance(stream, basestring):
+            stream = open(stream, 'w')
+            close_stream = True
+        else:
+            close_stream = False
+            if stream is None:
+                stream = StringIO()
+
+        J = self.calc_gradient(inputs, outputs, mode=mode)
+        Jbase = self.calc_gradient(inputs, outputs, mode='fd')
+
+        print >> stream, 24*'-'
+        print >> stream, 'Calculated Gradient'
+        print >> stream, 24*'-'
+        print >> stream, J
+        print >> stream, 24*'-'
+        print >> stream, 'Finite Difference Comparison'
+        print >> stream, 24*'-'
+        print >> stream, Jbase
+
+        # This code duplication is needed so that we print readable names for
+        # the constraints and objectives.
+
+        if inputs is None:
+            if hasattr(parent, 'list_param_group_targets'):
+                inputs = parent.list_param_group_targets()
+                input_refs = []
+                for item in inputs:
+                    if len(item) < 2:
+                        input_refs.append(item[0])
+                    else:
+                        input_refs.append(item)
+            # Should be caught in calc_gradient()
+            else:  # pragma no cover
+                msg = "No inputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+        else:
+            input_refs = inputs
+
+        if outputs is None:
+            outputs = []
+            output_refs = []
+            if hasattr(parent, 'get_objectives'):
+                obj = ["%s.out0" % item.pcomp_name for item in
+                       parent.get_objectives().values()]
+                outputs.extend(obj)
+                output_refs.extend(parent.get_objectives().keys())
+            if hasattr(parent, 'get_constraints'):
+                con = ["%s.out0" % item.pcomp_name for item in
+                       parent.get_constraints().values()]
+                outputs.extend(con)
+                output_refs.extend(parent.get_constraints().keys())
+
+            if len(outputs) == 0:  # pragma no cover
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
+        else:
+            output_refs = outputs
+
+        out_width = 0
+
+        for output, oref in zip(outputs, output_refs):
+            out_val = self.scope.get(output)
+            out_names = _flattened_names(oref, out_val)
+            out_width = max(out_width, max([len(out) for out in out_names]))
+
+        inp_width = 0
+        for input_tup, iref in zip(inputs, input_refs):
+            if isinstance(input_tup, str):
+                input_tup = [input_tup]
+            inp_val = self.scope.get(input_tup[0])
+            inp_names = _flattened_names(str(iref), inp_val)
+            inp_width = max(inp_width, max([len(inp) for inp in inp_names]))
+
+        label_width = out_width + inp_width + 4
+
+        print >> stream
+        print >> stream, label_width*' ', \
+              '%-18s %-18s %-18s' % ('Calculated', 'FiniteDiff', 'RelError')
+        print >> stream, (label_width+(3*18)+3)*'-'
+
+        suspect_limit = 1e-5
+        error_n = error_sum = 0
+        error_max = error_loc = None
+        suspects = []
+        i = -1
+
+        io_pairs = []
+
+        for output, oref in zip(outputs, output_refs):
+            out_val = self.scope.get(output)
+            for out_name in _flattened_names(oref, out_val):
+                i += 1
+                j = -1
+                for input_tup, iref in zip(inputs, input_refs):
+                    if isinstance(input_tup, basestring):
+                        input_tup = (input_tup,)
+
+                    inp_val = self.scope.get(input_tup[0])
+                    for inp_name in _flattened_names(iref, inp_val):
+                        j += 1
+                        calc = J[i, j]
+                        finite = Jbase[i, j]
+                        if finite and calc:
+                            error = (calc - finite) / finite
+                        else:
+                            error = calc - finite
+                        error_n += 1
+                        error_sum += abs(error)
+                        if error_max is None or abs(error) > abs(error_max):
+                            error_max = error
+                            error_loc = (out_name, inp_name)
+                        if abs(error) > suspect_limit or isnan(error):
+                            suspects.append((out_name, inp_name))
+                        print >> stream, '%*s / %*s: %-18s %-18s %-18s' \
+                              % (out_width, out_name, inp_width, inp_name,
+                                 calc, finite, error)
+                        io_pairs.append("%*s / %*s"
+                                        % (out_width, out_name,
+                                           inp_width, inp_name))
+        print >> stream
+        if error_n:
+            print >> stream, 'Average RelError:', error_sum / error_n
+            print >> stream, 'Max RelError:', error_max, 'for %s / %s' % error_loc
+        if suspects:
+            print >> stream, 'Suspect gradients (RelError > %s):' % suspect_limit
+            for out_name, inp_name in suspects:
+                print >> stream, '%*s / %*s' \
+                      % (out_width, out_name, inp_width, inp_name)
+        print >> stream
+
+        if close_stream:
+            stream.close()
+
+        # return arrays and suspects to make it easier to check from a test
+        return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
