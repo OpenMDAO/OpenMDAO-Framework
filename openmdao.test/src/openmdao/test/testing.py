@@ -248,16 +248,6 @@ def filter_config(hostlist, config, options):
         final_hosts = hosts
     
     return final_hosts
-
-
-def run_openmdao_suite_deprecated():
-    try:
-        run_openmdao_suite()
-    finally:
-        print '\n***'
-        print "'openmdao_test' is deprecated and will be removed in a later release."
-        print "Please use 'openmdao test' instead"
-        print '***'
         
 def is_dev_install():
     return (os.path.basename(os.path.dirname(os.path.dirname(sys.executable))) == "devenv")
