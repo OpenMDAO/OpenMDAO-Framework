@@ -211,7 +211,6 @@ class FiniteDifference(object):
 
                     # Undo step
                     self.set_value(src, -fd_step, i-i2)
-                    print 'fd', self.scope.comp.x, self.scope.comp.y, self.scope.comp.f_xy
 
                 #--------------------
                 # Backward difference

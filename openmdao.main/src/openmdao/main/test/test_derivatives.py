@@ -804,6 +804,71 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+    def test_multi_non_relevant_path(self):
+
+        self.top = set_as_top(Assembly())
+
+        exp1 = ['y1 = 2.0*x1**2']
+        deriv1 = ['dy1_dx1 = 4.0*x1']
+
+        exp2 = ['y1 = 0.5*x1']
+        deriv2 = ['dy1_dx1 = 0.5']
+
+        exp3 = ['y1 = x1 + 2.0*x2',
+                'y2 = 3.0*x1 + x1*x2*2.0']
+        deriv3 = ['dy1_dx1 = 1.0',
+                  'dy1_dx2 = 2.0',
+                  'dy2_dx1 = 3.0 + 2.0*x2',
+                  'dy2_dx2 = 2.0*x1']
+
+        exp4 = ['y1 = 3.5*x1']
+        deriv4 = ['dy1_dx1 = 3.5']
+
+        exp5 = ['y1 = 3.0*x1']
+        deriv5 = ['dy1_dx1 = 3.0']
+
+        self.top.add('comp1', ExecCompWithDerivatives(exp1, deriv1))
+        self.top.add('comp2', ExecCompWithDerivatives(exp2, deriv2))
+        self.top.add('comp3', ExecCompWithDerivatives(exp3, deriv3))
+        self.top.add('comp4', ExecCompWithDerivatives(exp4, deriv4))
+        self.top.add('comp5', ExecCompWithDerivatives(exp5, deriv5))
+
+        self.top.add('driver', SimpleDriver())
+        self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
+        self.top.driver.add_parameter('comp1.x1', low=-100, high=100)
+        self.top.driver.add_parameter('comp2.x1', low=-100, high=100)
+        self.top.driver.add_constraint('comp4.y1 < 0')
+        self.top.driver.add_constraint('comp5.y1 < 0')
+
+        self.top.connect('comp1.y1', 'comp3.x1')
+        self.top.connect('comp2.y1', 'comp3.x2')
+        self.top.connect('comp3.y1', 'comp4.x1')
+        self.top.connect('comp3.y2', 'comp5.x1')
+
+        # Case 1 - differentiable (comp4)
+
+        self.top.comp1.x1 = 2.0
+        self.top.comp2.x1 = 1.0
+        self.top.run()
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='forward')
+        print J
+        assert_rel_error(self, J[0, 0], 96.0, .001)
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='adjoint')
+        print J
+
+        J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
+                                                   outputs=['comp5.y1'],
+                                                   mode='fd')
+        print J
+
+
+
     def test_first_derivative(self):
 
         top = set_as_top(Assembly())
@@ -3041,151 +3106,6 @@ class CompAdjoint(CompBase):
 
 class Testcase_applyJT(unittest.TestCase):
     """ Unit test for conversion of provideJ to applyJT """
-
-    def test_applyJ_and_applyJT(self):
-
-        comp = Comp2()
-        J = comp.provideJ()
-
-        arg = {}
-        arg['x1'] = array([1.0])
-        arg['x2'] = array([1.0])
-        arg['y1'] = array([0.0])
-        arg['y2'] = array([0.0])
-
-        result = {}
-        result['y1'] = array([0.0])
-        result['y2'] = array([0.0])
-
-        applyJ(comp, arg, result, [], {}, J)
-
-        self.assertEqual(result['y1'], 8.0)
-        self.assertEqual(result['y2'], 18.0)
-
-        arg = {}
-        arg['y1'] = array([1.0])
-        arg['y2'] = array([1.0])
-
-        result = {}
-        result['x1'] = array([0.0])
-        result['x2'] = array([0.0])
-        result['y1'] = array([0.0])
-        result['y2'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {}, J)
-
-        self.assertEqual(result['x1'], 10.0)
-        self.assertEqual(result['x2'], 16.0)
-
-    def test_deriv_slices(self):
-
-        comp = Comp2_array()
-        comp.provideJ()
-
-        arg = {}
-        arg['x[0, 1]'] = array([1.0])
-        arg['y[1, 0]'] = array([0.0])
-
-        result = {}
-        result['y[1, 0]'] = array([0.0])
-
-        applyJ(comp, arg, result, [], {})
-
-        self.assertEqual(result['y[1, 0]'], 5.0)
-
-        arg = {}
-        arg['x[0, 1]'] = array([0.0])
-        arg['y[1, 0]'] = array([1.0])
-
-        result = {}
-        result['x[0, 1]'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {})
-
-        self.assertEqual(result['x[0, 1]'], 5.0)
-
-        arg = {}
-        arg['x[0, 1]'] = array([0.0])
-        arg['y[:, 0]'] = array([1.0, 1.0])
-
-        result = {}
-        result['x[0, 1]'] = array([0.0])
-
-        applyJT(comp, arg, result, [], {})
-
-        self.assertEqual(result['x[0, 1]'], 138.0)
-
-    def test_deriv_slices2(self):
-
-        top = set_as_top(Assembly())
-        top.add('comp1', Comp3_array())
-        top.add('driver', SimpleDriver())
-        top.driver.workflow.add(['comp1'])
-
-        top.run()
-
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
-                                              outputs=['comp1.y[:2, 1:]'],
-                                              mode='forward')
-
-        diff = abs(J.flatten() - top.comp1.J[[1, 2, 4, 5], 3].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1, 0]'],
-                                              outputs=['comp1.y[:2, 1:]'],
-                                              mode='adjoint')
-
-        diff = abs(J.flatten() - top.comp1.J[[1, 2, 4, 5], 3].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
-                                              outputs=['comp1.y[0, 2]'],
-                                              mode='forward')
-
-        diff = abs(J.flatten() - top.comp1.J[2, [3, 4, 6, 7]].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-        top.driver.workflow.config_changed()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1:, :2]'],
-                                              outputs=['comp1.y[0, 2]'],
-                                              mode='adjoint')
-
-        diff = abs(J.flatten() - top.comp1.J[2, [3, 4, 6, 7]].flatten())
-        self.assertAlmostEqual(diff.max(), 0.0, places=8)
-
-    def test_matvecREV2(self):
-        # Larger system
-
-        top = set_as_top(Assembly())
-        top.add('comp1', Comp2())
-        top.add('comp2', Comp2())
-        top.connect('comp1.y1', 'comp2.x1')
-
-        top.driver.workflow.add(['comp1', 'comp2'])
-
-        src = ['comp1.x1', 'comp1.x2']
-        resp = ['comp2.y1', 'comp2.y2']
-        J1 = top.driver.workflow.calc_gradient(src, resp, mode='forward')
-        J2 = top.driver.workflow.calc_gradient(src, resp, mode='adjoint')
-        diff = J1 - J2
-        assert_rel_error(self, diff.max(), 0.0, 1e-8)
-
-        J = zeros([5, 5])
-        arg = zeros((5, ))
-        for j in range(5):
-            arg[j] = 1.0
-            J[:, j] = top.driver.workflow.matvecFWD(arg)
-            arg[j] = 0.0
-
-        Jt = zeros([5, 5])
-        for j in range(5):
-            arg[j] = 1.0
-            Jt[:, j] = top.driver.workflow.matvecREV(arg)
-            arg[j] = 0.0
-        diff = J.T - Jt
-        self.assertEqual(diff.max(), 0.0)
 
     def test_forward_adjoint_error(self):
         # Test our error messages for when you have are missing one
