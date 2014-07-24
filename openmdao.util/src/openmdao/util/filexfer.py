@@ -7,7 +7,8 @@ import zipfile
 from openmdao.util.log import NullLogger
 
 
-def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
+def filexfer(src_server, src_path, dst_server, dst_path, mode='',
+             set_permissions=True):
     """
     Transfer a file from one place to another.
 
@@ -33,6 +34,9 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
 
     mode: string
         Mode settings for :func:`open`, not including 'r' or 'w'.
+
+    set_permissions: bool
+        If ``True`` then permissions of `src_path` are set on `dst_path`.
     """
     if src_server is None:
         src_file = open(src_path, 'r'+mode)
@@ -60,14 +64,15 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
     finally:
         src_file.close()
 
-    if src_server is None:
-        mode = os.stat(src_path).st_mode
-    else:
-        mode = src_server.stat(src_path).st_mode
-    if dst_server is None:
-        os.chmod(dst_path, mode)
-    else:
-        dst_server.chmod(dst_path, mode)
+    if set_permissions:
+        if src_server is None:
+            mode = os.stat(src_path).st_mode
+        else:
+            mode = src_server.stat(src_path).st_mode
+        if dst_server is None:
+            os.chmod(dst_path, mode)
+        else:
+            dst_server.chmod(dst_path, mode)
 
 
 def pack_zipfile(patterns, filename, logger=None):

@@ -188,10 +188,15 @@ class TestCase(unittest.TestCase):
 
         # Set illegal path (during execution of sink), verify error message.
         self.model.sink.bogus_path = '/illegal'
-        code = 'self.model.run()'
         msg = "middle.passthrough (1-middle.1-passthrough): Illegal path '/illegal'," \
               " not a descendant of"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+        try:
+            self.model.run()
+        except ValueError as exc:
+            print exc
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
     def test_legal_types(self):
         logging.debug('')
@@ -199,17 +204,27 @@ class TestCase(unittest.TestCase):
 
         # Set mismatched type and verify error message.
         self.model.source.text_file.content_type = 'invalid'
-        code = 'self.model.run()'
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
               " Content type 'invalid' not one of ['xyzzy', 'txt']"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+        try:
+            self.model.run()
+        except ValueError as exc:
+            print exc
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
         # Set null type and verify error message.
         self.model.source.text_file.content_type = ''
-        code = 'self.model.run()'
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
               " Content type '' not one of ['xyzzy', 'txt']"
-        assert_raises(self, code, globals(), locals(), ValueError, msg)
+        try:
+            self.model.run()
+        except ValueError as exc:
+            print exc
+            self.assertTrue(msg in str(exc))
+        else:
+            self.fail('ValueError expected')
 
     def test_formatting(self):
         logging.debug('')

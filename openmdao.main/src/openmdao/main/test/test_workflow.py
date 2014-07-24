@@ -174,8 +174,8 @@ class TestCase(unittest.TestCase):
         self.model.comp_b.set_stop = True
         try:
             self.model.run()
-        except RunStopped, exc:
-            self.assertEqual(str(exc), 'Stop requested')
+        except RunStopped as exc:
+            self.assertTrue('Stop requested' in str(exc))
         else:
             self.fail('Expected RunStopped')
 

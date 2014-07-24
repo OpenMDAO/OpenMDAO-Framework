@@ -154,7 +154,7 @@ class Workflow(object):
                 self.parent._logger.error("Can't record case: %s", exc)
 
         if err is not None:
-            err.reraise(with_traceback=False)
+            err.reraise()
 
     def calc_gradient(self, inputs=None, outputs=None,
                       upscope=False, mode='forward'):
