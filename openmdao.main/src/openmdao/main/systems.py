@@ -473,6 +473,9 @@ class System(object):
             #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
             scatter(self, srcvec, destvec) #, reverse=??)
 
+            if destvecname == 'p':
+                destvec.set_to_scope(self.scope, scatter.scatter_conns)
+
         return scatter
 
     def simple_dump(self):
@@ -688,7 +691,7 @@ class SimpleSystem(System):
         if self.is_active():
             comp = self._comp
             self.scatter('u','p')
-            self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
+            #self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
             comp.set_itername('%s-%s' % (iterbase, comp.name))
             comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             self.vec['u'].set_from_scope(self.scope)#, self._out_nodes)
@@ -737,7 +740,7 @@ class SimpleSystem(System):
     def apply_F(self):
         self.scatter('u', 'p')
         comp = self._comp
-        self.vec['p'].set_to_scope(self.scope)
+        #self.vec['p'].set_to_scope(self.scope)
         comp.evaluate()
         self.vec['u'].set_from_scope(self.scope)
 
@@ -781,8 +784,8 @@ class ExplicitSystem(SimpleSystem):
         self.scatter('u', 'p')
         comp = self._comp
         vec['f'].array[:] = vec['u'].array[:]
-        if self._comp.parent is not None:
-            self.vec['p'].set_to_scope(self._comp.parent)
+        #if self._comp.parent is not None:
+            #self.vec['p'].set_to_scope(self._comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
         comp.run()
         if self._comp.parent is not None:
@@ -1090,9 +1093,9 @@ class SerialSystem(CompoundSystem):
             self._stop = False
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
-                self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
-                self.vec['u'].dump(self.name+'.u',verbose=False)
-                self.vec['p'].dump(self.name+'.p',verbose=False)
+                #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
+                # self.vec['u'].dump(self.name+'.u',verbose=False)
+                # self.vec['p'].dump(self.name+'.p',verbose=False)
                 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 #x = sub.vec['u'].check(self.vec['u'])

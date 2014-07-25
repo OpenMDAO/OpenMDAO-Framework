@@ -145,7 +145,7 @@ class VecWrapperBase(object):
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 
-    def dump(self, vecname='', verbose=True):
+    def dump(self, vecname='', verbose=False):
         for name, (array_val, start) in self._info.items():
             if verbose or name not in self._subviews:
                 if start is None:
@@ -267,7 +267,8 @@ class DataTransfer(object):
     systems via scatters (and possibly send/receive for
     non-array values)
     """
-    def __init__(self, system, var_idxs, input_idxs, scatter_conns, noflat_vars):
+    def __init__(self, system, var_idxs, input_idxs, 
+                 scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
         self.noflat_vars = noflat_vars
