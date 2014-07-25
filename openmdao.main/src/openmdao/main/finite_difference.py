@@ -272,6 +272,9 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, -fd_step, i-i2, undo_complex=True)
 
+        # Restore final input.
+        self.system.vec['u'].set_to_scope(self.scope)
+
         # Return outputs to a clean state.
         for src in self.outputs:
             i1, i2 = self.out_bounds[src]

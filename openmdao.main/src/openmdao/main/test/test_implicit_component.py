@@ -355,6 +355,39 @@ class Coupled2(ImplicitComponent):
                         result[res] += self.J_output_input[j, k]*arg[state]
 
 
+class MyComp_Full_Array(ImplicitComponent):
+    ''' Single implicit component with 3 states and residuals, all as arrays.
+
+    For c=2.0, (x,y,z) = (1.0, -2.333333, -2.1666667)
+    '''
+
+    # External inputs
+    c = Float(2.0, iotype="in", fd_step=.00001,
+              desc="arbitrary constant that is not iterated on but does affect the results")
+
+    # States
+    xx = Array(np.zeros((3)), iotype="state")
+
+    # Residuals
+    res = Array(np.zeros((3)), iotype="residual")
+
+    # Outputs
+    y_out = Float(iotype='out')
+
+    def evaluate(self):
+        """run a single step to calculate the residual
+        values for the given state var values"""
+
+        c, x, y, z = self.c, self.xx[0], self.xx[1], self.xx[2]
+
+        self.res[0] = self.c*(3*x + 2*y - z) - 1
+        self.res[1] = 2*x - 2*y + 4*z + 2
+        self.res[2] = -x + y/2. - z
+
+        self.y_out = c + x + y + z
+        #print c, x, y, z, self.res
+
+
 class Testcase_implicit(unittest.TestCase):
     """A variety of tests for implicit components. """
 
@@ -417,6 +450,20 @@ class Testcase_implicit(unittest.TestCase):
         assert_rel_error(self, model.comp.x, 1.0, 1e-5)
         assert_rel_error(self, model.comp.y, -2.33333333, 1e-5)
         assert_rel_error(self, model.comp.z, -2.16666667, 1e-5)
+
+        assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
+
+    def test_single_array_comp_self_solve(self):
+
+        model = set_as_top(Assembly())
+        model.add('comp', MyComp_Full_Array())
+        model.driver.workflow.add('comp')
+
+        model.run()
+
+        assert_rel_error(self, model.comp.xx[0], 1.0, 1e-5)
+        assert_rel_error(self, model.comp.xx[1], -2.33333333, 1e-5)
+        assert_rel_error(self, model.comp.xx[2], -2.16666667, 1e-5)
 
         assert_rel_error(self, model.comp.y_out, -1.5, 1e-5)
 

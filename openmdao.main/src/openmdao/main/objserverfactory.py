@@ -226,7 +226,13 @@ class ObjServerFactory(Factory):
             If none, then a new server is created.
 
         res_desc: dict or None
-            Required resources. Currently not used.
+            Required resources. ``working_directory`` is used to set a
+            created server's directory, other keys are ignored.
+            If `allow_shell` has been set, then an absolute directory
+            reference may be used (including '~' expansion). If not, then
+            the reference must be relative and the working directory will be
+            relative to the factory's directory. If the directory already
+            exists, a new name will be used of the form ``<directory>_N``
 
         ctor_args: dict
             Other constructor arguments.
@@ -262,11 +268,28 @@ class ObjServerFactory(Factory):
 
             manager = self.manager_class(address, self._authkey, name=name,
                                          allowed_users=allowed_users)
-            root_dir = name
+
+            # Set (unique) working directory of server.
+            # Server cleanup removes this directory, so we avoid any
+            # existing directory to not delete existing files.
+            base = None
+            if res_desc is not None:
+                base = res_desc.get('working_directory')
+                if base:
+                    if self._allow_shell:  # Absolute allowed.
+                        base = os.path.expanduser(base)
+                    elif os.path.isabs(base) or base.startswith('..'):
+                        raise ValueError('working_directory %r must be subdirectory'
+                                         % base)
+                    res_desc = res_desc.copy()
+                    del res_desc['working_directory']
+            if not base:
+                base = name
             count = 1
+            root_dir = base
             while os.path.exists(root_dir):
                 count += 1
-                root_dir = '%s_%d' % (name, count)
+                root_dir = '%s_%d' % (base, count)
             os.mkdir(root_dir)
 
             # On Windows, when running the full test suite under Nose,

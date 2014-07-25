@@ -65,7 +65,6 @@ setup(name='openmdao.main',
       entry_points="""
       [console_scripts]
       idle=idlelib.PyShell:main
-      openmdao_docs=openmdao.util.view_docs:view_docs
       plugin=openmdao.main.plugin:plugin
       openmdao=openmdao.main.cli:openmdao
       
