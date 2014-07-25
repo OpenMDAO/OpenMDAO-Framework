@@ -55,17 +55,19 @@ class SimpleDriver(Driver):
     implements(IHasParameters)
 
 
-class TestcaseSystem(unittest.TestCase):
-    def test_single_comp(self):
-
-        top = set_as_top(Assembly())
+class TestcaseParaboloid(unittest.TestCase):
+    def setUp(self):
+        self.top = top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
+
+    def test_single_comp(self):
+        top = self.top
+
         top.driver.add_parameter('comp.x', low=-1000, high=1000)
         top.driver.add_parameter('comp.y', low=-1000, high=1000)
         top.driver.add_objective('comp.f_xy')
-
         top.comp.x = 3
         top.comp.y = 5
         #top.run()
@@ -136,3 +138,36 @@ class TestcaseSystem(unittest.TestCase):
         self.assertEqual(top._pseudo_0.in0, 93.)
         self.assertEqual(top._pseudo_0.out0, 93.)
 
+    def test_boundary_out(self):
+        top = self.top
+
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+
+        top.create_passthrough('comp.f_xy')
+
+        top.comp.x = 3
+        top.comp.y = 5
+
+        top.run()
+
+        # See if model gets the right answer
+        self.assertEqual(top.f_xy, 93.)
+
+    def test_boundary_in_out(self):
+        top = self.top
+
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+
+        top.create_passthrough('comp.x')
+        top.create_passthrough('comp.f_xy')
+
+        top.x = 3
+        top.comp.y = 5
+
+        top.run()
+
+        # See if model gets the right answer
+        self.assertEqual(top.f_xy, 93.)
