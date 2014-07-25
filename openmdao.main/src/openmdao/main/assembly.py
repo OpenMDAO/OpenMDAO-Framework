@@ -1429,7 +1429,7 @@ class Assembly(Component):
         # # this will calculate sizes for all subsystems
         self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None, parent_vec=None):
+    def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """

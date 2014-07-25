@@ -506,7 +506,7 @@ class Workflow(object):
             return
         return self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None, parent_vec=None):
+    def setup_vectors(self, arrays=None):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
         self._system.setup_vectors(arrays)

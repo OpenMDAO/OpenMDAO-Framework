@@ -1005,7 +1005,12 @@ class DependencyGraph(nx.DiGraph):
             g.add_edge(cname, newname)
 
         for dest in dests:
-            g.add_edge(newname, self._get_compname(dest))
+            cname = self._get_compname(dest)
+            if cname == dest:
+                if driver:
+                    g.add_edge(newname, cname)
+            else:
+                g.add_edge(newname, cname)
 
     def collapse_connections(self):
         """Returns a new graph with each variable

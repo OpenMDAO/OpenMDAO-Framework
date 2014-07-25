@@ -43,7 +43,7 @@ class VecWrapperBase(object):
             self._info[name][0][:] = value.flat
         else:
             # FIXME: this makes me nervous...  certain uses will be broken for this new item
-            self._info[name] = (value, None)
+            self._info[name] = (value, 0)
             self._subviews.add(name)
             self._add_tuple_members([name])
 
@@ -90,10 +90,14 @@ class VecWrapperBase(object):
         bnds = [(start, start+view.size) for view,start in infos]
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
-    def indices(self, name):
-        """Return the set of indices corresponding to name
-        as an index array.
+    def multi_indices(self, names):
+        """Return a list of index arrays that
+        corresponds to names.
         """
+        return [self.indices(n) for n in names]
+
+    def indices(self, name):
+        """Return the index array corresponding to a single name."""
         view, start = self._info[name]
         return petsc_linspace(start, start+view.size)
 
@@ -111,7 +115,6 @@ class VecWrapperBase(object):
                     array_val[:] = scope.get_flattened_value(name[0])
                 else:
                     array_val[:] = scope.get_flattened_value(name)
-                #mpiprint("getting %s (%s) from scope" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -123,7 +126,6 @@ class VecWrapperBase(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
-                #mpiprint("setting %s (%s) to scope %s" % (name, array_val,scope.name))
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
                     for dest in name[1]:
@@ -177,7 +179,6 @@ class VecWrapper(VecWrapperBase):
         start, end = 0, 0
         for i, (name, var) in enumerate(vector_vars.items()):
             sz = var['size']
-            assert(sz == system.local_var_sizes[system.mpi.rank,i])
             if sz > 0:
                 end += sz
                 self._info[name] = (self.array[start:end], start)
@@ -213,20 +214,31 @@ class VecWrapper(VecWrapperBase):
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):
 
+        flat_ins = system.flat(system._get_sized_inputs())
         start, end = 0, 0
-        for sub in system.simple_subsystems(local=True):
-            for i, name in enumerate(sub._in_nodes):
-                if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
-                    var = system.variables[name]
-                    sz = var['size']
-                    assert(sz == system.local_var_sizes[system.mpi.rank,i])
-                    if sz > 0:
-                        end += sz
-                        self._info[name] = (self.array[start:end], start)
-                        if end-start > self.array[start:end].size:
-                            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-                                         (system.name,name, [start,end],self[name].size))
-                        start += sz
+        for i, name in enumerate(flat_ins): #_flat_owned_args):
+            sz = system._var_meta[name]['size']
+            if sz > 0:
+                end += sz
+                self._info[name] = (self.array[start:end], start)
+                if end-start > self.array[start:end].size:
+                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                 (system.name,name, [start,end],self[name].size))
+                start += sz
+            
+        #for sub in system.simple_subsystems(local=True):
+            #for i, name in enumerate(sub._owned_args):
+                #if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
+                    #var = system.variables[name]
+                    #sz = var['size']
+                    #assert(sz == system.local_var_sizes[system.mpi.rank,i])
+                    #if sz > 0:
+                        #end += sz
+                        #self._info[name] = (self.array[start:end], start)
+                        #if end-start > self.array[start:end].size:
+                            #raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                         #(system.name,name, [start,end],self[name].size))
+                        #start += sz
 
         # # now add views for subvars that are subviews of their
         # # basevars
@@ -258,8 +270,8 @@ class DataTransfer(object):
     """
     def __init__(self, system, var_idxs, input_idxs, scatter_conns, noflat_vars):
         self.scatter = None
-        self.scatter_conns = scatter_conns[:]
-        self.noflat_vars = noflat_vars[:]
+        self.scatter_conns = scatter_conns
+        self.noflat_vars = noflat_vars
 
         #print "noflat: %s" % noflat_vars
 
@@ -336,9 +348,6 @@ class DataTransfer(object):
         #else:
         #    raise Exception('mode type not recognized')
         #srcvec.array /= system.vec['u0'].array
-
-        #for _, dvar in self.scatter_conns:
-            #srcvec[dvar][:] = destvec[dvar][:]
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
