@@ -186,7 +186,7 @@ class System(object):
         return args
 
     def get_inputs(self):
-        """Returns names of input variables (not collapsed edges) 
+        """Returns names of input variables (not collapsed edges)
         from this System and all of its children.
         """
         inputs = []
@@ -199,7 +199,7 @@ class System(object):
         return inputs
 
     def get_outputs(self, local=False):
-        """Returns names of output variables (not collapsed edges) 
+        """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
         outputs = []
@@ -302,7 +302,7 @@ class System(object):
         #  1) flattenable vars that add to the size of the vectors
         #  2) flattenable vars that don't add to the size of the vectors because they
         #     are slices of other vars already in the vectors
-        #  3) non-flattenable vars 
+        #  3) non-flattenable vars
 
         # first, get all flattenable variables
         for name in self._get_flat_vars(self.variables):
@@ -315,7 +315,7 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
-        # create an arg_idx dict to keep track of indices of 
+        # create an arg_idx dict to keep track of indices of
         # inputs
         # TODO: determine how we want the user to specify indices
         #       for distributed inputs...
@@ -325,7 +325,7 @@ class System(object):
             #        process' version of the arg once we have distributed
             #        components...
             self.arg_idx[name] = numpy.array(range(self._var_meta[name]['size']), 'i')
-                                
+
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
         those that are local.
@@ -366,7 +366,7 @@ class System(object):
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
-        
+
         for arg in self.flat(self._get_sized_inputs()):
             self.input_sizes[rank] += self._var_meta[arg]['size']
 
@@ -379,7 +379,7 @@ class System(object):
         #     sized_inputs.extend(self._in_nodes)
         sized_inputs.extend(self._owned_args)
         return sized_inputs
-        
+
     def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
@@ -718,7 +718,7 @@ class SimpleSystem(System):
         other_conns = []
 
         flat_args = self.flat(self._owned_args)
-        
+
         for dest in flat_args:
             ivar = ukeys.index(dest)
             scatter_conns.append(dest)
@@ -1093,7 +1093,7 @@ class SerialSystem(CompoundSystem):
                 self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
                 self.vec['u'].dump(self.name+'.u',verbose=False)
                 self.vec['p'].dump(self.name+'.p',verbose=False)
-                
+
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 #x = sub.vec['u'].check(self.vec['u'])
                 if self._stop:
@@ -1326,7 +1326,7 @@ class InnerAssemblySystem(SerialSystem):
             g.add_edge(name, drvname)
             g.node[name]['system'] = InVarSystem(scope, name)
             ordering.append(name)
- 
+
         ordering.append(drvname)
 
         for name in bouts:
