@@ -81,12 +81,19 @@ class TestcaseSystem(unittest.TestCase):
         self.assertEqual(compsys.get_inputs(), ['comp.x', 'comp.y'])
         self.assertEqual(compsys._out_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual(compsys.get_outputs(), ['comp.f_xy'])
-        self.assertEqual(compsys._owned_args, [])
+        self.assertEqual(compsys._owned_args, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
 
-        self.assertEqual(compsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',))])#,
-                                                    #('comp.x', ('comp.x',)),
-                                                    #('comp.y', ('comp.y',))])
+        self.assertEqual(compsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
+                                                    ('comp.x', ('comp.x',)),
+                                                    ('comp.y', ('comp.y',))])
 
+        self.assertEqual(compsys.scatter_full.scatter_conns, 
+                         [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
+        self.assertTrue(all(compsys.scatter_full.var_idxs ==
+                        compsys.vec['u'].multi_indices(compsys._in_nodes)))
+        self.assertTrue(all(compsys.scatter_full.input_idxs ==
+                         compsys.vec['p'].multi_indices(compsys._in_nodes)))
+        
         self.assertEqual(pseudosys._in_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual(pseudosys.get_inputs(), ['_pseudo_0.in0'])
         self.assertEqual(pseudosys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',))])
@@ -103,20 +110,10 @@ class TestcaseSystem(unittest.TestCase):
         self.assertEqual(wfsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
 
         self.assertEqual(wfsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                  #('comp.x', ('comp.x',)),
-                                                  #('comp.y', ('comp.y',)),
+                                                  ('comp.x', ('comp.x',)),
+                                                  ('comp.y', ('comp.y',)),
                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))])
         
-        self.assertEqual(wfsys.scatter_partial.scatter_conns, 
-                         set([('comp.x', ('comp.x',)), ('comp.y', ('comp.y',)), 
-                              #('comp.f_xy', ('_pseudo_0.in0',))
-                              ]))
-        self.assertTrue(all(wfsys.scatter_partial.var_idxs ==
-                         idx_merge(drvsys.vec['u'].multi_indices([a for a in drvsys._owned_args if a in wfsys._in_nodes]))))
-        self.assertTrue(all(wfsys.scatter_partial.input_idxs ==
-                         idx_merge(drvsys.vec['p'].multi_indices([a for a in drvsys._owned_args if a in wfsys._in_nodes]))))
-        
-
         self.assertEqual(drvsys._in_nodes, [])
         self.assertEqual(drvsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
         self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
@@ -124,19 +121,14 @@ class TestcaseSystem(unittest.TestCase):
                                             ('comp.x', ('comp.x',)),
                                             ('comp.y', ('comp.y',))])
         self.assertEqual(drvsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
-        self.assertEqual(drvsys._owned_args, [('comp.x', ('comp.x',)),
-                                              ('comp.y', ('comp.y',)),
-                                              ('comp.f_xy', ('_pseudo_0.in0',))])
-        self.assertEqual([0], drvsys.arg_idx[('comp.x', ('comp.x',))])
-        self.assertEqual([0], drvsys.arg_idx[('comp.y', ('comp.y',))])
+        self.assertEqual(drvsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual([0], drvsys.arg_idx[('comp.f_xy', ('_pseudo_0.in0',))])
 
         self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',)),
                                                    ('comp.x', ('comp.x',)),
-                                                   ('comp.y', ('comp.y',))])
-        
-        
+                                                   ('comp.y', ('comp.y',)),
+                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))
+                                                   ])
         top.run()
         
         # See if model gets the right answer

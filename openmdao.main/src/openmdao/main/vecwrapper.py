@@ -91,10 +91,9 @@ class VecWrapperBase(object):
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
     def multi_indices(self, names):
-        """Return a list of index arrays that
-        corresponds to names.
+        """Returns an index array that corresponds to names.
         """
-        return [self.indices(n) for n in names]
+        return idx_merge([self.indices(n) for n in names])
 
     def indices(self, name):
         """Return the index array corresponding to a single name."""

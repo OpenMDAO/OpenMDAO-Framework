@@ -286,9 +286,10 @@ class System(object):
                 self.variables[vname] = self._var_meta[vname] = \
                                             self._get_var_info(vname)
 
-        # add any driver inputs
         for vname in self._in_nodes:
             self._var_meta[vname] = self._get_var_info(vname)
+            if vname[0] == vname[1][0]: # add driver input
+                self.variables[vname] = self._var_meta[vname]
 
         self._create_var_dicts()
 
