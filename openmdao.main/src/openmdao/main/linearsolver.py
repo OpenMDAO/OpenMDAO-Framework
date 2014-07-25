@@ -121,7 +121,7 @@ class ScipyGMRES(LinearSolver):
         system.applyJ()
 
         # Extra equation for all requested inputs.
-        for varname in self.inputs:
+        for varname in system._in_nodes:
 
             if isinstance(varname, tuple):
                 varname = varname[0]
@@ -249,20 +249,12 @@ class PETSc_KSP(LinearSolver):
         system.applyJ()
 
         # Extra equation for all requested inputs.
-        for varname in self.inputs:
+        for varname in system._in_nodes:
 
             if isinstance(varname, tuple):
                 varname = varname[0]
 
             system.rhs_vec[varname] += system.sol_vec[varname]
-
-        # # HACK for test. Remove this
-        # if system.mode == 'forward':
-        #     system.rhs_vec['_pseudo_0.in0'] -= system.sol_vec['comp.f_xy']
-        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
-        # else:
-        #     system.rhs_vec['comp.f_xy'] -= system.sol_vec['_pseudo_0.in0']
-        #     system.rhs_vec['_pseudo_0.in0'] += system.sol_vec['_pseudo_0.in0']
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         print 'arg, result', sol_vec.array, rhs_vec.array

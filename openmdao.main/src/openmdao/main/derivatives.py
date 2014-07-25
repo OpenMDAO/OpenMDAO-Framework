@@ -182,7 +182,7 @@ def applyJ(system, pseudo=False):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJ', arg, result
+    print 'applyJ', obj.name, arg, result
 
 def applyJT(system, pseudo=False):
     """Multiply an input vector by the transposed Jacobian.
@@ -290,7 +290,7 @@ def applyJT(system, pseudo=False):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJT', arg, result
+    print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

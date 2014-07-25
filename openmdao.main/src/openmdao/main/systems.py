@@ -727,9 +727,9 @@ class ExplicitSystem(SimpleSystem):
 
             # Sign on the local Jacobian needs to be -1 before
             # we add in the fake residual. Since we can't modify
-            # the 'u' vector at this point without stomping on the
+            # the 'du' vector at this point without stomping on the
             # previous component's contributions, we can multiply
-            # out local 'arg' by -1, and then revert it afterwards.
+            # our local 'arg' by -1, and then revert it afterwards.
             vec['df'].array[:] *= -1.0
             comp.applyJT(self)
             vec['df'].array[:] *= -1.0

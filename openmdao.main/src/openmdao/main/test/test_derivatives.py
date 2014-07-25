@@ -854,20 +854,17 @@ class Testcase_derivatives(unittest.TestCase):
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='forward')
-        print J
         assert_rel_error(self, J[0, 0], 96.0, .001)
 
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='adjoint')
-        print J
+        assert_rel_error(self, J[0, 0], 96.0, .001)
 
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='fd')
-        print J
-
-
+        assert_rel_error(self, J[0, 0], 96.0, .001)
 
     def test_first_derivative(self):
 
