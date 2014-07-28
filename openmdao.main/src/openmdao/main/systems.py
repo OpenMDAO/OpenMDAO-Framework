@@ -64,7 +64,8 @@ def compound_setup_scatters(self):
     start = end = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
     #simple_subs = set(self.simple_subsystems())
-
+    destmap = {}
+    
     for subsystem in self.all_subsystems():
         #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
         src_partial = []
@@ -84,10 +85,19 @@ def compound_setup_scatters(self):
                     isrc = varkeys.index(node)
 
                     src_idxs = numpy.sum(var_sizes[:, :isrc]) + arg_idxs
-                                      #petsc_linspace(0, dest_idxs.shape[0])
-                    end += arg_idxs.shape[0]
-                    dest_idxs = petsc_linspace(start, end)
-                    start += arg_idxs.shape[0]
+
+                    # there are some situations where a 'collapsed' variable
+                    # is broadcast to multiple places, so in order to keep
+                    # the partial scatters correct, we need to reuse the
+                    # destination indices instead of incrementing start and
+                    # end each time we see that variable.
+                    if node in destmap:
+                        dest_idxs = destmap[node]
+                    else:
+                        end += arg_idxs.shape[0]
+                        dest_idxs = petsc_linspace(start, end)
+                        start += arg_idxs.shape[0]
+                        destmap[node] = dest_idxs
                     
                     assert(all(src_idxs == self.vec['u'].indices(node)))
                     assert(all(dest_idxs == self.vec['p'].indices(node)))
@@ -553,6 +563,21 @@ class System(object):
 
         return stream.getvalue() if getval else None
 
+    def _dot_shape(self):
+        return 'ellipse'
+
+    def get_plot_graph(self, local=False):
+        g = nx.DiGraph()
+        g.add_node(self.name, shape=self._dot_shape())
+        for i,s in enumerate(self.subsystems(local=local)):
+            subg = s.get_plot_graph(local=local)
+            for n, data in subg.nodes_iter(data=True):
+                g.add_node(n, **data)
+            for u,v,data in subg.edges_iter(data=True):
+                g.add_edge(u, v, **data)
+            g.add_edge(self.name, s.name, label="%d" % i)
+        return g
+        
     def _get_flat_vars(self, vardict):
         """Return a list of names of vars that represent variables that are
         flattenable to float arrays.
@@ -1481,3 +1506,4 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
+
