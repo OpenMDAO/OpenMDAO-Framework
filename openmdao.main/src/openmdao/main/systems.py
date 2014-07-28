@@ -74,7 +74,7 @@ def compound_setup_scatters(self):
         #for sub in subsystem.simple_subsystems():
         #sub_inputs = subsystem._get_sized_inputs()
         for node in self._owned_args:
-            if node in subsystem._in_nodes:
+            if node in subsystem._in_nodes or node in subsystem._owned_args:
                 if node in noflats:
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
@@ -83,12 +83,14 @@ def compound_setup_scatters(self):
                     arg_idxs = self.arg_idx[node]
                     isrc = varkeys.index(node)
 
-                    #dest_idxs = self.vec['p'].indices(node)
                     src_idxs = numpy.sum(var_sizes[:, :isrc]) + arg_idxs
                                       #petsc_linspace(0, dest_idxs.shape[0])
                     end += arg_idxs.shape[0]
                     dest_idxs = petsc_linspace(start, end)
                     start += arg_idxs.shape[0]
+                    
+                    assert(all(src_idxs == self.vec['u'].indices(node)))
+                    assert(all(dest_idxs == self.vec['p'].indices(node)))
 
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
@@ -180,9 +182,10 @@ class System(object):
     def _get_owned_args(self):
         args = []
         for sub in self.simple_subsystems(local=True):
-            args.extend([arg for arg in sub._in_nodes
-                            if arg in self.variables and
-                               (arg not in sub.variables or sub is self)])
+            for arg in sub._in_nodes:
+                if arg in self.variables and arg not in args and \
+                        (arg not in sub.variables or sub is self):
+                    args.append(arg)
         return args
 
     def get_inputs(self):
@@ -477,18 +480,6 @@ class System(object):
                 destvec.set_to_scope(self.scope, scatter.scatter_conns)
 
         return scatter
-
-    def simple_dump(self):
-        mpiprint(self.name)
-        mpiprint("u:")
-        for name, info in self.vec['u']._info.items():
-            mpiprint("%s: [%d:%d]" % (name, info[1], info[1]+info[0].size))
-        mpiprint("p:")
-        for name, info in self.vec['p']._info.items():
-            mpiprint("%s: [%d:%d]" % (name, info[1], info[1]+info[0].size))
-        for sub in self.subsystems():
-            mpiprint("")
-            sub.simple_dump()
 
     def dump(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -836,7 +827,7 @@ class InVarSystem(ExplicitSystem):
     def __init__(self, scope, name):
         super(InVarSystem, self).__init__(scope, name)
         self._out_nodes = [name]
-        self._in_nodes = [name]
+        self._in_nodes = []#[name]
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
