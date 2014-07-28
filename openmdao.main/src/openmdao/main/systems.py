@@ -667,7 +667,9 @@ class System(object):
         pass
 
 class SimpleSystem(System):
-    """A System for a single Component."""
+    """A System for a single Component. This component can have Inputs,
+    Outputs, States, and Residuals."""
+
     def __init__(self, scope, name):
         if isinstance(name, basestring):  # it's a OpenMDAO Component
             comp = getattr(scope, name)
