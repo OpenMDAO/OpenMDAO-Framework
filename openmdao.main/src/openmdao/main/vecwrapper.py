@@ -337,12 +337,13 @@ class DataTransfer(object):
                 raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
                                           self.noflat_vars) # FIXME
             else:
-                for src, dest in self.noflat_vars:
-                    if src != dest:
-                        try:
-                            system.scope.set(dest, system.scope.get_attr(src))
-                        except Exception:
-                            system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
+                for src, dests in self.noflat_vars:
+                    for dest in dests:
+                        if src != dest:
+                            try:
+                                system.scope.set(dest, system.scope.get_attr(src))
+                            except Exception:
+                                system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
         #elif system.mode == 'rev':
         #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
         #else:
