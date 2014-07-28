@@ -74,7 +74,7 @@ def compound_setup_scatters(self):
         #for sub in subsystem.simple_subsystems():
         #sub_inputs = subsystem._get_sized_inputs()
         for node in self._owned_args:
-            if node in subsystem._in_nodes:
+            if node in subsystem._in_nodes or node in subsystem._owned_args:
                 if node in noflats:
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
@@ -83,12 +83,14 @@ def compound_setup_scatters(self):
                     arg_idxs = self.arg_idx[node]
                     isrc = varkeys.index(node)
 
-                    #dest_idxs = self.vec['p'].indices(node)
                     src_idxs = numpy.sum(var_sizes[:, :isrc]) + arg_idxs
                                       #petsc_linspace(0, dest_idxs.shape[0])
                     end += arg_idxs.shape[0]
                     dest_idxs = petsc_linspace(start, end)
                     start += arg_idxs.shape[0]
+
+                    assert(all(src_idxs == self.vec['u'].indices(node)))
+                    assert(all(dest_idxs == self.vec['p'].indices(node)))
 
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
@@ -180,9 +182,10 @@ class System(object):
     def _get_owned_args(self):
         args = []
         for sub in self.simple_subsystems(local=True):
-            args.extend([arg for arg in sub._in_nodes
-                            if arg in self.variables and
-                               (arg not in sub.variables or sub is self)])
+            for arg in sub._in_nodes:
+                if arg in self.variables and arg not in args and \
+                        (arg not in sub.variables or sub is self):
+                    args.append(arg)
         return args
 
     def get_inputs(self):
@@ -473,19 +476,10 @@ class System(object):
             #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
             scatter(self, srcvec, destvec) #, reverse=??)
 
-        return scatter
+            if destvecname == 'p':
+                destvec.set_to_scope(self.scope, scatter.scatter_conns)
 
-    def simple_dump(self):
-        mpiprint(self.name)
-        mpiprint("u:")
-        for name, info in self.vec['u']._info.items():
-            mpiprint("%s: [%d:%d]" % (name, info[1], info[1]+info[0].size))
-        mpiprint("p:")
-        for name, info in self.vec['p']._info.items():
-            mpiprint("%s: [%d:%d]" % (name, info[1], info[1]+info[0].size))
-        for sub in self.subsystems():
-            mpiprint("")
-            sub.simple_dump()
+        return scatter
 
     def dump(self, nest=0, stream=sys.stdout):
         """Prints out a textual representation of the collapsed
@@ -690,7 +684,7 @@ class SimpleSystem(System):
         if self.is_active():
             comp = self._comp
             self.scatter('u','p')
-            self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
+            #self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
             comp.set_itername('%s-%s' % (iterbase, comp.name))
             comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             self.vec['u'].set_from_scope(self.scope)#, self._out_nodes)
@@ -739,7 +733,7 @@ class SimpleSystem(System):
     def apply_F(self):
         self.scatter('u', 'p')
         comp = self._comp
-        self.vec['p'].set_to_scope(self.scope)
+        #self.vec['p'].set_to_scope(self.scope)
         comp.evaluate()
         self.vec['u'].set_from_scope(self.scope)
 
@@ -783,8 +777,8 @@ class ExplicitSystem(SimpleSystem):
         self.scatter('u', 'p')
         comp = self._comp
         vec['f'].array[:] = vec['u'].array[:]
-        if self._comp.parent is not None:
-            self.vec['p'].set_to_scope(self._comp.parent)
+        #if self._comp.parent is not None:
+            #self.vec['p'].set_to_scope(self._comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
         comp.run()
         if self._comp.parent is not None:
@@ -835,7 +829,7 @@ class InVarSystem(ExplicitSystem):
     def __init__(self, scope, name):
         super(InVarSystem, self).__init__(scope, name)
         self._out_nodes = [name]
-        self._in_nodes = [name]
+        self._in_nodes = []#[name]
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
@@ -1092,9 +1086,9 @@ class SerialSystem(CompoundSystem):
             self._stop = False
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
-                self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
-                self.vec['u'].dump(self.name+'.u',verbose=False)
-                self.vec['p'].dump(self.name+'.p',verbose=False)
+                #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
+                # self.vec['u'].dump(self.name+'.u',verbose=False)
+                # self.vec['p'].dump(self.name+'.p',verbose=False)
 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 #x = sub.vec['u'].check(self.vec['u'])
