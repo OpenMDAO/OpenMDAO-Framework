@@ -161,7 +161,7 @@ class System(object):
         self.mode = None
         self.sol_vec = None
         self.rhs_vec = None
-        self.solver = None
+        self.ln_solver = None
         self.fd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
@@ -637,12 +637,12 @@ class System(object):
         """ Initialize the solver that will be used to calculate the
         gradient. """
 
-        if self.solver is None:
+        if self.ln_solver is None:
 
             if MPI:
-                self.solver = PETSc_KSP(self)
+                self.ln_solver = PETSc_KSP(self)
             else:
-                self.solver = ScipyGMRES(self)
+                self.ln_solver = ScipyGMRES(self)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -679,7 +679,7 @@ class System(object):
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
 
-        return self.solver.solve(inputs, outputs)
+        return self.ln_solver.solve(inputs, outputs)
 
     def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
@@ -708,7 +708,7 @@ class SimpleSystem(System):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             comp = self._comp
-            self.scatter('u','p')
+            self.scatter('u', 'p')
             #self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
             comp.set_itername('%s-%s' % (iterbase, comp.name))
             comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
