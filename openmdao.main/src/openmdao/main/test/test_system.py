@@ -80,7 +80,7 @@ class TestcaseParaboloid(unittest.TestCase):
         pseudosys = wfsys.find("_pseudo_0")
 
         self.assertEqual(compsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-        self.assertEqual(compsys.get_inputs(), ['comp.x', 'comp.y'])
+        self.assertEqual(set(compsys.get_inputs()), set(['comp.x', 'comp.y']))
         self.assertEqual(compsys._out_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual(compsys.get_outputs(), ['comp.f_xy'])
         self.assertEqual(compsys._owned_args, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
@@ -105,7 +105,7 @@ class TestcaseParaboloid(unittest.TestCase):
         self.assertEqual(pseudosys.variables.keys(), [('_pseudo_0.out0', ('_pseudo_0.out0',))])
 
         self.assertEqual(wfsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-        self.assertEqual(wfsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
+        self.assertEqual(set(wfsys.get_inputs()), set(['comp.x', 'comp.y', '_pseudo_0.in0']))
         self.assertEqual(wfsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
                                             ('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual(wfsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
@@ -117,7 +117,7 @@ class TestcaseParaboloid(unittest.TestCase):
                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))])
         
         self.assertEqual(drvsys._in_nodes, [])
-        self.assertEqual(drvsys.get_inputs(), ['comp.x', 'comp.y', '_pseudo_0.in0'])
+        self.assertEqual(set(drvsys.get_inputs()), set(['comp.x', 'comp.y', '_pseudo_0.in0']))
         self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
                                             ('comp.f_xy', ('_pseudo_0.in0',)),
                                             ('comp.x', ('comp.x',)),
