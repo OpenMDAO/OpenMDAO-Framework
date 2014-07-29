@@ -153,7 +153,7 @@ class System(object):
         for out in self._out_nodes:
             if graph.in_degree(out) <= 1:
                 pure_outs.append(out)
-        
+
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(pure_outs))
 
@@ -215,7 +215,7 @@ class System(object):
         inputs = set()
         for system in self.simple_subsystems():
             try:
-                inputs.update(['.'.join((system.name,s)) 
+                inputs.update(['.'.join((system.name,s))
                                   for s in system._comp.list_states()])
             except:
                 pass
@@ -788,8 +788,17 @@ class SimpleSystem(System):
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
+            resids = [comp.name+ '.' + varname for \
+                      varname in comp.list_residuals()]
             for var in self.get_outputs():
-                vec['df'][var][:] += vec['du'][var][:]
+                if var not in resids:
+                    vec['df'][var][:] += vec['du'][var][:]
+
+            vec['df']['comp.x'][:] = vec['df']['comp.res'][0]
+            vec['df']['comp.y'][:] = vec['df']['comp.res'][1]
+            vec['df']['comp.z'][:] = vec['df']['comp.res'][2]
+
+
 
         # Adjoint Mode
         elif self.mode == 'adjoint':

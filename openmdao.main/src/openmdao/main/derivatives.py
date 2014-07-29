@@ -134,6 +134,7 @@ def applyJ(system, pseudo=False):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
+        print 'applyJ', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -247,6 +248,7 @@ def applyJT(system, pseudo=False):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
+        print 'applyJT', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
