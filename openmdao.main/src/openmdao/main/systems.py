@@ -1,7 +1,6 @@
 import sys
 from StringIO import StringIO
 from collections import OrderedDict
-from itertools import chain
 
 import numpy
 import networkx as nx
@@ -151,11 +150,8 @@ class System(object):
         # as inputs, so we need to create a list of outputs that excludes any of those
         # states.
         pure_outs = []
-        self._states = []
         for out in self._out_nodes:
-            if graph.in_degree(out) > 1:
-                self._states.append(out)
-            else:
+            if graph.in_degree(out) <= 1:
                 pure_outs.append(out)
         
         # get our input nodes from the depgraph
@@ -216,14 +212,19 @@ class System(object):
         """Returns names of input variables (not collapsed edges)
         from this System and all of its children.
         """
-        inputs = []
+        inputs = set()
         for system in self.simple_subsystems():
-            for tup in chain(system._in_nodes, system._states):
+            try:
+                inputs.update(['.'.join((system.name,s)) 
+                                  for s in system._comp.list_states()])
+            except:
+                pass
+            for tup in system._in_nodes:
                 for dest in tup[1]:
                     parts = dest.split('.', 1)
-                    if parts[0] in system._nodes and dest not in inputs:
-                        inputs.append(dest)
-        return inputs
+                    if parts[0] in system._nodes:
+                        inputs.add(dest)
+        return list(inputs)
 
     def get_outputs(self, local=False):
         """Returns names of output variables (not collapsed edges)
@@ -717,7 +718,6 @@ class SimpleSystem(System):
         if self.is_active():
             comp = self._comp
             self.scatter('u', 'p')
-            #self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
             comp.set_itername('%s-%s' % (iterbase, comp.name))
             comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             self.vec['u'].set_from_scope(self.scope)#, self._out_nodes)
@@ -766,7 +766,6 @@ class SimpleSystem(System):
     def apply_F(self):
         self.scatter('u', 'p')
         comp = self._comp
-        #self.vec['p'].set_to_scope(self.scope)
         comp.evaluate()
         self.vec['u'].set_from_scope(self.scope)
 
@@ -895,7 +894,7 @@ class InVarSystem(ExplicitSystem):
     def __init__(self, scope, name):
         super(InVarSystem, self).__init__(scope, name)
         self._out_nodes = [name]
-        self._in_nodes = []#[name]
+        self._in_nodes = []
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
