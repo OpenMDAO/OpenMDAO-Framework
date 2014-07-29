@@ -1447,7 +1447,7 @@ class Assembly(Component):
         """
         dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
         dgraph.prune_unconnected_vars()
-        self._reduced_graph = dgraph.collapse_connections()
+        self._reduced_graph = dgraph.collapse_connections(self)
         
         for comp in self.get_comps():
             comp.pre_setup()

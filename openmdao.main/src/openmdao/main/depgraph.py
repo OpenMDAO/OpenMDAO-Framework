@@ -1012,13 +1012,29 @@ class DependencyGraph(nx.DiGraph):
             else:
                 g.add_edge(newname, cname)
 
-    def collapse_connections(self):
+    def collapse_connections(self, scope):
         """Returns a new graph with each variable
         connection collapsed into a single node.
         """
         src2dests = {}
         dest2src = {}
+        states = set()  # set of all states
+        resids = set()  # set of all residuals
 
+        g = nx.DiGraph()
+
+        # get state and metadata info from components
+        for node in self.all_comps():
+            g.add_node(node, self.node[node].copy())  # copying metadata
+            try:
+                states.update(['.'.join((node,s)) for s in getattr(scope, node).list_states()])
+            except AttributeError:
+                pass
+            try:
+                resids.update(['.'.join((node,r)) for r in getattr(scope, node).list_residuals()])
+            except AttributeError:
+                pass
+    
         conns = set(self.list_connections())
         drvconns = [(u,v) for u,v in self.list_connections(driver=True)
                                if (u,v) not in conns]
@@ -1027,10 +1043,6 @@ class DependencyGraph(nx.DiGraph):
             src2dests.setdefault(u, set()).add(v)
             dest2src[v] = u
 
-        g = nx.DiGraph()
-        for node in self.all_comps():
-            g.add_node(node, self.node[node].copy())  # copying metadata
-    
         # find any connected inputs used as srces and connect their
         # dests to the true source
         for src, dests in src2dests.items():
@@ -1047,10 +1059,28 @@ class DependencyGraph(nx.DiGraph):
         for src,dest in drvconns:
             if is_driver_node(self, src):
                 self._add_collapsed_node(g, (dest, (dest,)), 
-                                         src, (dest,), self.node[dest].copy(), driver=True)
+                                         src, (dest,), 
+                                         self.node[dest].copy(), driver=True)
             else:
                 self._add_collapsed_node(g, (src, (src,)), 
-                                         src, (dest,), self.node[src].copy(), driver=True)
+                                         src, (dest,), 
+                                         self.node[src].copy(), driver=True)
+
+        # make sure unconnected states and residuals are included in the graph.
+        # Name their nodes in the same manner as driver connctions, (name, (name,)).
+        depgraph = scope._depgraph # use depgraph here because unconnected
+                                    # vars have already been pruned from g
+        for state in states:
+            if state not in g:
+                self._add_collapsed_node(g, (state, (state,)),
+                                         state, (state,),
+                                         depgraph.node[state].copy())
+
+        for resid in resids:
+            if resid not in g:
+                self._add_collapsed_node(g, (resid, (resid,)),
+                                         resid, (resid,),
+                                         depgraph.node[resid].copy())
 
         return g
 
