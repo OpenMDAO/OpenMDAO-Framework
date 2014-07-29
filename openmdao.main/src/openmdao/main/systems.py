@@ -232,9 +232,14 @@ class System(object):
         """
         outputs = []
         for system in self.simple_subsystems():
+            states = set()
+            try:
+                states.update(system._comp.list_states())
+            except:
+                pass
             for src, _ in system._out_nodes:
                 parts = src.split('.', 1)
-                if parts[0] in system._nodes:
+                if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
         return outputs
 
