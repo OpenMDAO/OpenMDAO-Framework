@@ -4,7 +4,6 @@ A simple unit testing framework for MPI programs.
 
 import os
 import sys
-from itertools import chain
 
 from unittest import TestCase, SkipTest
 from openmdao.util.fileutil import get_module_path

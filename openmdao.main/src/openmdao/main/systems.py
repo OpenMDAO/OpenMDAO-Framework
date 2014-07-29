@@ -1,6 +1,7 @@
 import sys
 from StringIO import StringIO
 from collections import OrderedDict
+from itertools import chain
 
 import numpy
 import networkx as nx
@@ -150,8 +151,11 @@ class System(object):
         # as inputs, so we need to create a list of outputs that excludes any of those
         # states.
         pure_outs = []
+        self._states = []
         for out in self._out_nodes:
-            if graph.in_degree(out) <= 1:
+            if graph.in_degree(out) > 1:
+                self._states.append(out)
+            else:
                 pure_outs.append(out)
         
         # get our input nodes from the depgraph
@@ -214,10 +218,10 @@ class System(object):
         """
         inputs = []
         for system in self.simple_subsystems():
-            for tup in system._in_nodes:
+            for tup in chain(system._in_nodes, system._states):
                 for dest in tup[1]:
                     parts = dest.split('.', 1)
-                    if parts[0] in system._nodes:
+                    if parts[0] in system._nodes and dest not in inputs:
                         inputs.append(dest)
         return inputs
 
