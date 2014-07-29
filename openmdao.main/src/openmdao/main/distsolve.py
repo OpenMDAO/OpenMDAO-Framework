@@ -65,7 +65,7 @@ class MPISolver(Driver):
                 elif params[0] == cnst.lhs.text:
                     pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
         return pairs
-        
+
     def run_iteration(self):
         """ Operation executed in each iteration """
         raise NotImplementedError("run_iteration method not implemented")
@@ -96,9 +96,9 @@ class MPISolver(Driver):
         self.normval = self._norm()
         self.current_iteration += 1
         #mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
-        
+
 class MPINonlinearSolver(MPISolver):
-    """ A base class for dostribited nonlinear solvers """
+    """ A base class for distributed nonlinear solvers """
 
     def _norm(self):
         """ Computes the norm of the f Vec """

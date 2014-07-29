@@ -65,7 +65,7 @@ def compound_setup_scatters(self):
     varkeys = self.vector_vars.keys()
     #simple_subs = set(self.simple_subsystems())
     destmap = {}
-    
+
     for subsystem in self.all_subsystems():
         #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
         src_partial = []
@@ -98,7 +98,7 @@ def compound_setup_scatters(self):
                         dest_idxs = petsc_linspace(start, end)
                         start += arg_idxs.shape[0]
                         destmap[node] = dest_idxs
-                    
+
                     assert(all(src_idxs == self.vec['u'].indices(node)))
                     assert(all(dest_idxs == self.vec['p'].indices(node)))
 
@@ -161,7 +161,7 @@ class System(object):
         self.mode = None
         self.sol_vec = None
         self.rhs_vec = None
-        self.solver = None
+        self.ln_solver = None
         self.fd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
@@ -199,7 +199,7 @@ class System(object):
         return args
 
     def get_inputs(self):
-        """Returns names of input variables (not collapsed edges) 
+        """Returns names of input variables (not collapsed edges)
         from this System and all of its children.
         """
         inputs = []
@@ -212,7 +212,7 @@ class System(object):
         return inputs
 
     def get_outputs(self, local=False):
-        """Returns names of output variables (not collapsed edges) 
+        """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
         outputs = []
@@ -315,7 +315,7 @@ class System(object):
         #  1) flattenable vars that add to the size of the vectors
         #  2) flattenable vars that don't add to the size of the vectors because they
         #     are slices of other vars already in the vectors
-        #  3) non-flattenable vars 
+        #  3) non-flattenable vars
 
         # first, get all flattenable variables
         for name in self._get_flat_vars(self.variables):
@@ -328,7 +328,7 @@ class System(object):
             if name not in self.flat_vars:
                 self.noflat_vars[name] = info
 
-        # create an arg_idx dict to keep track of indices of 
+        # create an arg_idx dict to keep track of indices of
         # inputs
         # TODO: determine how we want the user to specify indices
         #       for distributed inputs...
@@ -338,7 +338,7 @@ class System(object):
             #        process' version of the arg once we have distributed
             #        components...
             self.arg_idx[name] = numpy.array(range(self._var_meta[name]['size']), 'i')
-                                
+
     def setup_sizes(self):
         """Given a dict of variables, set the sizes for
         those that are local.
@@ -379,7 +379,7 @@ class System(object):
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
-        
+
         for arg in self.flat(self._get_sized_inputs()):
             self.input_sizes[rank] += self._var_meta[arg]['size']
 
@@ -392,7 +392,7 @@ class System(object):
         #     sized_inputs.extend(self._in_nodes)
         sized_inputs.extend(self._owned_args)
         return sized_inputs
-        
+
     def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
@@ -622,12 +622,12 @@ class System(object):
         """ Initialize the solver that will be used to calculate the
         gradient. """
 
-        if self.solver is None:
+        if self.ln_solver is None:
 
             if MPI:
-                self.solver = PETSc_KSP(self)
+                self.ln_solver = PETSc_KSP(self)
             else:
-                self.solver = ScipyGMRES(self)
+                self.ln_solver = ScipyGMRES(self)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -664,7 +664,7 @@ class System(object):
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
 
-        return self.solver.solve(inputs, outputs)
+        return self.ln_solver.solve(inputs, outputs)
 
     def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
@@ -680,7 +680,9 @@ class System(object):
                 yield s
 
 class SimpleSystem(System):
-    """A System for a single Component."""
+    """A System for a single Component. This component can have Inputs,
+    Outputs, States, and Residuals."""
+
     def __init__(self, scope, name):
         if isinstance(name, basestring):  # it's a OpenMDAO Component
             comp = getattr(scope, name)
@@ -700,7 +702,7 @@ class SimpleSystem(System):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             comp = self._comp
-            self.scatter('u','p')
+            self.scatter('u', 'p')
             #self.vec['p'].set_to_scope(self.scope)#, self._in_nodes)
             comp.set_itername('%s-%s' % (iterbase, comp.name))
             comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
@@ -731,7 +733,7 @@ class SimpleSystem(System):
         other_conns = []
 
         flat_args = self.flat(self._owned_args)
-        
+
         for dest in flat_args:
             ivar = ukeys.index(dest)
             scatter_conns.append(dest)
@@ -758,6 +760,39 @@ class SimpleSystem(System):
         """ Linearize this component. """
 
         self.J = self._comp.linearize(first=True)
+
+    def applyJ(self):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        vec = self.vec
+        comp = self._comp
+
+        # Forward Mode
+        if self.mode == 'forward':
+
+            self.scatter('du', 'dp')
+
+            comp.applyJ(self)
+            vec['df'].array[:] *= -1.0
+
+            for var in self.get_outputs():
+                vec['df'][var][:] += vec['du'][var][:]
+
+        # Adjoint Mode
+        elif self.mode == 'adjoint':
+
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'du' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # our local 'arg' by -1, and then revert it afterwards.
+            vec['df'].array[:] *= -1.0
+            comp.applyJT(self)
+            vec['df'].array[:] *= -1.0
+
+            for var in self.get_outputs():
+                vec['du'][var][:] += vec['df'][var][:]
+            self.scatter('du', 'dp')
 
 
 # class BoundarySystem(SimpleSystem):
@@ -1084,7 +1119,7 @@ class SerialSystem(CompoundSystem):
                 #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
                 # self.vec['u'].dump(self.name+'.u',verbose=False)
                 # self.vec['p'].dump(self.name+'.p',verbose=False)
-                
+
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 #x = sub.vec['u'].check(self.vec['u'])
                 if self._stop:
@@ -1318,7 +1353,7 @@ class InnerAssemblySystem(SerialSystem):
             g.add_edge(name, drvname)
             g.node[name]['system'] = InVarSystem(scope, name)
             ordering.append(name)
- 
+
         ordering.append(drvname)
 
         for name in bouts:
