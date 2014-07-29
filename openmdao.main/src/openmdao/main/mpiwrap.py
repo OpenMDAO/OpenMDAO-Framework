@@ -12,11 +12,13 @@ def set_print_rank(rank):
 def _under_mpirun():
     """Return True if we're being executed under mpirun."""
     # TODO: this is a bit of a hack and there appears to be
-    # no consistent set of environment vars between MPI implementations
+    # no consistent set of environment vars between MPI 
+    # implementations.
     for name in os.environ.keys():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
             return True
     return False
+
 
 if _under_mpirun():
     from mpi4py import MPI
