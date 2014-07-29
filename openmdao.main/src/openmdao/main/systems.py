@@ -761,6 +761,39 @@ class SimpleSystem(System):
 
         self.J = self._comp.linearize(first=True)
 
+    def applyJ(self):
+        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
+
+        vec = self.vec
+        comp = self._comp
+
+        # Forward Mode
+        if self.mode == 'forward':
+
+            self.scatter('du', 'dp')
+
+            comp.applyJ(self)
+            vec['df'].array[:] *= -1.0
+
+            for var in self.get_outputs():
+                vec['df'][var][:] += vec['du'][var][:]
+
+        # Adjoint Mode
+        elif self.mode == 'adjoint':
+
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'du' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # our local 'arg' by -1, and then revert it afterwards.
+            vec['df'].array[:] *= -1.0
+            comp.applyJT(self)
+            vec['df'].array[:] *= -1.0
+
+            for var in self.get_outputs():
+                vec['du'][var][:] += vec['df'][var][:]
+            self.scatter('du', 'dp')
+
 
 # class BoundarySystem(SimpleSystem):
 #     """A SimpleSystem that has no component to execute. It just

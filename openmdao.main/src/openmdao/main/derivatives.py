@@ -108,6 +108,10 @@ def applyJ(system, pseudo=False):
     # 'apply_deriv' function instead of provideJ.
     if J is None and hasattr(obj, 'apply_deriv'):
 
+        # TODO - We shouldn't need to calculate the size of the full arrays,
+        # so the cache shouldn't be needed. Cache is None for now.
+        shape_cache = None
+
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
         resultkeys = sorted(result.keys())
@@ -215,6 +219,10 @@ def applyJT(system, pseudo=False):
     # If storage of the local Jacobian is a problem, the user can
     # specify the 'apply_derivT' function instead of provideJ.
     if J is None and hasattr(obj, 'apply_derivT'):
+
+        # TODO - We shouldn't need to calculate the size of the full arrays,
+        # so the cache shouldn't be needed. Cache is None for now.
+        shape_cache = None
 
         # The apply_deriv function expects the argument and
         # result dicts for each input and output to have the
