@@ -49,18 +49,8 @@ class MPITestCase(TestCase):
         then kick off N mpi processes running that test
         method.
         """
-        ncpus = self.NCPUS
-
         if MPI is None:
             raise SkipTest("mpi4py not installed")
-
-        modpath = get_module_path(__file__)
-        testpath = '.'.join((modpath, self.__class__.__name__,
-                             self._orig_testmethod_name))
-
-        self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
-                            args=['-m', 'unittest', testpath], 
-                            maxprocs=ncpus)
 
     def run(self, result=None):
         if _under_mpirun():
@@ -80,8 +70,13 @@ class MPITestCase(TestCase):
             comm.gather(result, root=0)
                 
         else:
-            super(MPITestCase, self).run(result)
+            modpath = get_module_path(__file__)
+            testpath = '.'.join((modpath, self.__class__.__name__,
+                                 self._orig_testmethod_name))
 
+            self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
+                                args=['-m', 'unittest', testpath], 
+                                maxprocs=self.NCPUS)
             results = None
 
             # gather results
