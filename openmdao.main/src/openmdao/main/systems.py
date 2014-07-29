@@ -142,10 +142,20 @@ class System(object):
         # find our output nodes (outputs from our System and any child Systems)
         for node in nodes:
             if node in graph:
-                self._out_nodes.extend(graph.successors(node))
+                for succ in graph.successors(node):
+                    if succ not in self._out_nodes:
+                        self._out_nodes.append(succ)
 
+        # for purposes of determining _in_nodes, we want to treat states with sources
+        # as inputs, so we need to create a list of outputs that excludes any of those
+        # states.
+        pure_outs = []
+        for out in self._out_nodes:
+            if graph.in_degree(out) <= 1:
+                pure_outs.append(out)
+        
         # get our input nodes from the depgraph
-        self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(self._out_nodes))
+        self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(pure_outs))
 
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)

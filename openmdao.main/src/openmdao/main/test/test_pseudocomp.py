@@ -114,7 +114,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top.comp1.time = 5.
         # dist/time = 2 ft/sec
         top.run()
-        top._system.dump()
+        #top._system.dump()
         self.assertAlmostEqual(top.comp2.speed, 24.) # speed = 24 inch/s
 
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
