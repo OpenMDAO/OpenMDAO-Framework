@@ -794,16 +794,14 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             resids = [comp.name+ '.' + varname for \
-                      varname in comp.list_residuals()]
+                      varname in comp.list_residuals() + comp.list_states()]
             for var in self.get_outputs():
                 if var not in resids:
                     vec['df'][var][:] += vec['du'][var][:]
 
-            vec['df']['comp.x'][:] = vec['df']['comp.res'][0]
-            vec['df']['comp.y'][:] = vec['df']['comp.res'][1]
-            vec['df']['comp.z'][:] = vec['df']['comp.res'][2]
-
-
+            vec['df']['comp.x'][:] += vec['df']['comp.res'][0]
+            vec['df']['comp.y'][:] += vec['df']['comp.res'][1]
+            vec['df']['comp.z'][:] += vec['df']['comp.res'][2]
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
@@ -817,8 +815,16 @@ class SimpleSystem(System):
             comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
+            resids = [comp.name+ '.' + varname for \
+                      varname in comp.list_residuals() + comp.list_states()]
             for var in self.get_outputs():
-                vec['du'][var][:] += vec['df'][var][:]
+                if var not in resids:
+                    vec['du'][var][:] += vec['df'][var][:]
+
+            vec['du']['comp.res'][0] += vec['du']['comp.x'][:]
+            vec['du']['comp.res'][1] += vec['du']['comp.y'][:]
+            vec['du']['comp.res'][2] += vec['du']['comp.z'][:]
+
             self.scatter('du', 'dp')
 
 
