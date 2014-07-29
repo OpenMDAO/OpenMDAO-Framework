@@ -563,21 +563,6 @@ class System(object):
 
         return stream.getvalue() if getval else None
 
-    def _dot_shape(self):
-        return 'ellipse'
-
-    def get_plot_graph(self, local=False):
-        g = nx.DiGraph()
-        g.add_node(self.name, shape=self._dot_shape())
-        for i,s in enumerate(self.subsystems(local=local)):
-            subg = s.get_plot_graph(local=local)
-            for n, data in subg.nodes_iter(data=True):
-                g.add_node(n, **data)
-            for u,v,data in subg.edges_iter(data=True):
-                g.add_edge(u, v, **data)
-            g.add_edge(self.name, s.name, label="%d" % i)
-        return g
-
     def _get_flat_vars(self, vardict):
         """Return a list of names of vars that represent variables that are
         flattenable to float arrays.
@@ -684,6 +669,15 @@ class System(object):
     def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
+
+    def iterate_all(self, local=False):
+        """Returns a generator that will iterate over this
+        System and all of its children recursively.
+        """
+        yield self
+        for child in self.subsystems(local=local):
+            for s in child.iterate_all(local=local):
+                yield s
 
 class SimpleSystem(System):
     """A System for a single Component. This component can have Inputs,
@@ -925,28 +919,6 @@ class CompoundSystem(System):
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
-
-    # def get_inputs(self, local=False):
-    #     inputs = []
-    #     inset = set()
-    #     for sub in self.subsystems(local):
-    #         for inp in sub.get_inputs(local):
-    #             if inp not in inset:
-    #                 inputs.append(inp)
-    #                 inset.add(inp)
-
-    #     return inputs
-
-    # def get_outputs(self, local=False):
-    #     outputs = []
-    #     outset = set()
-    #     for sub in self.subsystems(local):
-    #         for out in sub.get_outputs(local):
-    #             if out not in outset:
-    #                 outputs.append(out)
-    #                 outset.add(out)
-
-    #     return outputs
 
     def local_subsystems(self):
         if MPI:
@@ -1287,6 +1259,7 @@ class NonSolverDriverSystem(ExplicitSystem):
     def simple_subsystems(self, local=False):
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
+
 
 class SolverSystem(SimpleSystem):  # Implicit
     """A System for a Solver component."""
