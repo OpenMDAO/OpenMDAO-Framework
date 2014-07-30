@@ -84,13 +84,13 @@ def applyJ(system, pseudo=False):
     J = system.J
     obj = system._comp
     arg = {}
-    for item in system.get_inputs():
+    for item in system.list_inputs_and_states():
         key = item.partition('.')[-1]
         #arg[key] = system.sol_vec[item]
         arg[key] = system.scope._system.vec['du'][item]
 
     result = {}
-    for item in system.get_outputs():
+    for item in system.list_outputs_and_residuals():
         key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
 
@@ -198,12 +198,12 @@ def applyJT(system, pseudo=False):
     J = system.J
     obj = system._comp
     arg = {}
-    for item in system.get_outputs():
+    for item in system.list_outputs_and_residuals():
         key = item.partition('.')[-1]
         arg[key] = system.sol_vec[item]
 
     result = {}
-    for item in system.get_inputs():
+    for item in system.list_inputs_and_states():
         key = item.partition('.')[-1]
         result[key] = system.scope._system.vec['du'][item] #system.rhs_vec][item]
 

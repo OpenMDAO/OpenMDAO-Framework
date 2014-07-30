@@ -211,7 +211,7 @@ class System(object):
                     args.append(arg)
         return args
 
-    def get_inputs(self):
+    def list_inputs_and_states(self):
         """Returns names of input variables (not collapsed edges)
         from this System and all of its children.
         """
@@ -229,7 +229,7 @@ class System(object):
                         inputs.add(dest)
         return list(inputs)
 
-    def get_outputs(self, local=False):
+    def list_outputs_and_residuals(self, local=False):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
@@ -237,13 +237,15 @@ class System(object):
         for system in self.simple_subsystems():
             states = set()
             try:
+                outputs.extend(['.'.join((system.name,s))
+                                  for s in system._comp.list_residuals()])
                 states.update(['.'.join((system.name,s))
                                   for s in system._comp.list_states()])
-            except:
+            except AttributeError:
                 pass
             for src, _ in system._out_nodes:
                 parts = src.split('.', 1)
-                if parts[0] in system._nodes and src not in states:
+                if parts[0] in system._nodes and src not in states and src not in outputs:
                     outputs.append(src)
         return outputs
 
@@ -809,13 +811,13 @@ class SimpleSystem(System):
 
             resids = [comp.name+ '.' + varname for \
                       varname in comp.list_residuals()]
-            for var in self.get_outputs():
+            for var in self.list_outputs_and_residuals():
                 if var not in resids:
                     vec['df'][var][:] += vec['du'][var][:]
 
-            vec['df']['comp.x'][:] += vec['df']['comp.res'][0]
-            vec['df']['comp.y'][:] += vec['df']['comp.res'][1]
-            vec['df']['comp.z'][:] += vec['df']['comp.res'][2]
+            #vec['df']['comp.x'][:] += vec['df']['comp.res'][0]
+            #vec['df']['comp.y'][:] += vec['df']['comp.res'][1]
+            #vec['df']['comp.z'][:] += vec['df']['comp.res'][2]
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
@@ -831,13 +833,13 @@ class SimpleSystem(System):
 
             resids = [comp.name+ '.' + varname for \
                       varname in comp.list_residuals()]
-            for var in self.get_outputs():
+            for var in self.list_outputs_and_residuals():
                 if var not in resids:
                     vec['du'][var][:] += vec['df'][var][:]
 
-            vec['du']['comp.res'][0] += vec['du']['comp.x'][:]
-            vec['du']['comp.res'][1] += vec['du']['comp.y'][:]
-            vec['du']['comp.res'][2] += vec['du']['comp.z'][:]
+            #vec['du']['comp.res'][0] += vec['du']['comp.x'][:]
+            #vec['du']['comp.res'][1] += vec['du']['comp.y'][:]
+            #vec['du']['comp.res'][2] += vec['du']['comp.z'][:]
 
             self.scatter('du', 'dp')
 
@@ -902,7 +904,7 @@ class ExplicitSystem(SimpleSystem):
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.get_outputs():
+            for var in self.list_outputs_and_residuals():
                 vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
@@ -917,7 +919,7 @@ class ExplicitSystem(SimpleSystem):
             comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.get_outputs():
+            for var in self.list_outputs_and_residuals():
                 vec['du'][var][:] += vec['df'][var][:]
             self.scatter('du', 'dp')
 

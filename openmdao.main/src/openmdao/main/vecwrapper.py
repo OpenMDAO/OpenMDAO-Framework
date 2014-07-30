@@ -19,17 +19,17 @@ class VecWrapperBase(object):
 
         # create the PETSc vector
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
-        
+
         self._initialize(system)
 
         self._add_tuple_members(self._info.keys())
 
-        self._add_states(system)
+        self._add_resid(system)
 
 
-    def _add_states(self, system):
+    def _add_resid(self, system):
         pass
-    
+
     def _add_tuple_members(self, tups):
         # now add all srcs and dests from var tuples so that views for particular openmdao variables
         # can be accessed.
@@ -134,7 +134,7 @@ class VecWrapperBase(object):
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
                     for dest in name[1]:
-                        scope.set_flattened_value(dest, array_val)                        
+                        scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
 
@@ -157,7 +157,7 @@ class VecWrapperBase(object):
                 if start is None:
                     start = 0
                     mpiprint("bad start idx")
-                mpiprint("%s - %s: (%d,%d) %s" % 
+                mpiprint("%s - %s: (%d,%d) %s" %
                            (vecname,name, start, start+len(array_val),array_val))
         if self.petsc_vec is not None:
             mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
@@ -215,10 +215,11 @@ class VecWrapper(VecWrapperBase):
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
 
-    def _add_states(self, system):
+    def _add_resid(self, system):
         try:
             cname = system._comp.name
             states = ['.'.join((cname, s)) for s in system._comp.list_states()]
+            resids = ['.'.join((cname, s)) for s in system._comp.list_residuals()]
         except AttributeError:
             return
 
@@ -230,9 +231,10 @@ class VecWrapper(VecWrapperBase):
         view = self.array[start:end]
 
         assert(size == view.size)
+        assert(len(resids) == 1)
 
-        self._info['@states'] = (view, start)
-        self._subviews.add('@states')
+        self._info[resids[0]] = (view, start)
+        self._subviews.add(resids[0])
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -249,7 +251,7 @@ class InputVecWrapper(VecWrapperBase):
                     raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                  (system.name,name, [start,end],self[name].size))
                 start += sz
-            
+
         #for sub in system.simple_subsystems(local=True):
             #for i, name in enumerate(sub._owned_args):
                 #if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
@@ -292,7 +294,7 @@ class DataTransfer(object):
     systems via scatters (and possibly send/receive for
     non-array values)
     """
-    def __init__(self, system, var_idxs, input_idxs, 
+    def __init__(self, system, var_idxs, input_idxs,
                  scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
