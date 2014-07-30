@@ -1076,11 +1076,11 @@ class DependencyGraph(nx.DiGraph):
                                          state, (state,),
                                          depgraph.node[state].copy())
 
-        for resid in resids:
-            if resid not in g:
-                self._add_collapsed_node(g, (resid, (resid,)),
-                                         resid, (resid,),
-                                         depgraph.node[resid].copy())
+        # for resid in resids:
+        #     if resid not in g:
+        #         self._add_collapsed_node(g, (resid, (resid,)),
+        #                                  resid, (resid,),
+        #                                  depgraph.node[resid].copy())
 
         return g
 

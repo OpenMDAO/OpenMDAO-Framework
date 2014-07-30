@@ -101,7 +101,7 @@ class MPITestCase(TestCase):
             # gather results from spawned MPI processes
             self.comm.gather(infos, root=MPI.ROOT)
 
-            comm.Disconnect()
+            self.comm.Disconnect()
 
             for info in infos:
                 for k,v in info.items():
