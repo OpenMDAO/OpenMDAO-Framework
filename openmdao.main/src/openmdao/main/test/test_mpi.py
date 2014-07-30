@@ -1,7 +1,11 @@
 
 import time
 
-import numpy as np 
+import numpy as np
+
+import unittest
+from openmdao.test.mpiunittest import MPITestCase
+from openmdao.util.testutil import assert_rel_error
 
 from openmdao.main.api import Assembly, dump_iteration_tree, Component, Driver, set_as_top
 from openmdao.main.datatypes.api import Float, Array
@@ -247,6 +251,20 @@ class SellarMDF(Assembly):
         self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
         
+
+class BasicMPITests(MPITestCase):
+
+    NCPUS = 4
+
+    def test_sellar(self):
+        top, expected = _get_modelsellar()
+
+        top.run()
+
+        for name, expval in expected.items():
+            val = top.get(name)
+            assert_rel_error(self, expval, val, 0.001)
+
 
 if __name__ == '__main__':
     import sys

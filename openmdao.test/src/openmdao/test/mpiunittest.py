@@ -24,6 +24,13 @@ def _under_mpirun():
             return True
     return False
 
+_key2method = {
+    'failures': 'addFailure',
+    'skipped': 'addSkip',
+    'errors': 'addError',
+    'expectedFailures': 'addExpectedFailure',
+    'unexpectedSuccesses': 'addUnexpectedSuccess'
+}
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
@@ -65,22 +72,43 @@ class MPITestCase(TestCase):
             except Exception as err:
                 print str(err)
 
-            # send results back to the mothership
             comm = MPI.Comm.Get_parent()
-            comm.gather(result, root=0)
+
+            info = {
+                'failures': [],
+                'errors': [],
+                'skipped': [],
+                'expectedFailures': [],
+                'unexpectedSuccesses': [],
+            }
+            for key in info.keys():
+                for tcase, msg in getattr(result, key):
+                    info[key].append(msg)
+
+            # send results back to the mothership
+            comm.gather(info, root=0)
                 
         else:
-            modpath = get_module_path(__file__)
-            testpath = '.'.join((modpath, self.__class__.__name__,
+            testpath = '.'.join((self.__class__.__module__, 
+                                 self.__class__.__name__,
                                  self._orig_testmethod_name))
 
             self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
                                 args=['-m', 'unittest', testpath], 
                                 maxprocs=self.NCPUS)
-            results = None
+            infos = []
 
-            # gather results
-            self.comm.gather(results, root=MPI.ROOT)
+            # gather results from spawned MPI processes
+            self.comm.gather(infos, root=MPI.ROOT)
 
+            comm.Disconnect()
+
+            for info in infos:
+                for k,v in info.items():
+                    getattr(result, _key2method[k])(self, v)
+
+            for i,info in enumerate(infos):
+                for k,v in info.items():
+                    print "%d: %s: %s" % (i,k,v)
 
         
