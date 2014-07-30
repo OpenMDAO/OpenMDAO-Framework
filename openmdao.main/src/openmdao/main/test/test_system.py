@@ -85,9 +85,10 @@ class TestcaseParaboloid(unittest.TestCase):
         self.assertEqual(compsys.get_outputs(), ['comp.f_xy'])
         self.assertEqual(compsys._owned_args, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
 
-        self.assertEqual(compsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                    ('comp.x', ('comp.x',)),
-                                                    ('comp.y', ('comp.y',))])
+        self.assertEqual(compsys.variables.keys(), [('comp.x', ('comp.x',)),
+                                                    ('comp.y', ('comp.y',)),
+                                                    ('comp.f_xy', ('_pseudo_0.in0',)),
+                                                    ])
 
         self.assertEqual(compsys.scatter_full.scatter_conns, 
                          [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
@@ -111,9 +112,9 @@ class TestcaseParaboloid(unittest.TestCase):
         self.assertEqual(wfsys.get_outputs(), ['comp.f_xy', '_pseudo_0.out0'])
         self.assertEqual(wfsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
 
-        self.assertEqual(wfsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                  ('comp.x', ('comp.x',)),
+        self.assertEqual(wfsys.variables.keys(), [('comp.x', ('comp.x',)),
                                                   ('comp.y', ('comp.y',)),
+                                                  ('comp.f_xy', ('_pseudo_0.in0',)),                                                  
                                                   ('_pseudo_0.out0', ('_pseudo_0.out0',))])
         
         self.assertEqual(drvsys._in_nodes, [])
@@ -126,9 +127,9 @@ class TestcaseParaboloid(unittest.TestCase):
         self.assertEqual(drvsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
         self.assertEqual([0], drvsys.arg_idx[('comp.f_xy', ('_pseudo_0.in0',))])
 
-        self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                   ('comp.x', ('comp.x',)),
+        self.assertEqual(drvsys.variables.keys(), [('comp.x', ('comp.x',)),
                                                    ('comp.y', ('comp.y',)),
+                                                   ('comp.f_xy', ('_pseudo_0.in0',)),                                                   
                                                    ('_pseudo_0.out0', ('_pseudo_0.out0',))
                                                    ])
         top.run()

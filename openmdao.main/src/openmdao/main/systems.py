@@ -1,6 +1,7 @@
 import sys
 from StringIO import StringIO
 from collections import OrderedDict
+from itertools import chain
 
 import numpy
 import networkx as nx
@@ -146,13 +147,15 @@ class System(object):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
 
-        # for purposes of determining _in_nodes, we want to treat states with sources
-        # as inputs, so we need to create a list of outputs that excludes any of those
-        # states.
-        pure_outs = []
-        for out in self._out_nodes:
-            if graph.in_degree(out) <= 1:
-                pure_outs.append(out)
+        try:
+            states = set(['.'.join((self.name,s)) 
+                                  for s in self._comp.list_states()])
+        except AttributeError:
+            states = ()
+        pure_outs = [out for out in self._out_nodes if out not in states]
+        # for out in self._out_nodes:
+        #     if graph.in_degree(out) <= 1:
+        #         pure_outs.append(out)
         
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(pure_outs))
@@ -315,15 +318,32 @@ class System(object):
             self.variables.update(sub.variables)
             self._var_meta.update(sub._var_meta)
 
-        for vname in self._out_nodes:
-            if vname not in self.variables:
-                self.variables[vname] = self._var_meta[vname] = \
-                                            self._get_var_info(vname)
+        try:
+            states = set(['.'.join((self._comp.name, s)) 
+                             for s in self._comp.list_states()])
+            resids = set(['.'.join((self._comp.name, r)) 
+                             for r in self._comp.list_residuals()])
+        except AttributeError:
+            states = ()
+            resids = ()
 
-        for vname in self._in_nodes:
+        # group inputs into states and non-states
+        group1 = [v for v in self._in_nodes if v[1][0] in states]
+        group2 = [v for v in self._in_nodes if v[1][0] not in states]        
+
+        for vname in chain(group1, group2):
             self._var_meta[vname] = self._get_var_info(vname)
             if vname[0] == vname[1][0]: # add driver input
                 self.variables[vname] = self._var_meta[vname]
+
+        # group outputs into residuals and non-residuals
+        group1 = [v for v in self._out_nodes if v[1][0] in resids]
+        group2 = [v for v in self._out_nodes if v[1][0] not in resids]        
+
+        for vname in chain(group1, group2):
+            if vname not in self.variables:
+                self.variables[vname] = self._var_meta[vname] = \
+                                            self._get_var_info(vname)
 
         self._create_var_dicts()
 
