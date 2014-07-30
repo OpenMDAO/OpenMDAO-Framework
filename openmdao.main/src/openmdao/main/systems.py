@@ -229,7 +229,7 @@ class System(object):
                         inputs.add(dest)
         return list(inputs)
 
-    def list_outputs_and_residuals(self, local=False):
+    def list_outputs(self, local=False):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
@@ -237,16 +237,31 @@ class System(object):
         for system in self.simple_subsystems():
             states = set()
             try:
-                outputs.extend(['.'.join((system.name,s))
-                                  for s in system._comp.list_residuals()])
                 states.update(['.'.join((system.name,s))
                                   for s in system._comp.list_states()])
             except AttributeError:
                 pass
             for src, _ in system._out_nodes:
                 parts = src.split('.', 1)
-                if parts[0] in system._nodes and src not in states and src not in outputs:
+                if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
+        return outputs
+
+    def list_outputs_and_residuals(self, local=False):
+        """Returns names of output variables (not collapsed edges)
+        from this System and all of its children. This list also
+        contains the residuals.
+        """
+        outputs = []
+        for system in self.simple_subsystems():
+            try:
+                outputs.extend(['.'.join((system.name, s))
+                                  for s in system._comp.list_residuals()])
+            except AttributeError:
+                pass
+
+        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs])
+
         return outputs
 
     def get_size(self, names):
@@ -809,15 +824,8 @@ class SimpleSystem(System):
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
-            resids = [comp.name+ '.' + varname for \
-                      varname in comp.list_residuals()]
-            for var in self.list_outputs_and_residuals():
-                if var not in resids:
-                    vec['df'][var][:] += vec['du'][var][:]
-
-            #vec['df']['comp.x'][:] += vec['df']['comp.res'][0]
-            #vec['df']['comp.y'][:] += vec['df']['comp.res'][1]
-            #vec['df']['comp.z'][:] += vec['df']['comp.res'][2]
+            for var in self.list_outputs():
+                vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
@@ -831,15 +839,8 @@ class SimpleSystem(System):
             comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
-            resids = [comp.name+ '.' + varname for \
-                      varname in comp.list_residuals()]
-            for var in self.list_outputs_and_residuals():
-                if var not in resids:
-                    vec['du'][var][:] += vec['df'][var][:]
-
-            #vec['du']['comp.res'][0] += vec['du']['comp.x'][:]
-            #vec['du']['comp.res'][1] += vec['du']['comp.y'][:]
-            #vec['du']['comp.res'][2] += vec['du']['comp.z'][:]
+            for var in self.list_outputs():
+                vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
 
@@ -889,39 +890,6 @@ class ExplicitSystem(SimpleSystem):
         vec['f'].array[:] -= vec['u'].array[:]
         vec['u'].array[:] += vec['f'].array[:]
         #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
-
-    def applyJ(self):
-        """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
-
-        vec = self.vec
-        comp = self._comp
-
-        # Forward Mode
-        if self.mode == 'forward':
-
-            self.scatter('du', 'dp')
-
-            comp.applyJ(self)
-            vec['df'].array[:] *= -1.0
-
-            for var in self.list_outputs_and_residuals():
-                vec['df'][var][:] += vec['du'][var][:]
-
-        # Adjoint Mode
-        elif self.mode == 'adjoint':
-
-            # Sign on the local Jacobian needs to be -1 before
-            # we add in the fake residual. Since we can't modify
-            # the 'du' vector at this point without stomping on the
-            # previous component's contributions, we can multiply
-            # our local 'arg' by -1, and then revert it afterwards.
-            vec['df'].array[:] *= -1.0
-            comp.applyJT(self)
-            vec['df'].array[:] *= -1.0
-
-            for var in self.list_outputs_and_residuals():
-                vec['du'][var][:] += vec['df'][var][:]
-            self.scatter('du', 'dp')
 
 
 class InVarSystem(ExplicitSystem):
