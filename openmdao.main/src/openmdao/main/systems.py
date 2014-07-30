@@ -321,11 +321,11 @@ class System(object):
         try:
             states = set(['.'.join((self._comp.name, s))
                              for s in self._comp.list_states()])
-            resids = set(['.'.join((self._comp.name, r))
-                             for r in self._comp.list_residuals()])
+            # resids = set(['.'.join((self._comp.name, r))
+            #                  for r in self._comp.list_residuals()])
         except AttributeError:
             states = ()
-            resids = ()
+            #resids = ()
 
         # group inputs into states and non-states
         group1 = [v for v in self._in_nodes if v[1][0] in states]
@@ -336,11 +336,11 @@ class System(object):
             if vname[0] == vname[1][0]: # add driver input
                 self.variables[vname] = self._var_meta[vname]
 
-        # group outputs into residuals and non-residuals
-        group1 = [v for v in self._out_nodes if v[1][0] in resids]
-        group2 = [v for v in self._out_nodes if v[1][0] not in resids]
+        # # group outputs into residuals and non-residuals
+        # group1 = [v for v in self._out_nodes if v[1][0] in resids]
+        # group2 = [v for v in self._out_nodes if v[1][0] not in resids]
 
-        for vname in chain(group1, group2):
+        for vname in self._out_nodes: #chain(group1, group2):
             if vname not in self.variables:
                 self.variables[vname] = self._var_meta[vname] = \
                                             self._get_var_info(vname)
