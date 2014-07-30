@@ -234,7 +234,8 @@ class System(object):
         for system in self.simple_subsystems():
             states = set()
             try:
-                states.update(system._comp.list_states())
+                states.update(['.'.join((system.name,s)) 
+                                  for s in system._comp.list_states()])
             except:
                 pass
             for src, _ in system._out_nodes:
