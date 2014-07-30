@@ -234,7 +234,7 @@ class System(object):
         for system in self.simple_subsystems():
             states = set()
             try:
-                states.update(['.'.join((system.name,s)) 
+                states.update(['.'.join((system.name,s))
                                   for s in system._comp.list_states()])
             except:
                 pass
@@ -795,7 +795,7 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             resids = [comp.name+ '.' + varname for \
-                      varname in comp.list_residuals() + comp.list_states()]
+                      varname in comp.list_residuals()]
             for var in self.get_outputs():
                 if var not in resids:
                     vec['df'][var][:] += vec['du'][var][:]
@@ -817,7 +817,7 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             resids = [comp.name+ '.' + varname for \
-                      varname in comp.list_residuals() + comp.list_states()]
+                      varname in comp.list_residuals()]
             for var in self.get_outputs():
                 if var not in resids:
                     vec['du'][var][:] += vec['df'][var][:]
