@@ -321,29 +321,22 @@ class System(object):
         try:
             states = set(['.'.join((self._comp.name, s)) 
                              for s in self._comp.list_states()])
-            # resids = set(['.'.join((self._comp.name, r)) 
-            #                  for r in self._comp.list_residuals()])
         except AttributeError:
             states = ()
-            #resids = ()
 
         # group inputs into states and non-states
-        group1 = [v for v in self._in_nodes if v[1][0] in states]
-        group2 = [v for v in self._in_nodes if v[1][0] not in states]        
+        group1 = [v for v in self._out_nodes if v[1][0] in states]
+        group2 = [v for v in self._out_nodes if v[1][0] not in states]        
 
         for vname in chain(group1, group2):
-            self._var_meta[vname] = self._get_var_info(vname)
-            if vname[0] == vname[1][0]: # add driver input
-                self.variables[vname] = self._var_meta[vname]
-
-        # # group outputs into residuals and non-residuals
-        # group1 = [v for v in self._out_nodes if v[1][0] in resids]
-        # group2 = [v for v in self._out_nodes if v[1][0] not in resids]        
-
-        for vname in self._out_nodes: #chain(group1, group2):
             if vname not in self.variables:
                 self.variables[vname] = self._var_meta[vname] = \
                                             self._get_var_info(vname)
+
+        for vname in self._in_nodes:
+            self._var_meta[vname] = self._get_var_info(vname)
+            if vname[0] == vname[1][0]: # add driver input or state
+                self.variables[vname] = self._var_meta[vname]
 
         self._create_var_dicts()
 

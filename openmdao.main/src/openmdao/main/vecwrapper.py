@@ -17,13 +17,19 @@ class VecWrapperBase(object):
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subviews = set()  # set of all names representing subviews of other views
 
+        # create the PETSc vector
+        self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
+        
         self._initialize(system)
 
         self._add_tuple_members(self._info.keys())
 
-        # create the PETSc vector
-        self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
+        self._add_states(system)
 
+
+    def _add_states(self, system):
+        pass
+    
     def _add_tuple_members(self, tups):
         # now add all srcs and dests from var tuples so that views for particular openmdao variables
         # can be accessed.
@@ -208,6 +214,25 @@ class VecWrapper(VecWrapperBase):
                                              (system.name, name,
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
+
+    def _add_states(self, system):
+        try:
+            cname = system._comp.name
+            states = ['.'.join((cname, s)) for s in system._comp.list_states()]
+        except AttributeError:
+            return
+
+        start, end = self.bounds(states)
+
+        # verify contiguous states
+        size = sum([self._info[n][0].size for n in states])
+
+        view = self.array[start:end]
+
+        assert(size == view.size)
+
+        self._info['@states'] = (view, start)
+        self._subviews.add('@states')
 
 
 class InputVecWrapper(VecWrapperBase):
