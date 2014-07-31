@@ -51,9 +51,6 @@ class FixedPointIterator(Driver):
         self.post_iteration()
         self.current_iteration = 0
 
-        # Find dimension of our problem.
-        self.workflow.initialize_residual()
-
         # Get and save the intial value of the input parameters
         val0 = self.workflow.get_independents()
 
