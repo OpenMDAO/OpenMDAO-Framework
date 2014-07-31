@@ -1,13 +1,13 @@
 """ Class definition for an Implicit Component. """
 
-from scipy.sparse.linalg import gmres, LinearOperator
 import numpy as np
 
+# pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flattened_value
 from openmdao.main.component import Component
 from openmdao.main.datatypes.api import Bool
-from openmdao.main.derivatives import applyJ
-from openmdao.main.interfaces import IImplicitComponent, IVariableTree, implements
+from openmdao.main.interfaces import IImplicitComponent, IVariableTree, \
+                                     implements
 from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 
@@ -43,7 +43,8 @@ class ImplicitComponent(Component):
         """
 
         if self._state_names is None:
-            self._state_names = sorted([k for k, v in self.items(iotype='state')])
+            self._state_names = \
+                sorted([k for k, _ in self.items(iotype='state')])
         return self._state_names
 
     @rbac(('owner', 'user'))
@@ -55,7 +56,8 @@ class ImplicitComponent(Component):
         """
 
         if self._resid_names is None:
-            self._resid_names = sorted([k for k, v in self.items(iotype='residual')])
+            self._resid_names = \
+                sorted([k for k, _ in self.items(iotype='residual')])
         return self._resid_names
 
     def evaluate(self):
@@ -76,12 +78,13 @@ class ImplicitComponent(Component):
 
     def check_config(self, strict=False):
         """
-        Override this function to perform configuration checks specific to your class.
-        Bad configurations should raise an exception.
+        Override this function to perform configuration checks specific to
+        your class. Bad configurations should raise an exception.
         """
         super(ImplicitComponent, self).check_config(strict=strict)
 
-        pass  # TODO: add check that total width of states == total width of residuals
+        # TODO: add check that total width of states == total widtJh of
+        # residuals
 
     def execute(self):
         """ Performs either an internal solver or a single evaluation.
@@ -125,7 +128,8 @@ class ImplicitComponent(Component):
                 iter(val)
             except TypeError:
                 if has_interface(val, IVariableTree):
-                    raise RuntimeError("VariableTree states are not supported yet.")
+                    msg = "VariableTree states are not supported yet."
+                    raise RuntimeError(msg)
                 else:
                     if len(newval) != 1:
                         self.raise_exception("Trying to set a scalar value '%s' with a ")
@@ -134,6 +138,6 @@ class ImplicitComponent(Component):
                 setattr(self, name, newval.copy())
 
         if unused != 0:
-            self.raise_exception("State vector size does not match flattened size of state variables.",
-                                 ValueError)
+            msg = "State vector size does not match flattened size of state variables."
+            self.raise_exception(msg, ValueError)
 

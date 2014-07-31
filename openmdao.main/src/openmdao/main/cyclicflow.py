@@ -328,21 +328,7 @@ class CyclicWorkflow(SequentialWorkflow):
             #reset the deps array to the new order and sign
             deps = deps[new_dep_index]*new_dep_sign
 
-        sev_deps = []
-        for src, target in self._severed_edges:
-
-            if not isinstance(target, str):
-                target = target[0]
-
-            target = from_PA_var(target)
-            src = from_PA_var(src)
-            src_val = self.scope.get(src)
-            targ_val = self.scope.get(target)
-            res = flattened_value(src, src_val) - flattened_value(target, targ_val)
-
-            sev_deps.extend(res)
-
-        return hstack((deps, sev_deps))
+        return array(deps)
 
     def get_independents(self):
         """Returns a list of current values of the independents. This includes
@@ -350,72 +336,15 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         indeps = self.parent.eval_parameters(self.scope)
-        sev_indeps = []
-        for _, target in self._severed_edges:
-
-            if not isinstance(target, str):
-                target = target[0]
-
-            target = from_PA_var(target)
-            old_val = self.scope.get(target)
-
-            sev_indeps.extend(flattened_value(target, old_val))
-
-        return hstack((indeps, sev_indeps))
+        return array(indeps)
 
     def set_independents(self, val):
         """Sets all dependent variables to the values in the input array
         `val`. This includes both parameters and severed targets.
         """
-        bounds = self._bounds_cache
         nparam = self.parent.total_parameters()
         if nparam > 0:
             self.parent.set_parameters(val[:nparam].flatten())
-
-        if len(self._severed_edges) > 0:
-            i = nparam
-            for src, targets in self._mapped_severed_edges:
-                if isinstance(targets, str):
-                    targets = [targets]
-
-                i1, i2 = bounds[src]
-                if isinstance(i1, list):
-                    width = len(i1)
-                else:
-                    width = i2-i1
-
-                i1 = i
-                i2 = i + width
-
-                for target in targets:
-
-                    target = from_PA_var(target)
-                    old_val = self.scope.get(target)
-
-                    if isinstance(old_val, float):
-                        new_val = float(val[i1:i2])
-                    elif isinstance(old_val, ndarray):
-                        shape = old_val.shape
-                        if len(shape) > 1:
-                            new_val = val[i1:i2].copy()
-                            new_val = new_val.reshape(shape)
-                        else:
-                            new_val = val[i1:i2].copy()
-                    elif isinstance(old_val, VariableTree):
-                        new_val = old_val.copy()
-                        self._vtree_set(target, new_val, val[i1:i2], i1)
-                    else:
-                        msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                              " This type is not supported by the MDA Solver."
-                        self.scope.raise_exception(msg, RuntimeError)
-
-                    i += width
-
-                    # Poke new value into the input end of the edge.
-                    self.scope.set(target, new_val, force=True)
-
-                    # # Prevent OpenMDAO from stomping on our poked input.
-                    # self.scope.set_valid([target.split('[', 1)[0]], True)
 
     def _vtree_set(self, name, vtree, dv, i1=0):
         """ Update VariableTree `name` value `vtree` from `dv`. """

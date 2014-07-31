@@ -38,10 +38,12 @@ class Sellar_MDA(Assembly):
         self.d2.z2 = 2.0
 
         self.connect('d1.y1', 'd2.y1')
-        self.connect('d2.y2', 'd1.y2')
+        #self.connect('d2.y2', 'd1.y2')
 
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
+        self.driver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y2 = d2.y2')
 
 
 class Sellar_MDA_subbed(Assembly):
@@ -155,8 +157,8 @@ class Scalable_MDA(Assembly):
         self.driver.newton = True
 
 
-class MDA_SolverTestCase(unittest.TestCase):
-    """test the MDA Solver component"""
+class Newton_SolverTestCase(unittest.TestCase):
+    """test the Newton Solver component"""
 
     def setUp(self):
         self.top = set_as_top(Sellar_MDA())
