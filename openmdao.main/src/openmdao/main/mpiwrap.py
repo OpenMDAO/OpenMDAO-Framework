@@ -5,6 +5,17 @@ import sys
 # specified in the call, will print results from that rank only
 MPI_PRINT_RANK = None
 
+MPI_STREAM = sys.stdout
+
+def use_proc_files():
+    global MPI_STREAM
+    if MPI is None:
+        rank = 'non_mpi'
+    else:
+        rank = MPI.COMM_WORLD.rank
+    sname = "%s.out" % rank
+    MPI_STREAM = open(sname, 'w')
+
 def set_print_rank(rank):
     global MPI_PRINT_RANK
     MPI_PRINT_RANK = rank
@@ -29,7 +40,7 @@ if _under_mpirun():
     def create_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm)
 
-    def mpiprint(msg, rank=-1):
+    def mpiprint(msg, rank=-1, stream=sys.stdout):
         if rank < 0:
             if MPI_PRINT_RANK is not None and MPI_PRINT_RANK != MPI.COMM_WORLD.rank:
                 return
@@ -37,8 +48,11 @@ if _under_mpirun():
             return
 
         for part in str(msg).split('\n'):
-            print "{%d} %s" % (MPI.COMM_WORLD.rank, part)
-        sys.stdout.flush()
+            MPI_STREAM.write("{%d} %s\n" % (MPI.COMM_WORLD.rank, part))
+        try:
+            MPI_STREAM.flush()
+        except:
+            pass
 else:
     MPI = None
     PETSc = None
@@ -56,12 +70,12 @@ else:
         return None
 
     def mpiprint(msg, rank=-1):
-        print msg
+        MPI_STREAM.write(msg)
+        MPI_STREAM.write('\n')
 
 class MPI_info(object):
     def __init__(self):
         self.requested_cpus = 1
-        self.cpus = 0  # actual number of CPUs assigned.
 
         # the MPI communicator used by this comp and its children
         self.comm = COMM_NULL
@@ -77,3 +91,6 @@ class MPI_info(object):
         if MPI:
             return self.comm.rank
         return 0
+
+
+#use_proc_files()

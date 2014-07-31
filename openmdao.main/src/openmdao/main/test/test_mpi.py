@@ -3,19 +3,13 @@ import time
 
 import numpy as np
 
-import unittest
 from openmdao.test.mpiunittest import MPITestCase
 from openmdao.util.testutil import assert_rel_error
 
-from openmdao.main.api import Assembly, dump_iteration_tree, Component, Driver, set_as_top
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.hasobjective import HasObjectives
-from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.mpiwrap import mpiprint, set_print_rank
-from openmdao.util.decorators import add_delegate
+from openmdao.main.mpiwrap import MPI, mpiprint, set_print_rank
 from openmdao.main.distsolve import MPINonlinearSolver
-from openmdao.test.execcomp import ExecComp
 
 from openmdao.lib.optproblems import sellar
 
@@ -261,64 +255,69 @@ class BasicMPITests(MPITestCase):
 
         top.run()
 
-        for name, expval in expected.items():
-            val = top.get(name)
-            assert_rel_error(self, expval, val, 0.001)
+        # if our rank >= required cpus, nothing will actually
+        # run so the numbers will be wrong, so skip that case
+        if top._system.get_req_cpus() > self.comm.rank:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
 
 
 if __name__ == '__main__':
-    import sys
-    import traceback
-    from openmdao.main.mpiwrap import MPI
+    import unittest
+    unittest.main()
 
-    """
-    To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
-    where modelname is whatever comes after _get_model in the various _get_model* functions above.
-    """
+    # import sys
+    # import traceback
 
-    run = False
-    mname = ''
+    # """
+    # To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
+    # where modelname is whatever comes after _get_model in the various _get_model* functions above.
+    # """
 
-    for arg in sys.argv[1:]:
-        if arg.startswith('--run'):
-            run = True
-        elif arg.startswith('--rank'):
-            set_print_rank(int(arg.split('=',1)[1]))
-        elif not arg.startswith('-'):
-            mname = arg
+    # run = False
+    # mname = ''
 
-    ret = globals().get('_get_model%s' % mname)()
-    if isinstance(ret, tuple):
-        top, expected = ret
-    else:
-        top = ret
-        expected = None
+    # for arg in sys.argv[1:]:
+    #     if arg.startswith('--run'):
+    #         run = True
+    #     elif arg.startswith('--rank'):
+    #         set_print_rank(int(arg.split('=',1)[1]))
+    #     elif not arg.startswith('-'):
+    #         mname = arg
 
-    #dump_iteration_tree(top)
+    # ret = globals().get('_get_model%s' % mname)()
+    # if isinstance(ret, tuple):
+    #     top, expected = ret
+    # else:
+    #     top = ret
+    #     expected = None
 
-    try:
-        if not run:
-            top._setup()
-            mpiprint(top.driver.workflow._system.dump(stream=None))
+    # #dump_iteration_tree(top)
 
-            mpiprint("setup DONE")
+    # try:
+    #     if not run:
+    #         top._setup()
+    #         mpiprint(top.driver.workflow._system.dump(stream=None))
 
-        if run:
-            mpiprint('-'*50)
-            top.run()
+    #         mpiprint("setup DONE")
 
-            mpiprint('-'*50)
-            #mpiprint(top.driver.workflow._system.dump(stream=None))
+    #     if run:
+    #         mpiprint('-'*50)
+    #         top.run()
 
-            if expected:
-                mpiprint('-'*50)
-                mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
-                                                               "Expected",
-                                                               "Actual",
-                                                               "Error"))
-                for name, expval in expected.items():
-                    val = top.get(name)
-                    err = expval - val
-                    mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
-    except Exception as err:
-        mpiprint(traceback.format_exc())
+    #         mpiprint('-'*50)
+    #         #mpiprint(top.driver.workflow._system.dump(stream=None))
+
+    #         if expected:
+    #             mpiprint('-'*50)
+    #             mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
+    #                                                            "Expected",
+    #                                                            "Actual",
+    #                                                            "Error"))
+    #             for name, expval in expected.items():
+    #                 val = top.get(name)
+    #                 err = expval - val
+    #                 mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
+    # except Exception as err:
+    #     mpiprint(traceback.format_exc())

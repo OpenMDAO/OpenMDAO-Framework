@@ -1038,6 +1038,10 @@ class DependencyGraph(nx.DiGraph):
             src2dests.setdefault(u, set()).add(v)
             dest2src[v] = u
 
+        for u,v in drvconns:
+            if is_driver_node(self, u):
+                dest2src[v] = u
+
         # find any connected inputs used as srcs and connect their
         # dests to the true source
         for src, dests in src2dests.items():

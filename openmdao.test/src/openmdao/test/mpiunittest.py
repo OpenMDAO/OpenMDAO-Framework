@@ -5,6 +5,8 @@ A simple unit testing framework for MPI programs.
 import os
 import sys
 
+import numpy
+
 from unittest import TestCase, SkipTest
 from openmdao.util.fileutil import get_module_path
 
@@ -23,14 +25,6 @@ def _under_mpirun():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
             return True
     return False
-
-_key2method = {
-    'failures': 'addFailure',
-    'skipped': 'addSkip',
-    'errors': 'addError',
-    'expectedFailures': 'addExpectedFailure',
-    'unexpectedSuccesses': 'addUnexpectedSuccess'
-}
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
@@ -60,55 +54,94 @@ class MPITestCase(TestCase):
             raise SkipTest("mpi4py not installed")
 
     def run(self, result=None):
-        if _under_mpirun():
-            if result is None:
-                result = self.defaultTestResult()
-                startTestRun = getattr(result, 'startTestRun', None)
-                if startTestRun is not None:
-                    startTestRun()
+        info = {
+            'failures': [],
+            'errors': [],
+            'skipped': [],
+            'expectedFailures': [],
+            'unexpectedSuccesses': [],
+        }
 
-            try:
-                super(MPITestCase, self).run(result)
-            except Exception as err:
-                print str(err)
+        if result is None:
+            result = self.defaultTestResult()
+            startTestRun = getattr(result, 'startTestRun', None)
+            if startTestRun is not None:
+                startTestRun()
 
-            comm = MPI.Comm.Get_parent()
+        try:
+            if _under_mpirun():
+                self.comm = MPI.Comm.Get_parent()
 
-            info = {
-                'failures': [],
-                'errors': [],
-                'skipped': [],
-                'expectedFailures': [],
-                'unexpectedSuccesses': [],
-            }
-            for key in info.keys():
-                for tcase, msg in getattr(result, key):
-                    info[key].append(msg)
+                try:
+                    super(MPITestCase, self).run(result)
+                except Exception as err:
+                    print str(err)
 
-            # send results back to the mothership
-            comm.gather(info, root=0)
-                
-        else:
-            testpath = '.'.join((self.__class__.__module__, 
-                                 self.__class__.__name__,
-                                 self._orig_testmethod_name))
+                for key in info.keys():
+                    for tcase, msg in getattr(result, key):
+                        info[key].append(msg)
 
-            self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
-                                args=['-m', 'unittest', testpath], 
-                                maxprocs=self.NCPUS)
-            infos = []
+                # send results back to the mothership
+                self.comm.gather(info, root=0)
+                    
+            else:
+                testpath = '.'.join((self.__class__.__module__, 
+                                     self.__class__.__name__,
+                                     self._orig_testmethod_name))
 
-            # gather results from spawned MPI processes
-            self.comm.gather(infos, root=MPI.ROOT)
+                self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
+                                    args=['-m', 'openmdao.test.mpiunittest', testpath], 
+                                    maxprocs=self.NCPUS)
 
+                # gather results from spawned MPI processes
+                infos = self.comm.gather(info, root=MPI.ROOT)
+
+                self._testMethodName = self._orig_testmethod_name
+
+                # for key in info.keys():
+                #     rset = set()
+                #     for rmap in infos:
+                        
+                #         for k,v in rmap.items():
+                #             getattr(result, k).append((self,v))
+
+                # for i,rmap in enumerate(infos):
+                #     for k,v in rmap.items():
+                #         print ">>%d: %s: %s<<" % (i,k,v)
+        finally:
             self.comm.Disconnect()
 
-            for info in infos:
-                for k,v in info.items():
-                    getattr(result, _key2method[k])(self, v)
+if __name__ == '__main__':
+    args = sys.argv[1:]
+    testpath = args[0]
 
-            for i,info in enumerate(infos):
-                for k,v in info.items():
-                    print "%d: %s: %s" % (i,k,v)
+    parts = testpath.split('.')
 
-        
+    print "parts = %s" % parts
+
+    try:
+        method = parts[-1]
+        testcase_classname = parts[-2]
+        modname = '.'.join(parts[:-2])
+
+        print "mod = %s" % modname
+        print "tcase = %s" % testcase_classname
+        print "method = %s" % method
+
+        __import__(modname)
+        mod = sys.modules[modname]
+
+        tcase = getattr(mod, testcase_classname)(method)
+
+        result = tcase.defaultTestResult()
+
+        print "result initialized"
+
+    except Exception as err:
+        print str(err)
+        if _under_mpirun():
+            MPI.Comm.Get_parent().Disconnect()
+
+    print "running test case"
+    tcase.run(result)
+    
