@@ -64,11 +64,13 @@ class Sellar_MDA_subbed(Assembly):
         self.d2.z2 = 2.0
 
         self.connect('d1.y1', 'd2.y1')
-        self.connect('d2.y2', 'd1.y2')
+        #self.connect('d2.y2', 'd1.y2')
 
         self.add('subdriver', NewtonSolver())
         self.driver.workflow.add(['subdriver'])
         self.subdriver.workflow.add(['d1', 'd2'])
+        self.driver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y2 = d2.y2')
 
 
 class Sellar_MDA_Mixed(Assembly):
@@ -89,10 +91,12 @@ class Sellar_MDA_Mixed(Assembly):
         self.d2.z2 = 2.0
 
         self.connect('d1.y1', 'd2.y1')
-        self.connect('d2.y2', 'd1.y2')
+        #self.connect('d2.y2', 'd1.y2')
 
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
+        self.driver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y2 = d2.y2')
 
 class Sellar_MDA_Mixed_Flipped(Assembly):
 
@@ -112,10 +116,12 @@ class Sellar_MDA_Mixed_Flipped(Assembly):
         self.d2.z2 = 2.0
 
         self.connect('d1.y1', 'd2.y1')
-        self.connect('d2.y2', 'd1.y2')
+        #self.connect('d2.y2', 'd1.y2')
 
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
+        self.driver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y2 = d2.y2')
 
 class Sellar_MDA_None(Assembly):
 
@@ -135,10 +141,12 @@ class Sellar_MDA_None(Assembly):
         self.d2.z2 = 2.0
 
         self.connect('d1.y1', 'd2.y1')
-        self.connect('d2.y2', 'd1.y2')
+        #self.connect('d2.y2', 'd1.y2')
 
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
+        self.driver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y2 = d2.y2')
 
 
 
@@ -150,11 +158,12 @@ class Scalable_MDA(Assembly):
         self.add('d2', Discipline(prob_size=2))
 
         self.connect('d1.y_out', 'd2.y_in')
-        self.connect('d2.y_out', 'd1.y_in')
+        #self.connect('d2.y_out', 'd1.y_in')
 
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
-        self.driver.newton = True
+        self.driver.add_parameter('d1.y_in', low=-1e99, high=1e99)
+        self.driver.add_constraint('d1.y_in = d2.y_out')
 
 
 class Newton_SolverTestCase(unittest.TestCase):
@@ -168,22 +177,6 @@ class Newton_SolverTestCase(unittest.TestCase):
 
     def test_newton(self):
 
-        self.top.driver.newton = True
-        self.top.run()
-
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-
-    def test_newton_param_con(self):
-
-        self.top.disconnect('d2.y2')
-        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
-        self.top.driver.add_constraint('d1.y2 = d2.y2')
-        self.top.driver.newton = True
         self.top.run()
 
         assert_rel_error(self, self.top.d1.y1,
@@ -196,7 +189,6 @@ class Newton_SolverTestCase(unittest.TestCase):
     def test_newton_mixed(self):
 
         self.top = set_as_top(Sellar_MDA_Mixed())
-        self.top.driver.newton = True
 
         self.top.run()
 
@@ -210,7 +202,6 @@ class Newton_SolverTestCase(unittest.TestCase):
     def test_newton_mixed_flipped(self):
 
         self.top = set_as_top(Sellar_MDA_Mixed_Flipped())
-        self.top.driver.newton = True
 
         self.top.run()
 
@@ -224,26 +215,6 @@ class Newton_SolverTestCase(unittest.TestCase):
     def test_newton_none(self):
 
         self.top = set_as_top(Sellar_MDA_None())
-        self.top.driver.newton = True
-
-        self.top.run()
-
-        assert_rel_error(self, self.top.d1.y1,
-                               self.top.d2.y1,
-                               1.0e-4)
-        assert_rel_error(self, self.top.d1.y2,
-                               self.top.d2.y2,
-                               1.0e-4)
-
-    def test_newton_none_param_con(self):
-
-        self.top.disconnect('d2.y2')
-        self.top.driver.add_parameter('d1.y2', low=-100, high=100)
-        self.top.driver.add_constraint('d1.y2 = d2.y2')
-        self.top = set_as_top(Sellar_MDA_None())
-        self.top.driver.newton = True
-        self.top.driver.gradient_options.fd_step = 0.01
-        self.top.driver.gradient_options.fd_step_type = 'relative'
 
         self.top.run()
 
@@ -294,7 +265,6 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')
-        self.top.driver.newton = True
         self.top.driver.gradient_options.fd_step = 0.01
         self.top.driver.gradient_options.fd_step_type = 'relative'
 

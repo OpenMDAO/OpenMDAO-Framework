@@ -260,7 +260,10 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs])
+        # TODO FIXME - Input-Input connection deposits an extra output node
+        # in the graph. Bret will fix this, then we cah remove this hack.
+        inputs = self.list_inputs_and_states()
+        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs and n not in inputs])
 
         return outputs
 
