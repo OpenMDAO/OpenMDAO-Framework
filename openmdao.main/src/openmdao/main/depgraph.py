@@ -1019,7 +1019,6 @@ class DependencyGraph(nx.DiGraph):
         src2dests = {}
         dest2src = {}
         states = set()  # set of all states
-        resids = set()  # set of all residuals
 
         g = nx.DiGraph()
 
@@ -1028,10 +1027,6 @@ class DependencyGraph(nx.DiGraph):
             g.add_node(node, self.node[node].copy())  # copying metadata
             try:
                 states.update(['.'.join((node,s)) for s in getattr(scope, node).list_states()])
-            except AttributeError:
-                pass
-            try:
-                resids.update(['.'.join((node,r)) for r in getattr(scope, node).list_residuals()])
             except AttributeError:
                 pass
     
@@ -1043,7 +1038,11 @@ class DependencyGraph(nx.DiGraph):
             src2dests.setdefault(u, set()).add(v)
             dest2src[v] = u
 
-        # find any connected inputs used as srces and connect their
+        for u,v in drvconns:
+            if is_driver_node(self, u):
+                dest2src[v] = u
+
+        # find any connected inputs used as srcs and connect their
         # dests to the true source
         for src, dests in src2dests.items():
             if src in dest2src:
@@ -1066,21 +1065,16 @@ class DependencyGraph(nx.DiGraph):
                                          src, (dest,), 
                                          self.node[src].copy(), driver=True)
 
-        # make sure unconnected states and residuals are included in the graph.
+        # make sure unconnected states are included in the graph.
         # Name their nodes in the same manner as driver connctions, (name, (name,)).
-        depgraph = scope._depgraph # use depgraph here because unconnected
+        depgraph = scope._depgraph  # use depgraph to retrieve metadata here 
+                                    # because unconnected
                                     # vars have already been pruned from g
         for state in states:
             if state not in g:
                 self._add_collapsed_node(g, (state, (state,)),
                                          state, (state,),
                                          depgraph.node[state].copy())
-
-        # for resid in resids:
-        #     if resid not in g:
-        #         self._add_collapsed_node(g, (resid, (resid,)),
-        #                                  resid, (resid,),
-        #                                  depgraph.node[resid].copy())
 
         return g
 
