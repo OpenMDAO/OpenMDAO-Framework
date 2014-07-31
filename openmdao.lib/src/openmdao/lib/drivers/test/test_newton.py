@@ -149,7 +149,6 @@ class Sellar_MDA_None(Assembly):
         self.driver.add_constraint('d1.y2 = d2.y2')
 
 
-
 class Scalable_MDA(Assembly):
 
     def configure(self):
