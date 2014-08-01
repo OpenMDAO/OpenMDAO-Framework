@@ -64,9 +64,17 @@ class Multi(Component):
     out1 = Float(0, iotype="out")
     out2 = Float(0, iotype="out")
 
+    def __init__(self, *args, **kwargs):
+        super(Multi, self).__init__(*args, **kwargs)
+        self._set_input_callback('in1')
+        self._set_input_callback('in2')
+        
     def execute(self):
         self.out1 = self.in1/10.0
         self.out2 = self.in2/15.0
+        
+    def _input_updated(self, name, fullpath=None):
+        print "***** %s set to %s" % (name, getattr(self, name))
 
 
 class ArrayMulti(Component):
@@ -164,6 +172,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.add_parameter('simple.in1')
         self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
+        
         self.top.run()
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)

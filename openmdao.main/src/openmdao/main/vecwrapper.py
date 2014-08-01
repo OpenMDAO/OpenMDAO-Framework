@@ -106,38 +106,6 @@ class VecWrapperBase(object):
         view, start = self._info[name]
         return petsc_linspace(start, start+view.size)
 
-    def set_from_scope(self, scope, vnames=None):
-        """Get the named values from the given scope and set flattened
-        versions of them in our array.
-        """
-        if vnames is None:
-            vnames = self.keys()
-
-        for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    array_val[:] = scope.get_flattened_value(name[0])
-                else:
-                    array_val[:] = scope.get_flattened_value(name)
-
-    def set_to_scope(self, scope, vnames=None):
-        """Pull values for the given set of names out of our array
-        and set them into the given scope.
-        """
-        if vnames is None:
-            vnames = self.keys()
-
-        for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
-            if start is not None:
-                if isinstance(name, tuple):
-                    scope.set_flattened_value(name[0], array_val)
-                    for dest in name[1]:
-                        scope.set_flattened_value(dest, array_val)
-                else:
-                    scope.set_flattened_value(name, array_val)
-
     def set_to_vec(self, vec, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given array.
@@ -236,35 +204,84 @@ class VecWrapper(VecWrapperBase):
         self._info[resids[0]] = (view, start)
         self._subviews.add(resids[0])
 
+    def set_from_scope(self, scope, vnames=None):
+        """Get the named values from the given scope and set flattened
+        versions of them in our array.
+        """
+        if vnames is None:
+            vnames = self.keys()
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None:
+                if isinstance(name, tuple):
+                    array_val[:] = scope.get_flattened_value(name[0])
+                else:
+                    array_val[:] = scope.get_flattened_value(name)
+
+    def set_to_scope(self, scope, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given scope.
+        """
+        if vnames is None:
+            vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None:
+                if isinstance(name, tuple):
+                    scope.set_flattened_value(name[0], array_val)
+                    for dest in name[1]:
+                        scope.set_flattened_value(dest, array_val)
+                else:
+                    scope.set_flattened_value(name, array_val)
 
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):
 
-        flat_ins = system.flat(system._get_sized_inputs())
+        flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
-        for i, name in enumerate(flat_ins): #_flat_owned_args):
-            sz = system._var_meta[name]['size']
-            if sz > 0:
-                end += sz
-                self._info[name] = (self.array[start:end], start)
-                if end-start > self.array[start:end].size:
-                    raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-                                 (system.name,name, [start,end],self[name].size))
-                start += sz
+        # for i, name in enumerate(flat_ins): #_flat_owned_args):
+        #     sz = system._var_meta[name]['size']
+        #     if sz > 0:
+        #         end += sz
+        #         self._info[name] = (self.array[start:end], start)
+        #         if end-start > self.array[start:end].size:
+        #             raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+        #                          (system.name,name, [start,end],self[name].size))
+        #         start += sz
 
-        #for sub in system.simple_subsystems(local=True):
-            #for i, name in enumerate(sub._owned_args):
+        varkeys = system.variables.keys()
+        
+        #scatter_vars = set()
+
+        for sub in system.simple_subsystems(local=True):
+            for name in sub._in_nodes:
                 #if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
-                    #var = system.variables[name]
-                    #sz = var['size']
-                    #assert(sz == system.local_var_sizes[system.mpi.rank,i])
-                    #if sz > 0:
-                        #end += sz
-                        #self._info[name] = (self.array[start:end], start)
-                        #if end-start > self.array[start:end].size:
-                            #raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-                                         #(system.name,name, [start,end],self[name].size))
-                        #start += sz
+                if name in flat_ins and name not in self._info:
+                    var = system.variables[name]
+                    sz = var['size']
+                    assert(sz == system.local_var_sizes[system.mpi.rank,varkeys.index(name)])
+                    if sz > 0:
+                        #scatter_vars.add(name)
+                        end += sz
+                        self._info[name] = (self.array[start:end], start)
+                        if end-start > self.array[start:end].size:
+                            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                         (system.name,name, [start,end],self[name].size))
+                        start += sz
+
+        # # force our order to match order of vector vars
+        # for name, data in system.vector_vars.items():
+        #     if name in scatter_vars:
+        #         end += sz
+        #         self._info[name] = (self.array[start:end], start)
+        #         if end-start > self.array[start:end].size:
+        #             raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+        #                          (system.name,name, [start,end],self[name].size))
+        #         start += sz
 
         # # now add views for subvars that are subviews of their
         # # basevars
@@ -288,6 +305,25 @@ class InputVecWrapper(VecWrapperBase):
         #                                      (system.name, name,
         #                                      list(self.bounds(name)),
         #                                      sub_idx,self.array[sub_idx].size))
+
+    def set_to_scope(self, scope, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given scope.
+        """
+        if vnames is None:
+            vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None:
+                if isinstance(name, tuple):
+                    for dest in name[1]:
+                        scope.set_flattened_value(dest, array_val)
+                else:
+                    scope.set_flattened_value(name, array_val)
+
 
 class DataTransfer(object):
     """A wrapper object that manages data transfer between
@@ -418,6 +454,11 @@ class SerialScatter(object):
             #dk = self.dvec.keys()
             #for s,d in zip(self.src_idxs, self.dest_idxs):
                 #print "%s (%s) -> %s (%s)" % (sk[s], srcvec[s], dk[d], destvec[d])
+            #print ""
+            assert(len(self.dest_idxs) <= destvec.size)
+            assert(len(self.src_idxs) <= srcvec.size)
+            assert(len(self.src_idxs) <= len(self.dest_idxs))
+            
             destvec[self.dest_idxs] = srcvec[self.src_idxs]
             #self.svec.dump()
             #self.dvec.dump()

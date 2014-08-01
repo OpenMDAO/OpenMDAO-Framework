@@ -282,7 +282,7 @@ class Parameter(ParameterBase):
     def set(self, val, scope=None):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
-        mpiprint("setting param %s to %s" % (self.names, transval))
+        #mpiprint("setting param %s to %s" % (self.names, transval))
         self._expreval.set(transval, scope, force=True, tovector=True)
 
     def copy(self):
