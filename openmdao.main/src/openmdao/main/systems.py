@@ -28,7 +28,7 @@ def compound_setup_scatters(self):
     """ Defines a scatter for args at this system's level """
     if not self.is_active():
         return
-    mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
+    #mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
     var_sizes = self.local_var_sizes
     input_sizes = self.input_sizes
     rank = self.mpi.rank
@@ -73,10 +73,10 @@ def compound_setup_scatters(self):
         dest_partial = []
         scatter_conns = set()
         noflat_conns = set()  # non-flattenable vars
-        #for sub in subsystem.simple_subsystems():
-        #sub_inputs = subsystem._get_sized_inputs()
-        for node in self._owned_args:
-            if node in subsystem._in_nodes or node in subsystem._owned_args:
+        for sub in subsystem.simple_subsystems():
+            for node in sub._in_nodes:
+                if node not in self._owned_args or node in scatter_conns:
+                    continue
                 if node in noflats:
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
@@ -92,16 +92,17 @@ def compound_setup_scatters(self):
                     # the partial scatters correct, we need to reuse the
                     # destination indices instead of incrementing start and
                     # end each time we see that variable.
-                    if node in destmap:
-                        dest_idxs = destmap[node]
-                    else:
-                        end += arg_idxs.shape[0]
-                        dest_idxs = petsc_linspace(start, end)
-                        start += arg_idxs.shape[0]
-                        destmap[node] = dest_idxs
+                    # if node in destmap:
+                    #     dest_idxs = destmap[node]
+                    # else:
+                    #     end += arg_idxs.shape[0]
+                    #     dest_idxs = petsc_linspace(start, end)
+                    #     start += arg_idxs.shape[0]
+                    #     destmap[node] = dest_idxs
 
+                    dest_idxs = self.vec['p'].indices(node)
                     assert(all(src_idxs == self.vec['u'].indices(node)))
-                    assert(all(dest_idxs == self.vec['p'].indices(node)))
+                    #assert(all(dest_idxs == self.vec['p'].indices(node)))
 
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
@@ -123,6 +124,7 @@ def compound_setup_scatters(self):
 
     for sub in self.local_subsystems():
         sub.setup_scatters()
+
 
 class System(object):
     def __init__(self, scope, nodes, name):
@@ -203,13 +205,16 @@ class System(object):
         return [n for n in names if self._var_meta[n].get('flat')]
 
     def _get_owned_args(self):
-        args = []
+        args = set()
         for sub in self.simple_subsystems(local=True):
             for arg in sub._in_nodes:
-                if arg in self.variables and arg not in args and \
+                if arg in self.variables and \
                         (arg not in sub.variables or sub is self):
-                    args.append(arg)
-        return args
+                    args.add(arg)
+
+        # ensure that args are in same order that they appear in 
+        # variables
+        return [a for a in self.variables.keys() if a in args]
 
     def list_inputs_and_states(self):
         """Returns names of input variables (not collapsed edges)
@@ -355,7 +360,7 @@ class System(object):
 
         for vname in self._in_nodes:
             self._var_meta[vname] = self._get_var_info(vname)
-            if vname[0] == vname[1][0]: # add driver input or state
+            if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.'): # add driver input or state
                 self.variables[vname] = self._var_meta[vname]
 
         self._create_var_dicts()
@@ -387,7 +392,7 @@ class System(object):
         # TODO: determine how we want the user to specify indices
         #       for distributed inputs...
         self.arg_idx = OrderedDict()
-        for name in self.flat(self._get_sized_inputs()):
+        for name in self.flat(self._owned_args):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
@@ -434,18 +439,11 @@ class System(object):
         # local inputs
         self.input_sizes = numpy.zeros(size, int)
 
-        for arg in self.flat(self._get_sized_inputs()):
+        for arg in self.flat(self._owned_args):
             self.input_sizes[rank] += self._var_meta[arg]['size']
 
         if MPI:
             comm.Allgather(self.input_sizes[rank], self.input_sizes)
-
-    def _get_sized_inputs(self):
-        sized_inputs = []
-        # if self.local_subsystems():
-        #     sized_inputs.extend(self._in_nodes)
-        sized_inputs.extend(self._owned_args)
-        return sized_inputs
 
     def setup_vectors(self, arrays=None):
         """Creates vector wrapper objects to manage local and
@@ -475,25 +473,11 @@ class System(object):
 
         start, end = 0, 0
         for sub in self.local_subsystems():
-            # FIXME: not sure if driver systems with overlapping iteration sets
-            # will work at all in MPI, so for now, if MPI is active, assume
-            # no systems have any overlapping array views, else raise an exception.
-            #if MPI:
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
             end += sz
             if end-start > arrays['u'][start:end].size:
                 raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" %
                             (start,end,arrays['u'][start:end].size,self.name,sub.name))
-            ##else:
-            # subvecvars = sub.vector_vars.keys()
-            # if subvecvars:
-            #     start, end = self.vec['u'].bounds(subvecvars)
-            # else:
-            #     start, end = 0, 0
-
-            # if end-start != numpy.sum(sub.local_var_sizes[sub.mpi.rank, :]):
-            #     raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" %
-            #                        (start,end,arrays['u'][start:end].size,self.name,sub.name))
 
             subarrays = {}
             for n in ('u', 'f', 'du', 'df'):
@@ -501,7 +485,6 @@ class System(object):
 
             sub.setup_vectors(subarrays)
 
-            #if MPI:
             start += sz
 
         return self.vec
@@ -545,7 +528,7 @@ class System(object):
 
         return scatter
 
-    def dump(self, nest=0, stream=sys.stdout):
+    def dump(self, nest=0, stream=sys.stdout, verbose=False):
         """Prints out a textual representation of the collapsed
         execution graph (with groups of component nodes collapsed
         into Systems).  It shows which
@@ -583,13 +566,14 @@ class System(object):
                                            self.input_sizes[self.mpi.rank]))
 
         for v, (arr, start) in self.vec['u']._info.items():
-            stream.write(" "*(nest+2))
-            if v in self.vec['p']:
-                stream.write("u['%s'] (%s)   p['%s'] (%s)\n" %
-                                 (v, list(self.vec['u'].bounds([v])),
-                                  v, list(self.vec['p'].bounds([v]))))
-            else:
-                stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds([v]))))
+            if verbose or v not in self.vec['u']._subviews:
+                stream.write(" "*(nest+2))
+                if v in self.vec['p']:
+                    stream.write("u['%s'] (%s)   p['%s'] (%s)\n" %
+                                     (v, list(self.vec['u'].bounds([v])),
+                                      v, list(self.vec['p'].bounds([v]))))
+                else:
+                    stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds([v]))))
 
         for v, (arr, start) in self.vec['p']._info.items():
             if v not in self.vec['u']:
@@ -775,7 +759,7 @@ class SimpleSystem(System):
     def setup_scatters(self):
         if not self.is_active():
             return
-        mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
+        #mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
         rank = self.mpi.rank
         start = numpy.sum(self.input_sizes[:rank])
         end = numpy.sum(self.input_sizes[:rank+1])
@@ -980,8 +964,9 @@ class CompoundSystem(System):
             return self.all_subsystems()
 
     def all_subsystems(self):
-        return [data['system'] for node, data in
-                     self.graph.nodes_iter(data=True)]
+        return self._local_subsystems + [data['system'] for node, data in
+                                         self.graph.nodes_iter(data=True) if
+                                          data['system'] not in self._local_subsystems]
 
     def simple_subsystems(self, local=False):
         for s in self.subsystems(local=local):
@@ -1328,7 +1313,8 @@ class SolverSystem(SimpleSystem):  # Implicit
         self._comp.setup_communicators(self.mpi.comm)
 
     def setup_scatters(self):
-        super(SolverSystem, self).setup_scatters()
+        #super(SolverSystem, self).setup_scatters()
+        compound_setup_scatters(self)
         self._comp.setup_scatters()
 
     def local_subsystems(self):
