@@ -243,7 +243,7 @@ class InputVecWrapper(VecWrapperBase):
 
         flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
-        varkeys = system.variables.keys()
+        varkeys = system.vector_vars.keys()
         
         for sub in system.simple_subsystems(local=True):
             for name in sub._in_nodes:
