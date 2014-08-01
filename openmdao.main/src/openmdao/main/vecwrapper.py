@@ -243,23 +243,10 @@ class InputVecWrapper(VecWrapperBase):
 
         flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
-        # for i, name in enumerate(flat_ins): #_flat_owned_args):
-        #     sz = system._var_meta[name]['size']
-        #     if sz > 0:
-        #         end += sz
-        #         self._info[name] = (self.array[start:end], start)
-        #         if end-start > self.array[start:end].size:
-        #             raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-        #                          (system.name,name, [start,end],self[name].size))
-        #         start += sz
-
         varkeys = system.variables.keys()
         
-        #scatter_vars = set()
-
         for sub in system.simple_subsystems(local=True):
             for name in sub._in_nodes:
-                #if (sub is system and name in sub.variables) or (name in system.variables and name not in sub.variables):
                 if name in flat_ins and name not in self._info:
                     var = system.variables[name]
                     sz = var['size']
@@ -272,16 +259,6 @@ class InputVecWrapper(VecWrapperBase):
                             raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                          (system.name,name, [start,end],self[name].size))
                         start += sz
-
-        # # force our order to match order of vector vars
-        # for name, data in system.vector_vars.items():
-        #     if name in scatter_vars:
-        #         end += sz
-        #         self._info[name] = (self.array[start:end], start)
-        #         if end-start > self.array[start:end].size:
-        #             raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-        #                          (system.name,name, [start,end],self[name].size))
-        #         start += sz
 
         # # now add views for subvars that are subviews of their
         # # basevars

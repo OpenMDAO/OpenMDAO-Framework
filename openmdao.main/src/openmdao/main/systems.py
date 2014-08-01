@@ -74,11 +74,9 @@ def compound_setup_scatters(self):
         scatter_conns = set()
         noflat_conns = set()  # non-flattenable vars
         for sub in subsystem.simple_subsystems():
-        #for node in self._owned_args:
             for node in sub._in_nodes:
                 if node not in self._owned_args or node in scatter_conns:
                     continue
-            #if node in subsystem._in_nodes or node in subsystem._owned_args:
                 if node in noflats:
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
