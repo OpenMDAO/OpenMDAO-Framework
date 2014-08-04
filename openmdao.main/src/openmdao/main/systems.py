@@ -212,7 +212,7 @@ class System(object):
                         (arg not in sub.variables or sub is self):
                     args.add(arg)
 
-        # ensure that args are in same order that they appear in 
+        # ensure that args are in same order that they appear in
         # variables
         return [a for a in self.variables.keys() if a in args]
 
@@ -265,7 +265,10 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs])
+        # TODO FIXME - Input-Input connection deposits an extra output node
+        # in the graph. Bret will fix this, then we cah remove this hack.
+        inputs = self.list_inputs_and_states()
+        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs and n not in inputs])
 
         return outputs
 
@@ -1066,12 +1069,12 @@ class CompoundSystem(System):
     def applyJ(self):
         """ Delegate to subsystems """
 
-        if self.mode == 'forward':
-            self.scatter('u', 'p')
+        #if self.mode == 'forward':
+        #    self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
             subsystem.applyJ()
-        if self.mode == 'adjoint':
-            self.scatter('u', 'p')
+        #if self.mode == 'adjoint':
+        #    self.scatter('du', 'dp')
 
     def stop(self):
         for s in self.all_subsystems():
