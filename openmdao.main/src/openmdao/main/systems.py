@@ -107,7 +107,7 @@ def compound_setup_scatters(self):
                         scatter_conns.add(node)
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
-                        
+
                     if node not in scatter_conns_full:
                         scatter_conns_full.add(node)
                         src_full.append(src_idxs)
