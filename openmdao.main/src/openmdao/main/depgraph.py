@@ -1042,12 +1042,25 @@ class DependencyGraph(nx.DiGraph):
             if is_driver_node(self, u):
                 dest2src[v] = u
 
+        xtra_drv_conns = {}
+        to_remove = set()
         # find any connected inputs used as srcs and connect their
         # dests to the true source
         for src, dests in src2dests.items():
-            if src in dest2src:
+            if src in dest2src:  # src is also a destination (input used as output)
                 truesrc = dest2src[src]
-                src2dests[truesrc].update(dests)
+                if truesrc in src2dests:
+                    src2dests[truesrc].update(dests)
+                else:
+                    if truesrc not in xtra_drv_conns:
+                        xtra_drv_conns[truesrc] = {}
+                    xtra_drv_conns[truesrc].setdefault(src,[]).extend(dests)
+                # remove outgoing edges from the src since we've moved them to
+                # the true src
+                to_remove.add(src)
+
+        for name in to_remove:
+            del src2dests[name]
 
         for src, dests in src2dests.items():
             newname = (src,tuple(dests))
@@ -1057,9 +1070,22 @@ class DependencyGraph(nx.DiGraph):
         # param/obj/constraint nodes as (src,(src,)), or (dest, (dest,))
         for src,dest in drvconns:
             if is_driver_node(self, src):
-                self._add_collapsed_node(g, (dest, (dest,)), 
+                if src in xtra_drv_conns:  # 
+                    xtra_dests = xtra_drv_conns[src][dest]
+                    dests = tuple([dest]+xtra_dests)
+                else:
+                    xtra_dests = []
+                    dests = (dest,)
+
+                nodename = (dest, dests)
+                self._add_collapsed_node(g, nodename, 
                                          src, (dest,), 
                                          self.node[dest].copy(), driver=True)
+
+                # any extra dests now need to be connected to their
+                # corresponding components
+                for d in xtra_dests:
+                    g.add_edge(nodename, self._get_compname(d))
             else:
                 self._add_collapsed_node(g, (src, (src,)), 
                                          src, (dest,), 
@@ -1921,7 +1947,7 @@ def get_node_boundary(g, nodes):
     """
     ins, outs = get_edge_boundary(g, nodes)
     
-    return [u for u,v in ins], [v for u,v in outs]
+    return set([u for u,v in ins]), set([v for u,v in outs])
      
 def collapse_nodes(g, collapsed_name, nodes):
     """Collapse the given set of nodes into a single

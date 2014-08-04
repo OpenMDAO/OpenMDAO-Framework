@@ -7,7 +7,7 @@ import sys
 
 import numpy
 
-from unittest import TestCase, SkipTest
+from unittest import TestCase, TestResult, SkipTest
 from openmdao.util.fileutil import get_module_path
 
 try:
@@ -25,6 +25,12 @@ def _under_mpirun():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
             return True
     return False
+
+class MPITestResult(TestResult):
+    def __init__(self, stream=None, descriptions=None, verbosity=None):
+        
+    def addError(self, test, err):
+        ???
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
@@ -98,12 +104,12 @@ class MPITestCase(TestCase):
 
                 self._testMethodName = self._orig_testmethod_name
 
-                # for key in info.keys():
-                #     rset = set()
-                #     for rmap in infos:
+                for key in info.keys():
+                    rset = set()
+                    for rmap in infos:
                         
-                #         for k,v in rmap.items():
-                #             getattr(result, k).append((self,v))
+                        for k,v in rmap.items():
+                            getattr(result, k).append((self,v))
 
                 # for i,rmap in enumerate(infos):
                 #     for k,v in rmap.items():

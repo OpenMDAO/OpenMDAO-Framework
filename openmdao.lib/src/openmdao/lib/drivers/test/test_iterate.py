@@ -164,6 +164,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.add_parameter('simple.in1')
         self.top.driver.add_parameter('simple.in2')
         self.top.driver.tolerance = .02
+        
         self.top.run()
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)

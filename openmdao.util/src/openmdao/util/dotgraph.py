@@ -263,7 +263,7 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
 
     #os.remove(dotfile)
 
-def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=False, workflow=False):
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False):
     if IAssembly.providedBy(obj):
         if obj.name == '':
             obj.name = 'top'
