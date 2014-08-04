@@ -701,7 +701,7 @@ class System(object):
 
         return self.ln_solver.solve(inputs, outputs)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -794,7 +794,7 @@ class SimpleSystem(System):
 
         self.J = self._comp.linearize(first=True)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -888,7 +888,7 @@ class InVarSystem(ExplicitSystem):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -909,7 +909,7 @@ class OutVarSystem(ExplicitSystem):
         if self.is_active():
             self.vec['u'].set_to_scope(self.scope, self._nodes)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -1063,15 +1063,15 @@ class CompoundSystem(System):
         for subsystem in self.local_subsystems():
             subsystem.apply_F()
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Delegate to subsystems """
 
-        #if self.mode == 'forward':
-        #    self.scatter('du', 'dp')
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ()
-        #if self.mode == 'adjoint':
-        #    self.scatter('du', 'dp')
+            subsystem.applyJ(coupled)
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
 
     def stop(self):
         for s in self.all_subsystems():
@@ -1323,6 +1323,12 @@ class SolverSystem(SimpleSystem):  # Implicit
     def simple_subsystems(self, local=False):
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
+
+    def applyJ(self, coupled=False):
+        """ Delegate to subsystems """
+
+        for subsystem in self.local_subsystems():
+            subsystem.applyJ(coupled)
 
 
 class InnerAssemblySystem(SerialSystem):
