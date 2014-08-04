@@ -248,10 +248,11 @@ class SellarMDF(Assembly):
 
 class BasicMPITests(MPITestCase):
 
-    NCPUS = 4
+    N_PROCS = 4
 
     def test_sellar(self):
-        top, expected = _get_modelsellar()
+        top = set_as_top(SellarMDF(parallel=False, use_params=False))
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
 
@@ -266,58 +267,3 @@ class BasicMPITests(MPITestCase):
 if __name__ == '__main__':
     import unittest
     unittest.main()
-
-    # import sys
-    # import traceback
-
-    # """
-    # To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
-    # where modelname is whatever comes after _get_model in the various _get_model* functions above.
-    # """
-
-    # run = False
-    # mname = ''
-
-    # for arg in sys.argv[1:]:
-    #     if arg.startswith('--run'):
-    #         run = True
-    #     elif arg.startswith('--rank'):
-    #         set_print_rank(int(arg.split('=',1)[1]))
-    #     elif not arg.startswith('-'):
-    #         mname = arg
-
-    # ret = globals().get('_get_model%s' % mname)()
-    # if isinstance(ret, tuple):
-    #     top, expected = ret
-    # else:
-    #     top = ret
-    #     expected = None
-
-    # #dump_iteration_tree(top)
-
-    # try:
-    #     if not run:
-    #         top._setup()
-    #         mpiprint(top.driver.workflow._system.dump(stream=None))
-
-    #         mpiprint("setup DONE")
-
-    #     if run:
-    #         mpiprint('-'*50)
-    #         top.run()
-
-    #         mpiprint('-'*50)
-    #         #mpiprint(top.driver.workflow._system.dump(stream=None))
-
-    #         if expected:
-    #             mpiprint('-'*50)
-    #             mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
-    #                                                            "Expected",
-    #                                                            "Actual",
-    #                                                            "Error"))
-    #             for name, expval in expected.items():
-    #                 val = top.get(name)
-    #                 err = expval - val
-    #                 mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
-    # except Exception as err:
-    #     mpiprint(traceback.format_exc())
