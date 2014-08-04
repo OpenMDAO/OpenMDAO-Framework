@@ -102,6 +102,9 @@ class MPITestCase(TestCase):
 
                 self._testMethodName = self._orig_testmethod_name
 
+                # for each type of error or skip, loop over
+                # the results from all of the MPI procs we
+                # spawned and keep the unique ones.
                 for key in info.keys():
                     rset = set()
                     for i,rmap in enumerate(infos):
@@ -109,33 +112,39 @@ class MPITestCase(TestCase):
                         for v in val:
                             if v and v not in rset:
                                 rset.add(v)
-                                getattr(result, key).append((self, v))
+                                getattr(result, key).append((self, "{%d} %s" % (i, v)))
         finally:
             self.comm.Disconnect()
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    testpath = args[0]
+    if _under_mpirun():
+        args = sys.argv[1:]
+        testpath = args[0]
 
-    parts = testpath.split('.')
+        parts = testpath.split('.')
 
-    try:
-        method = parts[-1]
-        testcase_classname = parts[-2]
-        modname = '.'.join(parts[:-2])
+        try:
+            method = parts[-1]
+            testcase_classname = parts[-2]
+            modname = '.'.join(parts[:-2])
 
-        __import__(modname)
-        mod = sys.modules[modname]
+            __import__(modname)
+            mod = sys.modules[modname]
 
-        tcase = getattr(mod, testcase_classname)(method)
+            # Find the TestCase derived class in the 
+            # specified module and create an instance
+            tcase = getattr(mod, testcase_classname)(method)
 
-        result = tcase.defaultTestResult()
+            result = tcase.defaultTestResult()
 
-    except Exception as err:
-        print str(err)
-        if _under_mpirun():
-            MPI.Comm.Get_parent().Disconnect()
+        except Exception as err:
+            print str(err)
+            if _under_mpirun():
+                MPI.Comm.Get_parent().Disconnect()
 
-    tcase.run(result)
+        # run the test case, which will report its
+        # results back to the process that spawned this
+        # MPI process.
+        tcase.run(result)
     
