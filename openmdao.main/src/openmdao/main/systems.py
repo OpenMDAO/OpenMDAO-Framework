@@ -107,7 +107,7 @@ def compound_setup_scatters(self):
                         scatter_conns.add(node)
                         src_partial.append(src_idxs)
                         dest_partial.append(dest_idxs)
-                        
+
                     if node not in scatter_conns_full:
                         scatter_conns_full.add(node)
                         src_full.append(src_idxs)
@@ -1329,8 +1329,12 @@ class SolverSystem(SimpleSystem):  # Implicit
     def applyJ(self, coupled=False):
         """ Delegate to subsystems """
 
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ(coupled)
+            subsystem.applyJ(coupled=True)
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
 
 
 class InnerAssemblySystem(SerialSystem):
