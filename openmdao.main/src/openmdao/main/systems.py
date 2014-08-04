@@ -1327,8 +1327,12 @@ class SolverSystem(SimpleSystem):  # Implicit
     def applyJ(self, coupled=False):
         """ Delegate to subsystems """
 
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ(coupled)
+            subsystem.applyJ(coupled=True)
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
 
 
 class InnerAssemblySystem(SerialSystem):
