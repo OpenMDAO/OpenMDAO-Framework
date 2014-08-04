@@ -212,7 +212,7 @@ class System(object):
                         (arg not in sub.variables or sub is self):
                     args.add(arg)
 
-        # ensure that args are in same order that they appear in 
+        # ensure that args are in same order that they appear in
         # variables
         return [a for a in self.variables.keys() if a in args]
 
@@ -1069,12 +1069,12 @@ class CompoundSystem(System):
     def applyJ(self):
         """ Delegate to subsystems """
 
-        if self.mode == 'forward':
-            self.scatter('u', 'p')
+        #if self.mode == 'forward':
+        #    self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
             subsystem.applyJ()
-        if self.mode == 'adjoint':
-            self.scatter('u', 'p')
+        #if self.mode == 'adjoint':
+        #    self.scatter('du', 'dp')
 
     def stop(self):
         for s in self.all_subsystems():
