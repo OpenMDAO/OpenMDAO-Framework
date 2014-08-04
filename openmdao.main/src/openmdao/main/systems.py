@@ -65,7 +65,6 @@ def compound_setup_scatters(self):
     start = end = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
     #simple_subs = set(self.simple_subsystems())
-    destmap = {}
 
     for subsystem in self.all_subsystems():
         #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
@@ -104,12 +103,15 @@ def compound_setup_scatters(self):
                     assert(all(src_idxs == self.vec['u'].indices(node)))
                     #assert(all(dest_idxs == self.vec['p'].indices(node)))
 
-                    scatter_conns.add(node)
-                    scatter_conns_full.add(node)
-                    src_partial.append(src_idxs)
-                    dest_partial.append(dest_idxs)
-                    src_full.append(src_idxs)
-                    dest_full.append(dest_idxs)
+                    if node not in scatter_conns:
+                        scatter_conns.add(node)
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
+                        
+                    if node not in scatter_conns_full:
+                        scatter_conns_full.add(node)
+                        src_full.append(src_idxs)
+                        dest_full.append(dest_idxs)
 
         # mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
         #                                                       src_partial, dest_partial))
