@@ -28,9 +28,15 @@ def _under_mpirun():
 
 class MPITestResult(TestResult):
     def __init__(self, stream=None, descriptions=None, verbosity=None):
-        
+        super(MPITestResult, self).__init__(stream, descriptions, verbosity)
+        self._raw_errors = []
+        self._raw_failures = []
+
     def addError(self, test, err):
-        ???
+        self._raw_errors.append((test, err))
+
+    def addFailure(self, test, err):
+        self._raw_failures.append((test, err))
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
@@ -68,14 +74,16 @@ class MPITestCase(TestCase):
             'unexpectedSuccesses': [],
         }
 
-        if result is None:
-            result = self.defaultTestResult()
-            startTestRun = getattr(result, 'startTestRun', None)
-            if startTestRun is not None:
-                startTestRun()
+        infomap = {
+            'failures': '_raw_failures',
+            'errors': '_raw_errors',
+        }
 
         try:
             if _under_mpirun():
+                result = MPITestResult()
+                result.startTestRun()
+
                 self.comm = MPI.Comm.Get_parent()
 
                 try:
@@ -84,13 +92,19 @@ class MPITestCase(TestCase):
                     print str(err)
 
                 for key in info.keys():
-                    for tcase, msg in getattr(result, key):
-                        info[key].append(msg)
+                    for tcase, data in getattr(result, infomap.get(key,key)):
+                        info[key].append(data)
 
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
                     
             else:
+                if result is None:
+                    result = self.defaultTestResult()
+                    startTestRun = getattr(result, 'startTestRun', None)
+                    if startTestRun is not None:
+                        startTestRun()
+
                 testpath = '.'.join((self.__class__.__module__, 
                                      self.__class__.__name__,
                                      self._orig_testmethod_name))
