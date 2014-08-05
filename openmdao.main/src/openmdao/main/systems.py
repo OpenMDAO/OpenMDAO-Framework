@@ -12,7 +12,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver
+from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver, IPseudoComp
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, get_all_deps, gsort, \
                                    collapse_nodes
@@ -250,7 +250,7 @@ class System(object):
                         inputs.add(dest)
         return list(inputs)
 
-    def list_outputs(self, local=False):
+    def list_outputs(self, coupled=False):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
@@ -268,7 +268,7 @@ class System(object):
                     outputs.append(src)
         return outputs
 
-    def list_outputs_and_residuals(self, local=False):
+    def list_outputs_and_residuals(self):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children. This list also
         contains the residuals.
@@ -281,9 +281,8 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(local=local) 
+        outputs.extend([n for n in self.list_outputs(coupled=False) 
                                 if n not in outputs])
-
         return outputs
 
     def get_size(self, names):
@@ -827,7 +826,7 @@ class SimpleSystem(System):
             comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.list_outputs():
+            for var in self.list_outputs(coupled):
                 vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
@@ -842,7 +841,7 @@ class SimpleSystem(System):
             comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.list_outputs():
+            for var in self.list_outputs(coupled):
                 vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
@@ -1209,7 +1208,9 @@ class NonSolverDriverSystem(ExplicitSystem):
 
 
 class SolverSystem(SimpleSystem):  # Implicit
-    """A System for a Solver component."""
+    """A System for a Solver component. While it inherits from a SimpleSystem,
+    much of the behavior is like a CompoundSystem, particularly variable
+    propagation."""
 
     def __init__(self, driver):
         driver.setup_systems()
@@ -1297,6 +1298,18 @@ class InnerAssemblySystem(SerialSystem):
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
+
+class ConstraintSystem(ExplicitSystem):
+    ''' Special system for a constraint, used to capture implicit behavior in
+    a coupled solution. '''
+
+    def list_outputs(self, coupled=False):
+        ''' If we are in a subsolver, then are output is actually a residual '''
+        if coupled is True:
+            return []
+        return super(ConstraintSystem, self).list_outputs()
+
+
 def _create_simple_sys(scope, comp):
 
     if has_interface(comp, ISolver):
@@ -1305,6 +1318,8 @@ def _create_simple_sys(scope, comp):
         sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, comp.name)
+    elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint':
+        sub = ConstraintSystem(scope, comp.name)
     elif has_interface(comp, IImplicitComponent):
         sub = SimpleSystem(scope, comp.name)
     else:

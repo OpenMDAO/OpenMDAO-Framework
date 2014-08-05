@@ -8,7 +8,8 @@ from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
                                         flattened_value, get_val_and_index, get_index
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent, IVariableTree, IAssembly
+from openmdao.main.interfaces import implements, IComponent, IVariableTree, \
+                                     IAssembly, IPseudoComp
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info
@@ -83,7 +84,7 @@ class PseudoComponent(object):
     This fake component can be added to a dependency graph and executed
     along with 'real' components.
     """
-    implements(IComponent)
+    implements(IComponent, IPseudoComp)
 
     def __init__(self, parent, srcexpr, destexpr=None,
                  translate=True, pseudo_type=None):
@@ -441,11 +442,11 @@ class PseudoComponent(object):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system, pseudo=True)
+        applyJ(system)
 
     def applyJT(self, system):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system, pseudo=True)
+        applyJT(system)
 
