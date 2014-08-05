@@ -13,11 +13,12 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
                                             Discipline1, Discipline2
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.hasparameters import HasParameters
-from openmdao.util.decorators import add_delegate
 from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.main.datatypes.api import Float
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.testutil import assert_rel_error
+from openmdao.util.decorators import add_delegate
 
 
 class Sellar_MDA(Assembly):
@@ -307,6 +308,51 @@ class Newton_SolverTestCase(unittest.TestCase):
         top.driver.add_constraint('comp.y = 1.0')
 
         top.run()
+
+    def test_newton_nested(self):
+        # Make sure derivatives across the newton-solved system are correct.
+
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+
+        top.add('d1', Discipline1_WithDerivatives())
+        top.d1.x1 = 1.0
+        top.d1.y1 = 1.0
+        top.d1.y2 = 1.0
+        top.d1.z1 = 5.0
+        top.d1.z2 = 2.0
+
+        top.add('d2', Discipline2_WithDerivatives())
+        top.d2.y1 = 1.0
+        top.d2.y2 = 1.0
+        top.d2.z1 = 5.0
+        top.d2.z2 = 2.0
+
+        top.connect('d1.y1', 'd2.y1')
+
+        top.add('solver', NewtonSolver())
+        top.solver.workflow.add(['d1', 'd2'])
+        top.solver.add_parameter('d1.y2', low=-1e99, high=1e99)
+        top.solver.add_constraint('d1.y2 = d2.y2')
+
+        top.driver.workflow.add(['solver'])
+        top.driver.add_parameter('d1.z1', low=-100, high=100)
+        top.driver.add_objective('d1.y1 + d1.y2')
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+
+        J = top.driver.workflow.calc_gradient(mode='fd')
+        print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+
 
 if __name__ == "__main__":
     unittest.main()

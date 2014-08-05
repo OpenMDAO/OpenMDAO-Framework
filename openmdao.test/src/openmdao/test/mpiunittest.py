@@ -26,20 +26,15 @@ def _under_mpirun():
             return True
     return False
 
-class MPITestResult(TestResult):
-    def __init__(self, stream=None, descriptions=None, verbosity=None):
-        
-    def addError(self, test, err):
-        ???
 
 class MPITestCase(TestCase):
     """A base class for all TestCases that are
     intended to run under MPI.
     """
-    # A class attribute 'NCPUS' must be defined
+    # A class attribute 'N_PROCS' must be defined
     # for each MPITestCase class in order to 
     # know how big to make the MPI communicator.
-    # NCPUS = 4
+    # N_PROCS = 4
     def __init__(self, methodName='runTest'):
         super(MPITestCase, self).__init__(methodName)
 
@@ -64,8 +59,6 @@ class MPITestCase(TestCase):
             'failures': [],
             'errors': [],
             'skipped': [],
-            'expectedFailures': [],
-            'unexpectedSuccesses': [],
         }
 
         if result is None:
@@ -84,8 +77,8 @@ class MPITestCase(TestCase):
                     print str(err)
 
                 for key in info.keys():
-                    for tcase, msg in getattr(result, key):
-                        info[key].append(msg)
+                    for tcase, data in getattr(result, key):
+                        info[key].append(data)
 
                 # send results back to the mothership
                 self.comm.gather(info, root=0)
@@ -97,57 +90,61 @@ class MPITestCase(TestCase):
 
                 self.comm = MPI.COMM_SELF.Spawn(sys.executable, 
                                     args=['-m', 'openmdao.test.mpiunittest', testpath], 
-                                    maxprocs=self.NCPUS)
+                                    maxprocs=self.N_PROCS)
 
                 # gather results from spawned MPI processes
                 infos = self.comm.gather(info, root=MPI.ROOT)
 
+                try:
+                    super(MPITestCase, self).run(result)
+                except Exception as err:
+                    print str(err)
+
                 self._testMethodName = self._orig_testmethod_name
 
+                # for each type of error or skip, loop over
+                # the results from all of the MPI procs we
+                # spawned and keep the unique ones.
                 for key in info.keys():
                     rset = set()
-                    for rmap in infos:
-                        
-                        for k,v in rmap.items():
-                            getattr(result, k).append((self,v))
-
-                # for i,rmap in enumerate(infos):
-                #     for k,v in rmap.items():
-                #         print ">>%d: %s: %s<<" % (i,k,v)
+                    for i,rmap in enumerate(infos):
+                        val = rmap[key]
+                        for v in val:
+                            if v and v not in rset:
+                                rset.add(v)
+                                getattr(result, key).append((self, "{%d} %s" % (i, v)))
         finally:
             self.comm.Disconnect()
 
+
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    testpath = args[0]
+    if _under_mpirun():
+        args = sys.argv[1:]
+        testpath = args[0]
 
-    parts = testpath.split('.')
+        parts = testpath.split('.')
 
-    print "parts = %s" % parts
+        try:
+            method = parts[-1]
+            testcase_classname = parts[-2]
+            modname = '.'.join(parts[:-2])
 
-    try:
-        method = parts[-1]
-        testcase_classname = parts[-2]
-        modname = '.'.join(parts[:-2])
+            __import__(modname)
+            mod = sys.modules[modname]
 
-        print "mod = %s" % modname
-        print "tcase = %s" % testcase_classname
-        print "method = %s" % method
+            # Find the TestCase derived class in the 
+            # specified module and create an instance
+            tcase = getattr(mod, testcase_classname)(method)
 
-        __import__(modname)
-        mod = sys.modules[modname]
+            result = tcase.defaultTestResult()
 
-        tcase = getattr(mod, testcase_classname)(method)
+        except Exception as err:
+            print str(err)
+            if _under_mpirun():
+                MPI.Comm.Get_parent().Disconnect()
 
-        result = tcase.defaultTestResult()
-
-        print "result initialized"
-
-    except Exception as err:
-        print str(err)
-        if _under_mpirun():
-            MPI.Comm.Get_parent().Disconnect()
-
-    print "running test case"
-    tcase.run(result)
+        # run the test case, which will report its
+        # results back to the process that spawned this
+        # MPI process.
+        tcase.run(result)
     

@@ -1,11 +1,11 @@
 
-import time
-
 import numpy as np
 
-from openmdao.main.api import Assembly, dump_iteration_tree, Component, Driver, set_as_top
-from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.mpiwrap import mpiprint, set_print_rank
+from openmdao.util.testutil import assert_rel_error
+from openmdao.test.mpiunittest import MPITestCase
+from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.datatypes.api import Float
+from openmdao.main.mpiwrap import mpiprint
 from openmdao.main.test.test_derivatives import SimpleDriver
 
 class Paraboloid(Component):
@@ -43,88 +43,46 @@ class Paraboloid(Component):
         return input_keys, output_keys
 
 
-def _get_modelsimple():
-    """simple 1 component test"""
-    top = set_as_top(Assembly())
-    top.add('comp', Paraboloid())
-    top.add('driver', SimpleDriver())
-    top.driver.workflow.add(['comp'])
-    top.driver.add_parameter('comp.x', low=-1000, high=1000)
-    top.driver.add_parameter('comp.y', low=-1000, high=1000)
-    top.driver.add_objective('comp.f_xy')
+class MPITests(MPITestCase):
 
-    top.comp.x = 3
-    top.comp.y = 5
+    N_PROCS = 2
 
-    return top
+    def test_simple(self):
+        top = set_as_top(Assembly())
+        top.add('comp', Paraboloid())
+        top.add('driver', SimpleDriver())
+        top.driver.workflow.add(['comp'])
+        top.driver.add_parameter('comp.x', low=-1000, high=1000)
+        top.driver.add_parameter('comp.y', low=-1000, high=1000)
+        top.driver.add_objective('comp.f_xy')
+
+        top.comp.x = 3
+        top.comp.y = 5
+
+        top.run()
+
+        # if our rank >= required cpus, nothing will actually
+        # run so the numbers will be wrong, so skip that case
+        if self.comm.rank == 0:
+            self.assertEqual(top.comp.f_xy, 93.)
+            self.assertEqual(top._pseudo_0.out0, 93.)
+
+            J = top.driver.workflow.calc_gradient(mode='forward')
+
+            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+            J = top.driver.workflow.calc_gradient(mode='adjoint')
+
+            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
+            J = top.driver.workflow.calc_gradient(mode='fd')
+
+            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
 
 if __name__ == '__main__':
-    import sys
-    import traceback
-    from openmdao.main.mpiwrap import MPI
-
-    """
-    To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
-    where modelname is whatever comes after _get_model in the various _get_model* functions above.
-    """
-
-    run = False
-    mname = ''
-
-    for arg in sys.argv[1:]:
-        if arg.startswith('--run'):
-            run = True
-        elif arg.startswith('--rank'):
-            set_print_rank(int(arg.split('=',1)[1]))
-        elif not arg.startswith('-'):
-            mname = arg
-
-    ret = globals().get('_get_model%s' % mname)()
-    if isinstance(ret, tuple):
-        top, expected = ret
-    else:
-        top = ret
-        expected = None
-
-    #dump_iteration_tree(top)
-
-    try:
-        if not run:
-            top._setup()
-            mpiprint(top.driver.workflow._system.dump(stream=None))
-
-            mpiprint("setup DONE")
-
-        if run:
-            mpiprint('-'*50)
-            top.run()
-
-            mpiprint('-'*50)
-
-            mpiprint(top.driver.workflow._system.vec['df'].keys())
-
-            J = top.driver.workflow.calc_gradient(mode='forward')
-            mpiprint('Gradient - forward')
-            mpiprint(J)
-
-            J = top.driver.workflow.calc_gradient(mode='adjoint')
-            mpiprint('Gradient - adjoint')
-            mpiprint(J)
-
-            J = top.driver.workflow.calc_gradient(mode='fd')
-            mpiprint('Gradient - finite difference')
-            mpiprint(J)
-
-            if expected:
-                mpiprint('-'*50)
-                mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
-                                                               "Expected",
-                                                               "Actual",
-                                                               "Error"))
-                for name, expval in expected.items():
-                    val = top.get(name)
-                    err = expval - val
-                    mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
-    except Exception as err:
-        mpiprint(traceback.format_exc())
+    import unittest
+    unittest.main()

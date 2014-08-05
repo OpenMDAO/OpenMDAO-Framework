@@ -197,17 +197,18 @@ class PETSc_KSP(LinearSolver):
             for irhs in range(i1, i2):
 
                 system.rhs_vec.array[:] = 0.0
+                system.sol_vec.array[:] = 0.0
+                system.rhs_buf.array[:] = 0.0
+                system.sol_buf.array[:] = 0.0
 
                 ind = np.sum(system.local_var_sizes[:, :irhs])
                 ind_set = PETSc.IS().createGeneral([ind], comm=system.mpi.comm)
                 if system.app_ordering is not None:
                     ind_set = system.app_ordering.app2petsc(ind_set)
                 ind = ind_set.indices[0]
-                system.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
+                system.rhs_buf.setValue(ind, 1.0, addv=False)
 
                 # Call PetSC KSP to solve the linear system
-                system.rhs_buf.array[:] = system.rhs_vec.array[:]
-                system.sol_buf.array[:] = system.sol_vec.array[:]
                 self.ksp.solve(system.rhs_buf, system.sol_buf)
                 system.sol_vec.array[:] = system.sol_buf.array[:]
 

@@ -65,7 +65,6 @@ def compound_setup_scatters(self):
     start = end = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
     #simple_subs = set(self.simple_subsystems())
-    destmap = {}
 
     for subsystem in self.all_subsystems():
         #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
@@ -104,12 +103,15 @@ def compound_setup_scatters(self):
                     assert(all(src_idxs == self.vec['u'].indices(node)))
                     #assert(all(dest_idxs == self.vec['p'].indices(node)))
 
-                    scatter_conns.add(node)
-                    scatter_conns_full.add(node)
-                    src_partial.append(src_idxs)
-                    dest_partial.append(dest_idxs)
-                    src_full.append(src_idxs)
-                    dest_full.append(dest_idxs)
+                    if node not in scatter_conns:
+                        scatter_conns.add(node)
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
+
+                    if node not in scatter_conns_full:
+                        scatter_conns_full.add(node)
+                        src_full.append(src_idxs)
+                        dest_full.append(dest_idxs)
 
         # mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
         #                                                       src_partial, dest_partial))
@@ -212,7 +214,7 @@ class System(object):
                         (arg not in sub.variables or sub is self):
                     args.add(arg)
 
-        # ensure that args are in same order that they appear in 
+        # ensure that args are in same order that they appear in
         # variables
         return [a for a in self.variables.keys() if a in args]
 
@@ -265,10 +267,7 @@ class System(object):
             except AttributeError:
                 pass
 
-        # TODO FIXME - Input-Input connection deposits an extra output node
-        # in the graph. Bret will fix this, then we cah remove this hack.
-        inputs = self.list_inputs_and_states()
-        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs and n not in inputs])
+        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs])
 
         return outputs
 
@@ -704,7 +703,7 @@ class System(object):
 
         return self.ln_solver.solve(inputs, outputs)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -797,7 +796,7 @@ class SimpleSystem(System):
 
         self.J = self._comp.linearize(first=True)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -891,7 +890,7 @@ class InVarSystem(ExplicitSystem):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -912,7 +911,7 @@ class OutVarSystem(ExplicitSystem):
         if self.is_active():
             self.vec['u'].set_to_scope(self.scope, self._nodes)
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -1066,15 +1065,15 @@ class CompoundSystem(System):
         for subsystem in self.local_subsystems():
             subsystem.apply_F()
 
-    def applyJ(self):
+    def applyJ(self, coupled=False):
         """ Delegate to subsystems """
 
         if self.mode == 'forward':
-            self.scatter('u', 'p')
+            self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ()
+            subsystem.applyJ(coupled)
         if self.mode == 'adjoint':
-            self.scatter('u', 'p')
+            self.scatter('du', 'dp')
 
     def stop(self):
         for s in self.all_subsystems():
@@ -1326,6 +1325,16 @@ class SolverSystem(SimpleSystem):  # Implicit
     def simple_subsystems(self, local=False):
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
+
+    def applyJ(self, coupled=False):
+        """ Delegate to subsystems """
+
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
+        for subsystem in self.local_subsystems():
+            subsystem.applyJ(coupled=True)
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
 
 
 class InnerAssemblySystem(SerialSystem):
