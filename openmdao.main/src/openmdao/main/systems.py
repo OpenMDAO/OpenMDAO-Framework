@@ -158,10 +158,8 @@ class System(object):
                                   for s in self._comp.list_states()])
         except AttributeError:
             states = ()
+
         pure_outs = [out for out in self._out_nodes if out not in states]
-        # for out in self._out_nodes:
-        #     if graph.in_degree(out) <= 1:
-        #         pure_outs.append(out)
 
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(pure_outs))
@@ -346,8 +344,6 @@ class System(object):
         return vdict
 
     def setup_variables(self):
-        #mpiprint("setup_variables: %s" % self.name)
-
         self.variables = OrderedDict()
         self._var_meta = {}
 
@@ -362,7 +358,7 @@ class System(object):
         except AttributeError:
             states = ()
 
-        # group inputs into states and non-states
+        # group outputs into states and non-states
         group1 = [v for v in self._out_nodes if v[1][0] in states]
         group2 = [v for v in self._out_nodes if v[1][0] not in states]
 
