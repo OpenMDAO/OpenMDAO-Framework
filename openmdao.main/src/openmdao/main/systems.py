@@ -255,7 +255,7 @@ class System(object):
         from this System and all of its children.
         """
         outputs = []
-        for system in self.simple_subsystems(local=local):
+        for system in self.simple_subsystems(local=True):
             states = set()
             try:
                 states.update(['.'.join((system.name,s))
