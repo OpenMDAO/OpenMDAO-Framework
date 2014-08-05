@@ -1409,7 +1409,7 @@ def _create_simple_sys(scope, comp):
         sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, comp.name)
-    elif has_interface(comp, IPseudoComp):
+    elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint':
         sub = ConstraintSystem(scope, comp.name)
     elif has_interface(comp, IImplicitComponent):
         sub = SimpleSystem(scope, comp.name)
