@@ -140,6 +140,8 @@ class System(object):
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
 
+        self.state_resid_map = {}
+
         graph = self.scope._reduced_graph
 
         self._out_nodes = []
@@ -195,6 +197,18 @@ class System(object):
                 return s
         return None
 
+    def get_result(self, item):
+        if self.mode == 'adjoint':
+            if item in self.sol_vec:
+                return self.sol_vec[item]
+            return self.scope._system.vec['du'][
+                         self.state_resid_map.get(item, item)]
+        else:
+            if item in self.rhs_vec:
+                return self.rhs_vec[item]
+            return self.scope._system.vec['df'][
+                         self.state_resid_map.get(item, item)]
+            
     def subsystems(self, local=False):
         if local:
             return self.local_subsystems()
@@ -241,7 +255,7 @@ class System(object):
         from this System and all of its children.
         """
         outputs = []
-        for system in self.simple_subsystems():
+        for system in self.simple_subsystems(local=local):
             states = set()
             try:
                 states.update(['.'.join((system.name,s))
@@ -267,7 +281,8 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(local=local) if n not in outputs])
+        outputs.extend([n for n in self.list_outputs(local=local) 
+                                if n not in outputs])
 
         return outputs
 
@@ -444,24 +459,26 @@ class System(object):
         if MPI:
             comm.Allgather(self.input_sizes[rank], self.input_sizes)
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
         distributed vectors need to solve the distributed system.
         """
-        #mpiprint("setup_vectors: %s" % self.name)
         if not self.is_active():
             return
 
+        if state_resid_map:
+            for out in self.list_outputs():
+                if out in state_resid_map:
+                    self.state_resid_map[out] = state_resid_map[out]
+
         rank = self.mpi.rank
         if arrays is None:  # we're the top level System in our Assembly
-            #mpiprint("NO array given. %s must be top level" % self.name)
             arrays = {}
             # create top level vectors
             size = numpy.sum(self.local_var_sizes[rank, :])
             for name in ['u', 'f', 'du', 'df']:
                 arrays[name] = numpy.zeros(size)
 
-        #mpiprint("given uvec size is %d for %s" % (arrays['u'].size, self.name))
         for name in ['u', 'f', 'du', 'df']:
             self.vec[name] = VecWrapper(self, arrays[name])
 
@@ -831,30 +848,6 @@ class SimpleSystem(System):
             self.scatter('du', 'dp')
 
 
-# class BoundarySystem(SimpleSystem):
-#     """A SimpleSystem that has no component to execute. It just
-#     performs data transfer between a set of boundary variables and the rest
-#     of the system.
-#     """
-#     def __init__(self, scope, name):
-#         super(SimpleSystem, self).__init__(scope, name, str(name))
-#         self.mpi.requested_cpus = 1
-
-#     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-#         if self.is_active():
-#             #mpiprint("running boundary system %s" % self.name)
-#             self.scatter('u', 'p')
-#             self.vec['p'].set_to_scope(self.scope)
-
-#     def stop(self):
-#         pass
-
-#     def apply_F(self):
-#         self.scatter('u','p')
-#         self.vec['p'].set_to_scope(self.scope)
-#         self.vec['u'].set_from_scope(self.scope)
-
-
 class ExplicitSystem(SimpleSystem):
     """ Simple System with inputs and outputs, but no states or residuals. """
 
@@ -935,7 +928,7 @@ class AssemblySystem(ExplicitSystem):
         super(AssemblySystem, self).setup_sizes()
         self._comp.setup_sizes()
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, state_resid_map=None):
         super(AssemblySystem, self).setup_vectors(arrays)
         # internal Assembly will create new vectors
         self._comp.setup_vectors(arrays)
@@ -977,87 +970,6 @@ class CompoundSystem(System):
         if not self.is_active():
             return
         compound_setup_scatters(self)
-        #mpiprint("setup_scatters: %s  (%d of %d)" % (self.name,self.mpi.rank,self.mpi.size))
-        #var_sizes = self.local_var_sizes
-        #input_sizes = self.input_sizes
-        #rank = self.mpi.rank
-
-        #if MPI:
-            #start = numpy.sum(var_sizes[:rank, :])
-            #end = numpy.sum(var_sizes[:rank+1, :])
-            #petsc_idxs = petsc_linspace(start, end)
-
-            #app_idxs = []
-            #for ivar in xrange(len(self.vector_vars)):
-                #start = numpy.sum(var_sizes[:, :ivar]) + numpy.sum(var_sizes[:rank, ivar])
-                #end = start + var_sizes[rank, ivar]
-                #app_idxs.append(petsc_linspace(start, end))
-
-            #if app_idxs:
-                #app_idxs = numpy.concatenate(app_idxs)
-
-            #app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
-            #petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
-            ##mpiprint("creating petsc AO for %s" % self.name)
-            #self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
-                                                       #comm=self.mpi.comm)
-
-        ## mpiprint("app indices:   %s\npetsc indices: %s" %
-        ##           (app_ind_set.getIndices(), petsc_ind_set.getIndices()))
-        #src_full = []
-        #dest_full = []
-        #scatter_conns_full = []
-        #noflat_conns_full = []
-        #noflats = set([k for k,v in self.variables.items()
-                           #if not v.get('flat',True)])
-
-        #start = end = numpy.sum(input_sizes[:rank])
-        #varkeys = self.vector_vars.keys()
-        #simple_subs = set(self.simple_subsystems())
-
-        #for subsystem in self.all_subsystems():
-            ##mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
-            #src_partial = []
-            #dest_partial = []
-            #scatter_conns = []
-            #noflat_conns = []  # non-flattenable vars
-            #if subsystem in simple_subs:
-                #for node in subsystem._owned_args:
-                    #if node in noflats:
-                        #noflat_conns.append(node)
-                        #noflat_conns_full.append(node)
-                    #else:
-                        #arg_idxs = subsystem.arg_idx[node]
-                        #isrc = varkeys.index(node)
-
-                        ##dest_idxs = self.vec['p'].indices(node)
-                        #src_idxs = numpy.sum(var_sizes[:, :isrc]) + arg_idxs
-                                          ##petsc_linspace(0, dest_idxs.shape[0])
-                        #end += arg_idxs.shape[0]
-                        #dest_idxs = petsc_linspace(start, end)
-                        #start += arg_idxs.shape[0]
-
-                        #scatter_conns.append(node)
-                        #scatter_conns_full.append(node)
-                        #src_partial.append(src_idxs)
-                        #dest_partial.append(dest_idxs)
-
-                #src_full.extend(src_partial)
-                #dest_full.extend(dest_partial)
-
-            ## mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
-            ##                                                       src_partial, dest_partial))
-            #if MPI or scatter_conns or noflat_conns:
-                #subsystem.scatter_partial = DataTransfer(self, src_partial,
-                                                         #dest_partial,
-                                                         #scatter_conns, noflat_conns)
-
-        #if MPI or scatter_conns_full or noflat_conns_full:
-            #self.scatter_full = DataTransfer(self, src_full, dest_full,
-                                             #scatter_conns_full, noflat_conns_full)
-
-        #for sub in self.local_subsystems():
-            #sub.setup_scatters()
 
     def apply_F(self):
         """ Delegate to subsystems """
@@ -1121,8 +1033,6 @@ class SerialSystem(CompoundSystem):
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
                 #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
-                # self.vec['u'].dump(self.name+'.u',verbose=False)
-                # self.vec['p'].dump(self.name+'.p',verbose=False)
 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 #x = sub.vec['u'].check(self.vec['u'])

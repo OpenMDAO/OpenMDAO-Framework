@@ -707,10 +707,10 @@ class Workflow(object):
             return
         return self._system.setup_sizes()
 
-    def setup_vectors(self, arrays=None):
+    def setup_vectors(self, arrays=None, state_resid_map=None):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        self._system.setup_vectors(arrays)
+        self._system.setup_vectors(arrays, state_resid_map)
 
     def setup_args(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:

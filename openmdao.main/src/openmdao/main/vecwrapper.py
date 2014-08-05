@@ -21,11 +21,8 @@ class VecWrapperBase(object):
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
 
         self._initialize(system)
-
         self._add_tuple_members(self._info.keys())
-
         self._add_resid(system)
-
 
     def _add_resid(self, system):
         pass
@@ -45,13 +42,13 @@ class VecWrapperBase(object):
         return self._info[name][0]
 
     def __setitem__(self, name, value):
-        if name in self._info:
-            self._info[name][0][:] = value.flat
-        else:
-            # FIXME: this makes me nervous...  certain uses will be broken for this new item
-            self._info[name] = (value, 0)
-            self._subviews.add(name)
-            self._add_tuple_members([name])
+        #if name in self._info:
+        self._info[name][0][:] = value.flat
+        # else:
+        #     # FIXME: this makes me nervous...  certain uses will be broken for this new item
+        #     self._info[name] = (value, 0)
+        #     self._subviews.add(name)
+        #     self._add_tuple_members([name])
 
     def __contains__(self, name):
         return name in self._info

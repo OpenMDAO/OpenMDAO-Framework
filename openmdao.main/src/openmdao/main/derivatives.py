@@ -92,7 +92,7 @@ def applyJ(system, pseudo=False):
     result = {}
     for item in system.list_outputs_and_residuals():
         key = item.partition('.')[-1]
-        result[key] = system.rhs_vec[item]
+        result[key] = system.get_result(item) #system.rhs_vec[item]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
