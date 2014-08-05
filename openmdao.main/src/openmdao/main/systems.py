@@ -1299,7 +1299,9 @@ class NonSolverDriverSystem(ExplicitSystem):
 
 
 class SolverSystem(SimpleSystem):  # Implicit
-    """A System for a Solver component."""
+    """A System for a Solver component. While it inherits from a SimpleSystem,
+    much of the behavior is like a CompoundSystem, particularly variable
+    propagation."""
 
     def __init__(self, driver):
         driver.setup_systems()

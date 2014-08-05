@@ -3,6 +3,7 @@
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
+from openmdao.main.interfaces import IPseudoComp
 from openmdao.util.graph import list_deriv_vars
 
 from numpy import zeros, vstack, hstack
@@ -75,7 +76,7 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(system, pseudo=False):
+def applyJ(system):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -181,7 +182,7 @@ def applyJ(system, pseudo=False):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            if pseudo is True and obj._pseudo_type == 'units' \
+            if IPseudoComp.providedBy(obj) and obj._pseudo_type == 'units' \
                and Jsub.shape == (1, 1):
                 tmp += Jsub[0][0] * arg[ikey]
             else:
@@ -189,7 +190,7 @@ def applyJ(system, pseudo=False):
 
     print 'applyJ', obj.name, arg, result
 
-def applyJT(system, pseudo=False):
+def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
@@ -294,7 +295,7 @@ def applyJT(system, pseudo=False):
 
             # for unit pseudocomps, just scalar multiply the args
             # by the conversion factor
-            if pseudo is True and obj._pseudo_type == 'units' \
+            if IPseudoComp.providedBy(obj) and obj._pseudo_type == 'units' \
                and Jsub.shape == (1, 1):
                 tmp += Jsub[0][0] * arg[ikey]
             else:

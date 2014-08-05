@@ -169,7 +169,7 @@ class IComponent(IContainer):
     def check_config(strict=False):
         """Verify that this component is properly configured to execute.
         Classes overriding this method must call the base class method.
-        If strict is True, even configuration warnings should raise an exception.  
+        If strict is True, even configuration warnings should raise an exception.
         """
 
     def run(force=False):
@@ -227,6 +227,31 @@ class IImplicitComponent(IComponent):
     def evaluate(self):
         """run a single step to calculate the residual
         values for the given state var values.
+        """
+
+class IPseudoComp(IContainer):
+    """Special interface for Pseudocomps for checking.
+    """
+
+    def check_config(strict=False):
+        """Verify that this component is properly configured to execute.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.
+        """
+
+    def run(force=False):
+        """Run this object. This should include fetching input variables,
+        executing, and updating output variables. Do not override this function.
+        """
+
+    def list_inputs(valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+
+    def list_outputs(valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
         """
 
 
