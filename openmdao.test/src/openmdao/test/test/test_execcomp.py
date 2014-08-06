@@ -22,7 +22,7 @@ class execCompTest(unittest.TestCase):
     
         self.top.comp1.x1 = 3.0
         self.top.comp1.x2 = 5.0
-        self.top.comp1.run()
+        self.top.run()
         
         self.assertEqual(self.top.comp1.y1, 31.0)
         self.assertEqual(self.top.comp1.y2, 45.0)
@@ -41,7 +41,7 @@ class execCompTest(unittest.TestCase):
     
         self.top.comp1.x1 = 3.0
         self.top.comp1.x2 = 5.0
-        self.top.comp1.run()
+        self.top.run()
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1', 'comp1.x2'],
                                                    outputs=['comp1.y1', 'comp1.y2'])
         

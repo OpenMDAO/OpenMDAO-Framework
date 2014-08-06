@@ -12,7 +12,8 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, ISolver, IPseudoComp
+from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
+                                     ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, get_all_deps, gsort, \
                                    collapse_nodes
@@ -160,9 +161,12 @@ class System(object):
             states = ()
 
         pure_outs = [out for out in self._out_nodes if out not in states]
+        
+        all_outs = set(nodes)
+        all_outs.update(pure_outs)
 
         # get our input nodes from the depgraph
-        self._in_nodes, _ = get_node_boundary(graph, set(nodes).union(pure_outs))
+        self._in_nodes, _ = get_node_boundary(graph, all_outs)
 
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
@@ -733,14 +737,18 @@ class SimpleSystem(System):
     Outputs, States, and Residuals."""
 
     def __init__(self, scope, name):
-        if isinstance(name, basestring):  # it's a OpenMDAO Component
+        comp = None
+        nodes = set([name])
+        cpus = 1
+        try:
             comp = getattr(scope, name)
-            nodes = comp.get_full_nodeset()
-            cpus = comp.get_req_cpus()
-        else:  # name is a tuple, 'comp' is an Assembly boundary variable
-            comp = None
-            nodes = set([name])
-            cpus = 1
+        except (AttributeError, TypeError):
+            pass
+        else:
+            if has_interface(comp, IComponent):
+                self._comp = comp
+                nodes = comp.get_full_nodeset()
+                cpus = comp.get_req_cpus()
 
         super(SimpleSystem, self).__init__(scope, nodes, name)
 
@@ -763,8 +771,8 @@ class SimpleSystem(System):
         yield self
 
     def setup_communicators(self, comm):
-        if comm is not None:
-            mpiprint("setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
+        # if comm is not None:
+        #     mpiprint("setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
         self.mpi.comm = comm
 
     def setup_scatters(self):
@@ -799,8 +807,7 @@ class SimpleSystem(System):
 
     def apply_F(self):
         self.scatter('u', 'p')
-        comp = self._comp
-        comp.evaluate()
+        self._comp.evaluate()
         self.vec['u'].set_from_scope(self.scope)
 
     def linearize(self):
@@ -812,14 +819,13 @@ class SimpleSystem(System):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
-        comp = self._comp
 
         # Forward Mode
         if self.mode == 'forward':
 
             self.scatter('du', 'dp')
 
-            comp.applyJ(self)
+            self._comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs(coupled):
@@ -834,7 +840,7 @@ class SimpleSystem(System):
             # previous component's contributions, we can multiply
             # our local 'arg' by -1, and then revert it afterwards.
             vec['df'].array[:] *= -1.0
-            comp.applyJT(self)
+            self._comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs(coupled):
@@ -851,12 +857,12 @@ class ExplicitSystem(SimpleSystem):
         #mpiprint("%s.apply_F" % self.name)
         vec = self.vec
         self.scatter('u', 'p')
-        comp = self._comp
+
         vec['f'].array[:] = vec['u'].array[:]
         #if self._comp.parent is not None:
             #self.vec['p'].set_to_scope(self._comp.parent)
             #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
-        comp.run()
+        self._comp.run()
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
         #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
@@ -1403,7 +1409,6 @@ def get_branch(g, node, visited=None):
         else:
             branch.extend(get_branch(g, succ, visited))
     return branch
-
 
 def get_comm_if_active(obj, comm):
     if comm is None or comm == MPI.COMM_NULL:

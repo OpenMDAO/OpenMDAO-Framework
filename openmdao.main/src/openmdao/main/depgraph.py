@@ -635,6 +635,16 @@ class DependencyGraph(nx.DiGraph):
             self._conns[(show_passthrough, driver)] = conns
         return conns[:]
 
+    def list_driver_connections(self, driver=True):
+        """Return a list of connections between a driver and its
+        parameter or between an objective or constraint and its 
+        driver.  If driver is True, return connections for all
+        drivers. If driver contains the name of a specific driver,
+        return only the connections to/from that driver.
+        """
+        return [(u,v) for u,v in self.edges_iter() 
+                    if is_drv_connection(self, u, v, driver)]
+
     def get_sources(self, name):
         """Return the node that's actually a source for the
         named node (as opposed to just a connected subvar).
@@ -1092,7 +1102,8 @@ class DependencyGraph(nx.DiGraph):
                                          self.node[src].copy(), driver=True)
 
         # make sure unconnected states are included in the graph.
-        # Name their nodes in the same manner as driver connctions, (name, (name,)).
+        # Name their nodes in the same manner as driver connections, i.e.,
+        # (name, (name,)).
         depgraph = scope._depgraph  # use depgraph to retrieve metadata here 
                                     # because unconnected
                                     # vars have already been pruned from g
