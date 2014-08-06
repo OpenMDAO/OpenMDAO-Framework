@@ -616,23 +616,17 @@ class DependencyGraph(nx.DiGraph):
         else:
             return self._var_connections(path, direction)
 
-    def list_connections(self, show_passthrough=True, driver=False):
-        conns = self._conns.get((show_passthrough, driver))
+    def list_connections(self, show_passthrough=True):
+        conns = self._conns.get(show_passthrough)
         if conns is None:
-            if driver:
-                conn_test = lambda g,u,v: is_connection(g,u,v) or \
-                                     is_drv_connection(g,u,v,driver)
-            else:
-                conn_test = is_connection
-
             conns = [(u,v) for u,v in self.edges_iter()
-                              if conn_test(self, u, v)]
+                              if is_connection(self, u, v)]
 
             if show_passthrough is False:
                 conns = [(u,v) for u,v in conns 
                            if not ('.' in u or '.' in v)]
 
-            self._conns[(show_passthrough, driver)] = conns
+            self._conns[show_passthrough] = conns
         return conns[:]
 
     def list_driver_connections(self, driver=True):
@@ -1040,17 +1034,16 @@ class DependencyGraph(nx.DiGraph):
             except AttributeError:
                 pass
     
-        conns = set(self.list_connections())
-        drvconns = [(u,v) for u,v in self.list_connections(driver=True)
-                               if (u,v) not in conns]
+        drvconns = self.list_driver_connections()
 
-        for u,v in conns:
-            src2dests.setdefault(u, set()).add(v)
-            dest2src[v] = u
+        for src, dest in self.list_connections():
+            src2dests.setdefault(src, set()).add(dest)
+            dest2src[dest] = src
 
-        for u,v in drvconns:
-            if is_driver_node(self, u):
-                dest2src[v] = u
+        # add mappings for parameters to dest2src
+        for src, dest in drvconns:
+            if is_driver_node(self, src):
+                dest2src[dest] = src
 
         xtra_drv_conns = {}
         to_remove = set()
@@ -1117,7 +1110,7 @@ class DependencyGraph(nx.DiGraph):
 
     def prune_unconnected_vars(self):
         """Remove unconnected variable nodes"""
-        conns = self.list_connections(driver=True)
+        conns = self.list_driver_connections()
         convars = set([u for u,v in conns])
         convars.update([v for u,v in conns])
         convars.update([self.base_var(v) for v in convars])
