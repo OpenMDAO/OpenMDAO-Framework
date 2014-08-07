@@ -1987,7 +1987,7 @@ def collapse_driver(g, driver, excludes=()):
 
     return collapse_nodes(g, driver.name, nodes)
         
-def get_all_deps(g):
+def transitive_closure(g):
     """Return a set of edge tuples where the
     existence of a tuple (u,v) means that v depends 
     on u, either directly or indirectly.  Note that this will 

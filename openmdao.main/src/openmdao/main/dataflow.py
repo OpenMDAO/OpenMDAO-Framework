@@ -8,7 +8,7 @@ from networkx.algorithms.dag import is_directed_acyclic_graph
 from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.main.depgraph import get_all_deps, gsort
+from openmdao.main.depgraph import transitive_closure, gsort
 
 __all__ = ['Dataflow']
 
@@ -106,72 +106,11 @@ class Dataflow(SequentialWorkflow):
                     if u != cname and u not in iterset and not u.startswith('_pseudo_'):
                         collapsed_graph.add_edge(u, cname)
 
-        # # connect all of the edges from each driver's iterset members to itself
-        # # For this, we need the graph with the subdriver itersets all still in it.
-        # to_add = []
-        # for drv, iterset in itersets.items():
-        #     for cname in iterset:
-        #         for u, v in graph_with_subs.edges_iter(cname):
-        #             if v != drv:
-        #                 to_add.append((drv, v))
-        #         for u, v in graph_with_subs.in_edges_iter(cname):
-        #             if u != drv:
-        #                 to_add.append((u, drv))
-        # collapsed_graph.add_edges_from(to_add)
-
         collapsed_graph = collapsed_graph.subgraph(cnames-removes)
 
-        alldeps = get_all_deps(collapsed_graph)
+        alldeps = transitive_closure(collapsed_graph)
         self._fullnames = gsort(alldeps, self._fullnames)
-
-        # # now add some fake dependencies for degree 0 nodes in an attempt to
-        # # mimic a SequentialWorkflow in cases where nodes aren't connected.
-        # # Edges are added from each degree 0 node to all nodes after it in
-        # # sequence order.
-        # self._duplicates = set()
-        # names = self._names
-        # last = len(names)-1
-        # if last > 0:
-        #     to_add = []
-        #     for i, cname in enumerate(names):
-        #         if collapsed_graph.degree(cname) == 0:
-        #             if self._names.count(cname) > 1:
-        #                 # Don't introduce circular dependencies.
-        #                 self._duplicates.add(cname)
-        #             else:
-        #                 if i < last:
-        #                     for n in names[i+1:]:
-        #                         to_add.append((cname, n))
-        #                 else:
-        #                     for n in names[0:i]:
-        #                         to_add.append((n, cname))
-        #     collapsed_graph.add_edges_from([(u, v) for u, v in to_add
-        #                                     if u in collapsed_graph and v in collapsed_graph])
 
         self._collapsed_graph = collapsed_graph
 
         return self._collapsed_graph
-
-    # def _insert_duplicates(self):
-    #     """We have some duplicate unconnected components. Adjust order
-    #     to include duplicates in 'sequential' order.
-    #     """
-    #     # Remove (single instance of) duplicates from topo sort.
-    #     topsort = self._topsort
-    #     for cname in self._duplicates:
-    #         topsort.remove(cname)
-
-    #     # For each name in sequential order, if it's a duplicate we need
-    #     # to insert it after all of its (possibly duplicated) predecessors.
-    #     for i, cname in enumerate(self._names):
-    #         if cname in self._duplicates:
-    #             predecessors = self._names[0:i]
-    #             max_index = -1
-    #             for pname in predecessors:
-    #                 start = 0
-    #                 index = -1
-    #                 for j in range(predecessors.count(pname)):
-    #                     index = topsort.index(pname, start)
-    #                     start = index + 1
-    #                 max_index = max(index, max_index)
-    #             topsort.insert(max_index+1, cname)

@@ -15,7 +15,7 @@ from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
-from openmdao.main.depgraph import break_cycles, get_node_boundary, get_all_deps, gsort, \
+from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
                                    collapse_nodes
 
 def call_if_found(obj, fname, *args, **kwargs):
@@ -1015,7 +1015,7 @@ class SerialSystem(CompoundSystem):
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
 
-        self._ordering = gsort(get_all_deps(g), self._ordering)
+        self._ordering = gsort(transitive_closure(g), self._ordering)
 
         for s in self.all_subsystems():
             s.set_ordering(ordering)

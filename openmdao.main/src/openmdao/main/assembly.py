@@ -1441,7 +1441,7 @@ class Assembly(Component):
     def setup_scatters(self):
         self._system.setup_scatters()
         
-    def pre_setup(self):
+    def pre_setup(self, inputs=None, outputs=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
@@ -1456,9 +1456,12 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.post_setup()
 
-    def _setup(self):
+    def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
-        prior to execution.
+        prior to execution.  It will also be called if 
+        calc_gradient is called with input or output lists that
+        differ from the lists of parameters or objectives/constraints
+        that are inherent to the model.
         """
 
         if MPI:
@@ -1468,7 +1471,7 @@ class Assembly(Component):
             comm = None
 
         try:
-            self.pre_setup()
+            self.pre_setup(inputs, outputs)
             self.setup_systems()
             self.setup_communicators(comm)
             self.setup_variables()

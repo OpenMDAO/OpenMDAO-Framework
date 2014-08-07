@@ -5,14 +5,14 @@ from math import isnan
 import sys
 from traceback import format_exc
 import weakref
+from StringIO import StringIO
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_mpi_subsystems, \
-                                  get_comm_if_active, _create_simple_sys, \
-                                  get_full_nodeset
+                                  get_comm_if_active, _create_simple_sys
 from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped, TracedError
 
@@ -186,13 +186,20 @@ class Workflow(object):
         # TODO - Support automatic determination of mode
 
         parent = self.parent
-
+        reset = False
+        uvec = self._system.vec['u']
+        
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
                 inputs = parent.list_param_group_targets()
             if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
+        else:
+            for inp in inputs:
+                if inp not in uvec:
+                    reset = True
+                    break
 
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
@@ -201,6 +208,14 @@ class Workflow(object):
                 outputs.extend(parent.list_objective_targets())
             if hasattr(parent, 'list_constraint_targets'):
                 outputs.extend(parent.list_constraint_targets())
+        else:
+            for out in outputs:
+                if out not in uvec:
+                    reset = True
+                    break
+
+        if reset:
+            self._system.scope._setup(inputs=inputs, outputs=outputs) # re-create system hierarchy
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,

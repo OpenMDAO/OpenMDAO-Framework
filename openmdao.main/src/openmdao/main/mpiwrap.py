@@ -58,9 +58,6 @@ else:
     PETSc = None
     COMM_NULL = None
 
-    # def MPI_run(top):
-    #     return top.run()
-
     # TODO - THis is for testing only (so i can debug in serial).
     # Bret - Don't let this get in.
     #from petsc4py import PETSc
@@ -91,6 +88,3 @@ class MPI_info(object):
         if MPI:
             return self.comm.rank
         return 0
-
-
-#use_proc_files()

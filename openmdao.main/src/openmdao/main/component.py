@@ -1884,7 +1884,7 @@ class Component(Container):
         return set((self.name,))
 
     @rbac(('owner', 'user'))
-    def pre_setup(self):
+    def pre_setup(self, inputs=None, outputs=None):
         pass
 
     @rbac(('owner', 'user'))

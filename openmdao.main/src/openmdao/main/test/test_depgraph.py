@@ -4,7 +4,7 @@ import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
                                     find_all_connecting, \
                                     _get_inner_edges, _get_inner_connections,\
-                                    gsort, get_all_deps
+                                    gsort, transitive_closure
 from openmdao.util.graph import edges_to_dict, nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some
@@ -161,7 +161,7 @@ class DepGraphTestCase(unittest.TestCase):
 
     def test_sorting(self):
         cgraph = self.dep.component_graph()
-        deps = get_all_deps(cgraph)
+        deps = transitive_closure(cgraph)
         order = ['C','D','B','A']
         neworder = gsort(deps, order)
         self.assertEqual(neworder, ['A','D','B','C'])
