@@ -188,7 +188,7 @@ class Workflow(object):
         parent = self.parent
         reset = False
         uvec = self._system.vec['u']
-        
+
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
                 inputs = parent.list_param_group_targets()
@@ -219,6 +219,13 @@ class Workflow(object):
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,
+                                          iterbase=self._iterbase())
+
+    def calc_newton_direction(self):
+        """ Solves for the new state in Newton's method and leaves it in the
+        df vector."""
+
+        self._system.calc_newton_direction(options=self.parent.gradient_options,
                                           iterbase=self._iterbase())
 
     def check_gradient(self, inputs=None, outputs=None, stream=sys.stdout, mode='auto'):

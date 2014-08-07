@@ -30,7 +30,8 @@ class ScipyGMRES(LinearSolver):
     in an MPI setting."""
 
     def solve(self, inputs, outputs):
-        """ Run GMRES solver """
+        """ Run GMRES solver to return a Jacobian of outputs with respect to
+        inputs."""
 
         system = self._system
         options = self.options
@@ -111,6 +112,39 @@ class ScipyGMRES(LinearSolver):
         #print 'dx', dx
         return J
 
+    def newton(self):
+        """ Solve the coupled equations for a new state vector that nulls the
+        residual. Used by the Newton solvers."""
+
+        system = self._system
+        options = self.options
+        self.inputs = inputs
+
+        # Size the problem
+        n_edge = system.vec['df'].array.size
+
+        A = LinearOperator((n_edge, n_edge),
+                           matvec=self.mult,
+                           dtype=float)
+
+        # Call GMRES to solve the linear system
+        dx, info = gmres(A, system.vec['du'],
+                         tol=options.gmres_tolerance,
+                         maxiter=options.gmres_maxiter)
+
+        if info > 0:
+            msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
+                  "after %d iterations for parameter '%s' at index %d"
+            logger.error(msg, system.name, info, param, irhs)
+        elif info < 0:
+            msg = "ERROR in calc_gradient in '%s': gmres failed " \
+                  "for parameter '%s' at index %d"
+            logger.error(msg, system.name, param, irhs)
+
+        system.vec['df'] = -dx
+
+        print 'dx', dx
+
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
         system."""
@@ -130,6 +164,7 @@ class ScipyGMRES(LinearSolver):
 
         print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]
+
 
 class PETSc_KSP(LinearSolver):
     """ PETSc's KSP solver with preconditioning """
@@ -162,7 +197,8 @@ class PETSc_KSP(LinearSolver):
                                                      comm=system.mpi.comm)
 
     def solve(self, inputs, outputs):
-        """ Run KSP solver """
+        """ Run KSP solver to return a Jacobian of outputs with respect to
+        inputs."""
         system = self._system
 
         self.inputs = inputs

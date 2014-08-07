@@ -719,6 +719,19 @@ class System(object):
 
         return self.ln_solver.solve(inputs, outputs)
 
+    def calc_newton_direction(self, options=None, iterbase=''):
+        """ Solves for the new state in Newton's method and leaves it in the
+        df vector."""
+
+        self.set_options('forward', options)
+        self.initialize_gradient_solver()
+        self.linearize()
+
+        self.rhs_vec.array[:] = 0.0
+        self.vec['df'].array[:] = 0.0
+
+        self.ln_solver.newton()
+
     def applyJ(self, coupled=False):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass

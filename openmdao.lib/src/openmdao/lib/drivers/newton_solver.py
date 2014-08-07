@@ -9,6 +9,12 @@ __all__ = ['NewtonSolver']
 
 from scipy.optimize import fsolve
 
+# this little funct replaces a dependency on scipy
+import numpy
+npnorm = numpy.linalg.norm
+def norm(a, ord=None):
+    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+
 # pylint: disable-msg=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow
 from openmdao.main.datatypes.api import Float, Int, Enum
@@ -59,6 +65,33 @@ class NewtonSolver(Driver):
 
         # One choice
         self.execute_fsolve()
+
+    def execute_coupled(self):
+        """ New experimental method based on John's Newton solver.
+        """
+        system = self.workflow._system
+
+        converged = False
+        itercount = 0
+        while not converged:
+
+            system.calc_newton_direction()
+
+            for var in self.get_param_targets():
+                if isinstance(var, tuple):
+                    var = var[0]
+
+                system.vec['u'][var] += system.vec['df'][var]
+
+            self.pre_iteration()
+            self.run_iteration()
+            self.post_iteration()
+
+            norm = norm(system.vec['f'].array)
+            itercount += 1
+
+            if norm < self.tolerance or itercount == self.max_iteration:
+                break
 
     def execute_fsolve(self):
         """ Solver execution loop: scipy.fsolve. """
