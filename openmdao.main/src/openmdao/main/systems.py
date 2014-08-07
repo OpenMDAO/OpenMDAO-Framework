@@ -161,7 +161,7 @@ class System(object):
             states = ()
 
         pure_outs = [out for out in self._out_nodes if out not in states]
-        
+
         all_outs = set(nodes)
         all_outs.update(pure_outs)
 
@@ -210,7 +210,7 @@ class System(object):
                 return self.rhs_vec[item]
             return self.scope._system.vec['df'][
                          self.state_resid_map.get(item, item)]
-            
+
     def subsystems(self, local=False):
         if local:
             return self.local_subsystems()
@@ -283,7 +283,7 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(coupled=False) 
+        outputs.extend([n for n in self.list_outputs(coupled=False)
                                 if n not in outputs])
         return outputs
 
@@ -1238,35 +1238,6 @@ class SolverSystem(SimpleSystem):  # Implicit
     def simple_subsystems(self, local=False):
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
-
-    def state_residual_mapping(self):
-        pass
-        #pairs = []
-        #pgroups = self.list_param_group_targets()
-        #for key, cnst in self.get_eq_constraints().iteritems():
-            #for params in pgroups:
-                #if params[0] == cnst.rhs.text:
-                    #pairs.append((params[0], cnst.pcomp_name+'.out0', -1))
-                #elif params[0] == cnst.lhs.text:
-                    #pairs.append((params[0], cnst.pcomp_name+'.out0', 1))        #try:
-            ##cname = system._comp.name
-            ##states = ['.'.join((cname, s)) for s in system._comp.list_states()]
-            ##resids = ['.'.join((cname, s)) for s in system._comp.list_residuals()]
-        #except AttributeError:
-            #return
-
-        #start, end = self.bounds(states)
-
-        ## verify contiguous states
-        #size = sum([self._info[n][0].size for n in states])
-
-        #view = self.array[start:end]
-
-        #assert(size == view.size)
-        #assert(len(resids) == 1)
-
-        #self._info[resids[0]] = (view, start)
-        #self._subviews.add(resids[0])
 
     def applyJ(self, coupled=False):
         """ Delegate to subsystems """
