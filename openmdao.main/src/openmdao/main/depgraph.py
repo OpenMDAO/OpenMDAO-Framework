@@ -619,8 +619,7 @@ class DependencyGraph(nx.DiGraph):
     def list_connections(self, show_passthrough=True):
         conns = self._conns.get(show_passthrough)
         if conns is None:
-            conns = [(u,v) for u,v in self.edges_iter()
-                              if is_connection(self, u, v)]
+            conns = list_data_connections(self)
 
             if show_passthrough is False:
                 conns = [(u,v) for u,v in conns 
@@ -628,16 +627,6 @@ class DependencyGraph(nx.DiGraph):
 
             self._conns[show_passthrough] = conns
         return conns[:]
-
-    def list_driver_connections(self, driver=True):
-        """Return a list of connections between a driver and its
-        parameter or between an objective or constraint and its 
-        driver.  If driver is True, return connections for all
-        drivers. If driver contains the name of a specific driver,
-        return only the connections to/from that driver.
-        """
-        return [(u,v) for u,v in self.edges_iter() 
-                    if is_drv_connection(self, u, v, driver)]
 
     def get_sources(self, name):
         """Return the node that's actually a source for the
@@ -695,12 +684,6 @@ class DependencyGraph(nx.DiGraph):
             return self._all_child_vars(node)
         else:
             return []
-
-    def all_comps(self):
-        """Returns a list of all component and PseudoComponent
-        nodes.
-        """
-        return [n for n in self.nodes_iter() if is_comp_node(self, n)]
 
     def find_prefixed_nodes(self, nodes, data=False):
         """Returns a list of nodes including the given nodes and
@@ -795,7 +778,7 @@ class DependencyGraph(nx.DiGraph):
         and PseudoComponents and edges between them.
         """
         if self._component_graph is None:
-            compset = set(self.all_comps())
+            compset = set(all_comps(self))
 
             g = nx.DiGraph()
 
@@ -989,128 +972,10 @@ class DependencyGraph(nx.DiGraph):
 
         return comps
 
-    def _get_compname(self, node):
-        """Return the name of the component that owns the given node
-        if there is one.  Otherwise, just return the node name.
-        """
-        cname = node.split('.', 1)[0]
-        if is_comp_node(self, cname):
-            return cname
-        return node
-
-    def _add_collapsed_node(self, g, newname, src, dests, meta, driver=False):
-        g.add_node(newname, meta)
-
-        cname = self._get_compname(src)
-        if cname == src:
-            if driver:
-                g.add_edge(cname, newname)
-        elif g.node[cname].get('comp'):
-            g.add_edge(cname, newname)
-
-        for dest in dests:
-            cname = self._get_compname(dest)
-            if cname == dest:
-                if driver:
-                    g.add_edge(newname, cname)
-            else:
-                g.add_edge(newname, cname)
-
-    def collapse_connections(self, scope):
-        """Returns a new graph with each variable
-        connection collapsed into a single node.
-        """
-        src2dests = {}
-        dest2src = {}
-        states = set()  # set of all states
-
-        g = nx.DiGraph()
-
-        # get state and metadata info from components
-        for node in self.all_comps():
-            g.add_node(node, self.node[node].copy())  # copying metadata
-            try:
-                states.update(['.'.join((node,s)) for s in getattr(scope, node).list_states()])
-            except AttributeError:
-                pass
-    
-        drvconns = self.list_driver_connections()
-
-        for u,v in self.list_connections():
-            src2dests.setdefault(u, set()).add(v)
-            dest2src[v] = u
-
-        for u,v in drvconns:
-            if is_driver_node(self, u):
-                dest2src[v] = u
-
-        xtra_drv_conns = {}
-        to_remove = set()
-        # find any connected inputs used as srcs and connect their
-        # dests to the true source
-        for src, dests in src2dests.items():
-            if src in dest2src:  # src is also a destination (input used as output)
-                truesrc = dest2src[src]
-                if truesrc in src2dests:
-                    src2dests[truesrc].update(dests)
-                else:
-                    if truesrc not in xtra_drv_conns:
-                        xtra_drv_conns[truesrc] = {}
-                    xtra_drv_conns[truesrc].setdefault(src,[]).extend(dests)
-                # remove outgoing edges from the src since we've moved them to
-                # the true src
-                to_remove.add(src)
-
-        for name in to_remove:
-            del src2dests[name]
-
-        for src, dests in src2dests.items():
-            newname = (src,tuple(dests))
-            self._add_collapsed_node(g, newname, src, dests, self.node[src].copy())
-
-        # driver connections are slightly different.  Name their
-        # param/obj/constraint nodes as (src,(src,)), or (dest, (dest,))
-        for src,dest in drvconns:
-            if is_driver_node(self, src):
-                if src in xtra_drv_conns:  # 
-                    xtra_dests = xtra_drv_conns[src][dest]
-                    dests = tuple([dest]+xtra_dests)
-                else:
-                    xtra_dests = []
-                    dests = (dest,)
-
-                nodename = (dest, dests)
-                self._add_collapsed_node(g, nodename, 
-                                         src, (dest,), 
-                                         self.node[dest].copy(), driver=True)
-
-                # any extra dests now need to be connected to their
-                # corresponding components
-                for d in xtra_dests:
-                    g.add_edge(nodename, self._get_compname(d))
-            else:
-                self._add_collapsed_node(g, (src, (src,)), 
-                                         src, (dest,), 
-                                         self.node[src].copy(), driver=True)
-
-        # make sure unconnected states are included in the graph.
-        # Name their nodes in the same manner as driver connections, i.e.,
-        # (name, (name,)).
-        depgraph = scope._depgraph  # use depgraph to retrieve metadata here 
-                                    # because unconnected
-                                    # vars have already been pruned from g
-        for state in states:
-            if state not in g:
-                self._add_collapsed_node(g, (state, (state,)),
-                                         state, (state,),
-                                         depgraph.node[state].copy())
-
-        return g
-
     def prune_unconnected_vars(self):
         """Remove unconnected variable nodes"""
         conns = self.list_connections()
-        conns.extend([(u,v) for u,v in self.list_driver_connections()])
+        conns.extend([(u,v) for u,v in list_driver_connections(self)])
         convars = set([u for u,v in conns])
         convars.update([v for u,v in conns])
         convars.update([self.base_var(v) for v in convars])
@@ -1982,7 +1847,6 @@ def collapse_driver(g, driver, excludes=()):
     """
     nodes = driver.get_full_nodeset()
     nodes = [n for n in nodes
-                #driver.get_depgraph().find_prefixed_nodes(nodes)
                 if n not in excludes]
 
     return collapse_nodes(g, driver.name, nodes)
@@ -2044,3 +1908,147 @@ def gsort(deps, names):
     
     return final
 
+def list_data_connections(graph):
+    """Return all edges that are data connections"""
+    return [(u,v) for u,v,data in graph.edges_iter(data=True)
+                      if data.get('conn')]
+
+def list_driver_connections(graph, driver=True):
+    """Return all edges that are driver connections, i.e.,
+    (params, objectives,constraints).  If driver contains the
+    name of a specific driver, then only return connections for 
+    that driver.
+    """
+    if driver is True:
+        return [(u,v) for u,v,data in graph.edges_iter(data=True)
+                            if data.get('drv_conn')]
+    else:
+        return [(u,v) for u,v,data in graph.edges_iter(data=True)
+                            if data.get('drv_conn')==driver]
+
+def _get_compname(g, node):
+    """Return the name of the component that owns the given node
+    if there is one.  Otherwise, just return the node name.
+    """
+    cname = node.split('.', 1)[0]
+    if is_comp_node(g, cname):
+        return cname
+    return node
+
+def _add_collapsed_node(g, newname, src, dests, meta, driver=False):
+    """Adds new collapsed node and any new edges due to collapsing the node.
+    Does NOT remove the old nodes.
+    """
+    g.add_node(newname, meta)
+
+    cname = _get_compname(g, src)
+    if cname == src:
+        if driver:
+            g.add_edge(cname, newname)
+    elif g.node[cname].get('comp'):
+        g.add_edge(cname, newname)
+
+    for dest in dests:
+        cname = _get_compname(g, dest)
+        if cname == dest:
+            if driver:
+                g.add_edge(newname, cname)
+        else:
+            g.add_edge(newname, cname)
+
+def all_comps(g):
+    """Returns a list of all component and PseudoComponent
+    nodes.
+    """
+    return [n for n in g.nodes_iter() if is_comp_node(g, n)]
+
+def collapse_connections(orig_graph, scope):
+    """Returns a new graph with each variable
+    connection collapsed into a single node.
+    """
+    src2dests = {}
+    dest2src = {}
+    states = set()  # set of all states
+
+    g = nx.DiGraph()
+
+    # get state and metadata info from components
+    for node in all_comps(orig_graph):
+        g.add_node(node, orig_graph.node[node].copy())  # copying metadata
+        try:
+            states.update(['.'.join((node,s)) for s in getattr(scope, node).list_states()])
+        except AttributeError:
+            pass
+
+    drvconns = list_driver_connections(orig_graph)
+
+    for u,v in list_data_connections(orig_graph):
+        src2dests.setdefault(u, set()).add(v)
+        dest2src[v] = u
+
+    for u,v in drvconns:
+        if is_driver_node(orig_graph, u):
+            dest2src[v] = u
+
+    xtra_drv_conns = {}
+    to_remove = set()
+    # find any connected inputs used as srcs and connect their
+    # dests to the true source
+    for src, dests in src2dests.items():
+        if src in dest2src:  # src is also a destination (input used as output)
+            truesrc = dest2src[src]
+            if truesrc in src2dests:
+                src2dests[truesrc].update(dests)
+            else:
+                if truesrc not in xtra_drv_conns:
+                    xtra_drv_conns[truesrc] = {}
+                xtra_drv_conns[truesrc].setdefault(src,[]).extend(dests)
+            # remove outgoing edges from the src since we've moved them to
+            # the true src
+            to_remove.add(src)
+
+    for name in to_remove:
+        del src2dests[name]
+
+    for src, dests in src2dests.items():
+        newname = (src,tuple(dests))
+        _add_collapsed_node(g, newname, src, dests, orig_graph.node[src].copy())
+
+    # driver connections are slightly different.  Name their
+    # param/obj/constraint nodes as (src,(src,)), or (dest, (dest,))
+    for src,dest in drvconns:
+        if is_driver_node(orig_graph, src):
+            if src in xtra_drv_conns:  # 
+                xtra_dests = xtra_drv_conns[src][dest]
+                dests = tuple([dest]+xtra_dests)
+            else:
+                xtra_dests = []
+                dests = (dest,)
+
+            nodename = (dest, dests)
+            _add_collapsed_node(g, nodename, 
+                                     src, (dest,), 
+                                     orig_graph.node[dest].copy(), driver=True)
+
+            # any extra dests now need to be connected to their
+            # corresponding components
+            for d in xtra_dests:
+                g.add_edge(nodename, _get_compname(orig_graph, d))
+        else:
+            _add_collapsed_node(g, (src, (src,)), 
+                                     src, (dest,), 
+                                     orig_graph.node[src].copy(), driver=True)
+
+    # make sure unconnected states are included in the graph.
+    # Name their nodes in the same manner as driver connections, i.e.,
+    # (name, (name,)).
+    depgraph = scope._depgraph  # use depgraph to retrieve metadata here 
+                                # because unconnected
+                                # vars have already been pruned from g
+    for state in states:
+        if state not in g:
+            _add_collapsed_node(g, (state, (state,)),
+                                     state, (state,),
+                                     depgraph.node[state].copy())
+
+    return g

@@ -7,6 +7,8 @@ from traceback import format_exc
 import weakref
 from StringIO import StringIO
 
+from numpy import ndarray
+
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
@@ -15,6 +17,7 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   get_comm_if_active, _create_simple_sys
 from openmdao.main.depgraph import _get_inner_connections
 from openmdao.main.exceptions import RunStopped, TracedError
+from openmdao.main.interfaces import IVariableTree
 
 __all__ = ['Workflow']
 
@@ -31,7 +34,7 @@ def _flattened_names(name, val, names=None):
         for i in range(len(val)):
             value = val[i]
             _flattened_names('%s[%s]' % (name, i), value, names)
-    elif isinstance(val, VariableTree):
+    elif IVariableTree.providedBy(val):
         for key in sorted(val.list_vars()):  # Force repeatable order.
             value = getattr(val, key)
             _flattened_names('.'.join((name, key)), value, names)

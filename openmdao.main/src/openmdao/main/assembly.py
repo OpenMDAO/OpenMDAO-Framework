@@ -15,7 +15,6 @@ from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
 import networkx as nx
-from zope.interface import implementedBy
 
 from openmdao.main.mpiwrap import MPI, mpiprint
 
@@ -41,7 +40,7 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import DependencyGraph
+from openmdao.main.depgraph import DependencyGraph, all_comps, collapse_connections
 from openmdao.main.systems import InnerAssemblySystem
 
 from openmdao.util.graph import list_deriv_vars
@@ -588,9 +587,9 @@ class Assembly(Component):
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
         graph = self._depgraph
-        for name in chain(self._depgraph.all_comps(),
-                          self._depgraph.get_boundary_inputs(),
-                          self._depgraph.get_boundary_outputs()):
+        for name in chain(all_comps(graph),
+                          graph.get_boundary_inputs(),
+                          graph.get_boundary_outputs()):
             obj = getattr(self, name)
             if has_interface(obj, IContainer):
                 for vname in obj.get_req_default(self.trait(name).required):
@@ -1130,7 +1129,7 @@ class Assembly(Component):
         responses   = []
 
         # list of components (name & type) in the assembly
-        names = self._depgraph.order_components(self._depgraph.all_comps())
+        names = self._depgraph.order_components(all_comps(self._depgraph))
 
         # Bubble-up drivers ahead of their parameter targets.
         sorted_names = []
@@ -1404,7 +1403,6 @@ class Assembly(Component):
 
     @rbac(('owner', 'user'))
     def setup_systems(self):
-        #self._top_driver.setup_systems()
         self._system = InnerAssemblySystem(self)
         return self._system
 
@@ -1447,7 +1445,7 @@ class Assembly(Component):
         """
         dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
         dgraph.prune_unconnected_vars()
-        self._reduced_graph = dgraph.collapse_connections(self)
+        self._reduced_graph = collapse_connections(dgraph, self)
         
         for comp in self.get_comps():
             comp.pre_setup()
