@@ -40,7 +40,9 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
-from openmdao.main.depgraph import DependencyGraph, all_comps, collapse_connections
+from openmdao.main.depgraph import DependencyGraph, all_comps, \
+                                   collapse_connections, prune_reduced_graph, \
+                                   relabel_states
 from openmdao.main.systems import InnerAssemblySystem
 
 from openmdao.util.graph import list_deriv_vars
@@ -1443,10 +1445,10 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
-        dgraph.prune_unconnected_vars()
-        self._reduced_graph = collapse_connections(dgraph, self)
-        
+        self._reduced_graph = collapse_connections(self._depgraph, self)
+        prune_reduced_graph(self._depgraph, self._reduced_graph)
+        relabel_states(self._depgraph, self._reduced_graph)
+
         for comp in self.get_comps():
             comp.pre_setup()
     

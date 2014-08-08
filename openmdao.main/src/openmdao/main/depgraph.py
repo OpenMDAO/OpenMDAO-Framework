@@ -235,47 +235,47 @@ class DependencyGraph(nx.DiGraph):
 
         return '.'.join(parts[:2])
 
-    def sever_edges(self, edges):
-        """Temporarily remove the specified edges but save
-        them and their metadata for later restoration.
-        """
-        # Note: This will NOT call config_changed(), and if
-        # component_graph() has not been called since the last
-        # config_changed, it WILL create a temporary new
-        # component graph which will be overwritten by the original
-        # one when unsever_edges() is called.
-        if self._severed_edges:
-            raise RuntimeError("only one set of severed edges is permitted")
+    # def sever_edges(self, edges):
+    #     """Temporarily remove the specified edges but save
+    #     them and their metadata for later restoration.
+    #     """
+    #     # Note: This will NOT call config_changed(), and if
+    #     # component_graph() has not been called since the last
+    #     # config_changed, it WILL create a temporary new
+    #     # component graph which will be overwritten by the original
+    #     # one when unsever_edges() is called.
+    #     if self._severed_edges:
+    #         raise RuntimeError("only one set of severed edges is permitted")
 
-        # save old stuff to restore later
-        self._saved_comp_graph = self._component_graph
-        self._saved_loops = self._loops
+    #     # save old stuff to restore later
+    #     self._saved_comp_graph = self._component_graph
+    #     self._saved_loops = self._loops
 
-        self._severed_edges = list(edges)
+    #     self._severed_edges = list(edges)
 
-        self._allow_config_changed = False
-        try:
-            for u,v in edges:
-                self.disconnect(u, v)
-        finally:
-            self._allow_config_changed = True
+    #     self._allow_config_changed = False
+    #     try:
+    #         for u,v in edges:
+    #             self.disconnect(u, v)
+    #     finally:
+    #         self._allow_config_changed = True
 
-    def unsever_edges(self, scope):
-        """Restore previously severed edges."""
-        if not self._severed_edges:
-            return
+    # def unsever_edges(self, scope):
+    #     """Restore previously severed edges."""
+    #     if not self._severed_edges:
+    #         return
 
-        self._allow_config_changed = False
-        try:
-            for u,v in self._severed_edges:
-                self.connect(scope, u, v)
-        finally:
-            self._allow_config_changed = True
+    #     self._allow_config_changed = False
+    #     try:
+    #         for u,v in self._severed_edges:
+    #             self.connect(scope, u, v)
+    #     finally:
+    #         self._allow_config_changed = True
 
-        self._severed_edges = []
+    #     self._severed_edges = []
 
-        self._loops = self._saved_loops
-        self._component_graph = self._saved_comp_graph
+    #     self._loops = self._saved_loops
+    #     self._component_graph = self._saved_comp_graph
 
     def config_changed(self):
         if self._allow_config_changed:
@@ -1609,67 +1609,67 @@ def _check_for_missing_derivs(scope, comps):
 #     graph.remove_edges_from(to_remove)
 #     return graph
 
-def _explode_vartrees(graph, scope):
-    # if full vartrees are connected, create subvar nodes for all of their
-    # internal variables
-    for edge in graph.list_connections():
-        src, dest = edge
-        srcnames = []
-        destnames = []
+# def _explode_vartrees(graph, scope):
+#     # if full vartrees are connected, create subvar nodes for all of their
+#     # internal variables
+#     for edge in graph.list_connections():
+#         src, dest = edge
+#         srcnames = []
+#         destnames = []
 
-        if '@' not in src and '[' not in src:
+#         if '@' not in src and '[' not in src:
 
-            if '~' in src:
-                obj = scope.get(from_PA_var(src))
-            else:
-                obj = scope.get(src)
-            if has_interface(obj, IVariableTree):
-                srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                srcnames = ['.'.join((src, n)) for n in srcnames]
+#             if '~' in src:
+#                 obj = scope.get(from_PA_var(src))
+#             else:
+#                 obj = scope.get(src)
+#             if has_interface(obj, IVariableTree):
+#                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+#                 srcnames = ['.'.join((src, n)) for n in srcnames]
 
-        if '@' not in dest and '[' not in dest:
+#         if '@' not in dest and '[' not in dest:
 
-            if '~' in dest:
-                obj = scope.get(from_PA_var(dest))
-            else:
-                obj = scope.get(dest)
+#             if '~' in dest:
+#                 obj = scope.get(from_PA_var(dest))
+#             else:
+#                 obj = scope.get(dest)
 
-            if has_interface(obj, IVariableTree):
-                destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-                destnames = ['.'.join((dest, n)) for n in destnames]
+#             if has_interface(obj, IVariableTree):
+#                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
+#                 destnames = ['.'.join((dest, n)) for n in destnames]
 
-        if '@' not in src and '@' not in dest and (srcnames or destnames):
-            _replace_full_vtree_conn(graph, src, srcnames,
-                                            dest, destnames, scope)
+#         if '@' not in src and '@' not in dest and (srcnames or destnames):
+#             _replace_full_vtree_conn(graph, src, srcnames,
+#                                             dest, destnames, scope)
 
-    return graph
+#     return graph
 
-def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
-    fail = False
-    if len(srcnames) != len(destnames):
-        fail = True
-    else:
-        for s, d in zip(srcnames, destnames):
-            if s.split('.')[-1] != d.split('.')[-1]:
-                fail = True
-                break
+# def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
+#     fail = False
+#     if len(srcnames) != len(destnames):
+#         fail = True
+#     else:
+#         for s, d in zip(srcnames, destnames):
+#             if s.split('.')[-1] != d.split('.')[-1]:
+#                 fail = True
+#                 break
 
-    if fail:
-        snames = [n.split('.',1)[1] for n in srcnames]
-        dnames = [n.split('.',1)[1] for n in destnames]
-        msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
-        missing_srcs = set(dnames).difference(snames)
-        missing_dests = set(snames).difference(dnames)
-        if missing_srcs:
-            msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
-        if missing_dests:
-            msg += ", variables %s are missing from %s" % (list(missing_dests), dest)
-        raise ValueError(msg)
+#     if fail:
+#         snames = [n.split('.',1)[1] for n in srcnames]
+#         dnames = [n.split('.',1)[1] for n in destnames]
+#         msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
+#         missing_srcs = set(dnames).difference(snames)
+#         missing_dests = set(snames).difference(dnames)
+#         if missing_srcs:
+#             msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
+#         if missing_dests:
+#             msg += ", variables %s are missing from %s" % (list(missing_dests), dest)
+#         raise ValueError(msg)
 
-    graph.disconnect(src, dest)
+#     graph.disconnect(src, dest)
 
-    for s, d in zip(srcnames, destnames):
-        graph.connect(scope, s, d, check=False)
+#     for s, d in zip(srcnames, destnames):
+#         graph.connect(scope, s, d, check=False)
 
 
 def get_missing_derivs(obj, recurse=True):
@@ -1926,34 +1926,39 @@ def list_driver_connections(graph, driver=True):
         return [(u,v) for u,v,data in graph.edges_iter(data=True)
                             if data.get('drv_conn')==driver]
 
-def _get_compname(g, node):
-    """Return the name of the component that owns the given node
-    if there is one.  Otherwise, just return the node name.
-    """
-    cname = node.split('.', 1)[0]
-    if is_comp_node(g, cname):
-        return cname
-    return node
+def _add_collapsed_node(g, src, dests):
+    """Adds new collapsed node which collapses a source and any
+    destinations of that source, and adds any new edges due to 
+    collapsing the nodes.
 
-def _add_collapsed_node(g, newname, src, dests, meta, driver=False):
-    """Adds new collapsed node and any new edges due to collapsing the node.
     Does NOT remove the old nodes.
     """
-    g.add_node(newname, meta)
+    dests = list(dests)
+    if '@' in src: # src is a driver node
+        meta = g.node[dests[0]]
+        newname = (dests[0], tuple(dests))
+        src = src.split('@')[0]
+    else:
+        meta = g.node[src]
+        for i, dest in enumerate(dests):
+            if '@' in dest:
+                newdests = dests[:]
+                newdests[i] = src
+                newname = (src, tuple(newdests))
+                dests[i] = dest.split('@')[0]
+                break
+        else:
+            newname = (src, tuple(dests))
 
-    cname = _get_compname(g, src)
-    if cname == src:
-        if driver:
-            g.add_edge(cname, newname)
-    elif g.node[cname].get('comp'):
+    g.add_node(newname, meta.copy())
+
+    cname = src.split('.', 1)[0]
+    if is_comp_node(g, cname):
         g.add_edge(cname, newname)
 
     for dest in dests:
-        cname = _get_compname(g, dest)
-        if cname == dest:
-            if driver:
-                g.add_edge(newname, cname)
-        else:
+        cname = dest.split('.', 1)[0]
+        if is_comp_node(g, cname):
             g.add_edge(newname, cname)
 
 def all_comps(g):
@@ -1968,87 +1973,96 @@ def collapse_connections(orig_graph, scope):
     """
     src2dests = {}
     dest2src = {}
-    states = set()  # set of all states
 
-    g = nx.DiGraph()
+    g = nx.DiGraph(orig_graph)
+    #g = orig_graph.subgraph(orig_graph.nodes_iter())
 
-    # get state and metadata info from components
-    for node in all_comps(orig_graph):
-        g.add_node(node, orig_graph.node[node].copy())  # copying metadata
-        try:
-            states.update(['.'.join((node,s)) for s in getattr(scope, node).list_states()])
-        except AttributeError:
-            pass
+    conns = list_data_connections(g)
+    drvconns = list_driver_connections(g)
 
-    drvconns = list_driver_connections(orig_graph)
+    # mark all connected vars for removal since they're being collapsed
+    to_remove = set([u for u,v in conns])
+    to_remove.update([v for u,v in conns])
+    to_remove.update([u for u,v in drvconns if not is_driver_node(g, u)])
+    to_remove.update([v for u,v in drvconns if not is_driver_node(g, v)])
 
-    for u,v in list_data_connections(orig_graph):
+    # temporarily rename drivers in driver connections to include
+    # the name of the connected var
+    for i,(u,v) in enumerate(drvconns):
+        if is_driver_node(g, u):
+            drvconns[i] = ('%s@%s' % (u,v), v)
+            dest2src[v] = drvconns[i][0]
+        else:
+            drvconns[i] = (u, '%s@%s' % (v,u))
+
+    for u,v in drvconns:
+        src2dests.setdefault(u, set()).add(v)
+
+    for u,v in conns:
         src2dests.setdefault(u, set()).add(v)
         dest2src[v] = u
 
-    for u,v in drvconns:
-        if is_driver_node(orig_graph, u):
-            dest2src[v] = u
-
-    xtra_drv_conns = {}
-    to_remove = set()
-    # find any connected inputs used as srcs and connect their
-    # dests to the true source
+    # re-route inputs that are also sources
     for src, dests in src2dests.items():
-        if src in dest2src:  # src is also a destination (input used as output)
+        if src in dest2src:
             truesrc = dest2src[src]
-            if truesrc in src2dests:
-                src2dests[truesrc].update(dests)
-            else:
-                if truesrc not in xtra_drv_conns:
-                    xtra_drv_conns[truesrc] = {}
-                xtra_drv_conns[truesrc].setdefault(src,[]).extend(dests)
-            # remove outgoing edges from the src since we've moved them to
-            # the true src
-            to_remove.add(src)
-
-    for name in to_remove:
-        del src2dests[name]
-
+            src2dests[truesrc].update(dests)
+            del src2dests[src]
+            
     for src, dests in src2dests.items():
-        newname = (src,tuple(dests))
-        _add_collapsed_node(g, newname, src, dests, orig_graph.node[src].copy())
+        _add_collapsed_node(g, src, dests)
 
-    # driver connections are slightly different.  Name their
-    # param/obj/constraint nodes as (src,(src,)), or (dest, (dest,))
-    for src,dest in drvconns:
-        if is_driver_node(orig_graph, src):
-            if src in xtra_drv_conns:  # 
-                xtra_dests = xtra_drv_conns[src][dest]
-                dests = tuple([dest]+xtra_dests)
-            else:
-                xtra_dests = []
-                dests = (dest,)
-
-            nodename = (dest, dests)
-            _add_collapsed_node(g, nodename, 
-                                     src, (dest,), 
-                                     orig_graph.node[dest].copy(), driver=True)
-
-            # any extra dests now need to be connected to their
-            # corresponding components
-            for d in xtra_dests:
-                g.add_edge(nodename, _get_compname(orig_graph, d))
-        else:
-            _add_collapsed_node(g, (src, (src,)), 
-                                     src, (dest,), 
-                                     orig_graph.node[src].copy(), driver=True)
-
-    # make sure unconnected states are included in the graph.
-    # Name their nodes in the same manner as driver connections, i.e.,
-    # (name, (name,)).
-    depgraph = scope._depgraph  # use depgraph to retrieve metadata here 
-                                # because unconnected
-                                # vars have already been pruned from g
-    for state in states:
-        if state not in g:
-            _add_collapsed_node(g, (state, (state,)),
-                                     state, (state,),
-                                     depgraph.node[state].copy())
-
+    g.remove_nodes_from(to_remove)
+    
     return g
+
+def _find_in_meta(g, node, meta_name):
+    vals = []
+    if isinstance(node, basestring):
+        v = g.node[node].get(meta_name)
+        if v:
+            vals.append(v)
+        return vals
+    
+    for name in [node[0]]+list(node[1]):
+        meta = g.node.get(name)
+        if meta:
+            v = meta.get(meta_name)
+            if v:
+                vals.append(v)
+    return vals
+
+def prune_reduced_graph(orig_g, g):
+    """Remove all unconnected vars that are not states."""
+    to_remove = []
+
+    for node, data in g.nodes_iter(data=True):
+        if 'state' in _find_in_meta(orig_g, node, 'iotype'):
+            continue
+
+        if data.get('comp'):
+            continue
+        
+        indeg = g.in_degree(node)
+        outdeg = g.out_degree(node)
+
+        if indeg > 0 and outdeg > 0:
+            continue
+        
+        if (indeg > 0 or outdeg > 0) and _find_in_meta(orig_g, node, 'boundary'):
+            continue
+        
+        to_remove.append(node)
+
+    g.remove_nodes_from(to_remove)
+
+def relabel_states(orig_g, g):
+    # now rename state nodes to tuple form to be consistent
+    # with all other var nodes
+    statemap = {}
+    for node, data in orig_g.nodes_iter(data=True):
+        if data.get('iotype') == 'state' and node in g:
+            statemap[node] = (node, (node,))
+            
+    nx.relabel_nodes(g, statemap, copy=False)
+
