@@ -161,7 +161,7 @@ class System(object):
             states = ()
 
         pure_outs = [out for out in self._out_nodes if out not in states]
-        
+
         all_outs = set(nodes)
         all_outs.update(pure_outs)
 
@@ -283,7 +283,7 @@ class System(object):
             except AttributeError:
                 pass
 
-        outputs.extend([n for n in self.list_outputs(coupled=False) 
+        outputs.extend([n for n in self.list_outputs(coupled=False)
                                 if n not in outputs])
         return outputs
 
@@ -720,6 +720,19 @@ class System(object):
             return self.fd_solver.solve(iterbase=iterbase)
 
         return self.ln_solver.solve(inputs, outputs)
+
+    def calc_newton_direction(self, options=None, iterbase=''):
+        """ Solves for the new state in Newton's method and leaves it in the
+        df vector."""
+
+        self.set_options('forward', options)
+        self.initialize_gradient_solver()
+        self.linearize()
+
+        self.rhs_vec.array[:] = 0.0
+        self.vec['df'].array[:] = 0.0
+
+        self.ln_solver.newton()
 
     def applyJ(self, coupled=False):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
