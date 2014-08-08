@@ -52,20 +52,6 @@ class MPISolver(Driver):
         """ Computes the norm that must be driven to zero """
         raise NotImplementedError("_norm method not implemented")
 
-    def _get_param_constraint_pairs(self):
-        """Returns a list of tuples of the form (param, cnstraint, sign) where
-        sign is 1 or -1.
-        """
-        pairs = []
-        pgroups = self.list_param_group_targets()
-        for key, cnst in self.get_eq_constraints().iteritems():
-            for params in pgroups:
-                if params[0] == cnst.rhs.text:
-                    pairs.append((params[0], cnst.pcomp_name+'.out0', -1))
-                elif params[0] == cnst.lhs.text:
-                    pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
-        return pairs
-
     def run_iteration(self):
         """ Operation executed in each iteration """
         raise NotImplementedError("run_iteration method not implemented")

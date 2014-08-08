@@ -21,19 +21,22 @@ class VecWrapperBase(object):
         self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
 
         self._initialize(system)
-        self._add_tuple_members(self._info.keys())
+
+        self._map_resids_to_states(system)
+
+        self._add_tuple_members(system, self._info.keys())
         self._add_resid(system)
 
     def _add_resid(self, system):
         pass
 
-    def _add_tuple_members(self, tups):
+    def _add_tuple_members(self, system, tups):
         # now add all srcs and dests from var tuples so that views for particular openmdao variables
         # can be accessed.
         for tup in tups:
             info = self._info[tup]
             names = set([tup[0]])  # src
-            names.update(tup[1]) # adding dests
+            names.update(tup[1])   # adding dests
             for name in names:
                 self._info[name] = info
                 self._subviews.add(name)
@@ -201,6 +204,13 @@ class VecWrapper(VecWrapperBase):
         self._info[resids[0]] = (view, start)
         self._subviews.add(resids[0])
 
+    def _map_resids_to_states(self, system):
+        # add any mappings of residuals to states
+        for resid, state in system._mapped_resids.items():
+            if resid not in self._info:
+                self._info[resid] = self._info[state]
+                self._subviews.add(resid)
+
     def set_from_scope(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
         versions of them in our array.
@@ -280,6 +290,9 @@ class InputVecWrapper(VecWrapperBase):
         #                                      list(self.bounds(name)),
         #                                      sub_idx,self.array[sub_idx].size))
 
+    def _map_resids_to_states(self, system):
+        pass
+    
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given scope.

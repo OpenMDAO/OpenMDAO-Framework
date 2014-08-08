@@ -199,17 +199,17 @@ class System(object):
                 return s
         return None
 
-    def get_result(self, item):
-        if self.mode == 'adjoint':
-            if item in self.sol_vec:
-                return self.sol_vec[item]
-            return self.scope._system.vec['du'][
-                         self.state_resid_map.get(item, item)]
-        else:
-            if item in self.rhs_vec:
-                return self.rhs_vec[item]
-            return self.scope._system.vec['df'][
-                         self.state_resid_map.get(item, item)]
+    # def get_result(self, item):
+    #     if self.mode == 'adjoint':
+    #         if item in self.sol_vec:
+    #             return self.sol_vec[item]
+    #         return self.scope._system.vec['du'][
+    #                      self.state_resid_map.get(item, item)]
+    #     else:
+    #         if item in self.rhs_vec:
+    #             return self.rhs_vec[item]
+    #         return self.scope._system.vec['df'][
+    #                      self.state_resid_map.get(item, item)]
             
     def subsystems(self, local=False):
         if local:
@@ -347,12 +347,12 @@ class System(object):
 
         return vdict
 
-    def setup_variables(self):
+    def setup_variables(self, resid_state_map=None):
         self.variables = OrderedDict()
         self._var_meta = {}
 
         for sub in self.local_subsystems():
-            sub.setup_variables()
+            sub.setup_variables(resid_state_map)
             self.variables.update(sub.variables)
             self._var_meta.update(sub._var_meta)
 
@@ -376,9 +376,11 @@ class System(object):
             if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.'): # add driver input or state
                 self.variables[vname] = self._var_meta[vname]
 
-        self._create_var_dicts()
+        self._mapped_resids = {}
 
-    def _create_var_dicts(self):
+        self._create_var_dicts(resid_state_map)
+
+    def _create_var_dicts(self, resid_state_map):
         # now figure out all of the inputs we 'own'
         self._owned_args = self._get_owned_args()
         # self._flat_owned_args = self.flat(self._owned_args)
@@ -755,7 +757,8 @@ class SimpleSystem(System):
         self.mpi.requested_cpus = cpus
         self._comp = comp
         self.J = None
-
+        self._mapped_resids = {}
+        
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             comp = self._comp
@@ -774,6 +777,22 @@ class SimpleSystem(System):
         # if comm is not None:
         #     mpiprint("setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
         self.mpi.comm = comm
+
+    def _create_var_dicts(self, resid_state_map):
+        # for simple systems, if we're given a mapping of our outputs to
+        # states, we need to 'own' the state and later in apply_F we need
+        # to copy the residual part of our f vector to the corresponding
+        # state.
+        if resid_state_map:
+            for out in self._out_nodes:
+                state = resid_state_map.get(out)
+                if state and state not in self.variables:
+                    self.variables[state] = self._var_meta[state] = \
+                                                self._get_var_info(state)
+                    self._mapped_resids[out] = state
+                    del self.variables[out]
+                    
+        super(SimpleSystem, self)._create_var_dicts(resid_state_map)
 
     def setup_scatters(self):
         if not self.is_active():
@@ -854,22 +873,18 @@ class ExplicitSystem(SimpleSystem):
 
     def apply_F(self):
         """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
-        #mpiprint("%s.apply_F" % self.name)
-        vec = self.vec
+        uarray = self.vec['u'].array
+        farray = self.vec['f'].array
+
         self.scatter('u', 'p')
 
-        vec['f'].array[:] = vec['u'].array[:]
-        #if self._comp.parent is not None:
-            #self.vec['p'].set_to_scope(self._comp.parent)
-            #mpiprint("=== P vector for %s before: %s" % (comp.name, self.vec['p'].items()))
+        farray[:] = uarray[:]
         self._comp.run()
         if self._comp.parent is not None:
             self.vec['u'].set_from_scope(self._comp.parent)
-        #mpiprint("=== U vector for %s after: %s" % (comp.name,self.vec['u'].items()))
-        #mpiprint("=== F vector for %s after: %s" % (comp.name,self.vec['f'].items()))
-        vec['f'].array[:] -= vec['u'].array[:]
-        vec['u'].array[:] += vec['f'].array[:]
-        #mpiprint("after apply_F, f = %s" % self.vec['f'].array)
+
+        farray[:] -= uarray[:]
+        uarray[:] += farray[:]
 
 
 class InVarSystem(ExplicitSystem):
@@ -921,8 +936,8 @@ class AssemblySystem(ExplicitSystem):
         super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
 
-    def setup_variables(self):
-        super(AssemblySystem, self).setup_variables()
+    def setup_variables(self, resid_state_map=None):
+        super(AssemblySystem, self).setup_variables(resid_state_map)
         self._comp.setup_variables()
 
     def setup_sizes(self):
@@ -1144,7 +1159,7 @@ class ParallelSystem(CompoundSystem):
         for sub in self.local_subsystems():
             sub.setup_communicators(sub_comm)
 
-    def setup_variables(self):
+    def setup_variables(self, resid_state_map=None):
         """ Determine variables from local subsystems """
         #mpiprint("setup_variables: %s" % self.name)
         self.variables = OrderedDict()
@@ -1152,7 +1167,7 @@ class ParallelSystem(CompoundSystem):
             return
 
         for sub in self.local_subsystems():
-            sub.setup_variables()
+            sub.setup_variables(resid_state_map)
 
         if self.local_subsystems():
             sub = self.local_subsystems()[0]
@@ -1220,9 +1235,54 @@ class SolverSystem(SimpleSystem):  # Implicit
         super(SolverSystem, self).__init__(scope, driver.name)
         driver._system = self
 
+    def _get_resid_state_map(self):
+        # map of individual var names to collapsed names
+        nodemap = self.scope.name2collapsed
+
+        # set up our own resid_state_map
+        resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c, sign in 
+                                 self._comp._get_param_constraint_pairs()])
+        pgroups = self._comp.list_param_group_targets()
+        resids = self._comp.list_eq_constraint_targets()
+
+        skip = set()
+        szdict = {}
+        for params in pgroups:
+            params = tuple(params)
+            for p in params:
+                if nodemap[p] in resid_state_map:
+                    skip.add(params)
+                    break
+            if params not in skip:
+                node = nodemap[params[0]]
+                self._var_meta[node] = self._get_var_info(node)
+                szdict.setdefault(self._var_meta[node]['size'], []).append(node)
+
+        for resid in resids:
+            resnode = nodemap[resid]
+            self._var_meta[resnode] = self._get_var_info(resnode)
+            sz = self._var_meta[resnode]['size']
+            try:
+                pnode = szdict[sz].pop()
+            except:
+                raise RuntimeError("unable to find a state of size %d to match residual '%s'" %
+                                    (sz, resid))
+            resid_state_map[resnode] = pnode
+            
+        for sz, pnodes in szdict.items():
+            if pnodes:
+                raise RuntimeError("param node %s of size %d has no matching residual" %
+                                    (pnodes, sz))
+
+        return resid_state_map
+
     def setup_communicators(self, comm):
         super(SolverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
+
+    def setup_variables(self, resid_state_map=None):
+        # pass our resid_state_map to our children
+        super(SolverSystem, self).setup_variables(self._get_resid_state_map())
 
     def setup_scatters(self):
         #super(SolverSystem, self).setup_scatters()
@@ -1300,19 +1360,20 @@ class InnerAssemblySystem(SerialSystem):
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
+# class EqualityConstraintSystem(ExplicitSystem):
+#     ''' Special system for a constraint, used to capture implicit behavior in
+#     a coupled solution. '''
 
-class ConstraintSystem(ExplicitSystem):
-    ''' Special system for a constraint, used to capture implicit behavior in
-    a coupled solution. '''
-
-    def list_outputs(self, coupled=False):
-        ''' If we are in a subsolver, then are output is actually a residual '''
-        if coupled is True:
-            return []
-        return super(ConstraintSystem, self).list_outputs()
-
+#     def list_outputs(self, coupled=False):
+#         ''' If we are in a subsolver, then our output is actually a residual '''
+#         if coupled is True:
+#             return []
+#         return super(EqualityConstraintSystem, self).list_outputs()
 
 def _create_simple_sys(scope, comp):
+    """Given a Component, create the appropriate type
+    of simple System.
+    """
 
     if has_interface(comp, ISolver):
         sub = SolverSystem(comp)
@@ -1320,8 +1381,9 @@ def _create_simple_sys(scope, comp):
         sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, comp.name)
-    elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint':
-        sub = ConstraintSystem(scope, comp.name)
+    # elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
+    #            and comp._subtype == 'equality':
+    #     sub = EqualityConstraintSystem(scope, comp.name)
     elif has_interface(comp, IImplicitComponent):
         sub = SimpleSystem(scope, comp.name)
     else:

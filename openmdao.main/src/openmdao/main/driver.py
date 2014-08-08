@@ -471,6 +471,21 @@ class Driver(Component):
                 })
         return ret
 
+    def _get_param_constraint_pairs(self):
+        """Returns a list of tuples of the form (param, constraint, sign) where
+        sign is 1 or -1.
+        """
+        pairs = []
+        if hasattr(self, 'list_param_group_targets'):
+            pgroups = self.list_param_group_targets()
+            for key, cnst in self.get_eq_constraints().iteritems():
+                for params in pgroups:
+                    if params[0] == cnst.rhs.text:
+                        pairs.append((params[0], cnst.pcomp_name+'.out0', -1))
+                    elif params[0] == cnst.lhs.text:
+                        pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
+        return pairs
+
     @rbac(('owner', 'user'))
     def setup_systems(self):
         """Allocate communicators from here down to all of our
