@@ -74,17 +74,16 @@ class NewtonSolver(Driver):
         options = self.gradient_options
 
         converged = False
+        if npnorm(system.vec['f'].array) < self.tolerance:
+            converged = True
+
         itercount = 0
+        alpha = 1.0
         while not converged:
 
             system.calc_newton_direction(options=options)
 
-            system.vec['u'].array[:]  += system.sol_vec.array[:]
-            #for var in self.get_param_targets():
-                #if isinstance(var, tuple):
-                    #var = var[0]
-
-                #system.vec['u'][var] += system.vec['df'][var]
+            system.vec['u'].array[:]  += alpha*system.vec['df'].array[:]
 
             self.pre_iteration()
             self.run_iteration()
@@ -93,6 +92,7 @@ class NewtonSolver(Driver):
             norm = npnorm(system.vec['f'].array)
             print norm
             itercount += 1
+            #alpha = alpha*0.5
 
             if norm < self.tolerance or itercount == self.max_iteration:
                 break
