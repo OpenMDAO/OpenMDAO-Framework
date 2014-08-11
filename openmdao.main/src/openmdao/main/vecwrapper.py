@@ -45,13 +45,7 @@ class VecWrapperBase(object):
         return self._info[name][0]
 
     def __setitem__(self, name, value):
-        #if name in self._info:
         self._info[name][0][:] = value.flat
-        # else:
-        #     # FIXME: this makes me nervous...  certain uses will be broken for this new item
-        #     self._info[name] = (value, 0)
-        #     self._subviews.add(name)
-        #     self._add_tuple_members([name])
 
     def __contains__(self, name):
         return name in self._info
@@ -182,8 +176,12 @@ class VecWrapper(VecWrapperBase):
                                              (system.name, name,
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
+                    
+        # TODO: handle cases where we have overlapping subvars but no basevar
+        
 
     def _add_resid(self, system):
+        nodemap = system.scope.name2collapsed
         try:
             cname = system._comp.name
             states = ['.'.join((cname, s)) for s in system._comp.list_states()]
@@ -191,18 +189,20 @@ class VecWrapper(VecWrapperBase):
         except AttributeError:
             return
 
-        start, end = self.bounds(states)
-
-        # verify contiguous states
-        size = sum([self._info[n][0].size for n in states])
-
-        view = self.array[start:end]
-
-        assert(size == view.size)
-        assert(len(resids) == 1)
-
-        self._info[resids[0]] = (view, start)
-        self._subviews.add(resids[0])
+        states = [s for s in states if nodemap[s] in system.variables]
+        if states:
+            start, end = self.bounds(states)
+    
+            # verify contiguous states
+            size = sum([self._info[n][0].size for n in states])
+    
+            view = self.array[start:end]
+    
+            assert(size == view.size)
+            assert(len(resids) == 1)
+    
+            self._info[resids[0]] = (view, start)
+            self._subviews.add(resids[0])
 
     def _map_resids_to_states(self, system):
         # add any mappings of residuals to states

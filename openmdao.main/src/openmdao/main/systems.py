@@ -243,7 +243,7 @@ class System(object):
             try:
                 inputs.update(['.'.join((system.name,s))
                                   for s in system._comp.list_states()])
-            except:
+            except AttributeError:
                 pass
             for tup in system._in_nodes:
                 for dest in tup[1]:
@@ -350,31 +350,37 @@ class System(object):
     def setup_variables(self, resid_state_map=None):
         self.variables = OrderedDict()
         self._var_meta = {}
+        if resid_state_map is None:
+            resid_state_map = {}
+            
+        #mapped_states = resid_state_map.values()
 
+ 
         for sub in self.local_subsystems():
             sub.setup_variables(resid_state_map)
             self.variables.update(sub.variables)
             self._var_meta.update(sub._var_meta)
 
-        try:
-            states = set(['.'.join((self._comp.name, s))
-                             for s in self._comp.list_states()])
-        except AttributeError:
-            states = ()
+        #try:
+            #states = set(['.'.join((self._comp.name, s))
+                             #for s in self._comp.list_states()])
+        #except AttributeError:
+            #states = ()
 
-        # group outputs into states and non-states
-        group1 = [v for v in self._out_nodes if v[1][0] in states]
-        group2 = [v for v in self._out_nodes if v[1][0] not in states]
+        ## group outputs into states and non-states
+        #group1 = []#[v for v in self._out_nodes if v[1][0] in states]
+        #group2 = [v for v in self._out_nodes if v[1][0] not in states 
+                         #and v not in resid_state_map]
 
-        for vname in chain(group1, group2):
-            if vname not in self.variables:
-                self.variables[vname] = self._var_meta[vname] = \
-                                            self._get_var_info(vname)
+        #for vname in chain(group1, group2):
+            #if vname not in self.variables:
+                #self.variables[vname] = self._var_meta[vname] = \
+                                            #self._get_var_info(vname)
 
-        for vname in self._in_nodes:
-            self._var_meta[vname] = self._get_var_info(vname)
-            if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.'): # add driver input or state
-                self.variables[vname] = self._var_meta[vname]
+        #for vname in self._in_nodes:
+            #self._var_meta[vname] = self._get_var_info(vname)
+            #if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
+                #self.variables[vname] = self._var_meta[vname]
 
         self._mapped_resids = {}
 
@@ -570,9 +576,8 @@ class System(object):
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
-                     'SolverSystem': 'slv', #'BoundarySystem': 'bnd',
-                     'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner',
-                     'ExplicitSystem': 'exp' }
+                     'SolverSystem': 'slv', 
+                     'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner'}
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
@@ -771,15 +776,8 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
+        self._explicit = False
         
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        if self.is_active():
-            comp = self._comp
-            self.scatter('u', 'p')
-            comp.set_itername('%s-%s' % (iterbase, comp.name))
-            comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            self.vec['u'].set_from_scope(self.scope)#, self._out_nodes)
-
     def stop(self):
         self._comp.stop()
 
@@ -792,8 +790,33 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
+        try:
+            states = set(['.'.join((self._comp.name, s))
+                             for s in self._comp.list_states()])
+        except AttributeError:
+            states = ()
+
+        # group outputs into states and non-states
+        # comps no longer own their own states (unless they also
+        # own the corresponding residual)
+        mystates = [v for v in self._out_nodes if v[1][0] in states]
+        mynonstates = [v for v in self._out_nodes if v[1][0] not in states 
+                         and v not in resid_state_map]
+
+        for vname in chain(mystates, mynonstates):
+            if vname not in self.variables:
+                self.variables[vname] = self._var_meta[vname] = \
+                                            self._get_var_info(vname)
+
+        mapped_states = resid_state_map.values()
+
+        for vname in self._in_nodes:
+            self._var_meta[vname] = self._get_var_info(vname)
+            if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
+                self.variables[vname] = self._var_meta[vname]
+                
         # for simple systems, if we're given a mapping of our outputs to
-        # states, we need to 'own' the state and later in apply_F we need
+        # states, we need to 'own' the state and later in run we need
         # to copy the residual part of our f vector to the corresponding
         # state.
         if resid_state_map:
@@ -803,7 +826,8 @@ class SimpleSystem(System):
                     self.variables[state] = self._var_meta[state] = \
                                                 self._get_var_info(state)
                     self._mapped_resids[out] = state
-                    del self.variables[out]
+                    if out in self.variables:
+                        del self.variables[out]
                     
         super(SimpleSystem, self)._create_var_dicts(resid_state_map)
 
@@ -837,10 +861,35 @@ class SimpleSystem(System):
             self.scatter_full = DataTransfer(self, src_idxs, dest_idxs,
                                              scatter_conns, other_conns)
 
-    def apply_F(self):
-        self.scatter('u', 'p')
-        self._comp.evaluate()
-        self.vec['u'].set_from_scope(self.scope)
+    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        if self.is_active():
+            #if self._explicit:
+                #self._explicit_run(iterbase, ffd_order, case_label, case_uuid)
+            #else:
+            self.scatter('u', 'p')
+            self._comp.set_itername('%s-%s' % (iterbase, self._comp.name))
+            self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+            self.vec['u'].set_from_scope(self.scope)
+
+    # def apply_F(self):
+    #     self.scatter('u', 'p')
+    #     self._comp.evaluate()
+    #     self.vec['u'].set_from_scope(self.scope)
+
+    #def _explicit_run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        #""" F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
+        #uarray = self.vec['u'].array
+        #farray = self.vec['f'].array
+
+        #self.scatter('u', 'p')
+
+        #farray[:] = uarray[:]
+        #self._comp.set_itername('%s-%s' % (iterbase, self._comp.name))
+        #self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+        #self.vec['u'].set_from_scope(self.scope)
+
+        #farray[:] -= uarray[:]
+        #uarray[:] += farray[:]
 
     def linearize(self):
         """ Linearize this component. """
@@ -881,30 +930,12 @@ class SimpleSystem(System):
             self.scatter('du', 'dp')
 
 
-class ExplicitSystem(SimpleSystem):
-    """ Simple System with inputs and outputs, but no states or residuals. """
-
-    def apply_F(self):
-        """ F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
-        uarray = self.vec['u'].array
-        farray = self.vec['f'].array
-
-        self.scatter('u', 'p')
-
-        farray[:] = uarray[:]
-        self._comp.run()
-        if self._comp.parent is not None:
-            self.vec['u'].set_from_scope(self._comp.parent)
-
-        farray[:] -= uarray[:]
-        uarray[:] += farray[:]
-
-
-class InVarSystem(ExplicitSystem):
+class InVarSystem(SimpleSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
     def __init__(self, scope, name):
         super(InVarSystem, self).__init__(scope, name)
+        self._explicit = True
         self._out_nodes = [name]
         self._in_nodes = []
 
@@ -921,11 +952,12 @@ class InVarSystem(ExplicitSystem):
         pass
 
 
-class OutVarSystem(ExplicitSystem):
+class OutVarSystem(SimpleSystem):
     """System wrapper for Assembly output variables (internal perspective)."""
 
     def __init__(self, scope, name):
         super(OutVarSystem, self).__init__(scope, name)
+        self._explicit = True
         self._out_nodes = []
         self._in_nodes = [name]
 
@@ -941,13 +973,27 @@ class OutVarSystem(ExplicitSystem):
     def stop(self):
         pass
 
+class EqConstraintSystem(SimpleSystem):
+    """A special system to handle mapping of states and
+    residuals.
+    """
 
-class AssemblySystem(ExplicitSystem):
+    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        if self.is_active():
+            if self._mapped_resids: # run implicit
+                super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
+                state = self._mapped_resids[self.scope.name2collapsed[self.name+'.out0']]
+                self.vec['f'][state][:] = self._comp.out0
+            else:
+                self._explicit_run(iterbase, ffd_order, case_label, case_uuid)
+
+class AssemblySystem(SimpleSystem):
     """A System to handle an Assembly."""
 
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
+        self._explicit = True
 
     def setup_variables(self, resid_state_map=None):
         super(AssemblySystem, self).setup_variables(resid_state_map)
@@ -1000,11 +1046,11 @@ class CompoundSystem(System):
             return
         compound_setup_scatters(self)
 
-    def apply_F(self):
-        """ Delegate to subsystems """
-        self.scatter('u', 'p')
-        for subsystem in self.local_subsystems():
-            subsystem.apply_F()
+    # def apply_F(self):
+    #     """ Delegate to subsystems """
+    #     self.scatter('u', 'p')
+    #     for subsystem in self.local_subsystems():
+    #         subsystem.apply_F()
 
     def applyJ(self, coupled=False):
         """ Delegate to subsystems """
@@ -1205,7 +1251,7 @@ class ParallelSystem(CompoundSystem):
         self._create_var_dicts()
 
 
-class NonSolverDriverSystem(ExplicitSystem):
+class NonSolverDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, driver):
@@ -1213,6 +1259,7 @@ class NonSolverDriverSystem(ExplicitSystem):
         scope = driver.parent
         super(NonSolverDriverSystem, self).__init__(scope, driver.name)
         driver._system = self
+        self._explicit = True
 
     def setup_communicators(self, comm):
         super(NonSolverDriverSystem, self).setup_communicators(comm)
@@ -1375,16 +1422,6 @@ class InnerAssemblySystem(SerialSystem):
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
-# class EqualityConstraintSystem(ExplicitSystem):
-#     ''' Special system for a constraint, used to capture implicit behavior in
-#     a coupled solution. '''
-
-#     def list_outputs(self, coupled=False):
-#         ''' If we are in a subsolver, then our output is actually a residual '''
-#         if coupled is True:
-#             return []
-#         return super(EqualityConstraintSystem, self).list_outputs()
-
 def _create_simple_sys(scope, comp):
     """Given a Component, create the appropriate type
     of simple System.
@@ -1396,13 +1433,15 @@ def _create_simple_sys(scope, comp):
         sub = NonSolverDriverSystem(comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, comp.name)
-    # elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
-    #            and comp._subtype == 'equality':
-    #     sub = EqualityConstraintSystem(scope, comp.name)
+    elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
+               and comp._subtype == 'equality':
+        sub = EqConstraintSystem(scope, comp.name)
     elif has_interface(comp, IImplicitComponent):
         sub = SimpleSystem(scope, comp.name)
     else:
-        sub = ExplicitSystem(scope, comp.name)
+        sub = SimpleSystem(scope, comp.name)
+        sub._explicit = True
+
     return sub
 
 def partition_mpi_subsystems(cgraph, scope):

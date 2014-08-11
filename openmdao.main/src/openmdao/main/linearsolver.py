@@ -140,7 +140,7 @@ class ScipyGMRES(LinearSolver):
                   "for parameter '%s' at index %d"
             logger.error(msg, system.name, param, irhs)
 
-        system.vec['df'] = -dx
+        system.vec['df'].array[:] = -dx
 
         print 'dx', dx
 

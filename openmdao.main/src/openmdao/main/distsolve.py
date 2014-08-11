@@ -93,7 +93,7 @@ class MPINonlinearSolver(MPISolver):
         #for n in ['block_size','local_size','owner_range','owner_ranges','size','sizes']:
         #    mpiprint("f.%s = %s" % (n,getattr(system.vec['f'].petsc_vec,n)))
         #mpiprint("f vector (pre-apply_F): %s" % system.vec['f'].items())
-        system.apply_F()
+        system.run(self.workflow._iterbase())
         #mpiprint("f vector (post-apply_F): %s" % system.vec['f'].items())
 
         system.vec['f'].petsc_vec.assemble()

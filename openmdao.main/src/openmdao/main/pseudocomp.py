@@ -284,6 +284,9 @@ class PseudoComponent(object):
     def run(self, ffd_order=0, case_uuid=''):
         setattr(self, 'out0', self._srcexpr.evaluate())
 
+    def evaluate(self):
+        setattr(self, 'out0', self._srcexpr.evaluate())
+
     def get(self, name, index=None):
         if index is not None:
             raise RuntimeError("index not supported in PseudoComponent.get")
