@@ -118,7 +118,6 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         options = self.options
-        self.inputs = inputs
 
         # Size the problem
         n_edge = system.vec['df'].array.size
@@ -128,7 +127,7 @@ class ScipyGMRES(LinearSolver):
                            dtype=float)
 
         # Call GMRES to solve the linear system
-        dx, info = gmres(A, system.vec['du'],
+        dx, info = gmres(A, system.vec['du'].array,
                          tol=options.gmres_tolerance,
                          maxiter=options.gmres_maxiter)
 
