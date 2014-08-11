@@ -1271,6 +1271,7 @@ class SolverSystem(SimpleSystem):  # Implicit
                 self._var_meta[node] = self._get_var_info(node)
                 szdict.setdefault(self._var_meta[node]['size'], []).append(node)
 
+        # match remaining residuals and states by size
         for resid in resids:
             resnode = nodemap[resid]
             self._var_meta[resnode] = self._get_var_info(resnode)
@@ -1282,6 +1283,7 @@ class SolverSystem(SimpleSystem):  # Implicit
                                     (sz, resid))
             resid_state_map[resnode] = pnode
             
+        # all states must have a corresponding residual
         for sz, pnodes in szdict.items():
             if pnodes:
                 raise RuntimeError("param node %s of size %d has no matching residual" %
