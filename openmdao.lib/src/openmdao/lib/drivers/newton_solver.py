@@ -64,30 +64,34 @@ class NewtonSolver(Driver):
         self.post_iteration()
 
         # One choice
-        self.execute_fsolve()
+        #self.execute_fsolve()
+        self.execute_coupled()
 
     def execute_coupled(self):
         """ New experimental method based on John's Newton solver.
         """
         system = self.workflow._system
+        options = self.gradient_options
 
         converged = False
         itercount = 0
         while not converged:
 
-            system.calc_newton_direction()
+            system.calc_newton_direction(options=options)
 
-            for var in self.get_param_targets():
-                if isinstance(var, tuple):
-                    var = var[0]
+            system.vec['u'].array[:]  += system.sol_vec.array[:]
+            #for var in self.get_param_targets():
+                #if isinstance(var, tuple):
+                    #var = var[0]
 
-                system.vec['u'][var] += system.vec['df'][var]
+                #system.vec['u'][var] += system.vec['df'][var]
 
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
 
-            norm = norm(system.vec['f'].array)
+            norm = npnorm(system.vec['f'].array)
+            print norm
             itercount += 1
 
             if norm < self.tolerance or itercount == self.max_iteration:
