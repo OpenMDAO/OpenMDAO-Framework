@@ -90,7 +90,7 @@ class NewtonSolver(Driver):
             self.post_iteration()
 
             norm = npnorm(system.vec['f'].array)
-            print norm
+            print "Norm:", norm
             itercount += 1
             #alpha = alpha*0.5
 
