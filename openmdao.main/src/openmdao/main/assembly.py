@@ -1445,7 +1445,7 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        self._reduced_graph = collapse_connections(self._depgraph, self)
+        self._reduced_graph = collapse_connections(self._depgraph)
         prune_reduced_graph(self._depgraph, self._reduced_graph)
         relabel_states(self._depgraph, self._reduced_graph)
 
