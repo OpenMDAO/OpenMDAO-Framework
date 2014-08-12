@@ -38,8 +38,7 @@ class NewtonSolver(Driver):
 
     max_iteration = Int(50, iotype='in', desc='Maximum number of iterations')
 
-    method = Enum('fsolve', ['fsolve'], iotype='in',
-                  desc='Solution method (currently only fsolve from scipy optimize)')
+    alpha = Float(1.0, iotype='in', low=0.0, high=1.0, desc='Relaxation factor')
 
     def __init__(self):
 
@@ -78,7 +77,7 @@ class NewtonSolver(Driver):
             converged = True
 
         itercount = 0
-        alpha = 1.0
+        alpha = self.alpha
         while not converged:
 
             system.calc_newton_direction(options=options)

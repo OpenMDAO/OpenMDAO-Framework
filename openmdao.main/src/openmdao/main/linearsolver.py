@@ -161,7 +161,7 @@ class ScipyGMRES(LinearSolver):
 
             system.rhs_vec[varname] += system.sol_vec[varname]
 
-        print 'arg, result', arg, system.rhs_vec.array[:]
+        #print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]
 
 
@@ -293,7 +293,7 @@ class PETSc_KSP(LinearSolver):
             system.rhs_vec[varname] += system.sol_vec[varname]
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        print 'arg, result', sol_vec.array, rhs_vec.array
+        #print 'arg, result', sol_vec.array, rhs_vec.array
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """

@@ -163,7 +163,7 @@ class Scalable_MDA(Assembly):
         self.add('driver', NewtonSolver())
         self.driver.workflow.add(['d1', 'd2'])
         self.driver.add_parameter('d1.y_in', low=-1e99, high=1e99)
-        self.driver.add_constraint('d1.y_in = d2.y_out')
+        self.driver.add_constraint('d2.y_out = d1.y_in')
 
 
 class Newton_SolverTestCase(unittest.TestCase):
@@ -235,6 +235,8 @@ class Newton_SolverTestCase(unittest.TestCase):
         self.top.d1.z = self.top.d2.z = numpy.array([[-1.3], [2.45]])
         self.top.d1.C_y = numpy.array([[1.1, 1.3], [1.05, 1.13]])
         self.top.d2.C_y = numpy.array([[0.95, 0.98], [0.97, 0.95]])
+
+        self.top.driver.alpha = 0.7
 
         self.top.run()
 

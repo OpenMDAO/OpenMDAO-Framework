@@ -135,7 +135,7 @@ def applyJ(system):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -188,7 +188,7 @@ def applyJ(system):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJ', obj.name, arg, result
+    #print 'applyJ', obj.name, arg, result
 
 def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.
@@ -249,7 +249,7 @@ def applyJT(system):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJT', obj.name, arg, result
+        #print 'applyJT', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -301,7 +301,7 @@ def applyJT(system):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJT', obj.name, arg, result
+    #print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the
