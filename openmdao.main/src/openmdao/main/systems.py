@@ -512,23 +512,6 @@ class System(object):
 
         return self.vec
 
-    def setup_args(self):
-        pass
-        # # TODO: find a less hacky way to do this...
-        # for sub in self.local_subsystems():
-        #     for simple in sub.simple_subsystems():
-        #         for arg in self.vec['p']._info.keys():
-        #             sub.vec['p'][arg] = self.vec['p'][arg]
-        #             sub.vec['dp'][arg] = self.vec['dp'][arg]
-        #             #sub.vec['p0'][arg] = self.vec['p0'][arg]
-        #     sub.setup_args()
-        #     for simple in sub.simple_subsystems():
-        #         #for arg in sub._in_nodes:
-        #         for arg in sub.vec['p']._info.keys():
-        #             self.vec['p'][arg] = sub.vec['p'][arg]
-        #             self.vec['dp'][arg] = sub.vec['dp'][arg]
-        #             #self.vec['p0'][arg] = sub.vec['p0'][arg]
-
     def scatter(self, srcvecname, destvecname, subsystem=None):
         """ Perform data transfer (partial or full scatter or
         send/receive for data that isn't flattenable to a

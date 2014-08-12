@@ -737,11 +737,6 @@ class Workflow(object):
             return
         self._system.setup_vectors(arrays, state_resid_map)
 
-    def setup_args(self):
-        if MPI and self.mpi.comm == MPI.COMM_NULL:
-            return
-        self._system.setup_args()
-
     def setup_scatters(self):
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
