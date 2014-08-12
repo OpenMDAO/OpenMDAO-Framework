@@ -952,6 +952,24 @@ class EqConstraintSystem(SimpleSystem):
     """A special system to handle mapping of states and
     residuals.
     """
+    def setup_variables(self, resid_state_map=None):
+        super(EqConstraintSystem, self).setup_variables(resid_state_map)
+
+        nodemap = self.scope.name2collapsed
+        src = self._comp._exprobj.lhs.text
+        srcnode = nodemap.get(src, src)
+        dest = self._comp._exprobj.rhs.text
+        destnode = nodemap.get(dest, dest)
+
+        self._negate = False
+        if dest:
+            for resid_node, state_node in resid_state_map.items():
+                if resid_node == srcnode and state_node == destnode:
+                    break
+                elif resid_node == destnode and state_node == srcnode:
+                    self._negate = True
+                    break
+
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
@@ -1261,12 +1279,13 @@ class SolverSystem(SimpleSystem):  # Implicit
         driver._system = self
 
     def _get_resid_state_map(self):
+
         # map of individual var names to collapsed names
         nodemap = self.scope.name2collapsed
 
         # set up our own resid_state_map
-        resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c, sign in 
-                                 self._comp._get_param_constraint_pairs()])
+        pairs = self._comp._get_param_constraint_pairs()
+        resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c, sign in pairs])
         pgroups = self._comp.list_param_group_targets()
         resids = self._comp.list_eq_constraint_targets()
 
