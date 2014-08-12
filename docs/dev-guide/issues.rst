@@ -3,6 +3,9 @@
 OpenMDAO Issues
 ===============
 
+Creating an Issue
+------------------
+
 If you are not on the OpenMDAO development team and you want to submit a bug request or an enhancement, you
 should submit your issue to the OpenMDAO forum at http://openmdao.org/forum. 
 
@@ -32,9 +35,10 @@ the following page, where you can submit an issue.
 Complete the fields and submit your post to the forum. OpenMDAO developers receive an email
 notification when a a new forum question/issue is submitted, so your issue should get immediate
 attention. If the team agrees that the issue requires a code change, one of the developers will
-reply to your forum post and also enter a *story* into our bug tracking system. (See more on our
-tracking tool in the next main  section.) Once the issue has been resolved (e.g., a bug fixed), the
-developer who worked the story/issue should post to the forum.
+reply to your forum post and also enter a *story* into our bug tracking system. (For more
+information about our tracking tool, see the section on :ref:`Pivotal Tracker <Pivotal-Tracker>`.) 
+Once the issue has been resolved (e.g., a bug fixed), the developer who worked the story/issue
+should post to the forum.
 
 
 Working on an Issue
@@ -53,6 +57,7 @@ request gets merged into the main repository, you will be notified via email.
 
 .. seealso:: :ref:`Code-Contribution-Tutorial-&-Checklist`
 
+.. _`Pivotal-Tracker`:
 
 Tracking Bug/Feature Development in Pivotal Tracker
 ====================================================
