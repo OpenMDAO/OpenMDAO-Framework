@@ -127,7 +127,7 @@ class ScipyGMRES(LinearSolver):
                            dtype=float)
 
         # Call GMRES to solve the linear system
-        dx, info = gmres(A, system.vec['du'].array,
+        dx, info = gmres(A, system.vec['f'].array,
                          tol=options.gmres_tolerance,
                          maxiter=options.gmres_maxiter)
 
