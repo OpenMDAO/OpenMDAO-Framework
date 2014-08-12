@@ -945,7 +945,7 @@ class EqConstraintSystem(SimpleSystem):
         destnode = nodemap.get(dest, dest)
 
         self._negate = False
-        for _, state_node in self._mapped_resids.items():
+        for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._negate = True
                 break
@@ -1273,13 +1273,14 @@ class SolverSystem(SimpleSystem):  # Implicit
         resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c, sign in pairs])
         pgroups = self._comp.list_param_group_targets()
         resids = self._comp.list_eq_constraint_targets()
+        states = resid_state_map.values()
 
         skip = set()
         szdict = {}
         for params in pgroups:
             params = tuple(params)
             for p in params:
-                if nodemap[p] in resid_state_map:
+                if nodemap[p] in states: #resid_state_map:
                     skip.add(params)
                     break
             if params not in skip:
@@ -1287,6 +1288,8 @@ class SolverSystem(SimpleSystem):  # Implicit
                 self._var_meta[node] = self._get_var_info(node)
                 szdict.setdefault(self._var_meta[node]['size'], []).append(node)
 
+        resids = [r for r in resids if nodemap[r] not in resid_state_map]
+        
         # match remaining residuals and states by size
         for resid in resids:
             resnode = nodemap[resid]

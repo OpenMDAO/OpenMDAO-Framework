@@ -169,7 +169,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_swapped(self):
         self.top.add("driver", FixedPointIterator())
@@ -185,7 +185,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_swapped_reversed(self):
         self.top.add("driver", FixedPointIterator())
@@ -201,7 +201,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.in1, .01, .002)
         assert_rel_error(self, self.top.simple.out1, .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -215,7 +215,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_array_multi(self):
         self.top.add("driver", FixedPointIterator())
@@ -237,7 +237,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.arr2[1], .01, .002)
         assert_rel_error(self, self.top.simple.out2[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out2[1], .001, .0002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
 
     def test_mixed_scalar_array_multi(self): 
@@ -258,7 +258,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_mixed_scalar_array_multi_swapped(self): 
         self.top.add("driver", FixedPointIterator())
@@ -278,7 +278,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         assert_rel_error(self, self.top.simple.out1[0], .001, .0002)
         assert_rel_error(self, self.top.simple.out1[1], .001, .0002)
         assert_rel_error(self, self.top.simple.in2, .01, .002)
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_maxiteration(self):
         self.top.add("driver", FixedPointIterator())
@@ -289,7 +289,7 @@ class FixedPointIteratorTestCase(unittest.TestCase):
         self.top.driver.max_iteration = 3
 
         self.top.run()
-        self.assertEqual(self.top.driver.current_iteration, 2)
+        self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_check_config(self):
         self.top.add("driver", FixedPointIterator())
