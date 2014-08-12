@@ -83,7 +83,7 @@ class NewtonSolver(Driver):
 
             system.calc_newton_direction(options=options)
 
-            system.vec['u'].array[:]  += alpha*system.vec['df'].array[:]
+            system.vec['u'].array[:]  -= alpha*system.vec['df'].array[:]
 
             self.pre_iteration()
             self.run_iteration()
