@@ -99,7 +99,8 @@ class Constraint(object):
                 subtype = 'inequality'
             pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
                                      pseudo_type='constraint',
-                                     subtype=subtype)
+                                     subtype=subtype, 
+                                     exprobject=self)
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)

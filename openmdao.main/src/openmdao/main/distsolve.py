@@ -61,11 +61,8 @@ class MPISolver(Driver):
         self.current_iteration = 0
         self.normval = 1.e99
         self.norm0 = 1.e99
-        self.pairs = self._get_param_constraint_pairs()
-        #mpiprint("PAIRS: %s" % self.pairs)
         system = self.workflow._system
         system.vec['u'].set_from_scope(self.parent)
-        #mpiprint("initial u vector: %s" % system.vec['u'].items())
         self.run_iteration()
         self.normval = self._norm()
         self.norm0 = self.normval if self.normval != 0.0 else 1.0
@@ -84,106 +81,17 @@ class MPISolver(Driver):
         self.current_iteration += 1
         #mpiprint("iter %d, norm = %s" % (self.current_iteration, self.normval))
 
+
 class MPINonlinearSolver(MPISolver):
     """ A base class for distributed nonlinear solvers """
 
     def _norm(self):
         """ Computes the norm of the f Vec """
-        system = self.workflow._system
-        #mpiprint("NORM for %s" % system.name)
-        #for n in ['block_size','local_size','owner_range','owner_ranges','size','sizes']:
-        #    mpiprint("f.%s = %s" % (n,getattr(system.vec['f'].petsc_vec,n)))
-        #mpiprint("f vector (pre-apply_F): %s" % system.vec['f'].items())
-        #system.run(self.workflow._iterbase())
-        #mpiprint("f vector (post-apply_F): %s" % system.vec['f'].items())
-
-        system.vec['f'].petsc_vec.assemble()
-        #mpiprint("f vector (post-assemble): %s" % system.vec['f'].items())
-        return system.vec['f'].petsc_vec.norm()
+        fvec = self.workflow._system.vec['f']
+        fvec.petsc_vec.assemble()
+        return fvec.petsc_vec.norm()
 
     def run_iteration(self):
-        #mpiprint("NLGS running")
-        self.workflow._system.vec['u'].array[:] -= self.workflow._system.vec['f'].array[:]
-        self.workflow._system.run(self.workflow._iterbase())
-        #mpiprint("updating u vector with residuals")
-        #self.add_constraint_residuals()
-        #mpiprint("UVEC: %s" % self.workflow._system.vec['u'].items())
-
-    # def add_constraint_residuals(self):
-    #     uvec = self.workflow._system.vec['u']
-    #     for param, cnst, sign in self.pairs:
-    #         if sign < 0:
-    #             uvec[param][:] += uvec[cnst]
-    #         else:
-    #             uvec[param][:] -= uvec[cnst]
-
-
-# class MPINonlinearGS(MPINonlinearSolver):
-#     """ Nonlinear block Gauss Seidel """
-
-#     def run_iteration(self):
-#         """ Solve each subsystem in series """
-#         mpiprint("NLGS running")
-#         system = self.workflow._system
-#         for subsystem in system.local_subsystems:
-#             #mpiprint("=== system U vector before %s run: %s" % (subsystem.name, system.vec['u'].items()))
-#             system.scatter('u','p', subsystem)
-#             subsystem.run()
-#             #mpiprint("=== system U vector after %s run: %s" % (subsystem.name, system.vec['u'].items()))
-
-#         # TODO: look at collecting params into contiguous view and
-#         # constraints as well so we can do a fast numpy update with no
-#         # copying.
-
-#         # add current value of constraint residual to params
-#         self.add_constraint_residuals()
-
-
-# class MPINonlinearJacobi(MPINonlinearSolver):
-#     """ Nonlinear block Jacobi """
-
-#     def run_iteration(self):
-#         """ Solve each subsystem in parallel """
-#         system = self.workflow._system
-#         system.scatter('u','p')
-#         for subsystem in system.local_subsystems:
-#             subsystem.run()
-
-#         # add current value of constraint residual to params
-#         self.add_constraint_residuals()
-
-
-# class MPILinearSolver(MPISolver):
-#     """ A base class for linear solvers """
-
-#     def _norm(self):
-#         """ Computes the norm of the linear residual """
-#         system = self.workflow._system
-#         system.apply_dFdpu(system.variables.keys())
-#         system.rhs_vec.array[:] *= -1.0
-#         system.rhs_vec.array[:] += system.rhs_buf.array[:]
-#         system.rhs_vec.petsc.assemble()
-#         return system.rhs_vec.petsc.norm()
-
-#     def start_iteration(self):
-#         """ Stores the rhs and initial sol vectors """
-#         system = self.workflow._system
-#         system.rhs_buf.array[:] = system.rhs_vec.array[:]
-#         system.sol_buf.array[:] = system.sol_vec.array[:]
-#         norm = self._norm()
-#         norm0 = norm if norm != 0.0 else 1.0
-#         return norm0, norm
-
-#     def end_iteration(self):
-#         """ Copy the sol vector ; used for KSP solver """
-#         system = self.workflow._system
-#         system.sol_vec.array[:] = system.sol_buf.array[:]
-
-
-# class MPIIdentity(MPILinearSolver):
-#     """ Identity mapping; no preconditioning """
-
-#     def execute(self):
-#         """ Just copy the rhs to the sol vector """
-#         system = self.workflow._system
-#         system.sol_vec.array[:] = system.rhs_vec.array[:]
+        system = self.workflow._system
+        system.vec['u'].array += system.vec['f'].array[:]
+        system.run(self.workflow._iterbase())

@@ -39,11 +39,6 @@ class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with FixedPointIterator.
     """
-    def __init__(self, parallel=False, use_params=True):
-        self.parallel = parallel
-        self.use_params = use_params
-        super(SellarMDF, self).__init__()
-
     def configure(self):
         """ Creates a new Assembly with this problem
 
@@ -65,49 +60,80 @@ class SellarMDF(Assembly):
         C1.z2 = C2.z2 = 0
         C1.x1 = 0
 
-        if self.parallel:
-            # Use connections for Parallel
-            self.driver.add_parameter('C1.y1', low=-1e99, high=1e99)
-            self.driver.add_constraint('C1.y1 = C2.y1')
-            self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-            self.driver.add_constraint('C2.y2 = C1.y2')
-        else:
-            # Make connection for serial
-            self.connect('C1.y1','C2.y1')
-
-            # Iteration loop
-            if self.use_params:
-                self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-                #self.driver.add_constraint('C2.y2 = C1.y2')
-                self.driver.add_constraint('C1.y2 = C2.y2')
-            else:  # use circular connection
-                self.connect('C2.y2', 'C1.y2')
-
         # Solver settings
         self.driver.max_iteration = 5
         self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
 
 
-class BasicMPITests(MPITestCase):
+class MPITests1(MPITestCase):
 
     N_PROCS = 6
 
-    def test_sellar(self):
-        top = set_as_top(SellarMDF(parallel=False, use_params=False))
+    def test_sellar_params1(self):
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C1.y2 = C2.y2')
+
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
 
-        # if our rank >= required cpus, nothing will actually
-        # run so the numbers will be wrong, so skip that
         if self.comm.rank == 0:
             for name, expval in expected.items():
                 val = top.get(name)
                 assert_rel_error(self, val, expval, 0.001)
 
-    def test_sellar2(self):
-        top = set_as_top(SellarMDF(parallel=False, use_params=True))
+    def test_sellar_params2(self):
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C2.y2 = C1.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.run()
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+
+class MPITests2(MPITestCase):
+
+    N_PROCS = 6
+
+    def test_sellar_cyclic(self):
+
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+        top.connect('C2.y2', 'C1.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.run()
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+    def test_sellar_parallel(self):
+        # no direct connections
+        top = set_as_top(SellarMDF())
+
+        top.driver.add_parameter('C1.y1', low=-1e99, high=1e99)
+        top.driver.add_constraint('C1.y1 = C2.y1')
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C2.y2 = C1.y2')
+
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
