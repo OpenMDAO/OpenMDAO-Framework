@@ -66,6 +66,7 @@ class MPISolver(Driver):
         system = self.workflow._system
         system.vec['u'].set_from_scope(self.parent)
         #mpiprint("initial u vector: %s" % system.vec['u'].items())
+        self.run_iteration()
         self.normval = self._norm()
         self.norm0 = self.normval if self.normval != 0.0 else 1.0
 
@@ -93,7 +94,7 @@ class MPINonlinearSolver(MPISolver):
         #for n in ['block_size','local_size','owner_range','owner_ranges','size','sizes']:
         #    mpiprint("f.%s = %s" % (n,getattr(system.vec['f'].petsc_vec,n)))
         #mpiprint("f vector (pre-apply_F): %s" % system.vec['f'].items())
-        system.run(self.workflow._iterbase())
+        #system.run(self.workflow._iterbase())
         #mpiprint("f vector (post-apply_F): %s" % system.vec['f'].items())
 
         system.vec['f'].petsc_vec.assemble()
@@ -104,7 +105,7 @@ class MPINonlinearSolver(MPISolver):
         #mpiprint("NLGS running")
         self.workflow._system.run(self.workflow._iterbase())
         #mpiprint("updating u vector with residuals")
-        self.add_constraint_residuals()
+        #self.add_constraint_residuals()
         #mpiprint("UVEC: %s" % self.workflow._system.vec['u'].items())
 
     def add_constraint_residuals(self):

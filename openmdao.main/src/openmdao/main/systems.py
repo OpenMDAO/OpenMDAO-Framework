@@ -776,7 +776,6 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
-        self._explicit = False
         
     def stop(self):
         self._comp.stop()
@@ -863,33 +862,10 @@ class SimpleSystem(System):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
-            #if self._explicit:
-                #self._explicit_run(iterbase, ffd_order, case_label, case_uuid)
-            #else:
             self.scatter('u', 'p')
             self._comp.set_itername('%s-%s' % (iterbase, self._comp.name))
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             self.vec['u'].set_from_scope(self.scope)
-
-    # def apply_F(self):
-    #     self.scatter('u', 'p')
-    #     self._comp.evaluate()
-    #     self.vec['u'].set_from_scope(self.scope)
-
-    #def _explicit_run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        #""" F_i(p_i,u_i) = u_i - G_i(p_i) = 0 """
-        #uarray = self.vec['u'].array
-        #farray = self.vec['f'].array
-
-        #self.scatter('u', 'p')
-
-        #farray[:] = uarray[:]
-        #self._comp.set_itername('%s-%s' % (iterbase, self._comp.name))
-        #self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-        #self.vec['u'].set_from_scope(self.scope)
-
-        #farray[:] -= uarray[:]
-        #uarray[:] += farray[:]
 
     def linearize(self):
         """ Linearize this component. """
@@ -935,7 +911,6 @@ class InVarSystem(SimpleSystem):
 
     def __init__(self, scope, name):
         super(InVarSystem, self).__init__(scope, name)
-        self._explicit = True
         self._out_nodes = [name]
         self._in_nodes = []
 
@@ -957,7 +932,6 @@ class OutVarSystem(SimpleSystem):
 
     def __init__(self, scope, name):
         super(OutVarSystem, self).__init__(scope, name)
-        self._explicit = True
         self._out_nodes = []
         self._in_nodes = [name]
 
@@ -973,19 +947,18 @@ class OutVarSystem(SimpleSystem):
     def stop(self):
         pass
 
+
 class EqConstraintSystem(SimpleSystem):
     """A special system to handle mapping of states and
     residuals.
     """
-
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
+            super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
             if self._mapped_resids: # run implicit
-                super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
                 state = self._mapped_resids[self.scope.name2collapsed[self.name+'.out0']]
                 self.vec['f'][state][:] = self._comp.out0
-            else:
-                self._explicit_run(iterbase, ffd_order, case_label, case_uuid)
+
 
 class AssemblySystem(SimpleSystem):
     """A System to handle an Assembly."""
@@ -993,7 +966,6 @@ class AssemblySystem(SimpleSystem):
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
-        self._explicit = True
 
     def setup_variables(self, resid_state_map=None):
         super(AssemblySystem, self).setup_variables(resid_state_map)
@@ -1045,12 +1017,6 @@ class CompoundSystem(System):
         if not self.is_active():
             return
         compound_setup_scatters(self)
-
-    # def apply_F(self):
-    #     """ Delegate to subsystems """
-    #     self.scatter('u', 'p')
-    #     for subsystem in self.local_subsystems():
-    #         subsystem.apply_F()
 
     def applyJ(self, coupled=False):
         """ Delegate to subsystems """
@@ -1259,7 +1225,6 @@ class NonSolverDriverSystem(SimpleSystem):
         scope = driver.parent
         super(NonSolverDriverSystem, self).__init__(scope, driver.name)
         driver._system = self
-        self._explicit = True
 
     def setup_communicators(self, comm):
         super(NonSolverDriverSystem, self).setup_communicators(comm)
@@ -1436,11 +1401,8 @@ def _create_simple_sys(scope, comp):
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
         sub = EqConstraintSystem(scope, comp.name)
-    elif has_interface(comp, IImplicitComponent):
-        sub = SimpleSystem(scope, comp.name)
     else:
         sub = SimpleSystem(scope, comp.name)
-        sub._explicit = True
 
     return sub
 

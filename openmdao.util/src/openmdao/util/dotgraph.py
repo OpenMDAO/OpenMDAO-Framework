@@ -216,7 +216,7 @@ def plot_system_tree(system, fmt='pdf', outfile=None):
     else:
         webbrowser.get().open(outfile)
 
-    #os.remove(dotfile)
+    os.remove(dotfile)
 
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
@@ -261,7 +261,7 @@ def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=N
     else:
         webbrowser.get().open(outfile)
 
-    #os.remove(dotfile)
+    os.remove(dotfile)
 
 def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False):
     if IAssembly.providedBy(obj):
