@@ -962,19 +962,18 @@ class EqConstraintSystem(SimpleSystem):
         destnode = nodemap.get(dest, dest)
 
         self._negate = False
-        if dest:
-            for _, state_node in resid_state_map.items():
-                if state_node == srcnode:
-                    self._negate = True
-                    break
-                elif state_node == destnode:
-                    break
+        for _, state_node in self._mapped_resids.items():
+            if state_node == srcnode:
+                self._negate = True
+                break
+            elif state_node == destnode:
+                break
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
-            if self._mapped_resids: # run implicit
-                state = self._mapped_resids[self.scope.name2collapsed[self.name+'.out0']]
+            state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
+            if state:
                 if self._negate:
                     self.vec['f'][state][:] = -self._comp.out0
                 else:
