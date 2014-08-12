@@ -1270,24 +1270,26 @@ class SolverSystem(SimpleSystem):  # Implicit
 
         # set up our own resid_state_map
         pairs = self._comp._get_param_constraint_pairs()
-        resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c, sign in pairs])
-        pgroups = self._comp.list_param_group_targets()
-        resids = self._comp.list_eq_constraint_targets()
+        resid_state_map = dict([(nodemap[c], nodemap[p]) for p, c in pairs])
         states = resid_state_map.values()
 
-        skip = set()
+        pgroups = self._comp.list_param_group_targets()
+        resids = self._comp.list_eq_constraint_targets()
+
         szdict = {}
         for params in pgroups:
+            skip = False
             params = tuple(params)
             for p in params:
-                if nodemap[p] in states: #resid_state_map:
-                    skip.add(params)
+                if nodemap[p] in states:
+                    skip = True
                     break
-            if params not in skip:
+            if not skip:  # add to the size dict so we can match on size
                 node = nodemap[params[0]]
                 self._var_meta[node] = self._get_var_info(node)
                 szdict.setdefault(self._var_meta[node]['size'], []).append(node)
 
+        # get rid of any residuals we already mapped
         resids = [r for r in resids if nodemap[r] not in resid_state_map]
         
         # match remaining residuals and states by size

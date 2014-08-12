@@ -472,18 +472,16 @@ class Driver(Component):
         return ret
 
     def _get_param_constraint_pairs(self):
-        """Returns a list of tuples of the form (param, constraint, sign) where
-        sign is 1 or -1.
-        """
+        """Returns a list of tuples of the form (param, constraint)."""
         pairs = []
         if hasattr(self, 'list_param_group_targets'):
             pgroups = self.list_param_group_targets()
             for key, cnst in self.get_eq_constraints().iteritems():
                 for params in pgroups:
                     if params[0] == cnst.rhs.text:
-                        pairs.append((params[0], cnst.pcomp_name+'.out0', -1))
+                        pairs.append((params[0], cnst.pcomp_name+'.out0'))
                     elif params[0] == cnst.lhs.text:
-                        pairs.append((params[0], cnst.pcomp_name+'.out0', 1))
+                        pairs.append((params[0], cnst.pcomp_name+'.out0'))
         return pairs
 
     @rbac(('owner', 'user'))
