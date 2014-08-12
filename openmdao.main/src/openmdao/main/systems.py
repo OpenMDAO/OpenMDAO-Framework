@@ -955,27 +955,27 @@ class EqConstraintSystem(SimpleSystem):
     def setup_variables(self, resid_state_map=None):
         super(EqConstraintSystem, self).setup_variables(resid_state_map)
 
-        nodemap = self.scope.name2collapsed
-        src = self._comp._exprobj.lhs.text
-        srcnode = nodemap.get(src, src)
-        dest = self._comp._exprobj.rhs.text
-        destnode = nodemap.get(dest, dest)
+        # nodemap = self.scope.name2collapsed
+        # src = self._comp._exprobj.lhs.text
+        # srcnode = nodemap.get(src, src)
+        # dest = self._comp._exprobj.rhs.text
+        # destnode = nodemap.get(dest, dest)
 
-        self._negate = False
-        if dest:
-            for resid_node, state_node in resid_state_map.items():
-                if resid_node == srcnode and state_node == destnode:
-                    break
-                elif resid_node == destnode and state_node == srcnode:
-                    self._negate = True
-                    break
+        # self._negate = False
+        # if dest:
+        #     for resid_node, state_node in resid_state_map.items():
+        #         if resid_node == srcnode and state_node == destnode:
+        #             break
+        #         elif resid_node == destnode and state_node == srcnode:
+        #             self._negate = True
+        #             break
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
-            if self._mapped_resids: # run implicit
-                state = self._mapped_resids[self.scope.name2collapsed[self.name+'.out0']]
-                self.vec['f'][state][:] = self._comp.out0
+            # if self._mapped_resids: # run implicit
+            #     state = self._mapped_resids[self.scope.name2collapsed[self.name+'.out0']]
+            #     self.vec['f'][state][:] = self._comp.out0
 
 
 class AssemblySystem(SimpleSystem):
