@@ -1967,7 +1967,7 @@ def all_comps(g):
     """
     return [n for n in g.nodes_iter() if is_comp_node(g, n)]
 
-def collapse_connections(orig_graph, scope):
+def collapse_connections(orig_graph):
     """Returns a new graph with each variable
     connection collapsed into a single node.
     """
@@ -2002,12 +2002,19 @@ def collapse_connections(orig_graph, scope):
         src2dests.setdefault(u, set()).add(v)
         dest2src[v] = u
 
-    # re-route inputs that are also sources
-    for src, dests in src2dests.items():
-        if src in dest2src:
-            truesrc = dest2src[src]
-            src2dests[truesrc].update(dests)
-            del src2dests[src]
+    while True:
+        size = len(src2dests)
+        # re-route inputs that are also sources
+        for src, dests in src2dests.items():
+            if src in dest2src:
+                truesrc = dest2src[src]
+                src2dests[truesrc].update(dests)
+                for d in dests:
+                    if d in dest2src:
+                        dest2src[d] = truesrc
+                del src2dests[src]
+        if len(src2dests) == size:
+            break
             
     for src, dests in src2dests.items():
         _add_collapsed_node(g, src, dests)

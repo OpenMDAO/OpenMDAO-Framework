@@ -1445,9 +1445,20 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        self._reduced_graph = collapse_connections(self._depgraph, self)
+        self._reduced_graph = collapse_connections(self._depgraph)
         prune_reduced_graph(self._depgraph, self._reduced_graph)
         relabel_states(self._depgraph, self._reduced_graph)
+
+        # now create a mapping of all individual node names to their
+        # 'collapsed' node name
+        self.name2collapsed = {}
+        for node in self._reduced_graph.nodes_iter():
+            if isinstance(node, basestring):
+                self.name2collapsed[node] = node
+            else:
+                self.name2collapsed[node[0]] = node
+                for n in node[1]:
+                    self.name2collapsed[n] = node
 
         for comp in self.get_comps():
             comp.pre_setup()

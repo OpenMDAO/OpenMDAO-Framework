@@ -3,9 +3,10 @@ import unittest
 import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
                                     find_all_connecting, \
-                                    _get_inner_edges, _get_inner_connections,\
-                                    gsort, transitive_closure
-from openmdao.util.graph import edges_to_dict, nodes_matching_all, \
+                                    _get_inner_connections,\
+                                    gsort, transitive_closure, \
+                                    collapse_connections
+from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some
 from openmdao.main.interfaces import implements, IImplicitComponent
@@ -677,6 +678,64 @@ class DepGraphStateTestCase1(unittest.TestCase):
     def test_inner_connections(self):
         edges = _get_inner_connections(self.dep, ['a'], ['c'])
         self.assertEqual(set(edges), set([('C2.s2', 'c'), ('C1.s1', 'C2.a'), ('a', 'C1.s1')]))
+
+class ReductionTestCase(unittest.TestCase):
+
+    def _make_graph(self, comps, invars, outvars):
+        g = nx.DiGraph()
+        g.add_nodes_from(comps, comp=True)
+        for n in comps:
+            g.add_edges_from([("%s.%s"%(n,v),n) for v in invars])
+        for n in comps:
+            g.add_edges_from([(n,"%s.%s"%(n,v)) for v in outvars])
+        return g
+
+    def test_simple(self):
+        g = self._make_graph(['C1','C2'], ['in'], ['out'])
+        g.add_edge('C1.out','C2.in', conn=True)
+
+        reduced = collapse_connections(g)
+
+        self.assertEqual(set(reduced.nodes()),
+                         set(['C1.in','C1','C2','C2.out',('C1.out',('C2.in',))]))
+        self.assertEqual(set(reduced.edges()),
+                         set([(('C1.out', ('C2.in',)), 'C2'), ('C2', 'C2.out'), 
+                              ('C1', ('C1.out', ('C2.in',))), ('C1.in', 'C1')]))
+        
+    def test_input_redirect(self):
+        g = self._make_graph(['C1','C2','C3'], ['in'], ['out'])
+        g.add_edge('C1.out','C2.in', conn=True)
+        g.add_edge('C2.in','C3.in', conn=True)
+        
+        reduced = collapse_connections(g)
+
+        self.assertEqual(set(reduced.nodes()),
+                         set(['C1.in', ('C1.out', ('C3.in', 'C2.in')), 'C3', 'C2', 
+                              'C3.out', 'C2.out', 'C1']))
+        self.assertEqual(set(reduced.edges()),
+                         set([('C1.in', 'C1'), (('C1.out', ('C3.in', 'C2.in')), 'C3'), 
+                              (('C1.out', ('C3.in', 'C2.in')), 'C2'), ('C3', 'C3.out'), 
+                              ('C2', 'C2.out'), ('C1', ('C1.out', ('C3.in', 'C2.in')))]))
+
+    def test_multiple_input_redirect(self):
+        g = self._make_graph(['C1','C2','C3','C4'], ['in'], ['out'])
+        g.add_edge('C1.out','C2.in', conn=True)
+        g.add_edge('C2.in','C3.in', conn=True)
+        g.add_edge('C3.in','C4.in', conn=True)
+        
+        reduced = collapse_connections(g)
+        
+        self.assertEqual(set(reduced.nodes()),
+                         set([('C1.out', ('C3.in', 'C4.in', 'C2.in')), 
+                              'C1.in', 'C2.out', 'C4.out', 'C3.out', 
+                              'C1', 'C2', 'C3', 'C4']))
+        self.assertEqual(set(reduced.edges()),
+                         set([(('C1.out', ('C3.in', 'C4.in', 'C2.in')), 'C3'), 
+                              (('C1.out', ('C3.in', 'C4.in', 'C2.in')), 'C2'), 
+                              (('C1.out', ('C3.in', 'C4.in', 'C2.in')), 'C4'), 
+                              ('C1', ('C1.out', ('C3.in', 'C4.in', 'C2.in'))), 
+                              ('C1.in', 'C1'), ('C3', 'C3.out'), 
+                              ('C2', 'C2.out'), ('C4', 'C4.out')]))
 
 if __name__ == "__main__":
     unittest.main()

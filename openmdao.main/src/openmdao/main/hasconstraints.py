@@ -93,8 +93,13 @@ class Constraint(object):
         connections in the dependency graph.
         """
         if self.pcomp_name is None:
+            if self.comparator == '=':
+                subtype = 'equality'
+            else:
+                subtype = 'inequality'
             pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
-                                     pseudo_type='constraint')
+                                     pseudo_type='constraint',
+                                     subtype=subtype)
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
