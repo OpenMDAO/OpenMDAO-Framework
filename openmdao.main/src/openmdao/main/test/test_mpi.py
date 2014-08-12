@@ -20,7 +20,7 @@ class NTimes(MPINonlinearSolver):
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
-    
+
     def __init__(self, arr_size=9):
         super(ABCDArrayComp, self).__init__()
         self.add_trait('a', Array(np.ones(arr_size, float), iotype='in'))
@@ -46,11 +46,11 @@ class SellarMDF(Assembly):
 
     def configure(self):
         """ Creates a new Assembly with this problem
-        
+
         Optimal Design at (1.9776, 0, 0)
-        
+
         Optimal Objective = 3.18339"""
-        
+
         #self.add('driver', FixedPointIterator())
         self.add('driver', MPINonlinearSolver())
 
@@ -82,12 +82,12 @@ class SellarMDF(Assembly):
                 self.driver.add_constraint('C1.y2 = C2.y2')
             else:  # use circular connection
                 self.connect('C2.y2', 'C1.y2')
-        
+
         # Solver settings
         self.driver.max_iteration = 5
         self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
-        
+
 
 class BasicMPITests(MPITestCase):
 
@@ -145,12 +145,12 @@ class BasicMPITests(MPITestCase):
     #         top.connect(u, v)
 
     #     top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    #     top.driver.add_constraint('C8.d[0]=0') 
-        
+    #     top.driver.add_constraint('C8.d[0]=0')
+
     #     top.run()
 
 
 # FIXME: running this file as main currently doesn't work...
 if __name__ == '__main__':
     import unittest
-    unittest.main()  
+    unittest.main()
