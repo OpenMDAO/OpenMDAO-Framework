@@ -236,8 +236,6 @@ class Newton_SolverTestCase(unittest.TestCase):
         self.top.d1.C_y = numpy.array([[1.1, 1.3], [1.05, 1.13]])
         self.top.d2.C_y = numpy.array([[0.95, 0.98], [0.97, 0.95]])
 
-        self.top.driver.alpha = 0.7
-
         self.top.run()
 
         assert_rel_error(self, self.top.d1.y_out[0],
