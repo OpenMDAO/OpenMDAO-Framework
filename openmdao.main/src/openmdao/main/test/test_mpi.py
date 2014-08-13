@@ -9,14 +9,9 @@ from openmdao.util.testutil import assert_rel_error
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.mpiwrap import MPI, mpiprint, set_print_rank
-from openmdao.main.distsolve import MPINonlinearSolver
+from openmdao.lib.drivers.iterate import FixedPointIterator
 
 from openmdao.lib.optproblems import sellar
-
-class NTimes(MPINonlinearSolver):
-    def __init__(self, maxiter=1):
-        super(NTimes, self).__init__()
-        self.max_iteration = maxiter
 
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
@@ -46,8 +41,7 @@ class SellarMDF(Assembly):
 
         Optimal Objective = 3.18339"""
 
-        #self.add('driver', FixedPointIterator())
-        self.add('driver', MPINonlinearSolver())
+        self.add('driver', FixedPointIterator())
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         C1 = self.add('C1', sellar.Discipline1())

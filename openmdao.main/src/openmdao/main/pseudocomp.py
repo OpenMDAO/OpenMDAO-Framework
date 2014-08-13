@@ -382,9 +382,6 @@ class PseudoComponent(object):
     def setup_vectors(self, arrays=None):
         pass
 
-    def setup_args(self):
-        pass
-
     def get_float_var_info(self, name):
         """Returns the local flattened size, index and basevar info
         of the value of the named variable, if the flattened value
@@ -414,6 +411,7 @@ class PseudoComponent(object):
         return flattened_value(path, val)
 
     def set_flattened_value(self, path, value):
+        self.ensure_init()
         val = getattr(self, path.split('[',1)[0])
         idx = get_index(path)
         if isinstance(val, int_types):
@@ -432,7 +430,7 @@ class PseudoComponent(object):
         elif IVariableTree.providedBy(val):
             raise NotImplementedError("no support for setting flattened values into vartrees")
 
-        self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
+        raise TypeError("%s: Failed to set flattened value to variable %s" % (self.name, path))
 
     def get_req_default(self, self_reqired=None):
         return []
