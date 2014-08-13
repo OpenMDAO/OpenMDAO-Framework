@@ -56,7 +56,7 @@ in a file being created called `doe.json`.
 
 
 Once you have the `doe.json` file, then you can start to set up some post processing scripts to 
-let you interperate your data. The next script just prints the data to your screen.
+let you interpret your data. The next script just prints the data to your screen.
 
 .. testsetup:: case_recorders_post_processing
 
@@ -114,7 +114,7 @@ of methods for controlling what information is read from the file. In this examp
 to specify that the data should be returned as a list of dictionaries, where each item of the list is a single case and variables can be accessed by row. The `fetch` executes the query to read the data into memory. 
 
 In the DOE tutorial, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseDataset` objects. 
-Retrive the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than 
+Retrieve the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than 
 by case order. Notice that we're using the exact same data file, without re-running to get it again. 
 
 ::
@@ -170,4 +170,12 @@ OpenMDAO has convenience functions for two common post processing steps: writing
     caseset_query_dump(data)
 
 
-  
+By default OpenMDAO will record all variables in the model (based on the top
+level assembly's `includes` and `excludes` lists).  This can get to be a lot
+of data and the associated file can be quite large.  If you want to reduce
+the data processed for a specific post processing scenario you can write out
+a new file based on cases and/or variables specified in a query by replacing
+`fetch()` with `write(filename)`.  You can optionally specify a format for the
+new file (``json`` or ``bson``), so this facility can also be used for changing
+the format of an existing case dataset file.
+
