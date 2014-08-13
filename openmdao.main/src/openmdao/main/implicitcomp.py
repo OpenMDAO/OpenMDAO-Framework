@@ -19,9 +19,10 @@ class ImplicitComponent(Component):
 
     implements(IImplicitComponent)
 
-    eval_only = Bool(False, iotype='in', framework_var=True,
-                     desc='Set to True to have this comp perform a single '
-                           'evaluate when execute() is called.')
+    eval_only = Bool(True, iotype='in', framework_var=True,
+                     desc='Set to False if you define your own solver. '
+                          'Otherwise, OpenMDAO must solve the implicit '
+                          'equations for this component.')
 
     def __init__(self):
         super(ImplicitComponent, self).__init__()

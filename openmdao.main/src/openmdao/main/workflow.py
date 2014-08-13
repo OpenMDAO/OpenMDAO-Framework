@@ -163,14 +163,14 @@ class Workflow(object):
             record_case = False
 
         err = None
-        try:
-            self._system.run(iterbase=iterbase, ffd_order=ffd_order,
-                                case_uuid=case_uuid)
+        #try:
+        self._system.run(iterbase=iterbase, ffd_order=ffd_order,
+                            case_uuid=case_uuid)
 
-            if self._stop:
-                raise RunStopped('Stop requested')
-        except Exception as exc:
-            err = TracedError(exc, format_exc())
+        if self._stop:
+            raise RunStopped('Stop requested')
+        #except Exception as exc:
+        #    err = TracedError(exc, format_exc())
 
         if record_case and self._rec_required:
             try:
