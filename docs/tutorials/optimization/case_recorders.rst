@@ -40,7 +40,7 @@ in a file being created called `doe.json`.
 
             self.driver.add_response('paraboloid.f_xy')
 
-            self.recorders = [JSONCaseRecorder(filename='doe.json')]
+            self.recorders = [JSONCaseRecorder(out='doe.json')]
 
     if __name__ == "__main__": 
         #-----------------------------
