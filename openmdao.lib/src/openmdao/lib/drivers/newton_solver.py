@@ -2,22 +2,21 @@
 A python Newton solver with line-search adapation of the relaxation parameter.
 """
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 #public symbols
 __all__ = ['NewtonSolver']
 
-from scipy.optimize import fsolve
-
-# this little funct replaces a dependency on scipy
 import numpy
 npnorm = numpy.linalg.norm
-def norm(a, ord=None):
-    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+def norm(a, order=None):
+    '''This little funct for nomr replaces a dependency on scipy
+    '''
+    return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
-# pylint: disable-msg=E0611, F0401
+# pylint: disable=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow
-from openmdao.main.datatypes.api import Float, Int, Enum
+from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
@@ -33,16 +32,18 @@ class NewtonSolver(Driver):
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     atol = Float(1.0e-12, iotype='in', desc='Absolute convergence tolerance')
 
     rtol = Float(1.0e-10, iotype='in', desc='Relative convergence tolerance')
 
     max_iteration = Int(20, iotype='in', desc='Maximum number of iterations')
 
-    ls_atol = Float(1.0e-10, iotype='in', desc='Absolute convergence tolerance')
+    ls_atol = Float(1.0e-10, iotype='in',
+                    desc='Absolute convergence tolerance for line search')
 
-    ls_rtol = Float(0.9, iotype='in', desc='Relative convergence tolerance')
+    ls_rtol = Float(0.9, iotype='in',
+                    desc='Relative convergence tolerance for line search')
 
     ls_max_iteration = Int(10, iotype='in',
                           desc='Maximum number of line searches')
@@ -78,7 +79,7 @@ class NewtonSolver(Driver):
         self.run_iteration()
         self.post_iteration()
 
-        f_norm = npnorm(fvec.array)
+        f_norm = norm(fvec.array)
         f_norm0 = f_norm
 
         itercount = 0
@@ -94,7 +95,7 @@ class NewtonSolver(Driver):
             self.run_iteration()
             self.post_iteration()
 
-            f_norm = npnorm(fvec.array)
+            f_norm = norm(fvec.array)
             print "Norm:", f_norm
             itercount += 1
 
