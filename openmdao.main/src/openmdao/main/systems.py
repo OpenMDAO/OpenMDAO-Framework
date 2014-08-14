@@ -16,7 +16,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes
+                                   collapse_nodes, simple_node_iter
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -1367,9 +1367,11 @@ class InnerAssemblySystem(SerialSystem):
         rgraph = scope._reduced_graph
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' not in data:  # it's a collapsed var node
-                if rgraph.in_degree(node) == 0:  # boundary input
+                # boundary in node
+                if rgraph.in_degree(node) == 0 and (node[0],) != node[1]:
                     bins.append(node)
-                elif rgraph.out_degree(node) == 0: # boundary output
+                # boundary out node
+                elif rgraph.out_degree(node) == 0 and (node[0],) != node[1]:
                     bouts.append(node)
 
         for name in bins:
@@ -1518,20 +1520,6 @@ def get_comm_if_active(obj, comm):
     # else:
     #     mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
     return newcomm
-
-def simple_node_iter(nodes):
-    """Return individual nodes from an iterator containing nodes and
-    iterators of nodes.
-    """
-    if isinstance(nodes, basestring):
-        nodes = (nodes,)
-
-    for node in nodes:
-        if isinstance(node, basestring):
-            yield node
-        else:
-            for n in simple_node_iter(node):
-                yield n
 
 def get_full_nodeset(scope, group):
     names = set()

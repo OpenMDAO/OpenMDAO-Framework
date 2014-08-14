@@ -1599,7 +1599,7 @@ def _add_collapsed_node(g, src, dests):
     else:
         meta = g.node[src]
         for i, dest in enumerate(dests):
-            if '@' in dest:
+            if '@' in dest: # dest is a driver node
                 newdests = dests[:]
                 newdests[i] = src
                 newname = (src, tuple(newdests))
@@ -1699,17 +1699,17 @@ def _find_in_meta(g, node, meta_name):
                 vals.append(v)
     return vals
 
-def prune_reduced_graph(orig_g, g, keep=()):
+def prune_reduced_graph(orig_g, g, keep):
     """Remove all unconnected vars that are not states."""
     to_remove = []
 
     for node, data in g.nodes_iter(data=True):
-        #if node in keep:
-        #    continue
+        if node in keep:
+           continue
         
-        # don't prune states even if they're not connected
-        if 'state' in _find_in_meta(orig_g, node, 'iotype'):
-            continue
+        # # don't prune states even if they're not connected
+        # if 'state' in _find_in_meta(orig_g, node, 'iotype'):
+        #     continue
 
         # don't prune components
         if data.get('comp'):
@@ -1723,8 +1723,9 @@ def prune_reduced_graph(orig_g, g, keep=()):
             continue
         
         # keep boundary vars that only connect on one side
-        if (indeg > 0 or outdeg > 0) and _find_in_meta(orig_g, node, 'boundary'):
-            continue
+        if (indeg > 0 or outdeg > 0): # and _find_in_meta(orig_g, node, 'boundary'):
+            if (node[0],) != node[1]: 
+                continue
         
         to_remove.append(node)
 
@@ -1753,15 +1754,62 @@ def map_collapsed_nodes(g):
 
     return name2collapsed
 
-def relevant_subgraph(g, srcs, dests):
+def relevant_subgraph(g, srcs, dests, keep=()):
     """Return a subgraph of g that contains
     srcs and dests and all nodes connecting
-    them.
+    them.  Include any driver loops between them.
     """
-    edges = _get_inner_edges(g, srcs, dests)
+    # edges = _get_inner_edges(g, srcs, dests)
 
-    nodes = set([u for u,v in edges])
-    nodes.update([v for u,v in edges])
+    # nodes = set([u for u,v in edges])
+    # nodes.update([v for u,v in edges])
 
-    return g.subgraph(nodes)
-    
+    # return g.subgraph(nodes)
+
+    # create a 'fake' driver loop and grab
+    # everything that's strongly connected to 
+    # that fake driver.
+    g.add_node('@driver')
+    for src in srcs:
+        g.add_edge('@driver', src)
+    for dest in dests:
+        g.add_edge(dest, '@driver')
+
+    for comps in strongly_connected_components(g):
+        if '@driver' in comps:
+            comps.remove('@driver')
+            break
+
+    # now remove the driver we added to g, which
+    # also will remove all of the edges we added
+    g.remove_node('@driver')
+
+    comps = set(comps)
+
+    # make sure we include srcs and dests even if they're
+    # not connected
+    comps.update(srcs)
+    comps.update(dests)
+
+    # keep any var we've been told to keep if it's directly
+    # relevant or its parent component is relevant.
+    for k in keep:
+        if k not in comps and k.split('.', 1)[0] in comps:
+            comps.add(k)
+
+    return g.subgraph(comps)
+
+def simple_node_iter(nodes):
+    """Return individual nodes from an iterator containing nodes and
+    iterators of nodes.
+    """
+    if isinstance(nodes, basestring):
+        nodes = (nodes,)
+
+    for node in nodes:
+        if isinstance(node, basestring):
+            yield node
+        else:
+            for n in simple_node_iter(node):
+                yield n
+
