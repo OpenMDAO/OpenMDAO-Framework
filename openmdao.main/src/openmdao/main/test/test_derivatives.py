@@ -850,17 +850,11 @@ class Testcase_derivatives(unittest.TestCase):
 
         self.top.add('driver', SimpleDriver())
         self.top.driver.workflow.add(['comp1', 'comp2', 'comp3', 'comp4', 'comp5'])
-        #self.top.driver.add_parameter('comp1.x1', low=-100, high=100)
-        #self.top.driver.add_parameter('comp2.x1', low=-100, high=100)
-        #self.top.driver.add_constraint('comp4.y1 < 0')
-        #self.top.driver.add_constraint('comp5.y1 < 0')
 
         self.top.connect('comp1.y1', 'comp3.x1')
         self.top.connect('comp2.y1', 'comp3.x2')
         self.top.connect('comp3.y1', 'comp4.x1')
         self.top.connect('comp3.y2', 'comp5.x1')
-
-        # Case 1 - differentiable (comp4)
 
         self.top.comp1.x1 = 2.0
         self.top.comp2.x1 = 1.0
