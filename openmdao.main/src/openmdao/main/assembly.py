@@ -42,7 +42,8 @@ from openmdao.main.exprmapper import ExprMapper, PseudoComponent
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
-                                   relabel_states
+                                   vars2tuples, relevant_subgraph, \
+                                   map_collapsed_nodes
 from openmdao.main.systems import InnerAssemblySystem
 
 from openmdao.util.graph import list_deriv_vars
@@ -172,6 +173,9 @@ class Assembly(Component):
 
         self.includes = ['*']
         self.excludes = []
+
+        self._setup_inputs = _missing
+        self._setup_outputs = _missing
 
     @property
     def _top_driver(self):
@@ -735,6 +739,8 @@ class Assembly(Component):
         self._pre_driver = None
         self.J_input_keys = self.J_output_keys = None
         self._system = None
+
+        self._setup_inputs = self._setup_outputs = _missing
 
     def _set_failed(self, path, value, index=None, force=False):
         parts = path.split('.', 1)
@@ -1442,20 +1448,29 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        self._reduced_graph = collapse_connections(self._depgraph)
-        prune_reduced_graph(self._depgraph, self._reduced_graph)
-        relabel_states(self._depgraph, self._reduced_graph)
+        if inputs == self._setup_inputs and outputs == self._setup_outputs:
+            return
 
-        # now create a mapping of all individual node names to their
-        # 'collapsed' node name
-        self.name2collapsed = {}
-        for node in self._reduced_graph.nodes_iter():
-            if isinstance(node, basestring):
-                self.name2collapsed[node] = node
-            else:
-                self.name2collapsed[node[0]] = node
-                for n in node[1]:
-                    self.name2collapsed[n] = node
+        # collapse all connections into single nodes
+        self._reduced_graph = collapse_connections(self._depgraph)
+
+        if inputs is not None and outputs is not None:
+            collapsed = map_collapsed_nodes(self._reduced_graph)
+
+            in_nodes = [collapsed[n] for n in inputs]
+            out_nodes = [collapsed[n] for n in outputs]
+
+            self._reduced_graph = relevant_subgraph(self._reduced_graph,
+                                                    in_nodes,
+                                                    out_nodes)
+            keep = inputs + outputs
+        else:
+            keep = ()
+
+        prune_reduced_graph(self._depgraph, self._reduced_graph, keep)
+        vars2tuples(self._depgraph, self._reduced_graph)
+
+        self.name2collapsed = map_collapsed_nodes(self._reduced_graph)
 
         for comp in self.get_comps():
             comp.pre_setup()

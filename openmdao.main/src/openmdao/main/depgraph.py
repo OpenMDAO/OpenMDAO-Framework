@@ -1053,7 +1053,7 @@ def find_related_pseudos(depgraph, nodes):
     return list(pseudos)
 
 def find_all_connecting(graph, start, end):
-    """Return the set of all component nodes along all paths
+    """Return the set of all nodes along all paths
     between start and end. The start and end nodes are included
     in the set if they're connected.
     """
@@ -1362,315 +1362,6 @@ def _check_for_missing_derivs(scope, comps):
                 remove.extend(['.'.join((cname, m)) for m in missing])
 
     return remove
-
-# def mod_for_derivs(graph, inputs, outputs, wflow, full_fd=False, group_nondiff=True):
-#     """Adds needed nodes and connections to the given graph
-#     for use in derivative calculations.
-#     """
-#     #print "mod_for_derivs for %s" % wflow._parent.get_pathname()
-#     indct = {}
-#     inames = []
-#     onames = []
-
-#     scope = wflow.scope
-
-#     # We want our top level graph metadata to be stored in the copy, but not in the
-#     # parent, so make our own copy of the metadata dict.
-#     graph.graph = {}
-
-#     graph.graph['inputs'] = list(inputs)
-#     graph.graph['mapped_inputs'] = list(inputs)
-#     graph.graph['outputs'] = list(outputs)
-#     graph.graph['mapped_outputs'] = list(outputs)
-
-#     relevant = set()
-
-#     # add nodes for input parameters
-#     for i, varnames in enumerate(inputs):
-#         iname = '@in%d' % i
-#         inames.append(iname)
-#         graph.add_node(iname, var=True, iotype='in')
-#         for varname in flatten_list_of_iters(varnames):
-#             base = graph.base_var(varname)
-#             relevant.add(base) # keep basevars around
-#             subvars = graph._all_child_vars(base)
-#             # does base have any full basevar connections?
-#             fulls = set(graph.successors(base)) - set(subvars)
-#             if varname not in graph: # should only happen for a subvar
-#                 graph.add_node(varname, basevar=base, iotype='in')
-
-#             graph.add_edge(iname, varname, conn=True)
-
-#             if varname in subvars:
-#                 # make sure this subvar is connected to its base in the direction we need
-#                 graph.add_edge(varname, base)
-#             elif fulls:
-#                 # we have a full basevar connection, so we can get a subvar deriv
-#                 # varname is a subvar, so need to connect to basevar
-#                 tail = varname[len(base):]
-#                 if '.' in base: # this is a component var
-#                     if varname != base:
-#                         graph.add_edge(varname, base)
-#                     for dest in fulls:
-#                         sub = dest+tail
-#                         if not is_comp_node(graph, dest):
-#                             dbase = graph.base_var(dest)
-#                             if sub not in graph:
-#                                 graph.add_node(sub, basevar=dbase, iotype='in')
-#                                 graph.add_edge(sub, dbase)
-#                             graph.add_edge(iname, sub)
-#                 else: # it's a boundary var
-#                     graph.add_edge(base, varname)
-#                     for dest in fulls:
-#                         sub = dest+tail
-#                         dbase = graph.base_var(dest)
-#                         if sub not in graph:
-#                             graph.add_node(sub, basevar=dbase, iotype='in')
-#                             graph.add_edge(sub, dbase)
-#                         graph.add_edge(varname, sub, conn=True)
-
-#             indct[varname] = iname
-
-#     # add nodes for desired outputs
-#     for i, varnames in enumerate(outputs):
-#         oname = '@out%d' % i
-#         onames.append(oname)
-#         graph.add_node(oname, var=True, iotype='out')
-#         for varname in flatten_list_of_iters(varnames):
-#             if varname not in graph:
-#                 graph.add_node(varname, basevar=graph.base_var(varname),
-#                                iotype='out')
-#             graph.connect(None, varname, oname, check=False)
-
-#     rep_drivers, xtra_ins, xtra_outs = \
-#                    get_subdriver_graph(graph, inputs, outputs, wflow, full_fd)
-
-#     inames += list(xtra_ins)
-#     onames += list(xtra_outs)
-
-#     _remove_ignored_derivs(graph)
-
-#     _explode_vartrees(graph, scope)
-
-#     # Find and rmemove input-input vartree connections and prune.
-#     _prune_vartree_leaves(graph)
-
-#     # All inner edges that lie between our inputs and outputs.
-#     edges = _get_inner_edges(graph, inames, onames)
-
-#     edict = graph.edge
-#     conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
-#     relevant.update([u for u,v in edges])
-#     relevant.update([v for u,v in edges])
-#     comps = partition_names_by_comp([u for u,v in conns])
-#     partition_names_by_comp([v for u,v in conns], compmap=comps)
-
-#     if full_fd == False:
-
-#         remove = _check_for_missing_derivs(scope, comps)
-
-#         if remove:
-#             remove = set(remove)
-
-#             # remove edges associated with missing derivs
-#             for u,v in graph.list_connections():
-#                 if u in remove or v in remove:
-#                     graph.remove_edge(u, v)
-#             edges = _get_inner_edges(graph, inames, onames)
-#             relevant = set([u for u,v in edges])
-#             relevant.update([v for u,v in edges])
-#             conns = [(u,v) for u,v in edges if 'conn' in edict[u][v]]
-#             comps = partition_names_by_comp([u for u,v in conns])
-#             partition_names_by_comp([v for u,v in conns], compmap=comps)
-
-#     graph = graph.subgraph(relevant)
-
-#     # if we have destinations connected to subvars of a basevar
-#     # that's a destination of a parameter, then we have to
-#     # create a new edge from a new subvar of the parameter to
-#     # the original destination
-#     for vname, iname in indct.items():
-#         if is_basevar_node(graph, vname):
-#             for sub in graph.subvars(vname):
-#                 for src, dest in graph._var_connections(sub,
-#                                                         direction='out'):
-#                     newsub = sub.replace(vname, iname, 1)
-#                     graph.add_subvar(newsub)
-#                     graph.add_edge(newsub, dest, conn=True)
-#                     graph.remove_edge(src, dest)
-
-#     to_remove = set()
-#     for src, dest in conns:
-#         if src.startswith('@in'):
-#             # move edges from input boundary nodes if they're
-#             # connected to an @in node
-#             base_dest = graph.base_var(dest)
-#             if is_boundary_node(graph, base_dest):
-#                 if base_dest == dest: # dest is a basevar
-#                     newsrc = src
-#                 else: # dest is a subvar
-#                     if graph.out_degree(base_dest) > 0:
-#                         for s in graph.successors(base_dest):
-#                             if graph.base_var(s) != base_dest:
-#                                 newdest = dest.replace(base_dest, s, 1)
-#                                 if newdest not in graph:
-#                                     graph.add_subvar(newdest)
-#                                 graph.add_edge(src, newdest, conn=1)
-#                         newsrc = src
-#                     else:
-#                         newsrc = dest.replace(base_dest, graph.base_var(src), 1)
-#                     if newsrc not in graph:
-#                         graph.add_subvar(newsrc)
-#                 for s, d in graph.edges_iter(dest):
-#                     graph.add_edge(newsrc, d, attr_dict=graph.edge[s][d])
-#                     to_remove.add((s,d))
-#                 to_remove.add((src, dest))
-#             continue
-#         elif dest.startswith('@out') and not is_input_node(graph, src):
-#             # move edges from output boundary nodes if they're
-#             # connected to an @out node
-#             base_src = graph.base_var(src)
-#             if is_boundary_node(graph, base_src):
-#                 for pred in graph.predecessors_iter(base_src):
-#                     if not base_src == graph.base_var(pred): # it's not one of our subvars
-#                         break
-#                 else:
-#                     continue  # FIXME: not sure what to really do here.
-#                 if base_src == src: # src is a basevar
-#                     newsrc = pred
-#                 else: # src is a subvar
-#                     newsrc = src.replace(base_src, graph.base_var(pred), 1)
-#                     if newsrc not in graph:
-#                         graph.add_subvar(newsrc)
-#                 graph.add_edge(newsrc, dest, conn=True)
-#                 to_remove.add((src, dest))
-#             continue
-
-#         # Note: don't forward any input source vars that come from subsolvers
-#         # states.
-#         if is_input_node(graph, src) and 'solver_state' not in graph.node[src]:
-
-#             if is_basevar_node(graph, src):
-#                 subs = graph._all_child_vars(src, direction='in')
-#                 if not subs:
-#                     preds = graph.predecessors(src)
-#                     if preds:
-#                         newsrc = preds[0]
-#                         graph.add_edge(newsrc, dest, attr_dict=graph.edge[src][dest])
-#                         to_remove.add((src, dest))
-#                     continue
-#             else:
-#                 subs = [src]
-
-#             # if we have an input source basevar that has multiple inputs (subvars)
-#             # then we have to create fake subvars at the destination to store
-#             # derivative related metadata
-#             if group_nondiff:
-#                 added_edge = False
-#                 for sub in subs:
-#                     preds = graph.predecessors(sub)
-#                     newsrc = None
-#                     for p in preds:
-#                         if graph.base_var(sub) != p:
-#                             newsrc = p
-#                             break
-#                     if newsrc is None:
-#                         continue
-#                     new_target = sub.replace(src, dest, 1)
-#                     if new_target not in graph:
-#                         graph.add_subvar(new_target)
-#                         added_edge = True
-
-#                     if dest in graph.edge[src]:
-#                         graph.add_edge(newsrc, new_target,
-#                                        attr_dict=graph.edge[src][dest])
-#                         added_edge = True
-#                     else:
-#                         graph.add_edge(newsrc, new_target)
-#                         added_edge = True
-
-#                 # If we don't add replacement edges, then don't dare to
-#                 # remove any
-#                 if added_edge:
-#                     to_remove.add((src, dest))
-
-#         else:
-#             base = graph.base_var(src)
-#             if is_boundary_node(graph, base):
-#                 to_remove.add((src, dest))
-
-#     # get rid of any left over boundary connections
-#     for s, d in graph.list_connections():
-#         sbase = graph.base_var(s)
-#         dbase = graph.base_var(d)
-#         if is_boundary_node(graph, sbase) or is_boundary_node(graph, dbase):
-#             to_remove.add((s,d))
-
-#     graph.remove_edges_from(to_remove)
-#     return graph
-
-# def _explode_vartrees(graph, scope):
-#     # if full vartrees are connected, create subvar nodes for all of their
-#     # internal variables
-#     for edge in graph.list_connections():
-#         src, dest = edge
-#         srcnames = []
-#         destnames = []
-
-#         if '@' not in src and '[' not in src:
-
-#             if '~' in src:
-#                 obj = scope.get(from_PA_var(src))
-#             else:
-#                 obj = scope.get(src)
-#             if has_interface(obj, IVariableTree):
-#                 srcnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-#                 srcnames = ['.'.join((src, n)) for n in srcnames]
-
-#         if '@' not in dest and '[' not in dest:
-
-#             if '~' in dest:
-#                 obj = scope.get(from_PA_var(dest))
-#             else:
-#                 obj = scope.get(dest)
-
-#             if has_interface(obj, IVariableTree):
-#                 destnames = sorted([n for n,v in obj.items(recurse=True) if not has_interface(v, IVariableTree)])
-#                 destnames = ['.'.join((dest, n)) for n in destnames]
-
-#         if '@' not in src and '@' not in dest and (srcnames or destnames):
-#             _replace_full_vtree_conn(graph, src, srcnames,
-#                                             dest, destnames, scope)
-
-#     return graph
-
-# def _replace_full_vtree_conn(graph, src, srcnames, dest, destnames, scope):
-#     fail = False
-#     if len(srcnames) != len(destnames):
-#         fail = True
-#     else:
-#         for s, d in zip(srcnames, destnames):
-#             if s.split('.')[-1] != d.split('.')[-1]:
-#                 fail = True
-#                 break
-
-#     if fail:
-#         snames = [n.split('.',1)[1] for n in srcnames]
-#         dnames = [n.split('.',1)[1] for n in destnames]
-#         msg = "connected full vartrees '%s' and '%s' have non-matching leaf nodes" % (src,dest)
-#         missing_srcs = set(dnames).difference(snames)
-#         missing_dests = set(snames).difference(dnames)
-#         if missing_srcs:
-#             msg += ", variables %s are missing from %s" % (list(missing_srcs), src)
-#         if missing_dests:
-#             msg += ", variables %s are missing from %s" % (list(missing_dests), dest)
-#         raise ValueError(msg)
-
-#     graph.disconnect(src, dest)
-
-#     for s, d in zip(srcnames, destnames):
-#         graph.connect(scope, s, d, check=False)
-
 
 def get_missing_derivs(obj, recurse=True):
     """Return a list of missing derivatives found in the given 
@@ -2002,9 +1693,9 @@ def collapse_connections(orig_graph):
         src2dests.setdefault(u, set()).add(v)
         dest2src[v] = u
 
+    # re-route inputs that are also sources
     while True:
         size = len(src2dests)
-        # re-route inputs that are also sources
         for src, dests in src2dests.items():
             if src in dest2src:
                 truesrc = dest2src[src]
@@ -2013,6 +1704,8 @@ def collapse_connections(orig_graph):
                     if d in dest2src:
                         dest2src[d] = truesrc
                 del src2dests[src]
+
+        # if no nodes re-routed, stop
         if len(src2dests) == size:
             break
             
@@ -2039,23 +1732,30 @@ def _find_in_meta(g, node, meta_name):
                 vals.append(v)
     return vals
 
-def prune_reduced_graph(orig_g, g):
+def prune_reduced_graph(orig_g, g, keep=()):
     """Remove all unconnected vars that are not states."""
     to_remove = []
 
     for node, data in g.nodes_iter(data=True):
+        #if node in keep:
+        #    continue
+        
+        # don't prune states even if they're not connected
         if 'state' in _find_in_meta(orig_g, node, 'iotype'):
             continue
 
+        # don't prune components
         if data.get('comp'):
             continue
         
         indeg = g.in_degree(node)
         outdeg = g.out_degree(node)
 
+        # keep all nodes between two other nodes
         if indeg > 0 and outdeg > 0:
             continue
         
+        # keep boundary vars that only connect on one side
         if (indeg > 0 or outdeg > 0) and _find_in_meta(orig_g, node, 'boundary'):
             continue
         
@@ -2063,13 +1763,38 @@ def prune_reduced_graph(orig_g, g):
 
     g.remove_nodes_from(to_remove)
 
-def relabel_states(orig_g, g):
-    # now rename state nodes to tuple form to be consistent
-    # with all other var nodes
-    statemap = {}
+def vars2tuples(orig_g, g):
+    # now make sure all var nodes are converted to tuple form
+    varmap = {}
     for node, data in orig_g.nodes_iter(data=True):
-        if data.get('iotype') == 'state' and node in g:
-            statemap[node] = (node, (node,))
+        if 'comp' not in data and node in g and isinstance(node, basestring):
+            varmap[node] = (node, (node,))
             
-    nx.relabel_nodes(g, statemap, copy=False)
+    nx.relabel_nodes(g, varmap, copy=False)
 
+def map_collapsed_nodes(g):
+    """Return a dict of simple names to their collapsed node."""
+
+    name2collapsed = {}
+    for node in g.nodes_iter():
+        if isinstance(node, basestring):
+            name2collapsed[node] = node
+        else:
+            name2collapsed[node[0]] = node
+            for n in node[1]:
+                name2collapsed[n] = node
+
+    return name2collapsed
+
+def relevant_subgraph(g, srcs, dests):
+    """Return a subgraph of g that contains
+    srcs and dests and all nodes connecting
+    them.
+    """
+    edges = _get_inner_edges(g, srcs, dests)
+
+    nodes = set([u for u,v in edges])
+    nodes.update([v for u,v in edges])
+
+    return g.subgraph(nodes)
+    
