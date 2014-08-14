@@ -1,23 +1,22 @@
 """
-Newton solver based around Scipy's fsolve method. More methods can be added.
+A python Newton solver with line-search adapation of the relaxation parameter.
 """
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 #public symbols
 __all__ = ['NewtonSolver']
 
-from scipy.optimize import fsolve
-
-# this little funct replaces a dependency on scipy
 import numpy
 npnorm = numpy.linalg.norm
-def norm(a, ord=None):
-    return npnorm(numpy.asarray_chkfinite(a), ord=ord)
+def norm(a, order=None):
+    '''This little funct for nomr replaces a dependency on scipy
+    '''
+    return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
-# pylint: disable-msg=E0611, F0401
+# pylint: disable=E0611, F0401
 from openmdao.main.api import Driver, CyclicWorkflow
-from openmdao.main.datatypes.api import Float, Int, Enum
+from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
@@ -33,13 +32,24 @@ class NewtonSolver(Driver):
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    # pylint: disable-msg=E1101
-    tolerance = Float(1.0e-8, iotype='in', desc='Global convergence tolerance')
+    # pylint: disable=E1101
+    atol = Float(1.0e-12, iotype='in', desc='Absolute convergence tolerance')
 
-    max_iteration = Int(50, iotype='in', desc='Maximum number of iterations')
+    rtol = Float(1.0e-10, iotype='in', desc='Relative convergence tolerance')
 
-    method = Enum('fsolve', ['fsolve'], iotype='in',
-                  desc='Solution method (currently only fsolve from scipy optimize)')
+    max_iteration = Int(20, iotype='in', desc='Maximum number of iterations')
+
+    ls_atol = Float(1.0e-10, iotype='in',
+                    desc='Absolute convergence tolerance for line search')
+
+    ls_rtol = Float(0.9, iotype='in',
+                    desc='Relative convergence tolerance for line search')
+
+    ls_max_iteration = Int(10, iotype='in',
+                          desc='Maximum number of line searches')
+
+    alpha = Float(1.0, iotype='in', low=0.0, high=1.0,
+                  desc='Initial over-relaxation factor')
 
     def __init__(self):
 
@@ -56,34 +66,26 @@ class NewtonSolver(Driver):
             self.raise_exception(msg, RuntimeError)
 
     def execute(self):
-        """ Pick our solver method. """
+        """ General Newton's method. """
+
+        system = self.workflow._system
+        options = self.gradient_options
+        fvec = system.vec['f']
+        dfvec = system.vec['df']
+        uvec = system.vec['u']
 
         # perform an initial run
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
 
-        # One choice
-        #self.execute_fsolve()
-        self.execute_coupled()
-
-    def execute_coupled(self):
-        """ New experimental method based on John's Newton solver.
-        """
-        system = self.workflow._system
-        options = self.gradient_options
-
-        fvec = system.vec['f']
-        dfvec = system.vec['df']
-        uvec = system.vec['u']
-
-        converged = False
-        if npnorm(fvec.array) < self.tolerance:
-            converged = True
+        f_norm = norm(fvec.array)
+        f_norm0 = f_norm
 
         itercount = 0
-        alpha = 1.0
-        while not converged:
+        alpha = self.alpha
+        while itercount < self.max_iteration and f_norm > self.atol and \
+              f_norm/f_norm0 > self.rtol:
 
             system.calc_newton_direction(options=options)
 
@@ -93,34 +95,27 @@ class NewtonSolver(Driver):
             self.run_iteration()
             self.post_iteration()
 
-            norm = npnorm(fvec.array)
-            print "Norm:", norm
+            f_norm = norm(fvec.array)
+            print "Norm:", f_norm
             itercount += 1
-            #alpha = alpha*0.5
 
-            if norm < self.tolerance or itercount == self.max_iteration:
-                break
+            ls_itercount = 0
 
-    def execute_fsolve(self):
-        """ Solver execution loop: scipy.fsolve. """
+            # Backtracking Line Search
+            while ls_itercount < self.ls_max_iteration and \
+                  f_norm > self.ls_atol and \
+                  f_norm/f_norm0 > self.ls_rtol:
 
-        x0 = self.workflow.get_independents()
-        fsolve(self._solve_callback, x0, fprime=self._jacobian_callback,
-               maxfev=self.max_iteration, xtol=self.tolerance)
+                uvec.array += alpha*dfvec.array
+                alpha = alpha/2.0
+                uvec.array -= alpha*dfvec.array
 
-    def _solve_callback(self, vals):
-        """Function hook for evaluating our equations."""
+                self.pre_iteration()
+                self.run_iteration()
+                self.post_iteration()
 
-        self.workflow.set_independents(vals)
+                f_norm = npnorm(fvec.array)
+                print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                ls_itercount += 1
 
-        # run the model
-        self.pre_iteration()
-        self.run_iteration()
-        self.post_iteration()
-
-        return self.workflow.get_dependents()
-
-    def _jacobian_callback(self, vals):
-        """This function is passed to the internal solver to return the
-        jacobian of the dependents with respect to the independents."""
-        return self.workflow.calc_gradient()
+        #print "done"
