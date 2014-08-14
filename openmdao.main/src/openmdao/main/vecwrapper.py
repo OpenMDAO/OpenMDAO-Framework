@@ -4,6 +4,7 @@ import numpy
 from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
+from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 
 
@@ -40,6 +41,9 @@ class VecWrapperBase(object):
             for name in names:
                 self._info[name] = info
                 self._subviews.add(name)
+                # also add 1 item tuple form, since that's used for derivative inputs/outputs
+                self._info[(name,)] = info
+                self._subviews.add((name,))
 
     def __getitem__(self, name):
         return self._info[name][0]
@@ -182,12 +186,13 @@ class VecWrapper(VecWrapperBase):
 
     def _add_resid(self, system):
         nodemap = system.scope.name2collapsed
-        try:
+        if hasattr(system, '_comp') and IImplicitComponent.providedBy(system._comp):
             cname = system._comp.name
             states = ['.'.join((cname, s)) for s in system._comp.list_states()]
             resids = ['.'.join((cname, s)) for s in system._comp.list_residuals()]
-        except AttributeError:
-            return
+        else:
+            states = []
+            resids = []
 
         states = [s for s in states if nodemap[s] in system.variables]
         if states:

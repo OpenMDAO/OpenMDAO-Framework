@@ -21,7 +21,7 @@ from openmdao.main.mpiwrap import MPI, mpiprint
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
                                      ICaseIterator, ICaseRecorder, \
-                                     IDOEgenerator, IHasParameters
+                                     IDOEgenerator, IHasParameters, IImplicitComponent
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -1006,7 +1006,7 @@ class Assembly(Component):
             elif has_interface(obj, IComponent):
                 outputs = ['.'.join((obj.name, outp))
                           for outp in list_deriv_vars(obj)[1]]
-                inputs = sorted(inputs)
+                outputs = sorted(outputs)
             else:
                 self.raise_exception("Can't find any outputs for generating"
                                      " gradient.")
@@ -1450,10 +1450,8 @@ class Assembly(Component):
     def _get_all_states(self):
         states = []
         for comp in self.get_comps():
-            try:
+            if IImplicitComponent.providedBy(comp):
                 states.extend(['.'.join((comp.name, s)) for s in comp.list_states()])
-            except AttributeError:
-                pass
         return states
 
     def pre_setup(self, inputs=None, outputs=None):

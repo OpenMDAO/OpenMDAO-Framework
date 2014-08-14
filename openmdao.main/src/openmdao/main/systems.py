@@ -154,10 +154,10 @@ class System(object):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
 
-        try:
+        if hasattr(self, '_comp') and IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self.name,s))
                                   for s in self._comp.list_states()])
-        except AttributeError:
+        else:
             states = ()
 
         pure_outs = [out for out in self._out_nodes if out not in states]
@@ -699,13 +699,13 @@ class System(object):
         self.initialize_gradient_solver()
         self.linearize()
 
-        self.rhs_vec.array[:] = 0.0
-        self.vec['df'].array[:] = 0.0
-
         if mode == 'fd':
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
+        else:
+            self.rhs_vec.array[:] = 0.0
+            self.vec['df'].array[:] = 0.0
 
         return self.ln_solver.solve(inputs, outputs)
 
@@ -772,10 +772,10 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
-        try:
+        if IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self._comp.name, s))
                              for s in self._comp.list_states()])
-        except AttributeError:
+        else:
             states = ()
 
         # group outputs into states and non-states
