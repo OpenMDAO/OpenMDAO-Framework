@@ -1,7 +1,7 @@
 import unittest
 
 import networkx as nx
-from openmdao.main.depgraph import DependencyGraph, is_nested_node, \
+from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
                                     gsort, transitive_closure, \
@@ -206,14 +206,6 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.base_var('a.x.y'), 'a')
         self.assertEqual(self.dep.base_var('a.x[3].y'), 'a')
         self.assertEqual(self.dep.base_var('A.c[2]'), 'A.c')
-        
-    def test_is_nested_node(self):
-        self.assertEqual(is_nested_node(self.dep, 'B.a'), False)
-        self.assertEqual(is_nested_node(self.dep, 'a'), False)
-        self.assertEqual(is_nested_node(self.dep, 'A.d.z'), True)
-        self.assertEqual(is_nested_node(self.dep, 'A.c[2]'), False)
-        self.dep.add_node('a.x.y[2]', subvar=True)
-        self.assertEqual(is_nested_node(self.dep, 'a.x.y[2]'), True)
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 

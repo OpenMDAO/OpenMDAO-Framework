@@ -84,20 +84,18 @@ def unique(seq):
 def is_input_node(graph, node):
     if graph.node[node].get('iotype') == 'in':
         return True
-    base = graph.node[node].get('basevar')
-    return base is not None and graph.node[base].get('iotype') == 'in'
 
 def is_input_base_node(graph, node):
-    return graph.node[node].get('iotype') == 'in'
+    return graph.node[node].get('iotype') == 'in' and \
+                'basevar' not in graph.node[node]
 
 def is_output_node(graph, node):
     if graph.node[node].get('iotype') == 'out':
         return True
-    base = graph.node[node].get('basevar')
-    return base is not None and graph.node[base].get('iotype') == 'out'
 
 def is_output_base_node(graph, node):
-    return graph.node[node].get('iotype') == 'out'
+    return graph.node[node].get('iotype') == 'out' and \
+                'basevar' not in graph.node[node]
 
 def is_boundary_node(graph, node):
     return 'boundary' in graph.node.get(node, '')
@@ -119,14 +117,14 @@ def is_var_node(graph, node):
     """Return True for all basevar and subvar
     nodes.
     """
-    data = graph.node.get(node, '')
-    return 'var' in data or 'basevar' in data
+    return 'var' in graph.node.get(node, '')
 
 def is_basevar_node(graph, node):
     """Returns True if this node represents an
     actual input or output variable.
     """
-    return 'var' in graph.node.get(node, '')
+    return 'var' in graph.node.get(node, '') and \
+             'basevar' not in graph.node.get(node, '')
 
 def is_subvar_node(graph, node):
     """Returns True if this node represents some
@@ -138,15 +136,6 @@ def is_subvar_node(graph, node):
 def is_fake_node(graph, node):
     return 'fake' in graph.node.get(node, '')
 
-def is_var_node_with_solution_bounds(graph, node):
-    """Returns True if this variable node stores metadata
-    for calculating the gradient. The metadata whose keys
-    are driver iternames, and whose values are a tuple
-    containing the start and end index where this var's
-    values get poked into the solution vector.
-    """
-    return 'bounds' in graph.node.get(node, '')
-
 def is_pseudo_node(graph, node):
     return 'pseudo' in graph.node.get(node, '')
 
@@ -156,31 +145,9 @@ def is_objective_node(graph, node):
 def is_param_node(graph, node):
     return 'param' in graph.node.get(node, '')
 
-def is_pseudo_output_node(graph, node):
-    pseudo = graph.node[node].get('pseudo')
-    return pseudo == 'objective' or pseudo == 'constraint'
-
-def is_unit_node(graph, node):
-    return graph.node[node].get('pseudo') == 'units'
-
-def is_multivar_expr_node(graph, node):
-    return graph.node[node].get('pseudo') == 'multi_var_expr'
-
 def is_non_driver_pseudo_node(graph, node):
     pseudo = graph.node[node].get('pseudo')
     return pseudo == 'units' or pseudo == 'multi_var_expr'
-
-def is_nested_node(graph, node):
-    """Returns True if the given node refers to an attribute that
-    is nested within the child of a Component in our scope, or
-    within a boundary variable in our scope.  For
-    example, if a Component 'comp1' is within our scope,
-    a variable node referring to 'comp1.child.x' would be a
-    nested node while a 'comp1.y' node would not.  If we had a boundary
-    var called 'b', then 'b.x' would be a nested node.
-    """
-    base = graph.base_var(node)
-    return '.' in node[len(base):]
 
 # EDGE selectors
 
@@ -509,7 +476,7 @@ class DependencyGraph(nx.DiGraph):
         for i in range(len(path)):
             dest, base = path[i]
             if dest not in self:  # create a new subvar if it's not already there
-                self.add_node(dest, basevar=base)
+                self.add_node(dest, basevar=base, **self.node[base])
             if i > 0:
                 src = path[i-1][0]
                 try:
@@ -540,7 +507,7 @@ class DependencyGraph(nx.DiGraph):
             # adding something that's already there
             return subvar
 
-        self.add_node(subvar, basevar=base)
+        self.add_node(subvar, basevar=base, **self.node[base])
         if is_boundary_node(self, base):
             u, v = base, subvar
         else: # it's a var of a child component
