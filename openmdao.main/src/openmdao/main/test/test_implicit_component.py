@@ -416,6 +416,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv())
         model.driver.workflow.add('comp')
+        model.comp.eval_only = False
 
         model.run()
 
@@ -430,6 +431,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Full_Array())
         model.driver.workflow.add('comp')
+        model.comp.eval_only = False
 
         model.run()
 
@@ -444,6 +446,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', MyComp_No_Deriv())
         model.driver.workflow.add('comp')
+        model.comp.eval_only = False
 
         model.run()
 
@@ -488,6 +491,8 @@ class Testcase_implicit(unittest.TestCase):
         model.add('comp2', Coupled2())
         model.add('driver', NewtonSolver())
         model.driver.workflow.add(['comp1', 'comp2'])
+        model.comp1.eval_only = False
+        model.comp2.eval_only = False
 
         model.connect('comp1.x', 'comp2.x')
         model.connect('comp1.y', 'comp2.y')
@@ -543,6 +548,7 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.workflow.add('comp')
         model.driver.add_parameter('comp.c', low=-1000, high=1000)
         model.driver.add_objective('comp.y_out')
+        model.comp.eval_only = False
 
         model.run()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
@@ -572,6 +578,7 @@ class Testcase_implicit(unittest.TestCase):
                                                    ["dy_dx=2"]))
         model.driver.workflow.add(['comp', 'comp2'])
         model.connect('comp.z', 'comp2.x')
+        model.comp.eval_only = False
 
         model.run()
         #print model.comp.x, model.comp.y, model.comp.z, model.comp.res
@@ -597,6 +604,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv())
         model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
+        model.comp.eval_only = False
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -720,6 +728,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', MyComp_No_Deriv())
         model.driver.workflow.add('comp')
+        model.comp.eval_only = False
 
         model.run()
         J = model.driver.workflow.calc_gradient(inputs=['comp.c'],
