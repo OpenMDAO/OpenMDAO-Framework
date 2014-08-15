@@ -220,7 +220,7 @@ def plot_system_tree(system, fmt='pdf', outfile=None):
 
 
 def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
-               excludes=(), prune=True):
+               excludes=(), prune=False):
     """Create a plot of the given graph"""
 
     G = G.subgraph(G.nodes_iter())

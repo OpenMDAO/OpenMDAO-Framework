@@ -516,3 +516,16 @@ class Driver(Component):
         names = super(Driver, self).get_full_nodeset()
         names.update(self.workflow.get_full_nodeset())
         return names
+
+    def get_iteration_tree(self):
+        """Return a list of lists indicating the iteration
+        hierarchy for this driver.  This recurses down into
+        sub-Drivers but NOT into sub-Assemblies.
+        """
+        tree = [self.get_pathname(), []]
+        for comp in self.workflow:
+            if IDriver.providedBy(comp):
+                tree[1].append(comp.get_iteration_tree())
+            else:
+                tree[1].append(comp.get_pathname())
+        return tree

@@ -186,11 +186,15 @@ class Workflow(object):
     def calc_gradient(self, inputs=None, outputs=None,
                       upscope=False, mode='auto'):
 
-        # TODO - Support automatic determination of mode
-
         parent = self.parent
         reset = False
-        uvec = self._system.vec['u']
+        
+        # TODO - Support automatic determination of mode
+        
+        if self._system is None:
+            reset = True
+        else:
+            uvec = self._system.vec['u']
 
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
@@ -198,7 +202,7 @@ class Workflow(object):
             if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
-        else:
+        elif reset is False:
             for inp in inputs:
                 if inp not in uvec:
                     reset = True
@@ -211,14 +215,14 @@ class Workflow(object):
                 outputs.extend(parent.list_objective_targets())
             if hasattr(parent, 'list_constraint_targets'):
                 outputs.extend(parent.list_constraint_targets())
-        else:
+        elif reset is False:
             for out in outputs:
                 if out not in uvec:
                     reset = True
                     break
 
         if reset:
-            self._system.scope._setup(inputs=inputs, outputs=outputs) # re-create system hierarchy
+            self.scope._setup(inputs=inputs, outputs=outputs) # re-create system hierarchy
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,

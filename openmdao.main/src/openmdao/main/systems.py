@@ -16,7 +16,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes
+                                   collapse_nodes, simple_node_iter
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -154,10 +154,10 @@ class System(object):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
 
-        try:
+        if hasattr(self, '_comp') and IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self.name,s))
                                   for s in self._comp.list_states()])
-        except AttributeError:
+        else:
             states = ()
 
         pure_outs = [out for out in self._out_nodes if out not in states]
@@ -699,13 +699,13 @@ class System(object):
         self.initialize_gradient_solver()
         self.linearize()
 
-        self.rhs_vec.array[:] = 0.0
-        self.vec['df'].array[:] = 0.0
-
         if mode == 'fd':
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
+        else:
+            self.rhs_vec.array[:] = 0.0
+            self.vec['df'].array[:] = 0.0
 
         return self.ln_solver.solve(inputs, outputs)
 
@@ -772,10 +772,10 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
-        try:
+        if IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self._comp.name, s))
                              for s in self._comp.list_states()])
-        except AttributeError:
+        else:
             states = ()
 
         # group outputs into states and non-states
@@ -1367,9 +1367,11 @@ class InnerAssemblySystem(SerialSystem):
         rgraph = scope._reduced_graph
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' not in data:  # it's a collapsed var node
-                if rgraph.in_degree(node) == 0:  # boundary input
+                # boundary in node
+                if rgraph.in_degree(node) == 0 and (node[0],) != node[1]:
                     bins.append(node)
-                elif rgraph.out_degree(node) == 0: # boundary output
+                # boundary out node
+                elif rgraph.out_degree(node) == 0 and (node[0],) != node[1]:
                     bouts.append(node)
 
         for name in bins:
@@ -1518,20 +1520,6 @@ def get_comm_if_active(obj, comm):
     # else:
     #     mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
     return newcomm
-
-def simple_node_iter(nodes):
-    """Return individual nodes from an iterator containing nodes and
-    iterators of nodes.
-    """
-    if isinstance(nodes, basestring):
-        nodes = (nodes,)
-
-    for node in nodes:
-        if isinstance(node, basestring):
-            yield node
-        else:
-            for n in simple_node_iter(node):
-                yield n
 
 def get_full_nodeset(scope, group):
     names = set()

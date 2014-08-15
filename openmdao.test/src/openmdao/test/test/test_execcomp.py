@@ -19,7 +19,8 @@ class execCompTest(unittest.TestCase):
         exp1 = ['y1 = 2.0*x1 + x2*x2',
                 'y2 = 3.0*x1*x2']
         self.top.add('comp1', ExecComp(exp1))
-    
+        self.top.driver.workflow.add('comp1')
+            
         self.top.comp1.x1 = 3.0
         self.top.comp1.x2 = 5.0
         self.top.run()

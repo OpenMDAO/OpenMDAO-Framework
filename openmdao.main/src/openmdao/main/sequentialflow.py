@@ -2,33 +2,18 @@
 order. This workflow serves as the immediate base class for the two most
 important workflows: Dataflow and CyclicWorkflow."""
 
-import networkx as nx
-import sys
-from math import isnan
-from StringIO import StringIO
 from types import NoneType
 
-# pylint: disable=E0611,F0401
-from openmdao.main.array_helpers import flattened_size, \
-                                        flatten_slice, is_differentiable_val
-from openmdao.main.derivatives import applyJ, applyJT, applyMinvT
-
-from openmdao.main.exceptions import RunStopped
-from openmdao.main.pseudoassembly import PseudoAssembly, to_PA_var, from_PA_var
 from openmdao.main.vartree import VariableTree
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.depgraph import find_related_pseudos, \
-                                    is_subvar_node, is_boundary_node, \
-                                    find_all_connecting
-from openmdao.main.interfaces import IDriver, IImplicitComponent, ISolver
+from openmdao.main.depgraph import find_related_pseudos
+from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.util.graph import edges_to_dict, list_deriv_vars, \
-                                flatten_list_of_iters
 from openmdao.util.decorators import method_accepts
 from openmdao.util.debug import strict_chk_config
 
-from numpy import ndarray, zeros
+from numpy import ndarray
 
 _missing = object()
 
