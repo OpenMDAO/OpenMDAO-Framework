@@ -309,7 +309,7 @@ class FiniteDifference(object):
                 else:
                     self.scope.set(src, new_val, force=True)
 
-        print 'after FD', self.J
+        #print 'after FD', self.J
         return self.J
 
     def get_outputs(self, x):
