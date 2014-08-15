@@ -995,6 +995,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
+        # Should work without this line. Tell Bret.
+        #top.driver.add_parameter('comp1.x', low=-9999, high=9999)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
