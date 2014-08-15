@@ -1492,6 +1492,10 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.post_setup()
 
+        # load up the u vector so we have the correct values to start
+        if 'u' in self._system.vec:
+            self._system.vec['u'].set_from_scope(self)
+
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
         prior to execution.  It will also be called if 
