@@ -147,6 +147,9 @@ class ScipyGMRES(LinearSolver):
         # Extra equation for all requested inputs.
         for varname in system._in_nodes:
 
+            if varname not in system.sol_vec:
+                continue
+
             if isinstance(varname, tuple):
                 varname = varname[0]
 
