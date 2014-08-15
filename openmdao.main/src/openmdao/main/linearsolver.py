@@ -61,13 +61,8 @@ class ScipyGMRES(LinearSolver):
                 param = param[0]
 
             indices = system.vec['u'].indices(param)
-            i1 = indices[0]
-            if len(indices) == 2:
-                i2 = indices[1]
-            else:
-                i2 = i1 + 1
 
-            for irhs in range(i1, i2):
+            for irhs in indices:
 
                 RHS[irhs, 0] = 1.0
 
@@ -94,17 +89,13 @@ class ScipyGMRES(LinearSolver):
                         item = item[0]
 
                     indices = system.vec['u'].indices(item)
-                    k1 = indices[0]
-                    if len(indices) == 2:
-                        k2 = indices[1]
-                    else:
-                        k2 = k1 + 1
+                    nk = len(indices)
 
                     if system.mode == 'forward':
-                        J[i:i+(k2-k1), j] = dx[k1:k2]
+                        J[i:i+nk, j] = dx[indices]
                     else:
-                        J[j, i:i+(k2-k1)] = dx[k1:k2]
-                    i += k2-k1
+                        J[j, i:i+nk] = dx[indices]
+                    i += nk
 
                 j += 1
 
@@ -223,13 +214,8 @@ class PETSc_KSP(LinearSolver):
                 param = param[0]
 
             indices = system.vec['u'].indices(param)
-            i1 = indices[0]
-            if len(indices) == 2:
-                i2 = indices[1]
-            else:
-                i2 = i1 + 1
 
-            for irhs in range(i1, i2):
+            for irhs in indices:
 
                 system.rhs_vec.array[:] = 0.0
                 system.sol_vec.array[:] = 0.0
@@ -252,23 +238,20 @@ class PETSc_KSP(LinearSolver):
                 print 'dx', dx
 
                 i = 0
+
                 for item in outputs:
 
                     if isinstance(item, tuple):
                         item = item[0]
 
                     indices = system.vec['u'].indices(item)
-                    k1 = indices[0]
-                    if len(indices) == 2:
-                        k2 = indices[1]
-                    else:
-                        k2 = k1 + 1
+                    nk = len(indices)
 
                     if system.mode == 'forward':
-                        J[i:i+(k2-k1), j] = dx[k1:k2]
+                        J[i:i+nk, j] = dx[indices]
                     else:
-                        J[j, i:i+(k2-k1)] = dx[k1:k2]
-                    i += k2-k1
+                        J[j, i:i+nk] = dx[indices]
+                    i += nk
 
                 j += 1
 
