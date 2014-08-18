@@ -1,0 +1,161 @@
+<html>
+<head>
+<!-- <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+ --><!-- DataTables CSS -->
+
+<link rel="stylesheet" type="text/css" href="//code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css">
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/plug-ins/725b2a2115b/integration/jqueryui/dataTables.jqueryui.css">
+
+
+
+  
+<!-- jQuery -->
+<script type="text/javascript" charset="utf8" src="//code.jquery.com/jquery-1.10.2.min.js"></script>
+  
+<!-- DataTables -->
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="//cdn.datatables.net/colvis/1.1.1/js/dataTables.colVis.min.js"></script>
+<!-- <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/fixedcolumns/3.0.2/js/dataTables.fixedColumns.min.js"></script>
+ -->
+<!-- <script type="text/javascript" charset="utf-8" src="FixedColumns.js"></script>
+ -->
+</head>
+<body>
+<script type="text/javascript">
+
+/* Custom filtering function which will filter data in column one between two values */
+$.fn.dataTableExt.afnFiltering.push(
+	function( oSettings, aData, iDataIndex ) {
+		var iMin = document.getElementById('min').value * 1;
+		var iMax = document.getElementById('max').value * 1;
+		var iVersion = aData[0] == "-" ? 0 : aData[0]*1;
+		if ( iMin == "" && iMax == "" )
+		{
+			return true;
+		}
+		else if ( iMin == "" && iVersion < iMax )
+		{
+			return true;
+		}
+		else if ( iMin < iVersion && "" == iMax )
+		{
+			return true;
+		}
+		else if ( iMin < iVersion && iVersion < iMax )
+		{
+			return true;
+		}
+		return false;
+	}
+);
+
+
+$( document ).ready(function() {
+
+	$.getJSON( "sellar_MDF_solver.json", function( data ) {
+	    var cases = [];
+	    var it_case_key = "iteration_case_" ;
+	    var driver_info_key = "driver_info_" ;
+	    var driver_names = new Object();
+
+	    $.each( data, function( key , val ) {
+	  	    if (key.lastIndexOf(driver_info_key, 0) === 0) {
+	  	    	driver_names[ val._id ] = val.name ;
+	  	    }
+
+	  	    if (key.lastIndexOf(it_case_key, 0) === 0) {
+	  		    case_number = key.substring(it_case_key.length);
+	  		    driver_id = val._driver_id ;
+	  		    driver_id = driver_names[ val._driver_id ] ;
+	  		    timestamp = val.timestamp ;
+	  		    cases[ cases.length ] = [ case_number, driver_id, timestamp] ;
+	  	    }
+	    }); // end each
+	 
+	    var caseTable = $('#case_data').dataTable( {
+	        "data": cases,
+	        "columns": [
+	            { "title": "Case Number" },
+	            { "title": "Driver ID" },
+	            { "title": "Timestamp" },
+	        ],
+            "scrollY":        "200px",
+            "scrollCollapse": true,
+            "paging":         false,
+            "jQueryUI":       true, // if I set to true then the row click results in multiple callbacks !
+                    "scrollX": true,
+
+	  //  		"sScrollX": "100%",
+			// "sScrollXInner": "150%",
+			// "bScrollCollapse": true,
+
+
+		fnRowCallback: function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {
+		    // Row click
+		    $(nRow).on('click', function() {
+		      //alert( 'clicked on row with case number ' + aData[0]) ;
+		      //console.log('Row Clicked. Look I have access to all params, thank You closures.', this, aData, iDisplayIndex, iDisplayIndexFull);
+		    });
+		 
+		    //Cell click
+		    $('td', nRow).on('click', function() {
+		      alert( 'clicked on row with case number ' + aData[0]) ;
+		      console.log('Col Clicked.', this, aData, iDisplayIndex, iDisplayIndexFull);
+		    });
+		  }
+
+	    } );  // end dataTable
+
+	    /* Add event listeners to the two range filtering inputs */
+		$('#min').keyup( function() { caseTable.fnDraw(); } );
+		$('#max').keyup( function() { caseTable.fnDraw(); } );
+
+
+		//new FixedColumns( caseTable );
+
+
+	}); // end getJSON
+
+}); // end ready
+
+
+</script>
+
+
+<table border="0" cellspacing="5" cellpadding="5">
+				<tbody><tr>
+					<td>Minimum case number:</td>
+					<td><input type="text" id="min" name="min"></td>
+				</tr>
+				<tr>
+					<td>Maximum case number:</td>
+					<td><input type="text" id="max" name="max"></td>
+				</tr>
+			</tbody>
+</table>
+
+
+<table id="case_data" class="display">
+    <thead>
+        <tr>
+            <th>Case Number</th>
+            <th>Driver ID</th>
+            <th>Timestamp</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Row 1 Data 1</td>
+            <td>Row 1 Data 2</td>
+            <td>Row 1 Data 3</td>
+        </tr>
+        <tr>
+            <td>Row 2 Data 1</td>
+            <td>Row 2 Data 2</td>
+            <td>Row 2 Data 3</td>
+        </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
