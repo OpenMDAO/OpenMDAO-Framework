@@ -35,6 +35,10 @@ class ImplicitComponent(Component):
             if trait.iotype == 'state':
                 self._set_input_callback(name)
 
+        # This flag is for testing. Set to True to run this as an explicit
+        # component so you can test derivatives.
+        self._run_explicit = False
+
     @rbac(('owner', 'user'))
     def list_states(self):
         """Return a list of names of state variables in alphabetical order.
@@ -42,6 +46,9 @@ class ImplicitComponent(Component):
         ordering internally, override this function to return the states in
         the desired order.
         """
+
+        if self._run_explicit == True:
+            return []
 
         if self._state_names is None:
             self._state_names = \
@@ -55,6 +62,9 @@ class ImplicitComponent(Component):
         a different order internally, override this function to return the
         residuals in the desired order.
         """
+
+        if self._run_explicit == True:
+            return []
 
         if self._resid_names is None:
             self._resid_names = \
@@ -99,9 +109,11 @@ class ImplicitComponent(Component):
 
     def get_residuals(self):
         """Return a vector of residual values."""
+
         resids = []
-        for name in self.list_residuals():
-            resids.extend(flattened_value(name, getattr(self, name)))
+        if self._run_explicit == False:
+            for name in self.list_residuals():
+                resids.extend(flattened_value(name, getattr(self, name)))
         return np.array(resids)
 
     def get_state(self):
