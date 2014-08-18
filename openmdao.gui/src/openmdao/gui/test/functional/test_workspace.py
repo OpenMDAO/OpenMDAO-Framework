@@ -672,6 +672,8 @@ def execute(self)
         if 'Element is not clickable' in err:
             NotifierPage.wait(editor_page)
             message = NotifierPage.wait(editor_page)
+        else:
+            raise
     else:
         NotifierPage.wait(editor_page)
     eq(message, 'Error in file bug.py: invalid syntax (bug.py, line 6)')

@@ -24,6 +24,22 @@ _Missing = MissingValue()
 def _simpleflatten(name, obj):
     return [(name, obj)]
 
+
+def _flatten_dict(name, dct):
+    ret = []
+
+    def _recurse_flatten(ret, name, keys, dct):
+        for k,v in dct.items():
+            new_keys = keys+[k]
+            if isinstance(v, (dict)):
+                _recurse_flatten(ret, name, new_keys, v)
+            else:
+                keystr = '.'.join(['%s' % j for j in new_keys])
+                ret.append(("%s.%s" % (name, keystr), v))
+    _recurse_flatten(ret, name, [], dct)
+    return ret
+
+
 def _flatten_lst(name, lst):
     ret = []
 
@@ -31,9 +47,14 @@ def _flatten_lst(name, lst):
         for i, entry in enumerate(lst):
             new_idx = idx+[i]
             if isinstance(entry, (tuple, list, array)):
+                # ret is flattened list so far
+                # name is the name of the current object that needs to be flattened
+                # new_idx is a list of indices for the dimensions of the item, e.g. [3,0] is the first item in the third item
                 _recurse_flatten(ret, name, new_idx, entry)
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
+                # qqq returns the current flattened list if items
+                # idxstr is a string representing what element in the list this is referring to, e.g. '[3][0]'
                 ret.append(("%s%s" % (name, idxstr), entry))
 
     _recurse_flatten(ret, name, [], lst)
@@ -47,6 +68,7 @@ flatteners = {
        list: _flatten_lst,
        tuple: _flatten_lst,
        array: _flatten_lst,
+       dict: _flatten_dict,
        MissingValue: _simpleflatten,
     }
 

@@ -1,10 +1,13 @@
 import bson
 import json
+import logging
 
-from struct import unpack
+from struct import pack, unpack
 from weakref import ref
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, VariableTree
+
+_GLOBAL_DICT = dict(__builtins__=None)
 
 
 class CaseDataset(object):
@@ -44,6 +47,11 @@ class CaseDataset(object):
         cases = cds.data.driver(driver_name).parent_case(parent_id).fetch()
 
     Other possibilities exist, see :class:`Query`.
+
+    To restore from the last recorded case::
+
+        cds.restore(assembly, cds.data.fetch()[-1]['_id'])
+
     """
 
     def __init__(self, filename, format):
@@ -54,6 +62,9 @@ class CaseDataset(object):
             self._reader = _JSONReader(filename)
         else:
             raise ValueError("dataset format must be 'json' or 'bson'")
+
+        self._query_id = self._parent_id = self._driver_id = None
+        self._case_ids = self._drivers = None
 
     @property
     def data(self):
@@ -72,23 +83,188 @@ class CaseDataset(object):
 
     def _fetch(self, query):
         """ Return data based on `query`. """
-        vnames = query.vnames
-        if vnames is not None:
+        self._setup(query)
+
+        metadata_names = ['_id', '_parent_id', '_driver_id', 'error_status',
+                          'error_message', 'timestamp']
+        if query.vnames:
+            tmp = []
+            for name in metadata_names:
+                if name in query.vnames:
+                    tmp.append(name)
+            metadata_names = tmp
+            names = query.vnames
+        else:
+            if query.driver_name:
+                driver_info = self._drivers[self._driver_id]
+                prefix = driver_info['prefix']
+                all_names = [prefix+name
+                             for name in driver_info['recording']]
+            else:
+                all_names = []
+                for driver_info in self._drivers.values():
+                    prefix = driver_info['prefix']
+                    all_names.extend([prefix+name
+                                      for name in driver_info['recording']])
+            names = sorted(all_names+metadata_names)
+
+        if query.names:
+            # Returning single row, not list of rows.
+            return names
+
+        nan = float('NaN')
+        rows = ListResult()
+        state = {}  # Retains last seen values.
+        for case_data in self._reader.cases():
+            data = case_data['data']
+            case_id = case_data['_id']
+            case_driver_id = case_data['_driver_id']
+
+            prefix = self._drivers[case_driver_id]['prefix']
+            if prefix:
+                # Make names absolute.
+                data = dict([(prefix+name, value)
+                             for name, value in data.items()])
+            else:
+                data = data.copy()  # Don't modify reader version.
+
+            state.update(data)
+
+            # Filter on driver.
+            if self._driver_id is not None and \
+               case_driver_id != self._driver_id:
+                continue
+
+            # Filter on case.
+            if self._case_ids is None or case_id in self._case_ids:
+                for name in metadata_names:
+                    data[name] = case_data[name]
+
+                row = DictList(names)
+                for name in names:
+                    if query.local_only:
+                        if name in metadata_names:
+                            row.append(data[name])
+                        else:
+                            driver = self._drivers[case_driver_id]
+                            lnames = [prefix+rec for rec in driver['recording']]
+                            if name in lnames:
+                                row.append(data[name])
+                            else:
+                                row.append(nan)
+                    elif name in state:
+                        row.append(state[name])
+                    elif name in data:
+                        row.append(data[name])
+                    else:
+                        row.append(nan)
+                rows.append(row)
+
+            if case_id == self._query_id or case_id == self._parent_id:
+                break  # Parent is last case recorded.
+
+        if self._query_id and not rows:
+            raise ValueError('No case with _id %s' % self._query_id)
+
+        if query.transpose:
+            tmp = DictList(names)
+            for i in range(len(rows[0])):
+                tmp.append([row[i] for row in rows])
+            # Keep CDS as attribute for post-processing
+            tmp.cds = self
+            return tmp
+
+        # Keep CDS as attribute for post-processing
+        rows.cds = self
+        return rows
+
+    def _write(self, query, out, format):
+        """ Write data based on `query` to `out`. """
+        if query.local_only:
+            raise ValueError('data.local() invalid for write()')
+        if query.names:
+            raise ValueError('data.var_names() invalid for write()')
+        if query.transpose:
+            raise ValueError('data.by_variable() invalid for write()')
+
+        self._setup(query)
+
+        format = format.lower()
+        if format == 'bson':
+            writer = _BSONWriter(out)
+        elif format == 'json':
+            writer = _JSONWriter(out)
+        else:
+            raise ValueError("dataset format must be 'json' or 'bson'")
+
+        drivers = self.drivers
+
+        found = False
+        simulation_info = self.simulation_info
+        constants = simulation_info['constants']  # Updated to reflect start.
+        for count, case_data in enumerate(self._reader.cases()):
+            data = case_data['data']
+            case_id = case_data['_id']
+            case_driver_id = case_data['_driver_id']
+            prefix = self._drivers[case_driver_id]['prefix']
+
+            # Filter on driver.
+            if self._driver_id is not None and \
+               case_driver_id != self._driver_id:
+                if not found:
+                    # Update 'constants'.
+                    for name, value in data.items():
+                        constants[prefix+name] = value
+                continue
+
+            # Filter on case.
+            if self._case_ids is None or case_id in self._case_ids:
+                if not found:
+                    writer.write('simulation_info', simulation_info)
+                    for i, driver in enumerate(self.drivers):
+                        # Remove unused variables from driver['recording'] data.
+                        if query.vnames:
+                            prefix, _, name = driver['name'].rpartition('.')
+                            recording = [name for name in driver['recording']
+                                               if prefix+name in query.vnames]
+                            driver['recording'] = recording
+                        writer.write('driver_info_%s' % (i+1), driver)
+                    found = True
+
+                if query.vnames:
+                    # Filter on variable.
+                    for name in data.keys():
+                        if prefix+name not in query.vnames:
+                            del data[name]
+
+                writer.write('iteration_case_%s' % (count+1), case_data)
+
+            elif not found:
+                # Update 'constants'.
+                for name, value in data.items():
+                    constants[prefix+name] = value
+
+            if case_id == self._query_id or case_id == self._parent_id:
+                break  # Parent is last case recorded.
+
+        if self._query_id and not found:
+            raise ValueError('No case with _id %s' % self._query_id)
+
+        writer.close()
+
+    def _setup(self, query):
+        """ Setup for processing `query`. """
+        if query.vnames is not None:
             bad = []
             metadata = self.simulation_info['variable_metadata']
-            for name in vnames:
+            for name in query.vnames:
                 if name not in metadata:
                     bad.append(name)
             if bad:
                 raise RuntimeError('Names not found in the dataset: %s' % bad)
 
-        local = query.local_only
-        return_names = query.names
-
-        all_names = []
-        drivers = {}
-        driver_id = None
-        driver_names = None
+        self._drivers = {}
+        self._driver_id = None
         for driver_info in self._reader.drivers():
             _id = driver_info['_id']
             name = driver_info['name']
@@ -96,31 +272,25 @@ class CaseDataset(object):
             if prefix:
                 prefix += '.'
             driver_info['prefix'] = prefix
-            drivers[_id] = driver_info
-            if query.driver_name and name == query.driver_name:
-                driver_id = _id
-                driver_names = [prefix+name
-                                for name in driver_info['recording']]
-            if not vnames and not query.driver_name:
-                all_names.extend([prefix+name
-                                  for name in driver_info['recording']])
+            self._drivers[_id] = driver_info
+            if driver_info['name'] == query.driver_name:
+                self._driver_id = _id
 
         if query.driver_name:
-            if driver_id is None:
+            if self._driver_id is None:
                 raise ValueError('No driver named %r' % query.driver_name)
-            all_names = driver_names
 
-        case_ids = None
-        query_id = None
-        parent_id = None
+        self._case_ids = None
+        self._query_id = None
+        self._parent_id = None
         if query.case_id is not None:
-            query_id = query.case_id
-            case_ids = set([query_id])
-            driver_id = None
+            self._query_id = query.case_id
+            self._case_ids = set((self._query_id,))
+            self._driver_id = None  # Case specified, ignore driver.
         elif query.parent_id is not None:
             # Parent won't be seen until children are, so we have to pre-screen.
             # Collect tree of cases.
-            parent_id = query.parent_id
+            self._parent_id = query.parent_id
             cases = {}
             for case_data in self._reader.cases():
                 _id = case_data['_id']
@@ -147,128 +317,45 @@ class CaseDataset(object):
                     child = _CaseNode(_id, _driver_id, parent)
                     cases[_id] = parent.add_child(child)
 
-                if _id == parent_id:
+                if _id == self._parent_id:
                     break  # Parent is last case recorded.
 
             # Determine subtree of interest.
-            if parent_id in cases:
-                root = cases[parent_id]
-                case_ids = set((parent_id,))
-                if not vnames:
-                    all_names = list(drivers[root.driver_id]['recording'])
-                recorded = set()
+            if self._parent_id in cases:
+                root = cases[self._parent_id]
+                self._case_ids = set((self._parent_id,))
                 for child in root.get_children():
-                    case_ids.add(child.case_id)
-                    if not vnames and child.driver_id not in recorded:
-                        all_names.extend(drivers[child.driver_id]['recording'])
-                        recorded.add(child.driver_id)
+                    self._case_ids.add(child.case_id)
             else:
-                raise ValueError('No case with _id %s', parent_id)
-
-        metadata_names = ['_id', '_parent_id', '_driver_id', 'error_status',
-                          'error_message', 'timestamp']
-        if vnames:
-            tmp = []
-            for name in metadata_names:
-                if name in vnames:
-                    tmp.append(name)
-            metadata_names = tmp
-            names = vnames
-        else:
-            names = sorted(all_names+metadata_names)
-
-        if return_names:
-            # Returning single row, not list of rows.
-            return names
-
-        nan = float('NaN')
-        rows = []
-        state = {}  # Retains last seen values.
-        for case_data in self._reader.cases():
-            data = case_data['data']
-            case_id = case_data['_id']
-            case_driver_id = case_data['_driver_id']
-
-            prefix = drivers[case_driver_id]['prefix']
-            if prefix:
-                # Make names absolute.
-                tmp = dict([(prefix+name, value)
-                            for name, value in data.items()])
-                data = tmp
-            else:
-                data = data.copy()  # Don't modify reader version.
-
-            state.update(data)
-
-            # Filter on driver.
-            if driver_id is not None and case_driver_id != driver_id:
-                continue
-
-            if case_ids is None or case_id in case_ids:
-                # Record this case.
-                for name in metadata_names:
-                    data[name] = case_data[name]
-
-                row = DictList(names)
-                for name in names:
-                    if local:
-                        if name in metadata_names:
-                            row.append(data[name])
-                        else:
-                            driver = drivers[case_driver_id]
-                            lnames = [prefix+rec for rec in driver['recording']]
-                            if name in lnames:
-                                row.append(data[name])
-                            else:
-                                row.append(nan)
-                    elif name in state:
-                        row.append(state[name])
-                    elif name in data:
-                        row.append(data[name])
-                    else:
-                        row.append(nan)
-                rows.append(row)
-
-            if case_id == query_id or case_id == parent_id:
-                break  # Parent is last case recorded.
-
-        if query_id and not rows:
-            raise ValueError('No case with _id %s', query_id)
-
-        if query.transpose:
-            tmp = DictList(names)
-            for i in range(len(rows[0])):
-                tmp.append([row[i] for row in rows])
-            return tmp
-        elif query_id:
-            return rows[0]
-        return rows
+                raise ValueError('No case with _id %s', self._parent_id)
 
     def restore(self, assembly, case_id):
         """ Restore case `case_id` into `assembly`. """
-        case = self.data.case(case_id).fetch()
+        case = self.data.case(case_id).fetch()[0]
 
         # Restore constant inputs.
         constants = self.simulation_info['constants']
-        for name in sorted(constants.keys()):
-            assembly.set(name, constants[name])
+        for name in sorted(constants):
+            self._set(assembly, name, constants[name])
 
         # Restore case data.
-        global_dict = dict(__builtins__=None)
+        # Sorted order gets comp.arr set before comp.arr[[1, 3, 5]].
         metadata = self.simulation_info['variable_metadata']
-        for name, value in case.items():
+        for name in sorted(case.keys()):
+            value = case[name]
             if name in metadata:
                 iotype = metadata[name]['iotype']
-            elif name.startswith('_pseudo_'):
-                name += '.out0'
+            elif '_pseudo_' in name:
+                if not name.endswith('.out0'):
+                    name += '.out0'
                 iotype = 'out'
             else:
                 continue
 
-            if '[' in name:
-                exec('assembly.%s = value' % name, global_dict, locals())
-            else:
-                assembly.set(name, value)
+            try:
+                self._set(assembly, name, value)
+            except Exception as exc:
+                raise RuntimeError("Can't set %s to %s: %s" % (name, value, exc))
 
             # Find connected inputs and set those as well.
             asm = assembly
@@ -283,19 +370,46 @@ class CaseDataset(object):
                 prefix += '.'
             src = src[len(prefix):]
             for src, dst in asm._depgraph.out_edges(src):
+                if src.startswith(dst):
+                    continue  # Weird VarTree edge.
                 dst = prefix+dst
-                if '[' in dst:
-                    exec('assembly.%s = value' % dst, global_dict, locals())
-                else:
-                    assembly.set(dst, value)
+                try:
+                    self._set(assembly, dst, value)
+                except Exception as exc:
+                    logging.warning("Can't set %s to %s: %s", dst, value, exc)
+
+    def _set(self, assembly, name, value):
+        """ Set `name` in `assembly` to `value`. """
+        # Translating unicode to str to avoid issues like pyOpt option checks.
+        if isinstance(value, dict):
+            curr = assembly.get(name)
+            if isinstance(curr, VariableTree):
+                for key, val in value.items():
+                    self._set(assembly, '.'.join((name, key)), val)
+            elif '[' in name:
+                if isinstance(value, unicode):
+                    value = str(value)
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                for key, val in value.items():
+                    if isinstance(val, unicode):
+                        value[key] = str(val)
+                assembly.set(name, value)
+        else:
+            if isinstance(value, unicode):
+                value = str(value)
+            if '[' in name:
+                exec('assembly.%s = value' % name, _GLOBAL_DICT, locals())
+            else:
+                assembly.set(name, value)
 
 
 class Query(object):
     """
     Retains query information for a :class:`CaseDataset`. All methods other
-    than :meth:`fetch` return ``self``, so operations are easily chained.
-    If the same method is called more than once, only the last call has an
-    effect.
+    than :meth:`fetch` and :meth:`write` return ``self``, so operations are
+    easily chained.  If the same method is called more than once, only the last
+    call has an effect.
     """
 
     def __init__(self, dataset):
@@ -311,6 +425,18 @@ class Query(object):
     def fetch(self):
         """ Return a list of rows of data, one for each selected case. """
         return self._dataset._fetch(self)
+
+    def write(self, out, format=None):
+        """
+        Write filtered :class:`CaseDataset` to `out`, a filename or file-like
+        object.  Default `format` is the format of the original data file.
+        """
+        if format is None:
+            if isinstance(self._dataset._reader, _BSONReader):
+                format = 'bson'
+            else:
+                format = 'json'
+        self._dataset._write(self, out, format)
 
     def driver(self, driver_name):
         """ Filter the cases to those recorded by the named driver. """
@@ -370,6 +496,7 @@ class Query(object):
 
 
 class DictList(list):
+    """ List that can be indexed by index or 'var_name'. """
 
     def __init__(self, var_names, seq=None):
         if seq is None:
@@ -385,13 +512,23 @@ class DictList(list):
             return super(DictList, self).__getitem__(self.name_map[key])
 
     def keys(self):
+        """ Return list of dictionary keys. """
         return self.name_map.keys()
 
     def items(self):
+        """ Return list of ``(key, value)``. """
         return [(key, self[key]) for key in self.name_map]
 
     def values(self):
+        """ Return values in key order. """
         return [self[key] for key in self.name_map]
+
+
+class ListResult(list):
+    """ Simply a list that allows us to save a reference to the
+    original CaseDataSet.
+    """
+    pass
 
 
 class _CaseNode(object):
@@ -419,7 +556,7 @@ class _CaseNode(object):
         return child
 
     def get_children(self):
-        """ Return all child cases. """
+        """ Return all child cases, recursively. """
         kids = []
         for child in self.children:
             kids.append(child)
@@ -515,4 +652,58 @@ class _BSONReader(_Reader):
             return None
         reclen = unpack('<L', data)[0]
         return bson.loads(self._inp.read(reclen))
+
+
+class _JSONWriter(object):
+    """ Writes case data as JSON. """
+
+    def __init__(self, out, indent=4, sort_keys=True):
+        if isinstance(out, basestring):
+            self._out = open(out, 'w')
+        elif 'w' in out.mode and 'b' not in out.mode:
+            self._out = out
+        else:
+            raise ValueError("'out' must be a writable file-like object in"
+                             " text mode")
+        self._indent = indent
+        self._sort_keys = sort_keys
+        self._count = 0
+
+    def write(self, category, data):
+        """ Write `data` under `category`. """
+        data = json.dumps(data, indent=self._indent, sort_keys=self._sort_keys)
+        self._count += 1
+        prefix = '{\n' if self._count == 1 else ', '
+        self._out.write('%s"__length_%s": %s\n, "%s": '
+                        % (prefix, self._count, len(data), category))
+        self._out.write(data)
+        self._out.write('\n')
+
+    def close(self):
+        """ Close file. """
+        self._out.write('}\n')
+        self._out.close()
+
+
+class _BSONWriter(object):
+    """ Writes case data as BSON. """
+
+    def __init__(self, out):
+        if isinstance(out, basestring):
+            self._out = open(out, 'wb')
+        elif 'w' in out.mode and 'b' in out.mode:
+            self._out = out
+        else:
+            raise ValueError("'out' must be a writable file-like object in"
+                             " binary mode")
+
+    def write(self, category, data):
+        """ Write `data` under `category`. """
+        data = bson.dumps(data)
+        self._out.write(pack('<L', len(data)))
+        self._out.write(data)
+
+    def close(self):
+        """ Close file. """
+        self._out.close()
 

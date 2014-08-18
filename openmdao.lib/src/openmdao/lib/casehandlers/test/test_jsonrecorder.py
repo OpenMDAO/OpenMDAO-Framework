@@ -8,6 +8,7 @@ import unittest
 from struct import unpack
 from cStringIO import StringIO
 
+from openmdao.main import __version__
 from openmdao.main.api import Assembly, Component, Case, VariableTree, set_as_top
 from openmdao.main.datatypes.api import Array, Instance, List, VarTree
 from openmdao.test.execcomp import ExecComp
@@ -143,6 +144,9 @@ class TestCase(unittest.TestCase):
                 self.assertTrue(lines[i].startswith('"__length_'))
             elif expect.startswith(', "__length_'):
                 self.assertTrue(lines[i].startswith(', "__length_'))
+            elif expect.startswith('    "OpenMDAO_Version":'):
+                expect_fixed = expect[:25] + __version__ + '", '
+                self.assertEqual(lines[i], expect_fixed)
             elif expect.startswith('    "_driver_id":'):
                 self.assertTrue(lines[i].startswith('    "_driver_id":'))
             elif expect.startswith('    "_id":'):
