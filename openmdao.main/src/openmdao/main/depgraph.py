@@ -1485,14 +1485,16 @@ def collapse_nodes(g, collapsed_name, nodes):
     
     # create new connections to collapsed node
     for u,v in in_edges:
-        g.add_edge(u, collapsed_name)
-        # create our own copy of edge metadata
-        g[u][collapsed_name] = g[u][v].copy()
+        if u != collapsed_name:
+            g.add_edge(u, collapsed_name)
+            # create our own copy of edge metadata
+            g[u][collapsed_name] = g[u][v].copy()
 
     for u,v in out_edges:
-        g.add_edge(collapsed_name, v)
-        # create our own copy of edge metadata
-        g[collapsed_name][v] = g[u][v].copy()
+        if v != collapsed_name:
+            g.add_edge(collapsed_name, v)
+            # create our own copy of edge metadata
+            g[collapsed_name][v] = g[u][v].copy()
 
     g.remove_nodes_from(nodes)
 
@@ -1627,7 +1629,9 @@ def all_comps(g):
 
 def collapse_connections(orig_graph):
     """Returns a new graph with each variable
-    connection collapsed into a single node.
+    connection collapsed into a single node.  Any connections
+    where inputs are sources are rerouted to their true
+    source, if there is one.
     """
     src2dests = {}
     dest2src = {}
@@ -1660,7 +1664,7 @@ def collapse_connections(orig_graph):
         src2dests.setdefault(u, set()).add(v)
         dest2src[v] = u
 
-    # re-route inputs that are also sources
+    # reroute inputs that are also sources
     while True:
         size = len(src2dests)
         for src, dests in src2dests.items():
@@ -1732,13 +1736,27 @@ def prune_reduced_graph(orig_g, g, keep):
     g.remove_nodes_from(to_remove)
 
 def vars2tuples(orig_g, g):
-    # now make sure all var nodes are converted to tuple form
+    """convert all var nodes to tuple form"""
     varmap = {}
     for node, data in orig_g.nodes_iter(data=True):
         if 'comp' not in data and node in g and isinstance(node, basestring):
             varmap[node] = (node, (node,))
             
     nx.relabel_nodes(g, varmap, copy=False)
+
+def get_unconnected_vars(g):
+    """Return a list of var nodes that
+    are not between two (or more) component nodes.
+    """
+    ins = []
+    outs = []
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' not in data:
+            if g.in_degree(node) == 0:
+                ins.append(node)
+            elif g.out_degree(node) == 0:
+                outs.append(node)
+    return ins, outs
 
 def map_collapsed_nodes(g):
     """Return a dict of simple names to their collapsed node."""
@@ -1791,10 +1809,10 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     comps.update(srcs)
     comps.update(dests)
 
-    # keep any var we've been told to keep if it's directly
-    # relevant or its parent component is relevant.
+    # keep any var we've been told to keep if its 
+    # parent component is relevant.
     for k in keep:
-        if k not in comps and k.split('.', 1)[0] in comps:
+        if k.split('.', 1)[0] in comps:
             comps.add(k)
 
     return g.subgraph(comps)
@@ -1813,3 +1831,33 @@ def simple_node_iter(nodes):
             for n in simple_node_iter(node):
                 yield n
 
+def reduced2component(reduced):
+    """Return a component graph based on
+    the reduced graph (var edges collapsed)
+    """
+    cgraph = nx.DiGraph()
+    for node, data in reduced.nodes_iter(data=True):
+        if data.get('comp'):
+            cgraph.add_node(node, **data)
+    
+    for node, data in reduced.nodes_iter(data=True):
+        if not data.get('comp'):
+            succ = reduced.successors(node)
+            for p in reduced.predecessors(node):
+                for s in succ:
+                    cgraph.add_edge(p, s)
+
+    return cgraph
+
+def get_reduced_subgraph(g, compnodes):
+    """For a given set of component nodes in a
+    reduced graph g, return the subgraph containing those
+    compnodes and all variable nodes that are inputs or outputs 
+    to those nodes.
+    """
+    compset = set(compnodes)
+    vnodes = set([])
+    edges = g.edges()
+    vnodes.update([u for u,v in edges if v in compset])
+    vnodes.update([v for u,v in edges if u in compset])
+    return g.subgraph(vnodes.union(compset))

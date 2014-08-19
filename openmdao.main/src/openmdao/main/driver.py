@@ -13,7 +13,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
-                                   collapse_driver
+                                   collapse_driver, get_reduced_subgraph
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -131,6 +131,11 @@ class Driver(Component):
 
     def get_depgraph(self):
         return self.parent._depgraph  # May change this to use a smaller graph later
+
+    def get_reduced_graph(self):
+        nodes = [c.name for c in self.iteration_set()]
+        nodes.append(self.name)
+        return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
 
     def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
@@ -511,7 +516,7 @@ class Driver(Component):
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
-        belonging to this driver (inlcudes full iteration set).
+        belonging to this driver (includes full iteration set).
         """
         names = super(Driver, self).get_full_nodeset()
         names.update(self.workflow.get_full_nodeset())
