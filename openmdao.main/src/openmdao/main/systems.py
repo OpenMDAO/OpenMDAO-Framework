@@ -868,7 +868,7 @@ class ParamSystem(SimpleSystem):
 
     def applyJ(self, coupled=False):
         """ Set to zero """
-        if self.variables:
+        if self.variables: # don't do anything if we don't own our output
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def stop(self):
