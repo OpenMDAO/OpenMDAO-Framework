@@ -223,7 +223,8 @@ class Workflow(object):
                     break
 
         if reset:
-            self.scope._setup(inputs=inputs, outputs=outputs) # re-create system hierarchy
+            # recreate system hierarchy
+            self.scope._setup(inputs=inputs, outputs=outputs)
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,

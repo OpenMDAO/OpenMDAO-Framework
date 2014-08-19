@@ -47,8 +47,8 @@ class MPITests(MPITestCase):
 
     N_PROCS = 2
 
-    def test_simple(self):
-        top = set_as_top(Assembly())
+    def setUp(self):
+        self.top = top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp'])
@@ -58,30 +58,48 @@ class MPITests(MPITestCase):
 
         top.comp.x = 3
         top.comp.y = 5
+        
+    def test_run(self):
 
-        top.run()
+        self.top.run()
 
         # if our rank >= required cpus, nothing will actually
         # run so the numbers will be wrong, so skip that case
         if self.comm.rank == 0:
-            self.assertEqual(top.comp.f_xy, 93.)
-            self.assertEqual(top._pseudo_0.out0, 93.)
+            self.assertEqual(self.top.comp.f_xy, 93.)
+            self.assertEqual(self.top._pseudo_0.out0, 93.)
 
-            J = top.driver.workflow.calc_gradient(mode='forward')
+    def test_calc_gradient_fwd(self):
+        self.top.run()
 
+        mpiprint("calc_gradient forward")
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
+
+        if self.comm.rank == 0:
             assert_rel_error(self, J[0, 0], 5.0, 0.0001)
             assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-            J = top.driver.workflow.calc_gradient(mode='adjoint')
+    def test_calc_gradient_adjoint(self):
+        self.top.run()
 
+        mpiprint("calc_gradient adjoint")
+        J = self.top.driver.workflow.calc_gradient(mode='adjoint')
+
+        if self.comm.rank == 0:
             assert_rel_error(self, J[0, 0], 5.0, 0.0001)
             assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-            J = top.driver.workflow.calc_gradient(mode='fd')
+    def test_calc_gradient_fd(self):
+        self.top.run()
 
+        mpiprint("calc_gradient fd")
+        J = self.top.driver.workflow.calc_gradient(mode='fd')
+
+        if self.comm.rank == 0:
             assert_rel_error(self, J[0, 0], 5.0, 0.0001)
             assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+        mpiprint("all done")
 
 if __name__ == '__main__':
     import unittest
