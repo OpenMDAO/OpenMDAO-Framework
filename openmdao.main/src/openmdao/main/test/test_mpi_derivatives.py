@@ -99,7 +99,6 @@ class MPITests(MPITestCase):
             assert_rel_error(self, J[0, 0], 5.0, 0.0001)
             assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        mpiprint("all done")
 
 if __name__ == '__main__':
     import unittest
