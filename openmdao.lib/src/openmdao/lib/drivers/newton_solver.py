@@ -118,4 +118,7 @@ class NewtonSolver(Driver):
                 print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
                 ls_itercount += 1
 
-        #print "done"
+            # Reset backtracking
+            alpha = self.alpha
+
+        print "converged"

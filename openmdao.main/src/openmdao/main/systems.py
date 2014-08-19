@@ -249,7 +249,9 @@ class System(object):
                                   for s in system._comp.list_states()])
             except AttributeError:
                 pass
-            for src, _ in system._out_nodes:
+            out_nodes = [node for node in system._out_nodes \
+                         if node not in self._mapped_resids]
+            for src, _ in out_nodes:
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
@@ -268,6 +270,7 @@ class System(object):
             except AttributeError:
                 pass
 
+        outputs.extend([n for n, m in self._mapped_resids.keys()])
         outputs.extend([n for n in self.list_outputs(coupled=False)
                                 if n not in outputs])
         return outputs
@@ -938,6 +941,7 @@ class EqConstraintSystem(SimpleSystem):
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._negate = True
+                self._comp._negate = True
                 break
             elif state_node == destnode:
                 break
@@ -946,11 +950,10 @@ class EqConstraintSystem(SimpleSystem):
         if self.is_active():
             super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
             state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
+
+            # Propagate residuals.
             if state:
-                if self._negate:
-                    self.vec['f'][state][:] = -self._comp.out0
-                else:
-                    self.vec['f'][state][:] = self._comp.out0
+                self.vec['f'][state][:] = self._comp.out0
 
     def applyJ(self, coupled=False):
         """ Set to zero """

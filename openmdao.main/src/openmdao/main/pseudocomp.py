@@ -196,6 +196,7 @@ class PseudoComponent(object):
             self._orig_expr = self._orig_src
 
         self.missing_deriv_policy = 'error'
+        self._negate = False
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -286,10 +287,16 @@ class PseudoComponent(object):
                                      drv_conn=driver)
 
     def run(self, ffd_order=0, case_uuid=''):
-        setattr(self, 'out0', self._srcexpr.evaluate())
+        if self._negate:
+            setattr(self, 'out0', -self._srcexpr.evaluate())
+        else:
+            setattr(self, 'out0', self._srcexpr.evaluate())
 
     def evaluate(self):
-        setattr(self, 'out0', self._srcexpr.evaluate())
+        if self._negate:
+            setattr(self, 'out0', -self._srcexpr.evaluate())
+        else:
+            setattr(self, 'out0', self._srcexpr.evaluate())
 
     def get(self, name, index=None):
         if index is not None:
@@ -343,7 +350,10 @@ class PseudoComponent(object):
             J[:, i:i+width] = grad[varname]
             i += width
 
-        return J
+        if self._negate:
+            return -J
+        else:
+            return J
 
     def ensure_init(self):
         """Make sure our inputs and outputs have been

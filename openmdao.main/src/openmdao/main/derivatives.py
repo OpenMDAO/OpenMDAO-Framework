@@ -188,7 +188,7 @@ def applyJ(system):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJ', obj.name, arg, result
+    print 'applyJ', obj.name, arg, result
 
 def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.

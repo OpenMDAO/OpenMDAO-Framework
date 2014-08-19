@@ -164,6 +164,7 @@ class Scalable_MDA(Assembly):
         self.driver.workflow.add(['d1', 'd2'])
         self.driver.add_parameter('d1.y_in', low=-1e99, high=1e99)
         self.driver.add_constraint('d2.y_out = d1.y_in')
+        ##self.driver.add_constraint('d1.y_in = d2.y_out')
 
 
 class Newton_SolverTestCase(unittest.TestCase):
@@ -176,6 +177,20 @@ class Newton_SolverTestCase(unittest.TestCase):
         self.top = None
 
     def test_newton(self):
+
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+
+    def test_newton_flip_constraint(self):
+
+        self.top.driver.clear_constraints()
+        self.top.driver.add_constraint('d2.y2 = d1.y2')
 
         self.top.run()
 
