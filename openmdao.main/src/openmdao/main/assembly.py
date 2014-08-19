@@ -43,7 +43,8 @@ from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
-                                   map_collapsed_nodes, simple_node_iter
+                                   map_collapsed_nodes, simple_node_iter, \
+                                   get_unconnected_vars
 from openmdao.main.systems import InnerAssemblySystem
 
 from openmdao.util.graph import list_deriv_vars
@@ -1402,6 +1403,9 @@ class Assembly(Component):
     def get_depgraph(self):
         return self._depgraph
 
+    def get_reduced_graph(self):
+        return self._reduced_graph
+
     def get_comps(self):
         """Returns a list of all of objects contained in this
         Assembly implementing the IComponent interface.
@@ -1461,29 +1465,53 @@ class Assembly(Component):
         if inputs == self._setup_inputs and outputs == self._setup_outputs:
             return
 
+        self._setup_inputs = inputs if inputs is None else inputs[:]
+        self._setup_outputs = outputs if outputs is None else outputs[:]
+
         keep = set(self._get_all_states())
-        if inputs is not None and outputs is not None:
-            inputs = list(simple_node_iter(inputs))
-            outputs = list(simple_node_iter(outputs))
+
+        if inputs is None and outputs is None:
+            calc_relevant = False
+            dgraph = self._depgraph
+        else:
+            calc_relevant = True
+            dsrcs, ddests = self.driver.get_expr_var_depends(recurse=True)
+
+            if inputs is None and outputs is not None:
+                inputs = list(ddests)
+                outputs = list(simple_node_iter(outputs))
+            elif outputs is None and inputs is not None:
+                inputs = list(simple_node_iter(inputs))
+                outputs = list(dsrcs)
+            else:
+                inputs = list(simple_node_iter(inputs))
+                outputs = list(simple_node_iter(outputs))
+
             dgraph = relevant_subgraph(self._depgraph,
                                         inputs, outputs, 
                                         keep)
             keep.update(inputs)
             keep.update(outputs)
-        else:
-            dgraph = self._depgraph
 
-        # collapse all connections into single nodes
-        self._reduced_graph = collapse_connections(dgraph)
-        vars2tuples(self._depgraph, self._reduced_graph)
+        # collapse all connections into single nodes.
+        collapsed_graph = collapse_connections(dgraph)
 
-        self.name2collapsed = map_collapsed_nodes(self._reduced_graph)
+        vars2tuples(self._depgraph, collapsed_graph)
+
+        self.name2collapsed = map_collapsed_nodes(collapsed_graph)
+
+        if calc_relevant: # add paramcomps for inputs
+            for param in inputs:
+                collapsed_graph.add_node(param, comp='param')
+                collapsed_graph.add_edge(param, self.name2collapsed[param])
 
         # translate kept nodes to collapsed form
-        keep = set([self.name2collapsed[k] for k in keep])
+        coll_keep = set([self.name2collapsed[k] for k in keep])
 
-        prune_reduced_graph(self._depgraph, self._reduced_graph,
-                            keep)
+        prune_reduced_graph(self._depgraph, collapsed_graph,
+                            coll_keep)
+
+        self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():
             comp.pre_setup()
@@ -1574,51 +1602,3 @@ def _get_wflow_names(iter_tree):
             names.append(n[0])
     return names
     
-def _collapse_subdrivers(g, wfnames):
-    """collapse subdriver iteration sets into single nodes."""
-    # collapse all subdrivers in our graph
-    for child_drv in self.subdrivers(recurse=False):
-        collapse_driver(g, child_drv, wfnames)
-
-def setup_systems(graph, iteration_tree):
-    """Return a tree (graph) of Systems for the given
-    dependency graph and iteration tree.
-    """
-    wfnames = _get_wflow_names(iteration_tree)
-    cgraph = depgraph.component_graph().subgraph(wfnames)
-
-    # collapse driver iteration sets into a single node for
-    # the driver, except for nodes from their iteration set
-    # that are in the iteration set of their parent driver.
-    _collapse_subdrivers(cgraph, )
-
-    # create systems for all simple components
-    for node, data in cgraph.nodes_iter(data=True):
-        if isinstance(node, basestring):
-            data['system'] = _create_simple_sys(scope, getattr(scope, node))
-
-    # collapse the graph (recursively) into nodes representing
-    # subsystems
-    if MPI:
-        cgraph = partition_mpi_subsystems(cgraph, scope)
-
-        if len(cgraph) > 1:
-            if len(cgraph.edges()) > 0:
-                #mpiprint("creating serial top: %s" % cgraph.nodes())
-                self._system = SerialSystem(scope, cgraph, tuple(cgraph.nodes()))
-            else:
-                #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                self._system = ParallelSystem(scope, cgraph, str(tuple(cgraph.nodes())))
-        elif len(cgraph) == 1:
-            name = cgraph.nodes()[0]
-            self._system = cgraph.node[name].get('system')
-        else:
-            raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
-                                self.parent.get_pathname())
-    else:
-        self._system = SerialSystem(scope, cgraph, str(tuple(cgraph.nodes())))
-
-    self._system.set_ordering([c.name for c in self])
-
-    for comp in self:
-        comp.setup_systems()

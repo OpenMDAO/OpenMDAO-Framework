@@ -101,8 +101,6 @@ def compound_setup_scatters(self):
                     #     destmap[node] = dest_idxs
 
                     dest_idxs = self.vec['p'].indices(node)
-                    assert(all(src_idxs == self.vec['u'].indices(node)))
-                    #assert(all(dest_idxs == self.vec['p'].indices(node)))
 
                     if node not in scatter_conns:
                         scatter_conns.add(node)
@@ -130,7 +128,7 @@ def compound_setup_scatters(self):
 
 
 class System(object):
-    def __init__(self, scope, nodes, name):
+    def __init__(self, scope, graph, nodes, name):
         self.name = str(name)
         self.scope = scope
         self._nodes = nodes
@@ -141,9 +139,8 @@ class System(object):
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
 
-        self.state_resid_map = {}
-
-        graph = self.scope._reduced_graph
+        #self.state_resid_map = {}
+        self._mapped_resids = {}
 
         self._out_nodes = []
 
@@ -199,18 +196,6 @@ class System(object):
                 return s
         return None
 
-    # def get_result(self, item):
-    #     if self.mode == 'adjoint':
-    #         if item in self.sol_vec:
-    #             return self.sol_vec[item]
-    #         return self.scope._system.vec['du'][
-    #                      self.state_resid_map.get(item, item)]
-    #     else:
-    #         if item in self.rhs_vec:
-    #             return self.rhs_vec[item]
-    #         return self.scope._system.vec['df'][
-    #                      self.state_resid_map.get(item, item)]
-            
     def subsystems(self, local=False):
         if local:
             return self.local_subsystems()
@@ -317,6 +302,9 @@ class System(object):
         return self.mpi.requested_cpus
 
     def _get_var_info(self, node):
+        """Collect any variable metadata from the
+        model here.
+        """
         vdict = { 'size': 0 }
 
         # use the name of the src
@@ -353,43 +341,16 @@ class System(object):
         if resid_state_map is None:
             resid_state_map = {}
             
-        #mapped_states = resid_state_map.values()
-
- 
         for sub in self.local_subsystems():
             sub.setup_variables(resid_state_map)
             self.variables.update(sub.variables)
             self._var_meta.update(sub._var_meta)
-
-        #try:
-            #states = set(['.'.join((self._comp.name, s))
-                             #for s in self._comp.list_states()])
-        #except AttributeError:
-            #states = ()
-
-        ## group outputs into states and non-states
-        #group1 = []#[v for v in self._out_nodes if v[1][0] in states]
-        #group2 = [v for v in self._out_nodes if v[1][0] not in states 
-                         #and v not in resid_state_map]
-
-        #for vname in chain(group1, group2):
-            #if vname not in self.variables:
-                #self.variables[vname] = self._var_meta[vname] = \
-                                            #self._get_var_info(vname)
-
-        #for vname in self._in_nodes:
-            #self._var_meta[vname] = self._get_var_info(vname)
-            #if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
-                #self.variables[vname] = self._var_meta[vname]
-
-        self._mapped_resids = {}
 
         self._create_var_dicts(resid_state_map)
 
     def _create_var_dicts(self, resid_state_map):
         # now figure out all of the inputs we 'own'
         self._owned_args = self._get_owned_args()
-        # self._flat_owned_args = self.flat(self._owned_args)
 
         # split up vars into 3 categories:
         #  1) flattenable vars that add to the size of the vectors
@@ -473,10 +434,10 @@ class System(object):
         if not self.is_active():
             return
 
-        if state_resid_map:
-            for out in self.list_outputs():
-                if out in state_resid_map:
-                    self.state_resid_map[out] = state_resid_map[out]
+        # if state_resid_map:
+        #     for out in self.list_outputs():
+        #         if out in state_resid_map:
+        #             self.state_resid_map[out] = state_resid_map[out]
 
         rank = self.mpi.rank
         if arrays is None:  # we're the top level System in our Assembly
@@ -559,7 +520,7 @@ class System(object):
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
-                     'SolverSystem': 'slv', 
+                     'SolverSystem': 'slv',  'ParamSystem': 'param',
                      'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner'}
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
@@ -739,7 +700,7 @@ class SimpleSystem(System):
     """A System for a single Component. This component can have Inputs,
     Outputs, States, and Residuals."""
 
-    def __init__(self, scope, name):
+    def __init__(self, scope, graph, name):
         comp = None
         nodes = set([name])
         cpus = 1
@@ -753,7 +714,7 @@ class SimpleSystem(System):
                 nodes = comp.get_full_nodeset()
                 cpus = comp.get_req_cpus()
 
-        super(SimpleSystem, self).__init__(scope, nodes, name)
+        super(SimpleSystem, self).__init__(scope, graph, nodes, name)
 
         self.mpi.requested_cpus = cpus
         self._comp = comp
@@ -792,16 +753,18 @@ class SimpleSystem(System):
 
         mapped_states = resid_state_map.values()
 
-        for vname in self._in_nodes:
-            self._var_meta[vname] = self._get_var_info(vname)
-            if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
-                self.variables[vname] = self._var_meta[vname]
+        # for vname in self._in_nodes:
+        #     self._var_meta[vname] = self._get_var_info(vname)
+        #     if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
+        #         self.variables[vname] = self._var_meta[vname]
                 
         # for simple systems, if we're given a mapping of our outputs to
         # states, we need to 'own' the state and later in run we need
         # to copy the residual part of our f vector to the corresponding
         # state.
+
         if resid_state_map:
+            to_remove = set()
             for out in self._out_nodes:
                 state = resid_state_map.get(out)
                 if state and state not in self.variables:
@@ -809,7 +772,13 @@ class SimpleSystem(System):
                                                 self._get_var_info(state)
                     self._mapped_resids[out] = state
                     if out in self.variables:
-                        del self.variables[out]
+                        to_remove.add(out)
+                if out in mapped_states and state not in self.variables:
+                    to_remove.add(out)
+
+            if not isinstance(self, (SolverSystem, NonSolverDriverSystem)):
+                for name in to_remove:
+                    del self.variables[name]
                     
         super(SimpleSystem, self)._create_var_dicts(resid_state_map)
 
@@ -889,11 +858,32 @@ class SimpleSystem(System):
             self.scatter('du', 'dp')
 
 
+class ParamSystem(SimpleSystem):
+    """System wrapper for Assembly input variables (internal perspective)."""
+
+    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        pass
+        #if self.is_active():
+            #self.vec['u'].set_from_scope(self.scope, self._nodes)
+
+    def applyJ(self, coupled=False):
+        """ Set to zero """
+        if self.variables:
+            self.rhs_vec[self.name] += self.sol_vec[self.name]
+
+    def stop(self):
+        pass
+
+    def linearize(self):
+        """ Linearize this component. """
+        pass
+
+
 class InVarSystem(SimpleSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
-    def __init__(self, scope, name):
-        super(InVarSystem, self).__init__(scope, name)
+    def __init__(self, scope, graph, name):
+        super(InVarSystem, self).__init__(scope, graph, name)
         self._out_nodes = [name]
         self._in_nodes = []
 
@@ -913,8 +903,8 @@ class InVarSystem(SimpleSystem):
 class OutVarSystem(SimpleSystem):
     """System wrapper for Assembly output variables (internal perspective)."""
 
-    def __init__(self, scope, name):
-        super(OutVarSystem, self).__init__(scope, name)
+    def __init__(self, scope, graph, name):
+        super(OutVarSystem, self).__init__(scope, graph, name)
         self._out_nodes = []
         self._in_nodes = [name]
 
@@ -991,9 +981,11 @@ class AssemblySystem(SimpleSystem):
 class CompoundSystem(System):
     """A System that has subsystems."""
 
-    def __init__(self, scope, subg, name=None):
+    def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope,
-                                             get_full_nodeset(scope, subg.nodes()), name)
+                                             graph,
+                                             get_full_nodeset(scope, subg.nodes()),
+                                             name)
         self.driver = None
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
@@ -1037,9 +1029,6 @@ class CompoundSystem(System):
 
 
 class SerialSystem(CompoundSystem):
-
-    def __init__(self, scope, subg, name=None):
-        super(SerialSystem, self).__init__(scope, subg, name)
 
     def all_subsystems(self):
         return [self.graph.node[node]['system'] for node in self._ordering]
@@ -1211,22 +1200,23 @@ class ParallelSystem(CompoundSystem):
         #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
             for name in varkeys:
-                self.variables[name] = self._get_var_info(name)
+                self.variables[name] = self._var_meta[name] = \
+                           self._get_var_info(name)
 
         for sub in self.local_subsystems():
             for name, var in sub.variables.items():
-                self.variables[name] = var
+                self.variables[name] = self._var_meta[name] = var
 
-        self._create_var_dicts()
+        self._create_var_dicts(resid_state_map)
 
 
 class NonSolverDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
-    def __init__(self, driver):
+    def __init__(self, graph, driver):
         driver.setup_systems()
         scope = driver.parent
-        super(NonSolverDriverSystem, self).__init__(scope, driver.name)
+        super(NonSolverDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
@@ -1257,10 +1247,10 @@ class SolverSystem(SimpleSystem):  # Implicit
     much of the behavior is like a CompoundSystem, particularly variable
     propagation."""
 
-    def __init__(self, driver):
+    def __init__(self, graph, driver):
         driver.setup_systems()
         scope = driver.parent
-        super(SolverSystem, self).__init__(scope, driver.name)
+        super(SolverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
     def _get_resid_state_map(self):
@@ -1357,7 +1347,9 @@ class InnerAssemblySystem(SerialSystem):
 
         g = nx.DiGraph()
         g.add_node(drvname)
-        g.node[drvname]['system'] = _create_simple_sys(scope, scope._top_driver)
+        g.node[drvname]['system'] = _create_simple_sys(scope, 
+                                                       scope.get_reduced_graph(),
+                                                       '_top_driver')
 
         ordering = []
 
@@ -1368,16 +1360,16 @@ class InnerAssemblySystem(SerialSystem):
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' not in data:  # it's a collapsed var node
                 # boundary in node
-                if rgraph.in_degree(node) == 0 and (node[0],) != node[1]:
+                if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
                     bins.append(node)
                 # boundary out node
-                elif rgraph.out_degree(node) == 0 and (node[0],) != node[1]:
+                elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
                     bouts.append(node)
 
         for name in bins:
             g.add_node(name)
             g.add_edge(name, drvname)
-            g.node[name]['system'] = InVarSystem(scope, name)
+            g.node[name]['system'] = InVarSystem(scope, rgraph, name)
             ordering.append(name)
 
         ordering.append(drvname)
@@ -1385,10 +1377,10 @@ class InnerAssemblySystem(SerialSystem):
         for name in bouts:
             g.add_node(name)
             g.add_edge(drvname, name)
-            g.node[name]['system'] = OutVarSystem(scope, name)
+            g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
             ordering.append(name)
 
-        super(InnerAssemblySystem, self).__init__(scope, g, '_inner_asm')
+        super(InnerAssemblySystem, self).__init__(scope, rgraph, g, '_inner_asm')
         self.set_ordering(ordering)
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
@@ -1398,26 +1390,31 @@ class InnerAssemblySystem(SerialSystem):
                                                  case_label, case_uuid)
             self.vec['u'].set_to_scope(self.scope, self.bouts)
 
-def _create_simple_sys(scope, comp):
+def _create_simple_sys(scope, graph, name):
     """Given a Component, create the appropriate type
     of simple System.
     """
+    comp = getattr(scope, name, None)
 
     if has_interface(comp, ISolver):
-        sub = SolverSystem(comp)
+        sub = SolverSystem(graph, comp)
     elif has_interface(comp, IDriver):
-        sub = NonSolverDriverSystem(comp)
+        sub = NonSolverDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(scope, comp.name)
+        sub = AssemblySystem(scope, graph, comp.name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
-        sub = EqConstraintSystem(scope, comp.name)
+        sub = EqConstraintSystem(scope, graph, comp.name)
+    elif comp is not None:
+        sub = SimpleSystem(scope, graph, comp.name)
+    elif graph.node[name].get('comp') == 'param':
+        sub = ParamSystem(scope, graph, name)
     else:
-        sub = SimpleSystem(scope, comp.name)
+        raise RuntimeError("don't know how to create a System for '%s'" % name)
 
     return sub
 
-def partition_mpi_subsystems(cgraph, scope):
+def partition_subsystems(scope, graph, cgraph):
     """Return a nested system graph with metadata for parallel
     and serial subworkflows.  Graph must acyclic. All subdriver
     iterations sets must have already been collapsed.
@@ -1441,7 +1438,6 @@ def partition_mpi_subsystems(cgraph, scope):
             for node in zero_in_nodes:
                 brnodes = get_branch(gcopy, node)
                 if len(brnodes) > 1:
-                    #parallel_group.append(tuple(sorted(brnodes)))
                     parallel_group.append(tuple(brnodes))
                 else:
                     parallel_group.append(brnodes[0])
@@ -1449,10 +1445,9 @@ def partition_mpi_subsystems(cgraph, scope):
             for branch in parallel_group:
                 if isinstance(branch, tuple):
                     to_remove.extend(branch)
-                    subg = cgraph.subgraph(branch)  #_precollapse(scope, g, branch)
-                    partition_mpi_subsystems(subg, scope)
-                    #mpiprint("%d adding system for %s %s" % (id(g),type(branch),str(branch)))
-                    system=SerialSystem(scope, subg, str(branch))
+                    subg = cgraph.subgraph(branch)
+                    partition_subsystems(scope, graph, subg)
+                    system=SerialSystem(scope, graph, subg, str(branch))
                     update_system_node(cgraph, system, branch)
 
                     gcopy.remove_nodes_from(branch)
@@ -1462,9 +1457,8 @@ def partition_mpi_subsystems(cgraph, scope):
             #parallel_group = tuple(sorted(parallel_group))
             parallel_group = tuple(parallel_group)
             to_remove.extend(parallel_group)
-            subg = cgraph.subgraph(parallel_group)  #_precollapse(scope, g, parallel_group)
-            #mpiprint("%d adding system for %s %s" % (id(g),type(parallel_group),str(parallel_group)))
-            system=ParallelSystem(scope, subg, str(parallel_group))
+            subg = cgraph.subgraph(parallel_group)
+            system=ParallelSystem(scope, graph, subg, str(parallel_group))
             update_system_node(cgraph, system, parallel_group)
 
         elif len(zero_in_nodes) == 1:  # serial
