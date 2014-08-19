@@ -72,7 +72,6 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        mpiprint("calc_gradient forward")
         J = self.top.driver.workflow.calc_gradient(mode='forward')
 
         if self.comm.rank == 0:
@@ -82,7 +81,6 @@ class MPITests(MPITestCase):
     def test_calc_gradient_adjoint(self):
         self.top.run()
 
-        mpiprint("calc_gradient adjoint")
         J = self.top.driver.workflow.calc_gradient(mode='adjoint')
 
         if self.comm.rank == 0:
@@ -92,7 +90,6 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fd(self):
         self.top.run()
 
-        mpiprint("calc_gradient fd")
         J = self.top.driver.workflow.calc_gradient(mode='fd')
 
         if self.comm.rank == 0:

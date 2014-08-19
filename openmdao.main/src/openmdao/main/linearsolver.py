@@ -240,7 +240,7 @@ class PETSc_KSP(LinearSolver):
                 system.rhs_vec.petsc_vec.assemble()
                 #system.rhs_vec.array[irhs] = 0.0
                 dx = system.sol_vec.array
-                print 'dx', dx
+                mpiprint('%s:\n      dx = %s' % (system.name, dx))
 
                 i = 0
 
