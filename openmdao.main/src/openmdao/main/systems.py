@@ -957,7 +957,8 @@ class EqConstraintSystem(SimpleSystem):
         super(EqConstraintSystem, self).applyJ(coupled)
 
         for var in self.variables:
-            self.rhs_vec[var] += self.sol_vec[var]
+            if var not in self._out_nodes:
+                self.rhs_vec[var] += self.sol_vec[var]
 
 
 
