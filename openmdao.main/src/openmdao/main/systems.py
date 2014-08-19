@@ -340,7 +340,7 @@ class System(object):
         self._var_meta = {}
         if resid_state_map is None:
             resid_state_map = {}
-            
+
         for sub in self.local_subsystems():
             sub.setup_variables(resid_state_map)
             self.variables.update(sub.variables)
@@ -720,7 +720,7 @@ class SimpleSystem(System):
         self._comp = comp
         self.J = None
         self._mapped_resids = {}
-        
+
     def stop(self):
         self._comp.stop()
 
@@ -743,7 +743,7 @@ class SimpleSystem(System):
         # comps no longer own their own states (unless they also
         # own the corresponding residual)
         mystates = [v for v in self._out_nodes if v[1][0] in states]
-        mynonstates = [v for v in self._out_nodes if v[1][0] not in states 
+        mynonstates = [v for v in self._out_nodes if v[1][0] not in states
                          and v not in resid_state_map]
 
         for vname in chain(mystates, mynonstates):
@@ -757,7 +757,7 @@ class SimpleSystem(System):
         #     self._var_meta[vname] = self._get_var_info(vname)
         #     if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
         #         self.variables[vname] = self._var_meta[vname]
-                
+
         # for simple systems, if we're given a mapping of our outputs to
         # states, we need to 'own' the state and later in run we need
         # to copy the residual part of our f vector to the corresponding
@@ -779,7 +779,7 @@ class SimpleSystem(System):
             if not isinstance(self, (SolverSystem, NonSolverDriverSystem)):
                 for name in to_remove:
                     del self.variables[name]
-                    
+
         super(SimpleSystem, self)._create_var_dicts(resid_state_map)
 
     def setup_scatters(self):
@@ -951,6 +951,14 @@ class EqConstraintSystem(SimpleSystem):
                     self.vec['f'][state][:] = -self._comp.out0
                 else:
                     self.vec['f'][state][:] = self._comp.out0
+
+    def applyJ(self, coupled=False):
+        """ Set to zero """
+        super(EqConstraintSystem, self).applyJ(coupled)
+
+        for var in self.variables:
+            self.rhs_vec[var] += self.sol_vec[var]
+
 
 
 class AssemblySystem(SimpleSystem):
@@ -1281,7 +1289,7 @@ class SolverSystem(SimpleSystem):  # Implicit
 
         # get rid of any residuals we already mapped
         resids = [r for r in resids if nodemap[r] not in resid_state_map]
-        
+
         # match remaining residuals and states by size
         for resid in resids:
             resnode = nodemap[resid]
@@ -1293,7 +1301,7 @@ class SolverSystem(SimpleSystem):  # Implicit
                 raise RuntimeError("unable to find a state of size %d to match residual '%s'" %
                                     (sz, resid))
             resid_state_map[resnode] = pnode
-            
+
         # all states must have a corresponding residual
         for sz, pnodes in szdict.items():
             if pnodes:
@@ -1347,7 +1355,7 @@ class InnerAssemblySystem(SerialSystem):
 
         g = nx.DiGraph()
         g.add_node(drvname)
-        g.node[drvname]['system'] = _create_simple_sys(scope, 
+        g.node[drvname]['system'] = _create_simple_sys(scope,
                                                        scope.get_reduced_graph(),
                                                        '_top_driver')
 
