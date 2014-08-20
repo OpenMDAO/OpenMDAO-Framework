@@ -679,6 +679,7 @@ class System(object):
 
         self.set_options('forward', options)
         self.initialize_gradient_solver()
+        self.linearize()
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
