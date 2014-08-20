@@ -11,7 +11,10 @@ import weakref
 from numpy import ndarray
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent, SimpleEQConPComp, _remove_spaces
+from openmdao.main.pseudocomp import PseudoComponent, \
+                                     SimpleEQConPComp, \
+                                     SimpleEQ0PComp, \
+                                     _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -98,13 +101,58 @@ class Constraint(object):
             else:
                 subtype = 'inequality'
             
-            if self._is_simple_eq():
-                pseudo = SimpleEQConPComp(self.lhs.scope, self._combined_expr(),
+            # check for simple structure of equality constraint, 
+            # either
+            #     var1 = var2
+            #  OR
+            #     var1 - var2 = 0
+            #  OR
+            #     var1 = 0
+            lrefs = list(self.lhs.refs())
+            rrefs = list(self.rhs.refs())
+        
+            try:
+                leftval = float(self.lhs.text)
+            except ValueError:
+                leftval = None
+
+            try:
+                rightval = float(self.rhs.text)
+            except ValueError:
+                rightval = None    
+
+            pseudotype = 'std'
+
+            if self.comparator == '=':
+                if len(lrefs) == 2 and len(rrefs) == 0:
+                    if rightval == 0. and \
+                            _remove_spaces(self.lhs.text) == \
+                                lrefs[0]+'-'+lrefs[1]:
+                        pseudotype = 'v=v'
+                elif len(lrefs) == 0 and len(rrefs) == 2:
+                    pass
+                elif len(lrefs) == 1 and len(rrefs) == 1:
+                    if lrefs[0] == self.lhs.text and \
+                               rrefs[0] == self.rhs.text:
+                        pseudotype = 'v=v'
+                elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
+                    pseudotype = 'v=const'   
+
+            if pseudotype == 'v=v':
+                pseudo = SimpleEQConPComp(self.lhs.scope, 
+                                         self._combined_expr(),
+                                         pseudo_type='constraint',
+                                         subtype=subtype, 
+                                         exprobject=self)
+            elif pseudotype == 'v=const':
+                pseudo = SimpleEQ0PComp(self.lhs.scope, 
+                                         self._combined_expr(),
                                          pseudo_type='constraint',
                                          subtype=subtype, 
                                          exprobject=self)
             else:          
-                pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
+                pseudo = PseudoComponent(self.lhs.scope, 
+                                         self._combined_expr(),
                                          pseudo_type='constraint',
                                          subtype=subtype, 
                                          exprobject=self)
@@ -112,31 +160,6 @@ class Constraint(object):
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
 
-    def _is_simple_eq(self):
-        # check for simple structure of equality constraint, either
-        #     var1 = var2
-        #  OR
-        #     var1 - var2 = 0
-        lrefs = list(self.lhs.refs())
-        rrefs = list(self.rhs.refs())
-        
-        if self.comparator == '=':
-            if len(lrefs) == 2 and len(rrefs) == 0:
-                pass
-                #try:
-                    #f = float(self.rhs.text)
-                #except ValueError:
-                    #pass
-                #else:
-                    #if f == 0.
-            elif len(lrefs) == 0 and len(rrefs) == 2:
-                pass
-            elif len(lrefs) == 1 and len(rrefs) == 1:
-                if lrefs[0] == self.lhs.text and \
-                           rrefs[0] == self.rhs.text:
-                    return True
-
-        return False
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove

@@ -510,3 +510,30 @@ class SimpleEQConPComp(PseudoComponent):
                 result['in1'] += arg['out0']
             else:
                 result['in1'] -= arg['out0']
+
+
+class SimpleEQ0PComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate expressions of
+    the form comp1.x = comp2.y. A separate PComp was needed to efficiently
+    calculate the derivatives, especially for vector inputs.
+    """
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
+
+        if 'in0' in arg:
+            result['out0'][:] = arg['in0'][:]
+
+    def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        NOTE: This function is probably never called, since the Newton solve
+        is always forward.
+        """
+
+        if 'in0' in result:
+            result['in0'][:] = arg['out0'][:]

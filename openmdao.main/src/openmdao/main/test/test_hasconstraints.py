@@ -8,6 +8,7 @@ from openmdao.util.decorators import add_delegate
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, HasIneqConstraints, Constraint
 from openmdao.test.execcomp import ExecComp
 from openmdao.units.units import PhysicalQuantity
+from openmdao.main.pseudocomp import SimpleEQConPComp, SimpleEQ0PComp
 
 @add_delegate(HasConstraints)
 class MyDriver(Driver):
@@ -382,6 +383,16 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(self.asm._pseudo_5.out0, 1.0)
         self.assertEqual(self.asm._pseudo_6.out0, -1.0)
         self.assertEqual(self.asm._pseudo_7.out0, 2.0)
+
+    def test_custom_pseudocomps(self):
+        self.asm.add('driver', MyDriver())
+        self.asm.driver.add_constraint('comp1.c = 0')
+        self.assertEqual(self.asm._pseudo_0.__class__, SimpleEQ0PComp)
+        self.asm.driver.add_constraint('comp1.d = 5.4')
+        self.assertEqual(self.asm._pseudo_1.__class__, SimpleEQ0PComp)
+        self.asm.driver.add_constraint('comp2.c = comp3.a')
+        self.assertEqual(self.asm._pseudo_2.__class__, SimpleEQConPComp)
+        
 
 if __name__ == "__main__":
     unittest.main()

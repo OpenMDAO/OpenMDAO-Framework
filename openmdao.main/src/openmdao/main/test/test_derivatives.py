@@ -3280,8 +3280,8 @@ class TestMultiDriver(unittest.TestCase):
 
     def test_PA_subvar_driver_edges(self):
 
-        # Ther was a keyerror here too, resulting from a basevar node
-        # that gor removed somehow on the recursed optimizer graph.
+        # There was a keyerror here too, resulting from a basevar node
+        # that got removed somehow on the recursed optimizer graph.
 
         sp = set_as_top(UnitScalableProblem())
         sp.architecture = CO()
