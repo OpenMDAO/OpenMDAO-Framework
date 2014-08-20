@@ -26,12 +26,14 @@ class LinearSolver(object):
         self.inputs = None
 
 class ScipyGMRES(LinearSolver):
-    """ Scipy's GMRES Solver. This is a serial solver, so should never be used
-    in an MPI setting."""
+    """ Scipy's GMRES Solver. This is a serial solver, so 
+    it should never be used in an MPI setting.
+    """
 
     def solve(self, inputs, outputs):
-        """ Run GMRES solver to return a Jacobian of outputs with respect to
-        inputs."""
+        """ Run GMRES solver to return a Jacobian of outputs 
+        with respect to inputs.
+        """
 
         system = self._system
         options = self.options
@@ -151,6 +153,20 @@ class ScipyGMRES(LinearSolver):
 class PETSc_KSP(LinearSolver):
     """ PETSc's KSP solver with preconditioning """
 
+    class Monitor(object):
+        """ Prints output from PETSc's KSP solvers """
+
+        def __init__(self, ksp):
+            """ Stores pointer to the ksp solver """
+            self._ksp = ksp
+            self._norm0 = 1.0
+
+        def __call__(self, ksp, counter, norm):
+            """ Store norm if first iteration, and print norm """
+            if counter == 0 and norm != 0.0:
+                self._norm0 = norm
+            mpiprint("%d: norm=%f" % (counter, norm))
+
     def __init__(self, system):
         """ Set up KSP object """
         super(PETSc_KSP, self).__init__(system)
@@ -167,6 +183,7 @@ class PETSc_KSP(LinearSolver):
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
+        self.ksp.setMonitor(self.Monitor(self))
 
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
@@ -280,6 +297,8 @@ class PETSc_KSP(LinearSolver):
         #         varname = varname[0]
 
         #     system.rhs_vec[varname] += system.sol_vec[varname]
+
+        mpiprint('result = %s' % system.rhs_vec.array[:])
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'arg, result', sol_vec.array, rhs_vec.array
