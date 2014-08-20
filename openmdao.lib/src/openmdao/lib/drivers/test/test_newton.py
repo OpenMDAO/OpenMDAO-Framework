@@ -360,17 +360,17 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         J = top.driver.workflow.calc_gradient(mode='forward')
         print J
-        #assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
-        #assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
-        top.driver.gradient_options.fd_step = 1e-6
+        top.driver.gradient_options.fd_step = 1e-7
         top.driver.gradient_options.fd_form = 'central'
         J = top.driver.workflow.calc_gradient(mode='fd')
         print J
-        #assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
     def test_equation(self):
 

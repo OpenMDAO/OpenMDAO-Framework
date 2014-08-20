@@ -679,7 +679,6 @@ class System(object):
 
         self.set_options('forward', options)
         self.initialize_gradient_solver()
-        self.linearize()
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
@@ -954,15 +953,6 @@ class EqConstraintSystem(SimpleSystem):
             # Propagate residuals.
             if state:
                 self.vec['f'][state][:] = self._comp.out0
-
-    def applyJ(self, coupled=False):
-        """ Set to zero """
-        super(EqConstraintSystem, self).applyJ(coupled)
-
-        for var in self.variables:
-            if var not in self._out_nodes:
-                self.rhs_vec[var] += self.sol_vec[var]
-
 
 
 class AssemblySystem(SimpleSystem):
