@@ -6,7 +6,7 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, mpiprint
 from openmdao.util.log import logger
 
 if MPI:
@@ -173,9 +173,11 @@ class PETSc_KSP(LinearSolver):
         pc_mat.setPythonContext(self)
 
         # Set these in the system
-        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(size),
+        #mpiprint("KSP: creating sol buf, size %d" % lsize)
+        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
                                                      comm=system.mpi.comm)
-        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(size),
+        #mpiprint("KSP: creating rhs buf, size %d" % lsize)
+        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
                                                      comm=system.mpi.comm)
 
     def solve(self, inputs, outputs):
@@ -221,13 +223,24 @@ class PETSc_KSP(LinearSolver):
                 ind = ind_set.indices[0]
                 system.rhs_buf.setValue(ind, 1.0, addv=False)
 
+                # FIXME: john doesn't appear to need to call assemble
+                # before calling ksp.solve, but if we don't, petsc
+                # complains
+                system.rhs_buf.assemble()
+
                 # Call PetSC KSP to solve the linear system
                 self.ksp.solve(system.rhs_buf, system.sol_buf)
                 system.sol_vec.array[:] = system.sol_buf.array[:]
 
+                # this seems pretty expensive to make a setValue call
+                # on two different petsc vectors for each iteration,
+                # and John doesn't do it as far as I can tell, so we
+                # may want to revisit this later
                 system.rhs_vec.petsc_vec.setValue(ind, 0.0, addv=False)
+                system.rhs_vec.petsc_vec.assemble()
+                #system.rhs_vec.array[irhs] = 0.0
                 dx = system.sol_vec.array
-                print 'dx', dx
+                mpiprint('%s:\n      dx = %s' % (system.name, dx))
 
                 i = 0
 
@@ -247,6 +260,7 @@ class PETSc_KSP(LinearSolver):
 
                 j += 1
 
+        #mpiprint("returning from KSP.solve for system %s, rank %d" % (system.name, system.mpi.comm.rank))
         #print inputs, '\n', outputs, '\n', J
         return J
 
