@@ -345,9 +345,8 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         top.connect('d1.y1', 'd2.y1')
 
-        from openmdao.lib.drivers.api import BroydenSolver
         top.add('solver', NewtonSolver())
-        #top.solver.atol = 1e-9
+        top.solver.atol = 1e-9
         top.solver.workflow.add(['d1', 'd2'])
         top.solver.add_parameter('d1.y2', low=-1e99, high=1e99)
         top.solver.add_constraint('d1.y2 = d2.y2')
