@@ -661,13 +661,13 @@ class System(object):
 
         self.set_options(mode, options)
         self.initialize_gradient_solver()
-        self.linearize()
 
         if mode == 'fd':
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
         else:
+            self.linearize()
             self.rhs_vec.array[:] = 0.0
             self.vec['df'].array[:] = 0.0
 
