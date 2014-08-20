@@ -98,6 +98,32 @@ class MPITests1(MPITestCase):
                 val = top.get(name)
                 assert_rel_error(self, val, expval, 0.001)
 
+    def test_fan_in(self):
+        size = 5
+
+        # 2 parallel comps feeding another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3'])
+        top.connect('C1.c', 'C3.a')
+        top.connect('C2.d', 'C3.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.run()
+
+        top._system.dump()
+
+        mpiprint("C3.a = %s" % top.C3.a)
+        mpiprint("C3.b = %s" % top.C3.b)
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+            self.assertTrue(all(top.C3.b==np.ones(size, float)*-4.))
+
 
 class MPITests2(MPITestCase):
 

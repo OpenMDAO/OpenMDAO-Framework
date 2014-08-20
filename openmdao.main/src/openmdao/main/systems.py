@@ -483,15 +483,21 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
+            #s = self
         else:
             scatter = subsystem.scatter_partial
+            #s = subsystem
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            #mpiprint("scatter_conns = %s" % scatter.scatter_conns)
+            #mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" % 
+            #             (self.name, s.name, srcvecname, destvecname, scatter.scatter_conns))
+            #srcvec.dump(srcvecname)
             scatter(self, srcvec, destvec) #, reverse=??)
+
+            #destvec.dump(destvecname)
 
             if destvecname == 'p':
                 destvec.set_to_scope(self.scope, scatter.scatter_conns)
@@ -1019,12 +1025,13 @@ class CompoundSystem(System):
     def applyJ(self):
         """ Delegate to subsystems """
 
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.local_subsystems():
-            subsystem.applyJ()
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
+        if self.is_active():
+            if self.mode == 'forward':
+                self.scatter('du', 'dp')
+            for subsystem in self.local_subsystems():
+                subsystem.applyJ()
+            if self.mode == 'adjoint':
+                self.scatter('du', 'dp')
 
     def stop(self):
         for s in self.all_subsystems():
