@@ -237,7 +237,7 @@ class System(object):
                         inputs.add(dest)
         return list(inputs)
 
-    def list_outputs(self, coupled=False):
+    def list_outputs(self):
         """Returns names of output variables (not collapsed edges)
         from this System and all of its children.
         """
@@ -271,7 +271,7 @@ class System(object):
                 pass
 
         outputs.extend([n for n, m in self._mapped_resids.keys()])
-        outputs.extend([n for n in self.list_outputs(coupled=False)
+        outputs.extend([n for n in self.list_outputs()
                                 if n not in outputs])
         return outputs
 
@@ -685,13 +685,14 @@ class System(object):
 
         self.set_options('forward', options)
         self.initialize_gradient_solver()
+        self.linearize()
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
 
         self.ln_solver.newton()
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -832,7 +833,7 @@ class SimpleSystem(System):
 
         self.J = self._comp.linearize(first=True)
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -845,7 +846,7 @@ class SimpleSystem(System):
             self._comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.list_outputs(coupled):
+            for var in self.list_outputs():
                 vec['df'][var][:] += vec['du'][var][:]
 
         # Adjoint Mode
@@ -860,7 +861,7 @@ class SimpleSystem(System):
             self._comp.applyJT(self)
             vec['df'].array[:] *= -1.0
 
-            for var in self.list_outputs(coupled):
+            for var in self.list_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
@@ -874,7 +875,7 @@ class ParamSystem(SimpleSystem):
         #if self.is_active():
             #self.vec['u'].set_from_scope(self.scope, self._nodes)
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
             self.rhs_vec[self.name] += self.sol_vec[self.name]
@@ -899,7 +900,7 @@ class InVarSystem(SimpleSystem):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -920,7 +921,7 @@ class OutVarSystem(SimpleSystem):
         if self.is_active():
             self.vec['u'].set_to_scope(self.scope, self._nodes)
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Set to zero """
         if self.mode == 'fwd':
             self.vec['df'][self.name][:] = 0.0
@@ -1021,14 +1022,14 @@ class CompoundSystem(System):
             return
         compound_setup_scatters(self)
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Delegate to subsystems """
 
         if self.is_active():
             if self.mode == 'forward':
                 self.scatter('du', 'dp')
             for subsystem in self.local_subsystems():
-                subsystem.applyJ(coupled)
+                subsystem.applyJ()
             if self.mode == 'adjoint':
                 self.scatter('du', 'dp')
 
@@ -1334,13 +1335,13 @@ class SolverSystem(SimpleSystem):  # Implicit
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
 
-    def applyJ(self, coupled=False):
+    def applyJ(self):
         """ Delegate to subsystems """
 
         if self.mode == 'forward':
             self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ(coupled=True)
+            subsystem.applyJ()
         if self.mode == 'adjoint':
             self.scatter('du', 'dp')
 

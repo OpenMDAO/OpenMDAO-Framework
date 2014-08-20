@@ -135,7 +135,7 @@ class ScipyGMRES(LinearSolver):
 
         system.vec['df'].array[:] = -dx
 
-        print 'dx', dx
+        #print 'dx', dx
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the

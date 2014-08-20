@@ -11,7 +11,7 @@ import weakref
 from numpy import ndarray
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.pseudocomp import PseudoComponent, SimpleEQConPComp, _remove_spaces
 
 _ops = {
     '>': operator.gt,
@@ -99,7 +99,10 @@ class Constraint(object):
                 subtype = 'inequality'
             
             if self._is_simple_eq():
-                pseudo = SomeNewPseudo()
+                pseudo = SimpleEQConPComp(self.lhs.scope, self._combined_expr(),
+                                         pseudo_type='constraint',
+                                         subtype=subtype, 
+                                         exprobject=self)
             else:          
                 pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
                                          pseudo_type='constraint',
@@ -108,7 +111,6 @@ class Constraint(object):
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
-
 
     def _is_simple_eq(self):
         # check for simple structure of equality constraint, either

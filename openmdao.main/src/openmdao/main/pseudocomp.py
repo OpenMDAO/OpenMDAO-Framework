@@ -466,3 +466,33 @@ class PseudoComponent(object):
         """
         applyJT(system)
 
+
+class SimpleEQConPComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate expressions of
+    the form comp1.x = comp2.y. A separate PComp was needed to efficiently
+    calculate the derivatives, especially for vector inputs.
+    """
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+
+        factor = -1.0 if self._negate else 1.0
+
+        if 'in0' in arg:
+            result['out0'] = factor * arg['in0']
+
+        if 'in1' in arg:
+            result['out0'] -= factor * arg['in1']
+
+    def apply_derivT(self, arg, result):
+
+        factor = -1.0 if self._negate else 1.0
+
+        if 'in0' in result:
+            result['in0'] = factor * arg['out0']
+
+        if 'in1' in result:
+            result['in1'] -= factor * arg['out0']

@@ -78,7 +78,6 @@ class NewtonSolver(Driver):
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
-        system.linearize()
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
