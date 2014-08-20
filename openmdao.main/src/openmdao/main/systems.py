@@ -1347,6 +1347,13 @@ class SolverSystem(SimpleSystem):  # Implicit
         if self.mode == 'adjoint':
             self.scatter('du', 'dp')
 
+    def linearize(self):
+        """ Solvers must Linearize all of their subsystems. """
+
+        for subsystem in self.local_subsystems():
+            subsystem.linearize()
+
+
 
 class InnerAssemblySystem(SerialSystem):
     """A system to handle data transfer to an Assembly

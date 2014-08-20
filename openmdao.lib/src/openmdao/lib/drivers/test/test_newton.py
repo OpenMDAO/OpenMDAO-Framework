@@ -16,7 +16,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.main.datatypes.api import Float
-from openmdao.test.execcomp import ExecComp
+from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
@@ -345,7 +345,8 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         top.connect('d1.y1', 'd2.y1')
 
-        top.add('solver', NewtonSolver())
+        from openmdao.lib.drivers.api import BroydenSolver
+        top.add('solver', BroydenSolver())
         top.solver.workflow.add(['d1', 'd2'])
         top.solver.add_parameter('d1.y2', low=-1e99, high=1e99)
         top.solver.add_constraint('d1.y2 = d2.y2')
@@ -358,15 +359,39 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         J = top.driver.workflow.calc_gradient(mode='forward')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
 
         J = top.driver.workflow.calc_gradient(mode='fd')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 0.75, 1e-5)
+
+    def test_equation(self):
+
+        top = set_as_top(Assembly())
+
+        top.add('precomp', ExecCompWithDerivatives(['y=x'],
+                                                   ['dy_dx = 1']))
+        top.precomp.x = 1.0
+
+        expr = ['y = 3.0*x*x -4.0*x']
+        deriv = ['dy_dx = 6.0*x -4.0']
+
+        top.add('comp', ExecCompWithDerivatives(expr, deriv))
+        top.driver.workflow.add(['comp'])
+
+        top.add('driver', NewtonSolver())
+        top.driver.add_parameter('comp.x')
+        top.driver.add_constraint('precomp.y - comp.y = 1.0 - 2.0')
+
+        top.run()
+
+        print top.comp.x, top.comp.y
+        assert_rel_error(self, top.comp.x, -0.38742588, 1e-4)
+
 
 
 if __name__ == "__main__":
