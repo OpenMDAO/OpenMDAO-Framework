@@ -346,7 +346,8 @@ class Newton_SolverTestCase(unittest.TestCase):
         top.connect('d1.y1', 'd2.y1')
 
         from openmdao.lib.drivers.api import BroydenSolver
-        top.add('solver', BroydenSolver())
+        top.add('solver', NewtonSolver())
+        #top.solver.atol = 1e-9
         top.solver.workflow.add(['d1', 'd2'])
         top.solver.add_parameter('d1.y2', low=-1e99, high=1e99)
         top.solver.add_constraint('d1.y2 = d2.y2')
@@ -361,10 +362,16 @@ class Newton_SolverTestCase(unittest.TestCase):
         print J
         #assert_rel_error(self, J[0][0], 0.75, 1e-5)
 
+        J = top.solver.workflow.calc_gradient(inputs=['d1.z1'], outputs=['d1.y1', 'd1.y2'], mode='forward')
+        print J
+        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
         #assert_rel_error(self, J[0][0], 0.75, 1e-5)
 
+        top.driver.gradient_options.fd_step = 1e-5
+        top.driver.gradient_options.fd_form = 'central'
         J = top.driver.workflow.calc_gradient(mode='fd')
         print J
         #assert_rel_error(self, J[0][0], 0.75, 1e-5)
