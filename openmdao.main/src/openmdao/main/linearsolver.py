@@ -26,12 +26,12 @@ class LinearSolver(object):
         self.inputs = None
 
 class ScipyGMRES(LinearSolver):
-    """ Scipy's GMRES Solver. This is a serial solver, so 
+    """ Scipy's GMRES Solver. This is a serial solver, so
     it should never be used in an MPI setting.
     """
 
     def solve(self, inputs, outputs):
-        """ Run GMRES solver to return a Jacobian of outputs 
+        """ Run GMRES solver to return a Jacobian of outputs
         with respect to inputs.
         """
 
