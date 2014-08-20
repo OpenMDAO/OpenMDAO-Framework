@@ -97,13 +97,38 @@ class Constraint(object):
                 subtype = 'equality'
             else:
                 subtype = 'inequality'
-            pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
-                                     pseudo_type='constraint',
-                                     subtype=subtype, 
-                                     exprobject=self)
+            
+            if self._is_simple_eq():
+                pseudo = SomeNewPseudo()
+            else:          
+                pseudo = PseudoComponent(self.lhs.scope, self._combined_expr(),
+                                         pseudo_type='constraint',
+                                         subtype=subtype, 
+                                         exprobject=self)
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+
+
+    def _is_simple_eq(self):
+        # check for simple structure of equality constraint, either
+        #     var1 = var2
+        #  OR
+        #     var1 - var2 = 0
+        lrefs = self.lhs.refs()
+        rrefs = self.rhs.refs()
+        
+        if self.comparator == '=':
+            if len(lrefs) == 2 and len(rrefs) == 0:
+                pass
+            elif len(lrefs) == 0 and len(rrefs) == 2:
+                pass
+            elif len(lrefs) == 1 and len(rrefs) == 1:
+                if lrefs.pop() == self.lhs.text and \
+                           rrefs.pop() == self.rhs.text:
+                    return True
+
+        return False
 
     def deactivate(self):
         """Remove this constraint from the dependency graph and remove
@@ -160,7 +185,7 @@ class Constraint(object):
         if first_zero:
             newexpr = "-(%s)" % second
         elif second_zero:
-            newexpr = "%s" % first
+            newexpr = first
         else:
             newexpr = '%s-(%s)' % (first, second)
 
