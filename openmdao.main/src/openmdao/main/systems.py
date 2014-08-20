@@ -483,21 +483,21 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
-            s = self
+            #s = self
         else:
             scatter = subsystem.scatter_partial
-            s = subsystem
+            #s = subsystem
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" % 
-                         (self.name, s.name, srcvecname, destvecname, scatter.scatter_conns))
-            srcvec.dump(srcvecname)
+            #mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" % 
+            #             (self.name, s.name, srcvecname, destvecname, scatter.scatter_conns))
+            #srcvec.dump(srcvecname)
             scatter(self, srcvec, destvec) #, reverse=??)
 
-            destvec.dump(destvecname)
+            #destvec.dump(destvecname)
 
             if destvecname == 'p':
                 destvec.set_to_scope(self.scope, scatter.scatter_conns)
