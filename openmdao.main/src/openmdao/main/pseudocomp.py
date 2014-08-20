@@ -478,6 +478,8 @@ class SimpleEQConPComp(PseudoComponent):
         pass
 
     def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
 
         factor = -1.0 if self._negate else 1.0
 
@@ -488,6 +490,8 @@ class SimpleEQConPComp(PseudoComponent):
             result['out0'] -= factor * arg['in1']
 
     def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        """
 
         factor = -1.0 if self._negate else 1.0
 

@@ -565,7 +565,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv_ProvideJ())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
+        model.comp.add('c', Float(2.0, iotype="in"))
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
                                                    ["dy_dx=2"]))
@@ -594,7 +594,7 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv())
-        model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
+        model.comp.add('c', Float(2.0, iotype="in"))
         model.comp.eval_only = False
 
         model.add('comp2', ExecCompWithDerivatives(["y=2*x"],
