@@ -117,17 +117,23 @@ class Constraint(object):
         #     var1 = var2
         #  OR
         #     var1 - var2 = 0
-        lrefs = self.lhs.refs()
-        rrefs = self.rhs.refs()
+        lrefs = list(self.lhs.refs())
+        rrefs = list(self.rhs.refs())
         
         if self.comparator == '=':
             if len(lrefs) == 2 and len(rrefs) == 0:
                 pass
+                #try:
+                    #f = float(self.rhs.text)
+                #except ValueError:
+                    #pass
+                #else:
+                    #if f == 0.
             elif len(lrefs) == 0 and len(rrefs) == 2:
                 pass
             elif len(lrefs) == 1 and len(rrefs) == 1:
-                if lrefs.pop() == self.lhs.text and \
-                           rrefs.pop() == self.rhs.text:
+                if lrefs[0] == self.lhs.text and \
+                           rrefs[0] == self.rhs.text:
                     return True
 
         return False

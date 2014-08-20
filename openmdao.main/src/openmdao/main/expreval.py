@@ -636,6 +636,14 @@ class ExprEvaluator(object):
         else:
             return self._examiner.refs
 
+    def ordered_refs(self):
+        """Returns a list of all variables referenced, in order from
+        left to right.
+        """
+        text = self.text
+        tups = [(text.index(r),r) for r in self.refs()]
+        return [t[1] for t in sorted(tups)]
+
     def _finite_difference(self, grad_code, var_dict, target_var, stepsize, index=None):
         """ Perform central difference
         """

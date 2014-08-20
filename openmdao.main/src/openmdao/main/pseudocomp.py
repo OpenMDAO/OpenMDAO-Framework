@@ -118,7 +118,7 @@ class PseudoComponent(object):
 
         varmap = {}
         rvarmap = {}
-        for i, ref in enumerate(srcexpr.refs()):
+        for i, ref in enumerate(srcexpr.ordered_refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
             self._inmap[ref] = in_name
