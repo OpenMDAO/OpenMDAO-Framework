@@ -495,16 +495,18 @@ class SimpleEQConPComp(PseudoComponent):
 
     def apply_derivT(self, arg, result):
         """ Matrix vector product with the transpose Jacobian.
+        NOTE: This function is probably never called, since the Newton solve
+        is always forward.
         """
 
         if 'in0' in result:
             if self._negate:
-                result['in0'] += arg['out0']
-            else:
                 result['in0'] -= arg['out0']
+            else:
+                result['in0'] += arg['out0']
 
         if 'in1' in result:
             if self._negate:
-                result['in1'] -= arg['out0']
-            else:
                 result['in1'] += arg['out0']
+            else:
+                result['in1'] -= arg['out0']
