@@ -249,7 +249,9 @@ class System(object):
                                   for s in system._comp.list_states()])
             except AttributeError:
                 pass
-            for src, _ in system._out_nodes:
+            out_nodes = [node for node in system._out_nodes \
+                         if node not in self._mapped_resids]
+            for src, _ in out_nodes:
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
@@ -268,6 +270,7 @@ class System(object):
             except AttributeError:
                 pass
 
+        outputs.extend([n for n, m in self._mapped_resids.keys()])
         outputs.extend([n for n in self.list_outputs(coupled=False)
                                 if n not in outputs])
         return outputs
@@ -664,13 +667,13 @@ class System(object):
 
         self.set_options(mode, options)
         self.initialize_gradient_solver()
-        self.linearize()
 
         if mode == 'fd':
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs)
             return self.fd_solver.solve(iterbase=iterbase)
         else:
+            self.linearize()
             self.rhs_vec.array[:] = 0.0
             self.vec['df'].array[:] = 0.0
 
@@ -682,7 +685,6 @@ class System(object):
 
         self.set_options('forward', options)
         self.initialize_gradient_solver()
-        self.linearize()
 
         self.rhs_vec.array[:] = 0.0
         self.vec['df'].array[:] = 0.0
@@ -944,6 +946,7 @@ class EqConstraintSystem(SimpleSystem):
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
                 self._negate = True
+                self._comp._negate = True
                 break
             elif state_node == destnode:
                 break
@@ -952,20 +955,10 @@ class EqConstraintSystem(SimpleSystem):
         if self.is_active():
             super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
             state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
+
+            # Propagate residuals.
             if state:
-                if self._negate:
-                    self.vec['f'][state][:] = -self._comp.out0
-                else:
-                    self.vec['f'][state][:] = self._comp.out0
-
-    def applyJ(self, coupled=False):
-        """ Set to zero """
-        super(EqConstraintSystem, self).applyJ(coupled)
-
-        for var in self.variables:
-            if var not in self._out_nodes:
-                self.rhs_vec[var] += self.sol_vec[var]
-
+                self.vec['f'][state][:] = self._comp.out0
 
 
 class AssemblySystem(SimpleSystem):
@@ -1350,6 +1343,13 @@ class SolverSystem(SimpleSystem):  # Implicit
             subsystem.applyJ(coupled=True)
         if self.mode == 'adjoint':
             self.scatter('du', 'dp')
+
+    def linearize(self):
+        """ Solvers must Linearize all of their subsystems. """
+
+        for subsystem in self.local_subsystems():
+            subsystem.linearize()
+
 
 
 class InnerAssemblySystem(SerialSystem):

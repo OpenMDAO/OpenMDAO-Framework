@@ -146,7 +146,7 @@ class ScipyGMRES(LinearSolver):
         system.rhs_vec.array[:] = 0
         system.applyJ()
 
-        print 'arg, result', arg, system.rhs_vec.array[:]
+        #print 'arg, result', arg, system.rhs_vec.array[:]
         return system.rhs_vec.array[:]
 
 

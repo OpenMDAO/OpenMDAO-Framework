@@ -78,9 +78,11 @@ class NewtonSolver(Driver):
         self.pre_iteration()
         self.run_iteration()
         self.post_iteration()
+        system.linearize()
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
+        print "Norm:", f_norm
 
         itercount = 0
         alpha = self.alpha
@@ -118,4 +120,7 @@ class NewtonSolver(Driver):
                 print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
                 ls_itercount += 1
 
-        #print "done"
+            # Reset backtracking
+            alpha = self.alpha
+
+        print "converged"

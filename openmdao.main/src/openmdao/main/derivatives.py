@@ -103,6 +103,7 @@ def applyJ(system):
             break
 
     if nonzero is False:
+        #print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
@@ -188,7 +189,7 @@ def applyJ(system):
             else:
                 tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJ', obj.name, arg, result
+    #print 'applyJ', obj.name, arg, result
 
 def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.

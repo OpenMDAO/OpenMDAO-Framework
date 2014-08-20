@@ -189,9 +189,9 @@ class Workflow(object):
 
         parent = self.parent
         reset = False
-        
+
         # TODO - Support automatic determination of mode
-        
+
         if self._system is None:
             reset = True
         else:
@@ -671,11 +671,11 @@ class Workflow(object):
         """
         scope = self.scope
         name2collapsed = scope.name2collapsed
-        reduced = self.parent.get_reduced_graph()    
+        reduced = self.parent.get_reduced_graph()
 
         # remove our driver from the reduced graph
         if self.parent.name in reduced:
-            reduced.remove_node(self.parent.name)    
+            reduced.remove_node(self.parent.name)
 
         params = []
         if hasattr(self.parent, 'list_param_targets'):
@@ -689,7 +689,7 @@ class Workflow(object):
         if self.scope._setup_inputs is not None:
             for param in simple_node_iter(self.scope._setup_inputs):
                 reduced.add_node(param, comp='param')
-                reduced.add_edge(param, name2collapsed[param])                
+                reduced.add_edge(param, name2collapsed[param])
 
         cgraph = reduced2component(reduced)
         #cgraph = cgraph.subgraph(self.get_full_nodeset())

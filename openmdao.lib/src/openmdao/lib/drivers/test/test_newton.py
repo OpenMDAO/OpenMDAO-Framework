@@ -16,7 +16,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IHasParameters, implements
 from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.main.datatypes.api import Float
-from openmdao.test.execcomp import ExecComp
+from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.decorators import add_delegate
 
@@ -164,6 +164,7 @@ class Scalable_MDA(Assembly):
         self.driver.workflow.add(['d1', 'd2'])
         self.driver.add_parameter('d1.y_in', low=-1e99, high=1e99)
         self.driver.add_constraint('d2.y_out = d1.y_in')
+        ##self.driver.add_constraint('d1.y_in = d2.y_out')
 
 
 class Newton_SolverTestCase(unittest.TestCase):
@@ -176,6 +177,20 @@ class Newton_SolverTestCase(unittest.TestCase):
         self.top = None
 
     def test_newton(self):
+
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+
+    def test_newton_flip_constraint(self):
+
+        self.top.driver.clear_constraints()
+        self.top.driver.add_constraint('d2.y2 = d1.y2')
 
         self.top.run()
 
@@ -331,6 +346,7 @@ class Newton_SolverTestCase(unittest.TestCase):
         top.connect('d1.y1', 'd2.y1')
 
         top.add('solver', NewtonSolver())
+        top.solver.atol = 1e-9
         top.solver.workflow.add(['d1', 'd2'])
         top.solver.add_parameter('d1.y2', low=-1e99, high=1e99)
         top.solver.add_constraint('d1.y2 = d2.y2')
@@ -343,15 +359,41 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         J = top.driver.workflow.calc_gradient(mode='forward')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
+        top.driver.gradient_options.fd_step = 1e-7
+        top.driver.gradient_options.fd_form = 'central'
         J = top.driver.workflow.calc_gradient(mode='fd')
         print J
-        #assert_rel_error(self, J[0][0], 0.75, 1e-5)
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+
+    def test_equation(self):
+
+        top = set_as_top(Assembly())
+
+        top.add('precomp', ExecCompWithDerivatives(['y=x'],
+                                                   ['dy_dx = 1']))
+        top.precomp.x = 1.0
+
+        expr = ['y = 3.0*x*x -4.0*x']
+        deriv = ['dy_dx = 6.0*x -4.0']
+
+        top.add('comp', ExecCompWithDerivatives(expr, deriv))
+        top.driver.workflow.add(['comp'])
+
+        top.add('driver', NewtonSolver())
+        top.driver.add_parameter('comp.x')
+        top.driver.add_constraint('precomp.y - comp.y = 1.0 - 2.0')
+
+        top.run()
+
+        print top.comp.x, top.comp.y
+        assert_rel_error(self, top.comp.x, -0.38742588, 1e-4)
+
 
 
 if __name__ == "__main__":
