@@ -201,7 +201,7 @@ class FiniteDifference(object):
                 if form == 'forward':
 
                     # Step
-                    self.set_value(src, fd_step, i-i2)
+                    self.set_value(src, fd_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
                     self.get_outputs(self.y)
@@ -210,7 +210,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y_base)/fd_step
 
                     # Undo step
-                    self.set_value(src, -fd_step, i-i2)
+                    self.set_value(src, -fd_step, i-i1)
 
                 #--------------------
                 # Backward difference
@@ -218,7 +218,7 @@ class FiniteDifference(object):
                 elif form == 'backward':
 
                     # Step
-                    self.set_value(src, -fd_step, i-i2)
+                    self.set_value(src, -fd_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
                     self.get_outputs(self.y)
@@ -227,7 +227,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y_base - self.y)/fd_step
 
                     # Undo step
-                    self.set_value(src, fd_step, i-i2)
+                    self.set_value(src, fd_step, i-i1)
 
                 #--------------------
                 # Central difference
@@ -235,13 +235,13 @@ class FiniteDifference(object):
                 elif form == 'central':
 
                     # Forward Step
-                    self.set_value(src, fd_step, i-i2)
+                    self.set_value(src, fd_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
                     self.get_outputs(self.y)
 
                     # Backward Step
-                    self.set_value(src, -2.0*fd_step, i-i2)
+                    self.set_value(src, -2.0*fd_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
                     self.get_outputs(self.y2)
@@ -250,7 +250,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
 
                     # Undo step
-                    self.set_value(src, fd_step, i-i2)
+                    self.set_value(src, fd_step, i-i1)
 
                 #--------------------
                 # Complex Step
@@ -261,7 +261,7 @@ class FiniteDifference(object):
                     yc = zeros(len(self.y), dtype=complex128)
 
                     # Step
-                    self.set_value(src, complex_step, i-i2)
+                    self.set_value(src, complex_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
                     self.get_outputs(yc)
@@ -270,7 +270,7 @@ class FiniteDifference(object):
                     self.J[:, i] = (yc/fd_step).imag
 
                     # Undo step
-                    self.set_value(src, -fd_step, i-i2, undo_complex=True)
+                    self.set_value(src, -fd_step, i-i1, undo_complex=True)
 
         # Restore final input.
         self.system.vec['u'].set_to_scope(self.scope)

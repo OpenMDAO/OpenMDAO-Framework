@@ -140,11 +140,6 @@ def applyJ(system):
 
     input_keys, output_keys = list_deriv_vars(obj)
 
-    # TODO - Support non-differentiable comps.
-    if len(input_keys) < 1 and len(output_keys) < 1:
-        msg = 'Non-differentiable comps are currently not supported.'
-        obj.raise_exception(msg, RuntimeError)
-
     #print 'J', input_keys, output_keys, J
 
     # The Jacobian from provideJ is a 2D array containing the derivatives of
@@ -252,11 +247,6 @@ def applyJT(system):
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
-
-    # TODO - Support non-differentiable comps.
-    if len(input_keys) < 1 and len(output_keys) < 1:
-        msg = 'Non-differentiable comps are currently not supported.'
-        obj.raise_exception(msg, RuntimeError)
 
     #print 'J', input_keys, output_keys, J
 

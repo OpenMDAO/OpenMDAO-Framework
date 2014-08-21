@@ -838,6 +838,10 @@ class SimpleSystem(System):
 
         vec = self.vec
 
+        if not hasattr(self._comp, 'provideJ'):
+            msg = 'Non-differentiable comps are currently not supported.'
+            self._comp.raise_exception(msg, RuntimeError)
+
         # Forward Mode
         if self.mode == 'forward':
 
