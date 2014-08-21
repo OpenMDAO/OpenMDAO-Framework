@@ -1028,13 +1028,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=[obj], mode='forward')
 
-        edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['~0.comp1|y']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['~0.comp2|y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['~0.comp1|x', '_pseudo_0.in1']))
-        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 4)
-
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],

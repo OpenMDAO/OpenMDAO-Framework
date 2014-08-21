@@ -40,8 +40,17 @@ class ScipyGMRES(LinearSolver):
         self.inputs = inputs
 
         # Size the problem
-        num_input = system.get_size(inputs)
-        num_output = system.get_size(outputs)
+        # TODO - Support for array slice inputs/outputs
+        try:
+            num_input = system.get_size(inputs)
+            num_output = system.get_size(outputs)
+        except KeyError as exc:
+            if '[' in str(exc):
+                msg = 'Array slice inputs and outputs currently not supported.'
+                raise RuntimeError(msg)
+            else:
+                err.reraise()
+
         n_edge = system.vec['f'].array.size
 
         J = np.zeros((num_output, num_input))

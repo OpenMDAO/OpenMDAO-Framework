@@ -111,7 +111,7 @@ def applyJ(system):
 
         # TODO - We shouldn't need to calculate the size of the full arrays,
         # so the cache shouldn't be needed. Cache is None for now.
-        shape_cache = None
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
@@ -139,6 +139,11 @@ def applyJ(system):
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
+
+    # TODO - Support non-differentiable comps.
+    if len(input_keys) < 1 and len(output_keys) < 1:
+        msg = 'Non-differentiable comps are currently not supported.'
+        obj.raise_exception(msg, RuntimeError)
 
     #print 'J', input_keys, output_keys, J
 
@@ -218,7 +223,7 @@ def applyJT(system):
 
         # TODO - We shouldn't need to calculate the size of the full arrays,
         # so the cache shouldn't be needed. Cache is None for now.
-        shape_cache = None
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and
         # result dicts for each input and output to have the
@@ -247,6 +252,11 @@ def applyJT(system):
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
+
+    # TODO - Support non-differentiable comps.
+    if len(input_keys) < 1 and len(output_keys) < 1:
+        msg = 'Non-differentiable comps are currently not supported.'
+        obj.raise_exception(msg, RuntimeError)
 
     #print 'J', input_keys, output_keys, J
 

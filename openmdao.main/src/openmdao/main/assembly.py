@@ -1046,6 +1046,10 @@ class Assembly(Component):
         method on its base driver. Note, derivatives are only calculated for
         floats and iterable items containing floats.'''
 
+        # TODO - Support subassy recursion.
+        msg = 'Gradient of an Assembly currently not supported.'
+        self.raise_exception(msg, RuntimeError)
+
         # Sub-assembly sourced
         output_keys = []
 
