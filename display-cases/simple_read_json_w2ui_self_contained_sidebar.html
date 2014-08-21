@@ -9,7 +9,8 @@
 
 </head>
 <body>
-    <div id="grid" style="width: 100%; height: 250px;"></div>
+
+    <div id="sidebar" style="height: 300px; width: 200px;"></div>
 </body>
 
 
@@ -1372,6 +1373,12 @@ data = {
 ;
 
 
+function Tree(parent, child, data) {
+    this.parent = parent;
+    this.children = child || [];
+    this.data = data;
+} ;
+
 $( document ).ready(function() {
 
 	    var cases = [];
@@ -1382,100 +1389,61 @@ $( document ).ready(function() {
         var subcases = new Object();
         var case_objects = new Object();
 
+        var numcases = 0 ; 
+
+        // get all the cases in an associative array with the id as the key
         $.each( data, function( key , val ) {
 
             // Make a structure to hold all of the case info
             if (key.lastIndexOf(it_case_key, 0) === 0) {
-                case_number = key.substring(it_case_key.length);
-                case_objects[ case_number ] = val ;
+                //case_number = key.substring(it_case_key.length);
+                val[ 'children'] = [] ;
+                case_objects[ val._id ] = val ;
+                numcases++ ;
             }
         }); // end each
 
 
-	    $.each( data, function( key , val ) {
-            // What is uuid for sim
-            if (key.lastIndexOf(simulation_info_key, 0) === 0) {
-                simulation_info_key_uuid = val.uuid ;
-            }
 
-            // What are the names of the drivers ?
-            if (key.lastIndexOf(driver_info_key, 0) === 0) {
-                driver_names[ val._id ] = val.name ;
-            }
 
-	  	    if (key.lastIndexOf(it_case_key, 0) === 0) {
-                case_number = key.substring(it_case_key.length);
-                //driver_id = val._driver_id ;
-                driver_id = driver_names[ val._driver_id ] ;
-                timestamp = val.timestamp ;
-                // top level cases
-                if ( val._parent_id === simulation_info_key_uuid) {
-    	  		    cases[ cases.length ] = { recid: case_number, case_number: case_number, driver_id: driver_id, timestamp: timestamp} ;
-                }
-                else // subcase
-                {
-                    if ( ! subcases[val._parent_id] ) subcases[val._parent_id] = [] ;
-                    subcases[val._parent_id][ subcases[val._parent_id].length ]  = { recid: case_number, case_number: case_number, driver_id: driver_id, timestamp: timestamp} ;
-                }
-	  	    }
-	    }); // end each
 	 
-    $('#grid').w2grid({
-        name: 'grid',
-        header: 'List of Cases',
-        columns: [
-            { field: 'case_number', caption: 'Case Number', size: '30%' },
-            { field: 'driver_id', caption: 'Driver ID', size: '30%' },
-            { field: 'timestamp', caption: 'Timestamp', size: '40%' },
-        ],
-        records: cases,
+$(function () {
+    $('#sidebar').w2sidebar({
+        name: 'sidebar',
+        nodes: [ 
+            { id: 'level-1', text: 'Level 1', img: 'icon-folder', expanded: true, group: true,
+              nodes: [ { id: 'level-1-1', text: 'Level 1.1', icon: 'fa-home' },
+                       { id: 'level-1-2', text: 'Level 1.2', icon: 'fa-star' },
+                       { id: 'level-1-3', text: 'Level 1.3', icon: 'fa-star-empty' }
+                     ]
+            },
+            { id: 'level-2', text: 'Level 2', img: 'icon-folder', expanded: true, group: true,
+              nodes: [ { id: 'level-2-1', text: 'Level 2.1', img: 'icon-folder', count: 3,
+                           nodes: [
+                           { id: 'level-2-1-1', text: 'Level 2.1.1', icon: 'fa-star-empty' },
+                           { id: 'level-2-1-2', text: 'Level 2.1.2', icon: 'fa-star-empty', count: 67 },
+                           { id: 'level-2-1-3', text: 'Level 2.1.3', icon: 'fa-star-empty' ,
 
-        onClick: function(event) {
-            alert("clicked case number " + event.recid);
-        }  ,          
-
-        onExpand: function (event) {
-            var subcases = [];
-
-            if (w2ui.hasOwnProperty('subgrid-' + event.recid)) w2ui['subgrid-' + event.recid].destroy();
-            $('#'+ event.box_id).css({ margin: '0px', padding: '0px', width: '100%' }).animate({ height: '105px' }, 100);
-            // case_objects[ event.recid]._id has the _id for this upper level case
-            parent_id = case_objects[ event.recid]._id
-            // Need to loop through the cases looking for cases that have this as the parent id
-            //subcases = [] ;
-            Object.keys(case_objects).forEach(function(key) {
-                val = case_objects[key];
-                if ( val._parent_id === parent_id ){
-                    case_number = key ;
-                    driver_id = driver_names[ val._driver_id ] ;
-                    timestamp = val.timestamp ;
-                    subcases[ subcases.length ] = { recid: case_number, case_number: case_number, driver_id: driver_id, timestamp: timestamp} ;
-                }
-                //console.log(key, case_objects[key]);
-            }); 
-
-            setTimeout(function () {
-                $('#'+ event.box_id).w2grid({
-                    name: 'subgrid-' + event.recid, 
-                    show: { columnHeaders: false },
-                    fixedBody: true,
-                    columns: [                
-                        { field: 'case_number', caption: 'Case Number', size: '30%' },
-                        { field: 'driver_id', caption: 'Driver ID', size: '30%' },
-                        { field: 'timestamp', caption: 'Timestamp', size: '40%' },
-                    ],
-                    records: subcases,
-                    onClick: function(event) {
-                        alert("clicked case number " + event.recid);
-                    }  ,          
-
-                });
-                w2ui['subgrid-' + event.recid].resize();
-            }, 300);
-        }
+                              nodes: [ { id: 'level-2-1', text: 'Level 2.1', img: 'icon-folder', count: 3,
+                                                         nodes: [
+                                                         { id: 'level-2-1-1', text: 'Level 2.1.1', icon: 'fa-star-empty' },
+                                                         { id: 'level-2-1-2', text: 'Level 2.1.2', icon: 'fa-star-empty', count: 67 },
+                                                         { id: 'level-2-1-3', text: 'Level 2.1.3', icon: 'fa-star-empty' }
+                                                     ]},
+                                                     { id: 'level-2-2', text: 'Level 2.2', icon: 'fa-star-empty' },
+                                                     { id: 'level-2-3', text: 'Level 2.3', icon: 'fa-star-empty' }
+                                                   ]
 
 
+                         }
+                       ]},
+                       { id: 'level-2-2', text: 'Level 2.2', icon: 'fa-star-empty' },
+                       { id: 'level-2-3', text: 'Level 2.3', icon: 'fa-star-empty' }
+                     ]
+            }
+        ]
     });
+});
 
 
 }); // end ready
