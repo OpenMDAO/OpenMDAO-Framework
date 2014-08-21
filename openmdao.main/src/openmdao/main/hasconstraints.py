@@ -121,41 +121,29 @@ class Constraint(object):
             except ValueError:
                 rightval = None    
 
-            pseudotype = 'std'
+            pseudo_class = PseudoComponent
 
             if self.comparator == '=':
                 if len(lrefs) == 2 and len(rrefs) == 0:
                     if rightval == 0. and \
                             _remove_spaces(self.lhs.text) == \
                                 lrefs[0]+'-'+lrefs[1]:
-                        pseudotype = 'v=v'
+                        pseudo_class = SimpleEQConPComp
                 elif len(lrefs) == 0 and len(rrefs) == 2:
                     pass
                 elif len(lrefs) == 1 and len(rrefs) == 1:
                     if lrefs[0] == self.lhs.text and \
                                rrefs[0] == self.rhs.text:
-                        pseudotype = 'v=v'
+                        pseudo_class = SimpleEQConPComp
                 elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
-                    pseudotype = 'v=const'   
+                    pseudo_class = SimpleEQ0PComp
 
-            if pseudotype == 'v=v':
-                pseudo = SimpleEQConPComp(self.lhs.scope, 
-                                         self._combined_expr(),
-                                         pseudo_type='constraint',
-                                         subtype=subtype, 
-                                         exprobject=self)
-            elif pseudotype == 'v=const':
-                pseudo = SimpleEQ0PComp(self.lhs.scope, 
-                                         self._combined_expr(),
-                                         pseudo_type='constraint',
-                                         subtype=subtype, 
-                                         exprobject=self)
-            else:          
-                pseudo = PseudoComponent(self.lhs.scope, 
-                                         self._combined_expr(),
-                                         pseudo_type='constraint',
-                                         subtype=subtype, 
-                                         exprobject=self)
+            pseudo = pseudo_class(self.lhs.scope, 
+                                  self._combined_expr(),
+                                  pseudo_type='constraint',
+                                  subtype=subtype, 
+                                  exprobject=self)
+
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
         getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
