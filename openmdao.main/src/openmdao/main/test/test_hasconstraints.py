@@ -1,5 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
+import numpy as np
+
 import unittest
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
@@ -386,18 +388,53 @@ class HasConstraintsTestCase(unittest.TestCase):
 
     def test_custom_pseudocomp_creation(self):
         self.asm.add('driver', MyDriver())
+        arg = {}
+        result = {}
+
         self.asm.driver.add_constraint('comp1.c = 0')
         self.assertEqual(self.asm._pseudo_0.__class__, SimpleEQ0PComp)
+        self.asm.run()
+        arg['in0'] = np.array([3.3])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_0.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 3.3)
+
         self.asm.driver.add_constraint('comp1.d = 5.4')
         self.assertEqual(self.asm._pseudo_1.__class__, SimpleEQ0PComp)
+        self.asm.run()
+        arg['in0'] = np.array([3.3])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_1.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 3.3)
+
         self.asm.driver.add_constraint('comp2.c = comp3.a')
         self.assertEqual(self.asm._pseudo_2.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_2.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
+
         self.asm.driver.clear_constraints()
         self.asm.driver.add_constraint('comp2.c - comp3.a=0.0')
         self.assertEqual(self.asm._pseudo_3.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_3.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
+
         self.asm.driver.clear_constraints()
         self.asm.driver.add_constraint('0=comp2.c - comp3.a')
         self.assertEqual(self.asm._pseudo_4.__class__, SimpleEQConPComp)
+        self.asm.run()
+        arg['in0'] = np.array([7.2])
+        arg['in1'] = np.array([3.1])
+        result['out0'] = np.array([0.0])
+        self.asm._pseudo_4.apply_deriv(arg, result)
+        self.assertEqual(result['out0'][0], 4.1)
 
 if __name__ == "__main__":
     unittest.main()

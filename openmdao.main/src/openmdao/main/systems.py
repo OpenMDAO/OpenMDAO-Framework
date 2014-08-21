@@ -492,7 +492,7 @@ class System(object):
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            #mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" % 
+            #mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" %
             #             (self.name, s.name, srcvecname, destvecname, scatter.scatter_conns))
             #srcvec.dump(srcvecname)
             scatter(self, srcvec, destvec) #, reverse=??)
