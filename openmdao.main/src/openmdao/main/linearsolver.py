@@ -72,7 +72,7 @@ class ScipyGMRES(LinearSolver):
                 dx, info = gmres(A, RHS,
                                  tol=options.gmres_tolerance,
                                  maxiter=options.gmres_maxiter)
-                print 'dx', dx
+                #print 'dx', dx
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"
