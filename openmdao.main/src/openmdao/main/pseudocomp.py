@@ -514,7 +514,7 @@ class SimpleEQConPComp(PseudoComponent):
 
 class SimpleEQ0PComp(PseudoComponent):
     """ This is a simple pseudocomponent used to encapsulate expressions of
-    the form comp1.x = comp2.y. A separate PComp was needed to efficiently
+    the form comp1.x = 0. A separate PComp was needed to efficiently
     calculate the derivatives, especially for vector inputs.
     """
 
@@ -526,8 +526,7 @@ class SimpleEQ0PComp(PseudoComponent):
         """ Matrix vector product with the Jacobian.
         """
 
-        if 'in0' in arg:
-            result['out0'][:] = arg['in0'][:]
+        result['out0'][:] = arg['in0'][:]
 
     def apply_derivT(self, arg, result):
         """ Matrix vector product with the transpose Jacobian.
@@ -535,5 +534,37 @@ class SimpleEQ0PComp(PseudoComponent):
         is always forward.
         """
 
-        if 'in0' in result:
-            result['in0'][:] = arg['out0'][:]
+        result['in0'][:] = arg['out0'][:]
+
+
+class UnitConversionPComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate unit
+    conversions. A separate PComp was needed to efficiently calculate the
+    derivatives, especially for vector inputs.
+    """
+
+    def config_changed(self, update_parent=True):
+        """ Calculate and save our unit conversion factor.
+        """
+        super(UnitConversionPComp, self).config_changed(update_parent)
+
+        src    = PhysicalQuantity(1.0, self._srcunits)
+        target = self._meta['out0'].get('units')
+        src.convert_to_unit(target)
+        self.grad = src.get_value()
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
+
+        result['out0'][:] = self.grad*arg['in0'][:]
+
+    def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        """
+
+        result['in0'][:] = self.grad*arg['out0'][:]
