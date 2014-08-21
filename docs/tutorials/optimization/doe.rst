@@ -34,7 +34,7 @@ data points. Create a file called ``doe.py`` and copy the following into it:
     class Analysis(Assembly):
 
         def configure(self):
-            self.add('parabloid', Paraboloid)
+            self.add('paraboloid', Paraboloid)
 
             self.add('driver', DOEdriver())
             self.driver.DOEgenerator = Uniform(1000)
@@ -103,9 +103,9 @@ For example, to run this analysis and use the `case_input` and `case_output` var
 
         print "Elapsed time: ", time.time()-tt, "seconds"
 
-        x = analysis.driver.case_inputs.x
-        y = analysis.driver.case_inputs.y
-        f_xy = analysis.driver.case_outputs.f_xy
+        x = analysis.driver.case_inputs.paraboloid.x
+        y = analysis.driver.case_inputs.paraboloid.y
+        f_xy = analysis.driver.case_outputs.paraboloid.f_xy
 
         for i in range(0, len(x)):
             print "x: {} y: {} f(x, y): {}".format(x[i], y[i], f_xy[i])
@@ -125,9 +125,9 @@ Alternatively, the `case_input` and `case_output` variable trees can be used to 
 
         analysis.run()
 
-        x = analysis.driver.case_inputs.x
-        y = analysis.driver.case_inputs.y
-        f_xy = analysis.driver.case_outputs.f_xy
+        x = analysis.driver.case_inputs.paraboloid.x
+        y = analysis.driver.case_inputs.paraboloid.y
+        f_xy = analysis.driver.case_outputs.paraboloid.f_xy
 
         p.ion()
         fig = p.figure()
