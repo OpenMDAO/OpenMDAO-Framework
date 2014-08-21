@@ -384,7 +384,7 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(self.asm._pseudo_6.out0, -1.0)
         self.assertEqual(self.asm._pseudo_7.out0, 2.0)
 
-    def test_custom_pseudocomps(self):
+    def test_custom_pseudocomp_creation(self):
         self.asm.add('driver', MyDriver())
         self.asm.driver.add_constraint('comp1.c = 0')
         self.assertEqual(self.asm._pseudo_0.__class__, SimpleEQ0PComp)
@@ -392,7 +392,12 @@ class HasConstraintsTestCase(unittest.TestCase):
         self.assertEqual(self.asm._pseudo_1.__class__, SimpleEQ0PComp)
         self.asm.driver.add_constraint('comp2.c = comp3.a')
         self.assertEqual(self.asm._pseudo_2.__class__, SimpleEQConPComp)
-        
+        self.asm.driver.clear_constraints()
+        self.asm.driver.add_constraint('comp2.c - comp3.a=0.0')
+        self.assertEqual(self.asm._pseudo_3.__class__, SimpleEQConPComp)
+        self.asm.driver.clear_constraints()
+        self.asm.driver.add_constraint('0=comp2.c - comp3.a')
+        self.assertEqual(self.asm._pseudo_4.__class__, SimpleEQConPComp)
 
 if __name__ == "__main__":
     unittest.main()

@@ -108,8 +108,8 @@ class Constraint(object):
             #     var1 - var2 = 0
             #  OR
             #     var1 = 0
-            lrefs = list(self.lhs.refs())
-            rrefs = list(self.rhs.refs())
+            lrefs = list(self.lhs.ordered_refs())
+            rrefs = list(self.rhs.ordered_refs())
         
             try:
                 leftval = float(self.lhs.text)
@@ -124,17 +124,24 @@ class Constraint(object):
             pseudo_class = PseudoComponent
 
             if self.comparator == '=':
+                # look for var1-var2=0
                 if len(lrefs) == 2 and len(rrefs) == 0:
                     if rightval == 0. and \
                             _remove_spaces(self.lhs.text) == \
                                 lrefs[0]+'-'+lrefs[1]:
                         pseudo_class = SimpleEQConPComp
+                # look for 0=var1-var2
                 elif len(lrefs) == 0 and len(rrefs) == 2:
-                    pass
+                    if leftval==0. and \
+                           _remove_spaces(self.rhs.text) == \
+                                rrefs[0]+'-'+rrefs[1]:
+                        pseudo_class = SimpleEQConPComp
+                # look for var1=var2
                 elif len(lrefs) == 1 and len(rrefs) == 1:
                     if lrefs[0] == self.lhs.text and \
                                rrefs[0] == self.rhs.text:
                         pseudo_class = SimpleEQConPComp
+                # look for var1=0
                 elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
                     pseudo_class = SimpleEQ0PComp
 
