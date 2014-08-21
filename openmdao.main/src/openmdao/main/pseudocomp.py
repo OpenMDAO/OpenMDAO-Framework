@@ -526,7 +526,7 @@ class SimpleEQ0PComp(PseudoComponent):
         """ Matrix vector product with the Jacobian.
         """
 
-        result['out0'][:] = arg['in0'][:]
+        result['out0'][:] += arg['in0'][:]
 
     def apply_derivT(self, arg, result):
         """ Matrix vector product with the transpose Jacobian.
@@ -534,7 +534,7 @@ class SimpleEQ0PComp(PseudoComponent):
         is always forward.
         """
 
-        result['in0'][:] = arg['out0'][:]
+        result['in0'][:] += arg['out0'][:]
 
 
 class UnitConversionPComp(PseudoComponent):
@@ -561,10 +561,10 @@ class UnitConversionPComp(PseudoComponent):
         """ Matrix vector product with the Jacobian.
         """
 
-        result['out0'][:] = self.grad*arg['in0'][:]
+        result['out0'][:] += self.grad*arg['in0'][:]
 
     def apply_derivT(self, arg, result):
         """ Matrix vector product with the transpose Jacobian.
         """
 
-        result['in0'][:] = self.grad*arg['out0'][:]
+        result['in0'][:] += self.grad*arg['out0'][:]

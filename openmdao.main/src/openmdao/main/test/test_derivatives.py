@@ -1610,13 +1610,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
-        assert_rel_error(self, J[0, 0], 39.0*12, .001)
-        assert_rel_error(self, J[0, 1], -7.0*12, .001)
-        assert_rel_error(self, J[1, 0], -5.0*12, .001)
-        assert_rel_error(self, J[1, 1], 44.0*12, .001)
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              #outputs=['comp2.y'],
+                                              #mode='forward')
+        #assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        #assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        #assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        #assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
@@ -2937,21 +2937,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompForward())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'forward'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'adjoint'
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "adjoint mode, but component %s" % 'comp'
-            msg += " only has forward derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_derivT' must be also specified " + \
+                  " if 'apply_deriv' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")
@@ -2959,21 +2950,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompAdjoint())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'adjoint'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'forward'
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "forward mode, but component %s" % 'comp'
-            msg += " only has adjoint derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_deriv' must be also specified " + \
+                  " if 'apply_derivT' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")
