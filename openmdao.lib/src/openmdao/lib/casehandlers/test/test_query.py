@@ -351,6 +351,19 @@ class TestCase(unittest.TestCase):
         # Exact case counts are unreliable, just assure restore was quicker.
         self.assertTrue(len(cases) < n_orig/4)   # Typically 15
 
+    def test_write(self):
+        # Read in a dataset and write out a selected portion of it.
+        path = os.path.join(os.path.dirname(__file__), 'jsonrecorder.json')
+        cases = CaseDataset(path, 'json').data.fetch()
+        self.assertEqual(len(cases), 10)
+        self.assertEqual(len(cases[0]), 19)
+
+        names = ('comp1.x', 'comp1.y', 'comp1.z', 'comp2.z')
+        CaseDataset(path, 'json').data.vars(names).write('cases.reduced')
+        reduced = CaseDataset('cases.reduced', 'json').data.fetch()
+        self.assertEqual(len(reduced), 10)
+        self.assertEqual(len(reduced[0]), 10)
+
 
 if __name__ == '__main__':
     unittest.main()
