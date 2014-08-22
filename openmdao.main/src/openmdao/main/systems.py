@@ -527,7 +527,8 @@ class System(object):
             world_rank = MPI.COMM_WORLD.rank
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
+                     'SimpleSystem': 'simp', 'OpaqueDriverSystem': 'drv',
+                     'TransparentDriverSystem': 'tdrv',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
                      'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner'}
@@ -785,7 +786,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, (SolverSystem, NonSolverDriverSystem)):
+            if not isinstance(self, (SolverSystem, OpaqueDriverSystem)):
                 for name in to_remove:
                     del self.variables[name]
 
@@ -904,6 +905,10 @@ class InVarSystem(SimpleSystem):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
+    def linearize(self):
+        """ Nothing to linearize. """
+        pass
+
     def applyJ(self):
         """ Set to zero """
         if self.mode == 'fwd':
@@ -924,6 +929,10 @@ class OutVarSystem(SimpleSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_to_scope(self.scope, self._nodes)
+
+    def linearize(self):
+        """ Nothing to linearize. """
+        pass
 
     def applyJ(self):
         """ Set to zero """
@@ -989,6 +998,53 @@ class AssemblySystem(SimpleSystem):
     def setup_scatters(self):
         super(AssemblySystem, self).setup_scatters()
         self._comp.setup_scatters()
+
+    def set_options(self, mode, options):
+        """ Sets all user-configurable options for the inner_system and its
+        children. """
+        self.mode = mode
+        self._comp._system.set_options(mode, options)
+
+    def linearize(self):
+        """ Assemblies linearize all subsystems in the Inner Assy System. """
+        self._comp._system.linearize()
+
+    def applyJ(self):
+        """ Call into our assembly's top ApplyJ to get the matrix vector
+        product across the boundary variables.
+        """
+
+        inner_system = self._comp._system
+        if self.mode == 'forward':
+            arg = 'du'
+            res = 'df'
+        elif self.mode == 'adjoint':
+            arg = 'df'
+            res = 'du'
+
+        name = self.name
+        nonzero = False
+
+        for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
+            var = self.scope._system.vec[arg][item]
+            if any(var != 0):
+                nonzero = True
+            sub_name = item.partition('.')[2:][0]
+            inner_system.vec[arg][sub_name] = var
+
+            var = self.scope._system.vec[res][item]
+            sub_name = item.partition('.')[2:][0]
+            inner_system.vec[res][sub_name] = var
+
+        # Speedhack, don't call component's derivatives if incoming vector is zero.
+        if nonzero is False:
+            return
+
+        inner_system.applyJ()
+
+        for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
+            sub_name = item.partition('.')[2:][0]
+            self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
 
 
 class CompoundSystem(System):
@@ -1224,24 +1280,24 @@ class ParallelSystem(CompoundSystem):
         self._create_var_dicts(resid_state_map)
 
 
-class NonSolverDriverSystem(SimpleSystem):
+class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, graph, driver):
         driver.setup_systems()
         scope = driver.parent
-        super(NonSolverDriverSystem, self).__init__(scope, graph, driver.name)
+        super(OpaqueDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
-        super(NonSolverDriverSystem, self).setup_communicators(comm)
+        super(OpaqueDriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
     # FIXME: I'm inconsistent in the way that base methods are handled.  The System
     # base class should call setup methods on subsystems or local_subsystems in
     # order to avoid overriding setup methods like this one in derived classes.
     def setup_scatters(self):
-        #super(NonSolverDriverSystem, self).setup_scatters()
+        #super(OpaqueDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
 
@@ -1255,17 +1311,66 @@ class NonSolverDriverSystem(SimpleSystem):
         for sub in self._comp.workflow._system.simple_subsystems(local=local):
             yield sub
 
-
-class SolverSystem(SimpleSystem):  # Implicit
-    """A System for a Solver component. While it inherits from a SimpleSystem,
-    much of the behavior is like a CompoundSystem, particularly variable
-    propagation."""
+class TransparentDriverSystem(SimpleSystem):
+    """A system for an driver that allows derivative calculation across its
+    boundary."""
 
     def __init__(self, graph, driver):
         driver.setup_systems()
         scope = driver.parent
-        super(SolverSystem, self).__init__(scope, graph, driver.name)
+        super(TransparentDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
+
+    def _get_resid_state_map(self):
+        """ Essentially, this system behaves like a solver system, except it
+        has no states or residuals.
+        """
+        return dict()
+
+    def setup_communicators(self, comm):
+        super(TransparentDriverSystem, self).setup_communicators(comm)
+        self._comp.setup_communicators(self.mpi.comm)
+
+    def setup_variables(self, resid_state_map=None):
+        # pass our resid_state_map to our children
+        super(TransparentDriverSystem, self).setup_variables(self._get_resid_state_map())
+
+    def setup_scatters(self):
+        #super(TransparentDriverSystem, self).setup_scatters()
+        compound_setup_scatters(self)
+        self._comp.setup_scatters()
+
+    def local_subsystems(self):
+        return self.all_subsystems()
+
+    def all_subsystems(self):
+        return (self._comp.workflow._system,)
+
+    def simple_subsystems(self, local=False):
+        for sub in self._comp.workflow._system.simple_subsystems(local=local):
+            yield sub
+
+    def applyJ(self):
+        """ Delegate to subsystems """
+
+        if self.mode == 'forward':
+            self.scatter('du', 'dp')
+        for subsystem in self.local_subsystems():
+            subsystem.applyJ()
+        if self.mode == 'adjoint':
+            self.scatter('du', 'dp')
+
+    def linearize(self):
+        """ Solvers must Linearize all of their subsystems. """
+
+        for subsystem in self.local_subsystems():
+            subsystem.linearize()
+
+
+class SolverSystem(TransparentDriverSystem):  # Implicit
+    """A System for a Solver component. While it inherits from a SimpleSystem,
+    much of the behavior is like a CompoundSystem, particularly variable
+    propagation."""
 
     def _get_resid_state_map(self):
 
@@ -1315,45 +1420,6 @@ class SolverSystem(SimpleSystem):  # Implicit
                                     (pnodes, sz))
 
         return resid_state_map
-
-    def setup_communicators(self, comm):
-        super(SolverSystem, self).setup_communicators(comm)
-        self._comp.setup_communicators(self.mpi.comm)
-
-    def setup_variables(self, resid_state_map=None):
-        # pass our resid_state_map to our children
-        super(SolverSystem, self).setup_variables(self._get_resid_state_map())
-
-    def setup_scatters(self):
-        #super(SolverSystem, self).setup_scatters()
-        compound_setup_scatters(self)
-        self._comp.setup_scatters()
-
-    def local_subsystems(self):
-        return self.all_subsystems()
-
-    def all_subsystems(self):
-        return (self._comp.workflow._system,)
-
-    def simple_subsystems(self, local=False):
-        for sub in self._comp.workflow._system.simple_subsystems(local=local):
-            yield sub
-
-    def applyJ(self):
-        """ Delegate to subsystems """
-
-        if self.mode == 'forward':
-            self.scatter('du', 'dp')
-        for subsystem in self.local_subsystems():
-            subsystem.applyJ()
-        if self.mode == 'adjoint':
-            self.scatter('du', 'dp')
-
-    def linearize(self):
-        """ Solvers must Linearize all of their subsystems. """
-
-        for subsystem in self.local_subsystems():
-            subsystem.linearize()
 
 
 
@@ -1420,7 +1486,11 @@ def _create_simple_sys(scope, graph, name):
     if has_interface(comp, ISolver):
         sub = SolverSystem(graph, comp)
     elif has_interface(comp, IDriver):
-        sub = NonSolverDriverSystem(graph, comp)
+        from openmdao.main.driver import Driver
+        if comp.__class__ == Driver:
+            sub = TransparentDriverSystem(graph, comp)
+        else:
+            sub = OpaqueDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, graph, comp.name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \

@@ -8,7 +8,8 @@ from openmdao.main.interfaces import IDriver, IAssembly
 from openmdao.main.depgraph import DependencyGraph, is_var_node
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
-                                  OutVarSystem, InVarSystem, SolverSystem, NonSolverDriverSystem
+                                  OutVarSystem, InVarSystem, SolverSystem, \
+                                  OpaqueDriverSystem, TransparentDriverSystem
 
 
 _cluster_count = 0
@@ -77,7 +78,7 @@ _meta_excludes = set([
 ])
 
 def write_node(f, meta, node, indent):
-    assigns = ['%s=%s' % (k,v) for k,v in meta.items() 
+    assigns = ['%s=%s' % (k,v) for k,v in meta.items()
                     if k not in _meta_excludes]
     f.write('%s"%s" [%s];\n' % (' '*indent, node, ','.join(assigns)))
 
@@ -171,20 +172,22 @@ def write_system_dot(system, dotfile):
         write_node(f, {'shape': _dot_shape(system)}, name, indent)
 
         _sys_dot(system, indent, f)
-            
+
         f.write("}\n")
 
 def _dot_shape(system):
     if isinstance(system, AssemblySystem):
         return "box3d"
+    elif isinstance(system, OpaqueDriverSystem):
+        return "invhouse"
+    elif isinstance(system, TransparentDriverSystem):
+        return "invhouse"
     elif isinstance(system, SolverSystem):
         return "house"
-    elif isinstance(system, NonSolverDriverSystem):
-        return "invhouse"
     elif isinstance(system, SerialSystem):
         return "octagon"
     elif isinstance(system, ParallelSystem):
-        return "doubleoctagon" 
+        return "doubleoctagon"
     elif isinstance(system, InVarSystem):
         return "ellipse"
     elif isinstance(system, OutVarSystem):
@@ -197,10 +200,10 @@ def _sys_dot(system, indent, f):
     for i,s in enumerate(system.subsystems()):
         name = s.name
         write_node(f, {'shape': _dot_shape(s)}, name, indent)
-        f.write('%s"%s" -> "%s" [label=%d];\n' % 
+        f.write('%s"%s" -> "%s" [label=%d];\n' %
                         (' '*indent, system.name, name, i))
         _sys_dot(s, indent+3, f)
-        
+
 def plot_system_tree(system, fmt='pdf', outfile=None):
     if outfile is None:
         outfile = 'system_graph.'+fmt
@@ -268,17 +271,17 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False):
         if obj.name == '':
             obj.name = 'top'
         try:
-            plot_graph(obj._depgraph, fmt=fmt, 
+            plot_graph(obj._depgraph, fmt=fmt,
                        outfile=obj.name+'_depgraph'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
             print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
         try:
-            plot_graph(obj._reduced_graph, fmt=fmt, 
+            plot_graph(obj._reduced_graph, fmt=fmt,
                        outfile=obj.name+'_reduced'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
             print "Can't plot reduced graph of '%s': %s" % (obj.name, str(err))
         try:
-            plot_system_tree(obj._system, fmt=fmt, 
+            plot_system_tree(obj._system, fmt=fmt,
                        outfile=obj.name+'_system_tree'+'.'+fmt)
         except Exception as err:
             print "Can't plot system graph of '%s': %s" % (obj.name, str(err))
@@ -297,7 +300,7 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False):
         if recurse:
             for s in obj.iterate_all():
                 if isinstance(s, AssemblySystem):
-                    plot_system_tree(getattr(s.scope, s.name)._system, 
+                    plot_system_tree(getattr(s.scope, s.name)._system,
                                      fmt=fmt, outfile=s.name+'_system'+'.'+fmt)
 
 def main():

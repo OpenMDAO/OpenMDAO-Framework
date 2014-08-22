@@ -1041,68 +1041,6 @@ class Assembly(Component):
 
         return result
 
-    def provideJ(self, required_inputs, required_outputs, check_only=False):
-        '''An assembly calculates its Jacobian by calling the calc_gradient
-        method on its base driver. Note, derivatives are only calculated for
-        floats and iterable items containing floats.'''
-
-        # TODO - Support subassy recursion.
-        msg = 'Gradient of an Assembly currently not supported.'
-        self.raise_exception(msg, RuntimeError)
-
-        # Sub-assembly sourced
-        output_keys = []
-
-        # Parent-assembly sourced
-        self.J_input_keys = []
-        self.J_output_keys = []
-        self._provideJ_bounds = None
-
-        depgraph = self._depgraph
-
-        for src in required_inputs:
-            varname = depgraph.base_var(src)
-            target1 = [n for n in depgraph.successors(varname)
-                               if not n.startswith('parent.')
-                                  and depgraph.base_var(n) != varname]
-            target2 = []
-            if src in depgraph.node:
-                target2 = [n for n in depgraph.successors(src)
-                                   if not n.startswith('parent.')
-                                      and depgraph.base_var(n) != varname
-                                      and n not in target1]
-            if len(target1) == 0 and len(target2) == 0:
-                continue
-
-            self.J_input_keys.append(src)
-
-        for target in required_outputs:
-            varname = depgraph.base_var(target)
-            src = depgraph.predecessors(varname)
-            if len(src) == 0:
-                src = depgraph.get_sources(target)
-                if len(src) == 0:
-                    continue
-
-            src = src[0]
-
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if target != varname:
-                tail = target[len(varname):]
-                src = '%s%s' % (src, tail)
-
-            output_keys.append(src)
-            self.J_output_keys.append(target)
-
-        if check_only or len(self.J_input_keys) == 0 or len(output_keys) == 0:
-            return None
-
-        return self.driver.calc_gradient(self.J_input_keys, output_keys)
-
-    def list_deriv_vars(self):
-        return self.J_input_keys, self.J_output_keys
-
     def list_components(self):
         ''' List the components in the assembly.
         '''

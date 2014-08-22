@@ -1113,15 +1113,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys = list_deriv_vars(top.nest)
-        J = top.nest.provideJ(inkeys, outkeys)
-        self.assertTrue('x' in inkeys)
-        self.assertTrue('y' in inkeys)
-        self.assertEqual(len(inkeys), 2)
-        self.assertTrue('f_xy' in outkeys)
-        self.assertEqual(len(outkeys), 1)
-
         # Now, let's find the derivative of the unconnected. Behaviour depends
         # on deriv policy.
         top.nest.add('stuff', Float(1.0, iotype='in'))
