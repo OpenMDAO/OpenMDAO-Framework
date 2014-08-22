@@ -10,6 +10,7 @@
 </head>
 <body>
 
+    <div id="cases" style="height: 300px; width: 200px;"></div>
     <div id="sidebar" style="height: 300px; width: 200px;"></div>
 </body>
 
@@ -1388,23 +1389,55 @@ $( document ).ready(function() {
 	    var driver_names = new Object();
         var subcases = new Object();
         var case_objects = new Object();
-
-        var numcases = 0 ; 
+        var simulation_info_id = "" ;
 
         // get all the cases in an associative array with the id as the key
         $.each( data, function( key , val ) {
 
+           // need to add object for top of tree
+           if (key.lastIndexOf(simulation_info_key, 0) === 0) {
+                val[ 'children'] = [] ;
+                case_objects[ val.uuid ] = val ;
+                simulation_info_id = val.uuid ;
+            }
+
             // Make a structure to hold all of the case info
             if (key.lastIndexOf(it_case_key, 0) === 0) {
-                //case_number = key.substring(it_case_key.length);
+                case_number = key.substring(it_case_key.length);
                 val[ 'children'] = [] ;
+                val[ 'case_number'] = case_number ;
                 case_objects[ val._id ] = val ;
-                numcases++ ;
             }
         }); // end each
 
+        Object.keys(case_objects).forEach(function(key) {
+            if ( key != simulation_info_id )
+            {
+                case_object = case_objects[key];
+                parent_id = case_object._parent_id ;
+                parent_case_object = case_objects[parent_id] ;
+                parent_case_object_children = parent_case_object.children ;
+                parent_case_object_children[ parent_case_object_children.length ] = case_object ;
+            }
+        }); 
+
+        // Starting from the top "case_object", which is really the sim info data,
+        // Walk down the children leaves, creating the value for nodes in the call below
+        simulation_info_object = case_objects[simulation_info_id] ;
+        children = simulation_info_object.children ;
+        nodes = [] ;
+        for (var i=0; i < children.length; i++) {
+            child = children[i] ;
+            nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() } ;
+        }
 
 
+$(function () {
+    $('#cases').w2sidebar({
+        name: 'cases',
+        nodes: nodes 
+    });
+});
 
 	 
 $(function () {
