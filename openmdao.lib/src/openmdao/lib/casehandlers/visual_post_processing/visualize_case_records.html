@@ -1,0 +1,1477 @@
+<html>
+<head>
+
+
+    <link rel="stylesheet" type="text/css" href="http://w2ui.com/src/w2ui-1.4.1.min.css" />
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="http://w2ui.com/src/w2ui-1.4.1.min.js"></script>
+
+</head>
+<body>
+    <div id="main" style="width: 100%; height: 400px;"></div>
+</body>
+
+
+
+
+<script type="text/javascript">
+
+data = {
+"__length_1": 15817
+, "simulation_info": {
+    "OpenMDAO_Version": "0.10.0", 
+    "constants": {
+        "directory": "", 
+        "dis1.directory": "", 
+        "dis1.force_fd": false, 
+        "dis1.missing_deriv_policy": "error", 
+        "dis2.directory": "", 
+        "dis2.force_fd": false, 
+        "dis2.missing_deriv_policy": "error", 
+        "dis2.z1": 5.0, 
+        "dis2.z2": 2.0, 
+        "driver.accuracy": 1e-06, 
+        "driver.directory": "", 
+        "driver.force_fd": false, 
+        "driver.gradient_options.derivative_direction": "auto", 
+        "driver.gradient_options.directional_fd": false, 
+        "driver.gradient_options.fd_blocks": [], 
+        "driver.gradient_options.fd_form": "forward", 
+        "driver.gradient_options.fd_step": 1e-06, 
+        "driver.gradient_options.fd_step_type": "absolute", 
+        "driver.gradient_options.force_fd": false, 
+        "driver.gradient_options.gmres_maxiter": 100, 
+        "driver.gradient_options.gmres_tolerance": 1e-09, 
+        "driver.iout": 6, 
+        "driver.iprint": 0, 
+        "driver.maxiter": 50, 
+        "driver.output_filename": "slsqp.out", 
+        "excludes": [], 
+        "force_fd": false, 
+        "includes": [
+            "*"
+        ], 
+        "missing_deriv_policy": "assume_zero", 
+        "solver.algorithm": "broyden2", 
+        "solver.alpha": 0.4, 
+        "solver.alphamax": 1.0, 
+        "solver.directory": "", 
+        "solver.force_fd": false, 
+        "solver.gradient_options.derivative_direction": "auto", 
+        "solver.gradient_options.directional_fd": false, 
+        "solver.gradient_options.fd_blocks": [], 
+        "solver.gradient_options.fd_form": "forward", 
+        "solver.gradient_options.fd_step": 1e-06, 
+        "solver.gradient_options.fd_step_type": "absolute", 
+        "solver.gradient_options.force_fd": false, 
+        "solver.gradient_options.gmres_maxiter": 100, 
+        "solver.gradient_options.gmres_tolerance": 1e-09, 
+        "solver.itmax": 10, 
+        "solver.tol": 1e-07
+    }, 
+    "expressions": {
+        "(dis1.x1)**2+dis1.z2+dis1.y1+math.exp(-dis2.y2)": {
+            "data_type": "Objective", 
+            "pcomp_name": "_pseudo_1"
+        }, 
+        "3.16 < dis1.y1": {
+            "data_type": "Constraint", 
+            "pcomp_name": "_pseudo_2"
+        }, 
+        "dis2.y2 < 24.0": {
+            "data_type": "Constraint", 
+            "pcomp_name": "_pseudo_3"
+        }, 
+        "dis2.y2 = dis1.y2": {
+            "data_type": "Constraint", 
+            "pcomp_name": "_pseudo_0"
+        }
+    }, 
+    "name": "", 
+    "uuid": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "variable_metadata": {
+        "directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "dis1.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "dis1.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "dis1.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "dis1.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "dis1.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
+        }, 
+        "dis1.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "dis1.x1": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis1.y1": {
+            "assumed_default": true, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis1.y2": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis1.z1": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis1.z2": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis2.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "dis2.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "dis2.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "dis2.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "dis2.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
+        }, 
+        "dis2.missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "dis2.y2": {
+            "assumed_default": true, 
+            "high": null, 
+            "iotype": "out", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis2.z1": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "dis2.z2": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.accuracy": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "driver.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.derivative_direction": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "auto", 
+                "forward", 
+                "adjoint"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.directional_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.fd_blocks": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "driver.gradient_options.fd_form": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "forward", 
+                "backward", 
+                "central", 
+                "complex_step"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.fd_step": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.gradient_options.fd_step_type": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "absolute", 
+                "relative", 
+                "bounds_scaled"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.gradient_options.force_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "driver.iout": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.iprint": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                0, 
+                1, 
+                2, 
+                3
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "driver.maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "driver.output_filename": {
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "missing_deriv_policy": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "values": [
+                "error", 
+                "assume_zero"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "solver.algorithm": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "broyden2", 
+                "broyden3", 
+                "excitingmixing"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "solver.alpha": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "solver.alphamax": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "solver.derivative_exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "solver.directory": {
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Str"
+        }, 
+        "solver.exec_count": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "solver.force_fd": {
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "solver.gradient_options.derivative_direction": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "auto", 
+                "forward", 
+                "adjoint"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "solver.gradient_options.directional_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "solver.gradient_options.fd_blocks": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "solver.gradient_options.fd_form": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "forward", 
+                "backward", 
+                "central", 
+                "complex_step"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "solver.gradient_options.fd_step": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "solver.gradient_options.fd_step_type": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "values": [
+                "absolute", 
+                "relative", 
+                "bounds_scaled"
+            ], 
+            "vartypename": "Enum"
+        }, 
+        "solver.gradient_options.force_fd": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
+        }, 
+        "solver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "solver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }, 
+        "solver.itername": {
+            "deriv_ignore": true, 
+            "iotype": "out", 
+            "vartypename": "Str"
+        }, 
+        "solver.itmax": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
+            "vartypename": "Int"
+        }, 
+        "solver.tol": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
+            "vartypename": "Float"
+        }
+    }
+}
+, "__length_2": 690
+, "driver_info_1": {
+    "_id": 4459829872, 
+    "eq_constraints": [], 
+    "ineq_constraints": [
+        "3.16 < dis1.y1", 
+        "dis2.y2 < 24.0"
+    ], 
+    "name": "driver", 
+    "objectives": [
+        "(dis1.x1)**2+dis1.z2+dis1.y1+math.exp(-dis2.y2)"
+    ], 
+    "parameters": [
+        "['dis1.z1', 'dis2.z1']", 
+        "['dis1.z2', 'dis2.z2']", 
+        "dis1.x1"
+    ], 
+    "recording": [
+        "dis1.z1", 
+        "dis1.z2", 
+        "dis1.x1", 
+        "_pseudo_1", 
+        "_pseudo_2", 
+        "_pseudo_3", 
+        "dis2.y2", 
+        "dis1.y1", 
+        "solver.derivative_exec_count", 
+        "solver.exec_count", 
+        "solver.itername", 
+        "driver.workflow.itername"
+    ]
+}
+, "__length_3": 484
+, "driver_info_2": {
+    "_id": 4459829680, 
+    "eq_constraints": [
+        "dis2.y2 = dis1.y2"
+    ], 
+    "name": "solver", 
+    "parameters": [
+        "dis1.y2"
+    ], 
+    "recording": [
+        "dis1.y2", 
+        "_pseudo_0", 
+        "dis1.y1", 
+        "dis2.y2", 
+        "dis1.exec_count", 
+        "dis1.itername", 
+        "dis1.derivative_exec_count", 
+        "dis2.derivative_exec_count", 
+        "dis2.exec_count", 
+        "dis2.itername", 
+        "solver.workflow.itername"
+    ]
+}
+, "__length_4": 673
+, "iteration_case_1": {
+    "_driver_id": 4459829680, 
+    "_id": "cb72ebf5-23e4-11e4-8002-20c9d0478eff", 
+    "_parent_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 11.272570530585627, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 1, 
+        "dis1.itername": "1-solver.1-dis1", 
+        "dis1.y1": 27.8, 
+        "dis1.y2": 1.0, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 1, 
+        "dis2.itername": "1-solver.1-dis2", 
+        "dis2.y2": 12.272570530585627, 
+        "solver.workflow.itername": "1-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.079915
+}
+, "__length_5": 702
+, "iteration_case_2": {
+    "_driver_id": 4459829680, 
+    "_id": "cb734f6b-23e4-11e4-8003-20c9d0478eff", 
+    "_parent_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 6.6773187061229402, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 2, 
+        "dis1.itername": "1-solver.2-dis1", 
+        "dis1.y1": 26.898194357553148, 
+        "dis1.y2": 5.5090282122342513, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 2, 
+        "dis2.itername": "1-solver.2-dis2", 
+        "dis2.y2": 12.186346918357192, 
+        "solver.workflow.itername": "1-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.081108
+}
+, "__length_6": 706
+, "iteration_case_3": {
+    "_driver_id": 4459829680, 
+    "_id": "cb737968-23e4-11e4-8004-20c9d0478eff", 
+    "_parent_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.0026187864344535683, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 3, 
+        "dis1.itername": "1-solver.3-dis1", 
+        "dis1.y1": 25.587788765950634, 
+        "dis1.y2": 12.061056170246832, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 3, 
+        "dis2.itername": "1-solver.3-dis2", 
+        "dis2.y2": 12.058437383812379, 
+        "solver.workflow.itername": "1-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.082135
+}
+, "__length_7": 705
+, "iteration_case_4": {
+    "_driver_id": 4459829680, 
+    "_id": "cb73a4b8-23e4-11e4-8005-20c9d0478eff", 
+    "_parent_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 6.3374204728461336e-07, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 4, 
+        "dis1.itername": "1-solver.4-dis1", 
+        "dis1.y1": 25.58830249416901, 
+        "dis1.y2": 12.058487529154947, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 4, 
+        "dis2.itername": "1-solver.4-dis2", 
+        "dis2.y2": 12.058488162896994, 
+        "solver.workflow.itername": "1-solver.4"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.083208
+}
+, "__length_8": 706
+, "iteration_case_5": {
+    "_driver_id": 4459829680, 
+    "_id": "cb73c98f-23e4-11e4-8006-20c9d0478eff", 
+    "_parent_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 6.2172489379008766e-14, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 5, 
+        "dis1.itername": "1-solver.5-dis1", 
+        "dis1.y1": 25.588302369877699, 
+        "dis1.y2": 12.058488150611511, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 5, 
+        "dis2.itername": "1-solver.5-dis2", 
+        "dis2.y2": 12.058488150611574, 
+        "solver.workflow.itername": "1-solver.5"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.084123
+}
+, "__length_9": 694
+, "iteration_case_6": {
+    "_driver_id": 4459829872, 
+    "_id": "cb72dd8a-23e4-11e4-8001-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 28.588308165033762, 
+        "_pseudo_2": -22.428302369877699, 
+        "_pseudo_3": -11.941511849388426, 
+        "dis1.x1": 1.0, 
+        "dis1.y1": 25.588302369877699, 
+        "dis1.z1": 5.0, 
+        "dis1.z2": 2.0, 
+        "dis2.y2": 12.058488150611574, 
+        "driver.workflow.itername": "1", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 1, 
+        "solver.itername": "1-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.08763
+}
+, "__length_10": 705
+, "iteration_case_7": {
+    "_driver_id": 4459829680, 
+    "_id": "cb74a3d7-23e4-11e4-8008-20c9d0478eff", 
+    "_parent_id": "cb749abd-23e4-11e4-8007-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 6.2172489379008766e-14, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 6, 
+        "dis1.itername": "2-solver.1-dis1", 
+        "dis1.y1": 25.588302369877699, 
+        "dis1.y2": 12.058488150611511, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 6, 
+        "dis2.itername": "2-solver.1-dis2", 
+        "dis2.y2": 12.058488150611574, 
+        "solver.workflow.itername": "2-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.08983
+}
+, "__length_11": 705
+, "iteration_case_8": {
+    "_driver_id": 4459829680, 
+    "_id": "cb74c7e6-23e4-11e4-8009-20c9d0478eff", 
+    "_parent_id": "cb749abd-23e4-11e4-8007-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": 3.730349362740526e-14, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 7, 
+        "dis1.itername": "2-solver.2-dis1", 
+        "dis1.y1": 25.588302369877692, 
+        "dis1.y2": 12.058488150611536, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 7, 
+        "dis2.itername": "2-solver.2-dis2", 
+        "dis2.y2": 12.058488150611574, 
+        "solver.workflow.itername": "2-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.090655
+}
+, "__length_12": 695
+, "iteration_case_9": {
+    "_driver_id": 4459829872, 
+    "_id": "cb749abd-23e4-11e4-8007-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 28.588308165033755, 
+        "_pseudo_2": -22.428302369877692, 
+        "_pseudo_3": -11.941511849388426, 
+        "dis1.x1": 1.0, 
+        "dis1.y1": 25.588302369877692, 
+        "dis1.z1": 5.0, 
+        "dis1.z2": 2.0, 
+        "dis2.y2": 12.058488150611574, 
+        "driver.workflow.itername": "2", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 2, 
+        "solver.itername": "2-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.091585
+}
+, "__length_13": 704
+, "iteration_case_10": {
+    "_driver_id": 4459829680, 
+    "_id": "cb781221-23e4-11e4-800b-20c9d0478eff", 
+    "_parent_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -5.796470030964179, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 12, 
+        "dis1.itername": "3-solver.1-dis1", 
+        "dis1.y1": 6.6167955148574071, 
+        "dis1.y2": 12.058488150611536, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 12, 
+        "dis2.itername": "3-solver.1-dis2", 
+        "dis2.y2": 6.2620181196473572, 
+        "solver.workflow.itername": "3-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.112231
+}
+, "__length_14": 704
+, "iteration_case_11": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7833a3-23e4-11e4-800c-20c9d0478eff", 
+    "_parent_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -3.3892719219599838, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 13, 
+        "dis1.itername": "3-solver.2-dis1", 
+        "dis1.y1": 7.0805131173345419, 
+        "dis1.y2": 9.739900138225865, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 13, 
+        "dis2.itername": "3-solver.2-dis2", 
+        "dis2.y2": 6.3506282162658811, 
+        "solver.workflow.itername": "3-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.113335
+}
+, "__length_15": 708
+, "iteration_case_12": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7861b3-23e4-11e4-800d-20c9d0478eff", 
+    "_parent_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.0047821571357822279, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 14, 
+        "dis1.itername": "3-solver.3-dis1", 
+        "dis1.y1": 7.7334153624449433, 
+        "dis1.y2": 6.4753889126738553, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 14, 
+        "dis2.itername": "3-solver.3-dis2", 
+        "dis2.y2": 6.4706067555380731, 
+        "solver.workflow.itername": "3-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.114232
+}
+, "__length_16": 709
+, "iteration_case_13": {
+    "_driver_id": 4459829680, 
+    "_id": "cb788366-23e4-11e4-800e-20c9d0478eff", 
+    "_parent_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -3.6619223768852294e-06, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 15, 
+        "dis1.itername": "3-solver.4-dis1", 
+        "dis1.y1": 7.7343378888366239, 
+        "dis1.y2": 6.4707762807154525, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 15, 
+        "dis2.itername": "3-solver.4-dis2", 
+        "dis2.y2": 6.4707726187930756, 
+        "solver.workflow.itername": "3-solver.4"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.115089
+}
+, "__length_17": 709
+, "iteration_case_14": {
+    "_driver_id": 4459829680, 
+    "_id": "cb78a4eb-23e4-11e4-800f-20c9d0478eff", 
+    "_parent_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -3.7925218521195347e-12, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 16, 
+        "dis1.itername": "3-solver.5-dis1", 
+        "dis1.y1": 7.7343385957997759, 
+        "dis1.y2": 6.4707727458996933, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 16, 
+        "dis2.itername": "3-solver.5-dis2", 
+        "dis2.y2": 6.4707727458959008, 
+        "solver.workflow.itername": "3-solver.5"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.115951
+}
+, "__length_18": 742
+, "iteration_case_15": {
+    "_driver_id": 4459829872, 
+    "_id": "cb780c61-23e4-11e4-800a-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 8.5615296634985363, 
+        "_pseudo_2": -4.5743385957997758, 
+        "_pseudo_3": -17.5292272541041, 
+        "dis1.x1": 9.3258734068513149e-15, 
+        "dis1.y1": 7.7343385957997759, 
+        "dis1.z1": 2.864061819569975, 
+        "dis1.z2": 0.82564303866122923, 
+        "dis2.y2": 6.4707727458959008, 
+        "driver.workflow.itername": "3", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 3, 
+        "solver.itername": "3-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.116641
+}
+, "__length_19": 704
+, "iteration_case_16": {
+    "_driver_id": 4459829680, 
+    "_id": "cb79e3f0-23e4-11e4-8011-20c9d0478eff", 
+    "_parent_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -2.5480354362465865, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 21, 
+        "dis1.itername": "4-solver.1-dis1", 
+        "dis1.y1": 3.2271000576908389, 
+        "dis1.y2": 6.470772745899693, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 21, 
+        "dis2.itername": "4-solver.1-dis2", 
+        "dis2.y2": 3.9227373096531069, 
+        "solver.workflow.itername": "4-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.124477
+}
+, "__length_20": 705
+, "iteration_case_17": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7a213d-23e4-11e4-8012-20c9d0478eff", 
+    "_parent_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -1.4729539132841785, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 22, 
+        "dis1.itername": "4-solver.2-dis1", 
+        "dis1.y1": 3.4309428925905658, 
+        "dis1.y2": 5.4515585714010584, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 22, 
+        "dis2.itername": "4-solver.2-dis2", 
+        "dis2.y2": 3.9786046581168799, 
+        "solver.workflow.itername": "4-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.125881
+}
+, "__length_21": 708
+, "iteration_case_18": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7a4c17-23e4-11e4-8013-20c9d0478eff", 
+    "_parent_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.0026290663047747742, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 23, 
+        "dis1.itername": "4-solver.3-dis1", 
+        "dis1.y1": 3.7102250632422815, 
+        "dis1.y2": 4.0551477181424804, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 23, 
+        "dis2.itername": "4-solver.3-dis2", 
+        "dis2.y2": 4.0525186518377057, 
+        "solver.workflow.itername": "4-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.126798
+}
+, "__length_22": 709
+, "iteration_case_19": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7a6ea8-23e4-11e4-8014-20c9d0478eff", 
+    "_parent_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -2.5401409020631149e-06, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 24, 
+        "dis1.itername": "4-solver.4-dis1", 
+        "dis1.y1": 3.7107244435975093, 
+        "dis1.y2": 4.0526508163663415, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 24, 
+        "dis2.itername": "4-solver.4-dis2", 
+        "dis2.y2": 4.0526482762254394, 
+        "solver.workflow.itername": "4-solver.4"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.127678
+}
+, "__length_23": 709
+, "iteration_case_20": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7a9070-23e4-11e4-8015-20c9d0478eff", 
+    "_parent_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -4.2215120288346952e-12, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 25, 
+        "dis1.itername": "4-solver.5-dis1", 
+        "dis1.y1": 3.7107249265534694, 
+        "dis1.y2": 4.0526484015865396, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 25, 
+        "dis2.itername": "4-solver.5-dis2", 
+        "dis2.y2": 4.0526484015823181, 
+        "solver.workflow.itername": "4-solver.5"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.128539
+}
+, "__length_24": 750
+, "iteration_case_21": {
+    "_driver_id": 4459829872, 
+    "_id": "cb79dbb3-23e4-11e4-8010-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 3.7281012207949202, 
+        "_pseudo_2": -0.55072492655346927, 
+        "_pseudo_3": -19.947351598417683, 
+        "dis1.x1": 1.8896796957051253e-16, 
+        "dis1.y1": 3.7107249265534694, 
+        "dis1.z1": 2.1263242007913306, 
+        "dis1.z2": -1.1313172620930345e-13, 
+        "dis2.y2": 4.0526484015823181, 
+        "driver.workflow.itername": "4", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 4, 
+        "solver.itername": "4-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.129221
+}
+, "__length_25": 704
+, "iteration_case_22": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7bd52b-23e4-11e4-8017-20c9d0478eff", 
+    "_parent_id": "cb7bcfbd-23e4-11e4-8016-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.30199789082682393, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 30, 
+        "dis1.itername": "5-solver.1-dis1", 
+        "dis1.y1": 3.1232551821504209, 
+        "dis1.y2": 4.05264840158654, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 30, 
+        "dis2.itername": "5-solver.1-dis2", 
+        "dis2.y2": 3.7506505107597157, 
+        "solver.workflow.itername": "5-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.136894
+}
+, "__length_26": 703
+, "iteration_case_23": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7bf547-23e4-11e4-8018-20c9d0478eff", 
+    "_parent_id": "cb7bcfbd-23e4-11e4-8016-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.17437656154795933, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 31, 
+        "dis1.itername": "5-solver.2-dis1", 
+        "dis1.y1": 3.147415013416567, 
+        "dis1.y2": 3.93184924525581, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 31, 
+        "dis2.itername": "5-solver.2-dis2", 
+        "dis2.y2": 3.7574726837078507, 
+        "solver.workflow.itername": "5-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.137665
+}
+, "__length_27": 708
+, "iteration_case_24": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7c176b-23e4-11e4-8019-20c9d0478eff", 
+    "_parent_id": "cb7bcfbd-23e4-11e4-8016-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -4.219035310937258e-05, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 32, 
+        "dis1.itername": "5-solver.3-dis1", 
+        "dis1.y1": 3.1804260181410502, 
+        "dis1.y2": 3.7667942216333947, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 32, 
+        "dis2.itername": "5-solver.3-dis2", 
+        "dis2.y2": 3.7667520312802854, 
+        "solver.workflow.itername": "5-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.138542
+}
+, "__length_28": 707
+, "iteration_case_25": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7c39e8-23e4-11e4-801a-20c9d0478eff", 
+    "_parent_id": "cb7bcfbd-23e4-11e4-8016-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -5.8438214267653166e-09, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 33, 
+        "dis1.itername": "5-solver.4-dis1", 
+        "dis1.y1": 3.18043400707597, 
+        "dis1.y2": 3.7667542769587938, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 33, 
+        "dis2.itername": "5-solver.4-dis2", 
+        "dis2.y2": 3.7667542711149724, 
+        "solver.workflow.itername": "5-solver.4"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.139427
+}
+, "__length_29": 750
+, "iteration_case_26": {
+    "_driver_id": 4459829872, 
+    "_id": "cb7bcfbd-23e4-11e4-8016-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 3.2035610126662033, 
+        "_pseudo_2": -0.020434007075969873, 
+        "_pseudo_3": -20.233245728885027, 
+        "dis1.x1": -5.5700758420322898e-16, 
+        "dis1.y1": 3.18043400707597, 
+        "dis1.z1": 1.9833771357126713, 
+        "dis1.z2": -7.0460027799351075e-14, 
+        "dis2.y2": 3.7667542711149724, 
+        "driver.workflow.itername": "5", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 5, 
+        "solver.itername": "5-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.140096
+}
+, "__length_30": 706
+, "iteration_case_27": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7d7f2e-23e4-11e4-801c-20c9d0478eff", 
+    "_parent_id": "cb7d7a8a-23e4-11e4-801b-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.012102721375195635, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 38, 
+        "dis1.itername": "6-solver.1-dis1", 
+        "dis1.y1": 3.1577412200487909, 
+        "dis1.y2": 3.766754276958794, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 38, 
+        "dis2.itername": "6-solver.1-dis2", 
+        "dis2.y2": 3.7546515555835982, 
+        "solver.workflow.itername": "6-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.147733
+}
+, "__length_31": 708
+, "iteration_case_28": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7d9c91-23e4-11e4-801d-20c9d0478eff", 
+    "_parent_id": "cb7d7a8a-23e4-11e4-801b-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -0.0069892238127229334, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 39, 
+        "dis1.itername": "6-solver.2-dis1", 
+        "dis1.y1": 3.1587094377588065, 
+        "dis1.y2": 3.7619131884087156, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 39, 
+        "dis2.itername": "6-solver.2-dis2", 
+        "dis2.y2": 3.7549239645959926, 
+        "solver.workflow.itername": "6-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.148468
+}
+, "__length_32": 709
+, "iteration_case_29": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7dbbee-23e4-11e4-801e-20c9d0478eff", 
+    "_parent_id": "cb7d7a8a-23e4-11e4-801b-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -6.7521646496260246e-08, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 40, 
+        "dis1.itername": "6-solver.3-dis1", 
+        "dis1.y1": 3.1600328157778761, 
+        "dis1.y2": 3.7552962983133686, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 40, 
+        "dis2.itername": "6-solver.3-dis2", 
+        "dis2.y2": 3.7552962307917221, 
+        "solver.workflow.itername": "6-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.149358
+}
+, "__length_33": 751
+, "iteration_case_30": {
+    "_driver_id": 4459829872, 
+    "_id": "cb7d7a8a-23e4-11e4-801b-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 3.1834263354797185, 
+        "_pseudo_2": -3.2815777875949692e-05, 
+        "_pseudo_3": -20.244703769208279, 
+        "dis1.x1": 1.3493743865518881e-15, 
+        "dis1.y1": 3.1600328157778761, 
+        "dis1.z1": 1.9776481171938882, 
+        "dis1.z2": 1.752090049574868e-14, 
+        "dis2.y2": 3.7552962307917221, 
+        "driver.workflow.itername": "6", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 6, 
+        "solver.itername": "6-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.150026
+}
+, "__length_34": 708
+, "iteration_case_31": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7f0bae-23e4-11e4-8020-20c9d0478eff", 
+    "_parent_id": "cb7f06f0-23e4-11e4-801f-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -1.9566206879595427e-05, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 45, 
+        "dis1.itername": "7-solver.1-dis1", 
+        "dis1.y1": 3.1599963080505029, 
+        "dis1.y2": 3.7552962983133686, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 45, 
+        "dis2.itername": "7-solver.1-dis2", 
+        "dis2.y2": 3.755276732106489, 
+        "solver.workflow.itername": "7-solver.1"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.157888
+}
+, "__length_35": 708
+, "iteration_case_32": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7f2997-23e4-11e4-8021-20c9d0478eff", 
+    "_parent_id": "cb7f06f0-23e4-11e4-801f-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -1.1299449872659295e-05, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 46, 
+        "dis1.itername": "7-solver.2-dis1", 
+        "dis1.y1": 3.1599978733470531, 
+        "dis1.y2": 3.755288471830617, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 46, 
+        "dis2.itername": "7-solver.2-dis2", 
+        "dis2.y2": 3.7552771723807443, 
+        "solver.workflow.itername": "7-solver.2"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.158653
+}
+, "__length_36": 708
+, "iteration_case_33": {
+    "_driver_id": 4459829680, 
+    "_id": "cb7f4acc-23e4-11e4-8022-20c9d0478eff", 
+    "_parent_id": "cb7f06f0-23e4-11e4-801f-20c9d0478eff", 
+    "data": {
+        "_pseudo_0": -1.758593271006248e-13, 
+        "dis1.derivative_exec_count": 0, 
+        "dis1.exec_count": 47, 
+        "dis1.itername": "7-solver.3-dis1", 
+        "dis1.y1": 3.1600000128789025, 
+        "dis1.y2": 3.7552777741713705, 
+        "dis2.derivative_exec_count": 0, 
+        "dis2.exec_count": 47, 
+        "dis2.itername": "7-solver.3-dis2", 
+        "dis2.y2": 3.7552777741711947, 
+        "solver.workflow.itername": "7-solver.3"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.159518
+}
+, "__length_37": 752
+, "iteration_case_34": {
+    "_driver_id": 4459829872, 
+    "_id": "cb7f06f0-23e4-11e4-801f-20c9d0478eff", 
+    "_parent_id": "cb71b4c0-23e4-11e4-b2fb-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 3.1833939643500284, 
+        "_pseudo_2": -1.2878902388990809e-08, 
+        "_pseudo_3": -20.244722225828806, 
+        "dis1.x1": -1.9660725191092541e-15, 
+        "dis1.y1": 3.1600000128789025, 
+        "dis1.z1": 1.9776388870856019, 
+        "dis1.z2": 4.7540696536319563e-16, 
+        "dis2.y2": 3.7552777741711947, 
+        "driver.workflow.itername": "7", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 7, 
+        "solver.itername": "7-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408042630.16017
+}
+, "iteration_case_35": {
+    "_driver_id": 4459829872, 
+    "_id": "cb7f0699-23e4-11e4-801f-20c9d0478eff", 
+    "_parent_id": "cb7f4acc-23e4-11e4-8022-20c9d0478eff", 
+    "data": {
+        "_pseudo_1": 3.1833939643500284, 
+        "_pseudo_2": -1.2878902388990809e-08, 
+        "_pseudo_3": -20.244722225828806, 
+        "dis1.x1": -1.9660725191092541e-15, 
+        "dis1.y1": 3.1600000128789025, 
+        "dis1.z1": 1.9776388870856019, 
+        "dis1.z2": 4.7540696536319563e-16, 
+        "dis2.y2": 3.7552777741711947, 
+        "driver.workflow.itername": "7", 
+        "solver.derivative_exec_count": 0, 
+        "solver.exec_count": 7, 
+        "solver.itername": "7-solver"
+    }, 
+    "error_message": "", 
+    "error_status": null, 
+    "timestamp": 1408049999.16017
+}
+}
+;
+
+// recursive function to build up the JavaScript structure that w2ui needs for 
+//   display of a sidebar
+function get_nodes( root ) {
+    var nodes = [] ;
+    var children = root.children ;
+    var child ;
+
+    for (var i=0; i < children.length; i++) {
+        child = children[i] ;
+        if ( child.children.length ) {
+            child_nodes = get_nodes( child ) ;
+            nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString(), nodes: child_nodes } ;
+        }
+        else {
+            nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() } ;
+        }
+    }
+    return nodes ;
+}
+
+// widget configuration
+var config = {
+    layout: {
+        name: 'layout',
+        padding: 0,
+        panels: [
+            { type: 'left', size: 200, resizable: true, minSize: 120 },
+            { type: 'main',  minSize: 550, overflow: 'hidden' }
+        ]
+    },
+}
+
+
+
+$( document ).ready(function() {
+
+	    var cases = [];
+	    var it_case_key = "iteration_case_" ;
+        var simulation_info_key = "simulation_info" ;
+        var case_objects = new Object();
+        var simulation_info_id = "" ;
+        // var driver_info_key = "driver_info_" ;
+        // var driver_names = new Object();
+
+        // get all the cases in an associative array with the id as the key
+        $.each( data, function( key , val ) {
+
+           // need to add simulation info object for top of tree of cases
+           if (key.lastIndexOf(simulation_info_key, 0) === 0) {
+                val[ 'children'] = [] ;
+                case_objects[ val.uuid ] = val ;
+                simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
+            }
+
+            // Make a structure to hold all of the case info
+            if (key.lastIndexOf(it_case_key, 0) === 0) {
+                case_number = key.substring(it_case_key.length);
+                val[ 'children'] = [] ;
+                val[ 'case_number'] = case_number ;
+                case_objects[ val._id ] = val ;
+            }
+        }); // end each
+
+        // Loop over the case_objects and connect parents to children and vice versa
+        Object.keys(case_objects).forEach(function(key) {
+            var case_object, parent_id, parent_case_object, parent_case_object_children ;
+            if ( key != simulation_info_id )
+            {
+                case_object = case_objects[key];
+                parent_id = case_object._parent_id ;
+                parent_case_object = case_objects[parent_id] ;
+                parent_case_object_children = parent_case_object.children ;
+                parent_case_object_children[ parent_case_object_children.length ] = case_object ;
+            }
+        }); 
+
+        // Starting from the top "case_object", which is really the sim info data,
+        // Walk down the children leaves, creating the value for nodes in the w2ui call below
+        simulation_info_object = case_objects[simulation_info_id] ;
+        node_tree = get_nodes(simulation_info_object);
+
+
+$(function () {
+     // initialization
+    $('#main').w2layout(config.layout);
+    w2ui.layout.content('left', $().w2sidebar(
+        {
+            name: 'cases',
+            nodes: node_tree ,
+            onClick: function(event) {
+                w2ui.layout.content('main', '<div style="padding: 10px">case ' + event.target + ' clicked</div>' );
+            }  ,          
+        }
+    ));
+});
+
+
+}); // end ready
+
+
+</script>
+
+</html>
