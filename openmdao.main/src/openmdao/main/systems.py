@@ -537,7 +537,7 @@ class System(object):
                      'SimpleSystem': 'simp', 'NonSolverDriverSystem': 'drv',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', 'InnerAssemblySystem': 'inner'}
+                     'AssemblySystem': 'asm', } #'InnerAssemblySystem': 'inner'}
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
@@ -1357,64 +1357,64 @@ class SolverSystem(SimpleSystem):  # Implicit
 
 
 
-class InnerAssemblySystem(SerialSystem):
-    """A system to handle data transfer to an Assembly
-    boundary from its inner components. 
-    """
-    def __init__(self, scope):
-        drvname = scope._top_driver.name
+# class InnerAssemblySystem(SerialSystem):
+#     """A system to handle data transfer to an Assembly
+#     boundary from its inner components. 
+#     """
+#     def __init__(self, scope):
+#         drvname = scope._top_driver.name
 
-        # g = nx.DiGraph()
-        # g.add_node(drvname)
-        # g.node[drvname]['system'] = _create_simple_sys(scope,
-        #                                                scope.get_reduced_graph(),
-        #                                                '_top_driver')
+#         # g = nx.DiGraph()
+#         # g.add_node(drvname)
+#         # g.node[drvname]['system'] = _create_simple_sys(scope,
+#         #                                                scope.get_reduced_graph(),
+#         #                                                '_top_driver')
 
-        # ordering = []
+#         # ordering = []
 
-        # self.bins = bins = []
-        # self.bouts = bouts = []
+#         # self.bins = bins = []
+#         # self.bouts = bouts = []
 
-        # rgraph = scope._reduced_graph
-        # for node, data in rgraph.nodes_iter(data=True):
-        #     if 'comp' not in data:  # it's a collapsed var node
-        #         # boundary in node
-        #         if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
-        #             bins.append(node)
-        #         # boundary out node
-        #         elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
-        #             bouts.append(node)
+#         # rgraph = scope._reduced_graph
+#         # for node, data in rgraph.nodes_iter(data=True):
+#         #     if 'comp' not in data:  # it's a collapsed var node
+#         #         # boundary in node
+#         #         if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
+#         #             bins.append(node)
+#         #         # boundary out node
+#         #         elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
+#         #             bouts.append(node)
 
-        # for name in bins:
-        #     g.add_node(name[0])
-        #     g.add_edge(name, drvname)
-        #     g.node[name]['system'] = InVarSystem(scope, rgraph, name)
-        #     ordering.append(name)
+#         # for name in bins:
+#         #     g.add_node(name[0])
+#         #     g.add_edge(name, drvname)
+#         #     g.node[name]['system'] = InVarSystem(scope, rgraph, name)
+#         #     ordering.append(name)
 
-        # ordering.append(drvname)
+#         # ordering.append(drvname)
 
-        # for name in bouts:
-        #     g.add_node(name)
-        #     g.add_edge(drvname, name)
-        #     g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
-        #     ordering.append(name)
+#         # for name in bouts:
+#         #     g.add_node(name)
+#         #     g.add_edge(drvname, name)
+#         #     g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
+#         #     ordering.append(name)
 
-        reduced = scope._reduced_graph
-        cgraph = reduced2component(reduced)
-        iterset = [c.name for c in scope._top_driver.iteration_set()]
-        collapse_nodes(cgraph, drvname, iterset)
+#         reduced = scope._reduced_graph
+#         cgraph = reduced2component(reduced)
+#         iterset = [c.name for c in scope._top_driver.iteration_set()]
+#         collapse_nodes(cgraph, drvname, iterset)
 
-        super(InnerAssemblySystem, self).__init__(scope, reduced, 
-                                                  cgraph, '_inner_asm')
-        self.set_ordering(nx.topological_sort(cgraph))
+#         super(InnerAssemblySystem, self).__init__(scope, reduced, 
+#                                                   cgraph, '_inner_asm')
+#         self.set_ordering(nx.topological_sort(cgraph))
         
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        if self.is_active():
-            self.vec['u'].set_from_scope(self.scope)
-            super(InnerAssemblySystem, self).run(iterbase, ffd_order,
-                                                 case_label, case_uuid)
-            #self.vec['u'].set_to_scope(self.scope, self.bouts)
+#     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+#         if self.is_active():
+#             self.vec['u'].set_from_scope(self.scope)
+#             super(InnerAssemblySystem, self).run(iterbase, ffd_order,
+#                                                  case_label, case_uuid)
+#             #self.vec['u'].set_to_scope(self.scope, self.bouts)
 
 def _create_simple_sys(scope, graph, name):
     """Given a Component, create the appropriate type
