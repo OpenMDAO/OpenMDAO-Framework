@@ -68,8 +68,6 @@ class FixedPointIterator(Driver):
         self.current_iteration = 0
         self.normval = 1.e99
         self.norm0 = 1.e99
-        system = self.workflow._system
-        system.vec['u'].set_from_scope(self.parent)
         self.run_iteration()
         self.normval = self.norm()
         self.norm0 = self.normval if self.normval != 0.0 else 1.0

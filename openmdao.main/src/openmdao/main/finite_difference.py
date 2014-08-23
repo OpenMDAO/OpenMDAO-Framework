@@ -274,6 +274,7 @@ class FiniteDifference(object):
 
         # Restore final input.
         self.system.vec['u'].set_to_scope(self.scope)
+        #self.system.vec['p'].set_to_scope(self.scope)
 
         # Return outputs to a clean state.
         for src in self.outputs:

@@ -16,7 +16,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, reduced2component
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -200,6 +200,10 @@ class System(object):
         if local:
             return self.local_subsystems()
         return self.all_subsystems()
+
+    def list_subsystems(self, local=False):
+        """Returns the names of our subsystems."""
+        return [s.name for s in self.subsystems(local)]
 
     def flat(self, names):
         """Returns the names from the given list that refer
@@ -483,24 +487,27 @@ class System(object):
         """
         if subsystem is None:
             scatter = self.scatter_full
-            #s = self
         else:
             scatter = subsystem.scatter_partial
-            #s = subsystem
 
         if scatter is not None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            #mpiprint("%s scattering to %s (%s to %s):\n       scatter_conns = %s" % 
-            #             (self.name, s.name, srcvecname, destvecname, scatter.scatter_conns))
-            #srcvec.dump(srcvecname)
+            #if subsystem is None:
+                #mpiprint("%s scattering %s -> %s" % (str(self.name),srcvecname,destvecname))
+            #else:
+                #mpiprint("%s scattering to %s: %s -> %s" % (str(self.name),str(subsystem.name),srcvecname,destvecname))
             scatter(self, srcvec, destvec) #, reverse=??)
 
-            #destvec.dump(destvecname)
-
+            graph = self.scope._reduced_graph
             if destvecname == 'p':
-                destvec.set_to_scope(self.scope, scatter.scatter_conns)
+                if scatter is self.scatter_full:
+                    self.vec['p'].set_to_scope(self.scope)
+                else:
+                    if subsystem._in_nodes:
+                        #self.vec['p'].dump('p')
+                        self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
 
         return scatter
 
@@ -823,10 +830,18 @@ class SimpleSystem(System):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
+            graph = self.scope._reduced_graph
+
             self.scatter('u', 'p')
-            self._comp.set_itername('%s-%s' % (iterbase, self._comp.name))
+            
+            #mpiprint("running %s" % str(self.name))
+            self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            self.vec['u'].set_from_scope(self.scope)
+            #self.vec['u'].set_from_scope(self.scope)
+            
+            # put component outputs in u vector
+            self.vec['u'].set_from_scope(self.scope,
+                                         [n for n in graph.successors(self.name) if n in self.vector_vars])
 
     def linearize(self):
         """ Linearize this component. """
@@ -891,15 +906,10 @@ class ParamSystem(SimpleSystem):
 class InVarSystem(SimpleSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
-    def __init__(self, scope, graph, name):
-        super(InVarSystem, self).__init__(scope, graph, name)
-        self._out_nodes = [name]
-        self._in_nodes = []
-
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
-
+ 
     def applyJ(self):
         """ Set to zero """
         if self.mode == 'fwd':
@@ -912,14 +922,8 @@ class InVarSystem(SimpleSystem):
 class OutVarSystem(SimpleSystem):
     """System wrapper for Assembly output variables (internal perspective)."""
 
-    def __init__(self, scope, graph, name):
-        super(OutVarSystem, self).__init__(scope, graph, name)
-        self._out_nodes = []
-        self._in_nodes = [name]
-
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        if self.is_active():
-            self.vec['u'].set_to_scope(self.scope, self._nodes)
+        pass
 
     def applyJ(self):
         """ Set to zero """
@@ -943,10 +947,8 @@ class EqConstraintSystem(SimpleSystem):
         dest = self._comp._exprobj.rhs.text
         destnode = nodemap.get(dest, dest)
 
-        self._negate = False
         for _, state_node in resid_state_map.items():
             if state_node == srcnode:
-                self._negate = True
                 self._comp._negate = True
                 break
             elif state_node == destnode:
@@ -1091,6 +1093,7 @@ class SerialSystem(CompoundSystem):
 
         for sub in self.all_subsystems():
             self._local_subsystems.append(sub)
+            sub._parent_system = self
             sub.setup_communicators(self.mpi.comm)
 
 
@@ -1184,6 +1187,7 @@ class ParallelSystem(CompoundSystem):
                 self._local_subsystems.append(sub)
 
         for sub in self.local_subsystems():
+            sub._parent_system = self
             sub.setup_communicators(sub_comm)
 
     def setup_variables(self, resid_state_map=None):
@@ -1224,7 +1228,7 @@ class NonSolverDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, graph, driver):
-        driver.setup_systems()
+        #driver.setup_systems()
         scope = driver.parent
         super(NonSolverDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
@@ -1258,7 +1262,7 @@ class SolverSystem(SimpleSystem):  # Implicit
     propagation."""
 
     def __init__(self, graph, driver):
-        driver.setup_systems()
+        #driver.setup_systems()
         scope = driver.parent
         super(SolverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
@@ -1355,57 +1359,62 @@ class SolverSystem(SimpleSystem):  # Implicit
 
 class InnerAssemblySystem(SerialSystem):
     """A system to handle data transfer to an Assembly
-    boundary from its inner components. It splits the entire
-    graph into three pieces, a boundary input system, a top
-    driver system, and a boundary out system.
+    boundary from its inner components. 
     """
     def __init__(self, scope):
         drvname = scope._top_driver.name
 
-        g = nx.DiGraph()
-        g.add_node(drvname)
-        g.node[drvname]['system'] = _create_simple_sys(scope,
-                                                       scope.get_reduced_graph(),
-                                                       '_top_driver')
+        # g = nx.DiGraph()
+        # g.add_node(drvname)
+        # g.node[drvname]['system'] = _create_simple_sys(scope,
+        #                                                scope.get_reduced_graph(),
+        #                                                '_top_driver')
 
-        ordering = []
+        # ordering = []
 
-        self.bins = bins = []
-        self.bouts = bouts = []
+        # self.bins = bins = []
+        # self.bouts = bouts = []
 
-        rgraph = scope._reduced_graph
-        for node, data in rgraph.nodes_iter(data=True):
-            if 'comp' not in data:  # it's a collapsed var node
-                # boundary in node
-                if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
-                    bins.append(node)
-                # boundary out node
-                elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
-                    bouts.append(node)
+        # rgraph = scope._reduced_graph
+        # for node, data in rgraph.nodes_iter(data=True):
+        #     if 'comp' not in data:  # it's a collapsed var node
+        #         # boundary in node
+        #         if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
+        #             bins.append(node)
+        #         # boundary out node
+        #         elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
+        #             bouts.append(node)
 
-        for name in bins:
-            g.add_node(name)
-            g.add_edge(name, drvname)
-            g.node[name]['system'] = InVarSystem(scope, rgraph, name)
-            ordering.append(name)
+        # for name in bins:
+        #     g.add_node(name[0])
+        #     g.add_edge(name, drvname)
+        #     g.node[name]['system'] = InVarSystem(scope, rgraph, name)
+        #     ordering.append(name)
 
-        ordering.append(drvname)
+        # ordering.append(drvname)
 
-        for name in bouts:
-            g.add_node(name)
-            g.add_edge(drvname, name)
-            g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
-            ordering.append(name)
+        # for name in bouts:
+        #     g.add_node(name)
+        #     g.add_edge(drvname, name)
+        #     g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
+        #     ordering.append(name)
 
-        super(InnerAssemblySystem, self).__init__(scope, rgraph, g, '_inner_asm')
-        self.set_ordering(ordering)
+        reduced = scope._reduced_graph
+        cgraph = reduced2component(reduced)
+        iterset = [c.name for c in scope._top_driver.iteration_set()]
+        collapse_nodes(cgraph, drvname, iterset)
+
+        super(InnerAssemblySystem, self).__init__(scope, reduced, 
+                                                  cgraph, '_inner_asm')
+        self.set_ordering(nx.topological_sort(cgraph))
+        
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope)
             super(InnerAssemblySystem, self).run(iterbase, ffd_order,
                                                  case_label, case_uuid)
-            self.vec['u'].set_to_scope(self.scope, self.bouts)
+            #self.vec['u'].set_to_scope(self.scope, self.bouts)
 
 def _create_simple_sys(scope, graph, name):
     """Given a Component, create the appropriate type
@@ -1422,10 +1431,14 @@ def _create_simple_sys(scope, graph, name):
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
         sub = EqConstraintSystem(scope, graph, comp.name)
-    elif comp is not None:
+    elif IComponent.providedBy(comp):
         sub = SimpleSystem(scope, graph, comp.name)
     elif graph.node[name].get('comp') == 'param':
         sub = ParamSystem(scope, graph, name)
+    elif graph.node[name].get('comp') == 'invar':
+        sub = InVarSystem(scope, graph, name)
+    elif graph.node[name].get('comp') == 'outvar':
+        sub = OutVarSystem(scope, graph, name)
     else:
         raise RuntimeError("don't know how to create a System for '%s'" % name)
 

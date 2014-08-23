@@ -864,8 +864,6 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        stream = StringIO()
-        top.driver.workflow.check_gradient(outputs=('comp.f_xy',), stream=stream)
         expected = """\
 ------------------------
 Calculated Gradient
@@ -885,6 +883,8 @@ Average RelError: [^\n]+
 Max RelError: [^ ]+ for comp.f_xy / comp.x
 
 """
+        stream = StringIO()
+        top.driver.workflow.check_gradient(outputs=('comp.f_xy',), stream=stream)
         actual = stream.getvalue()
         if re.match(expected, actual) is None:
             print 'Expected:\n%s' % expected

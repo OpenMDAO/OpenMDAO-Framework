@@ -13,8 +13,8 @@ from numpy import ndarray
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  partition_subsystems, \
-                                  get_comm_if_active, _create_simple_sys
+                                  partition_subsystems, ParamSystem, \
+                                  get_comm_if_active#, _create_simple_sys
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
                                    simple_node_iter
 from openmdao.main.exceptions import RunStopped, TracedError
@@ -668,10 +668,14 @@ class Workflow(object):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
         graph, which contains components and/or other subsystems.
+        Returns the names of any added systems.
         """
+
         scope = self.scope
         name2collapsed = scope.name2collapsed
         reduced = self.parent.get_reduced_graph()
+        reduced = reduced.subgraph(reduced.nodes_iter())
+        added = set()
 
         # remove our driver from the reduced graph
         if self.parent.name in reduced:
@@ -685,11 +689,18 @@ class Workflow(object):
         for param in params:
             reduced.add_node(param, comp='param')
             reduced.add_edge(param, name2collapsed[param])
+            added.add(param)
+            reduced.node[param]['system'] = \
+                       ParamSystem(scope, reduced, param)
 
         if self.scope._setup_inputs is not None:
             for param in simple_node_iter(self.scope._setup_inputs):
-                reduced.add_node(param, comp='param')
-                reduced.add_edge(param, name2collapsed[param])
+                if param not in reduced:
+                    reduced.add_node(param, comp='param')
+                    reduced.add_edge(param, name2collapsed[param])
+                    reduced.node[param]['system'] = \
+                               ParamSystem(scope, reduced, param)
+                added.add(param)
 
         cgraph = reduced2component(reduced)
         #cgraph = cgraph.subgraph(self.get_full_nodeset())
@@ -698,11 +709,6 @@ class Workflow(object):
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
-
-        # create systems for all simple components
-        for node, data in cgraph.nodes_iter(data=True):
-            if isinstance(node, basestring):
-                data['system'] = _create_simple_sys(scope, reduced, node)
 
         # collapse the graph (recursively) into nodes representing
         # subsystems
@@ -727,8 +733,13 @@ class Workflow(object):
 
         self._system.set_ordering(params+[c.name for c in self])
 
+        self._system._parent_system = self.scope._reduced_graph.node[self.parent.name]['system']
+        self._reduced_graph = reduced
+
         for comp in self:
-            comp.setup_systems()
+            added.update(comp.setup_systems())
+
+        return added
 
     def get_req_cpus(self):
         """Return requested_cpus"""

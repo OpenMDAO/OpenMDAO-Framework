@@ -54,6 +54,16 @@ class Simple4(Component):
 
     def execute(self):
         self.outvar = self.outvar + self.invar
+        
+class Div10(Component):
+    """Testing for iteration counting and stop conditions"""
+
+    invar = Float(1., iotype="in")
+    outvar = Float(0., iotype="out")
+
+    def execute(self):
+        self.outvar = self.invar / 10.
+        print "invar, outvar = %s, %s" % (self.invar, self.outvar)
 
 
 class Multi(Component):
@@ -215,6 +225,20 @@ class FixedPointIteratorTestCase(unittest.TestCase):
 
         assert_rel_error(self, self.top.simple.arr[0], .01, .002)
         assert_rel_error(self, self.top.simple.out[0], .001, .0002)
+        self.assertEqual(self.top.driver.current_iteration, 3)
+        
+    def test_simple_div10(self):
+        self.top.add("driver", FixedPointIterator())
+        self.top.add("simple", Div10())
+        self.top.driver.workflow.add('simple')
+
+        self.top.driver.add_constraint('simple.outvar = simple.invar')
+        self.top.driver.add_parameter('simple.invar')
+        self.top.driver.tolerance = .02
+        self.top.run()
+
+        assert_rel_error(self, self.top.simple.invar, .01, .002)
+        assert_rel_error(self, self.top.simple.outvar, .001, .0002)
         self.assertEqual(self.top.driver.current_iteration, 3)
 
     def test_multi_array_multi(self):

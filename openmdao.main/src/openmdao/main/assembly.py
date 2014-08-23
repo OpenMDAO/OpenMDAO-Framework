@@ -44,8 +44,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
                                    map_collapsed_nodes, simple_node_iter, \
-                                   get_unconnected_vars
-from openmdao.main.systems import InnerAssemblySystem
+                                   reduced2component, collapse_nodes
+from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
@@ -1416,13 +1416,48 @@ class Assembly(Component):
     def get_iteration_tree(self):
         return self._top_driver.get_iteration_tree()
 
-    @rbac(('owner', 'user'))
-    def setup_systems(self):
-        self._system = InnerAssemblySystem(self)
-        return self._system
-
     def get_system(self):
         return self._system
+
+    @rbac(('owner', 'user'))
+    def setup_systems(self):
+        added = set()
+
+        rgraph = self._reduced_graph
+        # create systems for all simple components
+        for node, data in rgraph.nodes_iter(data=True):
+            if 'comp' in data:
+                data['system'] = _create_simple_sys(self, rgraph, node)
+
+        # now set up subsystems of our driver and assembly comps
+        for node, data in rgraph.nodes_iter(data=True):
+            if 'comp' in data:
+                comp = getattr(self, node, None)
+                if IComponent.providedBy(comp):
+                    added.update(comp.setup_systems())
+                
+        cgraph = reduced2component(rgraph)
+        iterset = set([c.name for c in self._top_driver.iteration_set()])
+        collapse_nodes(cgraph, self._top_driver.name, iterset)
+        
+        # remove any system nodes in the top level graph that duplicate
+        # nodes already found in subsystems.
+        for name in added:
+            if name in cgraph:
+                cgraph.remove_node(name)
+        
+        if len(cgraph) > 1:
+            self._system = SerialSystem(self, rgraph, cgraph, '_inner_asm')
+            self._system.set_ordering(nx.topological_sort(cgraph))
+        else:
+            # TODO: if top driver has no params/constraints, possibly
+            # remove driver system entirely and just go directly to workflow
+            # system...
+            self._system = rgraph.node[self._top_driver.name]['system']
+
+        # assemblies don't add systems to their parent
+        # graph, so return an empty tuple
+        return ()  
 
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
@@ -1458,7 +1493,7 @@ class Assembly(Component):
                 states.extend(['.'.join((comp.name, s)) for s in comp.list_states()])
         return states
 
-    def pre_setup(self, inputs=None, outputs=None):
+    def setup_graph(self, inputs=None, outputs=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
@@ -1475,7 +1510,9 @@ class Assembly(Component):
             dgraph = self._depgraph
         else:
             calc_relevant = True
-            dsrcs, ddests = self.driver.get_expr_var_depends(recurse=True)
+            dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
+            keep.add(self._top_driver.name)
+            keep.update([c.name for c in self._top_driver.iteration_set()])
 
             if inputs is None and outputs is not None:
                 inputs = list(ddests)
@@ -1488,8 +1525,8 @@ class Assembly(Component):
                 outputs = list(simple_node_iter(outputs))
 
             dgraph = relevant_subgraph(self._depgraph,
-                                        inputs, outputs, 
-                                        keep)
+                                       inputs, outputs, 
+                                       keep)
             keep.update(inputs)
             keep.update(outputs)
 
@@ -1500,13 +1537,28 @@ class Assembly(Component):
 
         self.name2collapsed = map_collapsed_nodes(collapsed_graph)
 
-        if calc_relevant: # add paramcomps for inputs
+        if calc_relevant: # add paramcomps for inputs and outvarcomps for outputs
             for param in inputs:
                 collapsed_graph.add_node(param, comp='param')
                 collapsed_graph.add_edge(param, self.name2collapsed[param])
+            for out in outputs:
+                if collapsed_graph.out_degree(self.name2collapsed[out]) == 0:
+                    collapsed_graph.add_node(out, comp='outvar')
+                    collapsed_graph.add_edge(self.name2collapsed[out], out)
 
+        # add InVarSystems and OutVarSystems for boundary vars
+        for node, data in collapsed_graph.nodes_iter(data=True):
+            if 'boundary' in data and collapsed_graph.degree(node) > 0:
+                if collapsed_graph.in_degree(node) == 0: # input boundary node
+                    collapsed_graph.add_node(node[0], comp='invar')
+                    collapsed_graph.add_edge(node[0], node)
+                elif collapsed_graph.out_degree(node) == 0: # output bndry node
+                    collapsed_graph.add_node(node[1][0], comp='outvar')
+                    collapsed_graph.add_edge(node, node[1][0])
+
+                
         # translate kept nodes to collapsed form
-        coll_keep = set([self.name2collapsed[k] for k in keep])
+        coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
         prune_reduced_graph(self._depgraph, collapsed_graph,
                             coll_keep)
@@ -1514,7 +1566,7 @@ class Assembly(Component):
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():
-            comp.pre_setup()
+            comp.setup_graph()
     
     def post_setup(self):
         for comp in self.get_comps():
@@ -1539,7 +1591,7 @@ class Assembly(Component):
             comm = None
 
         try:
-            self.pre_setup(inputs, outputs)
+            self.setup_graph(inputs, outputs)
             self.setup_systems()
             self.setup_communicators(comm)
             self.setup_variables()
@@ -1550,7 +1602,7 @@ class Assembly(Component):
             mpiprint(traceback.format_exc())
             raise
         finally:
-            self.post_setup()                
+            self.post_setup()   
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

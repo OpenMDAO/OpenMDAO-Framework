@@ -243,6 +243,7 @@ class VecWrapper(VecWrapperBase):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
+                #mpiprint("setting %s to scope: %s" % (str(name),array_val))
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
                     for dest in name[1]:
@@ -312,9 +313,11 @@ class InputVecWrapper(VecWrapperBase):
             if start is not None:
                 if isinstance(name, tuple):
                     for dest in name[1]:
+                        #print "set %s to %s" % (str(dest),array_val)
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
+                    #print "set %s to %s" % (str(name),array_val)
 
 
 class DataTransfer(object):
@@ -441,11 +444,8 @@ class SerialScatter(object):
         if mode:  # reverse?
             raise RuntimeError("reverse mode not supported yet")
         else:   # fwd
-            ## the following debug stuff only works if all vars are size=1
-            #sk = self.svec.keys()
-            #dk = self.dvec.keys()
             #for s,d in zip(self.src_idxs, self.dest_idxs):
-                #print "%s (%s) -> %s (%s)" % (sk[s], srcvec[s], dk[d], destvec[d])
+                #print "%s -> %s" % (srcvec[s], destvec[d])
             #print ""
             assert(len(self.dest_idxs) <= destvec.size)
             assert(len(self.src_idxs) <= srcvec.size)

@@ -108,9 +108,11 @@ class ParameterBase(object):
     def initialize(self, scope):
         """Set parameter to initial value."""
         if self.start is None:
-            self.set(self._untransform(self._expreval.evaluate(scope)))
+            start = self._untransform(self._expreval.evaluate(scope))
         else:
-            self.set(self.start, scope)
+            start = self.start
+            
+        self.set(self.start, self.parent._system.vec['u']) #scope)
 
     def set(self, value, scope=None):
         """Assigns the given value to the target referenced by this parameter,
@@ -279,11 +281,12 @@ class Parameter(ParameterBase):
         """Returns the value of this parameter as a sequence."""
         return [self._untransform(self._expreval.evaluate(scope))]
 
-    def set(self, val, scope=None):
+    def set(self, val, uvec):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
         #mpiprint("setting param %s to %s" % (self.names, transval))
-        self._expreval.set(transval, scope, force=True, tovector=True)
+        #self._expreval.set(transval, scope, force=True, tovector=True)
+        uvec[self._expreval.text][:] = transval
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -388,10 +391,10 @@ class ParameterGroup(object):
         """Returns finite difference step size as a sequence."""
         return self._params[0].get_fd_step()
 
-    def set(self, value, scope=None):
+    def set(self, value, uvec):
         """Set all targets to the given value."""
         for param in self._params:
-            param.set(value, scope)
+            param.set(value, uvec)
 
     def evaluate(self, scope=None):
         """Return the value of the first parameter in our target list as a
@@ -700,7 +703,7 @@ class ArrayParameter(ParameterBase):
         # Forcing a copy to isolate data ownership.
         return self._untransform(self._expreval.evaluate(scope)).flatten()
 
-    def set(self, value, scope=None):
+    def set(self, value, uvec):
         """Assigns the given value to the array referenced by this parameter."""
         copied = False
         if isinstance(value, (list, tuple)):
@@ -718,7 +721,8 @@ class ArrayParameter(ParameterBase):
         else:
             value = value * ones(self.shape, self.dtype)
         transval = self._transform(value)
-        self._expreval.set(transval, scope, force=True, tovector=True)
+        #self._expreval.set(transval, scope, force=True, tovector=True)
+        uvec[self._expreval.text][:] = transval.flatten()
 
     def copy(self):
         """Return a copy of this parameter."""
@@ -1057,7 +1061,7 @@ class HasParameters(object):
         """
         param = self._parameters[name]
         if case is None:
-            param.set(value, self._get_scope(scope))
+            param.set(value, self.parent.vec['u'])
         else:
             for target in param.targets:
                 case.add_input(target, value)
@@ -1083,16 +1087,17 @@ class HasParameters(object):
                              " values (%s)" %
                              (len(values), self.total_parameters()))
         if case is None:
-            scope = self._get_scope(scope)
+            uvec = self.parent._system.vec['u']
+            #scope = self._get_scope(scope)
             start = 0
             for param in self._parameters.values():
                 size = param.size
                 if size == 1:
-                    param.set(values[start], scope)
+                    param.set(values[start], uvec) #scope)
                     start += 1
                 else:
                     end = start + size
-                    param.set(values[start:end], scope)
+                    param.set(values[start:end], uvec) #scope)
                     start = end
         else:
             start = 0

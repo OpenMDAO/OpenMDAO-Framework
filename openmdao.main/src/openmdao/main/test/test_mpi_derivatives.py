@@ -60,13 +60,13 @@ class MPITests(MPITestCase):
         top.comp.x = 3
         top.comp.y = 5
         
-    # def test_run(self):
+    def test_run(self):
 
-    #     self.top.run()
+        self.top.run()
 
-    #     if self.comm.rank == 0:
-    #         self.assertEqual(self.top.comp.f_xy, 93.)
-    #         self.assertEqual(self.top._pseudo_0.out0, 93.)
+        if self.comm.rank == 0:
+            self.assertEqual(self.top.comp.f_xy, 93.)
+            self.assertEqual(self.top._pseudo_0.out0, 93.)
 
     def test_calc_gradient_fwd(self):
         self.top.run()

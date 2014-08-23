@@ -124,7 +124,7 @@ class PseudoComponent(object):
             self._inmap[ref] = in_name
             varmap[ref] = in_name
             rvarmap.setdefault(_get_varname(ref), set()).add(ref)
-            setattr(self, in_name, None)
+            setattr(self, in_name, 0.)
 
         refs = list(destexpr.refs())
         if refs:
@@ -378,7 +378,7 @@ class PseudoComponent(object):
         return 1
 
     def setup_systems(self):
-        pass
+        return ()
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm

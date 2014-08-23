@@ -355,7 +355,7 @@ class DependencyGraph(nx.DiGraph):
             self.add_edges_from([(v, cname) for v in states])
 
         self._update_graph_metadata(obj, cname,
-                                    chain(obj.list_inputs(), obj.list_outputs()))
+                                    obj.list_inputs()+obj.list_outputs())
 
     def _update_graph_metadata(self, obj, cname, names):
         for vname in names:
@@ -1607,6 +1607,8 @@ def _add_collapsed_node(g, src, dests):
                 newname = (src, tuple(newdests))
                 dests[i] = dest.split('@')[0]
                 break
+            if 'boundary' in g.node[dest]:
+                meta['boundary'] = True
         else:
             newname = (src, tuple(dests))
 
@@ -1810,9 +1812,11 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     comps.update(dests)
 
     # keep any var we've been told to keep if its 
-    # parent component is relevant.
+    # parent component is relevant or if it's a component.
     for k in keep:
         if k.split('.', 1)[0] in comps:
+            comps.add(k)
+        elif k in g and g.node[k].get('comp'):
             comps.add(k)
 
     return g.subgraph(comps)
@@ -1824,12 +1828,13 @@ def simple_node_iter(nodes):
     if isinstance(nodes, basestring):
         nodes = (nodes,)
 
+    allnodes = []
     for node in nodes:
         if isinstance(node, basestring):
-            yield node
+            allnodes.append(node)
         else:
-            for n in simple_node_iter(node):
-                yield n
+            allnodes.extend(simple_node_iter(node))
+    return allnodes
 
 def reduced2component(reduced):
     """Return a component graph based on

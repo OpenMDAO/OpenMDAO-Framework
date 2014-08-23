@@ -48,7 +48,7 @@ class Simple(Component):
         exec_order.append(self.name)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        print "%s: a=%s, b=%s, c=%s, d=%s" % (self.get_pathname(),self.a,self.b,self.c,self.d)
+        #print "%s: a=%s, b=%s, c=%s, d=%s" % (self.get_pathname(),self.a,self.b,self.c,self.d)
         
 
 allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6',
@@ -482,6 +482,7 @@ class DependsTestCase2(unittest.TestCase):
         
         self.assertEqual(top.c1.aout[1], 88.)
         self.assertEqual(top.sub.ain[1], 88.)
+        self.assertEqual(top.sub.c2.ain[1], 88.)
         self.assertEqual(top.sub.aout[1], 176.)
         self.assertEqual(top.c3.ain[1], 176.)
 

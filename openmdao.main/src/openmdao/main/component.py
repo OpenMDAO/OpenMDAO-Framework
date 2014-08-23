@@ -1874,7 +1874,7 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def setup_systems(self):
-        pass
+        return ()
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
@@ -1884,7 +1884,7 @@ class Component(Container):
         return set((self.name,))
 
     @rbac(('owner', 'user'))
-    def pre_setup(self, inputs=None, outputs=None):
+    def setup_graph(self, inputs=None, outputs=None):
         pass
 
     @rbac(('owner', 'user'))

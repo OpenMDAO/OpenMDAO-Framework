@@ -133,8 +133,10 @@ class Driver(Component):
         return self.parent._depgraph  # May change this to use a smaller graph later
 
     def get_reduced_graph(self):
-        nodes = [c.name for c in self.iteration_set()]
-        nodes.append(self.name)
+        nodes = set([c.name for c in self.iteration_set()])
+        nodes.add(self.name)
+        if self.parent._setup_inputs:
+            nodes.update(self.parent._setup_inputs)
         return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
 
     def check_config(self, strict=False):
@@ -338,9 +340,9 @@ class Driver(Component):
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
 
-        # force param pseudocomps to get updated values to start
-        # KTM1 - probably don't need this anymore
-        self.update_parameters()
+        # # force param pseudocomps to get updated values to start
+        # # KTM1 - probably don't need this anymore
+        # self.update_parameters()
         
         # Reset the workflow.
         self.workflow.reset()
@@ -352,10 +354,10 @@ class Driver(Component):
         Returns set of paths for changing inputs."""
         return self.workflow.configure_recording(includes, excludes)
 
-    def update_parameters(self):
-        if hasattr(self, 'get_parameters'):
-            for param in self.get_parameters().values():
-                param.initialize(self.get_expr_scope())
+    # def update_parameters(self):
+    #     if hasattr(self, 'get_parameters'):
+    #         for param in self.get_parameters().values():
+    #             param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -494,7 +496,8 @@ class Driver(Component):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self.workflow.setup_systems()
+        self._system = self.parent._reduced_graph.node[self.name]['system']
+        return self.workflow.setup_systems()
 
     #### MPI related methods ####
 
