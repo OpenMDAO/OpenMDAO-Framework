@@ -9,11 +9,10 @@ GUI
 Disclaimer
 ----------
 
-The OpenMDAO GUI is brand new and still under active development. We're working to add functionality 
-and make sure the features that are there work as expected. Please bear with us if you experience any bugs or you 
-find that certain things don't work quite the way you would like them to. The development team would 
-greatly appreciate any feedback you have (good or bad). Just post on our `forum <http://openmdao.org/forum>`_ or 
-:ref:`submit an issue <github_issues>`. 
+The OpenMDAO GUI is still under active development. We're working to add functionality and make sure the features that
+are there work as expected. Please bear with us if you experience any bugs or you  find that certain things don't work
+quite the way you would like them to. The development team would  greatly appreciate any feedback you have (good or
+bad). Just post on our `forum <http://openmdao.org/forum>`_. 
 
 
 Using the GUI

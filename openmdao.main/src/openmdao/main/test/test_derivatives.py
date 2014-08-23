@@ -108,52 +108,6 @@ class BadListDerivsComp(Component):
         return array([[2.0]])
 
 
-class Testcase_provideJ(unittest.TestCase):
-
-    def test_provideJ(self):
-
-        comp = MyComp()
-        J = comp.provideJ()
-
-        inputs = {}
-        outputs = {'xx1': None,
-                   'xx2': None,
-                   'xx3': None,
-                   'xx4': None,
-                   'vvt.a1': None,
-                   'vvt.vt1.d1': None}
-
-        num = 11
-        ident = identity(num)
-
-        for i in range(num):
-
-            inputs['x1'] = ident[i:i+1, 0]
-            inputs['x2'] = ident[i:i+1, 1]
-            inputs['x3'] = ident[i:i+1, 2:4].reshape((2, 1)).flatten()
-            inputs['x4'] = ident[i:i+1, 4:8].reshape((2, 2)).flatten()
-            inputs['vt.a1'] = ident[i:i+1, 8]
-            inputs['vt.vt1.d1'] = ident[i, 9:11].reshape((1, 2)).flatten()
-
-            inputs['xx1'] = zeros((1, ))
-            inputs['xx2'] = zeros((1, ))
-            inputs['xx3'] = zeros((2, 1)).flatten()
-            inputs['xx4'] = zeros((2, 2)).flatten()
-            inputs['vvt.a1'] = zeros((1, ))
-            inputs['vvt.vt1.d1'] = zeros((1, 2)).flatten()
-
-            applyJ(comp, inputs, outputs, [], {}, J)
-
-            self.assertEqual(outputs['xx1'], comp.J[0, i])
-            self.assertEqual(outputs['xx2'], comp.J[1, i])
-            for j in range(2):
-                self.assertEqual(outputs['xx3'][j], comp.J[2+j, i])
-            for j in range(4):
-                self.assertEqual(outputs['xx4'].flat[j], comp.J[4+j, i])
-            self.assertEqual(outputs['vvt.a1'], comp.J[8, i])
-            for j in range(2):
-                self.assertEqual(outputs['vvt.vt1.d1'].flat[j], comp.J[9+j, i])
-
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
 
@@ -660,8 +614,8 @@ class Testcase_derivatives(unittest.TestCase):
         top.comp.y = 5
         top.comp.run()
 
-        orig_gmres = openmdao.main.derivatives.gmres
-        orig_logger = openmdao.main.derivatives.logger
+        orig_gmres = openmdao.main.linearsolver.gmres
+        orig_logger = openmdao.main.linearsolver.logger
 
         # wrap gmres to return an error code
         def my_gmres(A, b, x0=None, tol=1e-05, restart=None,
@@ -670,8 +624,8 @@ class Testcase_derivatives(unittest.TestCase):
                                   xtype, M, callback, restrt)
             return dx, -13
 
-        openmdao.main.derivatives.gmres = my_gmres
-        openmdao.main.derivatives.logger = mocklogger = Mock()
+        openmdao.main.linearsolver.gmres = my_gmres
+        openmdao.main.linearsolver.logger = mocklogger = Mock()
 
         try:
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
@@ -965,7 +919,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
         # Should work without this line. Tell Bret.
-        #top.driver.add_parameter('comp1.x', low=-9999, high=9999)
+        # top.driver.add_parameter('comp1.x', low=-9999, high=9999)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -1027,13 +981,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=[obj], mode='forward')
-
-        edges = top.driver.workflow._edges
-        self.assertEqual(set(edges['~0.comp1|y']), set(['_pseudo_0.in0']))
-        self.assertEqual(set(edges['~0.comp2|y']), set(['_pseudo_0.in2']))
-        self.assertEqual(set(edges['@in0']), set(['~0.comp1|x', '_pseudo_0.in1']))
-        self.assertEqual(set(edges['_pseudo_0.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 4)
 
         assert_rel_error(self, J[0, 0], 13.0, 0.0001)
 
@@ -1165,15 +1112,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
-
-        # Test that our assembly doesn't calc derivatives for unconnected vars
-        inkeys, outkeys = list_deriv_vars(top.nest)
-        J = top.nest.provideJ(inkeys, outkeys)
-        self.assertTrue('x' in inkeys)
-        self.assertTrue('y' in inkeys)
-        self.assertEqual(len(inkeys), 2)
-        self.assertTrue('f_xy' in outkeys)
-        self.assertEqual(len(outkeys), 1)
 
         # Now, let's find the derivative of the unconnected. Behaviour depends
         # on deriv policy.
@@ -1617,13 +1555,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              outputs=['comp2.y'],
-                                              mode='forward')
-        assert_rel_error(self, J[0, 0], 39.0*12, .001)
-        assert_rel_error(self, J[0, 1], -7.0*12, .001)
-        assert_rel_error(self, J[1, 0], -5.0*12, .001)
-        assert_rel_error(self, J[1, 1], 44.0*12, .001)
+        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              #outputs=['comp2.y'],
+                                              #mode='forward')
+        #assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        #assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        #assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        #assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
@@ -2506,7 +2444,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
 
-    def test_free_floating_variables(self):
+    def test_boundary_variables(self):
 
         top = set_as_top(Assembly())
         top.add('comp', Paraboloid())
@@ -2944,21 +2882,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompForward())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'forward'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'adjoint'
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "adjoint mode, but component %s" % 'comp'
-            msg += " only has forward derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_derivT' must be also specified " + \
+                  " if 'apply_deriv' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")
@@ -2966,21 +2895,12 @@ class Testcase_applyJT(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', CompAdjoint())
         model.driver.workflow.add('comp')
-        model.driver.gradient_options.derivative_direction = 'adjoint'
 
-        model.run()
-
-        inputs = ['comp.x']
-        outputs = ['comp.y']
-        J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-
-        model.driver.gradient_options.derivative_direction = 'forward'
         try:
-            J = model.driver.workflow.calc_gradient(inputs=inputs, outputs=outputs)
-        except RuntimeError as err:
-            msg = ": Attempting to calculate derivatives in " + \
-                  "forward mode, but component %s" % 'comp'
-            msg += " only has adjoint derivatives defined."
+            model.run()
+        except Exception as err:
+            msg = "comp: method 'apply_deriv' must be also specified " + \
+                  " if 'apply_derivT' is specified"
             self.assertEqual(str(err), msg)
         else:
             self.fail("exception expected")

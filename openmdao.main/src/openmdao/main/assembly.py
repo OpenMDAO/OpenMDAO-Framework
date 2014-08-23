@@ -38,7 +38,8 @@ from openmdao.main.rbac import rbac
 from openmdao.main.mp_support import is_instance
 from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exprmapper import ExprMapper, PseudoComponent
+from openmdao.main.exprmapper import ExprMapper
+from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
 from openmdao.main.array_helpers import is_differentiable_var
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
@@ -529,7 +530,7 @@ class Assembly(Component):
         connected_bases = allbases - unconnected_bases
 
         collisions = []
-        for drv in chain([self._top_driver], 
+        for drv in chain([self._top_driver],
                           self._top_driver.subdrivers(recurse=True)):
             if has_interface(drv, IHasParameters):
                 for target in drv.list_param_targets():
@@ -645,8 +646,12 @@ class Assembly(Component):
                    self._exprmapper.check_connect(src, dest, self)
 
         if pcomp_type is not None:
-            pseudocomp = PseudoComponent(self, srcexpr, destexpr,
-                                         pseudo_type=pcomp_type)
+            if pcomp_type == 'units':
+                pseudocomp = UnitConversionPComp(self, srcexpr, destexpr,
+                                                 pseudo_type=pcomp_type)
+            else:
+                pseudocomp = PseudoComponent(self, srcexpr, destexpr,
+                                             pseudo_type=pcomp_type)
             self.add(pseudocomp.name, pseudocomp)
             pseudocomp.make_connections(self)
         else:
@@ -752,7 +757,7 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
-        self._system.run(self.itername, ffd_order=self.ffd_order, 
+        self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 
     def configure_recording(self, includes=None, excludes=None, inputs=None):
@@ -1035,64 +1040,6 @@ class Assembly(Component):
             driver.gradient_options.fd_step_type = base_fd_step_type
 
         return result
-
-    def provideJ(self, required_inputs, required_outputs, check_only=False):
-        '''An assembly calculates its Jacobian by calling the calc_gradient
-        method on its base driver. Note, derivatives are only calculated for
-        floats and iterable items containing floats.'''
-
-        # Sub-assembly sourced
-        output_keys = []
-
-        # Parent-assembly sourced
-        self.J_input_keys = []
-        self.J_output_keys = []
-        self._provideJ_bounds = None
-
-        depgraph = self._depgraph
-
-        for src in required_inputs:
-            varname = depgraph.base_var(src)
-            target1 = [n for n in depgraph.successors(varname)
-                               if not n.startswith('parent.')
-                                  and depgraph.base_var(n) != varname]
-            target2 = []
-            if src in depgraph.node:
-                target2 = [n for n in depgraph.successors(src)
-                                   if not n.startswith('parent.')
-                                      and depgraph.base_var(n) != varname
-                                      and n not in target1]
-            if len(target1) == 0 and len(target2) == 0:
-                continue
-
-            self.J_input_keys.append(src)
-
-        for target in required_outputs:
-            varname = depgraph.base_var(target)
-            src = depgraph.predecessors(varname)
-            if len(src) == 0:
-                src = depgraph.get_sources(target)
-                if len(src) == 0:
-                    continue
-
-            src = src[0]
-
-            # If subvar, only ask the assembly to calculate the
-            # elements we need.
-            if target != varname:
-                tail = target[len(varname):]
-                src = '%s%s' % (src, tail)
-
-            output_keys.append(src)
-            self.J_output_keys.append(target)
-
-        if check_only or len(self.J_input_keys) == 0 or len(output_keys) == 0:
-            return None
-
-        return self.driver.calc_gradient(self.J_input_keys, output_keys)
-
-    def list_deriv_vars(self):
-        return self.J_input_keys, self.J_output_keys
 
     def list_components(self):
         ''' List the components in the assembly.
@@ -1466,10 +1413,10 @@ class Assembly(Component):
 
     def setup_communicators(self, comm):
         self._system.setup_communicators(comm)
-        
+
     def setup_variables(self):
         self._system.setup_variables()
- 
+
     def setup_sizes(self):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
@@ -1485,7 +1432,7 @@ class Assembly(Component):
 
     def setup_scatters(self):
         self._system.setup_scatters()
-        
+
     def _get_all_states(self):
         states = []
         for comp in self.get_comps():
@@ -1567,7 +1514,7 @@ class Assembly(Component):
 
         for comp in self.get_comps():
             comp.setup_graph()
-    
+
     def post_setup(self):
         for comp in self.get_comps():
             comp.post_setup()
@@ -1578,7 +1525,7 @@ class Assembly(Component):
 
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
-        prior to execution.  It will also be called if 
+        prior to execution.  It will also be called if
         calc_gradient is called with input or output lists that
         differ from the lists of parameters or objectives/constraints
         that are inherent to the model.
@@ -1607,11 +1554,11 @@ class Assembly(Component):
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
     """Returns a text version of the iteration tree
-    of an OpenMDAO object.  The tree shows which are being 
+    of an OpenMDAO object.  The tree shows which are being
     iterated over by which drivers.
 
     If full is True, show pseudocomponents as well.
-    If derivs is True, include derivative input/output 
+    If derivs is True, include derivative input/output
     information.
     """
     def _dump_iteration_tree(obj, f, tablevel):
@@ -1653,4 +1600,4 @@ def _get_wflow_names(iter_tree):
         else:
             names.append(n[0])
     return names
-    
+

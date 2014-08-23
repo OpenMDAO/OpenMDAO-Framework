@@ -307,6 +307,12 @@ class Component(Container):
                 self.raise_exception("required method 'provideJ' is missing")
             if not hasattr(self, 'list_deriv_vars'):
                 self.raise_exception("required method 'list_deriv_vars' is missing")
+            if not hasattr(self, 'apply_deriv'):
+                self.raise_exception("method 'apply_deriv' must be also specified "
+                                     " if 'apply_derivT' is specified")
+            if not hasattr(self, 'apply_derivT'):
+                self.raise_exception("method 'apply_derivT' must be also specified "
+                                     " if 'apply_deriv' is specified")
 
         if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
             self.raise_exception("required method 'list_deriv_vars' is missing")

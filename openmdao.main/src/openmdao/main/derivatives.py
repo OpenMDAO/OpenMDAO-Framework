@@ -3,7 +3,6 @@
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.main.interfaces import IPseudoComp
 from openmdao.util.graph import list_deriv_vars
 
 from numpy import zeros, vstack, hstack
@@ -112,7 +111,7 @@ def applyJ(system):
 
         # TODO - We shouldn't need to calculate the size of the full arrays,
         # so the cache shouldn't be needed. Cache is None for now.
-        shape_cache = None
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
@@ -181,13 +180,7 @@ def applyJ(system):
                                       o1, o2, odx, osh)
             #print ikey, okey, Jsub
 
-            # for unit pseudocomps, just scalar multiply the args
-            # by the conversion factor
-            if IPseudoComp.providedBy(obj) and obj._pseudo_type == 'units' \
-               and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJ', obj.name, arg, result
 
@@ -225,7 +218,7 @@ def applyJT(system):
 
         # TODO - We shouldn't need to calculate the size of the full arrays,
         # so the cache shouldn't be needed. Cache is None for now.
-        shape_cache = None
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and
         # result dicts for each input and output to have the
@@ -294,13 +287,7 @@ def applyJT(system):
                                       i1, i2, idx, ish).T
             #print ikey, okey, Jsub
 
-            # for unit pseudocomps, just scalar multiply the args
-            # by the conversion factor
-            if IPseudoComp.providedBy(obj) and obj._pseudo_type == 'units' \
-               and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            tmp += Jsub.dot(arg[ikey])
 
     #print 'applyJT', obj.name, arg, result
 
