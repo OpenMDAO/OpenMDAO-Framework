@@ -52,19 +52,6 @@ def _remote_build_and_test(fname=None, pyversion='python', keep=False,
             vername = os.readlink(os.path.join(fname,
                                                'downloads',
                                                'latest'))
-        # find go file and get version number
-        godir = os.path.join(fname, 'downloads', 'latest')
-        gfiles = os.listdir(godir)
-        gfiles = fnmatch.filter(gfiles, 'go-openmdao-*.py')
-        try:
-            gfiles.remove('go-openmdao-dev.py')
-        except:
-            pass
-        if len(gfiles) != 1:
-            print "Need 1 go-openmdao-<version>.py file to run, but found %s" % gfiles
-            sys.exit(-1)
-        #fname = os.path.join(fname, 'downloads', 'latest', gfiles[0])
-        
         remoteargs = ['-f', os.path.join(os.path.basename(fname),
                                          'downloads',
                                          vername,
