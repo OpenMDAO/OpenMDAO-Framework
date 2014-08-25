@@ -54,7 +54,7 @@ def caseset_query_to_csv(data, filename='cases.csv', delimiter=',', quotechar='"
             outputs.append(name)
 
     # Open CSV file
-    outfile = open(filename, 'w')
+    outfile = open(filename, 'wb')
     csv_writer = csv.writer(outfile, delimiter=delimiter,
                                      quotechar=quotechar,
                                      quoting=csv.QUOTE_NONNUMERIC)
