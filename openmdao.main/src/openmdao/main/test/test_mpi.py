@@ -62,7 +62,7 @@ class SellarMDF(Assembly):
 
 class MPITests1(MPITestCase):
 
-    N_PROCS = 2
+    N_PROCS = 4
 
     def test_sellar_params1(self):
         top = set_as_top(SellarMDF())
@@ -75,6 +75,7 @@ class MPITests1(MPITestCase):
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
 
         top.run()
+        return
 
         if self.comm.rank == 0:
             for name, expval in expected.items():

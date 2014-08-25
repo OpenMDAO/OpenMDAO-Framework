@@ -467,8 +467,9 @@ class System(object):
             sz = numpy.sum(sub.local_var_sizes[sub.mpi.rank, :])
             end += sz
             if end-start > arrays['u'][start:end].size:
-                raise RuntimeError("size mismatch: passing [%d,%d] view of size %d array from %s to %s" %
-                            (start,end,arrays['u'][start:end].size,self.name,sub.name))
+                msg = "size mismatch: passing [%d,%d] view of size %d array from %s to %s" % \
+                            (start,end,arrays['u'][start:end].size,self.name,sub.name)
+                raise RuntimeError(msg)
 
             subarrays = {}
             for n in ('u', 'f', 'du', 'df'):
@@ -1152,10 +1153,10 @@ class SerialSystem(CompoundSystem):
             return
 
         for sub in self.all_subsystems():
-            self._local_subsystems.append(sub)
-            sub._parent_system = self
             sub.setup_communicators(self.mpi.comm)
-
+            sub._parent_system = self
+            if sub.is_active():
+                self._local_subsystems.append(sub)
 
 class ParallelSystem(CompoundSystem):
 
@@ -1306,7 +1307,7 @@ class OpaqueDriverSystem(SimpleSystem):
         self._comp.setup_scatters()
 
     def local_subsystems(self):
-        return self.all_subsystems()
+        return [s for s in self.all_subsystems() if s.is_active()]
 
     def all_subsystems(self):
         return (self._comp.workflow._system,)
@@ -1345,7 +1346,7 @@ class TransparentDriverSystem(SimpleSystem):
         self._comp.setup_scatters()
 
     def local_subsystems(self):
-        return self.all_subsystems()
+        return [s for s in self.all_subsystems() if s.is_active()]
 
     def all_subsystems(self):
         return (self._comp.workflow._system,)
