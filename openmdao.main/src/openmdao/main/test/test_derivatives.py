@@ -20,7 +20,7 @@ from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.interfaces import IHasParameters, implements
+from openmdao.main.interfaces import IHasParameters, implements, IHasConstraints, IHasObjective
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -167,7 +167,7 @@ class ParaboloidNoDeriv(Component):
 class SimpleDriver(Driver):
     """Driver with Parameters"""
 
-    implements(IHasParameters)
+    implements(IHasParameters, )
 
 class SimpleComp(Component):
 
