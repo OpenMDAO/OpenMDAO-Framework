@@ -224,8 +224,10 @@ class PETSc_KSP(LinearSolver):
             inputs = outputs
             outputs = temp
             invec = 'u'
+            outvec = 'p'
         else:
             invec = 'p'
+            outvec = 'u'
 
         self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
 
@@ -278,7 +280,7 @@ class PETSc_KSP(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    indices = system.vec['u'].indices(item)
+                    indices = system.vec[outvec].indices(item)
                     nk = len(indices)
 
                     if system.mode == 'forward':
