@@ -16,6 +16,7 @@ def use_proc_files():
     sname = "%s.out" % rank
     MPI_STREAM = open(sname, 'w')
 
+
 def set_print_rank(rank):
     global MPI_PRINT_RANK
     MPI_PRINT_RANK = rank
@@ -88,3 +89,5 @@ class MPI_info(object):
         if MPI:
             return self.comm.rank
         return 0
+
+#use_proc_files()

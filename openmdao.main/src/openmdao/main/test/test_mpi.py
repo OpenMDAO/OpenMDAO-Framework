@@ -27,7 +27,8 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        #mpiprint("%s: c = %s" % (self.name, self.c))
+        # mpiprint("%s: c = %s" % (self.name, self.c))
+        # mpiprint("%s: d = %s" % (self.name, self.d))
 
 
 class SellarMDF(Assembly):
@@ -62,7 +63,7 @@ class SellarMDF(Assembly):
 
 class MPITests1(MPITestCase):
 
-    N_PROCS = 4
+    N_PROCS = 2
 
     def test_sellar_params1(self):
         top = set_as_top(SellarMDF())
@@ -116,19 +117,23 @@ class MPITests1(MPITestCase):
         top.C2.a = np.ones(size, float) * 4.0
         top.C2.b = np.ones(size, float) * 5.0
 
-        mpiprint("pre-run C1.a = %s" % top.C1.a)
-        mpiprint("pre-run C1.b = %s" % top.C1.b)
-        mpiprint("pre-run C2.a = %s" % top.C2.a)
-        mpiprint("pre-run C2.b = %s" % top.C2.b)
+        #mpiprint("pre-run C1.a = %s" % top.C1.a)
+        #mpiprint("pre-run C1.b = %s" % top.C1.b)
+        #mpiprint("pre-run C2.a = %s" % top.C2.a)
+        #mpiprint("pre-run C2.b = %s" % top.C2.b)
 
         top.run()
 
-        mpiprint(top._system.dump(stream=None))
+        #mpiprint(top._system.dump(stream=None))
 
-        mpiprint("post-run C3.a = %s" % top.C3.a)
-        mpiprint("post-run C3.b = %s" % top.C3.b)
-        mpiprint("post-run C3.c = %s" % top.C3.c)
-        mpiprint("post-run C3.d = %s" % top.C3.d)
+        #mpiprint("post-run C1.c = %s" % top.C1.c)
+        #mpiprint("post-run C1.d = %s" % top.C1.d)
+        #mpiprint("post-run C2.c = %s" % top.C2.c)
+        #mpiprint("post-run C2.d = %s" % top.C2.d)
+        #mpiprint("post-run C3.a = %s" % top.C3.a)
+        #mpiprint("post-run C3.b = %s" % top.C3.b)
+        #mpiprint("post-run C3.c = %s" % top.C3.c)
+        #mpiprint("post-run C3.d = %s" % top.C3.d)
 
         if self.comm.rank == 0:
             self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))

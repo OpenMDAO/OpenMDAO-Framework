@@ -71,7 +71,7 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        mpiprint(self.top._system.dump(stream=None))
+        #mpiprint(self.top._system.dump(stream=None))
 
         J = self.top.driver.workflow.calc_gradient(mode='forward')
 

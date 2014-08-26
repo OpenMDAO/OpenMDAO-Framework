@@ -86,8 +86,15 @@ def applyJ(system):
     arg = {}
     for item in system.list_inputs_and_states():
         key = item.partition('.')[-1]
-        #arg[key] = system.sol_vec[item]
-        arg[key] = system.scope._system.vec['du'][item]
+        # FIXME: this is a hack. Sometimes the item we're looking
+        # for can be found in the parent dp vector, but not always,
+        # so we have to find it in another vector...
+        if item in system._parent_system.vec['dp']:
+            arg[key] = system._parent_system.vec['dp'][item]
+        elif item in system.sol_vec:
+            arg[key] = system.sol_vec[item]
+        else:
+            arg[key] = system.scope._system.vec['du'][item]
 
     result = {}
     for item in system.list_outputs_and_residuals():
@@ -200,7 +207,13 @@ def applyJT(system):
     result = {}
     for item in system.list_inputs_and_states():
         key = item.partition('.')[-1]
-        result[key] = system.scope._system.vec['du'][item] #system.rhs_vec][item]
+        # FIXME: same hack as in applyJ
+        if item in system.rhs_vec:
+            result[key] = system.rhs_vec[item]
+        elif item in system.scope._system.vec['du']:
+            result[key] = system.scope._system.vec['du'][item]
+        else :
+            result[key] = system._parent_system.vec['dp'][item]
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
