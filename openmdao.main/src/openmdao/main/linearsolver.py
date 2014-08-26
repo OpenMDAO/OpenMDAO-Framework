@@ -49,7 +49,7 @@ class ScipyGMRES(LinearSolver):
                 msg = 'Array slice inputs and outputs currently not supported.'
                 raise RuntimeError(msg)
             else:
-                err.reraise()
+                raise(exc, RuntimeError)
 
         n_edge = system.vec['f'].array.size
 
