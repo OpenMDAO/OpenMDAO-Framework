@@ -2,7 +2,7 @@ import unittest
 import math
 import ast
 
-from numpy import array
+from numpy import array, eye, arange, roll, tile
 from openmdao.main.datatypes.array import Array
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, \
                                    ExprExaminer
@@ -28,6 +28,8 @@ class A(Component):
     b2d = Array(array([[1.0, 1.0], [2.0, 3.0]]), iotype='out')
     c1d = Array(array([0.0, 1.0, 2.0, 3.0]), iotype='in')
     c2d = Array(array([[0.0, 1.0], [2.0, 3.0]]), iotype='in')
+
+    ext1 = Array(array([eye(3), eye(3), eye(3)]))
 
     def some_funct(self, a, b, op='add'):
         if op == 'add':
@@ -98,6 +100,13 @@ class ExprPrinterTestCase(unittest.TestCase):
             'a/b',
             'a-(b-c)',
             'a+b*c',
+            'a[0]',
+            'a[0::]',
+            'a[:0:]',
+            'a[::0]',
+            'a[(0,0)]',
+            'a[::,0]',
+            'a[0,::]'
             ]
         for check in checks:
             node = ast.parse(check, mode='eval')
@@ -389,6 +398,60 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.text = 'a2d[:,-2]'
         self.assertTrue(all(array([1., 2.]) == ex.evaluate()))
 
+    def test_ext_slice(self):
+        #Convoluted mess to test all cases of 3 x 3 x 3 array
+        #where inner arrays are 2D identity matrices
+        #Should cover all cases
+        for k in xrange(3):
+            expr = 'ext1[{0}, :, :]'.format(k)
+            expr = ExprEvaluator(expr, self.top.a)
+            comp = (eye(3) == expr.evaluate()).all()
+            self.assertTrue(comp)
+
+            expr = 'ext1[:, {0}, :]'.format(k)
+            expr = ExprEvaluator(expr, self.top.a)
+            comp = (tile(roll(array([1., 0., 0.]), k), (3, 1)) == expr.evaluate()).all()
+            self.assertTrue(comp)
+
+            expr = 'ext1[:, :, {0}]'.format(k)
+            expr = ExprEvaluator(expr, self.top.a)
+            comp = (tile(roll(array([1., 0., 0.]), k), (3, 1)) == expr.evaluate()).all()
+            self.assertTrue(comp)
+
+            for j in xrange(3):
+                expr = 'ext1[:, {0}, {1}]'.format(j, k)
+                expr = ExprEvaluator(expr, self.top.a)
+
+                if j == k:
+                    comp = all(array([1., 1., 1.]) == expr.evaluate())
+                    self.assertTrue(comp)
+                else:
+                    comp = all(array([0., 0., 0.]) == expr.evaluate())
+                    self.assertTrue(comp)
+
+                expr = 'ext1[{0}, :, {1}]'.format(j, k)
+                expr = ExprEvaluator(expr, self.top.a)
+                arr = array([1., 0., 0.])
+                comp = all(roll(arr, k) == expr.evaluate())
+                self.assertTrue(comp)
+
+                expr = 'ext1[{0}, {1}, :]'.format(j, k)
+                expr = ExprEvaluator(expr, self.top.a)
+                arr = array([1., 0., 0.])
+                comp = all(roll(arr, k) == expr.evaluate())
+                self.assertTrue(comp)
+
+                for i in xrange(3):
+                    expr = 'ext1[{0}, {1}, {2}]'.format(i, j, k)
+                    expr = ExprEvaluator(expr, self.top.a)
+
+                    if j == k:
+                        comp = all(array([1.]) == expr.evaluate())
+                        self.assertTrue(comp)
+                    else:
+                        comp = all(array([0.]) == expr.evaluate())
+                        self.assertTrue(comp)
+
     def test_boolean(self):
         comp = self.top.comp
         comp.x = 1.
@@ -673,7 +736,6 @@ class ExprEvalTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
 
-
 class ExprExaminerTestCase(unittest.TestCase):
 
     def _examine(self, text, simplevar=True, assignable=True,
@@ -703,6 +765,10 @@ class ExprExaminerTestCase(unittest.TestCase):
                       refs=set(['x[y[5]]']))
         self._examine("x[1:4:2]", simplevar=False, refs=set(['x[1:4:2]']))
         self._examine("x[1:4:y]", simplevar=False, const_indices=False, refs=set(['x[1:4:y]']))
+        self._examine("x[::,0,0]", simplevar=False, refs=set(['x[::,0,0]']))
+        self._examine("x[0,::,0]", simplevar=False, refs=set(['x[0,::,0]']))
+        self._examine("x[0,0,::]", simplevar=False, refs=set(['x[0,0,::]']))
+        #self._examine("x[:,0,0]", simplevar=False, const_indices=False, refs=set(['x[:,0,0]']))
         self._examine("x+y", simplevar=False, assignable=False, refs=set(['x', 'y']))
         self._examine("x*y", simplevar=False, assignable=False, refs=set(['x', 'y']))
         self._examine("x()", simplevar=False, assignable=False, refs=set(['x']))
@@ -711,5 +777,3 @@ class ExprExaminerTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
