@@ -230,6 +230,7 @@ class VecWrapper(VecWrapperBase):
                     array_val[:] = scope.get_flattened_value(name[0])
                 else:
                     array_val[:] = scope.get_flattened_value(name)
+                #mpiprint("getting %s from scope (%s)" % (name, array_val))
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -256,22 +257,18 @@ class InputVecWrapper(VecWrapperBase):
 
         flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
-        varkeys = system.vector_vars.keys()
+        arg_idx = system.arg_idx
         
-        for sub in system.simple_subsystems(local=True):
-            for name in sub._in_nodes:
+        for sub in system.simple_subsystems():
+            for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
-                    var = system.variables[name]
-                    sz = var['size']
-                    assert(sz == system.local_var_sizes[system.mpi.rank,varkeys.index(name)])
-                    if sz > 0:
-                        #scatter_vars.add(name)
-                        end += sz
-                        self._info[name] = (self.array[start:end], start)
-                        if end-start > self.array[start:end].size:
-                            raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
-                                         (system.name,name, [start,end],self[name].size))
-                        start += sz
+                    sz = len(arg_idx[name])
+                    end += sz
+                    self._info[name] = (self.array[start:end], start)
+                    if end-start > self.array[start:end].size:
+                        raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
+                                     (system.name,name, [start,end],self[name].size))
+                    start += sz
 
         # # now add views for subvars that are subviews of their
         # # basevars
@@ -313,11 +310,11 @@ class InputVecWrapper(VecWrapperBase):
             if start is not None:
                 if isinstance(name, tuple):
                     for dest in name[1]:
-                        #print "set %s to %s" % (str(dest),array_val)
+                        #mpiprint("set %s to %s" % (str(dest),array_val))
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
-                    #print "set %s to %s" % (str(name),array_val)
+                    #mpiprint("set %s to %s" % (str(name),array_val))
 
 
 class DataTransfer(object):
@@ -333,9 +330,8 @@ class DataTransfer(object):
 
         #print "noflat: %s" % noflat_vars
 
-        # TODO: remove the following attrs (used for debugging only)
-        self.var_idxs = idx_merge(var_idxs)
-        self.input_idxs = idx_merge(input_idxs)
+        var_idxs = idx_merge(var_idxs)
+        input_idxs = idx_merge(input_idxs)
 
         if not (MPI or scatter_conns or noflat_vars):
             #mpiprint("RETURNING (no xfer) for %s" % system.name)
@@ -343,15 +339,15 @@ class DataTransfer(object):
 
         #mpiprint("%s scatter_conns: %s" % (system.name, scatter_conns))
 
-        if len(self.var_idxs) != len(self.input_idxs):
+        if len(var_idxs) != len(input_idxs):
             raise RuntimeError("ERROR: creating scatter (index size mismatch): (%d != %d) srcs: %s,  dest: %s in %s" %
-                                (len(self.var_idxs), len(self.input_idxs),
-                                  self.var_idxs, self.input_idxs, system.name))
+                                (len(var_idxs), len(input_idxs),
+                                  var_idxs, input_idxs, system.name))
 
         if MPI:
-            var_idx_set = PETSc.IS().createGeneral(self.var_idxs,
+            var_idx_set = PETSc.IS().createGeneral(var_idxs,
                                                    comm=system.mpi.comm)
-            input_idx_set = PETSc.IS().createGeneral(self.input_idxs,
+            input_idx_set = PETSc.IS().createGeneral(input_idxs,
                                                      comm=system.mpi.comm)
 
             if system.app_ordering is not None:
@@ -367,9 +363,9 @@ class DataTransfer(object):
                                       (system.name, var_idxs, input_idxs, system.vec['u'].array.size,
                                        system.vec['p'].array.size, str(err)))
         else:  # serial execution
-            if len(self.var_idxs) and len(self.input_idxs):
-                self.scatter = SerialScatter(system.vec['u'], self.var_idxs,
-                                             system.vec['p'], self.input_idxs)
+            if len(var_idxs) and len(input_idxs):
+                self.scatter = SerialScatter(system.vec['u'], var_idxs,
+                                             system.vec['p'], input_idxs)
 
     def __call__(self, system, srcvec, destvec, reverse=False):
 
@@ -385,10 +381,17 @@ class DataTransfer(object):
             dest = destvec.array
 
         #srcvec.array *= system.vec['u0'].array
-        #if system.mode == 'fwd':
+        # if system.mode == 'adjoint':
+        #     addv = True
+        #     mode = True
+        # else:
+        addv = False
+        mode = False
+
         if self.scatter:
             #mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
-            self.scatter.scatter(src, dest, addv=False, mode=False)
+            #mpiprint("%s -> %s" % (self.var_idxs, self.input_idxs))
+            self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
         if self.noflat_vars:
             if MPI:
@@ -412,6 +415,9 @@ def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an
     array of int indices.
     """
+    # TODO: (for serial at least) convert the collection of indices into
+    #       a slice object (if possible) to avoid any unnecessary copying.  Not sure if petsc
+    #       will allow use of slice objects, but even if it's serial only it may still be worth it.
     if len(idxs) > 0:
         idxs = [i for i in idxs if isinstance(i, int_types) or
                            len(i)>0]
@@ -424,6 +430,7 @@ def idx_merge(idxs):
 
 def petsc_linspace(start, end):
     """ Return a linspace vector of the right int type for PETSc """
+    # TODO: I think numpy.arange is a better choice here...
     #return numpy.arange(start, end, dtype=PETSc.IntType)
     if MPI:
         dtype = PETSc.IntType

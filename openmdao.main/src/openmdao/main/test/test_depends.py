@@ -420,8 +420,8 @@ class DependsTestCase2(unittest.TestCase):
     def test_array_expr(self):
         class Dummy(Component): 
         
-            x = Array([[-1, 1],[-2, 2]],iotype="in",shape=(2,2))
-            y = Array([[-1, 1],[-2, 2]],iotype="out",shape=(2,2))
+            x = Array([[-1., 1.],[-2., 2.]],iotype="in",shape=(2,2), dtype='f')
+            y = Array([[-1., 1.],[-2., 2.]],iotype="out",shape=(2,2), dtype='f')
             
             def execute(self): 
                 self.y = self.x

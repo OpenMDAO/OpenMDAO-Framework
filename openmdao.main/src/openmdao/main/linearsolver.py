@@ -192,7 +192,7 @@ class PETSc_KSP(LinearSolver):
         self.ksp.setType('fgmres')
         self.ksp.setGMRESRestart(1000)
         self.ksp.setPCSide(PETSc.PC.Side.RIGHT)
-        self.ksp.setMonitor(self.Monitor(self))
+        #self.ksp.setMonitor(self.Monitor(self))
 
         pc_mat = self.ksp.getPC()
         pc_mat.setType('python')
@@ -223,6 +223,11 @@ class PETSc_KSP(LinearSolver):
             temp = inputs
             inputs = outputs
             outputs = temp
+            invec = 'u'
+            outvec = 'p'
+        else:
+            invec = 'p'
+            outvec = 'u'
 
         self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
 
@@ -233,7 +238,7 @@ class PETSc_KSP(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            indices = system.vec['u'].indices(param)
+            indices = system.vec[invec].indices(param)
 
             for irhs in indices:
 
@@ -266,7 +271,7 @@ class PETSc_KSP(LinearSolver):
                 system.rhs_vec.petsc_vec.assemble()
                 #system.rhs_vec.array[irhs] = 0.0
                 dx = system.sol_vec.array
-                mpiprint('%s:\n      dx = %s' % (system.name, dx))
+                #mpiprint('%s:\n      dx = %s' % (system.name, dx))
 
                 i = 0
 
@@ -275,7 +280,7 @@ class PETSc_KSP(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    indices = system.vec['u'].indices(item)
+                    indices = system.vec[outvec].indices(item)
                     nk = len(indices)
 
                     if system.mode == 'forward':
@@ -307,7 +312,7 @@ class PETSc_KSP(LinearSolver):
 
         #     system.rhs_vec[varname] += system.sol_vec[varname]
 
-        mpiprint('result = %s' % system.rhs_vec.array[:])
+        #mpiprint('result = %s' % system.rhs_vec.array[:])
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'arg, result', sol_vec.array, rhs_vec.array
@@ -315,7 +320,7 @@ class PETSc_KSP(LinearSolver):
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """
 
-        system = self._system
+        #system = self._system
 
         # TODO - Preconditioning is not supported yet, so mimic an Identity
         # matrix.

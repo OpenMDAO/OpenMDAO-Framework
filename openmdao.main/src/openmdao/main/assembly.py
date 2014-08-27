@@ -1421,7 +1421,7 @@ class Assembly(Component):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
-        # # this will calculate sizes for all subsystems
+        # this will calculate sizes for all subsystems
         self._system.setup_sizes()
 
     def setup_vectors(self, arrays=None):
@@ -1519,9 +1519,7 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.post_setup()
 
-        # load up the u vector so we have the correct values to start
-        if 'u' in self._system.vec:
-            self._system.vec['u'].set_from_scope(self)
+        self._system.vec['u'].set_from_scope(self)
 
     def _setup(self, inputs=None, outputs=None):
         """This is called automatically on the top level Assembly
