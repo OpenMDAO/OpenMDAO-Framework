@@ -320,7 +320,7 @@ class PETSc_KSP(LinearSolver):
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """
 
-        system = self._system
+        #system = self._system
 
         # TODO - Preconditioning is not supported yet, so mimic an Identity
         # matrix.

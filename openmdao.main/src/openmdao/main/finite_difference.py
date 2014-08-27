@@ -152,7 +152,6 @@ class FiniteDifference(object):
         self.get_outputs(self.y_base)
 
         for j, src, in enumerate(self.inputs):
-
             # Users can customize the FD per variable
             if j in self.form_custom:
                 form = self.form_custom[j]
@@ -341,12 +340,13 @@ class FiniteDifference(object):
             srcs = [srcs]
 
         for src in srcs:
-            vec = self.system.vec['u'][src]
+            if src in self.system.vec['u']:
+                vec = self.system.vec['u'][src]
 
-            if undo_complex is True:
-                vec[index] += val.real()
-            else:
-                vec[index] += val
+                if undo_complex is True:
+                    vec[index] += val.real()
+                else:
+                    vec[index] += val
 
     def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for

@@ -71,8 +71,6 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        #mpiprint(self.top._system.dump(stream=None))
-
         J = self.top.driver.workflow.calc_gradient(mode='forward')
 
         if self.comm.rank == 0:
@@ -88,14 +86,14 @@ class MPITests(MPITestCase):
             assert_rel_error(self, J[0, 0], 5.0, 0.0001)
             assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-    # def test_calc_gradient_fd(self):
-    #     self.top.run()
+    def test_calc_gradient_fd(self):
+        self.top.run()
 
-    #     J = self.top.driver.workflow.calc_gradient(mode='fd')
+        J = self.top.driver.workflow.calc_gradient(mode='fd')
 
-    #     if self.comm.rank == 0:
-    #         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-    #         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        if self.comm.rank == 0:
+            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
 
 if __name__ == '__main__':
