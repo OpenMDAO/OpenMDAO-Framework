@@ -27,8 +27,8 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        # mpiprint("%s: c = %s" % (self.name, self.c))
-        # mpiprint("%s: d = %s" % (self.name, self.d))
+        # mpiprint("%s.a = %s" % (self.name, self.a))
+        # mpiprint("%s.b = %s" % (self.name, self.b))
 
 
 class SellarMDF(Assembly):
@@ -117,29 +117,40 @@ class MPITests1(MPITestCase):
         top.C2.a = np.ones(size, float) * 4.0
         top.C2.b = np.ones(size, float) * 5.0
 
-        #mpiprint("pre-run C1.a = %s" % top.C1.a)
-        #mpiprint("pre-run C1.b = %s" % top.C1.b)
-        #mpiprint("pre-run C2.a = %s" % top.C2.a)
-        #mpiprint("pre-run C2.b = %s" % top.C2.b)
-
         top.run()
-
-        #mpiprint(top._system.dump(stream=None))
-
-        #mpiprint("post-run C1.c = %s" % top.C1.c)
-        #mpiprint("post-run C1.d = %s" % top.C1.d)
-        #mpiprint("post-run C2.c = %s" % top.C2.c)
-        #mpiprint("post-run C2.d = %s" % top.C2.d)
-        #mpiprint("post-run C3.a = %s" % top.C3.a)
-        #mpiprint("post-run C3.b = %s" % top.C3.b)
-        #mpiprint("post-run C3.c = %s" % top.C3.c)
-        #mpiprint("post-run C3.d = %s" % top.C3.d)
 
         if self.comm.rank == 0:
             self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
             self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
             self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
             self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+
+    def test_fan_out_in(self):
+        size = 5
+
+        # a comp feeds two parallel comps which feed
+        # another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.d', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.run()
+
+        #mpiprint(top._system.dump(stream=None))
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
 
 
 class MPITests2(MPITestCase):
