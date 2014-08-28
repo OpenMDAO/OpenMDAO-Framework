@@ -41,19 +41,26 @@ if _under_mpirun():
     def create_petsc_vec(comm, arr):
         return PETSc.Vec().createWithArray(arr, comm=comm)
 
-    def mpiprint(msg, rank=-1, stream=sys.stdout):
+    def mpiprint(*args, **kwargs):
+        rank = kwargs.get('rank', -1)
+        stream = kwargs.get('stream', MPI_STREAM)
         if rank < 0:
             if MPI_PRINT_RANK is not None and MPI_PRINT_RANK != MPI.COMM_WORLD.rank:
                 return
         elif rank != MPI.COMM_WORLD.rank:
             return
 
-        for part in str(msg).split('\n'):
-            MPI_STREAM.write("{%d} %s\n" % (MPI.COMM_WORLD.rank, part))
-        try:
-            MPI_STREAM.flush()
-        except:
-            pass
+        # allow for usage like normal print statement
+        if len(args) > 1:
+            stream.write("{%d} " % MPI.COMM_WORLD.rank)
+            for arg in args:
+                stream.write("%s " % arg)
+            stream.write("\n")
+            stream.flush()
+        elif len(args) > 0:
+            for part in str(args[0]).split('\n'):
+                stream.write("{%d} %s\n" % (MPI.COMM_WORLD.rank, part))
+                stream.flush()
 else:
     MPI = None
     PETSc = None
@@ -67,8 +74,9 @@ else:
     def create_petsc_vec(comm, arr):
         return None
 
-    def mpiprint(msg, rank=-1):
-        MPI_STREAM.write(msg)
+    def mpiprint(*args, **kwargs):
+        for arg in args:
+            MPI_STREAM.write("%s " % arg)
         MPI_STREAM.write('\n')
 
 class MPI_info(object):
