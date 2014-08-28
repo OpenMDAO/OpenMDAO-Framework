@@ -198,9 +198,6 @@ class CONMINdriver(Driver):
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution.
 
-    cons_is_linear = Array(zeros(0, 'i'), dtype=numpy_int, iotype='in',
-        desc='Array designating whether each constraint is linear.')
-
     iprint = Enum(0, [0, 1, 2, 3, 4, 5, 101], iotype='in', desc='Print '
                     'information during CONMIN solution. Higher values are '
                     'more verbose. 0 suppresses all output.')
