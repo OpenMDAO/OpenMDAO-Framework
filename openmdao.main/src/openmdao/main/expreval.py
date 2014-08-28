@@ -994,5 +994,3 @@ if __name__ == '__main__':
     print '\nattempting to compile the transformed AST...'
     ast.fix_missing_locations(root)
     code = compile(root, '<string>', 'exec')
-
-
