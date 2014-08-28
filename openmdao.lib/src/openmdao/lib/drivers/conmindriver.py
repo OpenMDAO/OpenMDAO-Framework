@@ -490,18 +490,12 @@ class CONMINdriver(Driver):
         self.g2 = zeros(length, 'd')
 
         # if constraint i is known to be a linear function of design vars,
-        # the user can set cons_is_linear[i] to 1, otherwise set it to 0. This
-        # is not essential and is for efficiency only.
+        # the user can declare it as a linear constraint. This is not
+        # essential and is for efficiency only.
         self._cons_is_linear = zeros(length, 'i')
-        if len(self.cons_is_linear) > 0:
-            if len(self.cons_is_linear) != self.total_ineq_constraints():
-                self.raise_exception('size of cons_is_linear (%d) does not'
-                                     ' match number of constraints (%d)' %
-                                     (len(self.cons_is_linear),
-                                      self.total_ineq_constraints()), ValueError)
-            else:
-                for i, val in enumerate(self.cons_is_linear):
-                    self._cons_is_linear[i] = val
+        for i, constraint in enumerate(self.get_constraints().values()):
+            linear_flag = 1 if constraint.linear else 0
+            self._cons_is_linear[i] = linear_flag
 
         self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = self.total_ineq_constraints()
