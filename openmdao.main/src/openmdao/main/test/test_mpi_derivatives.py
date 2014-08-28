@@ -71,6 +71,10 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
+        mpiprint("varkeys: %s" % self.top._system.vector_vars.keys())
+        mpiprint("u.keys: %s" % self.top._system.vec['u'].keys())
+        mpiprint("p.keys: %s" % self.top._system.vec['p'].keys())
+    
         J = self.top.driver.workflow.calc_gradient(mode='forward')
 
         if self.comm.rank == 0:
@@ -80,6 +84,9 @@ class MPITests(MPITestCase):
     def test_calc_gradient_adjoint(self):
         self.top.run()
 
+        mpiprint("u.keys: %s" % self.top._system.vec['u'].keys())
+        mpiprint("p.keys: %s" % self.top._system.vec['p'].keys())
+    
         J = self.top.driver.workflow.calc_gradient(mode='adjoint')
 
         if self.comm.rank == 0:

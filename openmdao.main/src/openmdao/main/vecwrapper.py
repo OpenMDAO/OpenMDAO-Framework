@@ -19,7 +19,8 @@ class VecWrapperBase(object):
         self._subviews = set()  # set of all names representing subviews of other views
 
         # create the PETSc vector
-        self.petsc_vec = create_petsc_vec(system.mpi.comm, self.array)
+        self.petsc_vec = create_petsc_vec(system.mpi.comm, 
+                                          self.array)
 
         self._initialize(system)
 
@@ -139,20 +140,30 @@ class VecWrapperBase(object):
                 retval = False
         return retval
 
+    #def app_idx(self, vname):
+    #    """Returns the starting index into the distributed 
+    #    vector for the given variable.
+    #    """
+    #    pass
+
+
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
         allvars = system.variables
         vector_vars = system.vector_vars
+        self.app_ordering = system.app_ordering
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
-        for i, (name, var) in enumerate(vector_vars.items()):
+        for ivar, (name, var) in enumerate(vector_vars.items()):
             sz = var['size']
             if sz > 0:
                 end += sz
-                self._info[name] = (self.array[start:end], start)
+                dist_start = numpy.sum(system.local_var_sizes[:, :ivar])
+                # store the view, local start idx, and distributed start idx
+                self._info[name] = (self.array[start:end], start)#, dist_start)
                 if end-start > self.array[start:end].size:
                     raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                  (system.name,name, [start,end],self[name].size))
@@ -367,7 +378,7 @@ class DataTransfer(object):
                 self.scatter = SerialScatter(system.vec['u'], var_idxs,
                                              system.vec['p'], input_idxs)
 
-    def __call__(self, system, srcvec, destvec, reverse=False):
+    def __call__(self, system, srcvec, destvec):
 
         if self.scatter is None and not self.noflat_vars:
             #mpiprint("dataxfer is a noop for system %s" % system.name)
@@ -381,12 +392,14 @@ class DataTransfer(object):
             dest = destvec.array
 
         #srcvec.array *= system.vec['u0'].array
-        # if system.mode == 'adjoint':
-        #     addv = True
-        #     mode = True
-        # else:
-        addv = False
-        mode = False
+        if system.mode == 'adjoint':
+            addv = True
+            mode = True
+            if MPI:
+                dest, src = src, dest
+        else:
+            addv = False
+            mode = False
 
         if self.scatter:
             #mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
@@ -448,17 +461,8 @@ class SerialScatter(object):
         self.dvec = destvec
 
     def scatter(self, srcvec, destvec, addv, mode):
-        if mode:  # reverse?
-            raise RuntimeError("reverse mode not supported yet")
-        else:   # fwd
-            #for s,d in zip(self.src_idxs, self.dest_idxs):
-                #print "%s -> %s" % (srcvec[s], destvec[d])
-            #print ""
-            assert(len(self.dest_idxs) <= destvec.size)
-            assert(len(self.src_idxs) <= srcvec.size)
-            assert(len(self.src_idxs) <= len(self.dest_idxs))
-            
-            destvec[self.dest_idxs] = srcvec[self.src_idxs]
-            #self.svec.dump()
-            #self.dvec.dump()
-            #print "post-scatter, dest = %s" % destvec
+        assert(len(self.dest_idxs) <= destvec.size)
+        assert(len(self.src_idxs) <= srcvec.size)
+        assert(len(self.src_idxs) <= len(self.dest_idxs))
+        
+        destvec[self.dest_idxs] = srcvec[self.src_idxs]

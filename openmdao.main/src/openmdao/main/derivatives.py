@@ -4,7 +4,7 @@
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
 from openmdao.util.graph import list_deriv_vars
-
+from openmdao.main.mpiwrap import mpiprint
 from numpy import zeros, vstack, hstack
 
 # pylint: disable=C0103
@@ -223,6 +223,7 @@ def applyJT(system):
             break
 
     if nonzero is False:
+        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -302,7 +303,7 @@ def applyJT(system):
 
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJT', obj.name, arg, result
+    mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

@@ -81,7 +81,7 @@ class ScipyGMRES(LinearSolver):
                 dx, info = gmres(A, RHS,
                                  tol=options.gmres_tolerance,
                                  maxiter=options.gmres_maxiter)
-                #print 'dx', dx
+                mpiprint('dx', dx)
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"
@@ -111,7 +111,6 @@ class ScipyGMRES(LinearSolver):
                 j += 1
 
         #print inputs, '\n', outputs, '\n', J
-        #print 'dx', dx
         return J
 
     def newton(self):
@@ -155,7 +154,7 @@ class ScipyGMRES(LinearSolver):
         system.rhs_vec.array[:] = 0
         system.applyJ()
 
-        #print 'arg, result', arg, system.rhs_vec.array[:]
+        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
@@ -207,8 +206,9 @@ class PETSc_KSP(LinearSolver):
                                                      comm=system.mpi.comm)
 
     def solve(self, inputs, outputs):
-        """ Run KSP solver to return a Jacobian of outputs with respect to
-        inputs."""
+        """ Run KSP solver to return a Jacobian of outputs with 
+        respect to inputs.
+        """
         system = self._system
 
         self.inputs = inputs
@@ -217,12 +217,13 @@ class PETSc_KSP(LinearSolver):
         num_input = system.get_size(inputs)
         num_output = system.get_size(outputs)
 
+        varkeys = system.vector_vars.keys()
+        rank = system.mpi.rank
+
         J = np.zeros((num_output, num_input))
 
         if system.mode == 'adjoint':
-            temp = inputs
-            inputs = outputs
-            outputs = temp
+            inputs, outputs = outputs, inputs
             invec = 'u'
             outvec = 'p'
         else:
@@ -231,12 +232,31 @@ class PETSc_KSP(LinearSolver):
 
         self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
 
+        mpiprint("starting param loop")
+
         # Forward mode, solve linear system for each parameter
         j = 0
         for param in inputs:
 
             if isinstance(param, tuple):
                 param = param[0]
+
+            # convert param to collapsed name
+            colparam = system.scope.name2collapsed[param]
+
+            # skip param if it's not local to this process
+            #if colparam not in system.vector_vars or system.vector_vars[colparam]['size']==0:
+            #    continue
+
+            #mpiprint("param: %s" % param)
+
+            ##indices = system.vec[invec].indices(param)
+            #ivar = varkeys.index(colparam)
+            #start_idx = np.sum(system.local_var_sizes[:, :ivar])
+            #indices = range(start_idx, start_idx + system.local_var_sizes[rank, ivar])
+            #ind_set = PETSc.IS().createGeneral(indices, comm=system.mpi.comm)
+            #if system.app_ordering is not None:
+            #    ind_set = system.app_ordering.app2petsc(ind_set)
 
             indices = system.vec[invec].indices(param)
 
@@ -253,10 +273,6 @@ class PETSc_KSP(LinearSolver):
                     ind_set = system.app_ordering.app2petsc(ind_set)
                 ind = ind_set.indices[0]
                 system.rhs_buf.setValue(ind, 1.0, addv=False)
-
-                # FIXME: john doesn't appear to need to call assemble
-                # before calling ksp.solve, but if we don't, petsc
-                # complains
                 system.rhs_buf.assemble()
 
                 # Call PetSC KSP to solve the linear system
@@ -271,7 +287,7 @@ class PETSc_KSP(LinearSolver):
                 system.rhs_vec.petsc_vec.assemble()
                 #system.rhs_vec.array[irhs] = 0.0
                 dx = system.sol_vec.array
-                #mpiprint('%s:\n      dx = %s' % (system.name, dx))
+                mpiprint('%s:\n      dx = %s' % (system.name, dx))
 
                 i = 0
 
@@ -280,7 +296,12 @@ class PETSc_KSP(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
+                    coll_out = system.scope.name2collapsed[item]
+                    #if coll_out not in system.sol_vec:
+                    #    continue
+
                     indices = system.vec[outvec].indices(item)
+                    #indices = system.sol_vec.indices(item)
                     nk = len(indices)
 
                     if system.mode == 'forward':
@@ -291,7 +312,6 @@ class PETSc_KSP(LinearSolver):
 
                 j += 1
 
-        #mpiprint("returning from KSP.solve for system %s, rank %d" % (system.name, system.mpi.comm.rank))
         #print inputs, '\n', outputs, '\n', J
         return J
 
@@ -304,18 +324,9 @@ class PETSc_KSP(LinearSolver):
         system.sol_vec.array[:] = sol_vec.array[:]
         system.applyJ()
 
-        # # Extra equation for all requested inputs.
-        # for varname in system._in_nodes:
-
-        #     if isinstance(varname, tuple):
-        #         varname = varname[0]
-
-        #     system.rhs_vec[varname] += system.sol_vec[varname]
-
-        #mpiprint('result = %s' % system.rhs_vec.array[:])
-
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'arg, result', sol_vec.array, rhs_vec.array
+        mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """

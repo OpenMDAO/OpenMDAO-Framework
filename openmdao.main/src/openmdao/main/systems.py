@@ -35,27 +35,7 @@ def compound_setup_scatters(self):
     rank = self.mpi.rank
 
     if MPI:
-        start = numpy.sum(var_sizes[:rank])
-        end = numpy.sum(var_sizes[:rank+1])
-        petsc_idxs = petsc_linspace(start, end)
-
-        app_idxs = []
-        for ivar in xrange(len(self.vector_vars)):
-            start = numpy.sum(var_sizes[:, :ivar]) + numpy.sum(var_sizes[:rank, ivar])
-            end = start + var_sizes[rank, ivar]
-            app_idxs.append(petsc_linspace(start, end))
-
-        if app_idxs:
-            app_idxs = numpy.concatenate(app_idxs)
-
-        #mpiprint("app indices: %s" % app_idxs)
-        #mpiprint("petsc indices: %s" % petsc_idxs)
-
-        app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
-        petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
-        #mpiprint("creating petsc AO for %s" % self.name)
-        self.app_ordering = PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
-                                                   comm=self.mpi.comm)
+        self.app_ordering = self.create_app_ordering()
 
     # mpiprint("app indices:   %s\npetsc indices: %s" %
     #           (app_ind_set.getIndices(), petsc_ind_set.getIndices()))
@@ -225,6 +205,29 @@ class System(object):
     def list_subsystems(self, local=False):
         """Returns the names of our subsystems."""
         return [s.name for s in self.subsystems(local)]
+
+    def create_app_ordering(self):
+        rank = self.mpi.rank
+
+        start = numpy.sum(self.local_var_sizes[:rank])
+        end = numpy.sum(self.local_var_sizes[:rank+1])
+        petsc_idxs = petsc_linspace(start, end)
+
+        app_idxs = []
+        for ivar in xrange(len(self.vector_vars)):
+            start = numpy.sum(self.local_var_sizes[:, :ivar]) + \
+                        numpy.sum(self.local_var_sizes[:rank, ivar])
+            end = start + self.local_var_sizes[rank, ivar]
+            app_idxs.append(petsc_linspace(start, end))
+
+        if app_idxs:
+            app_idxs = numpy.concatenate(app_idxs)
+
+        app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
+        petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
+
+        return PETSc.AO().createBasic(app_ind_set, petsc_ind_set,
+                                      comm=self.mpi.comm)
 
     def flat(self, names):
         """Returns the names from the given list that refer
@@ -524,14 +527,13 @@ class System(object):
             #    mpiprint("%s scattering %s -> %s" % (str(self.name),srcvecname,destvecname))
             #else:
             #    mpiprint("%s scattering to %s: %s -> %s" % (str(self.name),str(subsystem.name),srcvecname,destvecname))
-            scatter(self, srcvec, destvec) #, reverse=??)
+            scatter(self, srcvec, destvec)
 
             if destvecname == 'p':
                 if scatter is self.scatter_full:
                     self.vec['p'].set_to_scope(self.scope)
                 else:
                     if subsystem._in_nodes:
-                        #self.vec['p'].dump('p')
                         self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
 
         return scatter
@@ -912,65 +914,41 @@ class SimpleSystem(System):
 
             self.scatter('du', 'dp')
 
-
-class ParamSystem(SimpleSystem):
-    """System wrapper for Assembly input variables (internal perspective)."""
+class VarSystem(SimpleSystem):
+    """Base class for a System that contains a single variable."""
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         pass
-        #if self.is_active():
-            #self.vec['u'].set_from_scope(self.scope, self._nodes)
+
+    def applyJ(self):
+        pass
+
+    def stop(self):
+        pass
+
+    def linearize(self):
+        pass
+
+
+class ParamSystem(VarSystem):
+    """System wrapper for Assembly input variables (internal perspective)."""
 
     def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
-    def stop(self):
-        pass
 
-    def linearize(self):
-        """ Linearize this component. """
-        pass
-
-
-class InVarSystem(SimpleSystem):
+class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
 
-    def linearize(self):
-        """ Nothing to linearize. """
-        pass
 
-    def applyJ(self):
-        """ Set to zero """
-        if self.mode == 'fwd':
-            self.vec['df'][self.name][:] = 0.0
-
-    def stop(self):
-        pass
-
-
-class OutVarSystem(SimpleSystem):
-    """System wrapper for Assembly output variables (internal perspective)."""
-
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-        pass
-
-    def linearize(self):
-        """ Nothing to linearize. """
-        pass
-
-    def applyJ(self):
-        """ Set to zero """
-        if self.mode == 'fwd':
-            self.vec['df'][self.name][:] = 0.0
-
-    def stop(self):
-        pass
+class OutVarSystem(VarSystem):
+    pass
 
 
 class EqConstraintSystem(SimpleSystem):
@@ -1050,7 +1028,6 @@ class AssemblySystem(SimpleSystem):
             arg = 'df'
             res = 'du'
 
-        name = self.name
         nonzero = False
 
         for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
@@ -1239,11 +1216,6 @@ class ParallelSystem(CompoundSystem):
                         if assigned == limit:
                             break
 
-        #mpiprint("comm size = %d" % comm.size)
-        #mpiprint("subsystems: %s" % [c.name for c in subsystems])
-        #mpiprint("requested_procs: %s" % requested_procs)
-        #mpiprint("assigned_procs: %s" % assigned_procs)
-
         self._local_subsystems = []
 
         for i,sub in enumerate(subsystems):
@@ -1259,13 +1231,11 @@ class ParallelSystem(CompoundSystem):
             color.extend([MPI.UNDEFINED]*(size-assigned))
 
         rank_color = color[rank]
-        #mpiprint("setup_comms Split (par)")
         sub_comm = comm.Split(rank_color)
 
         if sub_comm == MPI.COMM_NULL:
             return
 
-        #mpiprint("RANKCOLOR: %d,  COLOR: %s, comm.size: %d, subcomm.size: %d" % (rank_color, color,comm.size,sub_comm.size))
         for i,sub in enumerate(subsystems):
             if i == rank_color:
                 self._local_subsystems.append(sub)
@@ -1293,11 +1263,8 @@ class ParallelSystem(CompoundSystem):
             sub = None
             names = []
 
-        #mpiprint("%s before ALLGATHER, varkeys=%s" % (self.name, names))
-        #mpiprint("setup_variables Allgather")
         varkeys_list = self.mpi.comm.allgather(names)
 
-        #mpiprint("%s after ALLGATHER, varkeys = %s" % (self.name,varkeys_list))
         for varkeys in varkeys_list:
             for name in varkeys:
                 self._var_meta[name] = self._get_var_info(name)
@@ -1459,66 +1426,6 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         return resid_state_map
 
 
-
-# class InnerAssemblySystem(SerialSystem):
-#     """A system to handle data transfer to an Assembly
-#     boundary from its inner components. 
-#     """
-#     def __init__(self, scope):
-#         drvname = scope._top_driver.name
-
-#         # g = nx.DiGraph()
-#         # g.add_node(drvname)
-#         # g.node[drvname]['system'] = _create_simple_sys(scope,
-#         #                                                scope.get_reduced_graph(),
-#         #                                                '_top_driver')
-
-#         # ordering = []
-
-#         # self.bins = bins = []
-#         # self.bouts = bouts = []
-
-#         # rgraph = scope._reduced_graph
-#         # for node, data in rgraph.nodes_iter(data=True):
-#         #     if 'comp' not in data:  # it's a collapsed var node
-#         #         # boundary in node
-#         #         if rgraph.in_degree(node) == 0 and node[0] != node[1][0]:
-#         #             bins.append(node)
-#         #         # boundary out node
-#         #         elif rgraph.out_degree(node) == 0 and node[0] != node[1][0]:
-#         #             bouts.append(node)
-
-#         # for name in bins:
-#         #     g.add_node(name[0])
-#         #     g.add_edge(name, drvname)
-#         #     g.node[name]['system'] = InVarSystem(scope, rgraph, name)
-#         #     ordering.append(name)
-
-#         # ordering.append(drvname)
-
-#         # for name in bouts:
-#         #     g.add_node(name)
-#         #     g.add_edge(drvname, name)
-#         #     g.node[name]['system'] = OutVarSystem(scope, rgraph, name)
-#         #     ordering.append(name)
-
-#         reduced = scope._reduced_graph
-#         cgraph = reduced2component(reduced)
-#         iterset = [c.name for c in scope._top_driver.iteration_set()]
-#         collapse_nodes(cgraph, drvname, iterset)
-
-#         super(InnerAssemblySystem, self).__init__(scope, reduced, 
-#                                                   cgraph, '_inner_asm')
-#         self.set_ordering(nx.topological_sort(cgraph))
-        
-
-#     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
-#         if self.is_active():
-#             self.vec['u'].set_from_scope(self.scope)
-#             super(InnerAssemblySystem, self).run(iterbase, ffd_order,
-#                                                  case_label, case_uuid)
-#             #self.vec['u'].set_to_scope(self.scope, self.bouts)
-
 def _create_simple_sys(scope, graph, name):
     """Given a Component, create the appropriate type
     of simple System.
@@ -1635,22 +1542,12 @@ def get_comm_if_active(obj, comm):
         return comm
 
     req = obj.get_req_cpus()
-    #mpiprint("rank+1: %d,  req: %d" % (comm.rank+1,req))
     if comm.rank+1 > req:
         color = MPI.UNDEFINED
     else:
         color = 1
 
-    newcomm = comm.Split(color)
-    # if isinstance(obj, System):
-    #     name = obj.name
-    # else:
-    #     name = obj.parent.name
-    # if newcomm == MPI.COMM_NULL:
-    #     mpiprint("NULL COMM for %s" % name)
-    # else:
-    #     mpiprint("active COMM (size %d) for %s" %(newcomm.size, name))
-    return newcomm
+    return comm.Split(color)
 
 def get_full_nodeset(scope, group):
     names = set()
