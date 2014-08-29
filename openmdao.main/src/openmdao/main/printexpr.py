@@ -191,13 +191,16 @@ class ExprPrinter(ast.NodeVisitor):
     def visit_Str(self, node):
         self.append("'%s'" % node.s)
 
-    def visit_Index(self, node):
-        self.append('[')
+    def visit_Subscript(self, node):
         self.visit(node.value)
+        self.append('[')
+        self.visit(node.slice)
         self.append(']')
 
+    def visit_Index(self, node):
+        self.visit(node.value)
+
     def visit_Slice(self, node):
-        self.append('[')
         if node.lower is not None:
             if not(isinstance(node.lower, ast.Name) and node.lower.id == 'None'):
                 self.visit(node.lower)
@@ -209,7 +212,12 @@ class ExprPrinter(ast.NodeVisitor):
         if node.step is not None:
             if not(isinstance(node.step, ast.Name) and node.step.id == 'None'):
                 self.visit(node.step)
-        self.append(']')
+
+    def visit_ExtSlice(self, node):
+        for i,d in enumerate(node.dims):
+            if i>0:
+                self.append(',')
+            self.visit(d)
 
     def visit_List(self, node):
         self.append('[')
@@ -274,7 +282,6 @@ class ExprPrinter(ast.NodeVisitor):
     visit_Expression = _ignore
     visit_Compare    = _ignore
     #visit_UnaryOp    = _ignore
-    visit_Subscript  = _ignore
     visit_Load       = _ignore
     visit_Store      = _ignore
 
@@ -343,6 +350,3 @@ if __name__ == '__main__':
     import sys
     mapping = { 'foo.bar': 'a.b.c.def', 'blah': 'hohum' }
     print transform_expression(sys.argv[1], mapping)
-
-
-
