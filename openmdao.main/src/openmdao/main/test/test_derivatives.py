@@ -2147,6 +2147,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = abs(J[4:, :-1])
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
+        Jdict = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                                  outputs=['nest.y1', 'nest.y2'],
+                                                  mode='forward',
+                                                  return_format='dict')
+        diff = Jdict['nest.y1']['nest.x'] - Jbase
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        diff = Jdict['nest.y2']['nest.x']
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
         J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
                                               outputs=['nest.y1', 'nest.y2'],
                                               mode='adjoint')
@@ -2155,6 +2165,16 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = abs(J[0:4, -1] - Jbase[:, -1])
         assert_rel_error(self, diff.max(), 0.0, .00001)
         diff = abs(J[4:, :-1])
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        Jdict = top.driver.workflow.calc_gradient(inputs=['nest.x'],
+                                                  outputs=['nest.y1', 'nest.y2'],
+                                                  mode='adjoint',
+                                                  return_format='dict')
+        diff = Jdict['nest.y1']['nest.x'] - Jbase
+        assert_rel_error(self, diff.max(), 0.0, .00001)
+
+        diff = Jdict['nest.y2']['nest.x']
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
     def test_large_dataflow(self):

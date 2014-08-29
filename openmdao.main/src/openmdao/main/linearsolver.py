@@ -53,11 +53,20 @@ class ScipyGMRES(LinearSolver):
 
         n_edge = system.vec['f'].array.size
 
-        J = np.zeros((num_output, num_input))
         RHS = np.zeros((n_edge, 1))
         A = LinearOperator((n_edge, n_edge),
                            matvec=self.mult,
                            dtype=float)
+
+        if return_format == 'dict':
+            J = {}
+            for okey in outputs:
+                J[okey] = {}
+                for ikey in inputs:
+                    J[okey][ikey] = None
+        else:
+            J = np.zeros((num_output, num_input))
+
 
         if system.mode == 'adjoint':
             temp = inputs
@@ -71,9 +80,10 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            indices = system.vec['u'].indices(param)
+            in_indices = system.vec['u'].indices(param)
+            jbase = j
 
-            for irhs in indices:
+            for irhs in in_indices:
 
                 RHS[irhs, 0] = 1.0
 
@@ -99,14 +109,25 @@ class ScipyGMRES(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    indices = system.vec['u'].indices(item)
-                    nk = len(indices)
+                    out_indices = system.vec['u'].indices(item)
+                    nk = len(out_indices)
 
-                    if system.mode == 'forward':
-                        J[i:i+nk, j] = dx[indices]
+                    if return_format == 'dict':
+                        if system.mode == 'forward':
+                            if J[item][param] is None:
+                                J[item][param] = np.zeros((nk, len(in_indices)))
+                            J[item][param][:, j-jbase] = dx[out_indices]
+                        else:
+                            if J[param][item] is None:
+                                J[param][item] = np.zeros((nk, len(in_indices)))
+                            J[param][item][j-jbase, :] = dx[out_indices]
+
                     else:
-                        J[j, i:i+nk] = dx[indices]
-                    i += nk
+                        if system.mode == 'forward':
+                            J[i:i+nk, j] = dx[out_indices]
+                        else:
+                            J[j, i:i+nk] = dx[out_indices]
+                        i += nk
 
                 j += 1
 
