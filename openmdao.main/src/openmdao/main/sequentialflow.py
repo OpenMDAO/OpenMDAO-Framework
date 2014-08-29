@@ -34,7 +34,6 @@ class SequentialWorkflow(Workflow):
         self._edges = None
         self._comp_edges = None
         self._derivative_graph = None
-        self._upscoped = False
         self._J_cache = {}
         self._bounds_cache = {}
         self._shape_cache = {}
@@ -72,7 +71,6 @@ class SequentialWorkflow(Workflow):
         self._comp_edges = None
         self._derivative_graph = None
         self.res = None
-        self._upscoped = False
         self._names = None
         self._J_cache = {}
         self._bounds_cache = {}

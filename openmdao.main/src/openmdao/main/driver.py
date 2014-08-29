@@ -191,7 +191,7 @@ class Driver(Component):
         """Returns a tuple of sets of the form (src_set, dest_set)
         containing all dependencies introduced by any parameters,
         objectives, or constraints in this Driver.  If recurse is True,
-        include any refs from subdrivers. 
+        include any refs from subdrivers.
         """
         srcset = set()
         destset = set()
@@ -243,7 +243,7 @@ class Driver(Component):
             # and including comps that we reference in any parameter, objective, or
             # constraint.
             conns = super(Driver, self).get_expr_depends()
-            
+
             getcomps = set([u for u, v in conns if u != self.name])
             setcomps = set([v for u, v in conns if v != self.name])
 
@@ -343,7 +343,7 @@ class Driver(Component):
         # # force param pseudocomps to get updated values to start
         # # KTM1 - probably don't need this anymore
         # self.update_parameters()
-        
+
         # Reset the workflow.
         self.workflow.reset()
         super(Driver, self).run(ffd_order, case_uuid)
@@ -387,7 +387,7 @@ class Driver(Component):
         self._continue = True
 
     def end_iteration(self):
-        """Called at the end of the iteraton loop.  Override this in 
+        """Called at the end of the iteraton loop.  Override this in
         inherited classes to perform some action after iteration is complete.
         """
         pass
@@ -423,7 +423,7 @@ class Driver(Component):
         on its workflow. However, some driver (optimizers in particular) may
         want to define their own behavior.
         """
-        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
+        return self.workflow.calc_gradient(inputs, outputs)
 
     def post_iteration(self):
         """Called after each iteration."""

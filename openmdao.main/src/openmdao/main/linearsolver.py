@@ -30,7 +30,7 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
-    def solve(self, inputs, outputs):
+    def solve(self, inputs, outputs, return_format='array'):
         """ Run GMRES solver to return a Jacobian of outputs
         with respect to inputs.
         """
@@ -206,7 +206,7 @@ class PETSc_KSP(LinearSolver):
         system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
                                                      comm=system.mpi.comm)
 
-    def solve(self, inputs, outputs):
+    def solve(self, inputs, outputs, return_format='array'):
         """ Run KSP solver to return a Jacobian of outputs with respect to
         inputs."""
         system = self._system
