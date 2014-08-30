@@ -736,7 +736,7 @@ class System(object):
             subsystem.linearize()
 
     def calc_gradient(self, inputs, outputs, mode='auto', options=None,
-                      iterbase=''):
+                      iterbase='', return_format='array'):
         """ Return the gradient for this system. """
 
         # Mode Precedence
@@ -757,14 +757,15 @@ class System(object):
 
         if mode == 'fd':
             if self.fd_solver is None:
-                self.fd_solver = FiniteDifference(self, inputs, outputs)
+                self.fd_solver = FiniteDifference(self, inputs, outputs,
+                                                  return_format)
             return self.fd_solver.solve(iterbase=iterbase)
         else:
             self.linearize()
             self.rhs_vec.array[:] = 0.0
             self.vec['df'].array[:] = 0.0
 
-        return self.ln_solver.solve(inputs, outputs)
+        return self.ln_solver.solve(inputs, outputs, return_format)
 
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
@@ -959,12 +960,12 @@ class SimpleSystem(System):
             graph = self.scope._reduced_graph
 
             self.scatter('u', 'p')
-            
+
             #mpiprint("running %s" % str(self.name))
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
             #self.vec['u'].set_from_scope(self.scope)
-            
+
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,
                                          [n for n in graph.successors(self.name) if n in self.vector_vars])

@@ -660,7 +660,7 @@ class _JSONWriter(object):
     def __init__(self, out, indent=4, sort_keys=True):
         if isinstance(out, basestring):
             self._out = open(out, 'w')
-        elif 'w' in out.mode and 'b' not in out.mode:
+        elif ('w' in out.mode or 'a' in out.mode) and 'b' not in out.mode:
             self._out = out
         else:
             raise ValueError("'out' must be a writable file-like object in"
@@ -682,8 +682,9 @@ class _JSONWriter(object):
     def close(self):
         """ Close file. """
         self._out.write('}\n')
-        self._out.close()
 
+        if self._out.mode == 'w':
+            self._out.close()
 
 class _BSONWriter(object):
     """ Writes case data as BSON. """
@@ -706,4 +707,3 @@ class _BSONWriter(object):
     def close(self):
         """ Close file. """
         self._out.close()
-

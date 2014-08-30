@@ -15,7 +15,7 @@ class FiniteDifference(object):
     """ Helper object for performing finite difference on a portion of a model.
     """
 
-    def __init__(self, system, inputs, outputs):
+    def __init__(self, system, inputs, outputs, return_format='array'):
         """ Performs finite difference on the components in a given
         pseudo_assembly. """
 

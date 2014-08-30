@@ -184,8 +184,24 @@ class Workflow(object):
         if err is not None:
             err.reraise()
 
-    def calc_gradient(self, inputs=None, outputs=None,
-                      upscope=False, mode='auto'):
+    def calc_gradient(self, inputs=None, outputs=None, mode='auto',
+                      return_format='array'):
+        """Returns the Jacobian of derivatives between inputs and outputs.
+
+        inputs: list of strings
+            List of OpenMDAO inputs to take derivatives with respect to.
+
+        outputs: list of strings
+            Lis of OpenMDAO outputs to take derivatives of.
+
+        mode: string in ['forward', 'adjoint', 'auto']
+            Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
+            forward or adjoint based on problem dimensions.
+
+        return_format: string in ['array', 'dict']
+            Format for return value. Default is array, but some optimizers may
+            want a dictionary instead.
+        """
 
         parent = self.parent
         reset = False
@@ -228,7 +244,8 @@ class Workflow(object):
 
         return self._system.calc_gradient(inputs, outputs, mode=mode,
                                           options=self.parent.gradient_options,
-                                          iterbase=self._iterbase())
+                                          iterbase=self._iterbase(),
+                                          return_format=return_format)
 
     def calc_newton_direction(self):
         """ Solves for the new state in Newton's method and leaves it in the

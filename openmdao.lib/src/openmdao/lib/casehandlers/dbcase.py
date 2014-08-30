@@ -3,7 +3,13 @@ DB (Python's sqlite.)
 """
 
 import sys
-import sqlite3
+
+try:
+    import sqlite3
+except ImportError:
+    import logging
+    logging.error('No sqlite3 support for DBCaseIterator or DBCaseRecorder')
+
 import time
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser

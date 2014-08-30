@@ -48,6 +48,7 @@ def _parse_constraint(expr_string):
 
 
 def _get_scope(obj, scope=None):
+    """ Trys to get the scope from the parent driver. """
     if scope is None:
         try:
             return obj.parent.get_expr_scope()
@@ -84,6 +85,9 @@ class Constraint(object):
         self.pcomp_name = None
         self._size = None
 
+        # Linear flag: constraints are nonlinear by default
+        self.linear = False
+
     @property
     def size(self):
         """Total scalar items in this constraint."""
@@ -100,8 +104,8 @@ class Constraint(object):
                 subtype = 'equality'
             else:
                 subtype = 'inequality'
-            
-            # check for simple structure of equality constraint, 
+
+            # check for simple structure of equality constraint,
             # either
             #     var1 = var2
             #  OR
@@ -110,7 +114,7 @@ class Constraint(object):
             #     var1 = 0
             lrefs = list(self.lhs.ordered_refs())
             rrefs = list(self.rhs.ordered_refs())
-        
+
             try:
                 leftval = float(self.lhs.text)
             except ValueError:
@@ -119,7 +123,7 @@ class Constraint(object):
             try:
                 rightval = float(self.rhs.text)
             except ValueError:
-                rightval = None    
+                rightval = None
 
             pseudo_class = PseudoComponent
 
@@ -145,10 +149,10 @@ class Constraint(object):
                 elif len(lrefs) == 1 and len(rrefs) == 0 and rightval is not None:
                     pseudo_class = SimpleEQ0PComp
 
-            pseudo = pseudo_class(self.lhs.scope, 
+            pseudo = pseudo_class(self.lhs.scope,
                                   self._combined_expr(),
                                   pseudo_type='constraint',
-                                  subtype=subtype, 
+                                  subtype=subtype,
                                   exprobject=self)
 
             self.pcomp_name = pseudo.name
@@ -218,6 +222,7 @@ class Constraint(object):
         return ExprEvaluator(newexpr, scope)
 
     def copy(self):
+        """ Returns a copy of our self. """
         return Constraint(str(self.lhs), self.comparator, str(self.rhs),
                           scope=self.lhs.scope)
 
@@ -236,11 +241,13 @@ class Constraint(object):
         """Returns the gradient of the constraint eq/ineq as a tuple of the
         form (lhs, rhs, comparator, is_violated)."""
 
-        lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+        lhs = self.lhs.evaluate_gradient(scope=scope, stepsize=stepsize,
+                                         wrt=wrt)
         if isinstance(self.rhs, float):
             rhs = 0.
         else:
-            rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize, wrt=wrt)
+            rhs = self.rhs.evaluate_gradient(scope=scope, stepsize=stepsize,
+                                             wrt=wrt)
 
         return (lhs, rhs, self.comparator, not _ops[self.comparator](lhs, rhs))
 
@@ -275,6 +282,8 @@ class Constraint(object):
 
 
 class _HasConstraintsBase(object):
+    """ Base class for the inequalty and equality constraint driver delegates.
+    """
     _do_not_promote = ['get_expr_depends', 'get_referenced_compnames',
                        'get_referenced_varpaths']
 
@@ -409,7 +418,7 @@ class _HasConstraintsBase(object):
         """
         names = set()
         for constraint in self._constraints.values():
-            names.update(constraint.get_referenced_varpaths(copy=False, 
+            names.update(constraint.get_referenced_varpaths(copy=False,
                                                             refs=refs))
         return names
 
@@ -441,7 +450,7 @@ class HasEqConstraints(_HasConstraintsBase):
     constraints but does not support inequality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -454,18 +463,25 @@ class HasEqConstraints(_HasConstraintsBase):
 
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
+
+        linear: bool
+            Set this to True to define this constraint is linear. Behavior
+            depends on whether and how your optimizer supports it. Deault is
+            False or nonlinear constraint.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self.parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._add_eq_constraint(lhs, rhs, name, scope)
+            self._add_eq_constraint(lhs, rhs, name=name, scope=scope,
+                                    linear=linear)
         else:
             msg = "Inequality constraints are not supported on this driver"
             self.parent.raise_exception(msg, ValueError)
 
-    def _add_eq_constraint(self, lhs, rhs, name=None, scope=None):
+    def _add_eq_constraint(self, lhs, rhs, name=None, scope=None,
+                           linear=False):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
@@ -486,6 +502,7 @@ class HasEqConstraints(_HasConstraintsBase):
                                         % name, ValueError)
 
         constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
+        constraint.linear = linear
         constraint.activate(self.parent)
 
         name = ident if name is None else name
@@ -547,7 +564,7 @@ class HasIneqConstraints(_HasConstraintsBase):
     constraints but does not support equality constraints.
     """
 
-    def add_constraint(self, expr_string, name=None, scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -560,14 +577,21 @@ class HasIneqConstraints(_HasConstraintsBase):
 
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
+
+        linear: bool
+            Set this to True to define this constraint is linear. Behavior
+            depends on whether and how your optimizer supports it. Deault is
+            False or nonlinear constraint.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self.parent.raise_exception(str(err), type(err))
-        self._add_ineq_constraint(lhs, rel, rhs, name, scope)
+        self._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,
+                                  linear=linear)
 
-    def _add_ineq_constraint(self, lhs, rel, rhs, name=None, scope=None):
+    def _add_ineq_constraint(self, lhs, rel, rhs, name=None, scope=None,
+                             linear=False):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right-hand side.
         """
@@ -592,6 +616,7 @@ class HasIneqConstraints(_HasConstraintsBase):
                                         % name, ValueError)
 
         constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
+        constraint.linear = linear
         constraint.activate(self.parent)
 
         if name is None:
@@ -687,7 +712,7 @@ class HasConstraints(object):
         """
         return self._eq._item_count() + self._ineq._item_count()
 
-    def add_constraint(self, expr_string, name=None, scope=None):
+    def add_constraint(self, expr_string, name=None, scope=None, linear=False):
         """Adds a constraint in the form of a boolean expression string
         to the driver.
 
@@ -700,15 +725,22 @@ class HasConstraints(object):
 
         scope: object (optional)
             The object to be used as the scope when evaluating the expression.
+
+        linear: bool
+            Set this to True to define this constraint is linear. Behavior
+            depends on whether and how your optimizer supports it. Deault is
+            False or nonlinear constraint.
         """
         try:
             lhs, rel, rhs = _parse_constraint(expr_string)
         except Exception as err:
             self.parent.raise_exception(str(err), type(err))
         if rel == '=':
-            self._eq._add_eq_constraint(lhs, rhs, name, scope)
+            self._eq._add_eq_constraint(lhs, rhs, name=name, scope=scope,
+                                        linear=linear)
         else:
-            self._ineq._add_ineq_constraint(lhs, rel, rhs, name, scope)
+            self._ineq._add_ineq_constraint(lhs, rel, rhs, name=name, scope=scope,
+                                            linear=linear)
 
     def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
@@ -773,23 +805,26 @@ class HasConstraints(object):
         self._ineq.clear_constraints()
 
     def copy_constraints(self):
+        """ Copies all constraints """
         dct = self._eq.copy_constraints()
         dct.update(self._ineq.copy_constraints())
         return dct
 
     def _add_ineq_constraint(self, lhs, comparator, rhs, scaler, adder,
-                             name=None, scope=None):
+                             name=None, scope=None, linear=False):
         """Adds an inequality constraint as three strings; a left-hand side,
         a comparator ('<','>','<=', or '>='), and a right hand side.
         """
         self._ineq._add_ineq_constraint(lhs, comparator, rhs, scaler, adder,
-                                        name, scope)
+                                        name=name, scope=scope, linear=linear)
 
-    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None, scope=None):
+    def _add_eq_constraint(self, lhs, rhs, scaler, adder, name=None,
+                           scope=None, linear=False):
         """Adds an equality constraint as two strings, a left-hand side and
         a right-hand side.
         """
-        self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name, scope)
+        self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name=name,
+                                    scope=scope, linear=linear)
 
     def get_eq_constraints(self):
         """Returns an ordered dict of equality constraint objects."""

@@ -81,7 +81,7 @@ class NewtonSolver(Driver):
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
-        print "Norm:", f_norm
+        print "Norm: ", f_norm, 0
 
         itercount = 0
         alpha = self.alpha
@@ -97,7 +97,7 @@ class NewtonSolver(Driver):
             self.post_iteration()
 
             f_norm = norm(fvec.array)
-            print "Norm:", f_norm
+            print "Norm: ", f_norm, itercount+1
             itercount += 1
 
             ls_itercount = 0
