@@ -48,7 +48,7 @@ def _parse_constraint(expr_string):
 
 
 def _get_scope(obj, scope=None):
-    """ Trys to get the scope from the parent driver. """
+    """ Tries to get the scope from the parent driver. """
     if scope is None:
         try:
             return obj.parent.get_expr_scope()

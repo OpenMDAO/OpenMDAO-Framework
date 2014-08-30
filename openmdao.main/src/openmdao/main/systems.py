@@ -223,7 +223,7 @@ class System(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
-        mpiprint("app_order: %s -> %s" % (app_idxs, petsc_idxs))
+        #mpiprint("app_order: %s -> %s" % (app_idxs, petsc_idxs))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
         petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
 
@@ -833,7 +833,7 @@ class System(object):
         if self.app_ordering is not None:
             ind_set = self.app_ordering.app2petsc(ind_set)
 
-        mpiprint("global indices: %s" % ind_set.indices)
+        #mpiprint("global indices: %s" % ind_set.indices)
 
         return ind_set.indices
 
@@ -1034,9 +1034,9 @@ class ParamSystem(VarSystem):
     def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
-            mpiprint("param sys %s: adding %s to %s" %
-                            (self.name, self.sol_vec[self.name],
-                                self.rhs_vec[self.name]))
+            # mpiprint("param sys %s: adding %s to %s" %
+            #                 (self.name, self.sol_vec[self.name],
+            #                     self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
 
