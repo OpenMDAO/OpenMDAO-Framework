@@ -392,14 +392,12 @@ class DataTransfer(object):
             dest = destvec.array
 
         #srcvec.array *= system.vec['u0'].array
-        if system.mode == 'adjoint':
-            addv = True
-            mode = True
-            if MPI:
-                dest, src = src, dest
-        else:
-            addv = False
-            mode = False
+        addv = mode = False
+        #if system.mode == 'adjoint':
+            #addv = True
+            #mode = True
+            # if MPI:
+            #     dest, src = src, dest
 
         if self.scatter:
             #mpiprint("%s scattering %s" % (system.name, self.scatter_conns))

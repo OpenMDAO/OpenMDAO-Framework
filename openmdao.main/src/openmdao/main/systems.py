@@ -182,8 +182,8 @@ class System(object):
         self.rhs_vec = None
         self.ln_solver = None
         self.fd_solver = None
-        self.sol_buf = None
-        self.rhs_buf = None
+        #self.sol_buf = None
+        #self.rhs_buf = None
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
@@ -223,6 +223,7 @@ class System(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
+        mpiprint("app_order: %s -> %s" % (app_idxs, petsc_idxs))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
         petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
 
@@ -234,6 +235,42 @@ class System(object):
         to variables that are flattenable to float arrays.
         """
         return [n for n in names if self._var_meta[n].get('flat')]
+
+    def get_unique_vars(self, vnames):
+        """
+        Returns a dict of variables and which
+        process (lowest rank) is 'responsible' for each
+        variable.
+        """
+
+        # FIXME: this currently doesn't handle distributed vars, 
+        #  i.e. variables that have parts located on different
+        #  procs.
+        comm = self.mpi.comm
+
+        myvars = self.vector_vars.keys()
+        collname = self.scope.name2collapsed
+
+        all_keys = comm.allgather(vnames)
+
+        mpiprint("allkeys: %s" % all_keys)
+       
+        var2proc = {}
+        for proc, names in enumerate(all_keys):
+            for name in names:
+                mpiprint("name: %s" % name)
+                if name not in var2proc:
+                    try:
+                        idx = myvars.index(collname[name])
+                    except ValueError:
+                        mpiprint('valerr')
+                        continue
+
+                    mpiprint("self.local_var_sizes[proc, idx]: %s" % self.local_var_sizes[proc, idx])
+                    if self.local_var_sizes[proc, idx] > 0:
+                        var2proc[name] = proc
+ 
+        return var2proc    
 
     def _get_owned_args(self):
         args = set()
@@ -307,17 +344,32 @@ class System(object):
         """Return the total local size of the variables
         corresponding to the given names.
         """
-        pvec = self.scope._system.vec['p']
+        # pvec = self.scope._system.vec['p']
+        # size = 0
+        # for name in names:
+        #     # Param target support.
+        #     if isinstance(name, tuple):
+        #         name = name[0]
+
+        #     try:
+        #         size += pvec[name].size
+        #     except KeyError:
+        #         size += self.vec['u'][name].size
+        var_sizes = self.scope._system.local_var_sizes
+        varkeys = self.scope._system.vector_vars.keys()
+        collnames = self.scope.name2collapsed
+        procs = range(self.mpi.size)
         size = 0
         for name in names:
-            # Param target support.
             if isinstance(name, tuple):
                 name = name[0]
 
-            try:
-                size += pvec[name].size
-            except KeyError:
-                size += self.vec['u'][name].size
+            idx = varkeys.index(collnames[name])
+            for proc in procs:
+                if var_sizes[proc, idx] > 0:
+                    size += var_sizes[proc, idx]
+                    break
+
         return size
 
     def set_ordering(self, ordering):
@@ -740,6 +792,51 @@ class System(object):
             for s in child.iterate_all(local=local):
                 yield s
 
+    def _compute_derivatives(self, ind, rank):
+        """ Solves derivatives of system (direct/adjoint).
+        ind must be a global petsc index.
+        """
+        self.rhs_vec.array[:] = 0.0
+        self.sol_vec.array[:] = 0.0
+        self.vec['dp'].array[:] = 0.0  
+
+        if self.mpi.rank == rank:
+            mpiprint("set %d index to 1.0" % ind)
+            self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
+
+        sol_buf = self.sol_vec.petsc_vec.duplicate()
+        rhs_buf = self.rhs_vec.petsc_vec.duplicate()
+
+        sol_buf.array[:] = self.sol_vec.array[:]
+        rhs_buf.array[:] = self.rhs_vec.array[:]
+
+        self.ln_solver.ksp.solve(rhs_buf, sol_buf)
+
+        self.sol_vec.array[:] = sol_buf.array[:]
+        
+        return self.sol_vec
+
+    def _get_global_indices(self, var, rank):
+        """Returns an iterator over global indices.
+        """
+        var_sizes = self.local_var_sizes
+        ivar = self.vector_vars.keys().index(var)
+        start = numpy.sum(self.local_var_sizes[:, :ivar])
+
+        #end = start + numpy.sum(var_sizes[self.mpi.rank, ivar])
+
+        end = start + var_sizes[rank, ivar]
+
+        idxs = xrange(start, end)
+        ind_set = PETSc.IS().createGeneral(idxs, comm=self.mpi.comm)
+        if self.app_ordering is not None:
+            ind_set = self.app_ordering.app2petsc(ind_set)
+
+        mpiprint("global indices: %s" % ind_set.indices)
+
+        return ind_set.indices
+
+
 class SimpleSystem(System):
     """A System for a single Component. This component can have Inputs,
     Outputs, States, and Residuals."""
@@ -936,6 +1033,9 @@ class ParamSystem(VarSystem):
     def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
+            mpiprint("param sys %s: adding %s to %s" %
+                            (self.name, self.sol_vec[self.name],
+                                self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
 
@@ -1558,4 +1658,5 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
+
 

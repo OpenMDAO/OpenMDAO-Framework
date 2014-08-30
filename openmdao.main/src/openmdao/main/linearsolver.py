@@ -49,7 +49,7 @@ class ScipyGMRES(LinearSolver):
                 msg = 'Array slice inputs and outputs currently not supported.'
                 raise RuntimeError(msg)
             else:
-                err.reraise()
+                exc.reraise()
 
         n_edge = system.vec['f'].array.size
 
@@ -60,9 +60,7 @@ class ScipyGMRES(LinearSolver):
                            dtype=float)
 
         if system.mode == 'adjoint':
-            temp = inputs
-            inputs = outputs
-            outputs = temp
+            outputs, inputs = inputs, outputs
 
         # Forward mode, solve linear system for each parameter
         j = 0
@@ -197,124 +195,103 @@ class PETSc_KSP(LinearSolver):
         pc_mat.setType('python')
         pc_mat.setPythonContext(self)
 
-        # Set these in the system
-        #mpiprint("KSP: creating sol buf, size %d" % lsize)
-        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
-                                                     comm=system.mpi.comm)
-        #mpiprint("KSP: creating rhs buf, size %d" % lsize)
-        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
-                                                     comm=system.mpi.comm)
+        # # Set these in the system
+        # #mpiprint("KSP: creating sol buf, size %d" % lsize)
+        # system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        #                                              comm=system.mpi.comm)
+        # #mpiprint("KSP: creating rhs buf, size %d" % lsize)
+        # system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+        #                                              comm=system.mpi.comm)
 
-    def solve(self, inputs, outputs):
-        """ Run KSP solver to return a Jacobian of outputs with 
-        respect to inputs.
+    def solve(self, inputs, outputs, full_J=True):
+        """If full_J is True, returns a Jacobian matrix,
+        otherwise returns a nested dict of sensitivities.
         """
-        system = self._system
-
         self.inputs = inputs
 
-        # Size the problem
-        num_input = system.get_size(inputs)
-        num_output = system.get_size(outputs)
+        if full_J:
+            return self._J_solve(inputs, outputs)
+        else:
+            return self._sens_dict_solve(inputs, outputs)
 
-        varkeys = system.vector_vars.keys()
-        rank = system.mpi.rank
 
-        J = np.zeros((num_output, num_input))
+    def _J_solve(self, inputs, outputs):
+        """Returns a Jacobian matrix for given inputs and outputs."""
+
+        system = self._system
+        name2collapsed = system.scope.name2collapsed
 
         if system.mode == 'adjoint':
-            inputs, outputs = outputs, inputs
-            invec = 'u'
-            outvec = 'p'
-        else:
-            invec = 'p'
-            outvec = 'u'
+            outputs, inputs = inputs, outputs
 
+        inputs = [_detuple(x) for x in inputs]
+        outputs = [_detuple(x) for x in outputs]
+
+        uniques = system.get_unique_vars(inputs+outputs)
+
+        # Size the problem
+        tot_input_size = system.get_size(inputs)
+        tot_output_size = system.get_size(outputs)
+        mpiprint('inputs', inputs, 'size', tot_input_size)
+        mpiprint('outputs', outputs, 'size', tot_output_size)
+
+        J = np.zeros((tot_output_size, tot_input_size))
+
+        mpiprint('J',str(J))
+
+        # FIXME: these shouldn't be hard-wired here
         self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
 
-        mpiprint("starting param loop")
+        mpiprint("local_var_sizes: %s" % system.local_var_sizes)
 
-        # Forward mode, solve linear system for each parameter
         j = 0
         for param in inputs:
 
-            if isinstance(param, tuple):
-                param = param[0]
+            i = 0
+            mpiprint("param, j: %s, %d" % (param,j))
+            for ind in system._get_global_indices(name2collapsed[param], uniques[param]):
+                solvec = system._compute_derivatives(ind, uniques[param])
 
-            # convert param to collapsed name
-            colparam = system.scope.name2collapsed[param]
+                for output in outputs:
 
-            # skip param if it's not local to this process
-            #if colparam not in system.vector_vars or system.vector_vars[colparam]['size']==0:
-            #    continue
+                    mpiprint("output, i: %s, %d" % (output, i))
+                    if output in solvec:
+                        view = solvec[output]
+                        if system.mode == 'forward':
+                            J[i:i+view.size, j] = view
+                        else:
+                            J[j, i:i+view.size] = view
+                        i += view.size
+            j += 1
 
-            #mpiprint("param: %s" % param)
-
-            ##indices = system.vec[invec].indices(param)
-            #ivar = varkeys.index(colparam)
-            #start_idx = np.sum(system.local_var_sizes[:, :ivar])
-            #indices = range(start_idx, start_idx + system.local_var_sizes[rank, ivar])
-            #ind_set = PETSc.IS().createGeneral(indices, comm=system.mpi.comm)
-            #if system.app_ordering is not None:
-            #    ind_set = system.app_ordering.app2petsc(ind_set)
-
-            indices = system.vec[invec].indices(param)
-
-            for irhs in indices:
-
-                system.rhs_vec.array[:] = 0.0
-                system.sol_vec.array[:] = 0.0
-                system.rhs_buf.array[:] = 0.0
-                system.sol_buf.array[:] = 0.0
-
-                ind = np.sum(system.local_var_sizes[:, :irhs])
-                ind_set = PETSc.IS().createGeneral([ind], comm=system.mpi.comm)
-                if system.app_ordering is not None:
-                    ind_set = system.app_ordering.app2petsc(ind_set)
-                ind = ind_set.indices[0]
-                system.rhs_buf.setValue(ind, 1.0, addv=False)
-                system.rhs_buf.assemble()
-
-                # Call PetSC KSP to solve the linear system
-                self.ksp.solve(system.rhs_buf, system.sol_buf)
-                system.sol_vec.array[:] = system.sol_buf.array[:]
-
-                # this seems pretty expensive to make a setValue call
-                # on two different petsc vectors for each iteration,
-                # and John doesn't do it as far as I can tell, so we
-                # may want to revisit this later
-                system.rhs_vec.petsc_vec.setValue(ind, 0.0, addv=False)
-                system.rhs_vec.petsc_vec.assemble()
-                #system.rhs_vec.array[irhs] = 0.0
-                dx = system.sol_vec.array
-                mpiprint('%s:\n      dx = %s' % (system.name, dx))
-
-                i = 0
-
-                for item in outputs:
-
-                    if isinstance(item, tuple):
-                        item = item[0]
-
-                    coll_out = system.scope.name2collapsed[item]
-                    #if coll_out not in system.sol_vec:
-                    #    continue
-
-                    indices = system.vec[outvec].indices(item)
-                    #indices = system.sol_vec.indices(item)
-                    nk = len(indices)
-
-                    if system.mode == 'forward':
-                        J[i:i+nk, j] = dx[indices]
-                    else:
-                        J[j, i:i+nk] = dx[indices]
-                    i += nk
-
-                j += 1
-
-        #print inputs, '\n', outputs, '\n', J
         return J
 
+    def _sens_dict_solve(self, inputs, outputs):
+        """Returns a dict of sensitivities for given 
+        inputs and outputs.
+        """
+        system = self.system
+        uvec = system.vec['u']
+
+        # FIXME: these shouldn't be hard-wired here
+        self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
+
+        sens_dict = {}
+        for output in outputs:
+            out_size = uvec[output].size
+
+            sens_dict[output] = {}
+            for param in inputs:
+                param_size = uvec[param].size
+                sens_dict[output][param] = np.zeros((out_size, param_size))
+
+            for ind in system._get_global_indices(output):
+                solvec = system._compute_derivatives(output, ind)
+
+                for param in inputs:
+                    sens_dict[output][param][ind, :] = solvec[param]  
+
+        return sens_dict      
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
@@ -341,3 +318,9 @@ class PETSc_KSP(LinearSolver):
         #system.solve_precon()
         #rhs_vec.array[:] = system.sol_vec.array[:]
 
+
+def _detuple(x):
+    """Return x, or if x is a tuple, x[0]."""
+    if isinstance(x, tuple):
+        return x[0]
+    return x
