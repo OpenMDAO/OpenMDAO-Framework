@@ -320,6 +320,16 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.driver._cons_is_linear[1], 1, 1e-6)
         self.assertEqual(self.top.driver._cons_is_linear[2], 0, 1e-6)
 
+        lcons = self.top.driver.get_constraints(linear=True)
+        self.assertTrue(len(lcons) == 2)
+        self.assertTrue('comp.x[2]+comp.x[3]>13.0' in lcons)
+        self.assertTrue('comp.x[1]-0.73*comp.x[3]*comp.x[2]>-12.0' not in lcons)
+
+        lcons = self.top.driver.get_constraints(linear=False)
+        self.assertTrue(len(lcons) == 1)
+        self.assertTrue('comp.x[2]+comp.x[3]>13.0' not in lcons)
+        self.assertTrue('comp.x[1]-0.73*comp.x[3]*comp.x[2]>-12.0' in lcons)
+
     def test_max_iteration(self):
 
         self.top.driver.add_objective('comp.result')
