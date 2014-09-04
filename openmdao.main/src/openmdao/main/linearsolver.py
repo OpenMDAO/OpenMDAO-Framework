@@ -224,95 +224,121 @@ class PETSc_KSP(LinearSolver):
         system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
                                                      comm=system.mpi.comm)
 
-    def solve(self, inputs, outputs, return_format='array'):
-        """Returns a Jacobian matrix if return_format == 'array',
-        or a nested dict of sensitivities if return_format == 'dict'.
+    def solve(self, inputs, outputs, return_format='dict'):
+        """Returns a nested dict of sensitivities if return_format == 'dict'.
         """
         #self.inputs = inputs
 
-        if return_format == 'array':
-            return self._J_array_solve(inputs, outputs)
-        # elif return_format == 'dict':
-        #     return self._J_dict_solve(inputs, outputs)
+        if return_format == 'dict':
+            return self._J_dict_solve(inputs, outputs)
+        # elif return_format == 'array':
+        #     return self._J_array_solve(inputs, outputs)
         else:
-            raise RuntimeError("unsupported J return format '%s'" % return_format)
+            raise RuntimeError("unsupported solve return_format '%s'" % return_format)
 
-    def _J_array_solve(self, inputs, outputs):
-        """Returns a Jacobian matrix for given inputs and outputs."""
+    # def _J_array_solve(self, inputs, outputs):
+    #     """Returns a Jacobian matrix for given inputs and outputs."""
 
-        system = self._system
-        name2collapsed = system.scope.name2collapsed
+    #     system = self._system
+    #     name2collapsed = system.scope.name2collapsed
 
-        if system.mode == 'adjoint':
-            outputs, inputs = inputs, outputs
+    #     if system.mode == 'adjoint':
+    #         outputs, inputs = inputs, outputs
 
-        inputs = [_detuple(x) for x in inputs]
-        outputs = [_detuple(x) for x in outputs]
+    #     inputs = [_detuple(x) for x in inputs]
+    #     outputs = [_detuple(x) for x in outputs]
 
-        uniques = system.get_unique_vars(inputs+outputs)
+    #     uniques = system.get_unique_vars(inputs+outputs)
 
-        # Size the problem
-        tot_input_size = system.get_size(inputs)
-        tot_output_size = system.get_size(outputs)
-        #mpiprint('inputs', inputs, 'size', tot_input_size)
-        #mpiprint('outputs', outputs, 'size', tot_output_size)
+    #     # Size the problem
+    #     tot_input_size = system.get_size(inputs)
+    #     tot_output_size = system.get_size(outputs)
+    #     #mpiprint('inputs', inputs, 'size', tot_input_size)
+    #     #mpiprint('outputs', outputs, 'size', tot_output_size)
 
-        J = np.zeros((tot_output_size, tot_input_size))
+    #     J = np.zeros((tot_output_size, tot_input_size))
 
-        #mpiprint('J',str(J))
-
-        # FIXME: these shouldn't be hard-wired here
-        self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
-
-        #mpiprint("local_var_sizes: %s" % system.local_var_sizes)
-
-        j = 0
-        for param in inputs:
-
-            i = 0
-            mpiprint("param, j: %s, %d" % (param,j))
-            for ind in system._get_global_indices(name2collapsed[param], uniques[param]):
-                solvec = system._compute_derivatives(ind, uniques[param])
-                for output in outputs:
-
-                    mpiprint("output, i: %s, %d" % (output, i))
-                    if output in solvec:
-                        view = solvec[output]
-                        if system.mode == 'forward':
-                            J[i:i+view.size, j] = view
-                        else:
-                            J[j, i:i+view.size] = view
-                        i += view.size
-            j += 1
-
-        return J
-
-    # def _J_dict_solve(self, inputs, outputs):
-    #     """Returns a dict of sensitivities for given 
-    #     inputs and outputs.
-    #     """
-    #     system = self.system
-    #     uvec = system.vec['u']
+    #     #mpiprint('J',str(J))
 
     #     # FIXME: these shouldn't be hard-wired here
     #     self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
 
-    #     sens_dict = {}
-    #     for output in outputs:
-    #         out_size = uvec[output].size
+    #     #mpiprint("local_var_sizes: %s" % system.local_var_sizes)
 
-    #         sens_dict[output] = {}
-    #         for param in inputs:
-    #             param_size = uvec[param].size
-    #             sens_dict[output][param] = np.zeros((out_size, param_size))
+    #     j = 0
+    #     for param in inputs:
 
-    #         for ind in system._get_global_indices(output):
-    #             solvec = system._compute_derivatives(output, ind)
+    #         i = 0
+    #         mpiprint("param, j: %s, %d" % (param,j))
+    #         for ind in system._get_global_indices(name2collapsed[param], uniques[param]):
+    #             solvec = system._compute_derivatives(ind, uniques[param])
+    #             for output in outputs:
 
-    #             for param in inputs:
-    #                 sens_dict[output][param][ind, :] = solvec[param]  
+    #                 mpiprint("output, i: %s, %d" % (output, i))
+    #                 if output in solvec:
+    #                     view = solvec[output]
+    #                     if system.mode == 'forward':
+    #                         J[i:i+view.size, j] = view
+    #                     else:
+    #                         J[j, i:i+view.size] = view
+    #                     i += view.size
+    #         j += 1
 
-    #     return sens_dict      
+    #     return J
+
+    def _J_dict_solve(self, inputs, outputs):
+        """Returns a dict of sensitivities for given 
+        inputs and outputs.
+        """
+        system = self._system
+        name2collapsed = system.scope.name2collapsed
+ 
+        inputs = [_detuple(x) for x in inputs]
+        outputs = [_detuple(x) for x in outputs]
+
+        J = {}
+        for okey in outputs:
+            J[okey] = {}
+            for ikey in inputs:
+                J[okey][ikey] = None
+
+        if system.mode == 'adjoint':
+            outputs, inputs = inputs, outputs
+
+        # FIXME: these shouldn't be hard-wired here
+        self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
+
+        j = 0
+        for param in inputs:
+            param_tup = name2collapsed[param]
+            param_size = system.get_size(param)
+
+            jbase = j
+
+            for irhs in xrange(param_size):
+                solvec = system._compute_derivatives(param_tup, irhs)
+
+                for out in outputs:
+                    out_size = system.get_size(out)
+
+                    if system.mode == 'forward':
+                        if out in solvec:
+                            if J[out][param] is None:
+                                J[out][param] = np.zeros((out_size, param_size))
+                            J[out][param][:, j-jbase] = solvec[out]
+                        else:
+                            del J[out][param]
+                    else:
+                        if out in solvec:
+                            if J[param][out] is None:
+                                J[param][out] = np.zeros((out_size, param_size))
+                            J[param][out][j-jbase, :] = solvec[out]
+                        else:
+                            del J[param][out]
+
+                j += 1
+
+        return J      
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
@@ -326,8 +352,8 @@ class PETSc_KSP(LinearSolver):
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'arg, result', sol_vec.array, rhs_vec.array
-        mpiprint('names = %s' % system.sol_vec.keys())
-        mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
+        # mpiprint('names = %s' % system.sol_vec.keys())
+        # mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
 
     def apply(self, mat, sol_vec, rhs_vec):
         """ Applies preconditioner """

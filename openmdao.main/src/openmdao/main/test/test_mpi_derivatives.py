@@ -70,27 +70,28 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        mpiprint("varkeys: %s" % self.top._system.vector_vars.keys())
-        mpiprint("u.keys: %s" % self.top._system.vec['u'].keys())
-        mpiprint("p.keys: %s" % self.top._system.vec['p'].keys())
-    
-        J = self.top.driver.workflow.calc_gradient(mode='forward')
+        J = self.top.driver.workflow.calc_gradient(mode='forward', 
+                                                   return_format='dict')
+        #mpiprint("J local: %s" % J)
 
-        mpiprint("final J: %s" % J)
-        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        J = self.top.driver.workflow._system.get_combined_J(J)
+        #mpiprint("final J: %s" % J)
+
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
 
     def test_calc_gradient_adjoint(self):
         self.top.run()
 
-        mpiprint("u.keys: %s" % self.top._system.vec['u'].keys())
-        mpiprint("p.keys: %s" % self.top._system.vec['p'].keys())
-    
-        J = self.top.driver.workflow.calc_gradient(mode='adjoint')
+        J = self.top.driver.workflow.calc_gradient(mode='adjoint', 
+                                                   return_format='dict')
+        #mpiprint("J local: %s" % J)
 
-        mpiprint("final J: %s" % J)
-        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        J = self.top.driver.workflow._system.get_combined_J(J)
+        #mpiprint("final J: %s" % J)
+
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
 
     def test_calc_gradient_fd(self):
         self.top.run()

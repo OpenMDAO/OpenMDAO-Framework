@@ -97,4 +97,4 @@ class MPI_info(object):
             return self.comm.rank
         return 0
 
-use_proc_files()
+#use_proc_files()

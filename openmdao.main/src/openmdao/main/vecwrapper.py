@@ -399,23 +399,23 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        # if system.mode == 'adjoint':
-        #     addv = True
-        #     mode = True
-        #     if MPI:
-        #         destvec, srcvec = srcvec, destvec
-        #         dest, src = src, dest
+        if system.mode == 'adjoint':
+            addv = True
+            mode = True
+            if MPI:
+                destvec, srcvec = srcvec, destvec
+                dest, src = src, dest
 
         if self.scatter:
-            mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
-            mpiprint("mode = %s" % system.mode)
-            mpiprint("%s BEFORE:" % srcvec.name)
-            srcvec.dump()
-            mpiprint("%s BEFORE:" % destvec.name)
-            destvec.dump()
+            #mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
+            #mpiprint("mode = %s" % system.mode)
+            #mpiprint("%s BEFORE:" % srcvec.name)
+            #srcvec.dump()
+            #mpiprint("%s BEFORE:" % destvec.name)
+            #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            mpiprint("%s AFTER:" % destvec.name)
-            destvec.dump()
+            #mpiprint("%s AFTER:" % destvec.name)
+            #destvec.dump()
 
         if self.noflat_vars:
             if MPI:

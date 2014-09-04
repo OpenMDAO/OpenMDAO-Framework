@@ -234,7 +234,7 @@ def applyJT(system):
             break
 
     if nonzero is False:
-        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -273,7 +273,7 @@ def applyJT(system):
 
     input_keys, output_keys = list_deriv_vars(obj)
 
-    mpiprint( 'J', input_keys, output_keys, J)
+    #mpiprint( 'J', input_keys, output_keys, J)
 
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We

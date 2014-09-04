@@ -138,8 +138,8 @@ class System(object):
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, all_outs)
 
-        mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
-        mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
+        # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
+        # mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
 
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
@@ -186,7 +186,6 @@ class System(object):
 
         start = numpy.sum(self.local_var_sizes[:rank])
         end = numpy.sum(self.local_var_sizes[:rank+1])
-        mpiprint('start',start,'end',end)
         petsc_idxs = petsc_linspace(start, end)
 
         app_idxs = []
@@ -199,7 +198,7 @@ class System(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
-        mpiprint("app_idxs: %s, petsc_idxs: %s" % (app_idxs, petsc_idxs))
+        #mpiprint("app_idxs: %s, petsc_idxs: %s" % (app_idxs, petsc_idxs))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
         petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
 
@@ -247,6 +246,58 @@ class System(object):
                         var2proc[name] = proc
  
         return var2proc    
+
+    def get_combined_J(self, J):
+        """
+        Take a J dict that's distributed, i.e., has different values
+        across different MPI processes, and return a dict that
+        contains all of the values from all of the processes.  If
+        values are duplicated, use the value from the lowest rank
+        process.  Note that J has a nested dict structure.
+        """
+        
+        comm = self.mpi.comm
+        myrank = comm.rank
+
+        tups = []
+
+        # gather a list of tuples for J
+        for param, dct in J.items():
+            for output, value in dct.items():
+                tups.append((param, output))
+
+        dist_tups = comm.gather(tups, root=0)
+       
+        tupdict = {}
+        if myrank == 0:
+            for rank, tups in enumerate(dist_tups):
+                for tup in tups:
+                    if not tup in tupdict:
+                        tupdict[tup] = rank
+
+            #get rid of tups from the root proc before bcast
+            for tup, rank in tupdict.items():
+                if rank == 0:
+                    del tupdict[tup]
+
+        tupdict = comm.bcast(tupdict, root=0)
+     
+        if myrank == 0:
+            for (param, output), rank in tupdict.items():
+                J[param][output] = comm.recv(source=rank, tag=0)
+        else:
+            for (param, output), rank in tupdict.items():
+                if rank == myrank:
+                    comm.send(J[param][output], dest=0, tag=0)
+
+
+        # FIXME: rework some of this using knowledge of local_var_sizes in order
+        # to avoid any unnecessary data passing
+
+        # get the combined dict
+        J = comm.bcast(J, root=0)
+
+        return J
 
     def _get_owned_args(self):
         args = set()
@@ -317,20 +368,14 @@ class System(object):
         return outputs
 
     def get_size(self, names):
-        """Return the total local size of the variables
-        corresponding to the given names.
+        """Return the total size of the variables
+        corresponding to the given names.  If a given 
+        variable does not exist locally, the size will
+        be taken from the lowest rank process that does
+        contain that variable.
         """
-        # pvec = self.scope._system.vec['p']
-        # size = 0
-        # for name in names:
-        #     # Param target support.
-        #     if isinstance(name, tuple):
-        #         name = name[0]
-
-        #     try:
-        #         size += pvec[name].size
-        #     except KeyError:
-        #         size += self.vec['u'][name].size
+        if isinstance(names, basestring):
+            names = [names]
         var_sizes = self.scope._system.local_var_sizes
         varkeys = self.scope._system.vector_vars.keys()
         collnames = self.scope.name2collapsed
@@ -577,10 +622,10 @@ class System(object):
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            if subsystem is None:
-               mpiprint("scattering (full) to %s" % str(self.name))
-            else:
-               mpiprint("%s scattering to %s" % (str(self.name),str(subsystem.name)))
+            # if subsystem is None:
+            #    mpiprint("scattering (full) to %s" % str(self.name))
+            # else:
+            #    mpiprint("%s scattering to %s" % (str(self.name),str(subsystem.name)))
             scatter(self, srcvec, destvec)
 
             if destvecname == 'p':
@@ -797,7 +842,7 @@ class System(object):
             for s in child.iterate_all(local=local):
                 yield s
 
-    def _compute_derivatives(self, ind, rank):
+    def _compute_derivatives(self, vname, ind):
         """ Solves derivatives of system (direct/adjoint).
         ind must be a global petsc index.
         """
@@ -805,9 +850,27 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         self.vec['dp'].array[:] = 0.0  
 
-        if self.mpi.rank == rank:
-            mpiprint("set %d index to 1.0" % ind)
+        varkeys = self.vector_vars.keys()
+        ivar = varkeys.index(vname)
+
+        if self.local_var_sizes[self.mpi.rank, ivar] > 0:
+            ind += numpy.sum(self.local_var_sizes[:, :ivar])
+            ind += numpy.sum(self.local_var_sizes[:self.mpi.rank, ivar])
+
+            ind_set = PETSc.IS().createGeneral([ind], comm=self.mpi.comm)
+            if self.app_ordering is not None:
+                ind_set = self.app_ordering.app2petsc(ind_set)
+            ind = ind_set.indices[0]
+            #mpiprint("setting 1.0 into index %d for %s" % (ind, str(vname)))
             self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
+        else:
+            # creating an IS is a collective call, so must do it
+            # here to avoid hanging, even though we don't need the IS
+            ind_set = PETSc.IS().createGeneral([], comm=self.mpi.comm)
+
+        # if self.mpi.rank == rank:
+        #     mpiprint("set %d index to 1.0" % ind)
+        #     self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
 
         self.sol_buf.array[:] = self.sol_vec.array[:]
         self.rhs_buf.array[:] = self.rhs_vec.array[:]
@@ -818,26 +881,26 @@ class System(object):
         
         return self.sol_vec
 
-    def _get_global_indices(self, var, rank):
-        """Returns an iterator over global indices.
-        """
-        mpiprint("getting global indices for %s" % str(var))
-        var_sizes = self.local_var_sizes
-        ivar = self.vector_vars.keys().index(var)
-        start = numpy.sum(self.local_var_sizes[:, :ivar])
+    # def _get_global_indices(self, var, rank):
+    #     """Returns an iterator over global indices.
+    #     """
+    #     mpiprint("getting global indices for %s" % str(var))
+    #     var_sizes = self.local_var_sizes
+    #     ivar = self.vector_vars.keys().index(var)
+    #     start = numpy.sum(self.local_var_sizes[:, :ivar])
 
-        #end = start + numpy.sum(var_sizes[self.mpi.rank, ivar])
-        #end = start + var_sizes[rank, ivar]
-        end = start + numpy.sum(var_sizes[:, ivar])
+    #     #end = start + numpy.sum(var_sizes[self.mpi.rank, ivar])
+    #     end = start + var_sizes[rank, ivar]
+    #     #end = start + numpy.sum(var_sizes[:, ivar])
 
-        idxs = xrange(start, end)
-        ind_set = PETSc.IS().createGeneral(idxs, comm=self.mpi.comm)
-        if self.app_ordering is not None:
-            ind_set = self.app_ordering.app2petsc(ind_set)
+    #     idxs = xrange(start, end)
+    #     ind_set = PETSc.IS().createGeneral(idxs, comm=self.mpi.comm)
+    #     if self.app_ordering is not None:
+    #         ind_set = self.app_ordering.app2petsc(ind_set)
 
-        mpiprint("global indices: %s" % ind_set.indices)
+    #     mpiprint("global indices: %s" % ind_set.indices)
 
-        return ind_set.indices
+    #     return ind_set.indices
 
 
 class SimpleSystem(System):
@@ -1036,9 +1099,9 @@ class ParamSystem(VarSystem):
     def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
-            mpiprint("param sys %s: adding %s to %s" %
-                            (self.name, self.sol_vec[self.name],
-                                self.rhs_vec[self.name]))
+            # mpiprint("param sys %s: adding %s to %s" %
+            #                 (self.name, self.sol_vec[self.name],
+            #                     self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
 
