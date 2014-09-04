@@ -54,6 +54,8 @@ if _under_mpirun():
         if len(args) > 1:
             stream.write("{%d} " % MPI.COMM_WORLD.rank)
             for arg in args:
+                if isinstance(arg, tuple):
+                    arg = str(arg)
                 stream.write("%s " % arg)
             stream.write("\n")
             stream.flush()
@@ -66,16 +68,13 @@ else:
     PETSc = None
     COMM_NULL = None
 
-    # TODO - THis is for testing only (so i can debug in serial).
-    # Bret - Don't let this get in.
-    #from petsc4py import PETSc
-    #def create_petsc_vec(comm, arr):
-    #    return PETSc.Vec().createWithArray(arr, comm=comm)
     def create_petsc_vec(comm, arr):
         return None
 
     def mpiprint(*args, **kwargs):
         for arg in args:
+            if isinstance(arg, tuple):
+                arg = str(arg)
             MPI_STREAM.write("%s " % arg)
         MPI_STREAM.write('\n')
 

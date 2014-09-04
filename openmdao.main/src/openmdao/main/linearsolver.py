@@ -218,11 +218,11 @@ class PETSc_KSP(LinearSolver):
 
         # # Set these in the system
         # #mpiprint("KSP: creating sol buf, size %d" % lsize)
-        # system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
-        #                                              comm=system.mpi.comm)
+        system.sol_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+                                                     comm=system.mpi.comm)
         # #mpiprint("KSP: creating rhs buf, size %d" % lsize)
-        # system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
-        #                                              comm=system.mpi.comm)
+        system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
+                                                     comm=system.mpi.comm)
 
     def solve(self, inputs, outputs, return_format='array'):
         """Returns a Jacobian matrix if return_format == 'array',
@@ -270,13 +270,12 @@ class PETSc_KSP(LinearSolver):
         for param in inputs:
 
             i = 0
-            #mpiprint("param, j: %s, %d" % (param,j))
+            mpiprint("param, j: %s, %d" % (param,j))
             for ind in system._get_global_indices(name2collapsed[param], uniques[param]):
                 solvec = system._compute_derivatives(ind, uniques[param])
-
                 for output in outputs:
 
-                    #mpiprint("output, i: %s, %d" % (output, i))
+                    mpiprint("output, i: %s, %d" % (output, i))
                     if output in solvec:
                         view = solvec[output]
                         if system.mode == 'forward':
@@ -321,10 +320,13 @@ class PETSc_KSP(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = sol_vec.array[:]
+        system.rhs_vec.array[:] = 0.0
+
         system.applyJ()
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         #print 'arg, result', sol_vec.array, rhs_vec.array
+        mpiprint('names = %s' % system.sol_vec.keys())
         mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
 
     def apply(self, mat, sol_vec, rhs_vec):

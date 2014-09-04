@@ -16,7 +16,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter, reduced2component
+                                   collapse_nodes, simple_node_iter
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -48,79 +48,52 @@ def compound_setup_scatters(self):
 
     start = end = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
-    #simple_subs = set(self.simple_subsystems())
-
-    #if isinstance(self, ParallelSystem):
-    #    mpiprint("PARALLEL")
-    #mpiprint("%s.variables = %s" % (self.name, self.variables.keys()))
-    #mpiprint("%s.u = %s (size=%d)" % (self.name, self.vec['u'].keys(),
-    #                                  self.vec['u'].array.size))
-    #mpiprint("%s.p = %s (size=%d)" % (self.name, self.vec['p'].keys(),
-    #                                  self.vec['p'].array.size))
-    #mpiprint("var_sizes: %s" % var_sizes)
-    #mpiprint("input_sizes: %s" % input_sizes)
-    #mpiprint("owned_args: %s" % self._owned_args)
 
     visited = {}
 
     for subsystem in self.all_subsystems():
-        #mpiprint("sub: %s" % subsystem.name)
-        #mpiprint("setting up scatters from %s to %s" % (self.name, subsystem.name))
         src_partial = []
         dest_partial = []
         scatter_conns = set()
         noflat_conns = set()  # non-flattenable vars
         for sub in subsystem.simple_subsystems():
-            #mpiprint("simple: %s,  in_nodes = %s" % (sub.name, sub._in_nodes))
-            for node in [n for n in self.vector_vars if n in sub._in_nodes]: #sub._in_nodes:
-                if node not in self._owned_args or node in scatter_conns:
-                    #mpiprint("%s not in owned args, skipping" % str(node))
-                    continue
-                if node in noflats:
-                    noflat_conns.add(node)
-                    noflat_conns_full.add(node)
-                else:
-                    #arg_idxs = sub.arg_idx[node]
-                    arg_idxs = self.arg_idx[node]
-                    #mpiprint("arg_idxs[%s] = %s" % (str(node),arg_idxs))
-                    isrc = varkeys.index(node)
-                    src_idxs = numpy.sum(var_sizes[:, :isrc]) + arg_idxs
-                    #mpiprint("isrc = %d" % isrc)
-                    #mpiprint("var_sizes[:, :isrc] = %s" % var_sizes[:, :isrc])
-
-                    # FIXME: broadcast var nodes will be scattered
-                    #  more than necessary using this scheme
-                    if node in visited:
-                        dest_idxs = visited[node]
+            for node in self.vector_vars:
+                if node in sub._in_nodes:
+                    if node not in self._owned_args or node in scatter_conns:
+                        continue
+                    if node in noflats:
+                        noflat_conns.add(node)
+                        noflat_conns_full.add(node)
                     else:
-                        dest_idxs = start + arg_idxs
-                        start += len(arg_idxs)
+                        isrc = varkeys.index(node)
+                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
 
-                        visited[node] = dest_idxs
+                        # FIXME: broadcast var nodes will be scattered
+                        #  more than necessary using this scheme
+                        if node in visited:
+                            dest_idxs = visited[node]
+                        else:
+                            dest_idxs = start + self.arg_idx[node]
+                            start += len(dest_idxs)
 
-                    if node not in scatter_conns:
-                        #mpiprint("%s: adding scatter %s" % (self.name, str(node)))
-                        #mpiprint("src_idxs: %s" % src_idxs)
-                        #mpiprint("dest_idxs: %s" % dest_idxs)
-                        scatter_conns.add(node)
-                        src_partial.append(src_idxs)
-                        dest_partial.append(dest_idxs)
+                            visited[node] = dest_idxs
 
-                    if node not in scatter_conns_full:
-                        scatter_conns_full.add(node)
-                        src_full.append(src_idxs)
-                        dest_full.append(dest_idxs)
+                        if node not in scatter_conns:
+                            scatter_conns.add(node)
+                            src_partial.append(src_idxs)
+                            dest_partial.append(dest_idxs)
 
-        # mpiprint("PARTIAL scatter setup: %s to %s: %s\n%s" % (self.name, subsystem.name,
-        #                                                       src_partial, dest_partial))
+                        if node not in scatter_conns_full:
+                            scatter_conns_full.add(node)
+                            src_full.append(src_idxs)
+                            dest_full.append(dest_idxs)
+                    
         if MPI or scatter_conns or noflat_conns:
-            #mpiprint("partial scatter to %s: %s" % (subsystem.name, scatter_conns))
             subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                      dest_partial,
                                                      scatter_conns, noflat_conns)
 
     if MPI or scatter_conns_full or noflat_conns_full:
-        #mpiprint("full scatter to %s : %s" % (self.name, scatter_conns_full))
         self.scatter_full = DataTransfer(self, src_full, dest_full,
                                          scatter_conns_full, noflat_conns_full)
 
@@ -166,6 +139,9 @@ class System(object):
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, all_outs)
 
+        mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
+        mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
+
         self._in_nodes = sorted(self._in_nodes)
         self._out_nodes = sorted(self._out_nodes)
 
@@ -182,8 +158,8 @@ class System(object):
         self.rhs_vec = None
         self.ln_solver = None
         self.fd_solver = None
-        #self.sol_buf = None
-        #self.rhs_buf = None
+        self.sol_buf = None
+        self.rhs_buf = None
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
@@ -211,6 +187,7 @@ class System(object):
 
         start = numpy.sum(self.local_var_sizes[:rank])
         end = numpy.sum(self.local_var_sizes[:rank+1])
+        mpiprint('start',start,'end',end)
         petsc_idxs = petsc_linspace(start, end)
 
         app_idxs = []
@@ -223,7 +200,7 @@ class System(object):
         if app_idxs:
             app_idxs = numpy.concatenate(app_idxs)
 
-        #mpiprint("app_order: %s -> %s" % (app_idxs, petsc_idxs))
+        mpiprint("app_idxs: %s, petsc_idxs: %s" % (app_idxs, petsc_idxs))
         app_ind_set = PETSc.IS().createGeneral(app_idxs, comm=self.mpi.comm)
         petsc_ind_set = PETSc.IS().createGeneral(petsc_idxs, comm=self.mpi.comm)
 
@@ -483,6 +460,10 @@ class System(object):
         for i, (name, var) in enumerate(self.vector_vars.items()):
             self.local_var_sizes[rank, i] = var['size']
 
+        # FIXME: once we have distributed vars, identify them here and
+        # include them in distributed_vars list
+        #self.distributed_vars = set()
+
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
@@ -492,6 +473,26 @@ class System(object):
         if MPI:
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
+
+            ## now zero out the 'local' size for all vars from other ranks that
+            ## are not marked as distributed vars, so we avoid duplication of
+            ## those vars in the global vectors
+            #for ivar, name in enumerate(self.vector_vars):
+            #    if name not in self.distributed_vars:
+            #        # mysize = self.local_var_sizes[rank, ivar]
+            #        # if mysize > 0:
+            #        #     self.local_var_sizes[:, ivar] = 0
+            #        #     self.local_var_sizes[rank, ivar] = mysize
+            #        # else: # otherwise, find first non-zero one and zero out the rest
+            #        for rnk in range(self.mpi.comm.size):
+            #            if self.local_var_sizes[rnk, ivar] > 0:
+            #                if rnk+1 < self.mpi.comm.size:
+            #                    self.local_var_sizes[rnk+1:, ivar] = 0
+            #                break
+            #        
+            #        self.vector_vars[name]['size'] = self.local_var_sizes[rank, ivar]
+
+            #mpiprint("local_var_sizes = %s" % self.local_var_sizes)
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
@@ -805,35 +806,33 @@ class System(object):
             mpiprint("set %d index to 1.0" % ind)
             self.rhs_vec.petsc_vec.setValue(ind, 1.0, addv=False)
 
-        sol_buf = self.sol_vec.petsc_vec.duplicate()
-        rhs_buf = self.rhs_vec.petsc_vec.duplicate()
+        self.sol_buf.array[:] = self.sol_vec.array[:]
+        self.rhs_buf.array[:] = self.rhs_vec.array[:]
 
-        sol_buf.array[:] = self.sol_vec.array[:]
-        rhs_buf.array[:] = self.rhs_vec.array[:]
+        self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
 
-        self.ln_solver.ksp.solve(rhs_buf, sol_buf)
-
-        self.sol_vec.array[:] = sol_buf.array[:]
+        self.sol_vec.array[:] = self.sol_buf.array[:]
         
         return self.sol_vec
 
     def _get_global_indices(self, var, rank):
         """Returns an iterator over global indices.
         """
+        mpiprint("getting global indices for %s" % str(var))
         var_sizes = self.local_var_sizes
         ivar = self.vector_vars.keys().index(var)
         start = numpy.sum(self.local_var_sizes[:, :ivar])
 
         #end = start + numpy.sum(var_sizes[self.mpi.rank, ivar])
-
-        end = start + var_sizes[rank, ivar]
+        #end = start + var_sizes[rank, ivar]
+        end = start + numpy.sum(var_sizes[:, ivar])
 
         idxs = xrange(start, end)
         ind_set = PETSc.IS().createGeneral(idxs, comm=self.mpi.comm)
         if self.app_ordering is not None:
             ind_set = self.app_ordering.app2petsc(ind_set)
 
-        #mpiprint("global indices: %s" % ind_set.indices)
+        mpiprint("global indices: %s" % ind_set.indices)
 
         return ind_set.indices
 
@@ -1034,9 +1033,9 @@ class ParamSystem(VarSystem):
     def applyJ(self):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
-            # mpiprint("param sys %s: adding %s to %s" %
-            #                 (self.name, self.sol_vec[self.name],
-            #                     self.rhs_vec[self.name]))
+            mpiprint("param sys %s: adding %s to %s" %
+                            (self.name, self.sol_vec[self.name],
+                                self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
 
@@ -1568,7 +1567,7 @@ def partition_subsystems(scope, graph, cgraph):
     if len(cgraph) < 2:
         return cgraph
 
-    gcopy = cgraph.copy()
+    gcopy = cgraph.subgraph(cgraph.nodes_iter())
 
     to_remove = []
 

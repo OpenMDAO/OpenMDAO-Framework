@@ -152,13 +152,14 @@ class VecWrapper(VecWrapperBase):
         allvars = system.variables
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
+        rank = system.mpi.rank
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
         for ivar, (name, var) in enumerate(vector_vars.items()):
-            sz = var['size']
+            sz = system.local_var_sizes[rank, ivar] #var['size']
             if sz > 0:
                 end += sz
                 dist_start = numpy.sum(system.local_var_sizes[:, :ivar])
@@ -393,15 +394,14 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        #if system.mode == 'adjoint':
-            #addv = True
-            #mode = True
-            # if MPI:
-            #     dest, src = src, dest
+        if system.mode == 'adjoint':
+            addv = True
+            mode = True
+            if MPI:
+                dest, src = src, dest
 
         if self.scatter:
-            #mpiprint("%s scattering %s" % (system.name, self.scatter_conns))
-            #mpiprint("%s -> %s" % (self.var_idxs, self.input_idxs))
+            mpiprint("%s SCATTERING %s" % (system.name, self.scatter_conns))
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
         if self.noflat_vars:

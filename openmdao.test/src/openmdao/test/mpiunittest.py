@@ -5,10 +5,9 @@ A simple unit testing framework for MPI programs.
 import os
 import sys
 
-import numpy
-
-from unittest import TestCase, TestResult, SkipTest
-from openmdao.util.fileutil import get_module_path
+from unittest import TestCase, SkipTest
+from openmdao.main.mpiwrap import mpiprint
+from openmdao.util.testutil import assert_rel_error
 
 try:
     from mpi4py import MPI
@@ -25,6 +24,43 @@ def _under_mpirun():
         if name.startswith('OMPI_COMM') or name.startswith('MPICH_'):
             return True
     return False
+
+
+## The following decorator doesn't work, and I'm not
+## sure why.  It hangs at the allgather, but I verified
+## that the allgather is being called in all processes
+## in the communicator.
+# def mpi_fail_if_any(f):
+#     """In order to keep MPI tests from hanging when
+#     a test fails in one process and succeeds in 
+#     another, perform an allgather to check for any
+#     failures in any of the processes running the test,
+#     and fail if any of them fail.
+#     """
+#     def wrapper(self, *args, **kwargs):
+#         try:
+#             ret = f(self, *args, **kwargs)
+#         except Exception as exc:
+#             fail = [True]
+#         else:
+#             fail = [False] 
+
+#         mpiprint('about to allgather. fail=%s'%fail)
+#         mpiprint("size = %d" % self.comm.size)
+#         try:
+#             fails = self.comm.allgather(fail)
+#         except:
+#             print "except"
+#         mpiprint("fails = %s" % fails)
+
+#         if fail:
+#             self.fail(str(exc))
+#         elif any(fails):
+#             self.fail("a test failed in another rank")
+        
+#         return ret
+
+#     return wrapper
 
 
 class MPITestCase(TestCase):
@@ -116,6 +152,23 @@ class MPITestCase(TestCase):
         finally:
             self.comm.Disconnect()
 
+    # @mpi_fail_if_any
+    # def mpi_assert_rel_error(self, actual, desired, tolerance):
+    #     assert_rel_error(self, actual, desired, tolerance)
+
+    # @mpi_fail_if_any
+    # def mpiAssertEqual(self, val1, val2):
+    #     self.assertEqual(val1, val2)
+
+    # @mpi_fail_if_any
+    # def mpiAssertTrue(self, arg):
+    #     self.assertTrue(arg)
+
+    # @mpi_fail_if_any
+    # def mpiAsserFalse(self, arg):
+    #     self.assertFalse(arg)
+
+
 
 if __name__ == '__main__':
     if _under_mpirun():
@@ -146,5 +199,11 @@ if __name__ == '__main__':
         # run the test case, which will report its
         # results back to the process that spawned this
         # MPI process.
-        tcase.run(result)
+        try:
+            tcase.run(result)
+        except Exception as err:
+            if _under_mpirun():
+                MPI.Comm.Get_parent().Disconnect()
+            raise
+
     

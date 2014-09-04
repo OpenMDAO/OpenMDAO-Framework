@@ -64,9 +64,8 @@ class MPITests(MPITestCase):
 
         self.top.run()
 
-        if self.comm.rank == 0:
-            self.assertEqual(self.top.comp.f_xy, 93.)
-            self.assertEqual(self.top._pseudo_0.out0, 93.)
+        self.assertEqual(self.top.comp.f_xy, 93.)
+        self.assertEqual(self.top._pseudo_0.out0, 93.)
 
     def test_calc_gradient_fwd(self):
         self.top.run()
@@ -78,9 +77,8 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow.calc_gradient(mode='forward')
 
         mpiprint("final J: %s" % J)
-        if self.comm.rank == 0:
-            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
     def test_calc_gradient_adjoint(self):
         self.top.run()
@@ -91,18 +89,16 @@ class MPITests(MPITestCase):
         J = self.top.driver.workflow.calc_gradient(mode='adjoint')
 
         mpiprint("final J: %s" % J)
-        if self.comm.rank == 0:
-            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
     def test_calc_gradient_fd(self):
         self.top.run()
 
         J = self.top.driver.workflow.calc_gradient(mode='fd')
 
-        if self.comm.rank == 0:
-            assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-            assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
 
 if __name__ == '__main__':

@@ -88,7 +88,10 @@ def applyJ(system):
         key = item.partition('.')[-1]
         # FIXME: this is a hack. Sometimes the item we're looking
         # for can be found in the parent dp vector, but not always,
-        # so we have to find it in another vector...
+        # so we have to find it in another vector...  I guess it's
+        # because input derivs will be found in dp and state derivs be
+        # found in du.  Maybe we should have a separate method for
+        # returning states and use two loops.
         if item in system._parent_system.vec['dp']:
             arg[key] = system._parent_system.vec['dp'][item]
         elif item in system.sol_vec:
@@ -262,7 +265,7 @@ def applyJT(system):
 
     input_keys, output_keys = list_deriv_vars(obj)
 
-    #print 'J', input_keys, output_keys, J
+    mpiprint( 'J', input_keys, output_keys, J)
 
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
@@ -273,7 +276,6 @@ def applyJT(system):
 
     used = set()
     for okey in result:
-
         odx = None
         if okey in obounds:
             o1, o2, osh = obounds[okey]
@@ -289,7 +291,6 @@ def applyJT(system):
 
         tmp = result[okey]
         for ikey in arg:
-
             idx = None
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
@@ -302,8 +303,6 @@ def applyJT(system):
             #print ikey, okey, Jsub
 
             tmp += Jsub.dot(arg[ikey])
-
-    mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the
