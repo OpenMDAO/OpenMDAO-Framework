@@ -3,7 +3,7 @@ import sys
 from collections import OrderedDict
 import numpy
 
-from openmdao.main.mpiwrap import MPI, mpiprint, create_petsc_vec, PETSc
+from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
 from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start
 from openmdao.main.interfaces import IImplicitComponent
@@ -121,7 +121,7 @@ class VecWrapperBase(object):
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 
-    def dump(self, verbose=False, stream=sys.stdout):
+    def dump(self, verbose=False, stream=MPI_STREAM):
         for name, (array_val, start) in self._info.items():
             if verbose or name not in self._subviews:
                 if start is None:
@@ -399,12 +399,12 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint':
-            addv = True
-            mode = True
-            if MPI:
-                destvec, srcvec = srcvec, destvec
-                dest, src = src, dest
+        # if system.mode == 'adjoint':
+        #     addv = True
+        #     mode = True
+        #     if MPI:
+        #         destvec, srcvec = srcvec, destvec
+        #         dest, src = src, dest
 
         if self.scatter:
             mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))

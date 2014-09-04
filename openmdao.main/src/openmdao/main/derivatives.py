@@ -219,8 +219,8 @@ def applyJT(system):
             result[key] = system.rhs_vec[item]
         elif item in system.scope._system.vec['du']:
             result[key] = system.scope._system.vec['du'][item]
-        else :
-            result[key] = system._parent_system.vec['dp'][item]
+        # else :
+        #     result[key] = system._parent_system.vec['dp'][item]
 
     # Bail if this component is not connected in the graph
     if len(arg)==0 or len(result)==0:
