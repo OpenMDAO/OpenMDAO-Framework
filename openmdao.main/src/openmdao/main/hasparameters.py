@@ -111,7 +111,7 @@ class ParameterBase(object):
             start = self._untransform(self._expreval.evaluate(scope))
         else:
             start = self.start
-            
+
         self.set(self.start, self.parent._system.vec['u']) #scope)
 
     def set(self, value, scope=None):
@@ -1061,7 +1061,7 @@ class HasParameters(object):
         """
         param = self._parameters[name]
         if case is None:
-            param.set(value, self.parent.vec['u'])
+            param.set(value, self.parent._system.vec['u'])
         else:
             for target in param.targets:
                 case.add_input(target, value)

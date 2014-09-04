@@ -116,7 +116,7 @@ class NewtonSolver(Driver):
                 self.post_iteration()
 
                 f_norm = npnorm(fvec.array)
-                print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
                 ls_itercount += 1
 
             # Reset backtracking

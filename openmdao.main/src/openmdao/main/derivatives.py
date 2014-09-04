@@ -104,6 +104,10 @@ def applyJ(system):
         key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
 
+    # Bail if this component is not connected in the graph
+    if len(arg)==0 or len(result)==0:
+        return
+
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
     for key, value in arg.iteritems():
@@ -217,6 +221,10 @@ def applyJT(system):
             result[key] = system.scope._system.vec['du'][item]
         else :
             result[key] = system._parent_system.vec['dp'][item]
+
+    # Bail if this component is not connected in the graph
+    if len(arg)==0 or len(result)==0:
+        return
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
