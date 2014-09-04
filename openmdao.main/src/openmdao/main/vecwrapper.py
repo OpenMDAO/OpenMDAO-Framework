@@ -1,3 +1,5 @@
+import sys
+
 from collections import OrderedDict
 import numpy
 
@@ -13,8 +15,9 @@ class VecWrapperBase(object):
     and info about what var maps to what range within the distributed
     vector.
     """
-    def __init__(self, system, array):
+    def __init__(self, system, array, name=''):
         self.array = array
+        self.name = name
         self._info = OrderedDict() # dict of (start_idx, view)
         self._subviews = set()  # set of all names representing subviews of other views
 
@@ -118,16 +121,18 @@ class VecWrapperBase(object):
                 #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
 
-    def dump(self, vecname='', verbose=False):
+    def dump(self, verbose=False, stream=sys.stdout):
         for name, (array_val, start) in self._info.items():
             if verbose or name not in self._subviews:
                 if start is None:
                     start = 0
-                    mpiprint("bad start idx")
+                    mpiprint("bad start idx", stream=stream)
                 mpiprint("%s - %s: (%d,%d) %s" %
-                           (vecname,name, start, start+len(array_val),array_val))
+                           (self.name, array_val, start, start+len(array_val), name), 
+                           stream=stream)
         if self.petsc_vec is not None:
-            mpiprint("%s - petsc sizes: %s" % (vecname,self.petsc_vec.sizes))
+            mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes), 
+                     stream=stream)
 
     def check(self, parent_vec):
         """Debugging method to check consistency of indexing between a child
@@ -398,11 +403,19 @@ class DataTransfer(object):
             addv = True
             mode = True
             if MPI:
+                destvec, srcvec = srcvec, destvec
                 dest, src = src, dest
 
         if self.scatter:
-            mpiprint("%s SCATTERING %s" % (system.name, self.scatter_conns))
+            mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
+            mpiprint("mode = %s" % system.mode)
+            mpiprint("%s BEFORE:" % srcvec.name)
+            srcvec.dump()
+            mpiprint("%s BEFORE:" % destvec.name)
+            destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
+            mpiprint("%s AFTER:" % destvec.name)
+            destvec.dump()
 
         if self.noflat_vars:
             if MPI:

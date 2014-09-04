@@ -107,13 +107,12 @@ class System(object):
         self.scope = scope
         self._nodes = nodes
 
-        self._var_meta = {} # dict of metadata (size, flat, etc. for all vars)
+        self._var_meta = {} # dict of metadata (size, flat, etc. for all vars (local and global))
         self.variables = OrderedDict() # dict of all vars owned by this System (flat and non-flat)
         self.flat_vars = OrderedDict() # all vars used in vectors, whether they add to vector size or not
-        self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
+        self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
-        #self.state_resid_map = {}
         self._mapped_resids = {}
 
         self._out_nodes = []
@@ -262,7 +261,7 @@ class System(object):
         return [a for a in self.variables.keys() if a in args]
 
     def list_inputs_and_states(self):
-        """Returns names of input variables (not collapsed edges)
+        """Returns names of input variables and states (not collapsed edges)
         from this System and all of its children.
         """
         inputs = set()
@@ -536,12 +535,14 @@ class System(object):
                 arrays[name] = numpy.zeros(size)
 
         for name in ['u', 'f', 'du', 'df']:
-            self.vec[name] = VecWrapper(self, arrays[name])
+            self.vec[name] = VecWrapper(self, arrays[name], 
+                                        name='.'.join((self.name, name)))
 
         insize = self.input_sizes[rank]
 
         for name in ['p', 'dp']:
-            self.vec[name] = InputVecWrapper(self, numpy.zeros(insize))
+            self.vec[name] = InputVecWrapper(self, numpy.zeros(insize), 
+                                             name='.'.join((self.name, name)))
 
         start, end = 0, 0
         for sub in self.local_subsystems():
@@ -576,10 +577,10 @@ class System(object):
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
 
-            #if subsystem is None:
-            #    mpiprint("%s scattering %s -> %s" % (str(self.name),srcvecname,destvecname))
-            #else:
-            #    mpiprint("%s scattering to %s: %s -> %s" % (str(self.name),str(subsystem.name),srcvecname,destvecname))
+            if subsystem is None:
+               mpiprint("scattering (full) to %s" % str(self.name))
+            else:
+               mpiprint("%s scattering to %s" % (str(self.name),str(subsystem.name)))
             scatter(self, srcvec, destvec)
 
             if destvecname == 'p':
@@ -706,12 +707,14 @@ class System(object):
         self.mode = mode
         self.options = options
 
-        if mode == 'forward':
+        if mode in ('forward', 'fd'):
             self.sol_vec = self.vec['du']
             self.rhs_vec = self.vec['df']
         elif mode == 'adjoint':
             self.sol_vec = self.vec['df']
             self.rhs_vec = self.vec['du']
+        else:
+            raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
 
         for subsystem in self.local_subsystems():
             subsystem.set_options(mode, options)
