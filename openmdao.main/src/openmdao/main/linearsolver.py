@@ -63,6 +63,8 @@ class ScipyGMRES(LinearSolver):
             for okey in outputs:
                 J[okey] = {}
                 for ikey in inputs:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
                     J[okey][ikey] = None
         else:
             J = np.zeros((num_output, num_input))
