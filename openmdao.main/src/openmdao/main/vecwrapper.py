@@ -22,7 +22,7 @@ class VecWrapperBase(object):
         self._subviews = set()  # set of all names representing subviews of other views
 
         # create the PETSc vector
-        self.petsc_vec = create_petsc_vec(system.mpi.comm, 
+        self.petsc_vec = create_petsc_vec(system.mpi.comm,
                                           self.array)
 
         self._initialize(system)
@@ -128,10 +128,10 @@ class VecWrapperBase(object):
                     start = 0
                     mpiprint("bad start idx", stream=stream)
                 mpiprint("%s - %s: (%d,%d) %s" %
-                           (self.name, array_val, start, start+len(array_val), name), 
+                           (self.name, array_val, start, start+len(array_val), name),
                            stream=stream)
         if self.petsc_vec is not None:
-            mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes), 
+            mpiprint("%s - petsc sizes: %s" % (self.name, self.petsc_vec.sizes),
                      stream=stream)
 
     def check(self, parent_vec):
@@ -146,7 +146,7 @@ class VecWrapperBase(object):
         return retval
 
     #def app_idx(self, vname):
-    #    """Returns the starting index into the distributed 
+    #    """Returns the starting index into the distributed
     #    vector for the given variable.
     #    """
     #    pass
@@ -197,9 +197,9 @@ class VecWrapper(VecWrapperBase):
                                              (system.name, name,
                                              list(self.bounds(name)),
                                              sub_idx,self.array[sub_idx].size))
-                    
+
         # TODO: handle cases where we have overlapping subvars but no basevar
-        
+
 
     def _add_resid(self, system):
         nodemap = system.scope.name2collapsed
@@ -214,15 +214,15 @@ class VecWrapper(VecWrapperBase):
         states = [s for s in states if nodemap[s] in system.variables]
         if states:
             start, end = self.bounds(states)
-    
+
             # verify contiguous states
             size = sum([self._info[n][0].size for n in states])
-    
+
             view = self.array[start:end]
-    
+
             assert(size == view.size)
             assert(len(resids) == 1)
-    
+
             self._info[resids[0]] = (view, start)
             self._subviews.add(resids[0])
 
@@ -275,7 +275,7 @@ class InputVecWrapper(VecWrapperBase):
         flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
         arg_idx = system.arg_idx
-        
+
         for sub in system.simple_subsystems():
             for name in [n for n in system.vector_vars if n in sub._in_nodes]:
                 if name in flat_ins and name not in self._info:
@@ -312,7 +312,7 @@ class InputVecWrapper(VecWrapperBase):
 
     def _map_resids_to_states(self, system):
         pass
-    
+
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given scope.
@@ -407,15 +407,15 @@ class DataTransfer(object):
         #         dest, src = src, dest
 
         if self.scatter:
-            mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
-            mpiprint("mode = %s" % system.mode)
-            mpiprint("%s BEFORE:" % srcvec.name)
-            srcvec.dump()
-            mpiprint("%s BEFORE:" % destvec.name)
-            destvec.dump()
+            #mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
+            #mpiprint("mode = %s" % system.mode)
+            #mpiprint("%s BEFORE:" % srcvec.name)
+            #srcvec.dump()
+            #mpiprint("%s BEFORE:" % destvec.name)
+            #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            mpiprint("%s AFTER:" % destvec.name)
-            destvec.dump()
+            #mpiprint("%s AFTER:" % destvec.name)
+            #destvec.dump()
 
         if self.noflat_vars:
             if MPI:
@@ -475,5 +475,5 @@ class SerialScatter(object):
         assert(len(self.dest_idxs) <= destvec.size)
         assert(len(self.src_idxs) <= srcvec.size)
         assert(len(self.src_idxs) <= len(self.dest_idxs))
-        
+
         destvec[self.dest_idxs] = srcvec[self.src_idxs]

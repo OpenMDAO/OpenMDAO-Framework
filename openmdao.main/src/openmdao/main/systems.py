@@ -87,7 +87,7 @@ def compound_setup_scatters(self):
                             scatter_conns_full.add(node)
                             src_full.append(src_idxs)
                             dest_full.append(dest_idxs)
-                    
+
         if MPI or scatter_conns or noflat_conns:
             subsystem.scatter_partial = DataTransfer(self, src_partial,
                                                      dest_partial,
@@ -219,7 +219,7 @@ class System(object):
         variable.
         """
 
-        # FIXME: this currently doesn't handle distributed vars, 
+        # FIXME: this currently doesn't handle distributed vars,
         #  i.e. variables that have parts located on different
         #  procs.
         comm = self.mpi.comm
@@ -230,7 +230,7 @@ class System(object):
         all_keys = comm.allgather(vnames)
 
         mpiprint("allkeys: %s" % all_keys)
-       
+
         var2proc = {}
         for proc, names in enumerate(all_keys):
             for name in names:
@@ -245,8 +245,8 @@ class System(object):
                     mpiprint("self.local_var_sizes[proc, idx]: %s" % self.local_var_sizes[proc, idx])
                     if self.local_var_sizes[proc, idx] > 0:
                         var2proc[name] = proc
- 
-        return var2proc    
+
+        return var2proc
 
     def _get_owned_args(self):
         args = set()
@@ -488,7 +488,7 @@ class System(object):
             #                if rnk+1 < self.mpi.comm.size:
             #                    self.local_var_sizes[rnk+1:, ivar] = 0
             #                break
-            #        
+            #
             #        self.vector_vars[name]['size'] = self.local_var_sizes[rank, ivar]
 
             #mpiprint("local_var_sizes = %s" % self.local_var_sizes)
@@ -535,13 +535,13 @@ class System(object):
                 arrays[name] = numpy.zeros(size)
 
         for name in ['u', 'f', 'du', 'df']:
-            self.vec[name] = VecWrapper(self, arrays[name], 
+            self.vec[name] = VecWrapper(self, arrays[name],
                                         name='.'.join((self.name, name)))
 
         insize = self.input_sizes[rank]
 
         for name in ['p', 'dp']:
-            self.vec[name] = InputVecWrapper(self, numpy.zeros(insize), 
+            self.vec[name] = InputVecWrapper(self, numpy.zeros(insize),
                                              name='.'.join((self.name, name)))
 
         start, end = 0, 0
@@ -760,6 +760,8 @@ class System(object):
         self.initialize_gradient_solver()
 
         if mode == 'fd':
+            self.vec['df'].array[:] = 0.0
+            self.vec['du'].array[:] = 0.0
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs,
                                                   return_format)
@@ -803,7 +805,7 @@ class System(object):
         """
         self.rhs_vec.array[:] = 0.0
         self.sol_vec.array[:] = 0.0
-        self.vec['dp'].array[:] = 0.0  
+        self.vec['dp'].array[:] = 0.0
 
         if self.mpi.rank == rank:
             mpiprint("set %d index to 1.0" % ind)
@@ -815,7 +817,7 @@ class System(object):
         self.ln_solver.ksp.solve(self.rhs_buf, self.sol_buf)
 
         self.sol_vec.array[:] = self.sol_buf.array[:]
-        
+
         return self.sol_vec
 
     def _get_global_indices(self, var, rank):
@@ -974,7 +976,7 @@ class SimpleSystem(System):
 
     def linearize(self):
         """ Linearize this component. """
-
+        print "linearize", self.name
         self.J = self._comp.linearize(first=True)
 
     def applyJ(self):

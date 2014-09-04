@@ -63,6 +63,8 @@ class ScipyGMRES(LinearSolver):
             for okey in outputs:
                 J[okey] = {}
                 for ikey in inputs:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
                     J[okey][ikey] = None
         else:
             J = np.zeros((num_output, num_input))
@@ -288,7 +290,7 @@ class PETSc_KSP(LinearSolver):
         return J
 
     # def _J_dict_solve(self, inputs, outputs):
-    #     """Returns a dict of sensitivities for given 
+    #     """Returns a dict of sensitivities for given
     #     inputs and outputs.
     #     """
     #     system = self.system
@@ -310,9 +312,9 @@ class PETSc_KSP(LinearSolver):
     #             solvec = system._compute_derivatives(output, ind)
 
     #             for param in inputs:
-    #                 sens_dict[output][param][ind, :] = solvec[param]  
+    #                 sens_dict[output][param][ind, :] = solvec[param]
 
-    #     return sens_dict      
+    #     return sens_dict
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
