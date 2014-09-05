@@ -472,17 +472,36 @@ class HasEqConstraints(_HasConstraintsBase):
                                         % constraint, ValueError)
         self.parent.config_changed()
 
-    def get_eq_constraints(self):
-        """Returns an ordered dict of constraint objects."""
-        return self._constraints
+    def get_eq_constraints(self, linear=None):
+        """Returns an ordered dict of constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+        if linear is None:
+            return self._constraints
+        else:
+            return dict((key, value) for key, value in self._constraints.iteritems() \
+                        if value.linear==linear)
+
 
     def total_eq_constraints(self):
         """Returns the total number of constraint values."""
         return sum([c.size for c in self._constraints.values()])
 
-    def get_constraints(self):
-        """Returns an ordered dict of constraint objects"""
-        return self._constraints
+    def get_constraints(self, linear=None):
+        """Returns an ordered dict of constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+        if linear is None:
+            return self._constraints
+        else:
+            return dict((key, value) for key, value in self._constraints.iteritems() \
+                        if value.linear==linear)
 
     def eval_eq_constraints(self, scope=None):
         """Returns a list of constraint values."""
@@ -585,16 +604,36 @@ class HasIneqConstraints(_HasConstraintsBase):
                                         % constraint, ValueError)
         self.parent.config_changed()
 
-    def get_ineq_constraints(self):
-        """Returns an ordered dict of inequality constraint objects."""
-        return self._constraints
+    def get_ineq_constraints(self, linear=None):
+        """Returns an ordered dict of inequality constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+        if linear is None:
+            return self._constraints
+        else:
+            return dict((key, value) for key, value in self._constraints.iteritems() \
+                        if value.linear==linear)
 
     def total_ineq_constraints(self):
         """Returns the total number of inequality constraint values."""
         return sum([c.size for c in self._constraints.values()])
 
-    def get_constraints(self):
-        """Returns an ordered dict of constraint objects"""
+    def get_constraints(self, linear=None):
+        """Returns an ordered dict of constraint objects
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+        if linear is None:
+            return self._constraints
+        else:
+            return dict((key, value) for key, value in self._constraints.iteritems() \
+                        if value.linear==linear)
+
         return self._constraints
 
     def eval_ineq_constraints(self, scope=None):
@@ -761,18 +800,31 @@ class HasConstraints(object):
         self._eq._add_eq_constraint(lhs, rhs, scaler, adder, name=name,
                                     scope=scope, linear=linear)
 
-    def get_eq_constraints(self):
-        """Returns an ordered dict of equality constraint objects."""
-        return self._eq.get_eq_constraints()
+    def get_eq_constraints(self, linear=None):
+        """Returns an ordered dict of equality constraint objects.
 
-    def get_ineq_constraints(self):
-        """Returns an ordered dict of inequality constraint objects."""
-        return self._ineq.get_ineq_constraints()
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+        return self._eq.get_eq_constraints(linear=linear)
 
-    def get_constraints(self):
-        """Returns an ordered dict of constraint objects"""
-        return ordereddict.OrderedDict(self._eq.get_eq_constraints().items() +
-                                       self._ineq.get_ineq_constraints().items())
+    def get_ineq_constraints(self, linear=None):
+        """Returns an ordered dict of inequality constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+        return self._ineq.get_ineq_constraints(linear=linear)
+
+    def get_constraints(self, linear=None):
+        """Returns an ordered dict of constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+        return ordereddict.OrderedDict(self._eq.get_eq_constraints(linear=linear).items() +
+                                       self._ineq.get_ineq_constraints(linear=linear).items())
 
     def total_eq_constraints(self):
         """Returns the total number of equality constraint values."""
