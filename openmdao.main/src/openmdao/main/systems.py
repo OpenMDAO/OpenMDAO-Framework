@@ -255,7 +255,7 @@ class System(object):
         values are duplicated, use the value from the lowest rank
         process.  Note that J has a nested dict structure.
         """
-        
+
         comm = self.mpi.comm
         myrank = comm.rank
 
@@ -267,7 +267,7 @@ class System(object):
                 tups.append((param, output))
 
         dist_tups = comm.gather(tups, root=0)
-       
+
         tupdict = {}
         if myrank == 0:
             for rank, tups in enumerate(dist_tups):
@@ -281,7 +281,7 @@ class System(object):
                     del tupdict[tup]
 
         tupdict = comm.bcast(tupdict, root=0)
-     
+
         if myrank == 0:
             for (param, output), rank in tupdict.items():
                 J[param][output] = comm.recv(source=rank, tag=0)
@@ -369,7 +369,7 @@ class System(object):
 
     def get_size(self, names):
         """Return the total size of the variables
-        corresponding to the given names.  If a given 
+        corresponding to the given names.  If a given
         variable does not exist locally, the size will
         be taken from the lowest rank process that does
         contain that variable.
@@ -1039,7 +1039,6 @@ class SimpleSystem(System):
 
     def linearize(self):
         """ Linearize this component. """
-        print "linearize", self.name
         self.J = self._comp.linearize(first=True)
 
     def applyJ(self):

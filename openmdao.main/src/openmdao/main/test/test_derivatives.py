@@ -169,7 +169,7 @@ class ParaboloidNoDeriv(Component):
 class SimpleDriver(Driver):
     """Driver with Parameters"""
 
-    implements(IHasParameters, )
+    implements(IHasParameters, IHasConstraints, IHasObjective)
 
 class SimpleComp(Component):
 

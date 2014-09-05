@@ -91,7 +91,7 @@ class ScipyGMRES(LinearSolver):
                 dx, info = gmres(A, RHS,
                                  tol=options.gmres_tolerance,
                                  maxiter=options.gmres_maxiter)
-                mpiprint('dx', dx)
+                #mpiprint('dx', dx)
                 if info > 0:
                     msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
                           "after %d iterations for parameter '%s' at index %d"
@@ -175,7 +175,7 @@ class ScipyGMRES(LinearSolver):
         system.rhs_vec.array[:] = 0
         system.applyJ()
 
-        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
@@ -289,12 +289,12 @@ class PETSc_KSP(LinearSolver):
     #     return J
 
     def _J_dict_solve(self, inputs, outputs):
-        """Returns a dict of sensitivities for given 
+        """Returns a dict of sensitivities for given
         inputs and outputs.
         """
         system = self._system
         name2collapsed = system.scope.name2collapsed
- 
+
         inputs = [_detuple(x) for x in inputs]
         outputs = [_detuple(x) for x in outputs]
 
@@ -340,7 +340,7 @@ class PETSc_KSP(LinearSolver):
 
                 j += 1
 
-        return J      
+        return J
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
