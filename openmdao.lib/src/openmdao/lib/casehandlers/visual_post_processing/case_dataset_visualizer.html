@@ -2,12 +2,13 @@
     <head>
         <link rel='stylesheet' type='text/css' href='http://w2ui.com/src/w2ui-1.4.1.min.css' />
         <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+        <script src="http://d3js.org/d3.v3.min.js"></script>
         <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
     </head>
     <body>
-        <div id='main' style='width: 100%; height: 400px;'></div>
+        <div id='main' style='width: 100%; height: 700px;'></div>
         <script id='case-data' type='application/json'>
-            {case_data}
+            {{ case_data }}
         </script>
         <script id='visualizer' type='text/javascript'>
             //global variable for reference case data
@@ -31,7 +32,7 @@
                     }
                 }
                 return nodes ;
-            }
+            } ; // end get_nodes function
 
             // widget configuration
             var config = {
@@ -43,72 +44,160 @@
                         { type: 'main',  minSize: 550, overflow: 'hidden' }
                     ]
                 },
-            }
-
-
+            };
 
             jQuery( document ).ready(function() {
+                var cases = [];
+                var it_case_key = "iteration_case_" ;
+                var simulation_info_key = "simulation_info" ;
+                var case_objects = new Object();
+                var simulation_info_id = "" ;
 
-                    var cases = [];
-                    var it_case_key = "iteration_case_" ;
-                    var simulation_info_key = "simulation_info" ;
-                    var case_objects = new Object();
-                    var simulation_info_id = "" ;
-                    // var driver_info_key = "driver_info_" ;
-                    // var driver_names = new Object();
+                // get all the cases in an associative array with the id as the key
+                jQuery.each( case_data, function( key , val ) {
 
-                    // get all the cases in an associative array with the id as the key
-                    jQuery.each( case_data, function( key , val ) {
+                   // need to add simulation info object for top of tree of cases
+                   if (key.lastIndexOf(simulation_info_key, 0) === 0) {
+                        val[ 'children'] = [] ;
+                        case_objects[ val.uuid ] = val ;
+                        simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
+                    }
 
-                       // need to add simulation info object for top of tree of cases
-                       if (key.lastIndexOf(simulation_info_key, 0) === 0) {
-                            val[ 'children'] = [] ;
-                            case_objects[ val.uuid ] = val ;
-                            simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
-                        }
+                    // Make a structure to hold all of the case info
+                    if (key.lastIndexOf(it_case_key, 0) === 0) {
+                        case_number = key.substring(it_case_key.length);
+                        val[ 'children'] = [] ;
+                        val[ 'case_number'] = case_number ;
+                        case_objects[ val._id ] = val ;
+                    }
+                }); // end each
 
-                        // Make a structure to hold all of the case info
-                        if (key.lastIndexOf(it_case_key, 0) === 0) {
-                            case_number = key.substring(it_case_key.length);
-                            val[ 'children'] = [] ;
-                            val[ 'case_number'] = case_number ;
-                            case_objects[ val._id ] = val ;
-                        }
-                    }); // end each
+                // Loop over the case_objects and connect parents to children and vice versa
+                Object.keys(case_objects).forEach(function(key) {
+                    var case_object, parent_id, parent_case_object, parent_case_object_children ;
+                    if ( key != simulation_info_id )
+                    {
+                        case_object = case_objects[key];
+                        parent_id = case_object._parent_id ;
+                        parent_case_object = case_objects[parent_id] ;
+                        parent_case_object_children = parent_case_object.children ;
+                        parent_case_object_children[ parent_case_object_children.length ] = case_object ;
+                    }
+                }); // end keys
 
-                    // Loop over the case_objects and connect parents to children and vice versa
-                    Object.keys(case_objects).forEach(function(key) {
-                        var case_object, parent_id, parent_case_object, parent_case_object_children ;
-                        if ( key != simulation_info_id )
-                        {
-                            case_object = case_objects[key];
-                            parent_id = case_object._parent_id ;
-                            parent_case_object = case_objects[parent_id] ;
-                            parent_case_object_children = parent_case_object.children ;
-                            parent_case_object_children[ parent_case_object_children.length ] = case_object ;
-                        }
-                    });
+                // Starting from the top "case_object", which is really the sim info data,
+                // Walk down the children leaves, creating the value for nodes in the w2ui call below
+                simulation_info_object = case_objects[simulation_info_id] ;
+                node_tree = get_nodes(simulation_info_object);
 
-                    // Starting from the top "case_object", which is really the sim info data,
-                    // Walk down the children leaves, creating the value for nodes in the w2ui call below
-                    simulation_info_object = case_objects[simulation_info_id] ;
-                    node_tree = get_nodes(simulation_info_object);
-
-
-            jQuery(function () {
-                 // initialization
+                // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
+                w2ui.layout.content('main', '<div id="svgContent"></div>' );
                 w2ui.layout.content('left', jQuery().w2sidebar(
                     {
                         name: 'cases',
                         nodes: node_tree ,
                         onClick: function(event) {
-                            w2ui.layout.content('main', '<div style="padding: 10px">case ' + event.target + ' clicked</div>' );
+                            alert( 'case ' + event.target + ' clicked');
+                            //w2ui.layout.content('main', '<div style="padding: 10px">case ' + event.target + ' clicked</div>' );
                         }  ,
                     }
-                ));
-            });
+                )); // end layout content left
 
+
+                // Draw the depgraph using d3 and the layout information for the
+                //   nodes and edges that graphviz's dot program generates
+                var w = 700, h = 700;
+
+                // TODO: Could really use dot's size attribute to scale things properly. 
+                // TODO: Also, use this option to dot to flip the direction of y
+                //         -y          - Invert y coordinate in output
+                var yscale = d3.scale.linear()
+                    .domain([0, {{graph_height}}])
+                    .range([h, 0]);
+                var h_scale = h / {{graph_height}} ;
+                var xscale = d3.scale.linear()
+                    .domain([0, {{graph_width}}])
+                    .range([0, {{graph_width}} * h_scale ]);
+                // var xscale = d3.scale.linear()
+                //     .domain([0, {{graph_width}}])
+                //     .range([0, w]);
+
+                var svg = d3.select("#svgContent")
+                              .append("svg")
+                              .attr("height", h)
+                              .attr("width", "100%")
+                              .attr('preserveAspectRatio', 'xMinYMin slice') ;
+
+                var dataSet = {
+                    nodes: [ 
+                            {{ node_content }}
+                           ]
+                };
+
+                var force = self.force = d3.layout.force()
+                    .nodes(dataSet.nodes)
+                    .size([w,h])
+                    .start();
+
+                // create SVG groups for each node
+                var node = svg.selectAll(".node")
+                    .data(dataSet.nodes)
+                    .enter().append("g")
+                    .attr("class", function (d) {
+                        return d.shape + " node";
+                    })
+                    .attr("transform", function(d) { return "translate(" + xscale(d.x) + "," + yscale(d.y) + " )" } )
+                    ;
+
+                // draw the shapes for the various kinds of nodes
+                d3.selectAll(".ellipse").append("ellipse")
+                    .attr("rx", 40)
+                    .attr("fill", "none")
+                    .attr("ry", 20)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2)
+                ;
+                d3.selectAll(".box").append("rect")
+                    .attr("width", 80)
+                    .attr("fill", "none")
+                    .attr("height", 40)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2)
+                    .attr("transform", "translate(-40,-20)")
+                ;
+                d3.selectAll(".diamond").append("polygon")
+                    .attr("points", "-30,0, 0,25, 30,0 0,-25")
+                    .attr("fill", "none")
+                    .attr("stroke","black")
+                    .attr("stroke-width",2);
+                d3.selectAll(".invhouse").append("polygon")
+                    .attr("points", "-40,-25, 40,-25, 40,10 0,25 -40,10")
+                    .attr("fill", "none")
+                    .attr("stroke","black")
+                    .attr("stroke-width",2);
+
+                // label the node
+                node.append("text")
+                    .text(function(d) { return d.name })
+                    .style("text-anchor", "middle")
+                    ;
+
+                // build the arrowhead
+                svg.append("svg:defs").selectAll("marker")
+                    .data(["end"])
+                    .enter().append("svg:marker")    
+                    .attr("id", String)
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 0)
+                    .attr("refY", 0)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("svg:path")
+                    .attr("d", "M0,-5L10,0L0,5");
+
+                {{ svg_path_edges }}
 
             }); // end ready
         </script>
