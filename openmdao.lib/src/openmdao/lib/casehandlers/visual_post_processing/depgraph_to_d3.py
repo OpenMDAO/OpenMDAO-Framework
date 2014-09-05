@@ -134,7 +134,7 @@ top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
 
 top.run()
 top.inner_driver.workflow.initialize_residual()
-edges = top.inner_driver.workflow._edges
+# edges = top.inner_driver.workflow._edges
 
 # Save the graphviz layout info to a plain text file
 plot_graph( top._depgraph, fmt='plain' )
