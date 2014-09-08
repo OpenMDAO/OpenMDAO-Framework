@@ -61,32 +61,36 @@ def compound_setup_scatters(self):
                 if node in sub._in_nodes:
                     if node not in self._owned_args or node in scatter_conns:
                         continue
-                    if node in noflats:
-                        noflat_conns.add(node)
-                        noflat_conns_full.add(node)
+
+                    isrc = varkeys.index(node)
+                    src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
+
+                    # FIXME: broadcast var nodes will be scattered
+                    #  more than necessary using this scheme
+                    if node in visited:
+                        dest_idxs = visited[node]
                     else:
-                        isrc = varkeys.index(node)
-                        src_idxs = numpy.sum(var_sizes[:, :isrc]) + self.arg_idx[node]
+                        dest_idxs = start + self.arg_idx[node]
+                        start += len(dest_idxs)
 
-                        # FIXME: broadcast var nodes will be scattered
-                        #  more than necessary using this scheme
-                        if node in visited:
-                            dest_idxs = visited[node]
-                        else:
-                            dest_idxs = start + self.arg_idx[node]
-                            start += len(dest_idxs)
+                        visited[node] = dest_idxs
 
-                            visited[node] = dest_idxs
+                    if node not in scatter_conns:
+                        scatter_conns.add(node)
+                        src_partial.append(src_idxs)
+                        dest_partial.append(dest_idxs)
 
-                        if node not in scatter_conns:
-                            scatter_conns.add(node)
-                            src_partial.append(src_idxs)
-                            dest_partial.append(dest_idxs)
+                    if node not in scatter_conns_full:
+                        scatter_conns_full.add(node)
+                        src_full.append(src_idxs)
+                        dest_full.append(dest_idxs)
 
-                        if node not in scatter_conns_full:
-                            scatter_conns_full.add(node)
-                            src_full.append(src_idxs)
-                            dest_full.append(dest_idxs)
+            for node in sub._in_nodes:
+                if node in noflats:
+                    scatter_conns.add(node)
+                    scatter_conns_full.add(node)
+                    noflat_conns.add(node)
+                    noflat_conns_full.add(node)
 
         if MPI or scatter_conns or noflat_conns:
             subsystem.scatter_partial = DataTransfer(self, src_partial,
