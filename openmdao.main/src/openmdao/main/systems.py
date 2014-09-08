@@ -172,6 +172,9 @@ class System(object):
                 return s
         return None
 
+    def pre_run(self):
+        pass
+
     def subsystems(self, local=False):
         if local:
             return self.local_subsystems()
@@ -1105,6 +1108,10 @@ class ParamSystem(VarSystem):
             #                     self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
+    def pre_run(self):
+        """ Load param value into u vector. """
+        self.vec['u'].set_from_scope(self.scope, [self.name])
+
 
 class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
@@ -1112,6 +1119,10 @@ class InVarSystem(VarSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
+
+    def pre_run(self):
+        """ Load param value into u vector. """
+        self.vec['u'].set_from_scope(self.scope, [self.name])
 
 
 class OutVarSystem(VarSystem):
@@ -1247,6 +1258,10 @@ class CompoundSystem(System):
         for s in self.all_subsystems():
             for sub in s.simple_subsystems():
                 yield sub
+
+    def pre_run(self):
+        for s in self.local_subsystems():
+            s.pre_run()
 
     def setup_scatters(self):
         """ Defines a scatter for args at this system's level """

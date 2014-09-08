@@ -166,7 +166,7 @@ class HasParametersTestCase(unittest.TestCase):
         #self.top.driver.set_parameters([22.])
         self.top.run()
         self.assertEqual(self.top.nest.x, 22.)
-        self.assertEqual(self.top.nest.y, 22.)
+        self.assertEqual(self.top.nest.comp.y, 22.)
 
     def test_add_incompatible_params(self):
         self.top.add('dummy', Dummy())
