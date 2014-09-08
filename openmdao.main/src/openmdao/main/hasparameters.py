@@ -114,7 +114,7 @@ class ParameterBase(object):
 
         self.set(self.start, self.parent._system.vec['u']) #scope)
 
-    def set(self, value, scope=None):
+    def set(self, val, uvec):
         """Assigns the given value to the target referenced by this parameter,
         must be overridden."""
         raise NotImplementedError('set')

@@ -338,11 +338,13 @@ class ParametersTestCase(unittest.TestCase):
 
         self.assertEqual(d1val, 9.0)
         self.assertEqual(d2val, 5.75)
+        
+        self.top.run()
 
-        params['comp.a'].set(d1val)
+        params['comp.a'].set(d1val, self.top._system.vec['u'])
         self.assertEqual(self.top.comp.a, 15.)
 
-        params2['comp.a'].set(5.0)
+        params2['comp.a'].set(5.0, self.top._system.vec['u'])
         self.assertEqual(self.top.comp.a, 12.)
 
         self.top.driver2.set_parameters([d2val])
