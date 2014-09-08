@@ -670,7 +670,6 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
-        mpiprint("**** STARTING adjoint")
         J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
                                               mode='adjoint')
 

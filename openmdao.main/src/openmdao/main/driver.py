@@ -125,9 +125,32 @@ class Driver(Component):
     def _collapse_subdrivers(self, g):
         """collapse subdriver iteration sets into single nodes."""
         # collapse all subdrivers in our graph
-        wfnames = set(self.workflow.get_names(full=True))
+        itercomps = {}
+        itercomps['#parent'] = self.workflow.get_names(full=True)
+        
         for child_drv in self.subdrivers(recurse=False):
-            collapse_driver(g, child_drv, wfnames)
+            itercomps[child_drv.name] = [c.name for c in child_drv.iteration_set()]
+            
+        for child_drv in self.subdrivers(recurse=False):
+            excludes = set()
+            for name, comps in itercomps.items():
+                if name != child_drv.name:
+                    for cname in comps:
+                        if cname not in itercomps[child_drv.name]:
+                            excludes.add(cname)
+                    
+            collapse_driver(g, child_drv, excludes)
+            
+        # now remove any comps that are shared by subdrivers but are not found
+        # in our workflow
+        to_remove = set()
+        for name, comps in itercomps.items():
+            if name != '#parent':
+                for comp in comps:
+                    if comp not in itercomps['#parent']:
+                        to_remove.add(comp)
+        
+        g.remove_nodes_from(to_remove)
 
     def get_depgraph(self):
         return self.parent._depgraph  # May change this to use a smaller graph later

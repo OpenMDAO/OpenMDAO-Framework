@@ -115,9 +115,9 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y', 0., 1.e99)
         self.top.run()
         self.top.driver.set_parameters([22., 33.])
-        self.top.run()
-        self.assertEqual(self.top.comp.x, 22.)
-        self.assertEqual(self.top.comp.y, 33.)
+
+        self.assertEqual(self.top._system.vec['u']['comp.x'][0], 22.)
+        self.assertEqual(self.top._system.vec['u']['comp.y'][0], 33.)
 
         ## try setting outside of bounds
         #try:
@@ -137,17 +137,16 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.run()
         self.top.driver.set_parameter_by_name('abc', 22.0)
         self.top.driver.set_parameter_by_name('def', 33.0)
-        self.top.run()
-        self.assertEqual(self.top.comp.x, 22.)
-        self.assertEqual(self.top.comp.y, 33.)
+
+        self.assertEqual(self.top._system.vec['u']['comp.x'][0], 22.)
+        self.assertEqual(self.top._system.vec['u']['comp.y'][0], 33.)
 
     def test_set_broadcast_params(self):
         self.top.driver.add_parameter(('comp.x', 'comp.y'), low=0., high=1e99)
         self.top.run()
         self.top.driver.set_parameters([22.])
-        self.top.run()
-        self.assertEqual(self.top.comp.x, 22.)
-        self.assertEqual(self.top.comp.y, 22.)
+        self.assertEqual(self.top._system.vec['u']['comp.x'][0], 22.)
+        self.assertEqual(self.top._system.vec['u']['comp.y'][0], 22.)
 
     def test_set_boundary_params(self):
         self.top = set_as_top(Assembly())
@@ -332,84 +331,53 @@ class HasParametersTestCase(unittest.TestCase):
         assert_raises(self, "self.top.run()", globals(), locals(), RuntimeError,
                       ": The following parameters collide with connected inputs: comp2.x in driver")
 
+    def test_transform(self):
+        self.top.comp.x = 15.0
+        self.top.comp.y = 7.0
+
+        # Vars with no bounds params with bounds
+        self.top.driver.add_parameter('comp.x', low=8.6, high=9.4, scaler=1.5, adder=1.)
+        self.top.driver.add_parameter('comp.y', low=-6., high=10., scaler=4., adder=-2.)
+
+        params = self.top.driver.get_parameters()
+
+        d1val = params['comp.x'].evaluate()[0]
+        d2val = params['comp.y'].evaluate()[0]
+        self.assertEqual(d1val, 9.0)
+        self.assertEqual(d2val, 3.75)
+
+        self.top.run()
+        
+        uvec = self.top._system.vec['u']
+
+        self.assertEqual(uvec['comp.x'][0], 15.)
+        self.assertEqual(uvec['comp.y'][0], 7.0)
+        
+        params['comp.x'].set(9.0, uvec)
+        params['comp.y'].set(3.75, uvec)
+        
+        self.assertEqual(uvec['comp.x'][0], 15.)
+        self.assertEqual(uvec['comp.y'][0], 7.)
+
+        self.top.driver.set_parameters([1.0, 3.0])
+        
+        self.assertEqual(uvec['comp.x'][0], 3.)
+        self.assertEqual(uvec['comp.y'][0], 4.)
+        
+        self.top.driver.set_parameters([9.0, 3.75])
+        
+        self.assertEqual(uvec['comp.x'][0], 15.)
+        self.assertEqual(uvec['comp.y'][0], 7.)
+
 
 class ParametersTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
-        self.top.add('driver', MyDriver())
+        self.top.add('driver1', MyDriver())
         self.top.add('driver2', MyDriver())
         self.top.add('comp', ExecComp(exprs=['z=a+b+c+d']))
-        self.top.driver.workflow.add('comp')
-
-    def test_transform(self):
-        self.top.comp.a = 15.
-
-        # Vars with no bounds params with bounds
-        self.top.driver.add_parameter('comp.a', low=8.6, high=9.4, scaler=1.5, adder=1.)
-        self.top.driver2.add_parameter('comp.a', low=-6., high=10., scaler=4., adder=-2.)
-
-        params = self.top.driver.get_parameters()
-        params2 = self.top.driver2.get_parameters()
-
-        d1val = params['comp.a'].evaluate()[0]
-        d2val = params2['comp.a'].evaluate()[0]
-
-        self.assertEqual(d1val, 9.0)
-        self.assertEqual(d2val, 5.75)
-        
-        self.top.run()
-
-        params['comp.a'].set(d1val, self.top._system.vec['u'])
-        self.assertEqual(self.top.comp.a, 15.)
-
-        params2['comp.a'].set(5.0, self.top._system.vec['u'])
-        self.assertEqual(self.top.comp.a, 12.)
-
-        self.top.driver2.set_parameters([d2val])
-        self.assertEqual(self.top.comp.a, 15.)
-
-    #def test_scaled_var_with_initial_violation(self):
-        # KTM1 - This tested pulling values into the param pseudocomps. We don't
-        # have those anymore, so don't need the test.
-
-        #self.top.comp.add_trait('svar', Float(0.0, low=-10.0, high=10.0, iotype='in'))
-
-        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        #self.top.driver.ctlmin = 1.0
-        #self.top.comp.svar = 1.5
-        #self.top.driver.run()
-
-        #self.top.driver.clear_parameters()
-        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        #self.top.driver.ctlmin = 1.0
-        #self.top.comp.svar = 2.5
-
-        #sout = StringIO.StringIO()
-        #sh = logging.StreamHandler(sout)
-        #sh.setLevel(logging.WARNING)
-        #logger.addHandler(sh)
-
-        #self.top.driver.run()
-        #self.assertEqual(sout.getvalue().strip(),
-                         #"Setting 'comp.svar' with a value of (12.5) which is outside of the range [10.0, 11.0]")
-        #oldlogval = sout.getvalue()
-
-        #self.top.comp.svar = 0.5 # put svar back in valid range
-        #self.top.driver.clear_parameters()
-        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        #self.top.driver.ctlmin = 1.0
-        #self.top.driver.run()
-
-        #self.top.driver.clear_parameters()
-        #self.top.driver.add_parameter('comp.svar', low=10.0, high=11.0, adder=-10.0)
-        #self.top.driver.ctlmin = 1.0
-        #self.top.comp.svar = -2.5
-
-        #self.top.driver.run()
-
-        #self.assertEqual(sout.getvalue()[len(oldlogval):].strip(),
-                         #"Setting 'comp.svar' with a value of (7.5) which is outside of the range [10.0, 11.0]")
+        self.top.driver.workflow.add(['driver1', 'driver2'])
 
     def test_group_get_referenced_vars_by_compname(self):
         self.top.driver.add_parameter(('comp.a', 'comp.b'), 0, 1e99)
