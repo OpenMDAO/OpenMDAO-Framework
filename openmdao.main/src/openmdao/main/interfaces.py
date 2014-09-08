@@ -722,6 +722,22 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         """Evaluates the constraint expressions and returns a list of values."""
 
 
+class IHas2SidedConstraints(Interface):
+    """An Interface for objects that can accept constraints defined like
+    a < x < b, where x is a variable and a and b are constants."""
+
+    def add_2sided_constraint(expr_string):
+        """Adds a constraint as a string containing
+        a double sided inequality 'a < x < b'.
+        """
+
+    def get_2sided_constraints():
+        """Returns an ordered dict of double-sided constraint objects."""
+
+    def eval_2sided_constraints(scope=None):
+        """Evaluates the constraint expressions and returns a list of values."""
+
+
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""
 
