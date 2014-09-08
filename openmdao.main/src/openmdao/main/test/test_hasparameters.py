@@ -25,7 +25,7 @@ class Dummy(Component):
 
 @add_delegate(HasParameters)
 class MyDriver(Driver):
-    
+
     implements(IHasParameters)
 
     def start_iteration(self):
@@ -113,7 +113,9 @@ class HasParametersTestCase(unittest.TestCase):
     def test_set_params(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99)
         self.top.driver.add_parameter('comp.y', 0., 1.e99)
+        self.top.run()
         self.top.driver.set_parameters([22., 33.])
+        self.top.run()
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 33.)
 
@@ -132,14 +134,18 @@ class HasParametersTestCase(unittest.TestCase):
     def test_set_param_by_name(self):
         self.top.driver.add_parameter('comp.x', 0., 1.e99, name='abc')
         self.top.driver.add_parameter('comp.y', 0., 1.e99, name='def')
+        self.top.run()
         self.top.driver.set_parameter_by_name('abc', 22.0)
         self.top.driver.set_parameter_by_name('def', 33.0)
+        self.top.run()
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 33.)
 
     def test_set_broadcast_params(self):
         self.top.driver.add_parameter(('comp.x', 'comp.y'), low=0., high=1e99)
+        self.top.run()
         self.top.driver.set_parameters([22.])
+        self.top.run()
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 22.)
 
@@ -276,7 +282,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(p.get_metadata(),
                          ('comp.x', {'high': None, 'iotype': 'in',
                                      'type': 'trait', 'low': None,
-                                     'vartypename': 'Float', 
+                                     'vartypename': 'Float',
                                      'assumed_default':False}))
 
         p2 = Parameter('comp.y', low=0, high=1e99, scope=self.top)
@@ -298,7 +304,7 @@ class HasParametersTestCase(unittest.TestCase):
                       ": The following parameters collide with connected inputs: comp2.x in driver")
 
         self.top.disconnect('comp.c', 'comp2.x')
-        
+
         # try with parameter group
         self.top.driver.clear_parameters()
         self.top.driver.add_parameter(('comp2.x', 'comp2.y'),
@@ -505,6 +511,7 @@ class ArrayTest(unittest.TestCase):
                       " One or the other must be specified.")
 
         driver.add_parameter('comp.x2d', low=-10, high=10, start=2)
+        top.run()
 
         targets = driver.list_param_targets()
         self.assertEqual(targets, ['comp.x1d', 'comp.x2d'])

@@ -1041,7 +1041,7 @@ class HasParameters(object):
         scope = self._get_scope()
         for param in self._parameters.itervalues():
             if param.start is not None:
-                param.set(param.start, scope)
+                param.set(param.start, scope._system.vec['u'])
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.
