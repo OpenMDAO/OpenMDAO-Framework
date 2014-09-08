@@ -149,6 +149,25 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp.x, 22.)
         self.assertEqual(self.top.comp.y, 22.)
 
+    def test_set_boundary_params(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('driver', MyDriver())
+        self.top.add('nest', Assembly())
+        self.top.nest.add('comp', ExecComp(exprs=['c=x+y', 'd=x-y']))
+        self.top.driver.workflow.add('nest')
+        self.top.nest.driver.workflow.add('comp')
+        self.top.nest.create_passthrough('comp.x')
+        self.top.nest.create_passthrough('comp.c')
+        self.top.nest.connect('x', 'comp.y')
+
+        self.top.driver.add_parameter(('nest.x'), low=0., high=1e99)
+        self.top.run()
+        self.top.nest.x = 22.0
+        #self.top.driver.set_parameters([22.])
+        self.top.run()
+        self.assertEqual(self.top.nest.x, 22.)
+        self.assertEqual(self.top.nest.y, 22.)
+
     def test_add_incompatible_params(self):
         self.top.add('dummy', Dummy())
 
