@@ -1497,6 +1497,11 @@ class OpaqueDriverSystem(SimpleSystem):
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
+    def pre_run(self):
+        for s in self.local_subsystems():
+            s.pre_run()
+
+
 class TransparentDriverSystem(SimpleSystem):
     """A system for an driver that allows derivative calculation across its
     boundary."""

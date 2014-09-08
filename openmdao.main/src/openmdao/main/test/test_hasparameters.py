@@ -151,6 +151,21 @@ class HasParametersTestCase(unittest.TestCase):
     def test_set_boundary_params(self):
         self.top = set_as_top(Assembly())
         self.top.add('driver', MyDriver())
+        self.top.add('comp', ExecComp(exprs=['c=x+y', 'd=x-y']))
+        self.top.driver.workflow.add('comp')
+        self.top.create_passthrough('comp.x')
+        self.top.create_passthrough('comp.c')
+        self.top.connect('x', 'comp.y')
+
+        self.top.driver.add_parameter(('x'), low=0., high=1e99)
+        self.top.x = 22.0
+        self.top.run()
+        self.assertEqual(self.top.x, 22.)
+        self.assertEqual(self.top.comp.y, 22.)
+
+    def test_set_boundary_params_nest(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('driver', MyDriver())
         self.top.add('nest', Assembly())
         self.top.nest.add('comp', ExecComp(exprs=['c=x+y', 'd=x-y']))
         self.top.driver.workflow.add('nest')
@@ -160,9 +175,7 @@ class HasParametersTestCase(unittest.TestCase):
         self.top.nest.connect('x', 'comp.y')
 
         self.top.driver.add_parameter(('nest.x'), low=0., high=1e99)
-        self.top.run()
         self.top.nest.x = 22.0
-        #self.top.driver.set_parameters([22.])
         self.top.run()
         self.assertEqual(self.top.nest.x, 22.)
         self.assertEqual(self.top.nest.comp.y, 22.)
@@ -563,6 +576,33 @@ class ArrayTest(unittest.TestCase):
         self.top.connect('exec_comp.c', 'comp.x1d[0]')
         self.top.driver.add_parameter('comp.x1d[1]', low=-10, high=10, start=1.)
         self.top.run()
+
+    def test_set_boundary_params(self):
+        self.top = set_as_top(Assembly())
+        self.top.add('driver', MyDriver())
+
+        class ArrayComp2(Component):
+
+            x = Array([0.0, 0.0], iotype='in')
+            y = Array([0.0, 0.0], iotype='in')
+            c = Array([0.0, 0.0], iotype='out')
+
+            def execute(self):
+                self.c = self.x + self.y
+
+        self.top.add('comp', ArrayComp2())
+        self.top.driver.workflow.add('comp')
+        self.top.create_passthrough('comp.x')
+        self.top.create_passthrough('comp.c')
+        self.top.connect('x', 'comp.y')
+
+        self.top.driver.add_parameter(('x'), low=0., high=1e99)
+        self.top.x = [22.0, 31.1]
+        self.top.run()
+        self.assertEqual(self.top.x[0], 22.)
+        self.assertEqual(self.top.x[1], 31.1)
+        self.assertEqual(self.top.comp.y[0], 22.)
+        self.assertEqual(self.top.comp.y[1], 31.1)
 
 
 if __name__ == "__main__":
