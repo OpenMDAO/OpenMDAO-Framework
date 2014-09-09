@@ -68,6 +68,32 @@ def get_val_and_index(scope, name):
     else:
         return (getattr(scope, name), None)
 
+def to_slice(idxs):
+    """Convert an index array to a slice if possible. Otherwise,
+    return the index array.
+    """
+    if isinstance(idxs, slice):
+        return idxs
+    elif isinstance(idxs, ndarray):
+        if len(idxs) == 1:
+            return slice(idxs[0], idxs[0]+1)
+        elif len(idxs) == 0:
+            return slice(0,0)
+
+        imin = idxs.min()
+        imax = idxs.max()
+        stride = idxs[1]-idxs[0]
+
+        for i in xrange(idxs):
+            if i and idxs[i] - idxs[i-1] != stride:
+                return idxs
+            return slice(imin, imax+1, stride)
+    elif isinstance(idxs, int_types):
+        return slice(idxs, idxs+1)
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to a slice" %
+                            str(type(idxs)))
+        
 def get_flattened_index(index, shape):
     """Given an index (int, slice, or tuple of ints and slices), into
     an array, return the equivalent index into a flattened version 
@@ -108,16 +134,14 @@ def get_flattened_index(index, shape):
 
     # see if we can convert the discrete list of indices 
     # into a single slice object
-    imin = min(idxs)
-    imax = max(idxs)
-    stride = idxs[1]-idxs[0]
-    if all(arange(imin, imax+1, stride) == list(idxs)):
-        _flat_idx_cache[(sindex, shape)] = slice(imin, imax+1, stride)
-        return slice(imin, imax+1, stride)
+    idxs = to_slice(idxs)
         
-    # if all else fails, return a discrete list of indices into
-    # the flat array.
-    _flat_idx_cache[(sindex, shape)] = idxs.copy()
+    if isinstance(idxs, slice):
+        _flat_idx_cache[(sindex, shape)] = idxs
+    else:
+        # if all else fails, return a discrete list of indices into
+        # the flat array.
+        _flat_idx_cache[(sindex, shape)] = idxs.copy()
     return idxs
 
 def offset_flat_index(idx, offset):

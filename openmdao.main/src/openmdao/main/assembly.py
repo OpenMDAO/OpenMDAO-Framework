@@ -1548,7 +1548,7 @@ class Assembly(Component):
         except Exception:
             mpiprint(traceback.format_exc())
             raise
-        finally:
+        else:
             self.post_setup()   
 
 
