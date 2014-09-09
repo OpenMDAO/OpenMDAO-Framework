@@ -1482,7 +1482,7 @@ class Assembly(Component):
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
 
-        vars2tuples(self._depgraph, collapsed_graph)
+        vars2tuples(dgraph, collapsed_graph)
 
         self.name2collapsed = map_collapsed_nodes(collapsed_graph)
 
