@@ -219,40 +219,6 @@ def get_var_shape(name, scope):
 
     return None
 
-def flattened_size_info(name, scope):
-    """Return the local flattened size of the variable with
-    the given name along with its flattened index into
-    its basevar and its basevar name (if it has one). If it
-    doesn't have a basevar, then index and basevar name are
-    None.
-    """
-    # TODO: add checking of local_size metadata...
-    parts = name.split('.')
-    if len(parts) > 1:  
-        vt = getattr(scope, parts[0]) # vartree reference
-        obj = vt
-        for part in parts[1:-1]:
-            obj = getattr(obj, part)
-        val, idx = get_val_and_index(obj, parts[-1])
-    else:
-        vt = None
-        val, idx = get_val_and_index(scope, name)
-
-    if vt is not None:  # name is a vartree subvar
-        base = vt.name
-        if '[' in name:  # array ref inside of a vartree
-            raise NotImplementedError("no support yet for array element access within vartrees")
-        else:
-            flat_idx = vt.get_flattened_index(name[len(base)+1:])
-    elif '[' in name:  # array index into basevar
-        base = name.split('[',1)[0]
-        flat_idx = get_flattened_index(idx, get_var_shape(base, scope))
-    else:
-        base = None
-        flat_idx = None
-        
-    return (flattened_size(name, val, scope=scope), flat_idx,  base)
-
 def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name, 'data_shape')
     if meta:

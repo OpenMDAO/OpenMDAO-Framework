@@ -1517,6 +1517,15 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.setup_graph()
 
+    def get_comps_and_pseudos(self):
+        for node, data in self._depgraph.nodes_iter(data=True):
+            if 'comp' in data:
+                yield getattr(self, node)
+
+    def pre_setup(self):
+        for comp in self.get_comps_and_pseudos():
+            comp.pre_setup()
+
     def post_setup(self):
         for comp in self.get_comps():
             comp.post_setup()
@@ -1538,6 +1547,7 @@ class Assembly(Component):
             comm = None
 
         try:
+            self.pre_setup()
             self.setup_graph(inputs, outputs)
             self.setup_systems()
             self.setup_communicators(comm)

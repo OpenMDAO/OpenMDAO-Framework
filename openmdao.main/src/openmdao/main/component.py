@@ -43,7 +43,6 @@ from openmdao.main.mpiwrap import MPI_info
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
-from openmdao.main.array_helpers import flattened_size_info
 #from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
@@ -1891,6 +1890,10 @@ class Component(Container):
 
     @rbac(('owner', 'user'))
     def setup_graph(self, inputs=None, outputs=None):
+        pass
+
+    @rbac(('owner', 'user'))
+    def pre_setup(self):
         pass
 
     @rbac(('owner', 'user'))

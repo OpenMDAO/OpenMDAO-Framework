@@ -550,11 +550,6 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
-        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()),
-                         set(['@in0', '@out0', 'comp1', 'comp2',
-                              'comp1.x', 'comp1.y', 'comp2.x', 'comp2.y']))
-
-
     def test_error_logging1(self):
 
         top = set_as_top(Assembly())

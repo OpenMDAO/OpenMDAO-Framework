@@ -103,7 +103,7 @@ class _Case(object):
             else:
                 expr = self._exprs.get(name)
             if expr:
-                expr.set(value, scope, tovector=True)
+                expr.set(value, scope) #, tovector=True)
             else:
                 scope.set(name, value)
                 # FIXME: this extra setting of the vector is messy...

@@ -4,7 +4,7 @@ import weakref
 
 from numpy import ndarray, zeros
 
-from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
+from openmdao.main.array_helpers import flattened_size, \
                                         flattened_value, get_val_and_index, get_index
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
@@ -114,7 +114,6 @@ class PseudoComponent(object):
         self._orig_dest = destexpr.text
         self.Jsize = None
         self.mpi = MPI_info()
-        self._var_sizes = {}
 
         varmap = {}
         rvarmap = {}
@@ -377,6 +376,9 @@ class PseudoComponent(object):
     def get_req_cpus(self):
         return 1
 
+    def pre_setup(self):
+        self.ensure_init()
+
     def setup_systems(self):
         return ()
 
@@ -392,23 +394,8 @@ class PseudoComponent(object):
     def setup_vectors(self, arrays=None):
         pass
 
-    def get_float_var_info(self, name):
-        """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value
-        can be expressed as an array of floats.  Otherwise, None is
-        returned.
-        """
-        if name in self._var_sizes:
-            return self._var_sizes[name]
-        else:
-            self.ensure_init()
-            try:
-                info = flattened_size_info(name, self)
-            except TypeError:
-                info = None
-            self._var_sizes[name] = info
-
-            return info
+    def post_setup(self):
+        pass
 
     def get_flattened_value(self, path):
         """Return the named value, which may include

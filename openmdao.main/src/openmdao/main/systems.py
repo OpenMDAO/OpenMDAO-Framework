@@ -17,6 +17,8 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
                                    collapse_nodes, simple_node_iter
+from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
+                                        get_var_shape, flattened_size
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -334,11 +336,15 @@ class System(object):
                     parts = dest.split('.', 1)
                     if parts[0] in system._nodes:
                         inputs.add(dest)
-        return list(inputs)
+
+        top = self.scope
+        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
+                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
 
     def list_outputs(self):
         """Returns names of output variables (not collapsed edges)
-        from this System and all of its children.
+        from this System and all of its children.  This only lists
+        outputs that are relevant to derivatives calculations.
         """
         outputs = []
         for system in self.simple_subsystems():
@@ -354,7 +360,10 @@ class System(object):
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
-        return outputs
+                    
+        top = self.scope
+        return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
+                   and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
 
     def list_outputs_and_residuals(self):
         """Returns names of output variables (not collapsed edges)
@@ -419,8 +428,10 @@ class System(object):
         """Collect any variable metadata from the
         model here.
         """
-        vdict = { 'size': 0 }
+        info = { 'size': 0, 'flat': True }
 
+        base = None
+        
         # use the name of the src
         name = node[0]
 
@@ -431,23 +442,55 @@ class System(object):
         else:
             cname, vname = '', name
             child = self.scope
-        info = child.get_float_var_info(vname)
-        if info is None:
-            vdict['flat'] = False
-        else:  # variable is flattenable to a float array
-            sz, flat_idx, base = info
-            vdict['size'] = sz
-            vdict['flat'] = True
-            if flat_idx is not None:
-                vdict['flat_idx'] = flat_idx
-            if base is not None:
-                if cname:
-                    bname = '.'.join((cname, base))
-                else:
-                    bname = base
-                vdict['basevar'] = bname
 
-        return vdict
+        try:
+            # TODO: add checking of local_size metadata...
+            parts = vname.split('.')
+            if len(parts) > 1:  
+                vt = getattr(child, parts[0]) # vartree reference
+                obj = vt
+                for part in parts[1:-1]:
+                    obj = getattr(obj, part)
+                val, idx = get_val_and_index(obj, parts[-1])
+            else:
+                vt = None
+                val, idx = get_val_and_index(child, vname)
+
+            if vt is not None:  # name is a vartree subvar
+                base = vt.name
+                if '[' in vname:  # array ref inside of a vartree
+                    raise NotImplementedError("no support yet for array element access within vartrees")
+                else:
+                    flat_idx = vt.get_flattened_index(vname[len(base)+1:])
+            elif '[' in vname:  # array index into basevar
+                base = vname.split('[',1)[0]
+                flat_idx = get_flattened_index(idx, 
+                                        get_var_shape(base, child))
+            else:
+                base = None
+                flat_idx = None
+
+            info['size'] = flattened_size(vname, val, scope=child)
+            if flat_idx is not None:
+                info['flat_idx'] = flat_idx
+
+        except Exception as err:
+            info['flat'] = False
+
+        if base is not None:
+            if cname:
+                bname = '.'.join((cname, base))
+            else:
+                bname = base
+            info['basevar'] = bname
+
+        # get any other metadata we want
+        for mname in ['deriv_ignore']:
+            meta = child.get_metadata(vname, mname)
+            if meta is not None:
+                info[mname] = meta
+
+        return info
 
     def setup_variables(self, resid_state_map=None):
         self.variables = OrderedDict()
@@ -1474,7 +1517,6 @@ class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, graph, driver):
-        #driver.setup_systems()
         scope = driver.parent
         super(OpaqueDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
@@ -1511,7 +1553,6 @@ class TransparentDriverSystem(SimpleSystem):
     boundary."""
 
     def __init__(self, graph, driver):
-        #driver.setup_systems()
         scope = driver.parent
         super(TransparentDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
