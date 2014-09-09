@@ -45,7 +45,7 @@ def get_index(name):
         newstr = idxstr.replace('][',',')
         # _eval_globals dict contains nothing but _idx_getter, so
         # eval will fail if index contains any non-literals. This
-        # is intentional since we want to avoid caching any indices
+        # is intentional since we don't want to allow any indices
         # that aren't constant.
         _idx_cache[idxstr] = idx = eval('_idx_getter'+newstr, _eval_globals)
     return idx
@@ -68,6 +68,34 @@ def get_val_and_index(scope, name):
     else:
         return (getattr(scope, name), None)
 
+def idx_size(idxs):
+    """Return the number of entries corresponding to the given 
+    indices.  idxs can be a slice, an index array, or a simple index.
+    slices with negative values for start, stop, or stride are not
+    supported. slices with stop values of None are also not supported.
+    """
+    if isinstance(idxs, slice):
+        start = 0 if idxs.start is None else idxs.start
+        stop = idxs.stop
+        step = 1 if idxs.step is None else idxs.step
+        if stop is None:
+            raise RuntimeError("can't get size of slice with stop of None")
+        sz = 0
+        i = start
+        tlen = stop - start
+        while i < stop:
+            sz += 1
+            i += step
+        return sz
+        
+    elif isinstance(idxs, ndarray):
+        return len(idxs)
+    elif isinstance(idxs, int_types):
+        return 1
+    else:
+        raise RuntimeError("can't get size for indices of type '%s'" %
+                            str(type(idxs)))    
+
 def to_slice(idxs):
     """Convert an index array to a slice if possible. Otherwise,
     return the index array.
@@ -84,10 +112,10 @@ def to_slice(idxs):
         imax = idxs.max()
         stride = idxs[1]-idxs[0]
 
-        for i in xrange(idxs):
+        for i in xrange(len(idxs)):
             if i and idxs[i] - idxs[i-1] != stride:
                 return idxs
-            return slice(imin, imax+1, stride)
+        return slice(imin, imax+1, stride)
     elif isinstance(idxs, int_types):
         return slice(idxs, idxs+1)
     else:
