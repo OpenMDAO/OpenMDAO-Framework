@@ -68,24 +68,35 @@ def get_val_and_index(scope, name):
     else:
         return (getattr(scope, name), None)
 
-def idx_size(idxs):
+def idx_size(idxs, size=None):
     """Return the number of entries corresponding to the given 
     indices.  idxs can be a slice, an index array, or a simple index.
     slices with negative values for start, stop, or stride are not
-    supported. slices with stop values of None are also not supported.
+    supported unless the 'size' arg is provided. slices with stop 
+    values of None are also not supported without 'size'.
     """
     if isinstance(idxs, slice):
-        start = 0 if idxs.start is None else idxs.start
-        stop = idxs.stop
-        step = 1 if idxs.step is None else idxs.step
-        if stop is None:
-            raise RuntimeError("can't get size of slice with stop of None")
+        if size is not None:
+            start, stop, step = idxs.indices(size)
+        else:
+            start = 0 if idxs.start is None else idxs.start
+            stop = idxs.stop
+            step = 1 if idxs.step is None else idxs.step
+            if stop is None:
+                raise RuntimeError("can't get size of slice with stop of None")
+            elif start < 0 or stop < 0:
+                raise RuntimeError("negative start or stop not allowed for slice unless size is provided")
+
         sz = 0
         i = start
-        tlen = stop - start
-        while i < stop:
-            sz += 1
-            i += step
+        if step > 0:
+            while i < stop:
+                sz += 1
+                i += step
+        elif step < 0:
+            while i > stop:
+                sz += 1
+                i += step
         return sz
         
     elif isinstance(idxs, ndarray):
@@ -120,6 +131,37 @@ def to_slice(idxs):
         return slice(idxs, idxs+1)
     else:
         raise RuntimeError("can't convert indices of type '%s' to a slice" %
+                            str(type(idxs)))
+
+def to_indices(idxs, vec):
+    """Convert an slice or simple index into an index array.
+    index arrays are just returned unchanged.
+    """
+    if isinstance(idxs, slice):
+        start, stop, step = idxs.indices(len(vec))
+        ilst = []
+        i = start
+        if step > 0:
+            while i < stop:
+                ilst.append(i)
+                i += step
+        elif step < 0:
+            while i > stop:
+                ilst.append(i)
+                i += step
+        else:
+            raise ValueError("slice step cannot be zero")
+
+        return array(ilst, 'i')
+            
+    elif isinstance(idxs, ndarray):
+        return idxs
+
+    elif isinstance(idxs, int_types):
+        return array([idxs], 'i')
+
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to an index array" %
                             str(type(idxs)))
         
 def get_flattened_index(index, shape):
