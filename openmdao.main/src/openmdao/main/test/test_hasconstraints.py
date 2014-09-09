@@ -517,6 +517,14 @@ class Has2SidedConstraintsTestCase(unittest.TestCase):
         self.assertEqual(J[2], 1.0)
         self.assertEqual(J[3], 3.0)
 
+    def test_replace(self):
+        drv = self.asm.add('driver', My2SDriver())
+        drv.add_constraint('-44.1 < comp1.a < 13.0')
+        drv.add_constraint('77.0 < comp1.c < 79.0')
+        self.asm.run()
+
+        self.asm.replace('driver', My2SDriver())
+
 if __name__ == "__main__":
     unittest.main()
 

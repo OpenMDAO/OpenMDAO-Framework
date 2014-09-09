@@ -161,7 +161,7 @@ class Constraint(object):
 
             self.pcomp_name = pseudo.name
             self.lhs.scope.add(pseudo.name, pseudo)
-        getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
+            getattr(self.lhs.scope, pseudo.name).make_connections(self.lhs.scope, driver)
 
     def _combined_expr(self):
         """Given a constraint object, take the lhs, operator, and
@@ -339,7 +339,7 @@ class Constraint2Sided(Constraint):
 
             self.pcomp_name = pseudo.name
             scope.add(pseudo.name, pseudo)
-        getattr(scope, pseudo.name).make_connections(scope, driver)
+            getattr(scope, pseudo.name).make_connections(scope, driver)
 
     def _combined_expr(self):
         """Only need the center expression
@@ -896,6 +896,10 @@ class HasConstraints(object):
             self._eq.add_existing_constraint(scope, constraint, name)
         else:
             self._ineq.add_existing_constraint(scope, constraint, name)
+            if IHas2SidedConstraints.providedBy(self.parent):
+                self.parent.add_existing_2sided_constraint(scope, constraint,
+                                                           name)
+
 
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
@@ -942,7 +946,7 @@ class HasConstraints(object):
         self._eq.clear_constraints()
         self._ineq.clear_constraints()
         if IHas2SidedConstraints.providedBy(self.parent):
-            self.parent.clear_2sconstraints()
+            self.parent.clear_2sided_constraints()
 
     def copy_constraints(self):
         """ Copies all constraints """
@@ -1155,3 +1159,38 @@ class Has2SidedConstraints(_HasConstraintsBase):
         """Return a list of strings containing constraint expressions."""
         return self._constraints.keys()
 
+    def clear_2sided_constraints(self):
+        """Removes all constraints."""
+        for name in self._constraints:
+            self.remove_constraint(name)
+
+    def add_existing_2sided_constraint(self, scope, constraint, name=None):
+        """Adds an existing Constraint object to the driver.
+
+        scope: container object where constraint expression will
+            be evaluated.
+
+        constraint: Constraint object
+
+        name: str (optional)
+            Name to be used to refer to the constraint rather than its
+            expression string.
+        """
+        self._constraints[name] = constraint
+        constraint.activate(self.parent)
+        self.parent.config_changed()
+
+    def mimic(self, target):
+        """Tries to mimic the target object's constraints.  Target constraints
+        that are incompatible with this object are ignored.
+        """
+        old = self._constraints
+        self._constraints = ordereddict.OrderedDict()
+        scope = _get_scope(target)
+
+        for name, cnst in target.copy_constraints().items():
+            try:
+                self.add_existing_2sided_constraint(scope, cnst, name)
+            except Exception:
+                self._constraints = old
+                raise

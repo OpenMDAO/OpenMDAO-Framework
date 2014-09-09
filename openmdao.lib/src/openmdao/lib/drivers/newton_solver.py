@@ -122,4 +122,4 @@ class NewtonSolver(Driver):
             # Reset backtracking
             alpha = self.alpha
 
-        print "converged"
+        print self.name, "converged"
