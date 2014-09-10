@@ -722,6 +722,30 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
         """Evaluates the constraint expressions and returns a list of values."""
 
 
+class IHas2SidedConstraints(Interface):
+    """An Interface for objects that can accept constraints defined like
+    a < x < b, where x is a variable and a and b are constants."""
+
+    def add_2sided_constraint(lhs, center, rhs, rel, name=None, scope=None,
+                               linear=False):
+        """Adds an 2-sided constraint as four strings; a left-hand side, a
+        center, a right-hand side, and a comparator ('<','>','<=', or '>=')
+        """
+
+    def get_2sided_constraints(linear=None):
+        """Returns an ordered dict of inequality constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+    def list_2sided_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+
+    def list_2sided_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
+
+
 class IHasObjectives(Interface):
     """An Interface for objects having a multiple objectives."""
 
