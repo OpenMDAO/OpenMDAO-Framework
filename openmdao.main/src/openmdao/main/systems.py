@@ -360,7 +360,7 @@ class System(object):
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
-                    
+
         top = self.scope
         return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
                    and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
@@ -431,7 +431,7 @@ class System(object):
         info = { 'size': 0, 'flat': True }
 
         base = None
-        
+
         # use the name of the src
         name = node[0]
 
@@ -446,7 +446,7 @@ class System(object):
         try:
             # TODO: add checking of local_size metadata...
             parts = vname.split('.')
-            if len(parts) > 1:  
+            if len(parts) > 1:
                 vt = getattr(child, parts[0]) # vartree reference
                 obj = vt
                 for part in parts[1:-1]:
@@ -464,7 +464,7 @@ class System(object):
                     flat_idx = vt.get_flattened_index(vname[len(base)+1:])
             elif '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
-                flat_idx = get_flattened_index(idx, 
+                flat_idx = get_flattened_index(idx,
                                         get_var_shape(base, child))
             else:
                 base = None
@@ -863,21 +863,24 @@ class System(object):
             return self.fd_solver.solve(iterbase=iterbase)
         else:
             self.linearize()
-            self.rhs_vec.array[:] = 0.0
             self.vec['df'].array[:] = 0.0
+            self.vec['du'].array[:] = 0.0
 
-        return self.ln_solver.solve(inputs, outputs, return_format)
+        J = self.ln_solver.solve(inputs, outputs, return_format)
+        self.sol_vec.array[:] = 0.0
+        return J
 
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
         df vector."""
 
         self.set_options('forward', options)
+
+        self.vec['du'].array[:] = 0.0
+        self.vec['df'].array[:] = 0.0
+
         self.initialize_gradient_solver()
         self.linearize()
-
-        self.rhs_vec.array[:] = 0.0
-        self.vec['df'].array[:] = 0.0
 
         self.ln_solver.newton()
 
