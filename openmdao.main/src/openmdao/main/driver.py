@@ -74,7 +74,7 @@ class GradientOptions(VariableTree):
                                 ['auto', 'forward', 'adjoint'],
                                 desc="Direction for derivative calculation. "
                                 "Can be 'forward', 'adjoint', or 'auto'. "
-                                "Auto is the default setting. "
+                                "'auto' is the default setting. "
                                 "When set to auto, OpenMDAO automatically "
                                 "figures out the best direction based on the "
                                 "number of parameters and responses. "
@@ -96,6 +96,20 @@ class Driver(Component):
 
     gradient_options = VarTree(GradientOptions(), iotype='in',
                                framework_var=True)
+
+    # flag to determine partitioning of our workflow's System
+    system_type = Enum('auto',
+                       ['auto', 'serial', 'parallel'],
+                       desc="Determines the partitioning of this driver's "
+                            "workflow components into Systems. Default is "
+                            "'auto', where a hierarchy of serial and parallel "
+                            "systems is automatically determined. 'serial' "
+                            "and 'parallel' may be specified to force the"
+                            "workflow components into a single serial or "
+                            "parallel System.  Note that when not running "
+                            "under MPI, this option is ignored and the "
+                            "resulting System will always be serial.",
+                       framework_var=True)
 
     def __init__(self):
         self._iter = None
@@ -520,7 +534,7 @@ class Driver(Component):
         child Components.
         """
         self._system = self.parent._reduced_graph.node[self.name]['system']
-        return self.workflow.setup_systems()
+        return self.workflow.setup_systems(self.system_type)
 
     #### MPI related methods ####
 

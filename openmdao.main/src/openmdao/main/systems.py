@@ -1510,7 +1510,11 @@ class ParallelSystem(CompoundSystem):
         self._create_var_dicts(resid_state_map)
 
     def simple_subsystems(self):
-        return self.local_subsystems()[0].simple_subsystems()
+        lsys = self.local_subsystems()
+        if lsys:
+            return lsys[0].simple_subsystems()
+        else:
+            return []
 
 
 class OpaqueDriverSystem(SimpleSystem):

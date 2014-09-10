@@ -681,7 +681,7 @@ class Workflow(object):
 
     ## MPI stuff ##
 
-    def setup_systems(self):
+    def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
         graph, which contains components and/or other subsystems.
@@ -720,43 +720,48 @@ class Workflow(object):
                 added.add(param)
 
         cgraph = reduced2component(reduced)
-        #cgraph = cgraph.subgraph(self.get_full_nodeset())
 
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
 
-        # collapse the graph (recursively) into nodes representing
-        # subsystems
-        if MPI:
-            cgraph = partition_subsystems(scope, reduced, cgraph)
-
-            if len(cgraph) > 1:
-                if len(cgraph.edges()) > 0:
-                    #mpiprint("creating serial top: %s" % cgraph.nodes())
-                    self._system = SerialSystem(scope, reduced, cgraph, tuple(cgraph.nodes()))
-                else:
-                    #mpiprint("creating parallel top: %s" % cgraph.nodes())
-                    self._system = ParallelSystem(scope, reduced, cgraph, str(tuple(cgraph.nodes())))
-            elif len(cgraph) == 1:
-                name = cgraph.nodes()[0]
-                self._system = cgraph.node[name].get('system')
-            else:
-                raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
-                                    self.parent.get_pathname())
+        if MPI and system_type == 'auto':
+            self._auto_setup_systems(scope, reduced, cgraph)
+        elif MPI and system_type == 'parallel':
+            self._system = ParallelSystem(scope, reduced, cgraph, 
+                                          str(tuple(cgraph.nodes())))
         else:
-            self._system = SerialSystem(scope, reduced, cgraph, str(tuple(cgraph.nodes())))
+            self._system = SerialSystem(scope, reduced, cgraph, 
+                                        str(tuple(cgraph.nodes())))
 
         self._system.set_ordering(params+[c.name for c in self])
 
         self._system._parent_system = self.scope._reduced_graph.node[self.parent.name]['system']
-        self._reduced_graph = reduced
 
         for comp in self:
             added.update(comp.setup_systems())
 
         return added
+
+    def _auto_setup_systems(self, scope, reduced, cgraph):
+        """
+        Collapse the graph (recursively) into nodes representing
+        subsystems.
+        """
+        cgraph = partition_subsystems(scope, reduced, cgraph)
+
+        if len(cgraph) > 1:
+            if len(cgraph.edges()) > 0:
+                self._system = SerialSystem(scope, reduced, cgraph, tuple(cgraph.nodes()))
+            else:
+                self._system = ParallelSystem(scope, reduced, cgraph, str(tuple(cgraph.nodes())))
+        elif len(cgraph) == 1:
+            name = cgraph.nodes()[0]
+            self._system = cgraph.node[name].get('system')
+        else:
+            raise RuntimeError("setup_systems called on %s.workflow but component graph is empty!" %
+                                self.parent.get_pathname())
 
     def get_req_cpus(self):
         """Return requested_cpus"""
