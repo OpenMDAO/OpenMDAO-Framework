@@ -5,7 +5,9 @@ from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
                                     gsort, transitive_closure, \
-                                    collapse_connections
+                                    collapse_connections, \
+                                    vars2tuples, \
+                                    prune_reduced_graph
 from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some
@@ -25,17 +27,7 @@ class Wflow(object):
     
     def get_names(self, **kwargs):
         return []
-    
-# def get_inner_edges(graph, srcs, dests, wflow):
 
-#     graph = graph.subgraph(graph.nodes())
-
-#     # add @in and @out nodes, rewire input srcs, etc.
-#     graph = mod_for_derivs(graph, srcs, dests, wflow)
-
-#     # sort edges by src so that basevars occur before subvars
-#     edges = sorted(graph.list_connections(), key=lambda e: e[0])
-#     return edges_to_dict(edges)
 
 class DumbClass(object):
     implements(IImplicitComponent)
@@ -104,9 +96,9 @@ def _make_base_sub_permutations():
     comps = ['C1', 'C2']
     conns = [
         ('C1.out1', 'C2.in1'),       # base to base
-        ('C1.out2[1]', 'C2.in2'),    # sub to base
-        ('C1.out3[1]', 'C2.in3[1]'), # sub to sub
-        ('C1.out4', 'C2.in4[1]'),    # base to sub
+        ('C1.out2[1][:]', 'C2.in2'),    # sub to base
+        ('C1.out3[1][:]', 'C2.in3[1][:]'), # sub to sub
+        ('C1.out4', 'C2.in4[1][:]'),    # base to sub
     ]
     bvariables = []
     inputs = ('in1', 'in2', 'in3', 'in4', 'in5', 'in6', 'in7')
@@ -728,6 +720,19 @@ class ReductionTestCase(unittest.TestCase):
                               ('C1', ('C1.out', ('C3.in', 'C4.in', 'C2.in'))), 
                               ('C1.in', 'C1'), ('C3', 'C3.out'), 
                               ('C2', 'C2.out'), ('C4', 'C4.out')]))
+
+    def test_subvar_conns(self):
+        g, scope = _make_base_sub_permutations()
+        reduced = collapse_connections(g)
+        vars2tuples(g, reduced)
+        prune_reduced_graph(g, reduced, [])
+        self.assertEqual(set(reduced.nodes()),
+                         set([('C1.out4', ('C2.in4[1][:]',)),
+                              ('C1.out2[1][:]', ('C2.in2',)),
+                              ('C1.out1', ('C2.in1',)),
+                              ('C1.out3[1][:]', ('C2.in3[1][:]',)),
+                              'C2', 'C1',
+                              ]))
 
 if __name__ == "__main__":
     unittest.main()

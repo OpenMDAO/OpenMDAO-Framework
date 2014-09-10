@@ -553,11 +553,6 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
-        self.assertEqual(set(top.driver.workflow._derivative_graph.nodes()),
-                         set(['@in0', '@out0', 'comp1', 'comp2',
-                              'comp1.x', 'comp1.y', 'comp2.x', 'comp2.y']))
-
-
     def test_error_logging1(self):
 
         top = set_as_top(Assembly())
@@ -3191,15 +3186,16 @@ class TestMultiDriver(unittest.TestCase):
         top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
 
         top.run()
-        top.inner_driver.workflow.initialize_residual()
         #J = top.inner_driver.workflow.calc_gradient()
-        edges = top.inner_driver.workflow._edges
-        #print edges
+
         #print top.inner_driver.list_objective_targets()
-        self.assertEqual(set(edges['comp.y']), set(['_pseudo_1.in0']))
-        self.assertEqual(set(edges['@in0']), set(['_pseudo_1.in2', 'comp.x']))
-        self.assertEqual(set(edges['_pseudo_1.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 3)
+        self.assertEqual( set(top._system.vec['u'].keys()),
+                          set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
+                               ('_pseudo_0.out0', ('_pseudo_0.out0',)),
+                               ('_pseudo_0.in0', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),                               
+                               ('_pseudo_1.out0', ('_pseudo_1.out0',)),
+                               ('_pseudo_1.in1', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
+                              ]))
 
     def test_PA_subvar_solver_edges(self):
 

@@ -45,7 +45,7 @@ def get_index(name):
         newstr = idxstr.replace('][',',')
         # _eval_globals dict contains nothing but _idx_getter, so
         # eval will fail if index contains any non-literals. This
-        # is intentional since we want to avoid caching any indices
+        # is intentional since we don't want to allow any indices
         # that aren't constant.
         _idx_cache[idxstr] = idx = eval('_idx_getter'+newstr, _eval_globals)
     return idx
@@ -68,6 +68,102 @@ def get_val_and_index(scope, name):
     else:
         return (getattr(scope, name), None)
 
+def idx_size(idxs, size=None):
+    """Return the number of entries corresponding to the given 
+    indices.  idxs can be a slice, an index array, or a simple index.
+    slices with negative values for start, stop, or stride are not
+    supported unless the 'size' arg is provided. slices with stop 
+    values of None are also not supported without 'size'.
+    """
+    if isinstance(idxs, slice):
+        if size is not None:
+            start, stop, step = idxs.indices(size)
+        else:
+            start = 0 if idxs.start is None else idxs.start
+            stop = idxs.stop
+            step = 1 if idxs.step is None else idxs.step
+            if stop is None:
+                raise RuntimeError("can't get size of slice with stop of None")
+            elif start < 0 or stop < 0:
+                raise RuntimeError("negative start or stop not allowed for slice unless size is provided")
+
+        sz = 0
+        i = start
+        if step > 0:
+            while i < stop:
+                sz += 1
+                i += step
+        elif step < 0:
+            while i > stop:
+                sz += 1
+                i += step
+        return sz
+        
+    elif isinstance(idxs, ndarray):
+        return len(idxs)
+    elif isinstance(idxs, int_types):
+        return 1
+    else:
+        raise RuntimeError("can't get size for indices of type '%s'" %
+                            str(type(idxs)))    
+
+def to_slice(idxs):
+    """Convert an index array to a slice if possible. Otherwise,
+    return the index array.
+    """
+    if isinstance(idxs, slice):
+        return idxs
+    elif isinstance(idxs, ndarray):
+        if len(idxs) == 1:
+            return slice(idxs[0], idxs[0]+1)
+        elif len(idxs) == 0:
+            return slice(0,0)
+
+        imin = idxs.min()
+        imax = idxs.max()
+        stride = idxs[1]-idxs[0]
+
+        for i in xrange(len(idxs)):
+            if i and idxs[i] - idxs[i-1] != stride:
+                return idxs
+        return slice(imin, imax+1, stride)
+    elif isinstance(idxs, int_types):
+        return slice(idxs, idxs+1)
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to a slice" %
+                            str(type(idxs)))
+
+def to_indices(idxs, vec):
+    """Convert an slice or simple index into an index array.
+    index arrays are just returned unchanged.
+    """
+    if isinstance(idxs, slice):
+        start, stop, step = idxs.indices(len(vec))
+        ilst = []
+        i = start
+        if step > 0:
+            while i < stop:
+                ilst.append(i)
+                i += step
+        elif step < 0:
+            while i > stop:
+                ilst.append(i)
+                i += step
+        else:
+            raise ValueError("slice step cannot be zero")
+
+        return array(ilst, 'i')
+            
+    elif isinstance(idxs, ndarray):
+        return idxs
+
+    elif isinstance(idxs, int_types):
+        return array([idxs], 'i')
+
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to an index array" %
+                            str(type(idxs)))
+        
 def get_flattened_index(index, shape):
     """Given an index (int, slice, or tuple of ints and slices), into
     an array, return the equivalent index into a flattened version 
@@ -108,16 +204,14 @@ def get_flattened_index(index, shape):
 
     # see if we can convert the discrete list of indices 
     # into a single slice object
-    imin = min(idxs)
-    imax = max(idxs)
-    stride = idxs[1]-idxs[0]
-    if all(arange(imin, imax+1, stride) == list(idxs)):
-        _flat_idx_cache[(sindex, shape)] = slice(imin, imax+1, stride)
-        return slice(imin, imax+1, stride)
+    idxs = to_slice(idxs)
         
-    # if all else fails, return a discrete list of indices into
-    # the flat array.
-    _flat_idx_cache[(sindex, shape)] = idxs.copy()
+    if isinstance(idxs, slice):
+        _flat_idx_cache[(sindex, shape)] = idxs
+    else:
+        # if all else fails, return a discrete list of indices into
+        # the flat array.
+        _flat_idx_cache[(sindex, shape)] = idxs.copy()
     return idxs
 
 def offset_flat_index(idx, offset):
@@ -166,40 +260,6 @@ def get_var_shape(name, scope):
         return (sz,)
 
     return None
-
-def flattened_size_info(name, scope):
-    """Return the local flattened size of the variable with
-    the given name along with its flattened index into
-    its basevar and its basevar name (if it has one). If it
-    doesn't have a basevar, then index and basevar name are
-    None.
-    """
-    # TODO: add checking of local_size metadata...
-    parts = name.split('.')
-    if len(parts) > 1:  
-        vt = getattr(scope, parts[0]) # vartree reference
-        obj = vt
-        for part in parts[1:-1]:
-            obj = getattr(obj, part)
-        val, idx = get_val_and_index(obj, parts[-1])
-    else:
-        vt = None
-        val, idx = get_val_and_index(scope, name)
-
-    if vt is not None:  # name is a vartree subvar
-        base = vt.name
-        if '[' in name:  # array ref inside of a vartree
-            raise NotImplementedError("no support yet for array element access within vartrees")
-        else:
-            flat_idx = vt.get_flattened_index(name[len(base)+1:])
-    elif '[' in name:  # array index into basevar
-        base = name.split('[',1)[0]
-        flat_idx = get_flattened_index(idx, get_var_shape(base, scope))
-    else:
-        base = None
-        flat_idx = None
-        
-    return (flattened_size(name, val, scope=scope), flat_idx,  base)
 
 def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name, 'data_shape')

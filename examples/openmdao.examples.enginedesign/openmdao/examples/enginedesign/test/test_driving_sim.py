@@ -22,7 +22,6 @@ class VehicleTestCase(unittest.TestCase):
         
         self.top.driver.workflow.add('sim_acc')
         self.top.driver.workflow.add('sim_EPA_city')
-        self.top.driver.workflow.add('sim_EPA_highway')
         
         self.top.sim_acc.workflow.add('vehicle')
         self.top.sim_acc.add_parameter('vehicle.velocity', name='velocity',
@@ -58,7 +57,7 @@ class VehicleTestCase(unittest.TestCase):
         self.top.vehicle.ratio4 = 3.54
         self.top.vehicle.ratio5 = 3.54
         try:
-            self.top.sim_EPA_city.run()
+            self.top.run() #sim_EPA_city.run()
         except RuntimeError, err:
             msg = "sim_EPA_city: Transmission gearing cannot " \
                   "achieve acceleration and speed required by EPA " \

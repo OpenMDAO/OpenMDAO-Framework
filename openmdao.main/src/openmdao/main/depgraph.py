@@ -1779,12 +1779,21 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     srcs and dests and all nodes connecting
     them.  Include any driver loops between them.
     """
-    # edges = _get_inner_edges(g, srcs, dests)
+    # if g doesn't have necessary nodes or edges for any srcs or dests,
+    # then we have to copy g and modify the copy.
+    to_add = [s for s in srcs if s not in g]
+    to_add.extend([d for d in dests if d not in g])
 
-    # nodes = set([u for u,v in edges])
-    # nodes.update([v for u,v in edges])
-
-    # return g.subgraph(nodes)
+    if to_add:
+        g = g.subgraph(g.nodes_iter())
+        for node in to_add:
+            base = g.base_var(node)
+            g.add_node(node, basevar=base, **g.node[base])
+            # connect it to its component
+            if node in srcs:
+                g.add_edge(node, node.split('.',1)[0])
+            else:
+                g.add_edge(node.split('.',1)[0], node)
 
     # create a 'fake' driver loop and grab
     # everything that's strongly connected to 
