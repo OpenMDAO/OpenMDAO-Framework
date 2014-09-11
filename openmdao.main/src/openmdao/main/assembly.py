@@ -1556,7 +1556,8 @@ class Assembly(Component):
             self.setup_vectors()
             self.setup_scatters()
         except Exception:
-            mpiprint(traceback.format_exc())
+            if MPI:
+                mpiprint(traceback.format_exc())
             raise
         else:
             self.post_setup()   

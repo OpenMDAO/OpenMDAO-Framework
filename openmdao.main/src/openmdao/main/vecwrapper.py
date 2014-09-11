@@ -4,8 +4,9 @@ from collections import OrderedDict
 import numpy
 
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
-from openmdao.main.array_helpers import offset_flat_index, \
-                                        get_flat_index_start
+from openmdao.main.array_helpers import offset_flat_index, to_indices, \
+                                        get_flat_index_start, get_val_and_index, get_shape, \
+                                        get_flattened_index
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
 
@@ -145,35 +146,58 @@ class VecWrapperBase(object):
                 retval = False
         return retval
 
-    #def app_idx(self, vname):
-    #    """Returns the starting index into the distributed
-    #    vector for the given variable.
-    #    """
-    #    pass
-
 
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
+        scope = system.scope
         allvars = system.variables
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
         rank = system.mpi.rank
+
+        vec_srcs = set([n[0] for n in vector_vars])
+        
+        # to detect overlapping index sets, we need all of the subvar bases
+        # that are NOT included in the vectors.  If a base IS included in the vectors,
+        # then all of its subvars are just subviews of the base view, so no chance
+        # of overlapping causing redundant data in the vectors
+        bases = dict([(n.split('[',1)[0], []) for n in vec_srcs
+                                    if n.split('[',1)[0] not in vec_srcs])
 
         # first, add views for vars whose sizes are added to the total,
         # i.e., either they are basevars or their basevars are not included
         # in the vector.
         start, end = 0, 0
         for ivar, (name, var) in enumerate(vector_vars.items()):
-            sz = system.local_var_sizes[rank, ivar] #var['size']
+            sz = system.local_var_sizes[rank, ivar]
             if sz > 0:
                 end += sz
-                dist_start = numpy.sum(system.local_var_sizes[:, :ivar])
                 # store the view, local start idx, and distributed start idx
                 self._info[name] = (self.array[start:end], start)#, dist_start)
+
+                base = name[0].split('[',1)[0]
+                
+                if base in bases and base not in vec_srcs:
+                    bases[base].append(name[0])
+    
+                    if len(bases[base]) > 1:
+                        # check for overlaping subvars
+                        idxset = set()
+                        bval = scope.get(base)
+
+                        for subname in bases[base]:
+                            _, idx = get_val_and_index(scope, subname)
+                            idxs = get_flattened_index(idx, get_shape(bval), cvt_to_slice=False)
+                            if idxset.intersection(set(idxs)):
+                                raise RuntimeError("Subvars %s share overlapping indices. Try reformulating the problem to prevent this." %
+                                                   [n for n in bases[base]])
+                            idxset.update(idxs)
+
                 if end-start > self.array[start:end].size:
                     raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                  (system.name,name, [start,end],self[name].size))
                 start += sz
+
 
         # now add views for subvars that are subviews of their
         # basevars
@@ -192,6 +216,7 @@ class VecWrapper(VecWrapperBase):
                     substart = get_flat_index_start(sub_idx)
                     self._info[name] = (self.array[sub_idx], substart)
                     self._subviews.add(name)
+
                     if self.array[sub_idx].size != sz:
                         raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
                                              (system.name, name,
@@ -268,6 +293,7 @@ class VecWrapper(VecWrapperBase):
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
+
 
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):

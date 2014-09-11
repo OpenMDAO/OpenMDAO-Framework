@@ -348,11 +348,8 @@ class VariableTree(Container):
         """Return the size of a flattened float array containing
         all values in the vartree that are flattenable to float
         arrays.  Any values not flattenable to float arrays will
-        raise an exception. 
+        raise a NoFlatError. 
         """
-        # FIXME: maybe all non float flattenable vals should
-        #        just return 0 size, and when asked for their
-        #        flattened float array val should just return []?
         size = 0
         for key in self.list_vars():
             size += flattened_size(key, getattr(self, key), scope=self)

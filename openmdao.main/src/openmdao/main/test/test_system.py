@@ -1,15 +1,15 @@
 
 import unittest
 
-from numpy import array
+import time
+from numpy import array, ones
 
 from openmdao.main.api import Component, Driver, Assembly, set_as_top
-from openmdao.main.datatypes.api import Float
+from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.interfaces import IHasParameters, implements
-from openmdao.main.vecwrapper import idx_merge
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 
@@ -70,68 +70,7 @@ class TestcaseParaboloid(unittest.TestCase):
         top.driver.add_objective('comp.f_xy')
         top.comp.x = 3
         top.comp.y = 5
-        #top.run()
-        top._setup()
 
-        # test some System stuff first
-        #drvsys = top._system.find('driver')
-        #wfsys = drvsys.local_subsystems()[0]
-        #compsys = wfsys.find("comp")
-        #pseudosys = wfsys.find("_pseudo_0")
-
-        #self.assertEqual(compsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-        #self.assertEqual(set(compsys.list_inputs_and_states()), set(['comp.x', 'comp.y']))
-        #self.assertEqual(compsys._out_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
-        #self.assertEqual(compsys.list_outputs_and_residuals(), ['comp.f_xy'])
-        #self.assertEqual(compsys._owned_args, []) #[('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-
-        #self.assertEqual(compsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',))]) #,
-                                                   ## ('comp.x', ('comp.x',)),
-                                                   ## ('comp.y', ('comp.y',)),
-                                                    ##])
-
-        #self.assertEqual(compsys.scatter_full.scatter_conns,
-                         #[('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-        #self.assertTrue(all(compsys.scatter_full.var_idxs ==
-                        #compsys.vec['u'].multi_indices(compsys._in_nodes)))
-        #self.assertTrue(all(compsys.scatter_full.input_idxs ==
-                         #compsys.vec['p'].multi_indices(compsys._in_nodes)))
-
-        #self.assertEqual(pseudosys._in_nodes, [('comp.f_xy', ('_pseudo_0.in0',))])
-        #self.assertEqual(pseudosys.list_inputs_and_states(), ['_pseudo_0.in0'])
-        #self.assertEqual(pseudosys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',))])
-        #self.assertEqual(pseudosys.list_outputs_and_residuals(), ['_pseudo_0.out0'])
-        #self.assertEqual(pseudosys._owned_args, [])
-
-        #self.assertEqual(pseudosys.variables.keys(), [('_pseudo_0.out0', ('_pseudo_0.out0',))])
-
-        #self.assertEqual(wfsys._in_nodes, [('comp.x', ('comp.x',)), ('comp.y', ('comp.y',))])
-        #self.assertEqual(set(wfsys.list_inputs_and_states()), set(['comp.x', 'comp.y', '_pseudo_0.in0']))
-        #self.assertEqual(wfsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
-                                            #('comp.f_xy', ('_pseudo_0.in0',))])
-        #self.assertEqual(wfsys.list_outputs_and_residuals(), ['comp.f_xy', '_pseudo_0.out0'])
-        #self.assertEqual(wfsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
-
-        #self.assertEqual(wfsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                  #('comp.x', ('comp.x',)),
-                                                  #('comp.y', ('comp.y',)),
-                                                  #('_pseudo_0.out0', ('_pseudo_0.out0',))])
-
-        #self.assertEqual(drvsys._in_nodes, [])
-        #self.assertEqual(set(drvsys.list_inputs_and_states()), set(['comp.x', 'comp.y', '_pseudo_0.in0']))
-        #self.assertEqual(drvsys._out_nodes, [('_pseudo_0.out0', ('_pseudo_0.out0',)),
-                                            #('comp.f_xy', ('_pseudo_0.in0',)),
-                                            #('comp.x', ('comp.x',)),
-                                            #('comp.y', ('comp.y',))])
-        #self.assertEqual(drvsys.list_outputs_and_residuals(), ['comp.f_xy', '_pseudo_0.out0'])
-        #self.assertEqual(drvsys._owned_args, [('comp.f_xy', ('_pseudo_0.in0',))])
-        #self.assertEqual([0], drvsys.arg_idx[('comp.f_xy', ('_pseudo_0.in0',))])
-
-        #self.assertEqual(drvsys.variables.keys(), [('comp.f_xy', ('_pseudo_0.in0',)),
-                                                   #('comp.x', ('comp.x',)),
-                                                   #('comp.y', ('comp.y',)),
-                                                   #('_pseudo_0.out0', ('_pseudo_0.out0',))
-                                                   #])
         top.run()
 
         # See if model gets the right answer
@@ -172,3 +111,45 @@ class TestcaseParaboloid(unittest.TestCase):
 
         # See if model gets the right answer
         self.assertEqual(top.f_xy, 93.)
+
+
+class ABCDArrayComp(Component):
+    delay = Float(0.01, iotype='in')
+
+    def __init__(self, arr_size=9):
+        super(ABCDArrayComp, self).__init__()
+        self.add_trait('a', Array(ones(arr_size, float), iotype='in'))
+        self.add_trait('b', Array(ones(arr_size, float), iotype='in'))
+        self.add_trait('c', Array(ones(arr_size, float), iotype='out'))
+        self.add_trait('d', Array(ones(arr_size, float), iotype='out'))
+
+    def execute(self):
+        time.sleep(self.delay)
+        self.c = self.a + self.b
+        self.d = self.a - self.b
+
+
+class TestArrayComp(unittest.TestCase):
+    def test_overlap_exception(self):
+        size = 20   # array var size
+
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c[:5]', 'C2.a')
+        top.connect('C1.c[3:]', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = ones(size, float) * 3.0
+        top.C1.b = ones(size, float) * 7.0
+
+        try:
+            top.run()
+        except Exception as err:
+            self.assertEqual(str(err), "Subvars ['C1.c[3::]', 'C1.c[:5:]'] share overlapping indices. Try reformulating the problem to prevent this.")
+        else:
+            self.fail("Exception expected")

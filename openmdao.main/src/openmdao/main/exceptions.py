@@ -19,6 +19,10 @@ class RunStopped(RuntimeError):
     not necessarily reflecting input values."""
     pass
 
+class NoFlatError(TypeError):
+    """Raised when a value is not flattenable to a 1D float array."""
+    pass
+
 class TracedError(Exception):
     """An exception that encapsulates another exception and its traceback."""
     def __init__(self, orig_exc, tback=None):
