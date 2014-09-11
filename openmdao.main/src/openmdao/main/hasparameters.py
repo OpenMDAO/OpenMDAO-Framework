@@ -1,5 +1,6 @@
 from ordereddict import OrderedDict
 import weakref
+import sys
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
@@ -890,7 +891,7 @@ class HasParameters(object):
                     target = ParameterGroup(parameters)
                 self._parameters[key] = target
             except Exception:
-                self.parent.reraise_exception()
+                self.parent.reraise_exception(info=sys.exc_info())
 
         self.parent.config_changed()
 
