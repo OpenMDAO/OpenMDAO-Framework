@@ -51,7 +51,7 @@ def _push_release(release_dir, destination, obj, py='python'):
         if (f.endswith('.tar.gz') and f != 'docs.tar.gz') or f.endswith('.egg'):
             obj.put(os.path.join(release_dir,f), '%s/dists/%s' % (destination, f))
             obj.run('chmod 644 %s/dists/%s' % (destination, f))
-    
+
     obj.put(os.path.join(release_dir, 'go-openmdao-%s.py' % version),
         '%s/downloads/%s/go-openmdao-%s.py' % (destination, version, version))
     obj.run('chmod 755 %s/downloads/%s/go-openmdao-%s.py' % (destination, version, version))
@@ -145,9 +145,9 @@ def push_release(parser, options):
     else: # assume destdir is a remote user@host:destdir
 
         # the only remote push destination should be the production server
-        # at openmdao.org, which doesn't have python 2.6 or 2.7 as default, so...
+        # at openmdao.org, which doesn't have python 2.7 as default, so...
         if options.py == 'python':
-            options.py = 'python2.6'
+            options.py = 'python2.7'
 
         comm_obj.put = put
         comm_obj.put_dir = put_dir
@@ -162,4 +162,3 @@ def push_release(parser, options):
         with settings(host_string=destparts[0]):
             _push_release(options.releasedir, home, comm_obj,
                           py=options.py)
-
