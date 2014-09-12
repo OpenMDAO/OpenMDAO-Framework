@@ -587,15 +587,15 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
                 " %d iterations for parameter '%s' at index %d",
-                'driver', 13, 'comp.y', 1)
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.y', 1)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
 
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed to"
-                " converge after %d iterations for output '%s' at index %d",
-                'driver', 13, 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed to"
+                " converge after %d iterations for parameter '%s' at index %d",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.f_xy', 2)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
@@ -632,13 +632,13 @@ class Testcase_derivatives(unittest.TestCase):
                                               mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed for parameter"
-                " '%s' at index %d", 'driver', 'comp.y', 1)
+                " '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.y', 1)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed for"
-                " output '%s' at index %d", 'driver', 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed for"
+                " parameter '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.f_xy', 2)
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
