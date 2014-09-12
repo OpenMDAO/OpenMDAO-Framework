@@ -1153,7 +1153,14 @@ class Container(SafeHasTraits):
                     self._exprcache[path] = expr
                 expr.set(value)
             else:
-                setattr(self, path, value)
+                if isinstance(value, ndarray):
+                    dest = getattr(self, path)
+                    if dest.size != value.size:
+                        setattr(self, path, value.copy())
+                    else:
+                        dest[:] = value
+                else:
+                    setattr(self, path, value)
 
     def _index_set(self, name, value, index):
         if len(index) == 1:
@@ -1525,6 +1532,8 @@ class Container(SafeHasTraits):
             If `trait` is not None, use that trait rather than building one.
         """
         self.raise_exception('build_trait()', NotImplementedError)
+
+
 
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)

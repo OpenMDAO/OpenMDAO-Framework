@@ -56,11 +56,11 @@ class Brent(Driver):
     def __init__(self):
         super(Brent, self).__init__()
         self.workflow = CyclicWorkflow()
-        self.xstar = self._param = None
+        self.xstar = None
 
     def _eval(self, x):
         """Callback function for evaluating f(x)"""
-        self._param.set(x)
+        self.set_parameters([x])
         self.run_iteration()
         return self.eval_eq_constraints(self.parent)[0]
 
@@ -109,7 +109,7 @@ class Brent(Driver):
 
 
         # Propagate solution back into the model
-        self._param.set(xstar)
+        self.set_parameters([xstar])
         self.run_iteration()
   
         if self.iprint == 1:
@@ -121,14 +121,13 @@ class Brent(Driver):
 
         super(Brent, self).check_config(strict=strict)
 
-        params = self.get_parameters().values()
-        if len(params) != 1:
+        nparam = len(self.get_parameters())
+        if nparam != 1:
             self.raise_exception("Brent driver must have 1 parameter, "
-                                 "but instead it has %d" % len(params))
+                                 "but instead it has %d" % nparam)
 
-        constraints = self.get_eq_constraints()
-        if len(constraints) != 1:
+        ncnst = len(self.get_eq_constraints())
+        if ncnst != 1:
             self.raise_exception("Brent driver must have 1 equality constraint, "
-                                 "but instead it has %d" % len(constraints))
-        self._param = params[0]
+                                 "but instead it has %d" % ncnst)
 

@@ -11,6 +11,7 @@ import threading
 import traceback
 from itertools import chain
 
+from numpy import ndarray
 from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
@@ -40,7 +41,7 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper
 from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
-from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
@@ -1423,6 +1424,36 @@ class Assembly(Component):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
+        # find all local systems
+        sys_stack = [self._system]
+        loc_comps = []
+
+        while sys_stack:
+            system = sys_stack.pop()
+            loc_comps.extend([s.name for s in system.simple_subsystems() 
+                                    if s._comp is not None])
+            sys_stack.extend(system.local_subsystems())
+
+        loc_comps = set(loc_comps)
+        loc_comps.add(None)
+
+        # loop over all component inputs and boundary outputs and
+        # set them to their sources so that they'll be sized properly
+        for node, data in self._reduced_graph.nodes_iter(data=True):
+            if 'comp' not in data:
+                src = node[0]
+                scomp = src.split('.',1)[0] if '.' in src else None
+                sval, idx = get_val_and_index(self, src)
+                if isinstance(sval, ndarray):
+                    dests = node[1]
+                    for dest in dests:
+                        dcomp = dest.split('.',1)[0] if '.' in dest else None
+                        if dcomp in loc_comps:
+                            dval, didx = get_val_and_index(self, dest)
+                            if isinstance(dval, ndarray):
+                                if sval.shape != dval.shape:
+                                    self.set(dest, sval)
+
         # this will calculate sizes for all subsystems
         self._system.setup_sizes()
 

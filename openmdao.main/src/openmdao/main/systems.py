@@ -1680,12 +1680,12 @@ def _create_simple_sys(scope, graph, name):
         else:
             sub = OpaqueDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(scope, graph, comp.name)
+        sub = AssemblySystem(scope, graph, name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
-        sub = EqConstraintSystem(scope, graph, comp.name)
+        sub = EqConstraintSystem(scope, graph, name)
     elif IComponent.providedBy(comp):
-        sub = SimpleSystem(scope, graph, comp.name)
+        sub = SimpleSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'param':
         sub = ParamSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'invar':

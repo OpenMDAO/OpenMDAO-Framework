@@ -71,7 +71,10 @@ def get_val_and_index(scope, name):
             val = val[idx]
         return (val, idx)
     else:
-        return (getattr(scope, name), None)
+        val = getattr(scope, name, __missing)
+        if val is __missing:
+            val = scope.get(name)
+        return (val, None)
 
 def idx_size(idxs, size=None):
     """Return the number of entries corresponding to the given 
@@ -182,7 +185,7 @@ def get_flattened_index(index, shape, cvt_to_slice=True):
 
     sindex = str(index)
     fidx = _flat_idx_cache.get((sindex, shape, cvt_to_slice))
-    if fidx:
+    if fidx is not None:
         return fidx
 
     if not isinstance(index, (tuple, list, ndarray)):
