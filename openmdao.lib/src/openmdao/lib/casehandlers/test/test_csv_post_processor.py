@@ -2,7 +2,7 @@ import os.path
 import unittest
 import StringIO
 
-from numpy import array
+from numpy import array, isnan
 
 from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.main.datatypes.api import Str, Bool, Array, VarTree
@@ -189,6 +189,10 @@ class CSVPostProcessorTestCase(unittest.TestCase):
                 item2 = items2[i]
                 try: # (str).isnumeric() only works on unicode
                     item1, item2 = float(item1), float(item2)
+                    # nan equality check fails by definition
+                    if isnan(item1) and isnan(item2):
+                        continue
+                    self.assertEqual(item1, item2)
                 except (ValueError, TypeError):
                     self.assertEqual(item1, item2)
 
