@@ -446,23 +446,9 @@ class System(object):
         try:
             # TODO: add checking of local_size metadata...
             parts = vname.split('.')
-            if len(parts) > 1:
-                vt = getattr(child, parts[0]) # vartree reference
-                obj = vt
-                for part in parts[1:-1]:
-                    obj = getattr(obj, part)
-                val, idx = get_val_and_index(obj, parts[-1])
-            else:
-                vt = None
-                val, idx = get_val_and_index(child, vname)
+            val, idx = get_val_and_index(child, vname)
 
-            if vt is not None:  # name is a vartree subvar
-                base = vt.name
-                if '[' in vname:  # array ref inside of a vartree
-                    raise NotImplementedError("no support yet for array element access within vartrees")
-                else:
-                    flat_idx = vt.get_flattened_index(vname[len(base)+1:])
-            elif '[' in vname:  # array index into basevar
+            if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
                 flat_idx = get_flattened_index(idx,
                                         get_var_shape(base, child))

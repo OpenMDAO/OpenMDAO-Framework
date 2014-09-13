@@ -1510,6 +1510,8 @@ class Assembly(Component):
             keep.update(inputs)
             keep.update(outputs)
 
+        dgraph = self._explode_vartrees(dgraph)
+
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
 
@@ -1540,6 +1542,7 @@ class Assembly(Component):
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
+        # remove all vars that don't connect components
         prune_reduced_graph(self._depgraph, collapsed_graph,
                             coll_keep)
 
@@ -1547,6 +1550,56 @@ class Assembly(Component):
 
         for comp in self.get_comps():
             comp.setup_graph()
+
+    def _explode_vartrees(self, depgraph):
+        """Given a depgraph, take all connected variable nodes corresponding
+        to VariableTrees and replace them with a variable node for each
+        variable in the VariableTree. 
+        """
+        conns = depgraph.list_connections()
+        connvars = set([u for u,v in conns])
+        connvars.update([v for u,v in conns])
+
+        vtrees = {}
+        for node in connvars:
+            obj = self.get(node)
+            if isinstance(obj, VariableTree):
+                if '.' in node:
+                    allvars = ['.'.join((node.split('.',1)[0], v)) 
+                                         for v in obj.list_all_vars()]
+                else:
+                    allvars = obj.list_all_vars()
+
+                vtrees[node] = (obj, set(allvars),
+                                depgraph.in_edges(node),
+                                depgraph.out_edges(node))
+
+        # if we're modifying the graph, make a copy
+        if vtrees:
+            depgraph = depgraph.subgraph(depgraph.nodes_iter())
+
+        for node, (vtree, allvars, ins, outs) in vtrees.items():
+            for var in allvars:
+                depgraph.add_node(var, **depgraph.node[node])
+                
+                for u,v in ins:
+                    if u in vtrees:
+                        for uu in vtrees[u][1]:
+                            if uu[len(u):] == var[len(node):]:
+                                depgraph.add_edge(uu, var, conn=True)
+                    else:
+                        depgraph.add_edge(u, var)
+                for u,v in outs:
+                    if v in vtrees:
+                        for vv in vtrees[v][1]:
+                            if vv[len(v):] == var[len(node):]:
+                                depgraph.add_edge(var, vv, conn=True)
+                    else:
+                        depgraph.add_edge(var, v)
+
+        depgraph.remove_nodes_from(vtrees.keys())
+
+        return depgraph  
 
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):

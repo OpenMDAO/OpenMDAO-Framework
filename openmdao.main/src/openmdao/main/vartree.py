@@ -17,6 +17,7 @@ from openmdao.main.mp_support import is_instance
 from openmdao.main.array_helpers import flattened_size
 
 
+
 class VariableTree(Container):
     """A tree of variables having the same input or output sense."""
 
@@ -343,6 +344,18 @@ class VariableTree(Container):
             attrs['Outputs'] = variables
 
         return attrs
+
+    def list_all_vars(self):
+        """Return a list of all variables in this VarTree (recursive)."""
+        vnames = []
+        for name, obj in self.__dict__.items():
+            if name.startswith('_'):
+                continue
+            if isinstance(obj, VariableTree):
+                vnames.extend(['.'.join((self.name,n)) for n in obj.list_all_vars()])
+            else:
+                vnames.append('.'.join((self.name, name)))
+        return vnames
 
     def get_flattened_size(self):
         """Return the size of a flattened float array containing
