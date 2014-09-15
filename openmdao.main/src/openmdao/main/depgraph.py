@@ -1600,6 +1600,7 @@ def _add_collapsed_node(g, src, dests):
         src = src.split('@')[0]
     else:
         meta = g.node[src]
+        
         for i, dest in enumerate(dests):
             if '@' in dest: # dest is a driver node
                 newdests = dests[:]
@@ -1611,12 +1612,25 @@ def _add_collapsed_node(g, src, dests):
                 meta['boundary'] = True
         else:
             newname = (src, tuple(dests))
+            
+    # if src is an input, we need to put src on the dest side so it
+    # will receive scatters
+    if g.node[src].get('iotype') == 'in':
+        if src not in dests:
+            dests.append(src)
+            newname = (src, tuple(dests))
 
     g.add_node(newname, meta.copy())
 
     cname = src.split('.', 1)[0]
     if is_comp_node(g, cname):
-        g.add_edge(cname, newname)
+        # edge goes the other way if src is actually an input
+        if g.node[src].get('iotype') == 'in':
+            g.add_edge(newname, cname)
+            if src not in dests:
+                dests.append(src)
+        else:
+            g.add_edge(cname, newname)
 
     for dest in dests:
         cname = dest.split('.', 1)[0]

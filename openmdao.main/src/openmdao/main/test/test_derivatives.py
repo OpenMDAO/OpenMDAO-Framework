@@ -918,8 +918,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
-        # Should work without this line. Tell Bret.
-        # top.driver.add_parameter('comp1.x', low=-9999, high=9999)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -1030,7 +1028,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.driver.workflow.add(['c1', 'c2', 'c3'])
         top.driver.workflow.add('sub')
         top.run()
-        J = top.driver.workflow.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
+        J = top.driver.workflow.calc_gradient(inputs=('sub.a',), outputs=('sub.c', 'sub.d'))
         self.assertEqual(J.shape, (2, 1))
         self.assertEqual(J[0, 0], 1.)
         self.assertEqual(J[1, 0], 0.)
