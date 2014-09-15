@@ -1203,7 +1203,7 @@ class Container(SafeHasTraits):
                                         self._logger, observer.observer,
                                         need_requirements)
         except Exception:
-            self.reraise_exception()  # Just to get a pathname.
+            self.reraise_exception(info=sys.exc_info())  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1228,7 +1228,7 @@ class Container(SafeHasTraits):
         try:
             eggsaver.save(self, outstream, fmt, proto, self._logger)
         except Exception:
-            self.reraise_exception()  # Just to get a pathname.
+            self.reraise_exception(info=sys.exc_info())  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1450,18 +1450,26 @@ class Container(SafeHasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
 
-    def reraise_exception(self, msg=''):
+    def reraise_exception(self, msg='', info=None):
         """Re-raise an exception with updated message and original traceback."""
-        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if info is None:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+        else:
+            exc_type, exc_value, exc_traceback = info
+
         if msg:
             msg = '%s: %s' % (msg, exc_value)
         else:
             msg = '%s' % exc_value
+
         prefix = '%s: ' % self.get_pathname()
+
         if not msg.startswith(prefix):
             msg = prefix + msg
+
         new_exc = exc_type(msg)
-        raise type(new_exc), new_exc, exc_traceback
+
+        raise exc_type, new_exc, exc_traceback
 
     def build_trait(self, ref_name, iotype=None, trait=None):
         """Build a trait referring to `ref_name`.

@@ -1,13 +1,13 @@
 """ Base class for all workflows. """
 
 from fnmatch import fnmatch
-from traceback import format_exc
+import sys
 import weakref
 
 # pylint: disable=E0611,F0401
 from openmdao.main.case import Case
 from openmdao.main.depgraph import _get_inner_connections
-from openmdao.main.exceptions import RunStopped, TracedError
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
@@ -141,19 +141,22 @@ class Workflow(object):
                     comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
                 if self._stop:
                     raise RunStopped('Stop requested')
-        except Exception as exc:
-            err = TracedError(exc, format_exc())
+        except Exception:
+            err = sys.exc_info()
 
         if record_case and self._rec_required:
             try:
                 self._record_case(case_uuid, err)
             except Exception as exc:
                 if err is None:
-                    err = TracedError(exc, format_exc())
+                    err = sys.exc_info()
                 self.parent._logger.error("Can't record case: %s", exc)
 
+        # reraise exception with proper traceback if one occurred
         if err is not None:
-            err.reraise()
+            # NOTE: cannot use 'raise err' here for some reason.  Must separate
+            # the parts of the tuple.
+            raise err[0], err[1], err[2] 
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
