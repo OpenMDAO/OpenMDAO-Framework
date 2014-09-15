@@ -17,13 +17,8 @@ import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
 from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasobjective import HasObjective
-from openmdao.main.hasconstraints import HasConstraints, Has2SidedConstraints
-from openmdao.main.interfaces import IHasParameters, implements, IHasConstraints, \
-     IHasObjective, IHas2SidedConstraints
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
-from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
 from openmdao.util.graph import list_deriv_vars
 
@@ -165,14 +160,6 @@ class ParaboloidNoDeriv(Component):
 
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-
-@add_delegate(HasParameters, HasObjective, HasConstraints,
-              Has2SidedConstraints)
-class SimpleDriver(Driver):
-    """Driver with Parameters"""
-
-    implements(IHasParameters, IHasConstraints, IHasObjective,
-               IHas2SidedConstraints)
 
 class SimpleComp(Component):
 
@@ -3192,7 +3179,7 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual( set(top._system.vec['u'].keys()),
                           set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
                                ('_pseudo_0.out0', ('_pseudo_0.out0',)),
-                               ('_pseudo_0.in0', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),                               
+                               ('_pseudo_0.in0', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
                                ('_pseudo_1.out0', ('_pseudo_1.out0',)),
                                ('_pseudo_1.in1', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
                               ]))

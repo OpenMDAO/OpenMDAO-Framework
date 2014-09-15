@@ -9,7 +9,7 @@ from numpy import array, eye
 from openmdao.examples.simple.optimization_constrained import OptimizationConstrained
 from openmdao.main.api import Component, VariableTree, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.util.testutil import assert_rel_error
 
 class SimpleCompFloat(Component):

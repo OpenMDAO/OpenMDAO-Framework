@@ -9,7 +9,7 @@ from numpy import array
 
 from openmdao.main.api import Assembly, Component, Driver, CyclicWorkflow, VariableTree
 from openmdao.main.datatypes.api import Array, Float, VarTree
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.main.interfaces import ISolver, implements
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -210,7 +210,7 @@ class TestCase_Residuals(unittest.TestCase):
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 3.0)
         self.assertEqual(indep[1], 5.0)
-        
+
         dep = self.model.driver.workflow.get_dependents()
         self.assertEqual(dep[0], -2.0)
         self.assertEqual(dep[1], -3.0)
@@ -259,7 +259,7 @@ class TestCase_Residuals(unittest.TestCase):
         self.assertEqual(indep[1], 5.0)
         self.assertEqual(indep[2], -8.0)
         self.assertEqual(indep[3], -13.0)
-        
+
         dep = self.model.driver.workflow.get_dependents()
         self.assertEqual(dep[0], -2.0)
         self.assertEqual(dep[1], -3.0)
@@ -284,7 +284,7 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.driver.workflow.set_independents(dv)
         indep = self.model.driver.workflow.get_independents()
         self.assertEqual(indep[0], 35.0)
-        
+
         dep = self.model.driver.workflow.get_dependents()
         self.assertEqual(dep[0], -34.0)
 

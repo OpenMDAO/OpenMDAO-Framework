@@ -14,7 +14,7 @@ from openmdao.lib.optproblems.sellar import Discipline1_WithDerivatives, \
 from openmdao.main.api import Assembly, Component, set_as_top, Driver
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.interfaces import IHasParameters, implements
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.main.datatypes.api import Float
 from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error

@@ -12,7 +12,7 @@ import openmdao.main.implicitcomp
 from openmdao.lib.drivers.api import BroydenSolver, NewtonSolver
 from openmdao.main.api import ImplicitComponent, Assembly, set_as_top, Component
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.testutil import assert_rel_error
 
