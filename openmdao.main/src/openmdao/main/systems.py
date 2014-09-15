@@ -1106,7 +1106,7 @@ class SimpleSystem(System):
         # Forward Mode
         if self.mode == 'forward':
 
-            self.scatter('du', 'dp')
+            #self.scatter('du', 'dp')
 
             self._comp.applyJ(self)
             vec['df'].array[:] *= -1.0
@@ -1129,7 +1129,7 @@ class SimpleSystem(System):
             for var in self.list_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
 
-            self.scatter('du', 'dp')
+            #self.scatter('du', 'dp')
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
