@@ -178,7 +178,7 @@ class TestCase_Residuals(unittest.TestCase):
         self.model.connect('c1.y_a', 'c2.x_a')
         self.model.connect('c2.y', 'c1.x')
 
-        self.model.driver.workflow.initialize_residual()
+        #self.model.driver.workflow.initialize_residual()
         self.model.run()
 
         dv = array([3.0, 5.0])
