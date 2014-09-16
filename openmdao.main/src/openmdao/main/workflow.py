@@ -3,7 +3,7 @@
 from fnmatch import fnmatch
 from math import isnan
 import sys
-from traceback import format_exc
+
 import weakref
 from StringIO import StringIO
 
@@ -14,11 +14,12 @@ from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_subsystems, ParamSystem, \
-                                  get_comm_if_active#, _create_simple_sys
+                                  get_comm_if_active
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
                                    simple_node_iter
-from openmdao.main.exceptions import RunStopped, TracedError
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree
+from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 
@@ -164,25 +165,27 @@ class Workflow(object):
             record_case = False
 
         err = None
-        #try:
-        self._system.run(iterbase=iterbase, ffd_order=ffd_order,
-                            case_uuid=case_uuid)
-
-        if self._stop:
-            raise RunStopped('Stop requested')
-        #except Exception as exc:
-        #    err = TracedError(exc, format_exc())
+        try:
+            self._system.run(iterbase=iterbase, ffd_order=ffd_order,
+                                case_uuid=case_uuid)
+            if self._stop:
+                raise RunStopped('Stop requested')
+        except Exception:
+            err = sys.exc_info()
 
         if record_case and self._rec_required:
             try:
                 self._record_case(case_uuid, err)
             except Exception as exc:
                 if err is None:
-                    err = TracedError(exc, format_exc())
+                    err = sys.exc_info()
                 self.parent._logger.error("Can't record case: %s", exc)
 
+        # reraise exception with proper traceback if one occurred
         if err is not None:
-            err.reraise()
+            # NOTE: cannot use 'raise err' here for some reason.  Must separate
+            # the parts of the tuple.
+            raise err[0], err[1], err[2] 
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array'):

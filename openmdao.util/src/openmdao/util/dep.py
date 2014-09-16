@@ -40,6 +40,8 @@ def _to_str(node):
     """Take groups of Name nodes or a Str node and convert to a string."""
     if isinstance(node, ast.Name):
         return node.id
+    if not hasattr(node, 'value'):
+      return None
     val = node.value
     parts = [node.attr]
     while True:
@@ -141,12 +143,12 @@ class PythonSourceFileAnalyser(ast.NodeVisitor):
         """This executes every time a class definition is parsed."""
         fullname = '.'.join([self.modpath, node.name])
         self.localnames[node.name] = fullname
-        bases = [_to_str(b) for b in node.bases]
+        bases = [_to_str(b) for b in node.bases if b is not None]
 
         bvisitor = _ClassBodyVisitor()
         bvisitor.visit(node)
 
-        bases = [self.localnames.get(b, b) for b in bases]
+        bases = [self.localnames.get(b, b) for b in bases if b is not None]
 
         self.classes[fullname] = ClassInfo(fullname, self.fname, bases,
                                            bvisitor.metadata,

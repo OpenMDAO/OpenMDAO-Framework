@@ -259,7 +259,7 @@ class TestCase(unittest.TestCase):
             except Exception as err:
                 err = replace_uuid(str(err))
                 if not sequential:  # RemoteError has different format.
-                    err = err[:-76]
+                    err = err.strip().strip('-').strip()
                 startmsg = 'driver: Run aborted: Traceback '
                 endmsg = 'driven (4-driven): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)

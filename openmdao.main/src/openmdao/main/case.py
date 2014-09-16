@@ -1,13 +1,13 @@
 import time
+import sys
 from uuid import uuid1, getnode
 from array import array
-import traceback
 from StringIO import StringIO
 from inspect import getmro
 import weakref
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError, traceback_str
+from openmdao.main.exceptions import traceback_str, exception_str
 from openmdao.main.variable import is_legal_name, make_legal_path
 from openmdao.main.array_helpers import flattened_value
 
@@ -121,7 +121,7 @@ class Case(object):
         self._exprs = None
         self._outputs = None
         self._inputs = {}
-        self.exc = exc  # Typically a TracedError.
+        self.exc = exc  # a sys.exc_info() tuple
 
         if case_uuid:
             self.uuid = str(case_uuid)
@@ -139,7 +139,7 @@ class Case(object):
     @property
     def msg(self):
         """Exception message."""
-        return '' if self.exc is None else str(self.exc)
+        return '' if self.exc is None else exception_str(self.exc)
 
     @property
     def traceback(self):
@@ -171,7 +171,7 @@ class Case(object):
             for name, val in outs:
                 write("      %s: %s\n" % (name, val))
         if self.exc:
-            stream.write("   exc: %s\n" % self.exc)
+            stream.write("   exc: %s\n" % exception_str(self.exc))
             stream.write("        %s\n" % traceback_str(self.exc))
 
         return stream.getvalue()
@@ -334,15 +334,15 @@ class Case(object):
                             outputs[name] = expr.evaluate(scope)
                         else:
                             outputs[name] = scope.get(name)
-                    except Exception as err:
-                        last_excpt = TracedError(err, traceback.format_exc())
+                    except Exception:
+                        last_excpt = sys.exc_info()
                         outputs[name] = _Missing
             else:
                 for name in outputs.keys():
                     try:
                         outputs[name] = scope.get(name)
-                    except Exception as err:
-                        last_excpt = TracedError(err, traceback.format_exc())
+                    except Exception:
+                        last_excpt = sys.exc_info()
                         outputs[name] = _Missing
 
         self.timestamp = time.time()

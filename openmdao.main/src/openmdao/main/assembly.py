@@ -300,7 +300,7 @@ class Assembly(Component):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s"
                                        % (target_name, type(tobj).__name__,
-                                          type(newobj).__name__))
+                                          type(newobj).__name__), sys.exc_info())
 
         exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
@@ -462,9 +462,10 @@ class Assembly(Component):
                 self.connect(newname, pathname)
             else:
                 self.connect(pathname, newname)
-        except RuntimeError as err:
+        except RuntimeError:
+            info = sys.exc_info()
             self.remove(newname)
-            raise err
+            raise info[0], info[1], info[2]
 
         return newtrait
 
@@ -635,7 +636,8 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst))
+                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst), 
+                                        sys.exc_info())
 
     def _connect(self, src, dest):
         """Handle one connection destination. This should only be called via

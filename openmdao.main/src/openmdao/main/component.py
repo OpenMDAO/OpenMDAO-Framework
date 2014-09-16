@@ -587,9 +587,10 @@ class Component(Container):
             #else:
             #    print 'skipping: %s' % self.get_pathname()
             self._post_run()
-        except:
+        except Exception:
+            info = sys.exc_info()
             self._set_exec_state('INVALID')
-            raise
+            raise info[0], info[1], info[2]
         finally:
             # If this is the top-level component, perform run termination.
             if self.parent is None:
@@ -650,7 +651,8 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__))
+                                                     type(newobj).__name__), 
+                                        sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object
 
