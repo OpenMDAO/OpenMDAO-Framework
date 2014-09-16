@@ -126,7 +126,7 @@ class MPITests1(MPITestCase):
             self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
 
     def test_fan_out_in(self):
-        size = 5
+        size = 5   # array var size
 
         # a comp feeds two parallel comps which feed
         # another comp
@@ -146,7 +146,30 @@ class MPITests1(MPITestCase):
 
         top.run()
 
-        #mpiprint(top._system.dump(stream=None))
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
+    def test_fan_out_in_force_serial(self):
+        size = 5  # array var size
+
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.d', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.driver.system_type = 'serial'
+
+        top.run()
 
         if self.comm.rank == 0:
             self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
@@ -155,7 +178,7 @@ class MPITests1(MPITestCase):
 
 class MPITests2(MPITestCase):
 
-    N_PROCS = 6
+    N_PROCS = 4
 
     def test_sellar_cyclic(self):
 
@@ -174,15 +197,17 @@ class MPITests2(MPITestCase):
                 assert_rel_error(self, val, expval, 0.001)
 
     def test_sellar_parallel(self):
-        # no direct connections
+
         top = set_as_top(SellarMDF())
 
-        top.driver.add_parameter('C1.y1', low=-1e99, high=1e99)
+        top.driver.add_parameter('C2.y1', low=-1e99, high=1e99)
         top.driver.add_constraint('C1.y1 = C2.y1')
         top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
         top.driver.add_constraint('C2.y2 = C1.y2')
 
         expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.driver.system_type = 'parallel'
 
         top.run()
 
@@ -190,39 +215,6 @@ class MPITests2(MPITestCase):
             for name, expval in expected.items():
                 val = top.get(name)
                 assert_rel_error(self, val, expval, 0.001)
-
-    # def test_system_layers(self):
-    #     #8 comps, several layers of subsystems
-    #     top = set_as_top(Assembly())
-    #     top.add('driver', NTimes(1))
-    #     for i in range(1,9):
-    #         name = 'C%d' % i
-    #         top.add(name, ABCDArrayComp(5))
-    #         top.driver.workflow.add(name)
-    #         getattr(top, name).mpi.requested_cpus = 1
-
-    #     top.create_passthrough('C2.a')
-    #     top.create_passthrough('C7.d')
-
-    #     conns = [
-    #         ('C1.c','C4.a'),
-    #         ('C2.c','C5.a'),
-    #         ('C3.c','C8.a'),
-    #         ('C3.d','C6.a'),
-    #         ('C5.c','C4.b'),
-    #         ('C5.d','C6.b'),
-    #         ('C6.c','C8.b'),
-    #         ('C6.d','C7.a'),
-    #     ]
-
-    #     for u,v in conns:
-    #         top.connect(u, v)
-
-    #     top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    #     top.driver.add_constraint('C8.d[0]=0')
-
-    #     top.run()
-
 
 # FIXME: running this file as main currently doesn't work...
 if __name__ == '__main__':

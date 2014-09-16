@@ -8,7 +8,7 @@ import networkx as nx
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
-from openmdao.main.exceptions import RunStopped
+from openmdao.main.exceptions import RunStopped, NoFlatError
 from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
@@ -446,23 +446,9 @@ class System(object):
         try:
             # TODO: add checking of local_size metadata...
             parts = vname.split('.')
-            if len(parts) > 1:
-                vt = getattr(child, parts[0]) # vartree reference
-                obj = vt
-                for part in parts[1:-1]:
-                    obj = getattr(obj, part)
-                val, idx = get_val_and_index(obj, parts[-1])
-            else:
-                vt = None
-                val, idx = get_val_and_index(child, vname)
+            val, idx = get_val_and_index(child, vname)
 
-            if vt is not None:  # name is a vartree subvar
-                base = vt.name
-                if '[' in vname:  # array ref inside of a vartree
-                    raise NotImplementedError("no support yet for array element access within vartrees")
-                else:
-                    flat_idx = vt.get_flattened_index(vname[len(base)+1:])
-            elif '[' in vname:  # array index into basevar
+            if '[' in vname:  # array index into basevar
                 base = vname.split('[',1)[0]
                 flat_idx = get_flattened_index(idx,
                                         get_var_shape(base, child))
@@ -474,7 +460,7 @@ class System(object):
             if flat_idx is not None:
                 info['flat_idx'] = flat_idx
 
-        except Exception as err:
+        except NoFlatError as err:
             info['flat'] = False
 
         if base is not None:
@@ -767,33 +753,36 @@ class System(object):
         return [n for n,info in vardict.items() if info.get('flat', True)]
 
     def _get_vector_vars(self, vardict):
-        """Return (adds, noadds), where adds are those vars that size the
-        vectors, and noadds are vars that are in the vectors but don't
-        contribute to the size, e.g. subvars that have a basevar in the vector
-        or connected destination vars.
+        """Return vector_vars, which are vars that actually add to the
+        size of the vectors (as opposed to subvars of vars that are in
+        the vector, which don't add anything to the vector but just
+        use a subview of the view corresponding to their base var)
         """
-        # FIXME: for now, ignore slicing
-        return vardict
-        #vector_vars = OrderedDict()
-        #for name in vardict:
-            #src = self._src_map.get(name, name)
-            #if src != name:
-                #if src not in vardict:
-                    #vector_vars[name] = vardict[name]
-                    #continue
-            #name = src
-            #if '[' in name:
-                #base = name.split('[', 1)[0]
-                #if base not in vardict:
-                    #vector_vars[name] = vardict[name]
-            #else:
-                #base = name
-                #if '.' in name and base.rsplit('.', 1)[0] in vardict:
-                    #pass
-                #else:
-                    #vector_vars[name] = vardict[name]
+        vector_vars = OrderedDict()
+        all_srcs = set([n[0] for n in vardict])
+    
+        # all bases that actually are found in the vardict
+        bases = set([s for s in all_srcs if '[' not in s])
 
-        #return vector_vars
+        # use these to find any subs that don't have a full base in the 
+        # vector. we have to make sure these don't overlap with other 
+        # baseless subs
+        sub_bases = set([s.split('[',1)[0] 
+                          for s in all_srcs 
+                             if '[' in s and s not in bases])
+
+        for name in vardict:
+            src = name[0]
+
+            if src in bases:
+                vector_vars[name] = vardict[name]
+            else:
+                base = src.split('[', 1)[0]
+                if base in sub_bases: # this sub's base is not in vardict
+                    # overlapping will be checked later when we create VecWrappers
+                    vector_vars[name] = vardict[name]
+
+        return vector_vars
 
     def set_options(self, mode, options):
         """ Sets all user-configurable options for this system and all
@@ -1513,7 +1502,11 @@ class ParallelSystem(CompoundSystem):
         self._create_var_dicts(resid_state_map)
 
     def simple_subsystems(self):
-        return self.local_subsystems()[0].simple_subsystems()
+        lsys = self.local_subsystems()
+        if lsys:
+            return lsys[0].simple_subsystems()
+        else:
+            return []
 
 
 class OpaqueDriverSystem(SimpleSystem):
@@ -1676,12 +1669,12 @@ def _create_simple_sys(scope, graph, name):
         else:
             sub = OpaqueDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
-        sub = AssemblySystem(scope, graph, comp.name)
+        sub = AssemblySystem(scope, graph, name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
-        sub = EqConstraintSystem(scope, graph, comp.name)
+        sub = EqConstraintSystem(scope, graph, name)
     elif IComponent.providedBy(comp):
-        sub = SimpleSystem(scope, graph, comp.name)
+        sub = SimpleSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'param':
         sub = ParamSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'invar':

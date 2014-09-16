@@ -1,9 +1,15 @@
 import unittest
 
+import logging
+
 from openmdao.main.api import Assembly, Component, Case
 from openmdao.main.datatypes.api import Float
 from openmdao.lib.casehandlers.api import ListCaseIterator, ListCaseRecorder
 from openmdao.lib.drivers.api import SimpleCaseIterDriver
+
+from openmdao.lib.drivers.test.test_caseiterdriver import Generator, \
+                                                          DrivenComponent, \
+                                                          Verifier
 
 from openmdao.main.case import CaseTreeNode
 
@@ -78,6 +84,33 @@ class TestCase(unittest.TestCase):
         ]
         for i, name in enumerate(roots[0].iternames()):
             self.assertEqual(name, expected[i])
+
+    def test_scid2(self):
+        logging.debug('')
+        logging.debug('test_simplecid')
+
+        top = Assembly()
+        top.add('generator', Generator())
+        cid = top.add('cid', SimpleCaseIterDriver())
+        top.add('driven', DrivenComponent())
+        top.add('verifier', Verifier())
+
+        top.driver.workflow.add(('generator', 'cid', 'verifier'))
+        cid.workflow.add('driven')
+        cid.add_parameter('driven.x')
+        cid.add_parameter('driven.y')
+        cid.add_response('driven.rosen_suzuki')
+        cid.add_response('driven.sum_y')
+
+        top.connect('generator.x', 'cid.case_inputs.driven.x')
+        top.connect('generator.y', 'cid.case_inputs.driven.y')
+
+        top.connect('generator.x', 'verifier.x')
+        top.connect('generator.y', 'verifier.y')
+        top.connect('cid.case_outputs.driven.rosen_suzuki', 'verifier.rosen_suzuki')
+        top.connect('cid.case_outputs.driven.sum_y', 'verifier.sum_y')
+
+        top.run()
 
 
 if __name__ == '__main__':

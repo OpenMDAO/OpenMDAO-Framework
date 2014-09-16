@@ -574,15 +574,15 @@ class Testcase_derivatives(unittest.TestCase):
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
                 " %d iterations for parameter '%s' at index %d",
-                'driver', 13, 'comp.y', 1)
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.y', 1)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
 
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed to"
-                " converge after %d iterations for output '%s' at index %d",
-                'driver', 13, 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed to"
+                " converge after %d iterations for parameter '%s' at index %d",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.f_xy', 2)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
@@ -619,13 +619,13 @@ class Testcase_derivatives(unittest.TestCase):
                                               mode='forward')
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed for parameter"
-                " '%s' at index %d", 'driver', 'comp.y', 1)
+                " '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.y', 1)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient_adjoint in '%s': gmres failed for"
-                " output '%s' at index %d", 'driver', 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed for"
+                " parameter '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.f_xy', 2)
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
@@ -905,8 +905,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
-        # Should work without this line. Tell Bret.
-        # top.driver.add_parameter('comp1.x', low=-9999, high=9999)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -1017,7 +1015,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.driver.workflow.add(['c1', 'c2', 'c3'])
         top.driver.workflow.add('sub')
         top.run()
-        J = top.driver.workflow.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
+        J = top.driver.workflow.calc_gradient(inputs=('sub.a',), outputs=('sub.c', 'sub.d'))
         self.assertEqual(J.shape, (2, 1))
         self.assertEqual(J[0, 0], 1.)
         self.assertEqual(J[1, 0], 0.)

@@ -1,5 +1,6 @@
 from ordereddict import OrderedDict
 import weakref
+import sys
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
@@ -112,9 +113,9 @@ class ParameterBase(object):
         else:
             start = self.start
 
-        self.set(self.start, self.parent._system.vec['u']) #scope)
+        self.set(start)
 
-    def set(self, val, uvec):
+    def set(self, val):
         """Assigns the given value to the target referenced by this parameter,
         must be overridden."""
         raise NotImplementedError('set')
@@ -281,12 +282,10 @@ class Parameter(ParameterBase):
         """Returns the value of this parameter as a sequence."""
         return [self._untransform(self._expreval.evaluate(scope))]
 
-    def set(self, val, uvec):
+    def set(self, val):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
-        #mpiprint("setting param %s to %s" % (self.names, transval))
-        #self._expreval.set(transval, scope, force=True, tovector=True)
-        uvec[self._expreval.text][:] = transval
+        self._get_scope()._system.vec['u'][self._expreval.text][:] = transval
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -391,10 +390,10 @@ class ParameterGroup(object):
         """Returns finite difference step size as a sequence."""
         return self._params[0].get_fd_step()
 
-    def set(self, value, uvec):
+    def set(self, value):
         """Set all targets to the given value."""
         for param in self._params:
-            param.set(value, uvec)
+            param.set(value)
 
     def evaluate(self, scope=None):
         """Return the value of the first parameter in our target list as a
@@ -703,7 +702,7 @@ class ArrayParameter(ParameterBase):
         # Forcing a copy to isolate data ownership.
         return self._untransform(self._expreval.evaluate(scope)).flatten()
 
-    def set(self, value, uvec):
+    def set(self, value):
         """Assigns the given value to the array referenced by this parameter."""
         copied = False
         if isinstance(value, (list, tuple)):
@@ -721,8 +720,7 @@ class ArrayParameter(ParameterBase):
         else:
             value = value * ones(self.shape, self.dtype)
         transval = self._transform(value)
-        #self._expreval.set(transval, scope, force=True, tovector=True)
-        uvec[self._expreval.text][:] = transval.flatten()
+        self._get_scope()._system.vec['u'][self._expreval.text][:] = transval.flatten()
 
     def copy(self):
         """Return a copy of this parameter."""
@@ -895,7 +893,7 @@ class HasParameters(object):
                     target = ParameterGroup(parameters)
                 self._parameters[key] = target
             except Exception:
-                self.parent.reraise_exception()
+                self.parent.reraise_exception(info=sys.exc_info())
 
         # add a graph connection from the driver to the param target
         dgraph = self.parent.get_depgraph()
@@ -1038,10 +1036,9 @@ class HasParameters(object):
         """Sets all parameters to their start value if a
         start value is given
         """
-        scope = self._get_scope()
         for param in self._parameters.itervalues():
             if param.start is not None:
-                param.set(param.start, scope._system.vec['u'])
+                param.set(param.start)
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.
@@ -1061,7 +1058,7 @@ class HasParameters(object):
         """
         param = self._parameters[name]
         if case is None:
-            param.set(value, self.parent._system.vec['u'])
+            param.set(value)
         else:
             for target in param.targets:
                 case.add_input(target, value)
@@ -1093,11 +1090,11 @@ class HasParameters(object):
             for param in self._parameters.values():
                 size = param.size
                 if size == 1:
-                    param.set(values[start], uvec) #scope)
+                    param.set(values[start])
                     start += 1
                 else:
                     end = start + size
-                    param.set(values[start:end], uvec) #scope)
+                    param.set(values[start:end])
                     start = end
         else:
             start = 0

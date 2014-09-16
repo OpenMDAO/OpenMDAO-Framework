@@ -11,6 +11,7 @@ import threading
 import traceback
 from itertools import chain
 
+from numpy import ndarray
 from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
@@ -40,7 +41,7 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper
 from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
-from openmdao.main.array_helpers import is_differentiable_var
+from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
@@ -299,7 +300,7 @@ class Assembly(Component):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s"
                                        % (target_name, type(tobj).__name__,
-                                          type(newobj).__name__))
+                                          type(newobj).__name__), sys.exc_info())
 
         exprconns = [(u, v) for u, v in self._exprmapper.list_connections()
                                  if '_pseudo_' not in u and '_pseudo_' not in v]
@@ -461,9 +462,10 @@ class Assembly(Component):
                 self.connect(newname, pathname)
             else:
                 self.connect(pathname, newname)
-        except RuntimeError as err:
+        except RuntimeError:
+            info = sys.exc_info()
             self.remove(newname)
-            raise err
+            raise info[0], info[1], info[2]
 
         return newtrait
 
@@ -634,7 +636,8 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst))
+                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst), 
+                                        sys.exc_info())
 
     def _connect(self, src, dest):
         """Handle one connection destination. This should only be called via
@@ -1423,6 +1426,36 @@ class Assembly(Component):
         """Calculate the local sizes of all relevant variables
         and share those across all processes in the communicator.
         """
+        # find all local systems
+        sys_stack = [self._system]
+        loc_comps = []
+
+        while sys_stack:
+            system = sys_stack.pop()
+            loc_comps.extend([s.name for s in system.simple_subsystems() 
+                                    if s._comp is not None])
+            sys_stack.extend(system.local_subsystems())
+
+        loc_comps = set(loc_comps)
+        loc_comps.add(None)
+
+        # loop over all component inputs and boundary outputs and
+        # set them to their sources so that they'll be sized properly
+        for node, data in self._reduced_graph.nodes_iter(data=True):
+            if 'comp' not in data:
+                src = node[0]
+                scomp = src.split('.',1)[0] if '.' in src else None
+                sval, idx = get_val_and_index(self, src)
+                if isinstance(sval, ndarray):
+                    dests = node[1]
+                    for dest in dests:
+                        dcomp = dest.split('.',1)[0] if '.' in dest else None
+                        if dcomp in loc_comps:
+                            dval, didx = get_val_and_index(self, dest)
+                            if isinstance(dval, ndarray):
+                                if sval.shape != dval.shape:
+                                    self.set(dest, sval)
+
         # this will calculate sizes for all subsystems
         self._system.setup_sizes()
 
@@ -1479,6 +1512,8 @@ class Assembly(Component):
             keep.update(inputs)
             keep.update(outputs)
 
+        dgraph = self._explode_vartrees(dgraph)
+
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
 
@@ -1509,6 +1544,7 @@ class Assembly(Component):
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
+        # remove all vars that don't connect components
         prune_reduced_graph(self._depgraph, collapsed_graph,
                             coll_keep)
 
@@ -1516,6 +1552,56 @@ class Assembly(Component):
 
         for comp in self.get_comps():
             comp.setup_graph()
+
+    def _explode_vartrees(self, depgraph):
+        """Given a depgraph, take all connected variable nodes corresponding
+        to VariableTrees and replace them with a variable node for each
+        variable in the VariableTree. 
+        """
+        conns = depgraph.list_connections()
+        connvars = set([u for u,v in conns])
+        connvars.update([v for u,v in conns])
+
+        vtrees = {}
+        for node in connvars:
+            obj = self.get(node)
+            if isinstance(obj, VariableTree):
+                if '.' in node:
+                    allvars = ['.'.join((node.split('.',1)[0], v)) 
+                                         for v in obj.list_all_vars()]
+                else:
+                    allvars = obj.list_all_vars()
+
+                vtrees[node] = (obj, set(allvars),
+                                depgraph.in_edges(node),
+                                depgraph.out_edges(node))
+
+        # if we're modifying the graph, make a copy
+        if vtrees:
+            depgraph = depgraph.subgraph(depgraph.nodes_iter())
+
+        for node, (vtree, allvars, ins, outs) in vtrees.items():
+            for var in allvars:
+                depgraph.add_node(var, **depgraph.node[node])
+                
+                for u,v in ins:
+                    if u in vtrees:
+                        for uu in vtrees[u][1]:
+                            if uu[len(u):] == var[len(node):]:
+                                depgraph.add_edge(uu, var, conn=True)
+                    else:
+                        depgraph.add_edge(u, var)
+                for u,v in outs:
+                    if v in vtrees:
+                        for vv in vtrees[v][1]:
+                            if vv[len(v):] == var[len(node):]:
+                                depgraph.add_edge(var, vv, conn=True)
+                    else:
+                        depgraph.add_edge(var, v)
+
+        depgraph.remove_nodes_from(vtrees.keys())
+
+        return depgraph  
 
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):
@@ -1556,7 +1642,8 @@ class Assembly(Component):
             self.setup_vectors()
             self.setup_scatters()
         except Exception:
-            mpiprint(traceback.format_exc())
+            if MPI:
+                mpiprint(traceback.format_exc())
             raise
         else:
             self.post_setup()   

@@ -78,7 +78,6 @@ class VecWrapperTestCase(unittest.TestCase):
                 
         self.assertEqual(top.sub._system.vec['u'].array.size, 30)
  
-    # TODO: add more...
 
 if __name__ == "__main__":
     unittest.main()
