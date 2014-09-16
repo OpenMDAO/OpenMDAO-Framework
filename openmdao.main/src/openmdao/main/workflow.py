@@ -216,8 +216,16 @@ class Workflow(object):
         else:
             uvec = self._system.vec['u']
             
-        if self.scope._setup_inputs != inputs or self.scope._setup_outputs != outputs:
-            reset = True
+        if reset is False and self.scope._setup_inputs != inputs or self.scope._setup_outputs != outputs:
+            for inp in inputs:
+                if inp not in uvec:
+                    reset = True
+                    break
+            if reset is False:
+                for out in outputs:
+                    if out not in uvec:
+                        reset = True
+                        break
 
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
