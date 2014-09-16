@@ -283,7 +283,7 @@ class PseudoComponent(object):
 
         if driver is not None:
             scope._depgraph.add_edge(self.name+'.out0', driver.name,
-                                     drv_conn=driver)
+                                     drv_conn=driver.name)
 
     def run(self, ffd_order=0, case_uuid=''):
         if self._negate:
