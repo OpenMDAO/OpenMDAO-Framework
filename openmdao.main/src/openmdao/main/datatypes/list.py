@@ -72,10 +72,13 @@ class List(Enthought_List):
 
         return attr, slot_attr
 
-
     def validate ( self, object, name, value ):
-        if isinstance(value, types.GeneratorType) or isinstance(value, np.ndarray):
+        if isinstance(value, types.GeneratorType):
             value = list(value)
+        elif isinstance(value, np.ndarray):
+            value = value.tolist()
+        elif isinstance(value, types.XRangeType):
+            value = list(value)
+
         value = super(List, self).validate(object, name, value)
         return value
-
