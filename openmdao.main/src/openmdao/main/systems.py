@@ -760,15 +760,15 @@ class System(object):
         """
         vector_vars = OrderedDict()
         all_srcs = set([n[0] for n in vardict])
-    
+
         # all bases that actually are found in the vardict
         bases = set([s for s in all_srcs if '[' not in s])
 
-        # use these to find any subs that don't have a full base in the 
-        # vector. we have to make sure these don't overlap with other 
+        # use these to find any subs that don't have a full base in the
+        # vector. we have to make sure these don't overlap with other
         # baseless subs
-        sub_bases = set([s.split('[',1)[0] 
-                          for s in all_srcs 
+        sub_bases = set([s.split('[',1)[0]
+                          for s in all_srcs
                              if '[' in s and s not in bases])
 
         for name in vardict:
@@ -1069,6 +1069,8 @@ class SimpleSystem(System):
             graph = self.scope._reduced_graph
 
             self.scatter('u', 'p')
+            #for var in self.list_outputs():
+            #    self.vec['f'][var][:] = self.vec['u'][var][:]
 
             #mpiprint("running %s" % str(self.name))
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
@@ -1078,6 +1080,8 @@ class SimpleSystem(System):
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,
                                          [n for n in graph.successors(self.name) if n in self.vector_vars])
+            #for var in self.list_outputs():
+            #    self.vec['f'][var][:] -= self.vec['u'][var][:]
 
     def linearize(self):
         """ Linearize this component. """

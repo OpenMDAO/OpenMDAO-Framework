@@ -27,6 +27,7 @@ class MyComp(Component):
     def execute(self):
         """ doubler """
         self.y = 2.0*self.x
+        print "Ran", self.name, self.x, self.y
 
 
 class Simple(Assembly):
@@ -169,16 +170,15 @@ class TestCase_Residuals(unittest.TestCase):
         self.model = None
 
     def test_column_vector(self):
-        self.model.c1.add('y_a', Array(iotype='out'))
-        self.model.c1.y_a = array([[1.0], [2.0]])
+        self.model.c2.add('y_a', Array(iotype='out'))
+        self.model.c2.y_a = array([[1.0], [2.0]])
 
-        self.model.c2.add('x_a', Array(iotype='in'))
-        self.model.c2.x_a = array([[3.0], [6.0]])
+        self.model.c1.add('x_a', Array(iotype='in'))
+        self.model.c1.x_a = array([[3.0], [6.0]])
 
-        self.model.connect('c1.y_a', 'c2.x_a')
-        self.model.connect('c2.y', 'c1.x')
+        self.model.connect('c2.y_a', 'c1.x_a')
+        self.model.connect('c1.y', 'c2.x')
 
-        #self.model.driver.workflow.initialize_residual()
         self.model.run()
 
         dv = array([3.0, 5.0])
