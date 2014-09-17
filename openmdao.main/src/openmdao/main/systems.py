@@ -812,10 +812,20 @@ class System(object):
 
         if self.ln_solver is None:
 
-            if MPI:
-                self.ln_solver = PETSc_KSP(self)
-            else:
+            solver_choice = self.options.lin_solver
+
+            # scipy_gmres not supported in MPI, so swap with
+            # petsc KSP.
+            if MPI and solver_choice=='scipy_gmres':
+                solver_choice = 'petsc_ksp'
+                msg = "scipy_gmres optimizer not supported in MPI. " + \
+                      "Using petsc_ksp instead."
+                self.options.parent._logger.warning(msg)
+
+            if solver_choice == 'scipy_gmres':
                 self.ln_solver = ScipyGMRES(self)
+            elif solver_choice == 'petsc_ksp':
+                self.ln_solver = PETSc_KSP(self)
 
     def linearize(self):
         """ Linearize all subsystems. """
