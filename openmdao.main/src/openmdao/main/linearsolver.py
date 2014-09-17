@@ -148,6 +148,7 @@ class ScipyGMRES(LinearSolver):
                            matvec=self.mult,
                            dtype=float)
 
+        #print 'newton start vec', system.vec['f'].array[:]
         # Call GMRES to solve the linear system
         dx, info = gmres(A, system.vec['f'].array,
                          tol=options.gmres_tolerance,
@@ -164,7 +165,7 @@ class ScipyGMRES(LinearSolver):
 
         system.vec['df'].array[:] = -dx
 
-        #print 'dx', dx
+        #print 'newton solution vec', system.vec['df'].array[:]
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
@@ -293,6 +294,7 @@ class PETSc_KSP(LinearSolver):
         inputs and outputs.
         """
         system = self._system
+        options = self.options
         name2collapsed = system.scope.name2collapsed
 
         inputs = [_detuple(x) for x in inputs]
@@ -308,7 +310,9 @@ class PETSc_KSP(LinearSolver):
             outputs, inputs = inputs, outputs
 
         # FIXME: these shouldn't be hard-wired here
-        self.ksp.setTolerances(max_it=10, atol=1e-10, rtol=1e-6)
+        self.ksp.setTolerances(max_it=options.gmres_maxiter,
+                               atol=options.gmres_tolerance,
+                               rtol=options.gmres_tolerance)
 
         j = 0
         for param in inputs:
@@ -341,6 +345,30 @@ class PETSc_KSP(LinearSolver):
                 j += 1
 
         return J
+
+    def newton(self):
+        """ Solve the coupled equations for a new state vector that nulls the
+        residual. Used by the Newton solvers."""
+
+        system = self._system
+        options = self.options
+
+        # FIXME: these shouldn't be hard-wired here
+        self.ksp.setTolerances(max_it=options.gmres_maxiter,
+                               atol=options.gmres_tolerance,
+                               rtol=options.gmres_tolerance)
+
+        system.rhs_vec.array[:] = system.vec['f'].array[:]
+        #print 'newton start vec', system.vec['f'].array[:]
+
+        system.sol_buf.array[:] = system.sol_vec.array[:]
+        system.rhs_buf.array[:] = system.rhs_vec.array[:]
+
+        system.ln_solver.ksp.solve(system.rhs_buf, system.sol_buf)
+
+        system.vec['df'].array[:] = -system.sol_buf.array[:]
+
+        #print 'newton solution vec', system.vec['df'].array[:]
 
     def mult(self, mat, sol_vec, rhs_vec):
         """ KSP Callback: applies Jacobian matrix. Mode is determined by the
