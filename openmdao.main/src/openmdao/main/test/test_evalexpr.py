@@ -31,6 +31,9 @@ class A(Component):
 
     ext1 = Array(array([eye(3), eye(3), eye(3)]))
 
+    def execute(self):
+        pass
+    
     def some_funct(self, a, b, op='add'):
         if op == 'add':
             return a+b
@@ -572,12 +575,15 @@ class ExprEvalTestCase(unittest.TestCase):
     def test_eval_gradient(self):
         top = set_as_top(Assembly())
         top.add('comp1', Simple())
+        top.comp1.a = 5.2
+        top.comp1.b = 1.8
+        
         top.run()
 
         exp = ExprEvaluator('3.0*comp1.c', top.driver)
         grad = exp.evaluate_gradient(scope=top)
-        self.assertEqual(top.comp1.c, 7.0)
         assert_rel_error(self, grad['comp1.c'], 3.0, 0.00001)
+        self.assertEqual(top.comp1.c, 7.0)
 
         # Commented out this test, until we find a case that can't be
         # handled analytically
