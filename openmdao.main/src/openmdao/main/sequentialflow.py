@@ -90,19 +90,6 @@ class SequentialWorkflow(Workflow):
             else:
                 self.parent._logger.warning(msg)
 
-    # def sever_edges(self, edges):
-    #     """Temporarily remove the specified edges but save
-    #     them and their metadata for later restoration.
-    #     """
-    #     if edges:
-    #         params = self.parent.get_parameters()
-    #         non_param_edges = [(src, targ) for (src, targ) in edges
-    #                                        if targ not in params]
-    #         self.scope._depgraph.sever_edges(non_param_edges)
-
-    # def unsever_edges(self):
-    #     self.scope._depgraph.unsever_edges(self.parent.get_expr_scope())
-
     def get_names(self, full=False):
         """Return a list of component names in this workflow.
         If full is True, include hidden pseudo-components in the list.
@@ -227,33 +214,6 @@ class SequentialWorkflow(Workflow):
         """Remove all components from this workflow."""
         self._explicit_names = []
         self.config_changed()
-
-    def _update(self, name, vtree, dv, i1=0):
-        """ Update VariableTree `name` value `vtree` from `dv`. """
-        for key in sorted(vtree.list_vars()):  # Force repeatable order.
-            value = getattr(vtree, key)
-            if isinstance(value, float):
-                setattr(vtree, key, value + float(dv[i1]))
-                i1 += 1
-            elif isinstance(value, ndarray):
-                shape = value.shape
-                size = value.size
-                i2 = i1 + size
-                if len(shape) > 1:
-                    value = value.flatten() + dv[i1:i2]
-                    value = value.reshape(shape)
-                else:
-                    value = value + dv[i1:i2]
-                setattr(vtree, key, value)
-                i1 += size
-            elif isinstance(value, VariableTree):
-                i1 = self._update('.'.join((name, key)), value, dv, i1)
-            else:
-                msg = "Variable %s is of type %s." % (name, type(value)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        return i1
 
     def mimic(self, src):
         '''Mimic capability'''
