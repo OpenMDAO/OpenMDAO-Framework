@@ -10,7 +10,7 @@ import networkx as nx
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped, NoFlatError
 from openmdao.main.finite_difference import FiniteDifference
-from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
+from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
@@ -826,6 +826,8 @@ class System(object):
                 self.ln_solver = ScipyGMRES(self)
             elif solver_choice == 'petsc_ksp':
                 self.ln_solver = PETSc_KSP(self)
+            elif solver_choice == 'linear_gs':
+                self.ln_solver = LinearGS(self)
 
     def linearize(self):
         """ Linearize all subsystems. """
@@ -865,7 +867,7 @@ class System(object):
             self.vec['df'].array[:] = 0.0
             self.vec['du'].array[:] = 0.0
 
-        J = self.ln_solver.solve(inputs, outputs, return_format)
+        J = self.ln_solver.calc_gradient(inputs, outputs, return_format)
         self.sol_vec.array[:] = 0.0
         return J
 
@@ -881,7 +883,16 @@ class System(object):
         self.initialize_gradient_solver()
         self.linearize()
 
-        self.ln_solver.newton()
+        self.vec['df'].array[:] = -self.ln_solver.solve(self.vec['f'].array)
+
+    def solve_linear(self, options=None, iterbase=''):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        self.set_options('forward', options)
+        self.initialize_gradient_solver()
+
+        self.rhs_vec.array = self.ln_solver.solve(self.sol_vec.array)
 
     def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """

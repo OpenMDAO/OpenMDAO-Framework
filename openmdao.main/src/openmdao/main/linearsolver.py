@@ -29,15 +29,15 @@ class LinearSolver(object):
         """ Computes the norm of the linear residual """
         system = self._system
         system.rhs_vec.array[:] = 0.0
-        system.apply_J()
+        system.applyJ()
         system.rhs_vec.array[:] *= -1.0
-        system.rhs_vec.array[:] += system.rhs_buf.array[:]
+        system.rhs_vec.array[:] += system.rhs_buf[:]
 
         if MPI:
             system.rhs_vec.petsc.assemble()
             return system.rhs_vec.petsc.norm()
         else:
-            return norm(rhs_vec)
+            return np.linalg.norm(system.rhs_vec.array)
 
 
 class ScipyGMRES(LinearSolver):
@@ -45,13 +45,25 @@ class ScipyGMRES(LinearSolver):
     it should never be used in an MPI setting.
     """
 
-    def solve(self, inputs, outputs, return_format='array'):
+    def __init__(self, system):
+        """ Set up ScipyGMRES object """
+        super(ScipyGMRES, self).__init__(system)
+
+        n_edge = system.vec['f'].array.size
+
+        self.RHS = np.zeros((n_edge, 1))
+        self.A = LinearOperator((n_edge, n_edge),
+                                matvec=self.mult,
+                                dtype=float)
+
+    def calc_gradient(self, inputs, outputs, return_format='array'):
         """ Run GMRES solver to return a Jacobian of outputs
         with respect to inputs.
         """
 
         system = self._system
-        options = self.options
+        RHS = self.RHS
+        A = self.A
 
         # Size the problem
         # TODO - Support for array slice inputs/outputs
@@ -64,13 +76,6 @@ class ScipyGMRES(LinearSolver):
                 raise RuntimeError(msg)
             else:
                 raise
-
-        n_edge = system.vec['f'].array.size
-
-        RHS = np.zeros((n_edge, 1))
-        A = LinearOperator((n_edge, n_edge),
-                           matvec=self.mult,
-                           dtype=float)
 
         if return_format == 'dict':
             J = {}
@@ -103,18 +108,7 @@ class ScipyGMRES(LinearSolver):
                 RHS[irhs, 0] = 1.0
 
                 # Call GMRES to solve the linear system
-                dx, info = gmres(A, RHS,
-                                 tol=options.atol,
-                                 maxiter=options.maxiter)
-                #mpiprint('dx', dx)
-                if info > 0:
-                    msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
-                          "after %d iterations for parameter '%s' at index %d"
-                    logger.error(msg, system.name, info, param, irhs)
-                elif info < 0:
-                    msg = "ERROR in calc_gradient in '%s': gmres failed " \
-                          "for parameter '%s' at index %d"
-                    logger.error(msg, system.name, param, irhs)
+                dx = self.solve(RHS)
 
                 RHS[irhs, 0] = 0.0
 
@@ -149,23 +143,18 @@ class ScipyGMRES(LinearSolver):
         #print inputs, '\n', outputs, '\n', J
         return J
 
-    def newton(self):
+    def solve(self, rhs_vec):
         """ Solve the coupled equations for a new state vector that nulls the
         residual. Used by the Newton solvers."""
 
         system = self._system
         options = self.options
+        RHS = self.RHS
+        A = self.A
 
-        # Size the problem
-        n_edge = system.vec['df'].array.size
-
-        A = LinearOperator((n_edge, n_edge),
-                           matvec=self.mult,
-                           dtype=float)
-
-        #print 'newton start vec', system.vec['f'].array[:]
+        #print 'Linear solution start vec', rhs_vec
         # Call GMRES to solve the linear system
-        dx, info = gmres(A, system.vec['f'].array,
+        dx, info = gmres(A, rhs_vec,
                          tol=options.atol,
                          maxiter=options.maxiter)
 
@@ -178,9 +167,9 @@ class ScipyGMRES(LinearSolver):
                   "for parameter '%s' at index %d"
             logger.error(msg, system.name, param, irhs)
 
-        system.vec['df'].array[:] = -dx
+        #print 'Linear solution vec', -dx
+        return dx
 
-        #print 'newton solution vec', system.vec['df'].array[:]
 
     def mult(self, arg):
         """ GMRES Callback: applies Jacobian matrix. Mode is determined by the
@@ -227,7 +216,7 @@ class PETSc_KSP(LinearSolver):
         system.rhs_buf = PETSc.Vec().createWithArray(np.zeros(lsize),
                                                      comm=system.mpi.comm)
 
-    def solve(self, inputs, outputs, return_format='dict'):
+    def calc_gradient(self, inputs, outputs, return_format='dict'):
         """Returns a nested dict of sensitivities if return_format == 'dict'.
         """
 
@@ -348,7 +337,16 @@ class LinearGS(LinearSolver):
     """ Linear block Gauss Seidel. MPI is not supported yet.
     Serial block solve of D x = b - (L+U) x """
 
-    def solve(self, inputs, outputs, return_format='array'):
+    def __init__(self, system):
+        """ Set up LinearGS object """
+        super(LinearGS, self).__init__(system)
+
+        lsize = np.sum(system.local_var_sizes[system.mpi.rank, :])
+
+        system.sol_buf = np.zeros(lsize)
+        system.rhs_buf = np.zeros(lsize)
+
+    def calc_gradient(self, inputs, outputs, return_format='array'):
         """ Run GMRES solver to return a Jacobian of outputs
         with respect to inputs.
         """
@@ -397,13 +395,13 @@ class LinearGS(LinearSolver):
 
             for irhs in in_indices:
 
-                system.rhs_vec.array[irhs, 0] = 1.0
+                system.sol_vec.array[irhs] = 1.0
+                system.rhs_vec.array[:] = 0.0
 
                 # Perform LinearGS solve
-                self._solve()
-                dx = system.sol_vec.array
+                dx = self.solve(system.sol_vec.array)
 
-                system.rhs_vec.array[irhs, 0] = 0.0
+                system.sol_vec.array[irhs] = 0.0
 
                 i = 0
                 for item in outputs:
@@ -436,11 +434,13 @@ class LinearGS(LinearSolver):
         #print inputs, '\n', outputs, '\n', J
         return J
 
-    def _solve(self):
+    def solve(self, rhs_vec):
         """ Executes an iterative solver """
 
-        system.rhs_buf.array[:] = system.rhs_vec.array[:]
-        system.sol_buf.array[:] = system.sol_vec.array[:]
+        system = self._system
+
+        system.rhs_buf[:] = system.rhs_vec.array[:]
+        system.sol_buf[:] = rhs_vec[:]
         options = self.options
         system = self._system
 
@@ -455,27 +455,31 @@ class LinearGS(LinearSolver):
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ()
                     system.rhs_vec.array[:] *= -1.0
-                    system.rhs_vec.array[:] += system.rhs_buf.array[:]
-                    subsystem.applyJ()
+                    system.rhs_vec.array[:] += system.rhs_buf[:]
+                    sub_options = options if subsystem.options is None \
+                                          else subsystem.options
+                    subsystem.solve_linear(sub_options)
 
             elif system.mode == 'adjoint':
-                system.subsystems['local'].reverse()
-                for subsystem in system.subsystems(local=True):
-                    system.sol_buf.array[:] = system.rhs_buf.array[:]
-                    for subsystem2 in system.subsystems['local']:
+
+                rev_systems = reversed(system.subsystems(local=True))
+
+                for subsystem in rev_systems:
+                    system.sol_buf[:] = system.rhs_buf[:]
+                    for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
                             system.rhs_vec.array[:] = 0.0
-                            subsystem2.applyJ(args)
+                            subsystem2.applyJ()
                             #system.scatter('lin', subsystem2)
-                            system.sol_buf.array[:] -= system.rhs_vec.array[:]
-                    system.rhs_vec.array[:] = system.sol_buf.array[:]
-                    subsystem.applyJ()
-
-                system.subsystems['local'].reverse()
+                            system.sol_buf[:] -= system.rhs_vec.array[:]
+                    system.rhs_vec.array[:] = system.sol_buf[:]
+                    subsystem.solve_linear(options)
 
             norm = self._norm()
             counter += 1
-            print self.name, "Norm: ", norm, counter
+            print system.name, "Norm: ", norm, counter
+
+        return system.rhs_vec.array
 
 
 def _detuple(x):
