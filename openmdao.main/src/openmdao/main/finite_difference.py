@@ -149,7 +149,8 @@ class FiniteDifference(object):
 
         iterbase = 'fd-' + iterbase
 
-        self.get_outputs(self.y_base)
+        self.system.vec['u'].set_to_array(self.y_base,
+                                          self.outputs)
 
         for j, src, in enumerate(self.inputs):
             # Users can customize the FD per variable
@@ -271,9 +272,8 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, -fd_step, i-i1, undo_complex=True)
 
-        self.restore_outputs(self.y_base)
-        
         # Restore final inputs/outputs.
+        self.system.vec['u'].set_from_array(self.y_base, self.outputs)
         self.system.vec['u'].set_to_scope(self.scope)
 
         #print 'after FD', self.J
