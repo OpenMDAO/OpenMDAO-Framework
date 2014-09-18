@@ -1,210 +1,14 @@
-""" Some functions and objects that provide the backbone to OpenMDAO's
-differentiation capability.
+""" Some functions and objects that support the component-side derivative API.
 """
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.graph import list_deriv_vars
-from openmdao.util.log import logger
-
+from openmdao.main.mpiwrap import mpiprint
 from numpy import zeros, vstack, hstack
-from scipy.sparse.linalg import gmres, LinearOperator
 
 # pylint: disable=C0103
 
-def calc_gradient(wflow, inputs, outputs, n_edge, shape):
-    """Returns the gradient of the passed outputs with respect to
-    all passed inputs.
-    """
-
-    # Size the problem
-    A = LinearOperator((n_edge, n_edge),
-                       matvec=wflow.matvecFWD,
-                       dtype=float)
-
-    J = zeros(shape)
-
-    # Each comp calculates its own derivatives at the current
-    # point. (i.e., linearizes)
-    comps = wflow.calc_derivatives(first=True)
-
-    if not comps:
-        return J
-
-    dgraph = wflow._derivative_graph
-    options = wflow.parent.gradient_options
-    bounds = wflow._bounds_cache
-
-    # Forward mode, solve linear system for each parameter
-    j = 0
-    for param in inputs:
-
-        if isinstance(param, tuple):
-
-            # You can ask for derivatives of broadcast inputs in cases
-            # where some of the inputs aren't in the relevance graph.
-            # Find the one that is.
-            for bcast_param in param:
-                if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
-                    param = bcast_param
-                    break
-            else:
-                param = param[0]
-                #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
-                                   #(param, wflow.parent.get_pathname()))
-        try:
-            i1, i2 = bounds[param]
-        except KeyError:
-
-            # If you end up here, it is usually because you have a
-            # tuple of broadcast inputs containing only non-relevant
-            # variables. Derivative is zero, so take one and increment
-            # by its width.
-            j += wflow.get_width(param)
-            continue
-
-        if isinstance(i1, list):
-            in_range = i1
-        else:
-            in_range = range(i1, i2)
-
-        for irhs in in_range:
-
-            RHS = zeros((n_edge, 1))
-            RHS[irhs, 0] = 1.0
-
-            # Call GMRES to solve the linear system
-            dx, info = gmres(A, RHS,
-                             tol=options.gmres_tolerance,
-                             maxiter=options.gmres_maxiter)
-            if info > 0:
-                msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
-                      "after %d iterations for parameter '%s' at index %d"
-                logger.error(msg, wflow.parent.get_pathname(), info, param, irhs)
-            elif info < 0:
-                msg = "ERROR in calc_gradient in '%s': gmres failed " \
-                      "for parameter '%s' at index %d"
-                logger.error(msg, wflow.parent.get_pathname(), param, irhs)
-
-            i = 0
-            for item in outputs:
-                try:
-                    k1, k2 = bounds[item]
-                except KeyError:
-                    i += wflow.get_width(item)
-                    continue
-
-                if isinstance(k1, list):
-                    J[i:i+(len(k1)), j] = dx[k1]
-                    i += len(k1)
-                else:
-                    J[i:i+(k2-k1), j] = dx[k1:k2]
-                    i += k2-k1
-
-            j += 1
-
-    #print inputs, '\n', outputs, '\n', J
-    return J
-
-def calc_gradient_adjoint(wflow, inputs, outputs, n_edge, shape):
-    """Returns the gradient of the passed outputs with respect to
-    all passed inputs. Calculation is done in adjoint mode.
-    """
-
-    # Size the problem
-    A = LinearOperator((n_edge, n_edge),
-                       matvec=wflow.matvecREV,
-                       dtype=float)
-    J = zeros(shape)
-
-    # Each comp calculates its own derivatives at the current
-    # point. (i.e., linearizes)
-    comps = wflow.calc_derivatives(first=True)
-
-    if not comps:
-        return J
-
-    dgraph = wflow._derivative_graph
-    options = wflow.parent.gradient_options
-    bounds = wflow._bounds_cache
-
-    # Adjoint mode, solve linear system for each output
-    j = 0
-    for output in outputs:
-
-        if isinstance(output, tuple):
-            output = output[0]
-
-        try:
-            i1, i2 = bounds[output]
-        except KeyError:
-            j += wflow.get_width(output)
-            continue
-
-
-        if isinstance(i1, list):
-            out_range = i1
-        else:
-            out_range = range(i1, i2)
-
-        for irhs in out_range:
-
-            RHS = zeros((n_edge, 1))
-            RHS[irhs, 0] = 1.0
-
-            # Call GMRES to solve the linear system
-            dx, info = gmres(A, RHS,
-                             tol=options.gmres_tolerance,
-                             maxiter=options.gmres_maxiter)
-
-            if info > 0:
-                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed to converge " \
-                      "after %d iterations for output '%s' at index %d"
-                logger.error(msg, wflow.parent.get_pathname(), info, output, irhs)
-            elif info < 0:
-                msg = "ERROR in calc_gradient_adjoint in '%s': gmres failed " \
-                      "for output '%s' at index %d"
-                logger.error(msg, wflow.parent.get_pathname(), output, irhs)
-
-            i = 0
-
-            for param in inputs:
-
-                # You can ask for derivatives of broadcast inputs in cases
-                # where some of the inputs aren't in the relevance graph.
-                # Find the one that is.
-                if isinstance(param, tuple):
-                    for bcast_param in param:
-                        if bcast_param in dgraph and 'bounds' in dgraph.node[bcast_param]:
-                            param = bcast_param
-                            break
-                    else:
-                        param = param[0]
-                        #raise RuntimeError("didn't find any of '%s' in derivative graph for '%s'" %
-                                           #(param, wflow.parent.get_pathname()))
-
-                try:
-                    k1, k2 = bounds[param]
-                except KeyError:
-                    # If you end up here, it is usually because you have a
-                    # tuple of broadcast inputs containing only non-relevant
-                    # variables. Derivative is zero, so take one and increment
-                    # by its width.
-                    i += wflow.get_width(param)
-                    continue
-
-                if isinstance(k1, list):
-                    J[j, i:i+(len(k1))] = dx[k1:k2]
-                    i += len(k1)
-                else:
-                    J[j, i:i+(k2-k1)] = dx[k1:k2]
-                    i += k2-k1
-
-            j += 1
-
-    #print inputs, '\n', outputs, '\n', J, dx
-    return J
 
 def pre_process_dicts(obj, key, arg_or_result, shape_cache):
     '''If the component supplies apply_deriv or applyMinv or their adjoint
@@ -271,28 +75,57 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(obj, arg, result, residual, shape_cache, J=None):
+def applyJ(system):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
-    for key in result:
-        if key not in residual:
-            result[key] = -arg[key]
+
+    J = system.J
+    obj = system._comp
+    arg = {}
+    for item in system.list_inputs_and_states():
+        key = item.partition('.')[-1]
+        # FIXME: this is a hack. Sometimes the item we're looking
+        # for can be found in the parent dp vector, but not always,
+        # so we have to find it in another vector...  I guess it's
+        # because input derivs will be found in dp and state derivs be
+        # found in du.  Maybe we should have a separate method for
+        # returning states and use two loops.
+        if item in system._parent_system.vec['dp']:
+            arg[key] = system._parent_system.vec['dp'][item]
+        elif item in system.sol_vec:
+            arg[key] = system.sol_vec[item]
+        else:
+            arg[key] = system.scope._system.vec['du'][item]
+
+    result = {}
+    for item in system.list_outputs_and_residuals():
+        key = item.partition('.')[-1]
+        result[key] = system.rhs_vec[item]
+
+    # Bail if this component is not connected in the graph
+    if len(arg)==0 or len(result)==0:
+        return
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
     for key, value in arg.iteritems():
-        if key not in result and any(value != 0):
+        if any(value != 0):
             nonzero = True
             break
 
     if nonzero is False:
+        #print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
     # 'apply_deriv' function instead of provideJ.
     if J is None and hasattr(obj, 'apply_deriv'):
+
+        # TODO - We shouldn't need to calculate the size of the full arrays,
+        # so the cache shouldn't be needed. Cache is None for now.
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and result dicts for
         # each input and output to have the same shape as the input/output.
@@ -316,6 +149,7 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
+        #print 'applyJ', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -342,8 +176,6 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
         tmp = result[okey]
         used = set()
         for ikey in arg:
-            if ikey in result:
-                continue
 
             idx = None
             if ikey in ibounds:
@@ -362,25 +194,37 @@ def applyJ(obj, arg, result, residual, shape_cache, J=None):
                                       o1, o2, odx, osh)
             #print ikey, okey, Jsub
 
-            # for unit pseudocomps, just scalar multiply the args
-            # by the conversion factor
-            if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJ', arg, result
+    #print 'applyJ', obj.name, arg, result
 
-def applyJT(obj, arg, result, residual, shape_cache, J=None):
+def applyJT(system):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
     """
 
-    for key in arg:
-        if key not in residual:
-            result[key] = -arg[key]
+    J = system.J
+    obj = system._comp
+    arg = {}
+    for item in system.list_outputs_and_residuals():
+        key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    result = {}
+    for item in system.list_inputs_and_states():
+        key = item.partition('.')[-1]
+        # FIXME: same hack as in applyJ
+        if item in system.rhs_vec:
+            result[key] = system.rhs_vec[item]
+        elif item in system.scope._system.vec['du']:
+            result[key] = system.scope._system.vec['du'][item]
+        # else :
+        #     result[key] = system._parent_system.vec['dp'][item]
+
+    # Bail if this component is not connected in the graph
+    if len(arg)==0 or len(result)==0:
+        return
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
     nonzero = False
@@ -390,11 +234,16 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
             break
 
     if nonzero is False:
+        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
     # specify the 'apply_derivT' function instead of provideJ.
     if J is None and hasattr(obj, 'apply_derivT'):
+
+        # TODO - We shouldn't need to calculate the size of the full arrays,
+        # so the cache shouldn't be needed. Cache is None for now.
+        shape_cache = {}
 
         # The apply_deriv function expects the argument and
         # result dicts for each input and output to have the
@@ -419,11 +268,12 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
+        print 'applyJT', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
 
-    #print 'J', input_keys, output_keys, J
+    #mpiprint( 'J', input_keys, output_keys, J)
 
     # The Jacobian from provideJ is a 2D array containing the derivatives of
     # the flattened output_keys with respect to the flattened input keys. We
@@ -434,9 +284,6 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
     used = set()
     for okey in result:
-        if okey in arg:
-            continue
-
         odx = None
         if okey in obounds:
             o1, o2, osh = obounds[okey]
@@ -452,7 +299,6 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
 
         tmp = result[okey]
         for ikey in arg:
-
             idx = None
             if ikey in ibounds:
                 i1, i2, ish = ibounds[ikey]
@@ -464,15 +310,9 @@ def applyJT(obj, arg, result, residual, shape_cache, J=None):
                                       i1, i2, idx, ish).T
             #print ikey, okey, Jsub
 
-            # for unit pseudocomps, just scalar multiply the args
-            # by the conversion factor
-            if isinstance(obj, PseudoComponent) and \
-               obj._pseudo_type == 'units' and Jsub.shape == (1, 1):
-                tmp += Jsub[0][0] * arg[ikey]
-            else:
-                tmp += Jsub.dot(arg[ikey])
+            tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJT', arg, result
+    print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

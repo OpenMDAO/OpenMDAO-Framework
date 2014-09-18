@@ -78,12 +78,8 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, driver=None):
-        super(MyModel, self).__init__()
-        self.drv = driver or CaseIteratorDriver()
-
     def configure(self):
-        driver = self.add('driver', self.drv)
+        driver = self.add('driver', CaseIteratorDriver())
         self.add('driven', DrivenComponent())
         driver.workflow.add('driven')
         driver.add_parameter('driven.x')
@@ -263,7 +259,7 @@ class TestCase(unittest.TestCase):
             except Exception as err:
                 err = replace_uuid(str(err))
                 if not sequential:  # RemoteError has different format.
-                    err = err[:-76]
+                    err = err.strip().strip('-').strip()
                 startmsg = 'driver: Run aborted: Traceback '
                 endmsg = 'driven (4-driven): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)
@@ -318,33 +314,6 @@ class TestCase(unittest.TestCase):
         top = Assembly()
         top.add('generator', Generator())
         cid = top.add('cid', CaseIteratorDriver())
-        top.add('driven', DrivenComponent())
-        top.add('verifier', Verifier())
-
-        top.driver.workflow.add(('generator', 'cid', 'verifier'))
-        cid.workflow.add('driven')
-        cid.add_parameter('driven.x')
-        cid.add_parameter('driven.y')
-        cid.add_response('driven.rosen_suzuki')
-        cid.add_response('driven.sum_y')
-
-        top.connect('generator.x', 'cid.case_inputs.driven.x')
-        top.connect('generator.y', 'cid.case_inputs.driven.y')
-
-        top.connect('generator.x', 'verifier.x')
-        top.connect('generator.y', 'verifier.y')
-        top.connect('cid.case_outputs.driven.rosen_suzuki', 'verifier.rosen_suzuki')
-        top.connect('cid.case_outputs.driven.sum_y', 'verifier.sum_y')
-
-        top.run()
-
-    def test_simplecid(self):
-        logging.debug('')
-        logging.debug('test_simplecid')
-
-        top = Assembly()
-        top.add('generator', Generator())
-        cid = top.add('cid', SimpleCaseIterDriver())
         top.add('driven', DrivenComponent())
         top.add('verifier', Verifier())
 

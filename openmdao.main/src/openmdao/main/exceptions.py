@@ -1,6 +1,9 @@
 """
 Exception classes for OpenMDAO.
 """
+import sys
+from traceback import print_exception
+from StringIO import StringIO
 
 class ConstraintError(ValueError):
     """Raised when a constraint is violated."""
@@ -19,35 +22,31 @@ class RunStopped(RuntimeError):
     not necessarily reflecting input values."""
     pass
 
-class TracedError(Exception):
-    """An exception that encapsulates another exception and its traceback."""
-    def __init__(self, orig_exc, tback=None):
-        if tback is None:
-            self.traceback = ''
-        else:
-            self.traceback = tback.strip()
-        self.orig_exc = orig_exc
-        super(TracedError, self).__init__(str(orig_exc))
-    
-    def __str__(self):
-        return str(self.orig_exc)
-    
-    def __repr__(self):
-        return "%s%s" % (self.__class__.__name__, self.args)
-    
-    def reraise(self, with_traceback=True):
-        if with_traceback:
-            raise self.orig_exc.__class__(self.traceback)
-        else:
-            raise self.orig_exc
-    
+class NoFlatError(TypeError):
+    """Raised when a value is not flattenable to a 1D float array."""
+    pass
 
+    
 def traceback_str(exc):
-    """Call this to get the traceback string associated with the given exception.
+    """Call this to get the traceback string associated with the given exception
+    or tuple of the form (exc_class, exc, traceback).
     Returns the exception string if there is no traceback.
     """
+    if isinstance(exc, tuple) and len(exc) == 3:
+        s = StringIO()
+        print_exception(*exc, file=s)
+        return s.getvalue().strip()
+
     try:
         return exc.traceback
     except AttributeError:
         return str(exc)
 
+def exception_str(exc):
+    """Call this to get the exception string associated with the given exception
+    or tuple of the form (exc, traceback) or (exc_class, exc, traceback).
+    """
+    if isinstance(exc, tuple) and len(exc) == 3:
+        return str(exc[1])
+
+    return str(exc)

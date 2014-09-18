@@ -220,7 +220,7 @@ class PBS_Server(ObjServer):
         ========================= ===========================
         ``submit_as_hold``        -h
         ------------------------- ---------------------------
-        rerunnable                -r y|n
+        ``rerunnable``            -r y|n
         ------------------------- ---------------------------
         ``working_directory``     Handled in generated script
         ------------------------- ---------------------------
@@ -232,7 +232,7 @@ class PBS_Server(ObjServer):
         ------------------------- ---------------------------
         ``min_phys_memory``       Ignored
         ------------------------- ---------------------------
-        email                     -M `value`
+        ``email``                 -M `value`
         ------------------------- ---------------------------
         ``email_on_started``      -m b
         ------------------------- ---------------------------
@@ -252,7 +252,7 @@ class PBS_Server(ObjServer):
         ------------------------- ---------------------------
         ``queue_name``            -q `value`
         ------------------------- ---------------------------
-        priority                  -p `value`
+        ``priority``              -p `value`
         ------------------------- ---------------------------
         ``start_time``            -a `value`
         ------------------------- ---------------------------
@@ -266,9 +266,8 @@ class PBS_Server(ObjServer):
         To support a working directory other than HOME or a
         PBS-generated scratch directory, a short script is written with
         PBS directives in the header. The script will change to the working
-        directory and then run the command.
+        directory of the server and then run the command.
         
-        If 'working_directory' is not specified, use current server directory.
         If 'input_path' is not specified, use ``/dev/null``.
         If 'output_path' is not specified, use ``<remote_command>.stdout``.
         If 'error_path' is not specified, use stdout.
@@ -305,7 +304,7 @@ class PBS_Server(ObjServer):
         `error_path`, or if that was not specified, stdout.
         """
         self.home_dir = os.path.expanduser('~')
-        self.work_dir = ''
+        self.work_dir = os.getcwd()  # Server started in working directory.
 
         cmd = list(self._QSUB)
         cmd.extend(('-V', '-W', 'block=true', '-j', 'oe'))
@@ -320,14 +319,6 @@ class PBS_Server(ObjServer):
         env = None
         inp, out, err = None, None, None
         join_files = False
-
-        # Set working directory now, for possible path fixing.
-        try:
-            value = resource_desc['working_directory']
-        except KeyError:
-            pass
-        else:
-            self.work_dir = self._fix_path(value)
 
         # Write script to be submitted rather than putting everything on
         # 'qsub' command line. We have to do this since otherwise there's
@@ -429,20 +420,15 @@ class PBS_Server(ObjServer):
                     script.write('%s -l walltime=%s\n'
                                  % (prefix, self._timelimit(wall_time)))
 
-            # Have script move to work directory relative to
-            # home directory on execution host.
+            # Have script move to work directory.
             home = os.path.realpath(os.path.expanduser('~'))
-            work = os.path.realpath(self.work_dir or os.getcwd())
+            work = os.path.realpath(self.work_dir)
             if work.startswith(home):
                 work = work[len(home)+1:]
                 if sys.platform == 'win32':  # pragma no cover
                     script.write('cd %HOMEDRIVE%%HOMEPATH%\n')
                 else:
                     script.write('cd $HOME\n')
-            else:
-                # This can potentially cause problems...
-                self._logger.warning('work %r not a descendant of home %r',
-                                     work, home)
             if ' ' in work:
                 work = '"%s"' % work
             script.write('cd %s\n' % work)
@@ -500,8 +486,10 @@ class PBS_Server(ObjServer):
                 qsub_echo = err
             with open('qsub.out', 'rU') as inp:
                 with open(qsub_echo, 'a+') as out:
-                    self._logger.error('qsub.out:')
+                    out.write('===== error_msg =====\n')
+                    out.write('%r\n' % error_msg)
                     out.write('===== qsub.out =====\n')
+                    self._logger.error('qsub.out:')
                     for line in inp:
                         self._logger.error('    %s', line.rstrip())
                         out.write(line)

@@ -7,28 +7,23 @@ import copy
 import pprint
 import socket
 import sys
-import logging
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
 # regarding this, but it isn't fixed yet.
 
-# pylint: disable-msg=W0212
+# pylint: disable=W0212
 copy._copy_dispatch[weakref.ref] = copy._copy_immutable
 copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
-# pylint: enable-msg=W0212
+# pylint: enable=W0212
 
 # pylint apparently doesn't understand namespace packages...
-# pylint: disable-msg=E0611,F0401
+# pylint: disable=E0611,F0401
 
 from zope.interface import Interface, implements
 
-try:
-    from numpy import ndarray
-except ImportError as err:
-    logging.warn("In %s: %r", __file__, err)
-    from openmdao.main.numpy_fallback import ndarray
+from numpy import ndarray
 
 from traits.api import HasTraits, Missing, Python, \
                        push_exception_handler, TraitType, CTrait
@@ -41,7 +36,7 @@ from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
-from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, \
                                      IComponent, IVariableTree
@@ -69,6 +64,7 @@ _copydict = {
 
 _iodict = {'out': 'output', 'in': 'input'}
 
+__missing__ = object()
 
 def get_closest_proxy(start_scope, pathname):
     """Resolve down to the closest in-process parent object
@@ -137,8 +133,8 @@ class SafeHasTraits(HasTraits):
 
 
 def _check_bad_default(name, trait, obj=None):
-    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True and \
-           not trait.assumed_default and trait._illegal_default_ is True:
+    if trait.vartypename not in ['Slot', 'VarTree'] and trait.required is True \
+       and not trait.assumed_default and trait._illegal_default_ is True:
 
         msg = "variable '%s' is required and cannot have a default value" % name
         if obj is None:
@@ -152,8 +148,6 @@ class Container(SafeHasTraits):
     to the framework"""
 
     implements(IContainer)
-
-    _interactive = True # if True, perform certain checks at runtime
 
     def __init__(self):
         self._parent = None  # Define these now for easier debugging during
@@ -480,7 +474,8 @@ class Container(SafeHasTraits):
         _check_bad_default(name, trait, self)
 
         #FIXME: saving our own list of added traits shouldn't be necessary...
-        self._added_traits[name] = trait
+        if name not in self._added_traits:
+            self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         if self._cached_traits_ is not None:
             self._cached_traits_[name] = self.trait(name)
@@ -562,7 +557,7 @@ class Container(SafeHasTraits):
 
     def _add_after_parent_set(self, name, obj):
         pass
-    
+
     def _prep_for_add(self, name, obj):
         """Check for illegal adds and update the new child
         object in preparation for insertion into self.
@@ -574,7 +569,7 @@ class Container(SafeHasTraits):
         elif not is_legal_name(name):
             self.raise_exception("'%s' is a reserved or invalid name" % name,
                                  NameError)
-            
+
         removed = False
         if has_interface(obj, IContainer):
             # if an old child with that name exists, remove it
@@ -591,13 +586,13 @@ class Container(SafeHasTraits):
             obj.name = name
 
             self._add_after_parent_set(name, obj)
-            
+
             # if this object is already installed in a hierarchy, then go
             # ahead and tell the obj (which will in turn tell all of its
             # children) that its scope tree back to the root is defined.
             if self._call_cpath_updated is False:
                 obj.cpath_updated()
-                
+
         return removed
 
     def _post_container_add(self, name, obj, removed):
@@ -787,7 +782,8 @@ class Container(SafeHasTraits):
                 # so check for them here and skip them if they don't point to
                 # anything.
                 if obj is not Missing:
-                    if is_instance(obj, (Container, VarTree)) and id(obj) not in visited:
+                    if is_instance(obj, (Container, VarTree)) and \
+                       id(obj) not in visited:
                         if not recurse:
                             yield (name, obj)
                     elif trait.iotype is not None:
@@ -1157,7 +1153,14 @@ class Container(SafeHasTraits):
                     self._exprcache[path] = expr
                 expr.set(value)
             else:
-                setattr(self, path, value)
+                if isinstance(value, ndarray):
+                    dest = getattr(self, path)
+                    if dest.size != value.size:
+                        setattr(self, path, value.copy())
+                    else:
+                        dest[:] = value
+                else:
+                    setattr(self, path, value)
 
     def _index_set(self, name, value, index):
         if len(index) == 1:
@@ -1165,14 +1168,6 @@ class Container(SafeHasTraits):
         else:
             obj = self.get(name, index[:-1])
         idx = index[-1]
-
-        # try:
-        #     if isinstance(idx, tuple):
-        #         old = _index_functs[idx[0]](obj, idx)
-        #     else:
-        #         old = obj[idx]
-        # except KeyError:
-        #     old = _missing
 
         if isinstance(idx, tuple):
             if idx[0] == INDEX:
@@ -1183,30 +1178,6 @@ class Container(SafeHasTraits):
                 obj.__setitem__(slice(idx[1][0], idx[1][1], idx[1][2]), value)
         else:
             obj[idx] = value
-
-        ## setting of individual Array entries or sub attributes doesn't seem to
-        ## trigger _input_trait_modified, so do it manually
-        ## FIXME: if people register other callbacks on a trait, they won't
-        ##        be called if we do it this way
-        #eq = (old == value)
-        #if not isinstance(eq, bool):
-            #try:
-                #eq = all(eq)
-            #except TypeError:
-                #pass
-
-        #if not eq:
-            ## need to find first item going up the parent tree that is a Component
-            #item = self
-            #path = name
-            #full = name
-            #while item:
-                #if has_interface(item, IComponent):
-                    #item._input_updated(path, fullpath=full)
-                    #break
-                #path = item.name
-                #full = '.'.join((path, full))
-                #item = item.parent
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""
@@ -1288,7 +1259,7 @@ class Container(SafeHasTraits):
                                         self._logger, observer.observer,
                                         need_requirements)
         except Exception:
-            self.reraise_exception()  # Just to get a pathname.
+            self.reraise_exception(info=sys.exc_info())  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1313,7 +1284,7 @@ class Container(SafeHasTraits):
         try:
             eggsaver.save(self, outstream, fmt, proto, self._logger)
         except Exception:
-            self.reraise_exception()  # Just to get a pathname.
+            self.reraise_exception(info=sys.exc_info())  # Just to get a pathname.
         finally:
             self.parent = parent
 
@@ -1535,18 +1506,26 @@ class Container(SafeHasTraits):
         self._logger.error(msg)
         raise exception_class(full_msg)
 
-    def reraise_exception(self, msg=''):
+    def reraise_exception(self, msg='', info=None):
         """Re-raise an exception with updated message and original traceback."""
-        exc_type, exc_value, exc_traceback = sys.exc_info()
+        if info is None:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+        else:
+            exc_type, exc_value, exc_traceback = info
+
         if msg:
             msg = '%s: %s' % (msg, exc_value)
         else:
             msg = '%s' % exc_value
+
         prefix = '%s: ' % self.get_pathname()
+
         if not msg.startswith(prefix):
             msg = prefix + msg
+
         new_exc = exc_type(msg)
-        raise type(new_exc), new_exc, exc_traceback
+
+        raise exc_type, new_exc, exc_traceback
 
     def build_trait(self, ref_name, iotype=None, trait=None):
         """Build a trait referring to `ref_name`.
@@ -1561,6 +1540,8 @@ class Container(SafeHasTraits):
             If `trait` is not None, use that trait rather than building one.
         """
         self.raise_exception('build_trait()', NotImplementedError)
+
+
 
 # By default we always proxy Containers and FileRefs.
 CLASSES_TO_PROXY.append(Container)

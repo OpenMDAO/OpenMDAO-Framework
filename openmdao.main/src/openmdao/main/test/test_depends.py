@@ -3,6 +3,8 @@
 import unittest
 import math
 
+from nose import SkipTest
+
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.hasobjective import HasObjectives
@@ -46,7 +48,7 @@ class Simple(Component):
         exec_order.append(self.name)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        print "%s: a=%s, b=%s, c=%s, d=%s" % (self.get_pathname(),self.a,self.b,self.c,self.d)
+        #print "%s: a=%s, b=%s, c=%s, d=%s" % (self.get_pathname(),self.a,self.b,self.c,self.d)
         
 
 allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6',
@@ -244,6 +246,7 @@ class DependsTestCase(unittest.TestCase):
         self.assertEqual(exec_order, ['c1','c2','c4','c3'])
                 
     def test_expr_deps(self):
+        raise SkipTest("FIXME when manual execution out of data order becomes a priority")
         top = set_as_top(Assembly())
         top.add('driver1', DumbDriver())
         top.add('driver2', DumbDriver())
@@ -417,8 +420,8 @@ class DependsTestCase2(unittest.TestCase):
     def test_array_expr(self):
         class Dummy(Component): 
         
-            x = Array([[-1, 1],[-2, 2]],iotype="in",shape=(2,2))
-            y = Array([[-1, 1],[-2, 2]],iotype="out",shape=(2,2))
+            x = Array([[-1., 1.],[-2., 2.]],iotype="in",shape=(2,2), dtype='f')
+            y = Array([[-1., 1.],[-2., 2.]],iotype="out",shape=(2,2), dtype='f')
             
             def execute(self): 
                 self.y = self.x
@@ -474,11 +477,12 @@ class DependsTestCase2(unittest.TestCase):
         top.c1.ain = [55.,44.,33.]
             
         #from openmdao.util.dotgraph import plot_graph
-        #plot_graph(top.sub._depgraph)
+        #plot_graph(top.sub._reduced_graph)
         top.run()
         
         self.assertEqual(top.c1.aout[1], 88.)
         self.assertEqual(top.sub.ain[1], 88.)
+        self.assertEqual(top.sub.c2.ain[1], 88.)
         self.assertEqual(top.sub.aout[1], 176.)
         self.assertEqual(top.c3.ain[1], 176.)
 

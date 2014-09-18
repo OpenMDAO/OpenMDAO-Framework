@@ -19,6 +19,7 @@ from traits.trait_base import not_event
 from traits.api import Property
 
 from openmdao.main.container import Container
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
                                      IAssembly, IComponent, IDriver, \
                                      IHasCouplingVars, IHasObjectives, \
@@ -42,7 +43,6 @@ from openmdao.main.mpiwrap import MPI_info
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.graph import list_deriv_vars
-from openmdao.main.array_helpers import flattened_size_info
 #from openmdao.main.mpiwrap import mpiprint
 
 import openmdao.util.log as tracing
@@ -178,7 +178,6 @@ class Component(Container):
         self._provideJ_bounds = None
 
         self._case_id = ''
-        self._var_sizes = {}
 
         self._complex_step = False
 
@@ -266,7 +265,7 @@ class Component(Container):
                 obj = getattr(self, name)
                 if is_instance(obj, VariableTree):
                     if self.name:
-                        req.extend(['.'.join((self.name, n)) 
+                        req.extend(['.'.join((self.name, n))
                                      for n in obj.get_req_default(trait.required)])
                     else:
                         req.extend(obj.get_req_default(trait.required))
@@ -307,6 +306,12 @@ class Component(Container):
                 self.raise_exception("required method 'provideJ' is missing")
             if not hasattr(self, 'list_deriv_vars'):
                 self.raise_exception("required method 'list_deriv_vars' is missing")
+            if not hasattr(self, 'apply_deriv'):
+                self.raise_exception("method 'apply_deriv' must be also specified "
+                                     " if 'apply_derivT' is specified")
+            if not hasattr(self, 'apply_derivT'):
+                self.raise_exception("method 'apply_derivT' must be also specified "
+                                     " if 'apply_deriv' is specified")
 
         if hasattr(self, 'provideJ') and not hasattr(self, 'list_deriv_vars'):
             self.raise_exception("required method 'list_deriv_vars' is missing")
@@ -429,7 +434,7 @@ class Component(Container):
 
                 self.set(out_name, y)
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
+    def linearize(self, first=False, second=False, savebase=False,
                          required_inputs=None, required_outputs=None):
         """Prepare for Fake Finite Difference runs by calculating all needed
         derivatives, and saving the current state as the baseline if
@@ -497,6 +502,20 @@ class Component(Container):
                 self._ffd_outputs[name] = self.get(name)
 
         return J
+
+    def applyJ(self, system):
+        """ Wrapper for component derivative specification methods.
+        Forward Mode.
+        """
+        applyJ(system)
+
+
+    def applyJT(self, system):
+        """ Wrapper for component derivative specification methods.
+        Adjoint Mode.
+        """
+        applyJT(system)
+
 
     def _post_execute(self):
         """Update output variables and anything else needed after execution.
@@ -568,9 +587,10 @@ class Component(Container):
             #else:
             #    print 'skipping: %s' % self.get_pathname()
             self._post_run()
-        except:
+        except Exception:
+            info = sys.exc_info()
             self._set_exec_state('INVALID')
-            raise
+            raise info[0], info[1], info[2]
         finally:
             # If this is the top-level component, perform run termination.
             if self.parent is None:
@@ -631,7 +651,8 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__))
+                                                     type(newobj).__name__), 
+                                        sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object
 
@@ -683,7 +704,6 @@ class Component(Container):
         self._container_names = None
         self._new_config = True
         self._provideJ_bounds = None
-        self._var_sizes = {}
 
     @rbac(('owner', 'user'))
     def list_inputs(self):
@@ -1860,25 +1880,8 @@ class Component(Container):
         return self.mpi.requested_cpus
 
     @rbac(('owner', 'user'))
-    def get_float_var_info(self, name):
-        """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value 
-        can be expressed as an array of floats.  Otherwise, None is 
-        returned.
-        """
-        info = self._var_sizes.get(name, __missing__)
-        if info is __missing__:
-            try:
-                info = flattened_size_info(name, self)
-            except TypeError:
-                info = None
-            self._var_sizes[name] = info
-                
-        return info
-
-    @rbac(('owner', 'user'))
     def setup_systems(self):
-        pass
+        return ()
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
@@ -1888,9 +1891,13 @@ class Component(Container):
         return set((self.name,))
 
     @rbac(('owner', 'user'))
+    def setup_graph(self, inputs=None, outputs=None):
+        pass
+
+    @rbac(('owner', 'user'))
     def pre_setup(self):
         pass
-    
+
     @rbac(('owner', 'user'))
     def post_setup(self):
         pass

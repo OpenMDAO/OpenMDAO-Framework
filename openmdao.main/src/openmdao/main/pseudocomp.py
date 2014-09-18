@@ -4,10 +4,12 @@ import weakref
 
 from numpy import ndarray, zeros
 
-from openmdao.main.array_helpers import flattened_size, flattened_size_info, \
+from openmdao.main.array_helpers import flattened_size, \
                                         flattened_value, get_val_and_index, get_index
+from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent, IVariableTree, IAssembly
+from openmdao.main.interfaces import implements, IComponent, IVariableTree, \
+                                     IAssembly, IPseudoComp
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info
@@ -82,10 +84,11 @@ class PseudoComponent(object):
     This fake component can be added to a dependency graph and executed
     along with 'real' components.
     """
-    implements(IComponent)
+    implements(IComponent, IPseudoComp)
 
-    def __init__(self, parent, srcexpr, destexpr=None, 
-                 translate=True, pseudo_type=None):
+    def __init__(self, parent, srcexpr, destexpr=None,
+                 translate=True, pseudo_type=None, subtype=None,
+                 exprobject=None):
         if destexpr is None:
             destexpr = DummyExpr()
         self._parent = None
@@ -103,21 +106,24 @@ class PseudoComponent(object):
         self._pseudo_type = pseudo_type  # a string indicating the type of pseudocomp
                                          # this is, e.g., 'units', 'constraint', 'objective',
                                          # or 'multi_var_expr'
+        self._subtype = subtype  # for constraints, 'equality' or 'inequality'
+
+        self._exprobj = exprobject  # object responsible for creation of this pcomp, e.g. a Constraint
+
         self._orig_src = srcexpr.text
         self._orig_dest = destexpr.text
         self.Jsize = None
         self.mpi = MPI_info()
-        self._var_sizes = {}
 
         varmap = {}
         rvarmap = {}
-        for i, ref in enumerate(srcexpr.refs()):
+        for i, ref in enumerate(srcexpr.ordered_refs()):
             in_name = 'in%d' % i
             self._inputs.append(in_name)
             self._inmap[ref] = in_name
             varmap[ref] = in_name
             rvarmap.setdefault(_get_varname(ref), set()).add(ref)
-            setattr(self, in_name, None)
+            setattr(self, in_name, 0.)
 
         refs = list(destexpr.refs())
         if refs:
@@ -171,7 +177,7 @@ class PseudoComponent(object):
         else:
             self._srcunits = None
 
-        self._srcexpr = ConnectedExprEvaluator(xformed_src, 
+        self._srcexpr = ConnectedExprEvaluator(xformed_src,
                                                scope=self)
 
         # this is just the equation string (for debugging)
@@ -189,6 +195,7 @@ class PseudoComponent(object):
             self._orig_expr = self._orig_src
 
         self.missing_deriv_policy = 'error'
+        self._negate = False
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -276,10 +283,19 @@ class PseudoComponent(object):
 
         if driver is not None:
             scope._depgraph.add_edge(self.name+'.out0', driver.name,
-                                     drv_conn=driver)
+                                     drv_conn=driver.name)
 
     def run(self, ffd_order=0, case_uuid=''):
-        setattr(self, 'out0', self._srcexpr.evaluate())
+        if self._negate:
+            setattr(self, 'out0', -self._srcexpr.evaluate())
+        else:
+            setattr(self, 'out0', self._srcexpr.evaluate())
+
+    def evaluate(self):
+        if self._negate:
+            setattr(self, 'out0', -self._srcexpr.evaluate())
+        else:
+            setattr(self, 'out0', self._srcexpr.evaluate())
 
     def get(self, name, index=None):
         if index is not None:
@@ -299,8 +315,8 @@ class PseudoComponent(object):
     def set_itername(self, itername):
         self._itername = itername
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
+    def linearize(self, first=False, second=False, savebase=False,
+                  required_inputs=None, required_outputs=None):
         if first:
             return self.provideJ()
         if second:
@@ -333,17 +349,20 @@ class PseudoComponent(object):
             J[:, i:i+width] = grad[varname]
             i += width
 
-        return J
+        if self._negate:
+            return -J
+        else:
+            return J
 
     def ensure_init(self):
-        """Make sure our inputs and outputs have been 
+        """Make sure our inputs and outputs have been
         initialized.
         """
         if not self._initialized:
             # set the current value of the connected variable
             # into our input
             for ref, in_name in self._inmap.items():
-                setattr(self, in_name, 
+                setattr(self, in_name,
                         ExprEvaluator(ref).evaluate(self.parent))
 
             # set the initial value of the output
@@ -357,8 +376,11 @@ class PseudoComponent(object):
     def get_req_cpus(self):
         return 1
 
+    def pre_setup(self):
+        self.ensure_init()
+
     def setup_systems(self):
-        pass
+        return ()
 
     def setup_communicators(self, comm, scope=None):
         self.mpi.comm = comm
@@ -372,23 +394,8 @@ class PseudoComponent(object):
     def setup_vectors(self, arrays=None):
         pass
 
-    def get_float_var_info(self, name):
-        """Returns the local flattened size, index and basevar info
-        of the value of the named variable, if the flattened value 
-        can be expressed as an array of floats.  Otherwise, None is 
-        returned.
-        """
-        if name in self._var_sizes:
-            return self._var_sizes[name]
-        else:
-            self.ensure_init()
-            try:
-                info = flattened_size_info(name, self)
-            except TypeError:
-                info = None
-            self._var_sizes[name] = info
-                
-            return info
+    def post_setup(self):
+        pass
 
     def get_flattened_value(self, path):
         """Return the named value, which may include
@@ -401,9 +408,10 @@ class PseudoComponent(object):
         return flattened_value(path, val)
 
     def set_flattened_value(self, path, value):
+        self.ensure_init()
         val = getattr(self, path.split('[',1)[0])
         idx = get_index(path)
-        if isinstance(val, int_types): 
+        if isinstance(val, int_types):
             pass  # fall through to exception
         if isinstance(val, real_types):
             if idx is None:
@@ -419,7 +427,7 @@ class PseudoComponent(object):
         elif IVariableTree.providedBy(val):
             raise NotImplementedError("no support for setting flattened values into vartrees")
 
-        self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
+        raise TypeError("%s: Failed to set flattened value to variable %s" % (self.name, path))
 
     def get_req_default(self, self_reqired=None):
         return []
@@ -432,3 +440,118 @@ class PseudoComponent(object):
         belonging to this component.
         """
         return set((self.name,))
+
+    def applyJ(self, system):
+        """ Wrapper for component derivative specification methods.
+        Forward Mode.
+        """
+        applyJ(system)
+
+    def applyJT(self, system):
+        """ Wrapper for component derivative specification methods.
+        Adjoint Mode.
+        """
+        applyJT(system)
+
+
+class SimpleEQConPComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate expressions of
+    the form comp1.x = comp2.y. A separate PComp was needed to efficiently
+    calculate the derivatives, especially for vector inputs.
+    """
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
+
+        if 'in0' in arg:
+            if self._negate:
+                result['out0'] -= arg['in0']
+            else:
+                result['out0'] += arg['in0']
+
+        if 'in1' in arg:
+            if self._negate:
+                result['out0'] += arg['in1']
+            else:
+                result['out0'] -= arg['in1']
+
+    def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        NOTE: This function is probably never called, since the Newton solve
+        is always forward.
+        """
+
+        if 'in0' in result:
+            if self._negate:
+                result['in0'] -= arg['out0']
+            else:
+                result['in0'] += arg['out0']
+
+        if 'in1' in result:
+            if self._negate:
+                result['in1'] += arg['out0']
+            else:
+                result['in1'] -= arg['out0']
+
+
+class SimpleEQ0PComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate expressions of
+    the form comp1.x = 0. A separate PComp was needed to efficiently
+    calculate the derivatives, especially for vector inputs.
+    """
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
+
+        result['out0'][:] += arg['in0'][:]
+
+    def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        NOTE: This function is probably never called, since the Newton solve
+        is always forward.
+        """
+
+        result['in0'][:] += arg['out0'][:]
+
+
+class UnitConversionPComp(PseudoComponent):
+    """ This is a simple pseudocomponent used to encapsulate unit
+    conversions. A separate PComp was needed to efficiently calculate the
+    derivatives, especially for vector inputs.
+    """
+
+    def config_changed(self, update_parent=True):
+        """ Calculate and save our unit conversion factor.
+        """
+        super(UnitConversionPComp, self).config_changed(update_parent)
+
+        src    = PhysicalQuantity(1.0, self._srcunits)
+        target = self._meta['out0'].get('units')
+        src.convert_to_unit(target)
+        self.grad = src.get_value()
+
+    def provideJ(self):
+        """No need to pre-calculate."""
+        pass
+
+    def apply_deriv(self, arg, result):
+        """ Matrix vector product with the Jacobian.
+        """
+
+        result['out0'][:] += self.grad*arg['in0'][:]
+
+    def apply_derivT(self, arg, result):
+        """ Matrix vector product with the transpose Jacobian.
+        """
+
+        result['in0'][:] += self.grad*arg['out0'][:]

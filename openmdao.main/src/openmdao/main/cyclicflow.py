@@ -169,116 +169,116 @@ class CyclicWorkflow(SequentialWorkflow):
 
         return self._workflow_graph
 
-    def initialize_residual(self):
-        """Creates the array that stores the residual. Also returns the
-        number of edges.
-        """
-        dgraph = self.derivative_graph()
+    # def initialize_residual(self):
+    #     """Creates the array that stores the residual. Also returns the
+    #     number of edges.
+    #     """
+    #     dgraph = self.derivative_graph()
 
-        # We need to map any of our edges if they are in a
-        # pseudo-assy
-        pa_keys = set([s.split('.', 1)[0] for s in self.edge_list() if '~' in s])
+    #     # We need to map any of our edges if they are in a
+    #     # pseudo-assy
+    #     pa_keys = set([s.split('.', 1)[0] for s in self.edge_list() if '~' in s])
 
-        if len(pa_keys) == 0:
-            self._mapped_severed_edges = self._severed_edges
-        else:
-            palist = [dgraph.node[pa_key]['pa_object'] for pa_key in pa_keys]
-            self._mapped_severed_edges = []
-            for src, target in self._severed_edges:
+    #     if len(pa_keys) == 0:
+    #         self._mapped_severed_edges = self._severed_edges
+    #     else:
+    #         palist = [dgraph.node[pa_key]['pa_object'] for pa_key in pa_keys]
+    #         self._mapped_severed_edges = []
+    #         for src, target in self._severed_edges:
 
-                compname, _, varname = src.partition('.')
-                for pseudo in palist:
-                    if src in pseudo.outputs:
-                        src = to_PA_var(src, pseudo.name)
-                        break
+    #             compname, _, varname = src.partition('.')
+    #             for pseudo in palist:
+    #                 if src in pseudo.outputs:
+    #                     src = to_PA_var(src, pseudo.name)
+    #                     break
 
-                compname, _, varname = target.partition('.')
-                for pseudo in palist:
-                    flat_inputs = set()
-                    for item in pseudo.inputs:
-                        flat_inputs.update(item)
+    #             compname, _, varname = target.partition('.')
+    #             for pseudo in palist:
+    #                 flat_inputs = set()
+    #                 for item in pseudo.inputs:
+    #                     flat_inputs.update(item)
 
-                    if target in flat_inputs:
-                        target = to_PA_var(target, pseudo.name)
-                        break
+    #                 if target in flat_inputs:
+    #                     target = to_PA_var(target, pseudo.name)
+    #                     break
 
-                self._mapped_severed_edges.append((src, target))
+    #             self._mapped_severed_edges.append((src, target))
 
-        return super(CyclicWorkflow, self).initialize_residual()
+    #     return super(CyclicWorkflow, self).initialize_residual()
 
-    def derivative_graph(self, inputs=None, outputs=None, fd=False,
-                         group_nondif=True, add_implicit=True):
-        """Returns the local graph that we use for derivatives. For cyclic
-        flows, we need to sever edges and use them as inputs/outputs.
-        """
+    # def derivative_graph(self, inputs=None, outputs=None, fd=False,
+    #                      group_nondif=True, add_implicit=True):
+    #     """Returns the local graph that we use for derivatives. For cyclic
+    #     flows, we need to sever edges and use them as inputs/outputs.
+    #     """
 
-        if self._derivative_graph is None or group_nondif is False:
+    #     if self._derivative_graph is None or group_nondif is False:
 
-            if inputs is None:
-                inputs = []
+    #         if inputs is None:
+    #             inputs = []
 
-            if outputs is None:
-                outputs = []
+    #         if outputs is None:
+    #             outputs = []
 
-            if add_implicit is True:
+    #         if add_implicit is True:
 
-                # Solver can specify parameters
-                if hasattr(self.parent, 'list_param_group_targets'):
-                    inputs.extend(self.parent.list_param_group_targets())
+    #             # Solver can specify parameters
+    #             if hasattr(self.parent, 'list_param_group_targets'):
+    #                 inputs.extend(self.parent.list_param_group_targets())
 
-                # Solver can specify equality constraints
-                if hasattr(self.parent, 'get_eq_constraints'):
-                    outputs.extend(["%s.out0" % item.pcomp_name for item in
-                                    self.parent.get_constraints().values()])
+    #             # Solver can specify equality constraints
+    #             if hasattr(self.parent, 'get_eq_constraints'):
+    #                 outputs.extend(["%s.out0" % item.pcomp_name for item in
+    #                                 self.parent.get_constraints().values()])
 
-            # Cyclic flows need to be severed before derivatives are calculated.
-            self._get_topsort()
+    #         # Cyclic flows need to be severed before derivatives are calculated.
+    #         self._get_topsort()
 
-            for src, target in self._severed_edges:
-                inputs.append(target)
-                outputs.append(src)
+    #         for src, target in self._severed_edges:
+    #             inputs.append(target)
+    #             outputs.append(src)
 
-            dgraph = super(CyclicWorkflow, self).derivative_graph(inputs=inputs,
-                            outputs=outputs, fd=fd, severed=self._severed_edges,
-                            group_nondif=group_nondif, add_implicit=add_implicit)
+    #         dgraph = super(CyclicWorkflow, self).derivative_graph(inputs=inputs,
+    #                         outputs=outputs, fd=fd, severed=self._severed_edges,
+    #                         group_nondif=group_nondif, add_implicit=add_implicit)
 
-            if group_nondif is False:
-                return dgraph
+    #         if group_nondif is False:
+    #             return dgraph
 
-        return self._derivative_graph
+    #     return self._derivative_graph
 
-    def edge_list(self):
-        """ Return the list of edges for the derivatives of this workflow. """
+    # def edge_list(self):
+    #     """ Return the list of edges for the derivatives of this workflow. """
 
-        self._edges = super(CyclicWorkflow, self).edge_list()
+    #     self._edges = super(CyclicWorkflow, self).edge_list()
 
-        # TODO: Shouldn't have to do this everytime.
-        if len(self._mapped_severed_edges) > 0:
+    #     # TODO: Shouldn't have to do this everytime.
+    #     if len(self._mapped_severed_edges) > 0:
 
-            cyclic_edges = OrderedDict()
-            for edge in self._mapped_severed_edges:
-                cyclic_edges[edge[0]] = edge[1]
+    #         cyclic_edges = OrderedDict()
+    #         for edge in self._mapped_severed_edges:
+    #             cyclic_edges[edge[0]] = edge[1]
 
-            # Finally, modify our edge list to include the severed edges, and
-            # exclude the boundary edges.
-            for src, targets in self._edges.iteritems():
-                if '@in' not in src or \
-                   not any(edge in cyclic_edges.values() for edge in targets):
-                    if isinstance(targets, str):
-                        targets = [targets]
+    #         # Finally, modify our edge list to include the severed edges, and
+    #         # exclude the boundary edges.
+    #         for src, targets in self._edges.iteritems():
+    #             if '@in' not in src or \
+    #                not any(edge in cyclic_edges.values() for edge in targets):
+    #                 if isinstance(targets, str):
+    #                     targets = [targets]
 
-                    newtargets = []
-                    for target in targets:
-                        if '@out' not in target or \
-                           src not in cyclic_edges:
-                            newtargets.append(target)
+    #                 newtargets = []
+    #                 for target in targets:
+    #                     if '@out' not in target or \
+    #                        src not in cyclic_edges:
+    #                         newtargets.append(target)
 
-                    if len(newtargets) > 0:
-                        cyclic_edges[src] = newtargets
+    #                 if len(newtargets) > 0:
+    #                     cyclic_edges[src] = newtargets
 
-            self._edges = cyclic_edges
+    #         self._edges = cyclic_edges
 
-        return self._edges
+    #     return self._edges
 
     def get_dependents(self, fixed_point=False):
         """Returns a list of current values of the dependents. This includes
@@ -328,21 +328,7 @@ class CyclicWorkflow(SequentialWorkflow):
             #reset the deps array to the new order and sign
             deps = deps[new_dep_index]*new_dep_sign
 
-        sev_deps = []
-        for src, target in self._severed_edges:
-
-            if not isinstance(target, str):
-                target = target[0]
-
-            target = from_PA_var(target)
-            src = from_PA_var(src)
-            src_val = self.scope.get(src)
-            targ_val = self.scope.get(target)
-            res = flattened_value(src, src_val) - flattened_value(target, targ_val)
-
-            sev_deps.extend(res)
-
-        return hstack((deps, sev_deps))
+        return array(deps)
 
     def get_independents(self):
         """Returns a list of current values of the independents. This includes
@@ -350,96 +336,39 @@ class CyclicWorkflow(SequentialWorkflow):
         """
 
         indeps = self.parent.eval_parameters(self.scope)
-        sev_indeps = []
-        for _, target in self._severed_edges:
-
-            if not isinstance(target, str):
-                target = target[0]
-
-            target = from_PA_var(target)
-            old_val = self.scope.get(target)
-
-            sev_indeps.extend(flattened_value(target, old_val))
-
-        return hstack((indeps, sev_indeps))
+        return array(indeps)
 
     def set_independents(self, val):
         """Sets all dependent variables to the values in the input array
         `val`. This includes both parameters and severed targets.
         """
-        bounds = self._bounds_cache
         nparam = self.parent.total_parameters()
         if nparam > 0:
             self.parent.set_parameters(val[:nparam].flatten())
 
-        if len(self._severed_edges) > 0:
-            i = nparam
-            for src, targets in self._mapped_severed_edges:
-                if isinstance(targets, str):
-                    targets = [targets]
+    # def _vtree_set(self, name, vtree, dv, i1=0):
+    #     """ Update VariableTree `name` value `vtree` from `dv`. """
+    #     for key in sorted(vtree.list_vars()):  # Force repeatable order.
+    #         value = getattr(vtree, key)
+    #         if isinstance(value, float):
+    #             setattr(vtree, key, float(dv[i1]))
+    #             i1 += 1
+    #         elif isinstance(value, ndarray):
+    #             shape = value.shape
+    #             size = value.size
+    #             i2 = i1 + size
+    #             if len(shape) > 1:
+    #                 value = dv[i1:i2]
+    #                 value = value.reshape(shape)
+    #             else:
+    #                 value = dv[i1:i2]
+    #             setattr(vtree, key, value)
+    #             i1 += size
+    #         elif isinstance(value, VariableTree):
+    #             i1 = self._vtree_set('.'.join((name, key)), value, dv, i1)
+    #         else:
+    #             msg = "Variable %s is of type %s." % (name, type(value)) + \
+    #                   " This type is not supported by the MDA Solver."
+    #             self.scope.raise_exception(msg, RuntimeError)
 
-                i1, i2 = bounds[src]
-                if isinstance(i1, list):
-                    width = len(i1)
-                else:
-                    width = i2-i1
-
-                i1 = i
-                i2 = i + width
-
-                for target in targets:
-
-                    target = from_PA_var(target)
-                    old_val = self.scope.get(target)
-
-                    if isinstance(old_val, float):
-                        new_val = float(val[i1:i2])
-                    elif isinstance(old_val, ndarray):
-                        shape = old_val.shape
-                        if len(shape) > 1:
-                            new_val = val[i1:i2].copy()
-                            new_val = new_val.reshape(shape)
-                        else:
-                            new_val = val[i1:i2].copy()
-                    elif isinstance(old_val, VariableTree):
-                        new_val = old_val.copy()
-                        self._vtree_set(target, new_val, val[i1:i2], i1)
-                    else:
-                        msg = "Variable %s is of type %s." % (target, type(old_val)) + \
-                              " This type is not supported by the MDA Solver."
-                        self.scope.raise_exception(msg, RuntimeError)
-
-                    i += width
-
-                    # Poke new value into the input end of the edge.
-                    self.scope.set(target, new_val, force=True)
-
-                    # # Prevent OpenMDAO from stomping on our poked input.
-                    # self.scope.set_valid([target.split('[', 1)[0]], True)
-
-    def _vtree_set(self, name, vtree, dv, i1=0):
-        """ Update VariableTree `name` value `vtree` from `dv`. """
-        for key in sorted(vtree.list_vars()):  # Force repeatable order.
-            value = getattr(vtree, key)
-            if isinstance(value, float):
-                setattr(vtree, key, float(dv[i1]))
-                i1 += 1
-            elif isinstance(value, ndarray):
-                shape = value.shape
-                size = value.size
-                i2 = i1 + size
-                if len(shape) > 1:
-                    value = dv[i1:i2]
-                    value = value.reshape(shape)
-                else:
-                    value = dv[i1:i2]
-                setattr(vtree, key, value)
-                i1 += size
-            elif isinstance(value, VariableTree):
-                i1 = self._vtree_set('.'.join((name, key)), value, dv, i1)
-            else:
-                msg = "Variable %s is of type %s." % (name, type(value)) + \
-                      " This type is not supported by the MDA Solver."
-                self.scope.raise_exception(msg, RuntimeError)
-
-        return i1
+    #     return i1

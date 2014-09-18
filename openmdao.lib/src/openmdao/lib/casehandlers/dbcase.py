@@ -3,7 +3,13 @@ DB (Python's sqlite.)
 """
 
 import sys
-import sqlite3
+
+try:
+    import sqlite3
+except ImportError:
+    import logging
+    logging.error('No sqlite3 support for DBCaseIterator or DBCaseRecorder')
+
 import time
 from cPickle import dumps, loads, HIGHEST_PROTOCOL, UnpicklingError
 from optparse import OptionParser
@@ -13,6 +19,9 @@ from traits.trait_handlers import TraitListObject, TraitDictObject
 # pylint: disable=E0611,F0401
 from openmdao.main.interfaces import implements, ICaseRecorder, ICaseIterator
 from openmdao.main.case import Case
+
+from openmdao.lib.casehandlers.util import driver_map
+
 
 _casetable_attrs = set(['id', 'uuid', 'parent', 'msg', 'model_id', 'timeEnter'])
 _vartable_attrs = set(['var_id', 'name', 'case_id', 'sense', 'value'])
@@ -202,14 +211,7 @@ class DBCaseRecorder(object):
 
     def register(self, driver, inputs, outputs):
         """Register names for later record call from `driver`."""
-        if hasattr(driver, 'parent'):
-            prefix = driver.parent.get_pathname()
-            if prefix:
-                prefix += '.'
-        else:
-            prefix = ''
-        self._cfg_map[driver] = ([prefix+name for name in inputs],
-                                 [prefix+name for name in outputs])
+        self._cfg_map[driver] = driver_map(driver, inputs, outputs)
 
     def record_constants(self, constants):
         """Record constant data - currently ignored."""

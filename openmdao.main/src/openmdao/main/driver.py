@@ -7,12 +7,13 @@ from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
 
+from openmdao.main.mpiwrap import MPI, mpiprint
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
-                                   collapse_driver
+                                   collapse_driver, get_reduced_subgraph
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -60,26 +61,34 @@ class GradientOptions(VariableTree):
                               "should be finite-differenced together.",
                               framework_var=True)
 
-    # KTM - story up for this one.
-    #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
-    #                          'by adding sets of component names.')
-
-    # Analytic solution with GMRES
-    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES',
-                            framework_var=True)
-    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
-                        framework_var=True)
     derivative_direction = Enum('auto',
                                 ['auto', 'forward', 'adjoint'],
                                 desc="Direction for derivative calculation. "
                                 "Can be 'forward', 'adjoint', or 'auto'. "
-                                "Auto is the default setting. "
+                                "'auto' is the default setting. "
                                 "When set to auto, OpenMDAO automatically "
                                 "figures out the best direction based on the "
                                 "number of parameters and responses. "
                                 "When the number of parameters and responses "
                                 "are equal, then forward direction is used.",
                                 framework_var=True)
+
+    # KTM - story up for this one.
+    #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
+    #                          'by adding sets of component names.')
+
+    # Linear Solver settings
+    lin_solver = Enum('scipy_gmres', ['scipy_gmres', 'petsc_ksp', 'linear_gs'],
+                      desc='Method to use for gradient calculation',
+                      framework_var=True)
+
+    atol = Float(1.0e-9, desc='Absolute tolerance for the linear solver.',
+                 framework_var=True)
+    rtol = Float(1.0e-9, desc='Relative tolerance for the linear solver. '
+                               '(Not supported by scipy.gmres)',
+                               framework_var=True)
+    maxiter = Int(100, desc='Maximum number of iterations for the linear solver.',
+                  framework_var=True)
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -95,6 +104,20 @@ class Driver(Component):
 
     gradient_options = VarTree(GradientOptions(), iotype='in',
                                framework_var=True)
+
+    # flag to determine partitioning of our workflow's System
+    system_type = Enum('auto',
+                       ['auto', 'serial', 'parallel'],
+                       desc="Determines the partitioning of this driver's "
+                            "workflow components into Systems. Default is "
+                            "'auto', where a hierarchy of serial and parallel "
+                            "systems is automatically determined. 'serial' "
+                            "and 'parallel' may be specified to force the"
+                            "workflow components into a single serial or "
+                            "parallel System.  Note that when not running "
+                            "under MPI, this option is ignored and the "
+                            "resulting System will always be serial.",
+                       framework_var=True)
 
     def __init__(self):
         self._iter = None
@@ -124,12 +147,42 @@ class Driver(Component):
     def _collapse_subdrivers(self, g):
         """collapse subdriver iteration sets into single nodes."""
         # collapse all subdrivers in our graph
-        wfnames = set(self.workflow.get_names(full=True))
+        itercomps = {}
+        itercomps['#parent'] = self.workflow.get_names(full=True)
+
         for child_drv in self.subdrivers(recurse=False):
-            collapse_driver(g, child_drv, wfnames)
+            itercomps[child_drv.name] = [c.name for c in child_drv.iteration_set()]
+
+        for child_drv in self.subdrivers(recurse=False):
+            excludes = set()
+            for name, comps in itercomps.items():
+                if name != child_drv.name:
+                    for cname in comps:
+                        if cname not in itercomps[child_drv.name]:
+                            excludes.add(cname)
+
+            collapse_driver(g, child_drv, excludes)
+
+        # now remove any comps that are shared by subdrivers but are not found
+        # in our workflow
+        to_remove = set()
+        for name, comps in itercomps.items():
+            if name != '#parent':
+                for comp in comps:
+                    if comp not in itercomps['#parent']:
+                        to_remove.add(comp)
+
+        g.remove_nodes_from(to_remove)
 
     def get_depgraph(self):
         return self.parent._depgraph  # May change this to use a smaller graph later
+
+    def get_reduced_graph(self):
+        nodes = set([c.name for c in self.iteration_set()])
+        nodes.add(self.name)
+        if self.parent._setup_inputs:
+            nodes.update(self.parent._setup_inputs)
+        return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
 
     def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
@@ -183,7 +236,7 @@ class Driver(Component):
         """Returns a tuple of sets of the form (src_set, dest_set)
         containing all dependencies introduced by any parameters,
         objectives, or constraints in this Driver.  If recurse is True,
-        include any refs from subdrivers. 
+        include any refs from subdrivers.
         """
         srcset = set()
         destset = set()
@@ -235,7 +288,7 @@ class Driver(Component):
             # and including comps that we reference in any parameter, objective, or
             # constraint.
             conns = super(Driver, self).get_expr_depends()
-            
+
             getcomps = set([u for u, v in conns if u != self.name])
             setcomps = set([v for u, v in conns if v != self.name])
 
@@ -332,10 +385,10 @@ class Driver(Component):
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
 
-        # force param pseudocomps to get updated values to start
-        # KTM1 - probably don't need this anymore
-        self.update_parameters()
-        
+        # # force param pseudocomps to get updated values to start
+        # # KTM1 - probably don't need this anymore
+        # self.update_parameters()
+
         # Reset the workflow.
         self.workflow.reset()
         super(Driver, self).run(ffd_order, case_uuid)
@@ -346,10 +399,10 @@ class Driver(Component):
         Returns set of paths for changing inputs."""
         return self.workflow.configure_recording(includes, excludes)
 
-    def update_parameters(self):
-        if hasattr(self, 'get_parameters'):
-            for param in self.get_parameters().values():
-                param.initialize(self.get_expr_scope())
+    # def update_parameters(self):
+    #     if hasattr(self, 'get_parameters'):
+    #         for param in self.get_parameters().values():
+    #             param.initialize(self.get_expr_scope())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -379,7 +432,7 @@ class Driver(Component):
         self._continue = True
 
     def end_iteration(self):
-        """Called at the end of the iteraton loop.  Override this in 
+        """Called at the end of the iteraton loop.  Override this in
         inherited classes to perform some action after iteration is complete.
         """
         pass
@@ -415,7 +468,7 @@ class Driver(Component):
         on its workflow. However, some driver (optimizers in particular) may
         want to define their own behavior.
         """
-        return self.workflow.calc_gradient(inputs, outputs, upscope=True)
+        return self.workflow.calc_gradient(inputs, outputs)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -470,18 +523,33 @@ class Driver(Component):
                 })
         return ret
 
+    def _get_param_constraint_pairs(self):
+        """Returns a list of tuples of the form (param, constraint)."""
+        pairs = []
+        if hasattr(self, 'list_param_group_targets'):
+            pgroups = self.list_param_group_targets()
+            for key, cnst in self.get_eq_constraints().iteritems():
+                for params in pgroups:
+                    if params[0] == cnst.rhs.text:
+                        pairs.append((params[0], cnst.pcomp_name+'.out0'))
+                    elif params[0] == cnst.lhs.text:
+                        pairs.append((params[0], cnst.pcomp_name+'.out0'))
+        return pairs
+
     @rbac(('owner', 'user'))
     def setup_systems(self):
         """Allocate communicators from here down to all of our
         child Components.
         """
-        self.workflow.setup_systems()
+        self._system = self.parent._reduced_graph.node[self.name]['system']
+        return self.workflow.setup_systems(self.system_type)
 
     #### MPI related methods ####
 
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
         """Return requested_cpus."""
+        #mpiprint("driver %s reports %s cpus" % (self.name,self.workflow.get_req_cpus()))
         return self.workflow.get_req_cpus()
 
     def setup_communicators(self, comm):
@@ -490,23 +558,27 @@ class Driver(Component):
         """
         self.workflow.setup_communicators(comm)
 
-    def setup_variables(self):
-        return self.workflow.setup_variables()
-
-    def setup_sizes(self):
-        return self.workflow.setup_sizes()
-
-    def setup_vectors(self, arrays=None):
-        self.workflow.setup_vectors(arrays)
-
     def setup_scatters(self):
         self.workflow.setup_scatters()
 
     @rbac(('owner', 'user'))
     def get_full_nodeset(self):
         """Return the full set of nodes in the depgraph
-        belonging to this driver (inlcudes full iteration set).
+        belonging to this driver (includes full iteration set).
         """
         names = super(Driver, self).get_full_nodeset()
         names.update(self.workflow.get_full_nodeset())
         return names
+
+    def get_iteration_tree(self):
+        """Return a list of lists indicating the iteration
+        hierarchy for this driver.  This recurses down into
+        sub-Drivers but NOT into sub-Assemblies.
+        """
+        tree = [self.get_pathname(), []]
+        for comp in self.workflow:
+            if IDriver.providedBy(comp):
+                tree[1].append(comp.get_iteration_tree())
+            else:
+                tree[1].append(comp.get_pathname())
+        return tree

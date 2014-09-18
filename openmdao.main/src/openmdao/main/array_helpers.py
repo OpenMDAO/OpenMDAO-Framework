@@ -4,6 +4,8 @@ import itertools
 
 
 from openmdao.main.interfaces import IVariableTree
+from openmdao.main.exceptions import NoFlatError
+
 from traits.trait_handlers import TraitListObject
 
 from openmdao.util.typegroups import real_types, int_types
@@ -22,6 +24,7 @@ _flat_idx_cache = {}
 _idx_cache = {}
 _eval_globals = {'_idx_getter': IndexGetter() }
 
+__missing = object()
 
 def get_index(name):
     """Return the index (int or slice or tuple combination) 
@@ -45,7 +48,7 @@ def get_index(name):
         newstr = idxstr.replace('][',',')
         # _eval_globals dict contains nothing but _idx_getter, so
         # eval will fail if index contains any non-literals. This
-        # is intentional since we want to avoid caching any indices
+        # is intentional since we don't want to allow any indices
         # that aren't constant.
         _idx_cache[idxstr] = idx = eval('_idx_getter'+newstr, _eval_globals)
     return idx
@@ -55,7 +58,9 @@ def get_val_and_index(scope, name):
     which may contain array element access.
     """
     if '[' in name:
-        val = getattr(scope, name.split('[',1)[0])
+        val = getattr(scope, name.split('[',1)[0], __missing)
+        if val is __missing:
+            val = scope.get(name.split('[',1)[0])
         idx = get_index(name)
         # for objects that are not numpy arrays, an index tuple
         #  really means [idx0][idx1]...[idx_n]
@@ -66,9 +71,111 @@ def get_val_and_index(scope, name):
             val = val[idx]
         return (val, idx)
     else:
-        return (getattr(scope, name), None)
+        val = getattr(scope, name, __missing)
+        if val is __missing:
+            val = scope.get(name)
+        return (val, None)
 
-def get_flattened_index(index, shape):
+def idx_size(idxs, size=None):
+    """Return the number of entries corresponding to the given 
+    indices.  idxs can be a slice, an index array, or a simple index.
+    slices with negative values for start, stop, or stride are not
+    supported unless the 'size' arg is provided. slices with stop 
+    values of None are also not supported without 'size'.
+    """
+    if isinstance(idxs, slice):
+        if size is not None:
+            start, stop, step = idxs.indices(size)
+        else:
+            start = 0 if idxs.start is None else idxs.start
+            stop = idxs.stop
+            step = 1 if idxs.step is None else idxs.step
+            if stop is None:
+                raise RuntimeError("can't get size of slice with stop of None")
+            elif start < 0 or stop < 0:
+                raise RuntimeError("negative start or stop not allowed for slice unless size is provided")
+
+        sz = 0
+        i = start
+        if step > 0:
+            while i < stop:
+                sz += 1
+                i += step
+        elif step < 0:
+            while i > stop:
+                sz += 1
+                i += step
+        return sz
+        
+    elif isinstance(idxs, ndarray):
+        return len(idxs)
+    elif isinstance(idxs, int_types):
+        return 1
+    else:
+        raise RuntimeError("can't get size for indices of type '%s'" %
+                            str(type(idxs)))    
+
+def to_slice(idxs):
+    """Convert an index array to a slice if possible. Otherwise,
+    return the index array.
+    """
+    if isinstance(idxs, slice):
+        return idxs
+    elif isinstance(idxs, ndarray):
+        if len(idxs) == 1:
+            return slice(idxs[0], idxs[0]+1)
+        elif len(idxs) == 0:
+            return slice(0,0)
+
+        imin = idxs.min()
+        imax = idxs.max()
+        stride = idxs[1]-idxs[0]
+
+        for i in xrange(len(idxs)):
+            if i and idxs[i] - idxs[i-1] != stride:
+                return idxs
+        return slice(imin, imax+1, stride)
+    elif isinstance(idxs, int_types):
+        return slice(idxs, idxs+1)
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to a slice" %
+                            str(type(idxs)))
+
+def to_indices(idxs, val):
+    """Convert an slice or simple index into an index array.
+    index arrays are just returned unchanged.
+    """
+    if isinstance(idxs, slice):
+        start, stop, step = idxs.indices(len(val))
+        ilst = []
+        i = start
+        if step > 0:
+            while i < stop:
+                ilst.append(i)
+                i += step
+        elif step < 0:
+            while i > stop:
+                ilst.append(i)
+                i += step
+        else:
+            raise ValueError("slice step cannot be zero")
+
+        return array(ilst, 'i')
+            
+    elif isinstance(idxs, ndarray):
+        return idxs
+
+    elif isinstance(idxs, int_types):
+        return array([idxs], 'i')
+    
+    elif isinstance(idxs, tuple):
+        return get_flattened_index(idxs, val.shape, cvt_to_slice=False)
+
+    else:
+        raise RuntimeError("can't convert indices of type '%s' to an index array" %
+                            str(type(idxs)))
+        
+def get_flattened_index(index, shape, cvt_to_slice=True):
     """Given an index (int, slice, or tuple of ints and slices), into
     an array, return the equivalent index into a flattened version 
     of the array.
@@ -77,8 +184,8 @@ def get_flattened_index(index, shape):
     global _flat_idx_cache
 
     sindex = str(index)
-    fidx = _flat_idx_cache.get((sindex, shape))
-    if fidx:
+    fidx = _flat_idx_cache.get((sindex, shape, cvt_to_slice))
+    if fidx is not None:
         return fidx
 
     if not isinstance(index, (tuple, list, ndarray)):
@@ -100,24 +207,24 @@ def get_flattened_index(index, shape):
         indices = zip(*itertools.product(*indices))
 
     idxs = ravel_multi_index(indices, dims=shape)
-    if len(idxs) == 1:
-        # _flat_idx_cache[(sindex, shape)] = slice(idxs[0], idxs[0]+1)
-        # return slice(idxs[0], idxs[0]+1)
-        _flat_idx_cache[(sindex, shape)] = idxs[0]
-        return idxs[0]
+    # if len(idxs) == 1:
+    #     # _flat_idx_cache[(sindex, shape)] = slice(idxs[0], idxs[0]+1)
+    #     # return slice(idxs[0], idxs[0]+1)
+    #     _flat_idx_cache[(sindex, shape, cvt_to_slice)] = idxs[0]
+    #     return idxs[0]
 
     # see if we can convert the discrete list of indices 
     # into a single slice object
-    imin = min(idxs)
-    imax = max(idxs)
-    stride = idxs[1]-idxs[0]
-    if all(arange(imin, imax+1, stride) == list(idxs)):
-        _flat_idx_cache[(sindex, shape)] = slice(imin, imax+1, stride)
-        return slice(imin, imax+1, stride)
+    if cvt_to_slice:
+        idxs = to_slice(idxs)
         
-    # if all else fails, return a discrete list of indices into
-    # the flat array.
-    _flat_idx_cache[(sindex, shape)] = idxs.copy()
+    if isinstance(idxs, slice):
+        _flat_idx_cache[(sindex, shape, cvt_to_slice)] = idxs
+    else:
+        # if all else fails, return a discrete list of indices into
+        # the flat array.
+        _flat_idx_cache[(sindex, shape, cvt_to_slice)] = idxs.copy()
+
     return idxs
 
 def offset_flat_index(idx, offset):
@@ -160,45 +267,12 @@ def get_var_shape(name, scope):
 
     if IVariableTree.providedBy(val):
         raise NotImplementedError("get_var_shape not supported for vartrees")
-        sz = flattened_size(name, val, scope)
-        if sz:
-            return (sz,)
+    
+    sz = flattened_size(name, val, scope)
+    if sz:
+        return (sz,)
 
     return None
-
-def flattened_size_info(name, scope):
-    """Return the local flattened size of the variable with
-    the given name along with its flattened index into
-    its basevar and its basevar name (if it has one). If it
-    doesn't have a basevar, then index and basevar name are
-    None.
-    """
-    # TODO: add checking of local_size metadata...
-    parts = name.split('.')
-    if len(parts) > 1:  
-        vt = getattr(scope, parts[0]) # vartree reference
-        obj = vt
-        for part in parts[1:-1]:
-            obj = getattr(obj, part)
-        val, idx = get_val_and_index(obj, parts[-1])
-    else:
-        vt = None
-        val, idx = get_val_and_index(scope, name)
-
-    if vt is not None:  # name is a vartree subvar
-        base = vt.name
-        if '[' in name:  # array ref inside of a vartree
-            raise NotImplementedError("no support yet for array element access within vartrees")
-        else:
-            flat_idx = vt.get_flattened_index(name[len(base)+1:])
-    elif '[' in name:  # array index into basevar
-        base = name.split('[',1)[0]
-        flat_idx = get_flattened_index(idx, get_var_shape(base, scope))
-    else:
-        base = None
-        flat_idx = None
-        
-    return (flattened_size(name, val, scope=scope), flat_idx,  base)
 
 def is_differentiable_var(name, scope):
     meta = scope.get_metadata(name, 'data_shape')
@@ -219,7 +293,9 @@ def is_differentiable_val(val):
     return False
 
 def flattened_size(name, val, scope=None):
-    """ Return size of `val` flattened to a 1D float array. """
+    """ Return size of `val` flattened to a 1D float array. Raises
+    a NoFlatError if the value is not convertible to a 1D float array.
+    """
 
     # have to check int_types before real_types because apparently
     # int_types are considered also to be real types
@@ -251,11 +327,11 @@ def flattened_size(name, val, scope=None):
             if dshape:
                 return prod(dshape)
 
-    raise TypeError('Variable %s is of type %s which is not convertable'
+    raise NoFlatError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))
 
 def flattened_value(name, val):
-    """ Return `val` as a 1D float (or complex) array. An exception 
+    """ Return `val` as a 1D float (or complex) array. A NoFlatError 
     will be raised if val is not completely flattenable to a float
     array.  A VariableTree is not considered completely 
     flattenable unless all of its leaf nodes are flattenable.
@@ -277,10 +353,32 @@ def flattened_value(name, val):
             vals.extend(flattened_value('.'.join((name, key)), value))
         return array(vals)
     elif isinstance(val, TraitListObject): #FIXME: list must contain floats
-        return array(val)
+        # HACK: just check first value
+        if len(val) > 0 and (isinstance(val[0], int_types) or \
+                        not isinstance(val[0], real_types)):
+            pass # fall through to exception
+        else:
+            return array(val)
 
-    raise TypeError('Variable %s is of type %s which is not convertable'
+    raise NoFlatError('Variable %s is of type %s which is not convertable'
                     ' to a 1D float array.' % (name, type(val)))
+
+def get_shape(val):
+    """Return a shape tuple for the given value. This will work
+    for nested lists and tuples, but only if all subs at every 
+    level have the same length.
+    """
+    if isinstance(val, ndarray):
+        return val.shape
+    if isinstance(val, (list, tuple)) and len(val) > 0:
+        entry = val
+        shape = []
+        while isinstance(entry, (list, tuple)):
+            shape.append(len(entry))
+            if shape[-1] > 0:
+                entry = entry[0]
+        return tuple(shape)
+    return ()
 
 def flatten_slice(index, shape, name='flat_index', offset=0):
     """ Return a string index that flattens an arbitrary slice denoted by

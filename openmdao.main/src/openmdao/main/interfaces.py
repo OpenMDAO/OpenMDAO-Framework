@@ -169,7 +169,7 @@ class IComponent(IContainer):
     def check_config(strict=False):
         """Verify that this component is properly configured to execute.
         Classes overriding this method must call the base class method.
-        If strict is True, even configuration warnings should raise an exception.  
+        If strict is True, even configuration warnings should raise an exception.
         """
 
     def run(force=False):
@@ -227,6 +227,31 @@ class IImplicitComponent(IComponent):
     def evaluate(self):
         """run a single step to calculate the residual
         values for the given state var values.
+        """
+
+class IPseudoComp(IContainer):
+    """Special interface for Pseudocomps for checking.
+    """
+
+    def check_config(strict=False):
+        """Verify that this component is properly configured to execute.
+        Classes overriding this method must call the base class method.
+        If strict is True, even configuration warnings should raise an exception.
+        """
+
+    def run(force=False):
+        """Run this object. This should include fetching input variables,
+        executing, and updating output variables. Do not override this function.
+        """
+
+    def list_inputs(valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+
+    def list_outputs(valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
         """
 
 
@@ -695,6 +720,30 @@ class IHasConstraints(IHasEqConstraints, IHasIneqConstraints):
 
     def eval_constraints(scope=None):
         """Evaluates the constraint expressions and returns a list of values."""
+
+
+class IHas2SidedConstraints(Interface):
+    """An Interface for objects that can accept constraints defined like
+    a < x < b, where x is a variable and a and b are constants."""
+
+    def add_2sided_constraint(lhs, center, rhs, rel, name=None, scope=None,
+                               linear=False):
+        """Adds an 2-sided constraint as four strings; a left-hand side, a
+        center, a right-hand side, and a comparator ('<','>','<=', or '>=')
+        """
+
+    def get_2sided_constraints(linear=None):
+        """Returns an ordered dict of inequality constraint objects.
+
+        linear: obj
+            Set to True or False to return linear or nonlinear constraints.
+            Default is None, for all constraints."""
+
+    def list_2sided_constraints(self):
+        """Return a list of strings containing constraint expressions."""
+
+    def list_2sided_constraint_targets(self):
+        """Returns a list of outputs suitable for calc_gradient()."""
 
 
 class IHasObjectives(Interface):

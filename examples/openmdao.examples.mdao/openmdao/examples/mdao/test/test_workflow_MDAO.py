@@ -278,35 +278,10 @@ class TestCase(unittest.TestCase):
         prob.dis1.z2 = prob.dis2.z2 = prob.z_store[1] = 2.0
         prob.dis1.x1 = prob.x1_store = 1.0
 
-        # gotta run the components, but not the driver
-        prob.sa_dis1.workflow.run()
-        prob.sa_dis1.workflow.initialize_residual()
-
-        edges = prob.sa_dis1.workflow._edges
-        self.assertEqual(set(edges['@in0']),
-                         set(['_pseudo_7.in3', '~0.dis1|x1']))
-        self.assertEqual(set(edges['~0.dis1|y1']),
-                         set(['_pseudo_5.in0', '_pseudo_7.in0']))
-        self.assertEqual(set(edges['_pseudo_5.out0']), set(['@out1']))
-        #self.assertEqual(set(edges['@source0']), set(['@out1']))
-        self.assertEqual(set(edges['_pseudo_7.out0']), set(['@out0']))
-        self.assertEqual(len(edges), 4)
-
         prob.run()
         assert_rel_error(self, prob.dis1.z1, 1.977, 0.04)
         assert_rel_error(self, 1.0-prob.dis1.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
-
-        # TODO - These tested behavior that has nothing to do with BLISS. Need
-        # new test for them -- KTM
-        #self.assertEqual(prob.check_gradient()[3], [])
-        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
-        #                                     outputs=['_pseudo_1.out0'])[3], [])
-        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
-        #                                     outputs=['_pseudo_2.out0'])[3], [])
-        #self.assertEqual(prob.check_gradient(inputs=['dis1.z1'],
-        #                                     outputs=['_pseudo_2.out0',
-        #                                              '_pseudo_2.out0'])[3], [])
 
 
 class TestCon(Component):

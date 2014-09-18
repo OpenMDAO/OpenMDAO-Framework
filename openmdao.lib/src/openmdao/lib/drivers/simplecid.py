@@ -61,7 +61,7 @@ class SimpleCaseIterDriver(Driver):
                 value = values[j][i]
                 expr = exprs.get(path)
                 if expr:
-                    expr.set(value, self.parent, tovector=True)
+                    expr.set(value, self.parent) #, tovector=True)
                 else:
                     self.parent.set(path, value)
                     # FIXME: this extra setting of the vector is messy...

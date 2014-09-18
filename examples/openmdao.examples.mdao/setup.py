@@ -24,7 +24,7 @@ setup(name='openmdao.examples.mdao',
             'License :: OSI Approved',
             'Natural Language :: English',
             'Operating System :: OS Independent',
-            'Programming Language :: Python :: 2.6',
+            'Programming Language :: Python :: 2.7',
             'Topic :: Scientific/Engineering',
              ],
        keywords='optimization multidisciplinary multi-disciplinary analysis',
@@ -45,5 +45,3 @@ setup(name='openmdao.examples.mdao',
          # -*- Entry points: -*-
          """
       )
-
-

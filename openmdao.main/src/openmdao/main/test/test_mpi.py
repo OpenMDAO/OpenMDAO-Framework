@@ -1,28 +1,21 @@
 
 import time
 
-import numpy as np 
+import numpy as np
 
-from openmdao.main.api import Assembly, dump_iteration_tree, Component, Driver, set_as_top
+from openmdao.test.mpiunittest import MPITestCase
+from openmdao.util.testutil import assert_rel_error
+
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
-from openmdao.main.hasobjective import HasObjectives
-from openmdao.main.hasconstraints import HasConstraints
-from openmdao.main.hasparameters import HasParameters
-from openmdao.main.mpiwrap import mpiprint, set_print_rank
-from openmdao.util.decorators import add_delegate
-from openmdao.main.distsolve import MPINonlinearSolver
-from openmdao.test.execcomp import ExecComp
+from openmdao.main.mpiwrap import MPI, mpiprint, set_print_rank
+from openmdao.lib.drivers.iterate import FixedPointIterator
 
 from openmdao.lib.optproblems import sellar
 
-class NTimes(MPINonlinearSolver):
-    def __init__(self, maxiter=1):
-        super(NTimes, self).__init__()
-        self.max_iteration = maxiter
-
 class ABCDArrayComp(Component):
     delay = Float(0.01, iotype='in')
-    
+
     def __init__(self, arr_size=9):
         super(ABCDArrayComp, self).__init__()
         self.add_trait('a', Array(np.ones(arr_size, float), iotype='in'))
@@ -34,181 +27,22 @@ class ABCDArrayComp(Component):
         time.sleep(self.delay)
         self.c = self.a + self.b
         self.d = self.a - self.b
-        mpiprint("%s: c = %s" % (self.name, self.c))
-        
-def _get_model():
-    """1 component"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(3))
-    name = 'C1'
-    top.add(name, ABCDArrayComp())
-    top.driver.workflow.add(name)
-    getattr(top, name).mpi.requested_cpus = 1
-
-    top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C1.d[0]=0')
-    return top
-    
-def _get_model1():
-    """2 comps, not connected"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(3))
-    for i in range(1,3):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
-        top.driver.workflow.add(name)
-        getattr(top, name).mpi.requested_cpus = 1
-
-    top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C2.d[0]=0') 
-    
-    return top
-
-def _get_model2():
-    """3 comps, not connected"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(3))
-    for i in range(1,4):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
-        top.driver.workflow.add(name)
-        getattr(top, name).mpi.requested_cpus = 1
-
-    top.driver.add_parameter('C1.a', high=100.0, low=0.0)
-    top.driver.add_constraint('C2.d[0]=0') 
-    
-    return top
-
-def _get_model3():
-    """5 comps, connected"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(1))
-    for i in range(1,6):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
-        top.driver.workflow.add(name)
-        getattr(top, name).mpi.requested_cpus = 1
-
-    conns = [
-        ('C1.c','C2.a'),
-        ('C2.c','C3.a'),
-        ('C3.c','C4.a'),
-        ('C4.c','C5.a'),
-    ]
-
-    for u,v in conns:
-        top.connect(u, v)
-
-    # top.driver.add_parameter('C3.b[1]', high=100.0, low=0.0)
-    # top.driver.add_constraint('C5.d[0]=0') 
-    
-    return top
-
-def _get_model4():
-    """3 comps with nested drivers"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(2))
-    for i in range(1,4):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
-        getattr(top, name).mpi.requested_cpus = 1
-
-    top.add('subdriver', NTimes(3))
-
-    top.driver.workflow.add(['subdriver', 'C3'])
-
-    conns = [
-        ('C1.c','C2.a'),
-        ('C2.c','C3.a'),
-    ]
-
-    for u,v in conns:
-        top.connect(u, v)
-
-    top.driver.add_parameter('C3.b[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C3.d[0]=0') 
-    
-    top.subdriver.add_parameter('C1.b[0]', high=100.0, low=0.0)
-    top.subdriver.add_constraint('C2.d[0]=0') 
-    
-    return top
-
-def _get_model5():
-    """8 comps, several layers of subsystems"""
-    top = set_as_top(Assembly())
-    top.add('driver', NTimes(1))
-    for i in range(1,9):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp(5))
-        top.driver.workflow.add(name)
-        getattr(top, name).mpi.requested_cpus = 1
-
-    conns = [
-        ('C1.c','C4.a'),
-        ('C2.c','C5.a'),
-        ('C3.c','C8.a'),
-        ('C3.d','C6.a'),
-        ('C5.c','C4.b'),
-        ('C5.d','C6.b'),
-        ('C6.c','C8.b'),
-        ('C6.d','C7.a'),
-    ]
-
-    for u,v in conns:
-        top.connect(u, v)
-
-    top.driver.add_parameter('C3.a[1]', high=100.0, low=0.0)
-    top.driver.add_constraint('C8.d[0]=0') 
-    
-    return top
-
-def _get_modelsimple():
-    """2 comps"""
-    top = set_as_top(Assembly())
-    top.add('driver', MPINonlinearSolver())
-    top.driver.max_iteration = 3
-
-    for i in range(1,3):
-        name = 'C%d' % i
-        top.add(name, ABCDArrayComp())
-        top.driver.workflow.add(name)
-        getattr(top, name).mpi.requested_cpus = 1
-
-    top.connect('C1.c', 'C2.a')
-    #top.connect('C2.c', 'C1.a')
-    top.driver.add_parameter('C1.a', low=-1e99, high=1e99)
-    top.driver.add_constraint('C2.c = C1.a')
-    return top
-
-def _get_modelsellar():
-    """Sellar (serial)"""
-    prob = set_as_top(SellarMDF(parallel=False, use_params=False))
-    return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
-
-def _get_modelsellar2():
-    """Sellar (serial)"""
-    prob = set_as_top(SellarMDF(parallel=False, use_params=True))
-    return prob, { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+        # mpiprint("%s.a = %s" % (self.name, self.a))
+        # mpiprint("%s.b = %s" % (self.name, self.b))
 
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
     Disciplines coupled with FixedPointIterator.
     """
-    def __init__(self, parallel=False, use_params=True):
-        self.parallel = parallel
-        self.use_params = use_params
-        super(SellarMDF, self).__init__()
-
     def configure(self):
         """ Creates a new Assembly with this problem
-        
+
         Optimal Design at (1.9776, 0, 0)
-        
+
         Optimal Objective = 3.18339"""
-        
-        #self.add('driver', FixedPointIterator())
-        self.add('driver', MPINonlinearSolver())
+
+        self.add('driver', FixedPointIterator())
 
         # Inner Loop - Full Multidisciplinary Solve via fixed point iteration
         C1 = self.add('C1', sellar.Discipline1())
@@ -221,83 +55,168 @@ class SellarMDF(Assembly):
         C1.z2 = C2.z2 = 0
         C1.x1 = 0
 
-        if self.parallel:
-            # Use connections for Parallel
-            self.driver.add_parameter('C1.y1', low=-1e99, high=1e99)
-            self.driver.add_constraint('C1.y1 = C2.y1')
-            self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-            self.driver.add_constraint('C2.y2 = C1.y2')
-        else:
-            # Make connection for serial
-            self.connect('C1.y1','C2.y1')
-
-            # Iteration loop
-            if self.use_params:
-                self.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
-                #self.driver.add_constraint('C2.y2 = C1.y2')
-                self.driver.add_constraint('C1.y2 = C2.y2')
-            else:  # use circular connection
-                self.connect('C2.y2', 'C1.y2')
-        
         # Solver settings
         self.driver.max_iteration = 5
         self.driver.tolerance = 1.e-15
         self.driver.print_convergence = False
-        
 
+
+class MPITests1(MPITestCase):
+
+    N_PROCS = 2
+
+    def test_sellar_params1(self):
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C1.y2 = C2.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.run()
+        return
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+    def test_sellar_params2(self):
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C2.y2 = C1.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.run()
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+    def test_fan_in(self):
+        size = 5
+
+        # 2 parallel comps feeding another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3'])
+        top.connect('C1.c', 'C3.a')
+        top.connect('C2.d', 'C3.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+        top.C2.a = np.ones(size, float) * 4.0
+        top.C2.b = np.ones(size, float) * 5.0
+
+        top.run()
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C3.a==np.ones(size, float)*10.))
+            self.assertTrue(all(top.C3.b==np.ones(size, float)*-1.))
+            self.assertTrue(all(top.C3.c==np.ones(size, float)*9.))
+            self.assertTrue(all(top.C3.d==np.ones(size, float)*11.))
+
+    def test_fan_out_in(self):
+        size = 5   # array var size
+
+        # a comp feeds two parallel comps which feed
+        # another comp
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.d', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.run()
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
+    def test_fan_out_in_force_serial(self):
+        size = 5  # array var size
+
+        top = set_as_top(Assembly())
+        top.add("C1", ABCDArrayComp(size))
+        top.add("C2", ABCDArrayComp(size))
+        top.add("C3", ABCDArrayComp(size))
+        top.add("C4", ABCDArrayComp(size))
+        top.driver.workflow.add(['C1', 'C2', 'C3', 'C4'])
+        top.connect('C1.c', 'C2.a')
+        top.connect('C1.d', 'C3.b')
+        top.connect('C2.c', 'C4.a')
+        top.connect('C3.d', 'C4.b')
+
+        top.C1.a = np.ones(size, float) * 3.0
+        top.C1.b = np.ones(size, float) * 7.0
+
+        top.driver.system_type = 'serial'
+
+        top.run()
+
+        if self.comm.rank == 0:
+            self.assertTrue(all(top.C4.a==np.ones(size, float)*11.))
+            self.assertTrue(all(top.C4.b==np.ones(size, float)*5.))
+
+
+class MPITests2(MPITestCase):
+
+    N_PROCS = 4
+
+    def test_sellar_cyclic(self):
+
+        top = set_as_top(SellarMDF())
+
+        top.connect('C1.y1','C2.y1')
+        top.connect('C2.y2', 'C1.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.run()
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+    def test_sellar_parallel(self):
+
+        top = set_as_top(SellarMDF())
+
+        top.driver.add_parameter('C2.y1', low=-1e99, high=1e99)
+        top.driver.add_constraint('C1.y1 = C2.y1')
+        top.driver.add_parameter('C1.y2', low=-1.e99, high=1.e99)
+        top.driver.add_constraint('C2.y2 = C1.y2')
+
+        expected = { 'C1.y1': 3.160068, 'C2.y2': 3.755315 }
+
+        top.driver.system_type = 'parallel'
+
+        top.run()
+
+        if self.comm.rank == 0:
+            for name, expval in expected.items():
+                val = top.get(name)
+                assert_rel_error(self, val, expval, 0.001)
+
+# FIXME: running this file as main currently doesn't work...
 if __name__ == '__main__':
-    import sys
-    import traceback
-    from openmdao.main.mpiwrap import MPI
-
-    """
-    To run various tests, use the following cmdline:   mpirun -n <numprocs> python test_mpi.py --run <modelname>
-    where modelname is whatever comes after _get_model in the various _get_model* functions above.
-    """
-
-    run = False
-    mname = ''
-
-    for arg in sys.argv[1:]:
-        if arg.startswith('--run'):
-            run = True
-        elif arg.startswith('--rank'):
-            set_print_rank(int(arg.split('=',1)[1]))
-        elif not arg.startswith('-'):
-            mname = arg
-
-    ret = globals().get('_get_model%s' % mname)()
-    if isinstance(ret, tuple):
-        top, expected = ret
-    else:
-        top = ret
-        expected = None
-
-    #dump_iteration_tree(top)
-
-    try:
-        if MPI is not None and not run:
-            top._setup()
-            mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
-
-            mpiprint("setup DONE")
-
-        if run:
-            mpiprint('-'*50)
-            top.run()
-
-            mpiprint('-'*50)
-            #mpiprint(top.driver.workflow._system.dump_subsystem_tree(stream=None))
-
-            if expected:
-                mpiprint('-'*50)
-                mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format("Name",
-                                                               "Expected",
-                                                               "Actual",
-                                                               "Error"))
-                for name, expval in expected.items():
-                    val = top.get(name)
-                    err = expval - val
-                    mpiprint("{0:<17} {1:<17} {2:<17} {3:<17}".format(name, expval, val, err))
-    except Exception as err:
-        mpiprint(traceback.format_exc())
+    import unittest
+    unittest.main()

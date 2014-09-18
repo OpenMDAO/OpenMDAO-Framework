@@ -114,6 +114,7 @@ class PseudoCompTestCase(unittest.TestCase):
         top.comp1.time = 5.
         # dist/time = 2 ft/sec
         top.run()
+        #top._system.dump()
         self.assertAlmostEqual(top.comp2.speed, 24.) # speed = 24 inch/s
 
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
@@ -129,13 +130,13 @@ class PseudoCompTestCase(unittest.TestCase):
                               '_pseudo_0', '_pseudo_1']))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('comp1.dist', '_pseudo_1.in1'), ('comp1.time', '_pseudo_1.in0'),
+                              ('comp1.dist', '_pseudo_1.in0'), ('comp1.time', '_pseudo_1.in1'),
                               ('_pseudo_1.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
                          set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_1.in1'),
+                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_1.in0'),
                               ('comp1.dist/comp1.time', 'comp2.speed'),
-                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in0')]))
+                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in1')]))
 
         # disconnect two linked expressions
         top.disconnect('comp1.dist/comp1.time')
@@ -161,13 +162,13 @@ class PseudoCompTestCase(unittest.TestCase):
                          set(['comp1','comp2', '_pseudo_0', '_pseudo_2','driver']))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('comp1.dist', '_pseudo_2.in1'), ('comp1.time', '_pseudo_2.in0'),
+                              ('comp1.dist', '_pseudo_2.in0'), ('comp1.time', '_pseudo_2.in1'),
                               ('_pseudo_2.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
                          set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('_pseudo_2.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_2.in1'),
+                              ('_pseudo_2.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_2.in0'),
                               ('comp1.dist/comp1.time', 'comp2.speed'),
-                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_2.in0')]))
+                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_2.in1')]))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
                          set(['_pseudo_0', '_pseudo_2']))
         self.assertEqual(set(top.list_connections(visible_only=True)),
@@ -196,13 +197,13 @@ class PseudoCompTestCase(unittest.TestCase):
                          set(['comp1','comp2', '_pseudo_0', '_pseudo_3','driver']))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('comp1.dist', '_pseudo_3.in1'), ('comp1.time', '_pseudo_3.in0'),
+                              ('comp1.dist', '_pseudo_3.in0'), ('comp1.time', '_pseudo_3.in1'),
                               ('_pseudo_3.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
                          set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('_pseudo_3.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_3.in1'),
+                              ('_pseudo_3.out0', 'comp2.speed'), ('comp1.dist', '_pseudo_3.in0'),
                               ('comp1.dist/comp1.time', 'comp2.speed'),
-                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_3.in0')]))
+                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_3.in1')]))
         self.assertEqual(set(top._exprmapper.list_pseudocomps()),
                          set(['_pseudo_0', '_pseudo_3']))
         self.assertEqual(set(top.list_connections(visible_only=True)),
@@ -246,13 +247,13 @@ class PseudoCompTestCase(unittest.TestCase):
                               '_pseudo_0', '_pseudo_1']))
         self.assertEqual(set(top._depgraph.list_connections()),
                          set([('_pseudo_0.out0', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('comp1.arr[1]', '_pseudo_1.in1'), ('comp1.time', '_pseudo_1.in0'),
+                              ('comp1.arr[1]', '_pseudo_1.in0'), ('comp1.time', '_pseudo_1.in1'),
                               ('_pseudo_1.out0', 'comp2.speed')]))
         self.assertEqual(set(top._exprmapper.list_connections()),
                          set([('comp1.c', 'comp2.a'), ('comp1.c', '_pseudo_0.in0'),
-                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.arr[1]', '_pseudo_1.in1'),
+                              ('_pseudo_1.out0', 'comp2.speed'), ('comp1.arr[1]', '_pseudo_1.in0'),
                               ('comp1.arr[1]/comp1.time', 'comp2.speed'),
-                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in0')]))
+                              ('_pseudo_0.out0', 'comp2.a'), ('comp1.time', '_pseudo_1.in1')]))
 
         # disconnect a single variable
         top.disconnect('comp1.arr[1]')

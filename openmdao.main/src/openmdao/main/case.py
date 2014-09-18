@@ -1,13 +1,13 @@
 import time
+import sys
 from uuid import uuid1, getnode
 from array import array
-import traceback
 from StringIO import StringIO
 from inspect import getmro
 import weakref
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.exceptions import TracedError, traceback_str
+from openmdao.main.exceptions import traceback_str, exception_str
 from openmdao.main.variable import is_legal_name, make_legal_path
 from openmdao.main.array_helpers import flattened_value
 
@@ -25,6 +25,22 @@ _Missing = MissingValue()
 def _simpleflatten(name, obj):
     return [(name, obj)]
 
+
+def _flatten_dict(name, dct):
+    ret = []
+
+    def _recurse_flatten(ret, name, keys, dct):
+        for k,v in dct.items():
+            new_keys = keys+[k]
+            if isinstance(v, (dict)):
+                _recurse_flatten(ret, name, new_keys, v)
+            else:
+                keystr = '.'.join(['%s' % j for j in new_keys])
+                ret.append(("%s.%s" % (name, keystr), v))
+    _recurse_flatten(ret, name, [], dct)
+    return ret
+
+
 def _flatten_lst(name, lst):
     ret = []
 
@@ -32,9 +48,14 @@ def _flatten_lst(name, lst):
         for i, entry in enumerate(lst):
             new_idx = idx+[i]
             if isinstance(entry, (tuple, list, array)):
+                # ret is flattened list so far
+                # name is the name of the current object that needs to be flattened
+                # new_idx is a list of indices for the dimensions of the item, e.g. [3,0] is the first item in the third item
                 _recurse_flatten(ret, name, new_idx, entry)
             else:
                 idxstr = ''.join(["[%d]" % j for j in new_idx])
+                # qqq returns the current flattened list if items
+                # idxstr is a string representing what element in the list this is referring to, e.g. '[3][0]'
                 ret.append(("%s%s" % (name, idxstr), entry))
 
     _recurse_flatten(ret, name, [], lst)
@@ -48,6 +69,7 @@ flatteners = {
        list: _flatten_lst,
        tuple: _flatten_lst,
        array: _flatten_lst,
+       dict: _flatten_dict,
        MissingValue: _simpleflatten,
     }
 
@@ -99,7 +121,7 @@ class Case(object):
         self._exprs = None
         self._outputs = None
         self._inputs = {}
-        self.exc = exc  # Typically a TracedError.
+        self.exc = exc  # a sys.exc_info() tuple
 
         if case_uuid:
             self.uuid = str(case_uuid)
@@ -117,7 +139,7 @@ class Case(object):
     @property
     def msg(self):
         """Exception message."""
-        return '' if self.exc is None else str(self.exc)
+        return '' if self.exc is None else exception_str(self.exc)
 
     @property
     def traceback(self):
@@ -149,7 +171,7 @@ class Case(object):
             for name, val in outs:
                 write("      %s: %s\n" % (name, val))
         if self.exc:
-            stream.write("   exc: %s\n" % self.exc)
+            stream.write("   exc: %s\n" % exception_str(self.exc))
             stream.write("        %s\n" % traceback_str(self.exc))
 
         return stream.getvalue()
@@ -286,7 +308,7 @@ class Case(object):
         for name, value in self._inputs.items():
             expr = self._exprs.get(name)
             if expr:
-                expr.set(value, scope, tovector=True)
+                expr.set(value, scope) #, tovector=True)
             else:
                 scope.set(name, value)
                 # FIXME: this extra setting of the vector is messy...
@@ -312,15 +334,15 @@ class Case(object):
                             outputs[name] = expr.evaluate(scope)
                         else:
                             outputs[name] = scope.get(name)
-                    except Exception as err:
-                        last_excpt = TracedError(err, traceback.format_exc())
+                    except Exception:
+                        last_excpt = sys.exc_info()
                         outputs[name] = _Missing
             else:
                 for name in outputs.keys():
                     try:
                         outputs[name] = scope.get(name)
-                    except Exception as err:
-                        last_excpt = TracedError(err, traceback.format_exc())
+                    except Exception:
+                        last_excpt = sys.exc_info()
                         outputs[name] = _Missing
 
         self.timestamp = time.time()
