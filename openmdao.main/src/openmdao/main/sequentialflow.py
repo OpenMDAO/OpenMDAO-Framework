@@ -4,16 +4,12 @@ important workflows: Dataflow and CyclicWorkflow."""
 
 from types import NoneType
 
-from openmdao.main.vartree import VariableTree
-
 from openmdao.main.workflow import Workflow
 from openmdao.main.depgraph import find_related_pseudos
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
 from openmdao.util.decorators import method_accepts
 from openmdao.util.debug import strict_chk_config
-
-from numpy import ndarray
 
 _missing = object()
 

@@ -28,7 +28,7 @@ class Dataflow(SequentialWorkflow):
         # resolve all of the components up front so if there's a problem
         # it will fail early and not waste time running components
         scope = self.scope
-        self.get_names()
+        self._get_collapsed_graph()
         return [getattr(scope, n) for n in self._fullnames].__iter__()
 
     def check_config(self, strict=False):
