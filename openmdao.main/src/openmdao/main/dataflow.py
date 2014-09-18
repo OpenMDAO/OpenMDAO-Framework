@@ -29,7 +29,6 @@ class Dataflow(SequentialWorkflow):
         # it will fail early and not waste time running components
         scope = self.scope
         self.get_names()
-        #return [getattr(scope, n) for n in self._get_topsort()].__iter__()
         return [getattr(scope, n) for n in self._fullnames].__iter__()
 
     def check_config(self, strict=False):
@@ -54,22 +53,6 @@ class Dataflow(SequentialWorkflow):
         self._collapsed_graph = None
         self._topsort = None
         self._duplicates = None
-
-    # def _get_topsort(self):
-    #     if self._topsort is None:
-    #         graph = self._get_collapsed_graph()
-    #         try:
-    #             self._topsort = nx.topological_sort(graph)
-    #         except nx.NetworkXUnfeasible:
-    #             # do a little extra work here to give more info to the user
-    #             # in the error message
-    #             strcon = strongly_connected_components(graph)
-    #             self.scope.raise_exception('circular dependency found between'
-    #                                        ' the following: %s'
-    #                                        % str(strcon[0]), RuntimeError)
-    #         if self._duplicates:
-    #             self._insert_duplicates()
-    #     return self._topsort
 
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components

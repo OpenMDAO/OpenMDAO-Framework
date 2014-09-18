@@ -1624,13 +1624,11 @@ def _add_collapsed_node(g, src, dests):
 
     cname = src.split('.', 1)[0]
     if is_comp_node(g, cname):
-        # edge goes the other way if src is actually an input
-        if g.node[src].get('iotype') == 'in':
-            g.add_edge(newname, cname)
-            if src not in dests:
-                dests.append(src)
-        else:
-            g.add_edge(cname, newname)
+        ## edge goes the other way if src is actually an input
+        #if g.node[src].get('iotype') == 'in':
+            #g.add_edge(newname, cname)
+        #else:
+        g.add_edge(cname, newname)
 
     for dest in dests:
         cname = dest.split('.', 1)[0]

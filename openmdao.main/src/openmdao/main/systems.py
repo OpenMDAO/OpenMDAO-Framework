@@ -384,7 +384,7 @@ class System(object):
         return outputs
 
     def get_size(self, names):
-        """Return the total size of the variables
+        """Return the combined size of the variables
         corresponding to the given names.  If a given
         variable does not exist locally, the size will
         be taken from the lowest rank process that does
@@ -521,7 +521,6 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
-            #mpiprint("%s not active, input_size = 0" % self.name)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -769,7 +768,7 @@ class System(object):
         # baseless subs
         sub_bases = set([s.split('[',1)[0] 
                           for s in all_srcs 
-                             if '[' in s and s not in bases])
+                             if '[' in s and s.split('[',1)[0] not in bases])
 
         for name in vardict:
             src = name[0]
@@ -1003,11 +1002,6 @@ class SimpleSystem(System):
                 self.variables[vname] = self._var_meta[vname].copy()
 
         mapped_states = resid_state_map.values()
-
-        # for vname in self._in_nodes:
-        #     self._var_meta[vname] = self._get_var_info(vname)
-        #     if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
-        #         self.variables[vname] = self._var_meta[vname]
 
         # for simple systems, if we're given a mapping of our outputs to
         # states, we need to 'own' the state and later in run we need

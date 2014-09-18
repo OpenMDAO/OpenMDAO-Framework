@@ -150,6 +150,7 @@ class VecWrapperBase(object):
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
         scope = system.scope
+        name2collapsed = scope.name2collapsed
         allvars = system.variables
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
@@ -207,7 +208,7 @@ class VecWrapper(VecWrapperBase):
                 if sz > 0 and var.get('flat', True):
                     idx = var['flat_idx']
                     try:
-                        basestart = self.start(var['basevar'])
+                        basestart = self.start(name2collapsed[var['basevar']])
                     except KeyError:
                         mpiprint("name: %s, base: %s, vars: %s" %
                                  (name, var['basevar'], self._info.keys()))

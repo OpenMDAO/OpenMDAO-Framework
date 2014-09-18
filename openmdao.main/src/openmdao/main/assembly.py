@@ -760,8 +760,9 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
-        for system in self._system.local_subsystems():
-            system.pre_run()
+        # for system in self._system.local_subsystems():
+        #     system.pre_run()
+        self._system.vec['u'].set_from_scope(self)
         self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 
@@ -1521,7 +1522,7 @@ class Assembly(Component):
 
         self.name2collapsed = map_collapsed_nodes(collapsed_graph)
 
-        if calc_relevant: # add paramcomps for inputs and outvarcomps for outputs
+        if calc_relevant: # add ParamSystems for inputs and OutVarSystems for outputs
             for param in inputs:
                 collapsed_graph.add_node(param, comp='param')
                 collapsed_graph.add_edge(param, self.name2collapsed[param])
@@ -1533,14 +1534,15 @@ class Assembly(Component):
         # add InVarSystems and OutVarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
             if 'boundary' in data and collapsed_graph.degree(node) > 0:
-                if collapsed_graph.in_degree(node) == 0: # input boundary node
-                    collapsed_graph.add_node(node[0], comp='invar')
-                    collapsed_graph.add_edge(node[0], node)
-                elif collapsed_graph.out_degree(node) == 0: # output bndry node
-                    collapsed_graph.add_node(node[1][0], comp='outvar')
-                    collapsed_graph.add_edge(node, node[1][0])
-
-                
+                if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
+                    collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
+                    collapsed_graph.add_edge(node[0].split('[',1)[0], node)
+                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                    collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
+                    collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
+                    
+        #collapsed_graph = self._add_driver_subvar_conns(dgraph, collapsed_graph)
+                    
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
@@ -1553,6 +1555,19 @@ class Assembly(Component):
         for comp in self.get_comps():
             comp.setup_graph()
 
+    def _add_driver_subvar_conns(self, depgraph, collapsed):
+        """Connect any var nodes with subvar sources that don't have an upstream component
+        to their basevar's upstream component.
+        """
+        for node, data in collapsed.nodes_iter(data=True):
+            if 'basevar' in data and collapsed.in_degree(node) == 0:
+                base = self.name2collapsed[data['basevar']]
+                if base in collapsed:
+                    preds = collapsed.predecessors(base)
+                    if preds:
+                        collapsed.add_edge(preds[0], node)
+        return collapsed
+        
     def _explode_vartrees(self, depgraph):
         """Given a depgraph, take all connected variable nodes corresponding
         to VariableTrees and replace them with a variable node for each
