@@ -7,6 +7,9 @@ __all__ = ["List"]
 
 # pylint: disable-msg=E0611,F0401
 
+import types
+import numpy as np
+
 from traits.api import List as Enthought_List
 
 from openmdao.main.datatypes.slot import Slot
@@ -68,3 +71,14 @@ class List(Enthought_List):
             slot_attr['filled'] = valtypes
 
         return attr, slot_attr
+
+    def validate ( self, object, name, value ):
+        if isinstance(value, types.GeneratorType):
+            value = list(value)
+        elif isinstance(value, np.ndarray):
+            value = value.tolist()
+        elif isinstance(value, types.XRangeType):
+            value = list(value)
+
+        value = super(List, self).validate(object, name, value)
+        return value
