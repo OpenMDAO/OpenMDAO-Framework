@@ -5,6 +5,8 @@ from itertools import chain
 
 import numpy
 import networkx as nx
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
@@ -16,7 +18,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, get_reduced_subgraph
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 
@@ -237,12 +239,10 @@ class System(object):
 
         all_keys = comm.allgather(vnames)
 
-        mpiprint("allkeys: %s" % all_keys)
 
         var2proc = {}
         for proc, names in enumerate(all_keys):
             for name in names:
-                mpiprint("name: %s" % name)
                 if name not in var2proc:
                     try:
                         idx = myvars.index(collname[name])
@@ -250,7 +250,6 @@ class System(object):
                         mpiprint('valerr')
                         continue
 
-                    mpiprint("self.local_var_sizes[proc, idx]: %s" % self.local_var_sizes[proc, idx])
                     if self.local_var_sizes[proc, idx] > 0:
                         var2proc[name] = proc
 
@@ -460,7 +459,7 @@ class System(object):
             if flat_idx is not None:
                 info['flat_idx'] = flat_idx
 
-        except NoFlatError as err:
+        except NoFlatError:
             info['flat'] = False
 
         if base is not None:
@@ -1064,14 +1063,13 @@ class SimpleSystem(System):
 
             self.scatter('u', 'p')
 
-            #mpiprint("running %s" % str(self.name))
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            #self.vec['u'].set_from_scope(self.scope)
 
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,
-                                         [n for n in graph.successors(self.name) if n in self.vector_vars])
+                             [n for n in graph.successors(self.name) 
+                                   if n in self.vector_vars])
 
     def linearize(self):
         """ Linearize this component. """
@@ -1275,6 +1273,38 @@ class CompoundSystem(System):
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
+        self._resid_vars = []
+
+        # examine the graph to see if we have any cycles that we need to
+        # deal with
+
+        # make a copy of the graph since we don't want to modify it
+        g = subg.subgraph(subg.nodes_iter())
+
+        if not is_directed_acyclic_graph(g):
+            # get total data sizes for subsystem connections
+            sizes = []
+            for u,v,data in g.edges_iter(data=True):
+                sz = 0
+                for node in data['varconns']:
+                    dct = self._get_var_info(node)
+                    sz += dct.get('size', 0)
+                data['conn_size'] = sz
+                sizes.append((sz, (u,v)))
+
+            sizes = sorted(sizes)       
+
+            while not is_directed_acyclic_graph(g):
+                strong = strongly_connected_components(g)[0]
+                if len(strong) == 1:
+                    break
+                
+                # find the connection with the smallest data xfer
+                for sz, (src, dest) in sizes:
+                    if src in strong and dest in strong:
+                        self._resid_vars.extend(g[src][dest]['varconns'])
+                        g.remove_edge(src, dest)
+                        break
 
     def local_subsystems(self):
         if MPI:
@@ -1351,16 +1381,24 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
-            #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
             self._stop = False
+
+            # save old value of u to compute resids
+            for node in self._resid_vars:
+                self.vec['f'][node][:] = self.vec['u'][node][:]
+            
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
-                #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
-                #x = sub.vec['u'].check(self.vec['u'])
                 if self._stop:
                     raise RunStopped('Stop requested')
+
+            # update resid vector for cyclic vars
+            for node in self._resid_vars:
+                self.vec['f'][node][:] -= self.vec['u'][node][:]
+                self.vec['u'][node][:] -= self.vec['f'][node][:]
+            
 
     def setup_communicators(self, comm):
         self._local_subsystems = []
@@ -1395,8 +1433,17 @@ class ParallelSystem(CompoundSystem):
 
         self.scatter('u', 'p')
 
+        # save old value of u to compute resids
+        for node in self._resid_vars:
+            self.vec['f'][node][:] = self.vec['u'][node][:]
+            
         for sub in self.local_subsystems():
             sub.run(iterbase, ffd_order, case_label, case_uuid)
+
+        # update resid vector for cyclic vars
+        for node in self._resid_vars:
+            self.vec['f'][node][:] -= self.vec['u'][node][:]
+            self.vec['u'][node][:] -= self.vec['f'][node][:]
 
     def setup_communicators(self, comm):
         #mpiprint("<Parallel> setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))

@@ -1,6 +1,6 @@
 """ A workflow that allows the user to explicitly specify the execution
-order. This workflow serves as the immediate base class for the two most
-important workflows: Dataflow and CyclicWorkflow."""
+order.
+"""
 
 from types import NoneType
 

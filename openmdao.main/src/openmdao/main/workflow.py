@@ -19,7 +19,6 @@ from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
                                    simple_node_iter
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree
-from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 

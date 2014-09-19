@@ -155,6 +155,7 @@ class Assembly(Component):
         # constraints/objectives.  This is the starting graph for
         # all later transformations.
         self._depgraph = DependencyGraph()
+        self._reduced_graph = nx.DiGraph()
 
         for name, trait in self.class_traits().items():
             if trait.iotype:  # input or output

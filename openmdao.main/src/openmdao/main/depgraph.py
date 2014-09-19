@@ -1871,7 +1871,10 @@ def reduced2component(reduced):
             succ = reduced.successors(node)
             for p in reduced.predecessors(node):
                 for s in succ:
-                    cgraph.add_edge(p, s)
+                    if s in cgraph[p]: # edge exists
+                        cgraph[p][s]['varconns'].append(node)
+                    else:
+                        cgraph.add_edge(p, s, varconns=[node])
 
     return cgraph
 

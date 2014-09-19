@@ -15,7 +15,7 @@ def norm(a, order=None):
     return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
 # pylint: disable=E0611, F0401
-from openmdao.main.api import Driver, CyclicWorkflow
+from openmdao.main.driver import Driver
 from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -51,19 +51,6 @@ class NewtonSolver(Driver):
     alpha = Float(1.0, iotype='in', low=0.0, high=1.0,
                   desc='Initial over-relaxation factor')
 
-    def __init__(self):
-
-        super(NewtonSolver, self).__init__()
-        self.workflow = CyclicWorkflow()
-
-    def check_config(self, strict=False):
-        """ This solver requires a CyclicWorkflow. """
-
-        super(NewtonSolver, self).check_config(strict=strict)
-
-        if not isinstance(self.workflow, CyclicWorkflow):
-            msg = "The NewtonSolver requires a CyclicWorkflow workflow."
-            self.raise_exception(msg, RuntimeError)
 
     def execute(self):
         """ General Newton's method. """
