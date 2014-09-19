@@ -846,8 +846,10 @@ class System(object):
         if mode == 'auto':
 
             # TODO - Support automatic determination of mode
-            mode = 'forward'
-            #mode = options.derivative_direction
+            if options.derivative_direction == 'auto':
+                mode = 'forward'
+            else:
+                mode = options.derivative_direction
 
         if options.force_fd is True:
             mode == 'fd'
@@ -885,14 +887,21 @@ class System(object):
 
         self.vec['df'].array[:] = -self.ln_solver.solve(self.vec['f'].array)
 
-    def solve_linear(self, options=None, iterbase=''):
+    def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
         in the RHS vector."""
+
+        if numpy.linalg.norm(self.rhs_vec.array) < 1e-15:
+            self.sol_vec.array[:] = 0.0
+            return self.sol_vec.array
 
         self.set_options('forward', options)
         self.initialize_gradient_solver()
 
-        self.rhs_vec.array = self.ln_solver.solve(self.sol_vec.array)
+        """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
+        self.rhs_buf[:] = self.rhs_vec.array[:]
+        self.sol_buf[:] = self.sol_vec.array[:]
+        self.sol_vec.array = self.ln_solver.solve(self.rhs_vec.array)
 
     def applyJ(self):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
@@ -1120,13 +1129,14 @@ class SimpleSystem(System):
         # Forward Mode
         if self.mode == 'forward':
 
-            #self.scatter('du', 'dp')
+            self.scatter('du', 'dp')
 
             self._comp.applyJ(self)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
                 vec['df'][var][:] += vec['du'][var][:]
+
 
         # Adjoint Mode
         elif self.mode == 'adjoint':
@@ -1143,7 +1153,14 @@ class SimpleSystem(System):
             for var in self.list_outputs():
                 vec['du'][var][:] += vec['df'][var][:]
 
-            #self.scatter('du', 'dp')
+            self.scatter('du', 'dp')
+
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        self.sol_vec.array[:] = self.rhs_vec.array[:]
+
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
@@ -1170,6 +1187,7 @@ class ParamSystem(VarSystem):
             # mpiprint("param sys %s: adding %s to %s" %
             #                 (self.name, self.sol_vec[self.name],
             #                     self.rhs_vec[self.name]))
+            print "Param variable ApplyJ", self.sol_vec[self.name], self.rhs_vec[self.name]
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1677,6 +1695,14 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
                                     (pnodes, sz))
 
         return resid_state_map
+
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        # Apply to inner driver system only. No need to pass options since it
+        # has its own.
+        self.subsystems()[0].solve_linear()
 
 
 def _create_simple_sys(scope, graph, name):
