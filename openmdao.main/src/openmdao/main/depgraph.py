@@ -1213,51 +1213,9 @@ def get_subdriver_graph(graph, inputs, outputs, wflow, full_fd=False):
     # replaced with PAs, along with any subsolver states/resids
     return [d.name for d in fd_drivers], xtra_inputs, xtra_outputs
 
-
-def _create_driver_PA(drv, startgraph, graph, inputs, outputs,
-                      wflow, ancestor_using):
-    """Creates a PsuedoAssembly in the given graph for the specified
-    Driver.  It adds nodes/edges to the graph but doesn't remove anything.
-    """
-    needed = set([c.name for c in drv.iteration_set()])
-    for cname in needed:
-        if cname in graph and cname not in ancestor_using:
-            graph.node[cname] = graph.node[cname].copy() # don't pollute other graphs with nondiff markers
-            graph.node[cname]['differentiable'] = False
-
-    # get any boundary vars referenced by parameters of the subdriver or
-    # any of its subdrivers
-    srcs, dests = drv.get_expr_var_depends(recurse=True)
-    boundary_params = [v for v in dests if is_boundary_node(startgraph, v)]
-
-    pa = PseudoAssembly('~'+drv.name, list(needed), startgraph, wflow,
-                        drv_name=drv.name,
-                        boundary_params=boundary_params)
-
-    pa.add_to_graph(startgraph, graph,
-                    excludes=ancestor_using-set([drv.name]))
-    return pa
-
 def _remove_ignored_derivs(graph):
     to_remove = [n for n, data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
     graph.remove_nodes_from(to_remove)
-
-def _prune_vartree_leaves(graph):
-    input_subvars = [n for n in graph.nodes_iter() \
-                     if is_subvar_node(graph, n) and is_input_node(graph, n)]
-    to_remove = []
-    for subvar in input_subvars:
-
-        # Only prune vartree leaves, not arrays
-        if len(subvar.split('.')) < 3:
-            continue
-
-        preds = graph.predecessors(subvar)
-        if len(preds) == 1 and preds[0] == graph.node[subvar]['basevar']:
-            to_remove.append(subvar)
-
-    graph.remove_nodes_from(to_remove)
-
 
 def _is_false(item):
     return not item
@@ -1890,3 +1848,33 @@ def get_reduced_subgraph(g, compnodes):
     vnodes.update([u for u,v in edges if v in compset])
     vnodes.update([v for u,v in edges if u in compset])
     return g.subgraph(vnodes.union(compset))
+
+def get_nondiff_groups(graph):
+    """Return a modified graph with connected
+    nondifferentiable systems grouped together.
+    """
+    groups = []
+
+    nondiff = [n for n,data in graph.nodes_iter(data=True) 
+                      if not data['system'].is_differentiable()]
+
+    # TODO: add pseudocomps to nondiff groups if they're
+    # connected to nondiff systems on both sides
+
+    # Groups any connected non-differentiable blocks. Each block is a
+    # set of component names.
+    sub = graph.subgraph(nondiff)
+
+    for inodes in nx.connected_components(sub.to_undirected()):
+
+        # Pull in any differentiable islands
+        nodeset = set(inodes)
+        for src in inodes:
+            for targ in inodes:
+                if src != targ:
+                    nodeset.update(find_all_connecting(graph, src,
+                                                       targ))
+        groups.append(nodeset)
+
+    return groups
+

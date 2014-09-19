@@ -253,6 +253,15 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
+    @rbac(('owner', 'user'))
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        if self.force_fd:
+            return False
+
+        return hasattr(self, 'provideJ')
 
     @rbac(('owner', 'user'))
     def get_req_default(self, self_required=None):

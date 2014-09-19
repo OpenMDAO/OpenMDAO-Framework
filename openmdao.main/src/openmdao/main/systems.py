@@ -180,8 +180,11 @@ class System(object):
                 return s
         return None
 
-    def pre_run(self):
-        pass
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        return True
 
     def subsystems(self, local=False):
         if local:
@@ -973,6 +976,15 @@ class SimpleSystem(System):
     def stop(self):
         self._comp.stop()
 
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        if self._comp is not None:
+            return self._comp.is_differentiable()
+
+        return True
+
     def simple_subsystems(self):
         yield self
 
@@ -1273,38 +1285,7 @@ class CompoundSystem(System):
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
-        self._resid_vars = []
-
-        # examine the graph to see if we have any cycles that we need to
-        # deal with
-
-        # make a copy of the graph since we don't want to modify it
-        g = subg.subgraph(subg.nodes_iter())
-
-        if not is_directed_acyclic_graph(g):
-            # get total data sizes for subsystem connections
-            sizes = []
-            for u,v,data in g.edges_iter(data=True):
-                sz = 0
-                for node in data['varconns']:
-                    dct = self._get_var_info(node)
-                    sz += dct.get('size', 0)
-                data['conn_size'] = sz
-                sizes.append((sz, (u,v)))
-
-            sizes = sorted(sizes)       
-
-            while not is_directed_acyclic_graph(g):
-                strong = strongly_connected_components(g)[0]
-                if len(strong) == 1:
-                    break
-                
-                # find the connection with the smallest data xfer
-                for sz, (src, dest) in sizes:
-                    if src in strong and dest in strong:
-                        self._resid_vars.extend(g[src][dest]['varconns'])
-                        g.remove_edge(src, dest)
-                        break
+        self._cycle_vars = get_cycle_vars(self, subg)
 
     def local_subsystems(self):
         if MPI:
@@ -1384,7 +1365,7 @@ class SerialSystem(CompoundSystem):
             self._stop = False
 
             # save old value of u to compute resids
-            for node in self._resid_vars:
+            for node in self._cycle_vars:
                 self.vec['f'][node][:] = self.vec['u'][node][:]
             
             for sub in self.local_subsystems():
@@ -1395,7 +1376,7 @@ class SerialSystem(CompoundSystem):
                     raise RunStopped('Stop requested')
 
             # update resid vector for cyclic vars
-            for node in self._resid_vars:
+            for node in self._cycle_vars:
                 self.vec['f'][node][:] -= self.vec['u'][node][:]
                 self.vec['u'][node][:] -= self.vec['f'][node][:]
             
@@ -1434,14 +1415,14 @@ class ParallelSystem(CompoundSystem):
         self.scatter('u', 'p')
 
         # save old value of u to compute resids
-        for node in self._resid_vars:
+        for node in self._cycle_vars:
             self.vec['f'][node][:] = self.vec['u'][node][:]
             
         for sub in self.local_subsystems():
             sub.run(iterbase, ffd_order, case_label, case_uuid)
 
         # update resid vector for cyclic vars
-        for node in self._resid_vars:
+        for node in self._cycle_vars:
             self.vec['f'][node][:] -= self.vec['u'][node][:]
             self.vec['u'][node][:] -= self.vec['f'][node][:]
 
@@ -1569,6 +1550,12 @@ class OpaqueDriverSystem(SimpleSystem):
         #super(OpaqueDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
+
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        return False
 
     def local_subsystems(self):
         return [s for s in self.all_subsystems() if s.is_active()]
@@ -1829,3 +1816,37 @@ def get_full_nodeset(scope, group):
     return names
 
 
+def get_cycle_vars(system, graph):
+    # examine the graph to see if we have any cycles that we need to
+    # deal with
+    cycle_vars = []
+
+    # make a copy of the graph since we don't want to modify it
+    g = graph.subgraph(graph.nodes_iter())
+
+    if not is_directed_acyclic_graph(g):
+        # get total data sizes for subsystem connections
+        sizes = []
+        for u,v,data in g.edges_iter(data=True):
+            sz = 0
+            for node in data['varconns']:
+                dct = system._get_var_info(node)
+                sz += dct.get('size', 0)
+            data['conn_size'] = sz
+            sizes.append((sz, (u,v)))
+
+        sizes = sorted(sizes)       
+
+        while not is_directed_acyclic_graph(g):
+            strong = strongly_connected_components(g)[0]
+            if len(strong) == 1:
+                break
+            
+            # find the connection with the smallest data xfer
+            for sz, (src, dest) in sizes:
+                if src in strong and dest in strong:
+                    cycle_vars.extend(g[src][dest]['varconns'])
+                    g.remove_edge(src, dest)
+                    break
+
+    return cycle_vars

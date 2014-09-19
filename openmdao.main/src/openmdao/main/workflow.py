@@ -11,12 +11,12 @@ from numpy import ndarray
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
+from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   simple_node_iter
+                                   simple_node_iter, get_nondiff_groups
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree
 
@@ -746,6 +746,14 @@ class Workflow(object):
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
 
+        # collapse non-differentiable system groups into
+        # opaque systems
+        # for group in get_nondiff_groups(cgraph):
+        #     system = OpaqueSystem(scope, reduced, 
+        #                           cgraph.subgraph(group),
+        #                           str(tuple(group)))
+        #     update_system_node(cgraph, system, group)
+
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
@@ -773,9 +781,11 @@ class Workflow(object):
 
         if len(cgraph) > 1:
             if len(cgraph.edges()) > 0:
-                self._system = SerialSystem(scope, reduced, cgraph, tuple(cgraph.nodes()))
+                self._system = SerialSystem(scope, reduced, 
+                                            cgraph, tuple(cgraph.nodes()))
             else:
-                self._system = ParallelSystem(scope, reduced, cgraph, str(tuple(cgraph.nodes())))
+                self._system = ParallelSystem(scope, reduced, 
+                                              cgraph, str(tuple(cgraph.nodes())))
         elif len(cgraph) == 1:
             name = cgraph.nodes()[0]
             self._system = cgraph.node[name].get('system')

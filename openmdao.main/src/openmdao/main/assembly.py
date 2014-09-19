@@ -1376,8 +1376,8 @@ class Assembly(Component):
     @rbac(('owner', 'user'))
     def setup_systems(self):
         added = set()
-
         rgraph = self._reduced_graph
+
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
