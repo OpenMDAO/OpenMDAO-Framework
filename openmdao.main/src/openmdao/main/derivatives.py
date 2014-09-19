@@ -75,7 +75,7 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(system):
+def applyJ(system, variables):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
@@ -85,7 +85,13 @@ def applyJ(system):
     obj = system._comp
     arg = {}
     for item in system.list_inputs_and_states():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
         key = item.partition('.')[-1]
+
         # FIXME: this is a hack. Sometimes the item we're looking
         # for can be found in the parent dp vector, but not always,
         # so we have to find it in another vector...  I guess it's
@@ -101,6 +107,7 @@ def applyJ(system):
 
     result = {}
     for item in system.list_outputs_and_residuals():
+
         key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
 
@@ -116,7 +123,7 @@ def applyJ(system):
             break
 
     if nonzero is False:
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
@@ -149,7 +156,7 @@ def applyJ(system):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -196,9 +203,9 @@ def applyJ(system):
 
             tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJ', obj.name, arg, result
+    #print 'applyJ', obj.name, arg, result
 
-def applyJT(system):
+def applyJT(system, variables):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
@@ -208,6 +215,11 @@ def applyJT(system):
     obj = system._comp
     arg = {}
     for item in system.list_outputs_and_residuals():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
         key = item.partition('.')[-1]
         arg[key] = system.sol_vec[item]
 
@@ -234,7 +246,7 @@ def applyJT(system):
             break
 
     if nonzero is False:
-        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -268,7 +280,7 @@ def applyJT(system):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        #print 'applyJT', obj.name, arg, result
+        print 'applyJT', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -312,7 +324,7 @@ def applyJT(system):
 
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJT', obj.name, arg, result
+    print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

@@ -168,7 +168,8 @@ class Testcase_derivatives(unittest.TestCase):
         J = top.driver.workflow.calc_gradient(mode='adjoint')
 
         print J
-        #assert_rel_error(self, J[0, 0], 0.096927, 0.0001)
+        assert_rel_error(self, J[0, 0], 0.9806145, 0.0001)
+        assert_rel_error(self, J[1, 0], 0.0969276, 0.0001)
 
 
 

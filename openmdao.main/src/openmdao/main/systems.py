@@ -901,9 +901,10 @@ class System(object):
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
         self.rhs_buf[:] = self.rhs_vec.array[:]
         self.sol_buf[:] = self.sol_vec.array[:]
-        self.sol_vec.array = self.ln_solver.solve(self.rhs_vec.array)
+        self.sol_buf = self.ln_solver.solve(self.rhs_buf)
+        self.sol_vec.array[:] = self.sol_buf[:]
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
@@ -1117,7 +1118,7 @@ class SimpleSystem(System):
         """ Linearize this component. """
         self.J = self._comp.linearize(first=True)
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ df = du - dGdp * dp or du = df and dp = -dGdp^T * df """
 
         vec = self.vec
@@ -1131,7 +1132,7 @@ class SimpleSystem(System):
 
             self.scatter('du', 'dp')
 
-            self._comp.applyJ(self)
+            self._comp.applyJ(self, variables)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
@@ -1147,7 +1148,7 @@ class SimpleSystem(System):
             # previous component's contributions, we can multiply
             # our local 'arg' by -1, and then revert it afterwards.
             vec['df'].array[:] *= -1.0
-            self._comp.applyJT(self)
+            self._comp.applyJT(self, variables)
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
@@ -1168,7 +1169,7 @@ class VarSystem(SimpleSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         pass
 
-    def applyJ(self):
+    def applyJ(self, variables):
         pass
 
     def stop(self):
@@ -1181,7 +1182,7 @@ class VarSystem(SimpleSystem):
 class ParamSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ Set to zero """
         if self.variables: # don't do anything if we don't own our output
             # mpiprint("param sys %s: adding %s to %s" %
@@ -1275,7 +1276,7 @@ class AssemblySystem(SimpleSystem):
         """ Assemblies linearize all subsystems in the Inner Assy System. """
         self._comp._system.linearize()
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ Call into our assembly's top ApplyJ to get the matrix vector
         product across the boundary variables.
         """
@@ -1305,7 +1306,8 @@ class AssemblySystem(SimpleSystem):
         if nonzero is False:
             return
 
-        inner_system.applyJ()
+        variables = inner_system.variables.keys()
+        inner_system.applyJ(variables)
 
         for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
             sub_name = item.partition('.')[2:][0]
@@ -1351,14 +1353,14 @@ class CompoundSystem(System):
             return
         compound_setup_scatters(self)
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ Delegate to subsystems """
 
         if self.is_active():
             if self.mode == 'forward':
                 self.scatter('du', 'dp')
             for subsystem in self.local_subsystems():
-                subsystem.applyJ()
+                subsystem.applyJ(variables)
             if self.mode == 'adjoint':
                 self.scatter('du', 'dp')
 
@@ -1625,13 +1627,13 @@ class TransparentDriverSystem(SimpleSystem):
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
-    def applyJ(self):
+    def applyJ(self, variables):
         """ Delegate to subsystems """
 
         if self.mode == 'forward':
             self.scatter('du', 'dp')
         for subsystem in self.local_subsystems():
-            subsystem.applyJ()
+            subsystem.applyJ(variables)
         if self.mode == 'adjoint':
             self.scatter('du', 'dp')
 

@@ -441,17 +441,17 @@ class PseudoComponent(object):
         """
         return set((self.name,))
 
-    def applyJ(self, system):
+    def applyJ(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system)
+        applyJ(system, variables)
 
-    def applyJT(self, system):
+    def applyJT(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system)
+        applyJT(system, variables)
 
 
 class SimpleEQConPComp(PseudoComponent):
