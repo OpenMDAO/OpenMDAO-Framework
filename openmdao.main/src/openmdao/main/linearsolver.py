@@ -166,7 +166,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed "
             logger.error(msg, system.name)
 
-        print 'Linear solution vec', -dx
+        #print 'Linear solution vec', -dx
         return dx
 
 
@@ -179,7 +179,7 @@ class ScipyGMRES(LinearSolver):
         system.rhs_vec.array[:] = 0
         system.applyJ(system.variables.keys())
 
-        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
@@ -401,7 +401,6 @@ class LinearGS(LinearSolver):
 
                 # Perform LinearGS solve
                 dx = self.solve(system.rhs_vec.array)
-                print 'dx', dx
 
                 #system.rhs_vec.array[irhs] = 0.0
 
@@ -496,7 +495,7 @@ class LinearGS(LinearSolver):
             print options.parent.name, "Norm: ", norm, counter
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
-        print 'Linear solution vec', system.sol_vec.array
+        #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
 
 

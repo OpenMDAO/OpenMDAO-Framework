@@ -365,10 +365,8 @@ class System(object):
         return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
                    and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
 
-    def list_outputs_and_residuals(self):
-        """Returns names of output variables (not collapsed edges)
-        from this System and all of its children. This list also
-        contains the residuals.
+    def list_residuals(self):
+        """Returns names of all residuals.
         """
         outputs = []
         for system in self.simple_subsystems():
@@ -379,8 +377,6 @@ class System(object):
                 pass
 
         outputs.extend([n for n, m in self._mapped_resids.keys()])
-        outputs.extend([n for n in self.list_outputs()
-                                if n not in outputs])
         return outputs
 
     def get_size(self, names):
@@ -1152,6 +1148,12 @@ class SimpleSystem(System):
             vec['df'].array[:] *= -1.0
 
             for var in self.list_outputs():
+
+                collapsed = self.scope.name2collapsed.get(var)
+                if collapsed not in variables:
+                    print 'removing', var
+                    continue
+
                 vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
@@ -1188,7 +1190,6 @@ class ParamSystem(VarSystem):
             # mpiprint("param sys %s: adding %s to %s" %
             #                 (self.name, self.sol_vec[self.name],
             #                     self.rhs_vec[self.name]))
-            print "Param variable ApplyJ", self.sol_vec[self.name], self.rhs_vec[self.name]
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1291,7 +1292,9 @@ class AssemblySystem(SimpleSystem):
 
         nonzero = False
 
-        for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
+        for item in self.list_inputs_and_states() + \
+                    self.list_outputs() + self.list_residuals():
+
             var = self.scope._system.vec[arg][item]
             if any(var != 0):
                 nonzero = True
@@ -1309,7 +1312,9 @@ class AssemblySystem(SimpleSystem):
         variables = inner_system.variables.keys()
         inner_system.applyJ(variables)
 
-        for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
+        for item in self.list_inputs_and_states() + \
+                    self.list_outputs() + self.list_residuals():
+
             sub_name = item.partition('.')[2:][0]
             self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
 

@@ -106,7 +106,7 @@ def applyJ(system, variables):
             arg[key] = system.scope._system.vec['du'][item]
 
     result = {}
-    for item in system.list_outputs_and_residuals():
+    for item in system.list_outputs() + system.list_residuals():
 
         key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
@@ -214,12 +214,16 @@ def applyJT(system, variables):
     J = system.J
     obj = system._comp
     arg = {}
-    for item in system.list_outputs_and_residuals():
+    for item in system.list_outputs():
 
         collapsed = system.scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
+        key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    for item in system.list_residuals():
         key = item.partition('.')[-1]
         arg[key] = system.sol_vec[item]
 
