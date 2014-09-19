@@ -180,6 +180,7 @@ class ScipyGMRES(LinearSolver):
         system.applyJ()
 
         mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        print 'dump ', system.vec['df'].dump()
         return system.rhs_vec.array[:]
 
 

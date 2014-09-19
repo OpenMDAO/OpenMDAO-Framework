@@ -158,7 +158,7 @@ class Testcase_derivatives(unittest.TestCase):
         #top.subdriver.gradient_options.lin_solver = 'linear_gs'
         #top.subdriver.gradient_options.maxiter = 1
         top.run()
-
+        print "####################"
         J = top.driver.workflow.calc_gradient(mode='forward')
 
         print J

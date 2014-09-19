@@ -1702,7 +1702,8 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
 
         # Apply to inner driver system only. No need to pass options since it
         # has its own.
-        self.subsystems()[0].solve_linear()
+        for sub in self.local_subsystems():
+            sub.solve_linear()
 
 
 def _create_simple_sys(scope, graph, name):
