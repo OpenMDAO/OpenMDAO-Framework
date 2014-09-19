@@ -75,8 +75,15 @@ class FixedPointIterator(Driver):
     def run_iteration(self):
         self.current_iteration += 1
         system = self.workflow._system
-        system.vec['u'].array += system.vec['f'].array[:]
-        system.run(self.workflow._iterbase())
+        uvec = system.vec['u']
+        fvec = system.vec['f']
+
+        cycle_vars = self.workflow._cycle_vars
+        for name in uvec.keys():
+            if name not in cycle_vars:
+                uvec[name] += fvec[name]
+
+        self.workflow.run(ffd_order=self.ffd_order)
 
     def continue_iteration(self):
         return not self.should_stop() and \

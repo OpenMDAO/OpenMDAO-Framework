@@ -5,8 +5,6 @@ from itertools import chain
 
 import numpy
 import networkx as nx
-from networkx.algorithms.dag import is_directed_acyclic_graph
-from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
@@ -1285,7 +1283,6 @@ class CompoundSystem(System):
         self.graph = subg
         self._local_subsystems = []  # subsystems in the same process
         self._ordering = ()
-        self._cycle_vars = get_cycle_vars(self, subg)
 
     def local_subsystems(self):
         if MPI:
@@ -1364,22 +1361,12 @@ class SerialSystem(CompoundSystem):
         if self.is_active():
             self._stop = False
 
-            # save old value of u to compute resids
-            for node in self._cycle_vars:
-                self.vec['f'][node][:] = self.vec['u'][node][:]
-            
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
                 if self._stop:
-                    raise RunStopped('Stop requested')
-
-            # update resid vector for cyclic vars
-            for node in self._cycle_vars:
-                self.vec['f'][node][:] -= self.vec['u'][node][:]
-                self.vec['u'][node][:] -= self.vec['f'][node][:]
-            
+                    raise RunStopped('Stop requested')            
 
     def setup_communicators(self, comm):
         self._local_subsystems = []
@@ -1414,17 +1401,8 @@ class ParallelSystem(CompoundSystem):
 
         self.scatter('u', 'p')
 
-        # save old value of u to compute resids
-        for node in self._cycle_vars:
-            self.vec['f'][node][:] = self.vec['u'][node][:]
-            
         for sub in self.local_subsystems():
             sub.run(iterbase, ffd_order, case_label, case_uuid)
-
-        # update resid vector for cyclic vars
-        for node in self._cycle_vars:
-            self.vec['f'][node][:] -= self.vec['u'][node][:]
-            self.vec['u'][node][:] -= self.vec['f'][node][:]
 
     def setup_communicators(self, comm):
         #mpiprint("<Parallel> setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
@@ -1815,38 +1793,3 @@ def get_full_nodeset(scope, group):
             names.add(name)
     return names
 
-
-def get_cycle_vars(system, graph):
-    # examine the graph to see if we have any cycles that we need to
-    # deal with
-    cycle_vars = []
-
-    # make a copy of the graph since we don't want to modify it
-    g = graph.subgraph(graph.nodes_iter())
-
-    if not is_directed_acyclic_graph(g):
-        # get total data sizes for subsystem connections
-        sizes = []
-        for u,v,data in g.edges_iter(data=True):
-            sz = 0
-            for node in data['varconns']:
-                dct = system._get_var_info(node)
-                sz += dct.get('size', 0)
-            data['conn_size'] = sz
-            sizes.append((sz, (u,v)))
-
-        sizes = sorted(sizes)       
-
-        while not is_directed_acyclic_graph(g):
-            strong = strongly_connected_components(g)[0]
-            if len(strong) == 1:
-                break
-            
-            # find the connection with the smallest data xfer
-            for sz, (src, dest) in sizes:
-                if src in strong and dest in strong:
-                    cycle_vars.extend(g[src][dest]['varconns'])
-                    g.remove_edge(src, dest)
-                    break
-
-    return cycle_vars

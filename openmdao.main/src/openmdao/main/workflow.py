@@ -8,6 +8,8 @@ import weakref
 from StringIO import StringIO
 
 from numpy import ndarray
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
@@ -165,8 +167,21 @@ class Workflow(object):
 
         err = None
         try:
-            self._system.run(iterbase=iterbase, ffd_order=ffd_order,
-                                case_uuid=case_uuid)
+            uvec = self._system.vec['u']
+            fvec = self._system.vec['f']
+
+            # save old value of u to compute resids
+            for node in self._cycle_vars:
+                fvec[node][:] = uvec[node][:]
+            
+            self._system.run(iterbase=iterbase, 
+                             ffd_order=ffd_order,
+                             case_uuid=case_uuid)
+
+            # update resid vector for cyclic vars
+            for node in self._cycle_vars:
+                fvec[node][:] -= uvec[node][:]
+
             if self._stop:
                 raise RunStopped('Stop requested')
         except Exception:
@@ -770,6 +785,8 @@ class Workflow(object):
         for comp in self:
             added.update(comp.setup_systems())
 
+        self._cycle_vars = get_cycle_vars(self._system)
+
         return added
 
     def _auto_setup_systems(self, scope, reduced, cgraph):
@@ -847,3 +864,39 @@ class Workflow(object):
                     nodeset.add(node)
 
         return nodeset
+
+def get_cycle_vars(system):
+    # examine the graph to see if we have any cycles that we need to
+    # deal with
+    cycle_vars = []
+    graph = system.graph
+
+    # make a copy of the graph since we don't want to modify it
+    g = graph.subgraph(graph.nodes_iter())
+
+    if not is_directed_acyclic_graph(g):
+        # get total data sizes for subsystem connections
+        sizes = []
+        for u,v,data in g.edges_iter(data=True):
+            sz = 0
+            for node in data['varconns']:
+                dct = system._get_var_info(node)
+                sz += dct.get('size', 0)
+            data['conn_size'] = sz
+            sizes.append((sz, (u,v)))
+
+        sizes = sorted(sizes)       
+
+        while not is_directed_acyclic_graph(g):
+            strong = strongly_connected_components(g)[0]
+            if len(strong) == 1:
+                break
+            
+            # find the connection with the smallest data xfer
+            for sz, (src, dest) in sizes:
+                if src in strong and dest in strong:
+                    cycle_vars.extend(g[src][dest]['varconns'])
+                    g.remove_edge(src, dest)
+                    break
+
+    return cycle_vars

@@ -7,7 +7,7 @@ from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
@@ -535,6 +535,7 @@ class Driver(Component):
         """
         self._system = self.parent._reduced_graph.node[self.name]['system']
         return self.workflow.setup_systems(self.system_type)
+
 
     #### MPI related methods ####
 
