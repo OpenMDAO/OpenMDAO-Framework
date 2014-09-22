@@ -84,7 +84,7 @@ def applyJ(system, variables):
     J = system.J
     obj = system._comp
     arg = {}
-    for item in system.list_inputs_and_states():
+    for item in system.list_states():
 
         collapsed = system.scope.name2collapsed.get(item)
         if collapsed not in variables:
@@ -92,18 +92,25 @@ def applyJ(system, variables):
 
         key = item.partition('.')[-1]
 
-        # FIXME: this is a hack. Sometimes the item we're looking
-        # for can be found in the parent dp vector, but not always,
-        # so we have to find it in another vector...  I guess it's
-        # because input derivs will be found in dp and state derivs be
-        # found in du.  Maybe we should have a separate method for
-        # returning states and use two loops.
-        if item in system._parent_system.vec['dp']:
-            arg[key] = system._parent_system.vec['dp'][item]
-        elif item in system.sol_vec:
+        if item in system.sol_vec:
             arg[key] = system.sol_vec[item]
         else:
             arg[key] = system.scope._system.vec['du'][item]
+
+    for item in system.list_inputs():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item.partition('.')[-1]
+        parent = system
+        done = False
+        while not done:
+            parent = parent._parent_system
+            if item in parent.vec['dp']:
+                arg[key] = parent.vec['dp'][item]
+                done = True
 
     result = {}
     for item in system.list_outputs() + system.list_residuals():
@@ -123,7 +130,7 @@ def applyJ(system, variables):
             break
 
     if nonzero is False:
-        #print 'applyJ', obj.name, arg, result
+        print 'applyJ', obj.name, arg, result
         return
 
     # If storage of the local Jacobian is a problem, the user can specify the
@@ -156,7 +163,7 @@ def applyJ(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        #print 'applyJ', obj.name, arg, result
+        print 'applyJ', obj.name, arg, result
         return
 
     input_keys, output_keys = list_deriv_vars(obj)
@@ -203,7 +210,7 @@ def applyJ(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    #print 'applyJ', obj.name, arg, result
+    print 'applyJ', obj.name, arg, result
 
 def applyJT(system, variables):
     """Multiply an input vector by the transposed Jacobian.
@@ -214,29 +221,41 @@ def applyJT(system, variables):
     J = system.J
     obj = system._comp
     arg = {}
-    for item in system.list_outputs():
+    for item in system.list_outputs() + system.list_residuals():
+        key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    result = {}
+    for item in system.list_states():
 
         collapsed = system.scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
         key = item.partition('.')[-1]
-        arg[key] = system.sol_vec[item]
-
-    for item in system.list_residuals():
-        key = item.partition('.')[-1]
-        arg[key] = system.sol_vec[item]
-
-    result = {}
-    for item in system.list_inputs_and_states():
-        key = item.partition('.')[-1]
-        # FIXME: same hack as in applyJ
         if item in system.rhs_vec:
             result[key] = system.rhs_vec[item]
         elif item in system.scope._system.vec['du']:
             result[key] = system.scope._system.vec['du'][item]
-        # else :
-        #     result[key] = system._parent_system.vec['dp'][item]
+
+    for item in system.list_inputs():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item.partition('.')[-1]
+        parent = system
+        done = False
+        while not done:
+            parent = parent._parent_system
+            if item in parent.vec['dp']:
+                result[key] = parent.vec['dp'][item]
+                done = True
+        #if item in system.rhs_vec:
+            #result[key] = system.rhs_vec[item]
+        #elif item in system.scope._system.vec['du']:
+            #result[key] = system.scope._system.vec['du'][item]
 
     # Bail if this component is not connected in the graph
     if len(arg)==0 or len(result)==0:

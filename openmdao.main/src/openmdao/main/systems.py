@@ -320,9 +320,25 @@ class System(object):
         # variables
         return [a for a in self.variables.keys() if a in args]
 
-    def list_inputs_and_states(self):
-        """Returns names of input variables and states (not collapsed edges)
-        from this System and all of its children.
+    def list_inputs(self):
+        """Returns names of input variables from this System and all of its
+        children.
+        """
+        inputs = set()
+        for system in self.simple_subsystems():
+            for tup in system._in_nodes:
+                for dest in tup[1]:
+                    parts = dest.split('.', 1)
+                    if parts[0] in system._nodes:
+                        inputs.add(dest)
+
+        top = self.scope
+        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
+                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+
+    def list_states(self):
+        """Returns names of states (not collapsed edges) from this System and
+        all of its children.
         """
         inputs = set()
         for system in self.simple_subsystems():
@@ -331,11 +347,6 @@ class System(object):
                                   for s in system._comp.list_states()])
             except AttributeError:
                 pass
-            for tup in system._in_nodes:
-                for dest in tup[1]:
-                    parts = dest.split('.', 1)
-                    if parts[0] in system._nodes:
-                        inputs.add(dest)
 
         top = self.scope
         return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
@@ -658,6 +669,7 @@ class System(object):
             #    mpiprint("scattering (full) to %s" % str(self.name))
             # else:
             #    mpiprint("%s scattering to %s" % (str(self.name),str(subsystem.name)))
+
             scatter(self, srcvec, destvec)
 
             if destvecname == 'p':
@@ -856,14 +868,20 @@ class System(object):
         if mode == 'fd':
             self.vec['df'].array[:] = 0.0
             self.vec['du'].array[:] = 0.0
+            self.vec['dp'].array[:] = 0.0
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs,
                                                   return_format)
             return self.fd_solver.solve(iterbase=iterbase)
-        else:
-            self.linearize()
-            self.vec['df'].array[:] = 0.0
-            self.vec['du'].array[:] = 0.0
+
+        self.linearize()
+
+        # Clean out all arrays.
+        self.vec['df'].array[:] = 0.0
+        self.vec['du'].array[:] = 0.0
+        self.vec['dp'].array[:] = 0.0
+        for elemsystem in self.subsystems():
+            elemsystem.vec['dp'].array[:] = 0.0
 
         J = self.ln_solver.calc_gradient(inputs, outputs, return_format)
         self.sol_vec.array[:] = 0.0
@@ -877,6 +895,7 @@ class System(object):
 
         self.vec['du'].array[:] = 0.0
         self.vec['df'].array[:] = 0.0
+        self.vec['dp'].array[:] = 0.0
 
         self.initialize_gradient_solver()
         self.linearize()
@@ -1292,7 +1311,7 @@ class AssemblySystem(SimpleSystem):
 
         nonzero = False
 
-        for item in self.list_inputs_and_states() + \
+        for item in self.list_inputs() + self.list_states() + \
                     self.list_outputs() + self.list_residuals():
 
             var = self.scope._system.vec[arg][item]
@@ -1310,9 +1329,10 @@ class AssemblySystem(SimpleSystem):
             return
 
         variables = inner_system.variables.keys()
+        inner_system.vec['dp'].array[:] = 0.0
         inner_system.applyJ(variables)
 
-        for item in self.list_inputs_and_states() + \
+        for item in self.list_inputs() + self.list_states()  + \
                     self.list_outputs() + self.list_residuals():
 
             sub_name = item.partition('.')[2:][0]
@@ -1634,6 +1654,12 @@ class TransparentDriverSystem(SimpleSystem):
 
     def applyJ(self, variables):
         """ Delegate to subsystems """
+
+        # Need to clean out the dp vector because the parent systems can't
+        # see into this subsystem.
+        self.vec['dp'].array[:] = 0.0
+        for elemsystem in self.subsystems():
+            elemsystem.vec['dp'].array[:] = 0.0
 
         if self.mode == 'forward':
             self.scatter('du', 'dp')

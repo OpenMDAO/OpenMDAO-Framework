@@ -166,7 +166,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed "
             logger.error(msg, system.name)
 
-        #print 'Linear solution vec', -dx
+        print 'Linear solution vec', -dx
         return dx
 
 
@@ -176,10 +176,16 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-        system.rhs_vec.array[:] = 0
+
+        # Start with a clean slate
+        system.rhs_vec.array[:] = 0.0
+        system.vec['dp'].array[:] = 0.0
+        for elemsystem in system.subsystems():
+            elemsystem.vec['dp'].array[:] = 0.0
+
         system.applyJ(system.variables.keys())
 
-        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
@@ -309,7 +315,12 @@ class PETSc_KSP(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = sol_vec.array[:]
+
+        # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
+        system.vec['dp'].array[:] = 0.0
+        for elemsystem in system.subsystems():
+            elemsystem.vec['dp'].array[:] = 0.0
 
         system.applyJ(system.variables.keys())
 
@@ -477,13 +488,19 @@ class LinearGS(LinearSolver):
                         if subsystem is not subsystem2:
                             print "Linear Solve", subsystem2.name, subsystem.name
                             print "T1", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
+
+                            # Start with a clean slate
                             system.rhs_vec.array[:] = 0.0
+                            system.vec['dp'].array[:] = 0.0
+                            for elemsystem in system.subsystems():
+                                elemsystem.vec['dp'].array[:] = 0.0
+
                             args = [v for v in system.variables.keys()
                                     if v not in subsystem2.variables.keys()]
                             print "T1.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                             subsystem2.applyJ(args)
                             print "T2", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
-                            system.scatter('du', 'dp', subsystem=subsystem)
+                            system.scatter('du', 'dp', subsystem=subsystem2)
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     print "T2.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array

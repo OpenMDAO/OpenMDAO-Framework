@@ -156,7 +156,7 @@ class VecWrapper(VecWrapperBase):
         rank = system.mpi.rank
 
         vec_srcs = set([n[0] for n in vector_vars])
-        
+
         # to detect overlapping index sets, we need all of the subvar bases
         # that are NOT included in the vectors.  If a base IS included in the vectors,
         # then all of its subvars are just subviews of the base view, so no chance
@@ -176,10 +176,10 @@ class VecWrapper(VecWrapperBase):
                 self._info[name] = (self.array[start:end], start)#, dist_start)
 
                 base = name[0].split('[',1)[0]
-                
+
                 if base in bases and base not in vec_srcs:
                     bases[base].append(name[0])
-    
+
                     if len(bases[base]) > 1:
                         # check for overlaping subvars
                         idxset = set()
@@ -428,7 +428,7 @@ class DataTransfer(object):
         if system.mode == 'adjoint':
             addv = True
             mode = True
-            if MPI:
+            if srcvec.name.endswith('du'):
                 destvec, srcvec = srcvec, destvec
                 dest, src = src, dest
 
@@ -502,4 +502,7 @@ class SerialScatter(object):
         assert(len(self.src_idxs) <= srcvec.size)
         assert(len(self.src_idxs) <= len(self.dest_idxs))
 
-        destvec[self.dest_idxs] = srcvec[self.src_idxs]
+        if addv is True:
+            destvec[self.src_idxs] += srcvec[self.dest_idxs]
+        else:
+            destvec[self.dest_idxs] = srcvec[self.src_idxs]
