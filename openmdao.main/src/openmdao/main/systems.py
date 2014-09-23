@@ -320,6 +320,12 @@ class System(object):
         # variables
         return [a for a in self.variables.keys() if a in args]
 
+    def clear_dp(self):
+        """ Recusively sets the dp vector to zero."""
+        self.vec['dp'].array[:] = 0.0
+        for system in self.subsystems():
+            system.clear_dp()
+
     def list_inputs(self):
         """Returns names of input variables from this System and all of its
         children.
@@ -868,7 +874,7 @@ class System(object):
         if mode == 'fd':
             self.vec['df'].array[:] = 0.0
             self.vec['du'].array[:] = 0.0
-            self.vec['dp'].array[:] = 0.0
+            self.clear_dp()
             if self.fd_solver is None:
                 self.fd_solver = FiniteDifference(self, inputs, outputs,
                                                   return_format)
@@ -879,9 +885,7 @@ class System(object):
         # Clean out all arrays.
         self.vec['df'].array[:] = 0.0
         self.vec['du'].array[:] = 0.0
-        self.vec['dp'].array[:] = 0.0
-        for elemsystem in self.subsystems():
-            elemsystem.vec['dp'].array[:] = 0.0
+        self.clear_dp()
 
         J = self.ln_solver.calc_gradient(inputs, outputs, return_format)
         self.sol_vec.array[:] = 0.0
@@ -910,7 +914,7 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
-        self.set_options('forward', options)
+        self.set_options(self.mode, options)
         self.initialize_gradient_solver()
 
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
@@ -1129,6 +1133,11 @@ class SimpleSystem(System):
             #for var in self.list_outputs():
             #    self.vec['f'][var][:] -= self.vec['u'][var][:]
 
+    def clear_dp(self):
+        """ Sets the dp vector to zero."""
+        if 'dp' in self.vec:
+            self.vec['dp'].array[:] = 0.0
+
     def linearize(self):
         """ Linearize this component. """
         self.J = self._comp.linearize(first=True)
@@ -1170,7 +1179,6 @@ class SimpleSystem(System):
 
                 collapsed = self.scope.name2collapsed.get(var)
                 if collapsed not in variables:
-                    print 'removing', var
                     continue
 
                 vec['du'][var][:] += vec['df'][var][:]
@@ -1291,6 +1299,12 @@ class AssemblySystem(SimpleSystem):
         children. """
         self.mode = mode
         self._comp._system.set_options(mode, options)
+
+    def clear_dp(self):
+        """ Recusively sets the dp vector to zero."""
+        self.vec['dp'].array[:] = 0.0
+        for system in self.subsystems():
+            system.clear_dp()
 
     def linearize(self):
         """ Assemblies linearize all subsystems in the Inner Assy System. """
@@ -1652,14 +1666,18 @@ class TransparentDriverSystem(SimpleSystem):
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
+    def clear_dp(self):
+        """ Recusively sets the dp vector to zero."""
+        self.vec['dp'].array[:] = 0.0
+        for system in self.subsystems():
+            system.clear_dp()
+
     def applyJ(self, variables):
         """ Delegate to subsystems """
 
         # Need to clean out the dp vector because the parent systems can't
         # see into this subsystem.
-        self.vec['dp'].array[:] = 0.0
-        for elemsystem in self.subsystems():
-            elemsystem.vec['dp'].array[:] = 0.0
+        self.clear_dp()
 
         if self.mode == 'forward':
             self.scatter('du', 'dp')

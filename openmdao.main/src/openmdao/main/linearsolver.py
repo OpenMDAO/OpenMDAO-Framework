@@ -166,7 +166,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed "
             logger.error(msg, system.name)
 
-        print 'Linear solution vec', -dx
+        #print 'Linear solution vec', -dx
         return dx
 
 
@@ -179,13 +179,11 @@ class ScipyGMRES(LinearSolver):
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
-        system.vec['dp'].array[:] = 0.0
-        for elemsystem in system.subsystems():
-            elemsystem.vec['dp'].array[:] = 0.0
+        system.clear_dp()
 
         system.applyJ(system.variables.keys())
 
-        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
@@ -318,9 +316,7 @@ class PETSc_KSP(LinearSolver):
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
-        system.vec['dp'].array[:] = 0.0
-        for elemsystem in system.subsystems():
-            elemsystem.vec['dp'].array[:] = 0.0
+        system.clear_dp()
 
         system.applyJ(system.variables.keys())
 
@@ -405,7 +401,7 @@ class LinearGS(LinearSolver):
 
             for irhs in in_indices:
 
-                system.vec['dp'].array[:] = 0.0
+                system.clear_dp()
                 system.sol_vec.array[:] = 0.0
                 system.rhs_vec.array[:] = 0.0
                 system.rhs_vec.array[irhs] = 1.0
@@ -463,20 +459,14 @@ class LinearGS(LinearSolver):
 
             if system.mode == 'forward':
                 for subsystem in system.subsystems(local=True):
-                    #print "Linear Solve", subsystem.name
-                    #print "T1", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                     system.scatter('du', 'dp', subsystem=subsystem)
                     system.rhs_vec.array[:] = 0.0
-                    #print "T1.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                     subsystem.applyJ(system.variables.keys())
-                    #print "T2", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
-                    #print "T2.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                     subsystem.solve_linear(sub_options)
-                    #print "T3", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
 
             elif system.mode == 'adjoint':
 
@@ -486,30 +476,19 @@ class LinearGS(LinearSolver):
                     system.sol_buf[:] = system.rhs_buf[:]
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
-                            print "Linear Solve", subsystem2.name, subsystem.name
-                            print "T1", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
-
-                            # Start with a clean slate
                             system.rhs_vec.array[:] = 0.0
-                            system.vec['dp'].array[:] = 0.0
-                            for elemsystem in system.subsystems():
-                                elemsystem.vec['dp'].array[:] = 0.0
-
                             args = [v for v in system.variables.keys()
                                     if v not in subsystem2.variables.keys()]
-                            print "T1.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                             subsystem2.applyJ(args)
-                            print "T2", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                             system.scatter('du', 'dp', subsystem=subsystem2)
+                            system.clear_dp()
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                     system.rhs_vec.array[:] = system.sol_buf[:]
-                    print "T2.5", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
                     subsystem.solve_linear(options)
-                    print "T3", system.vec['du'].array, system.vec['df'].array, system.vec['dp'].array
 
             norm = self._norm()
             counter += 1
-            print options.parent.name, "Norm: ", norm, counter
+            #print options.parent.name, "Norm: ", norm, counter
 
         #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
         #print 'Linear solution vec', system.sol_vec.array
