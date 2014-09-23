@@ -425,12 +425,11 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint':
+        if system.mode == 'adjoint' and srcvec.name.endswith('du'):
             addv = True
             mode = True
-            if srcvec.name.endswith('du'):
-                destvec, srcvec = srcvec, destvec
-                dest, src = src, dest
+            destvec, srcvec = srcvec, destvec
+            dest, src = src, dest
 
         if self.scatter:
             #mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))

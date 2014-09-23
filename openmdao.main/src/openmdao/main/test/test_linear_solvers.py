@@ -116,6 +116,14 @@ class Testcase_derivatives(unittest.TestCase):
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
+        # Make sure we aren't add-scattering out p vector
+
+        top.run()
+        J = top.driver.workflow.calc_gradient(inputs=['comp.x', 'comp.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+
 
     def test_linearGS_single_comp(self):
 
