@@ -279,6 +279,7 @@ class Newton_SolverTestCase(unittest.TestCase):
         comp.x = 0.0
 
         driver = a.add('driver', NewtonSolver())
+        driver.workflow.add('comp')
 
         driver.add_parameter('comp.x', 0, 100)
         driver.add_constraint('comp.f=0')
