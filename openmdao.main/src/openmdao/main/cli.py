@@ -60,7 +60,7 @@ def _get_openmdao_parser():
                         default=[],
                         help='Select host from config file to run on. '
                              'To run on multiple hosts, use multiple --host args.')
-    parser.add_argument('--all', action='store_true', dest='allhosts',
+    parser.add_argument('--all', action='store_true', dest='allhosts', default=True,
                         help='Use all hosts found in testhosts.cfg file.')
     parser.set_defaults(func=list_testhosts)
 
