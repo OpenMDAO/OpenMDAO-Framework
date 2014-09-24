@@ -321,7 +321,6 @@ class PETSc_KSP(LinearSolver):
         system.applyJ(system.variables.keys())
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        #print 'arg, result', sol_vec.array, rhs_vec.array
         # mpiprint('names = %s' % system.sol_vec.keys())
         # mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
 
