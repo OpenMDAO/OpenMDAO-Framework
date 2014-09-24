@@ -1612,7 +1612,7 @@ class OpaqueSystem(CompoundSystem):
         
         nodes = internal_nodes(graph, subg.nodes())
         
-        # need to create invar and outvar nodes here else inputs won't exist in
+        # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
             graph.add_node(node[0], comp='var')
@@ -1621,13 +1621,6 @@ class OpaqueSystem(CompoundSystem):
             nodes.add(node)
             nodes.add(node[0])
             
-        for node in self._out_nodes:
-            graph.add_node(node[0], comp='var')
-            graph.add_edge(node, node[0])
-            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
-            nodes.add(node)
-            nodes.add(node[0])
-              
         graph = graph.subgraph(nodes)
         
         self._inner_system = SerialSystem(scope, graph, 
