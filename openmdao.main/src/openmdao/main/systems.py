@@ -1352,6 +1352,13 @@ class AssemblySystem(SimpleSystem):
             sub_name = item.partition('.')[2:][0]
             self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
 
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        # Apply into our assembly.
+        for sub in self.subsystems():
+            sub.solve_linear()
 
 class CompoundSystem(System):
     """A System that has subsystems."""
