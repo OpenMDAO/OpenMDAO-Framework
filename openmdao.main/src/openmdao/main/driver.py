@@ -61,15 +61,6 @@ class GradientOptions(VariableTree):
                               "should be finite-differenced together.",
                               framework_var=True)
 
-    # KTM - story up for this one.
-    #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
-    #                          'by adding sets of component names.')
-
-    # Analytic solution with GMRES
-    gmres_tolerance = Float(1.0e-9, desc='Tolerance for GMRES',
-                            framework_var=True)
-    gmres_maxiter = Int(100, desc='Maximum number of iterations for GMRES',
-                        framework_var=True)
     derivative_direction = Enum('auto',
                                 ['auto', 'forward', 'adjoint'],
                                 desc="Direction for derivative calculation. "
@@ -81,6 +72,23 @@ class GradientOptions(VariableTree):
                                 "When the number of parameters and responses "
                                 "are equal, then forward direction is used.",
                                 framework_var=True)
+
+    # KTM - story up for this one.
+    #fd_blocks = List([], desc='User can specify nondifferentiable blocks '
+    #                          'by adding sets of component names.')
+
+    # Linear Solver settings
+    lin_solver = Enum('scipy_gmres', ['scipy_gmres', 'petsc_ksp', 'linear_gs'],
+                      desc='Method to use for gradient calculation',
+                      framework_var=True)
+
+    atol = Float(1.0e-9, desc='Absolute tolerance for the linear solver.',
+                 framework_var=True)
+    rtol = Float(1.0e-9, desc='Relative tolerance for the linear solver. '
+                               '(Not supported by scipy.gmres)',
+                               framework_var=True)
+    maxiter = Int(100, desc='Maximum number of iterations for the linear solver.',
+                  framework_var=True)
 
 @add_delegate(HasEvents)
 class Driver(Component):
@@ -144,10 +152,10 @@ class Driver(Component):
         # collapse all subdrivers in our graph
         itercomps = {}
         itercomps['#parent'] = self.workflow.get_names(full=True)
-        
+
         for child_drv in self.subdrivers(recurse=False):
             itercomps[child_drv.name] = [c.name for c in child_drv.iteration_set()]
-            
+
         for child_drv in self.subdrivers(recurse=False):
             excludes = set()
             for name, comps in itercomps.items():
@@ -155,9 +163,9 @@ class Driver(Component):
                     for cname in comps:
                         if cname not in itercomps[child_drv.name]:
                             excludes.add(cname)
-                    
+
             collapse_driver(g, child_drv, excludes)
-            
+
         # now remove any comps that are shared by subdrivers but are not found
         # in our workflow
         to_remove = set()
@@ -166,7 +174,7 @@ class Driver(Component):
                 for comp in comps:
                     if comp not in itercomps['#parent']:
                         to_remove.add(comp)
-        
+
         g.remove_nodes_from(to_remove)
 
     def get_depgraph(self):

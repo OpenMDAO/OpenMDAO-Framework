@@ -6,7 +6,7 @@ from openmdao.test.mpiunittest import MPITestCase
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float
 from openmdao.main.mpiwrap import mpiprint
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 
 class Paraboloid(Component):
     """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
@@ -59,7 +59,7 @@ class MPITests(MPITestCase):
 
         top.comp.x = 3
         top.comp.y = 5
-        
+
     def test_run(self):
 
         self.top.run()
@@ -70,7 +70,7 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fwd(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='forward', 
+        J = self.top.driver.workflow.calc_gradient(mode='forward',
                                                    return_format='dict')
         #mpiprint("J local: %s" % J)
 
@@ -83,7 +83,7 @@ class MPITests(MPITestCase):
     def test_calc_gradient_adjoint(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='adjoint', 
+        J = self.top.driver.workflow.calc_gradient(mode='adjoint',
                                                    return_format='dict')
         #mpiprint("J local: %s" % J)
 

@@ -512,18 +512,18 @@ class Component(Container):
 
         return J
 
-    def applyJ(self, system):
+    def applyJ(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system)
+        applyJ(system, variables)
 
 
-    def applyJT(self, system):
+    def applyJT(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system)
+        applyJT(system, variables)
 
 
     def _post_execute(self):
@@ -660,7 +660,7 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__), 
+                                                     type(newobj).__name__),
                                         sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object

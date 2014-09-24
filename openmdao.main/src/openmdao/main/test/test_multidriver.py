@@ -12,7 +12,7 @@ from openmdao.main.api import Assembly, Component, Driver, \
 from openmdao.main.datatypes.api import Float, Int, Str
 from openmdao.main.hasobjective import HasObjective
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.test.test_derivatives import SimpleDriver
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
@@ -158,7 +158,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.rosen_setUp()
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=True)
         self.assertEqual(set(['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']), dests)
-        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']), 
+        self.assertEqual(set(['_pseudo_0.out0','_pseudo_1.out0','_pseudo_2.out0','_pseudo_3.out0']),
                          srcs)
         srcs, dests = self.top.driver.get_expr_var_depends(recurse=False)
         self.assertEqual(set(), srcs)
@@ -354,7 +354,7 @@ class MultiDriverTestCase(unittest.TestCase):
 
         # test all_wflows_order
         comps = top.all_wflows_order()
-        self.assertEqual(comps, 
+        self.assertEqual(comps,
                          ['driver', 'driver1', 'comp1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
 
     def test_2_nested_drivers_same_assembly_extra_comp(self):
@@ -594,11 +594,11 @@ class MultiDriverTestCase(unittest.TestCase):
 
     def test_get_itertree(self):
         self.rosen_setUp()
-        self.assertEqual(self.top.get_iteration_tree(), 
-                         ['driver', 
-                          [['driver1', 
-                            ['comp1', 'comp2', 'comp3', 'comp4', 
-                             'adder1', 'adder2', 'adder3', 
+        self.assertEqual(self.top.get_iteration_tree(),
+                         ['driver',
+                          [['driver1',
+                            ['comp1', 'comp2', 'comp3', 'comp4',
+                             'adder1', 'adder2', 'adder3',
                              '._pseudo_1', '._pseudo_0', '._pseudo_3', '._pseudo_2']
                             ]
                            ]

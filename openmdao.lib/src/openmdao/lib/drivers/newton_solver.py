@@ -76,6 +76,7 @@ class NewtonSolver(Driver):
               f_norm/f_norm0 > self.rtol:
 
             system.calc_newton_direction(options=options)
+            #print "new direction", dfvec.array
 
             uvec.array -= alpha*dfvec.array
 

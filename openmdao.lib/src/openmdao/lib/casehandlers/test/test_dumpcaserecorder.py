@@ -49,17 +49,18 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
         expected_constants = """\
 Constants:
-   comp1.directory: 
+   comp1.directory:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
-   comp2.directory: 
+   comp2.directory:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
-   directory: 
+   directory:
    driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
    driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-   driver.directory: 
+   driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -67,8 +68,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    excludes: []
    force_fd: False
    includes: ['*']
@@ -129,16 +131,17 @@ Case:
 
         expected = """\
 Constants:
-   comp1.directory: 
+   comp1.directory:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.y: 0.0
-   comp2.directory: 
+   comp2.directory:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
-   directory: 
-   driver.directory: 
+   directory:
+   driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -146,8 +149,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    excludes: []
    force_fd: False
    includes: ['*']
