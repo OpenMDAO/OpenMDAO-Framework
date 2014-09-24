@@ -32,7 +32,7 @@ class FixedPointIterator(Driver):
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
 
-    tolerance = Float(1.0e-3, iotype='in', desc='Absolute convergence '
+    tolerance = Float(1.0e-6, iotype='in', desc='Absolute convergence '
                                             'tolerance between iterations.')
 
     norm_order = Enum('Infinity', ['Infinity', 'Euclidean'],
@@ -88,7 +88,7 @@ class FixedPointIterator(Driver):
     def continue_iteration(self):
         return not self.should_stop() and \
                self.current_iteration < self.max_iteration and \
-               self.normval > self.tolerance 
+               self.normval > self.tolerance
               # and self.normval/self.norm0 > self.rtol:
 
     def post_iteration(self):
@@ -104,7 +104,7 @@ class FixedPointIterator(Driver):
 
     def norm(self):
         """ Compute the norm using numpy.linalg. """
-        return norm(self.workflow._system.vec['f'].array, 
+        return norm(self.workflow._system.vec['f'].array,
                     self._norm_order)
 
     def check_config(self, strict=False):
