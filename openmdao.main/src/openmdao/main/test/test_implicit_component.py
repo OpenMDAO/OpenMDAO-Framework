@@ -296,6 +296,11 @@ class Coupled1(ImplicitWithSolver):
                         result[res] += self.J_output_input[j, k]*arg[state]
 
 
+    def apply_derivT(self, arg, result):
+        """ Not using it, so let's just define it. """
+        self.raise_exception("Should never get here.", RunTimeError)
+
+
 class Coupled2(ImplicitWithSolver):
     ''' This comp only has the last state (z).
 
@@ -373,6 +378,10 @@ class Coupled2(ImplicitWithSolver):
                 for k, state in enumerate(['c', 'x', 'y']):
                     if state in arg:
                         result[res] += self.J_output_input[j, k]*arg[state]
+
+    def apply_derivT(self, arg, result):
+        """ Not using it, so let's just define it. """
+        self.raise_exception("Should never get here.", RunTimeError)
 
 
 class MyComp_Full_Array(ImplicitWithSolver):

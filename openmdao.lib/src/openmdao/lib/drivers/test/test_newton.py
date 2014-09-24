@@ -178,7 +178,9 @@ class Newton_SolverTestCase(unittest.TestCase):
 
     def test_newton(self):
 
+        print self.top.d1.y1, self.top.d2.y1, self.top.d1.y2, self.top.d2.y2
         self.top.run()
+        print self.top.d1.y1, self.top.d2.y1, self.top.d1.y2, self.top.d2.y2
 
         assert_rel_error(self, self.top.d1.y1,
                                self.top.d2.y1,
@@ -393,6 +395,97 @@ class Newton_SolverTestCase(unittest.TestCase):
 
         print top.comp.x, top.comp.y
         assert_rel_error(self, top.comp.x, -0.38742588, 1e-4)
+
+
+class Sellar_MDA_Cycles(Assembly):
+
+    def configure(self):
+
+        self.add('d1', Discipline1_WithDerivatives())
+        self.d1.x1 = 1.0
+        self.d1.y1 = 1.0
+        self.d1.y2 = 1.0
+        self.d1.z1 = 5.0
+        self.d1.z2 = 2.0
+
+        self.add('d2', Discipline2_WithDerivatives())
+        self.d2.y1 = 1.0
+        self.d2.y2 = 1.0
+        self.d2.z1 = 5.0
+        self.d2.z2 = 2.0
+
+        self.connect('d1.y1', 'd2.y1')
+        self.connect('d2.y2', 'd1.y2')
+
+        self.add('driver', NewtonSolver())
+        self.driver.workflow.add(['d1', 'd2'])
+
+
+class Newton_SolverTestCase_with_Cycles(unittest.TestCase):
+    """test the Newton Solver component with cycles"""
+
+    def setUp(self):
+        self.top = set_as_top(Sellar_MDA_Cycles())
+
+    def tearDown(self):
+        self.top = None
+
+    def test_newton(self):
+
+        self.top.run()
+
+        assert_rel_error(self, self.top.d1.y1,
+                               self.top.d2.y1,
+                               1.0e-4)
+        assert_rel_error(self, self.top.d1.y2,
+                               self.top.d2.y2,
+                               1.0e-4)
+
+    def test_newton_nested(self):
+        # Make sure derivatives across the newton-solved system are correct.
+
+        top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+
+        top.add('d1', Discipline1_WithDerivatives())
+        top.d1.x1 = 1.0
+        top.d1.y1 = 1.0
+        top.d1.y2 = 1.0
+        top.d1.z1 = 5.0
+        top.d1.z2 = 2.0
+
+        top.add('d2', Discipline2_WithDerivatives())
+        top.d2.y1 = 1.0
+        top.d2.y2 = 1.0
+        top.d2.z1 = 5.0
+        top.d2.z2 = 2.0
+
+        top.connect('d1.y1', 'd2.y1')
+        top.connect('d2.y2', 'd1.y2')
+
+        top.add('solver', NewtonSolver())
+        top.solver.atol = 1e-9
+        top.solver.workflow.add(['d1', 'd2'])
+
+        top.driver.workflow.add(['solver'])
+        top.driver.add_parameter('d1.z1', low=-100, high=100)
+        top.driver.add_objective('d1.y1 + d1.y2')
+
+        top.run()
+
+        J = top.driver.workflow.calc_gradient(mode='forward')
+        print J
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+
+        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        print J
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
+
+        top.driver.gradient_options.fd_step = 1e-7
+        top.driver.gradient_options.fd_form = 'central'
+        J = top.driver.workflow.calc_gradient(mode='fd')
+        print J
+        assert_rel_error(self, J[0][0], 10.77542099, 1e-5)
 
 
 

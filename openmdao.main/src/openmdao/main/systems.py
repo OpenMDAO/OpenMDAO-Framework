@@ -879,7 +879,7 @@ class System(object):
             self.fd_solver = FiniteDifference(self, inputs, outputs,
                                               return_format)
         return self.fd_solver.solve(iterbase=iterbase)
-        
+
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
         df vector."""
@@ -893,7 +893,9 @@ class System(object):
         self.initialize_gradient_solver()
         self.linearize()
 
+        print 'Newton Direction', self.vec['f'].array[:]
         self.vec['df'].array[:] = -self.ln_solver.solve(self.vec['f'].array)
+        print 'Newton Solution', self.vec['df'].array[:]
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting
@@ -1015,7 +1017,7 @@ class SimpleSystem(System):
 
     def inner(self):
         return self._comp
-    
+
     def stop(self):
         self._comp.stop()
 
@@ -1127,6 +1129,31 @@ class SimpleSystem(System):
                              [n for n in graph.successors(self.name)
                                    if n in self.vector_vars])
 
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        if self.is_active():
+            graph = self.scope._reduced_graph
+
+            vec = self.vec
+            vec['f'].array[:] = vec['u'].array[:]
+            self.scatter('u', 'p')
+
+            if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
+                self._comp.evaluate()
+            else:
+                self._comp.set_itername('%s-%s' % (iterbase, self.name))
+                self._comp.run(case_uuid=case_uuid)
+
+            # put component outputs in u vector
+            self.vec['u'].set_from_scope(self.scope,
+                             [n for n in graph.successors(self.name)
+                                   if n in self.vector_vars])
+
+            vec['f'].array[:] -= vec['u'].array[:]
+            vec['u'].array[:] += vec['f'].array[:]
+
     def clear_dp(self):
         """ Sets the dp vector to zero."""
         if 'dp' in self.vec:
@@ -1192,6 +1219,12 @@ class VarSystem(SimpleSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         pass
 
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        pass
+
     def applyJ(self, variables):
         pass
 
@@ -1224,6 +1257,12 @@ class InVarSystem(VarSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
+
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
     def pre_run(self):
         """ Load param value into u vector. """
@@ -1261,7 +1300,13 @@ class EqConstraintSystem(SimpleSystem):
 
             # Propagate residuals.
             if state:
-                self.vec['f'][state][:] = self._comp.out0
+                self.vec['f'][state][:] = -self._comp.out0
+
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
 
 class AssemblySystem(SimpleSystem):
@@ -1458,6 +1503,20 @@ class SerialSystem(CompoundSystem):
                 if self._stop:
                     raise RunStopped('Stop requested')
 
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        if self.is_active():
+            self._stop = False
+
+            for sub in self.local_subsystems():
+                self.scatter('u', 'p', sub)
+
+                sub.evaluate(iterbase, case_label, case_uuid)
+                if self._stop:
+                    raise RunStopped('Stop requested')
+
     def setup_communicators(self, comm):
         self._local_subsystems = []
 
@@ -1493,6 +1552,12 @@ class ParallelSystem(CompoundSystem):
 
         for sub in self.local_subsystems():
             sub.run(iterbase, ffd_order, case_label, case_uuid)
+
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
     def setup_communicators(self, comm):
         #mpiprint("<Parallel> setup_comms for %s  (%d of %d)" % (self.name, comm.rank, comm.size))
@@ -1609,9 +1674,9 @@ class OpaqueSystem(CompoundSystem):
         super(OpaqueSystem, self).__init__(scope, graph, subg, name)
 
         graph = graph.subgraph(graph.nodes_iter())
-        
+
         nodes = internal_nodes(graph, subg.nodes())
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
@@ -1620,17 +1685,17 @@ class OpaqueSystem(CompoundSystem):
             graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
             nodes.add(node)
             nodes.add(node[0])
-            
+
         graph = graph.subgraph(nodes)
-        
-        self._inner_system = SerialSystem(scope, graph, 
+
+        self._inner_system = SerialSystem(scope, graph,
                                           reduced2component(graph))
 
         self._inner_system._provideJ_bounds = None
 
     def inner(self):
         return self._inner_system
-    
+
     def setup_communicators(self, comm):
         self.mpi.comm = comm
         self._inner_system.setup_communicators(comm)
@@ -1657,21 +1722,27 @@ class OpaqueSystem(CompoundSystem):
         children. """
         super(OpaqueSystem, self).set_options(mode, options)
         self._inner_system.set_options(mode, options)
-        
+
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         self_u = self.vec['u']
         inner_u = self._inner_system.vec['u']
-        
-        inner_u.set_from_scope(self.scope, 
+
+        inner_u.set_from_scope(self.scope,
                                self._inner_system.list_inputs()+self._inner_system.list_states())
-        
+
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
         for item in self.list_outputs():
             self_u[item] = inner_u[item]
 
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
+
     def linearize(self):
-        """Do a finite difference on the inner system to calculate a 
+        """Do a finite difference on the inner system to calculate a
         Jacobian.
         """
         inner_system = self._inner_system
@@ -1691,30 +1762,30 @@ class OpaqueSystem(CompoundSystem):
             var = self.scope._system.vec[res][item]
             inner_system.vec[res][item] = var
 
-        inner_system.J = inner_system.solve_fd(inner_system.list_inputs()+inner_system.list_states(), 
+        inner_system.J = inner_system.solve_fd(inner_system.list_inputs()+inner_system.list_states(),
                                                inner_system.list_outputs())
-        
+
         self.J = inner_system.J
-        
+
     def applyJ(self, variables):
         vec = self.vec
         dfvec = vec['df']
-    
+
         # Forward Mode
         if self.mode == 'forward':
-    
+
             self.scatter('du', 'dp')
-                
+
             applyJ(self, variables)
             dfvec.array[:] *= -1.0
-    
+
             for var in variables: #self.list_outputs():
                 if var in dfvec:
                     dfvec[var][:] += vec['du'][var][:]
-    
+
         # Adjoint Mode
         elif self.mode == 'adjoint':
-    
+
             # Sign on the local Jacobian needs to be -1 before
             # we add in the fake residual. Since we can't modify
             # the 'du' vector at this point without stomping on the
@@ -1723,11 +1794,11 @@ class OpaqueSystem(CompoundSystem):
             dfvec.array[:] *= -1.0
             applyJT(self, variables)
             dfvec.array[:] *= -1.0
-    
+
             for var in variables: #self.list_outputs():
                 if var in dfvec:
                     vec['du'][var][:] += dfvec[var][:]
-    
+
             self.scatter('du', 'dp')
 
     def simple_subsystems(self):

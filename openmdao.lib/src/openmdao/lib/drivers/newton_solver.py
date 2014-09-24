@@ -15,6 +15,7 @@ def norm(a, order=None):
     return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
 # pylint: disable=E0611, F0401
+from openmdao.main.case import Case
 from openmdao.main.driver import Driver
 from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.hasparameters import HasParameters
@@ -60,15 +61,18 @@ class NewtonSolver(Driver):
         fvec = system.vec['f']
         dfvec = system.vec['df']
         uvec = system.vec['u']
+        iterbase = self.workflow._iterbase()
 
         # perform an initial run
-        self.pre_iteration()
-        self.run_iteration()
-        self.post_iteration()
+        #self.pre_iteration()
+        #self.run_iteration()
+        #self.post_iteration()
+        self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
         print self.name, "Norm: ", f_norm, 0
+        print 'f', fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -78,13 +82,14 @@ class NewtonSolver(Driver):
             system.calc_newton_direction(options=options)
             #print "new direction", dfvec.array
 
-            uvec.array -= alpha*dfvec.array
+            print "LS 1", uvec.array, '+', dfvec.array
+            uvec.array += alpha*dfvec.array
 
-            self.pre_iteration()
-            self.run_iteration()
-            self.post_iteration()
+            # Just evaluate the model with the new points
+            self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
+            print 'f', fvec.array
             print self.name, "Norm: ", f_norm, itercount+1
             itercount += 1
 
@@ -97,11 +102,10 @@ class NewtonSolver(Driver):
 
                 uvec.array += alpha*dfvec.array
                 alpha = alpha/2.0
-                uvec.array -= alpha*dfvec.array
+                uvec.array += alpha*dfvec.array
 
-                self.pre_iteration()
-                self.run_iteration()
-                self.post_iteration()
+                # Just evaluate the model with the new points
+                self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
                 f_norm = npnorm(fvec.array)
                 #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
@@ -109,6 +113,12 @@ class NewtonSolver(Driver):
 
             # Reset backtracking
             alpha = self.alpha
+
+        # Need to make sure the whole workflow is executed at the final
+        # point, not just evaluated.
+        self.pre_iteration()
+        self.run_iteration()
+        self.post_iteration()
 
         print self.name, "converged"
 
