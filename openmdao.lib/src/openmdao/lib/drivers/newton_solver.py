@@ -72,7 +72,7 @@ class NewtonSolver(Driver):
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
         print self.name, "Norm: ", f_norm, 0
-        print 'f', fvec.array
+        print uvec.array, fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -89,7 +89,7 @@ class NewtonSolver(Driver):
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
-            print 'f', fvec.array
+            print uvec.array, fvec.array
             print self.name, "Norm: ", f_norm, itercount+1
             itercount += 1
 
