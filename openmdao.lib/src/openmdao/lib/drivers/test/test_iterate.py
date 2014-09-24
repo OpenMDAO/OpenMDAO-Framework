@@ -440,6 +440,7 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
     def test_gauss_seidel_sub(self):
 
         self.top = set_as_top(Sellar_MDA_subbed())
+        self.top.subdriver.tolerance = 1.0e-9
         self.top.run()
 
         assert_rel_error(self, self.top.d1.y1,
@@ -454,20 +455,19 @@ class FixedPointIterator_with_Cyclic_TestCase(unittest.TestCase):
         outputs = ['d1.y1', 'd2.y2']
         J1 = self.top.driver.workflow.calc_gradient(inputs=inputs,
                                                    outputs=outputs)
-        print J1
         J2 = self.top.driver.workflow.calc_gradient(inputs=inputs,
                                                    outputs=outputs,
                                                    mode='adjoint')
-        print J2
         J3 = self.top.driver.workflow.calc_gradient(inputs=inputs,
                                                    outputs=outputs,
                                                    mode='fd')
-        print J3
 
-        J = (J1 - J2)
-        #print J.max()
+        J = (J1 - J3)
         self.assertTrue(J.max() < 1.0e-3)
 
+
+        J = (J2 - J3)
+        self.assertTrue(J.max() < 1.0e-3)
 
 class TestIterateUntill(unittest.TestCase):
     """Test case for the IterateUntil Driver"""
