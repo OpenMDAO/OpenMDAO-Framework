@@ -16,7 +16,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter, get_reduced_subgraph
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 
@@ -178,8 +178,11 @@ class System(object):
                 return s
         return None
 
-    def pre_run(self):
-        pass
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        return True
 
     def subsystems(self, local=False):
         if local:
@@ -237,12 +240,10 @@ class System(object):
 
         all_keys = comm.allgather(vnames)
 
-        mpiprint("allkeys: %s" % all_keys)
 
         var2proc = {}
         for proc, names in enumerate(all_keys):
             for name in names:
-                mpiprint("name: %s" % name)
                 if name not in var2proc:
                     try:
                         idx = myvars.index(collname[name])
@@ -250,7 +251,6 @@ class System(object):
                         mpiprint('valerr')
                         continue
 
-                    mpiprint("self.local_var_sizes[proc, idx]: %s" % self.local_var_sizes[proc, idx])
                     if self.local_var_sizes[proc, idx] > 0:
                         var2proc[name] = proc
 
@@ -397,7 +397,7 @@ class System(object):
         return outputs
 
     def get_size(self, names):
-        """Return the total size of the variables
+        """Return the combined size of the variables
         corresponding to the given names.  If a given
         variable does not exist locally, the size will
         be taken from the lowest rank process that does
@@ -473,7 +473,7 @@ class System(object):
             if flat_idx is not None:
                 info['flat_idx'] = flat_idx
 
-        except NoFlatError as err:
+        except NoFlatError:
             info['flat'] = False
 
         if base is not None:
@@ -534,7 +534,6 @@ class System(object):
 
         if not self.is_active():
             self.local_var_sizes = numpy.zeros((0,0), int)
-            #mpiprint("%s not active, input_size = 0" % self.name)
             self.input_sizes = numpy.zeros(0, int)
             return
 
@@ -783,7 +782,7 @@ class System(object):
         # baseless subs
         sub_bases = set([s.split('[',1)[0]
                           for s in all_srcs
-                             if '[' in s and s not in bases])
+                             if '[' in s and s.split('[',1)[0] not in bases])
 
         for name in vardict:
             src = name[0]
@@ -1025,6 +1024,15 @@ class SimpleSystem(System):
     def stop(self):
         self._comp.stop()
 
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        if self._comp is not None:
+            return self._comp.is_differentiable()
+
+        return True
+
     def simple_subsystems(self):
         yield self
 
@@ -1053,11 +1061,6 @@ class SimpleSystem(System):
                 self.variables[vname] = self._var_meta[vname].copy()
 
         mapped_states = resid_state_map.values()
-
-        # for vname in self._in_nodes:
-        #     self._var_meta[vname] = self._get_var_info(vname)
-        #     if vname[0] == vname[1][0] and vname[0].startswith(self.name+'.') and vname not in mapped_states: # add driver input or state
-        #         self.variables[vname] = self._var_meta[vname]
 
         # for simple systems, if we're given a mapping of our outputs to
         # states, we need to 'own' the state and later in run we need
@@ -1122,16 +1125,13 @@ class SimpleSystem(System):
             #for var in self.list_outputs():
             #    self.vec['f'][var][:] = self.vec['u'][var][:]
 
-            #mpiprint("running %s" % str(self.name))
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
-            #self.vec['u'].set_from_scope(self.scope)
 
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,
-                                         [n for n in graph.successors(self.name) if n in self.vector_vars])
-            #for var in self.list_outputs():
-            #    self.vec['f'][var][:] -= self.vec['u'][var][:]
+                             [n for n in graph.successors(self.name)
+                                   if n in self.vector_vars])
 
     def clear_dp(self):
         """ Sets the dp vector to zero."""
@@ -1448,14 +1448,12 @@ class SerialSystem(CompoundSystem):
 
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
-            #mpiprint("running serial system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
             self._stop = False
+
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
-                #self.vec['p'].set_to_scope(self.scope, sub._in_nodes)
 
                 sub.run(iterbase, ffd_order, case_label, case_uuid)
-                #x = sub.vec['u'].check(self.vec['u'])
                 if self._stop:
                     raise RunStopped('Stop requested')
 
@@ -1619,6 +1617,12 @@ class OpaqueDriverSystem(SimpleSystem):
         #super(OpaqueDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
+
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        return False
 
     def local_subsystems(self):
         return [s for s in self.all_subsystems() if s.is_active()]
@@ -1896,5 +1900,4 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
-
 

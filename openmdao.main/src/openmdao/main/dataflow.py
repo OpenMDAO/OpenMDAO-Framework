@@ -28,23 +28,8 @@ class Dataflow(SequentialWorkflow):
         # resolve all of the components up front so if there's a problem
         # it will fail early and not waste time running components
         scope = self.scope
-        self.get_names()
-        #return [getattr(scope, n) for n in self._get_topsort()].__iter__()
+        self._get_collapsed_graph()
         return [getattr(scope, n) for n in self._fullnames].__iter__()
-
-    def check_config(self, strict=False):
-        """Check for cyclic graph."""
-
-        super(Dataflow, self).check_config(strict=strict)
-
-        graph = self._get_collapsed_graph()
-        if not is_directed_acyclic_graph(graph):
-            # do a little extra work here to give more info to the user
-            # in the error message
-            strcon = strongly_connected_components(graph)
-            self.scope.raise_exception('circular dependency found between'
-                                       ' the following: %s'
-                                       % str(strcon[0]), RuntimeError)
 
     def config_changed(self):
         """Notifies the Workflow that its configuration (dependencies, etc.)
@@ -54,22 +39,6 @@ class Dataflow(SequentialWorkflow):
         self._collapsed_graph = None
         self._topsort = None
         self._duplicates = None
-
-    # def _get_topsort(self):
-    #     if self._topsort is None:
-    #         graph = self._get_collapsed_graph()
-    #         try:
-    #             self._topsort = nx.topological_sort(graph)
-    #         except nx.NetworkXUnfeasible:
-    #             # do a little extra work here to give more info to the user
-    #             # in the error message
-    #             strcon = strongly_connected_components(graph)
-    #             self.scope.raise_exception('circular dependency found between'
-    #                                        ' the following: %s'
-    #                                        % str(strcon[0]), RuntimeError)
-    #         if self._duplicates:
-    #             self._insert_duplicates()
-    #     return self._topsort
 
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
@@ -88,25 +57,11 @@ class Dataflow(SequentialWorkflow):
         # the driver in our collapsed graph
         comps = self.get_components(full=True)
         cnames = set([c.name for c in comps])
-        removes = set()
-        itersets = {}
         graph_with_subs = graph.component_graph()
         collapsed_graph = graph_with_subs.subgraph(cnames)
-
         for comp in comps:
-            cname = comp.name
             if has_interface(comp, IDriver):
-                iterset = [c.name for c in comp.iteration_set()]
-                itersets[cname] = iterset
-                removes.update(iterset)
-                for u, v in graph_with_subs.edges_iter(nbunch=iterset):  # outgoing edges
-                    if v != cname and v not in iterset and not v.startswith('_pseudo_'):
-                        collapsed_graph.add_edge(cname, v)
-                for u, v in graph_with_subs.in_edges_iter(nbunch=iterset):  # incoming edges
-                    if u != cname and u not in iterset and not u.startswith('_pseudo_'):
-                        collapsed_graph.add_edge(u, cname)
-
-        collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+                comp._collapse_subdrivers(collapsed_graph)
 
         alldeps = transitive_closure(collapsed_graph)
         self._fullnames = gsort(alldeps, self._fullnames)

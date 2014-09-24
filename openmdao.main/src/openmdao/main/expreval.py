@@ -748,12 +748,12 @@ class ExprEvaluator(object):
         gradient = {}
         for var in wrt:
 
-            # A "fake" boundary connection in an assembly has a special
-            # format. All expression derivatives from inside the assembly are
-            # handled outside the assembly.
-            if var[0:4] == '@bin':
-                gradient[var] = 1.0
-                continue
+            ## A "fake" boundary connection in an assembly has a special
+            ## format. All expression derivatives from inside the assembly are
+            ## handled outside the assembly.
+            #if var[0:4] == '@bin':
+                #gradient[var] = 1.0
+                #continue
 
             # Don't take derivative with respect to a variable that is not in
             # the expression

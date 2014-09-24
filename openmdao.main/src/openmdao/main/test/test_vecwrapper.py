@@ -65,18 +65,24 @@ class VecWrapperTestCase(unittest.TestCase):
     def test_getitem(self):
         top = _nested_model()
         top.run()
-        #from openmdao.util.dotgraph import plot_graph
-        #plot_graph(top.sub._depgraph)
         self.assertEqual(set(top.sub._system.vec['u'].keys()), 
-                         set(['a1','b2','a3','c2','d3','d5','d1','b4','c4','b6',
-                              'comp2.b','comp2.c','comp2.d',
-                              'comp3.a','comp3.c','comp3.d',
-                              'comp5.a','comp5.b','comp5.c','comp5.d',
-                              'comp1.a','comp1.b','comp1.c','comp1.d',
-                              'comp4.a','comp4.b','comp4.c','comp4.d',
-                              'comp6.a','comp6.b']))
+                         set([('b2', ('comp2.b', 'b2')), 
+                              ('b6', ('comp6.b', 'b6')), 
+                              ('b4', ('comp4.b', 'b4')), 
+                              ('a3', ('comp3.a', 'a3')), 
+                              ('a1', ('comp1.a', 'a1')), 
+                              ('comp2.c', ('c2',)), 
+                              ('comp2.d', ('comp5.b',)), 
+                              ('comp3.c', ('comp5.a',)), 
+                              ('comp3.d', ('d3',)), 
+                              ('comp5.c', ('comp1.b',)), 
+                              ('comp5.d', ('d5',)), 
+                              ('comp1.c', ('comp4.a',)), 
+                              ('comp1.d', ('d1',)), 
+                              ('comp4.c', ('c4',)), 
+                              ('comp4.d', ('comp6.a',))]))
                 
-        self.assertEqual(top.sub._system.vec['u'].array.size, 30)
+        self.assertEqual(top.sub._system.vec['u'].array.size, 15)
  
 
 if __name__ == "__main__":

@@ -149,7 +149,8 @@ class FiniteDifference(object):
 
         iterbase = 'fd-' + iterbase
 
-        self.get_outputs(self.y_base)
+        self.system.vec['u'].set_to_array(self.y_base,
+                                          self.outputs)
 
         for j, src, in enumerate(self.inputs):
             # Users can customize the FD per variable
@@ -271,43 +272,9 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, -fd_step, i-i1, undo_complex=True)
 
-        # Restore final input.
+        # Restore final inputs/outputs.
+        self.system.vec['u'].set_from_array(self.y_base, self.outputs)
         self.system.vec['u'].set_to_scope(self.scope)
-        #self.system.vec['p'].set_to_scope(self.scope)
-
-        # Return outputs to a clean state.
-        for src in self.outputs:
-            i1, i2 = self.out_bounds[src]
-            old_val = self.scope.get(src)
-
-            if isinstance(old_val, (float, complex)):
-                new_val = float(self.y_base[i1:i2])
-            elif isinstance(old_val, ndarray):
-                shape = old_val.shape
-                if len(shape) > 1:
-                    new_val = self.y_base[i1:i2]
-                    new_val = new_val.reshape(shape)
-                else:
-                    new_val = self.y_base[i1:i2]
-            elif has_interface(old_val, IVariableTree):
-                new_val = old_val.copy()
-                self.system.wflow._update(src, new_val, self.y_base[i1:i2])
-            else:
-                continue
-
-            src, _, idx = src.partition('[')
-            if idx:
-                old_val = self.scope.get(src)
-                if isinstance(new_val, ndarray):
-                    exec('old_val[%s = new_val.copy()' % idx)
-                else:
-                    exec('old_val[%s = new_val' % idx)
-                self.scope.set(src, old_val, force=True)
-            else:
-                if isinstance(new_val, ndarray):
-                    self.scope.set(src, new_val.copy(), force=True)
-                else:
-                    self.scope.set(src, new_val, force=True)
 
         #print 'after FD', self.J
         return self.J
@@ -315,22 +282,26 @@ class FiniteDifference(object):
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
 
+        uvec = self.system.vec['u']
+        start = end = 0
+        
         for src in self.outputs:
+            sz = uvec[src].size
+            end += sz
+            x[start:end] = uvec[src]
+            start += sz
 
-            # Speedhack: getting an indexed var in OpenMDAO is slow
-            if '[' in src:
-                basekey, _, index = src.partition('[')
-                base = self.scope.get(basekey)
-                exec("src_val = base[%s" % index)
-            else:
-                src_val = self.scope.get(src)
+    def restore_outputs(self, x):
+        """Put saved output values back in uvec"""
 
-            src_val = flattened_value(src, src_val)
-            i1, i2 = self.out_bounds[src]
-            if len(src_val) > 1:
-                x[i1:i2] = src_val.copy()
-            else:
-                x[i1:i2] = src_val[0]
+        uvec = self.system.vec['u']
+        start = end = 0
+        
+        for src in self.outputs:
+            sz = uvec[src].size
+            end += sz
+            uvec[src] = x[start:end]
+            start += sz
 
     def set_value(self, srcs, val, index, undo_complex=False):
         """Set a value in the model"""

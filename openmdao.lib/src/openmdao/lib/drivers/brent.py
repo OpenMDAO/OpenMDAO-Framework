@@ -5,7 +5,6 @@ Solver based on scipy.optimize.brentq
 from scipy.optimize import brentq
 
 from openmdao.main.driver import Driver
-from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
 from openmdao.main.hasparameters import HasParameters
@@ -55,7 +54,6 @@ class Brent(Driver):
 
     def __init__(self):
         super(Brent, self).__init__()
-        self.workflow = CyclicWorkflow()
         self.xstar = None
 
     def _eval(self, x):

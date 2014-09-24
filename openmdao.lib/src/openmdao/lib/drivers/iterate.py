@@ -10,13 +10,14 @@ if not MPI:
     from numpy.linalg import norm
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.api import Driver, CyclicWorkflow
+from openmdao.main.driver import Driver
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
                                      ISolver, implements
+from networkx.algorithms.components import strongly_connected_components
 
 @add_delegate(HasParameters, HasEqConstraints, HasStopConditions)
 class FixedPointIterator(Driver):
@@ -41,7 +42,6 @@ class FixedPointIterator(Driver):
     def __init__(self):
         super(FixedPointIterator, self).__init__()
         self.current_iteration = 0
-        self.workflow = CyclicWorkflow()
         self.normval = 1.e99
         self.norm0 = 1.e99
 
@@ -75,8 +75,15 @@ class FixedPointIterator(Driver):
     def run_iteration(self):
         self.current_iteration += 1
         system = self.workflow._system
-        system.vec['u'].array += system.vec['f'].array[:]
-        system.run(self.workflow._iterbase())
+        uvec = system.vec['u']
+        fvec = system.vec['f']
+
+        cycle_vars = self.workflow._cycle_vars
+        for name in uvec.keys():
+            if name not in cycle_vars:
+                uvec[name] += fvec[name]
+
+        self.workflow.run(ffd_order=self.ffd_order)
 
     def continue_iteration(self):
         return not self.should_stop() and \
@@ -117,8 +124,9 @@ class FixedPointIterator(Driver):
 
         # Check to make sure we don't have a null problem.
         if n_dep == 0:
-            self.workflow._get_topsort()
-            if len(self.workflow._severed_edges) == 0:
+            cgraph = self.parent._depgraph.component_graph().subgraph([c.name for c in self.workflow])
+            strong = strongly_connected_components(cgraph)
+            if not ((strong and len(strong[0]) > 1) or self._get_param_constraint_pairs()):
                 msg = "FixedPointIterator requires a cyclic workflow, or a " \
                       "parameter/constraint pair."
                 self.raise_exception(msg, RuntimeError)
