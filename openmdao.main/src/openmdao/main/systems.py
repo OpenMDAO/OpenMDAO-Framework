@@ -5,6 +5,7 @@ from itertools import chain
 
 import numpy
 import networkx as nx
+from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
@@ -13,12 +14,14 @@ from openmdao.main.finite_difference import FiniteDifference
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
-                                     ISolver, IPseudoComp, IComponent
+                                     ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter, get_reduced_subgraph
+                                   collapse_nodes, simple_node_iter, get_reduced_subgraph, \
+                                   internal_nodes, reduced2component
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
+from openmdao.main.derivatives import applyJ, applyJT
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -108,6 +111,8 @@ def compound_setup_scatters(self):
 
 
 class System(object):
+    implements(ISystem)
+
     def __init__(self, scope, graph, nodes, name):
         self.name = str(name)
         self.scope = scope
@@ -320,6 +325,9 @@ class System(object):
         # variables
         return [a for a in self.variables.keys() if a in args]
 
+    def get(self, name):
+        return self.vec['u'][name]
+
     def list_inputs_and_states(self):
         """Returns names of input variables and states (not collapsed edges)
         from this System and all of its children.
@@ -392,6 +400,7 @@ class System(object):
         """
         if isinstance(names, basestring):
             names = [names]
+        uvec = self.scope._system.vec['u']
         var_sizes = self.scope._system.local_var_sizes
         varkeys = self.scope._system.vector_vars.keys()
         collnames = self.scope.name2collapsed
@@ -401,11 +410,14 @@ class System(object):
             if isinstance(name, tuple):
                 name = name[0]
 
-            idx = varkeys.index(collnames[name])
-            for proc in procs:
-                if var_sizes[proc, idx] > 0:
-                    size += var_sizes[proc, idx]
-                    break
+            if name in uvec:
+                size += uvec[name].size
+            else:
+                idx = varkeys.index(collnames[name])
+                for proc in procs:
+                    if var_sizes[proc, idx] > 0:
+                        size += var_sizes[proc, idx]
+                        break
 
         return size
 
@@ -539,39 +551,14 @@ class System(object):
         for i, (name, var) in enumerate(self.vector_vars.items()):
             self.local_var_sizes[rank, i] = var['size']
 
-        # FIXME: once we have distributed vars, identify them here and
-        # include them in distributed_vars list
-        #self.distributed_vars = set()
-
         # collect local var sizes from all of the processes in our comm
         # these sizes will be the same in all processes except in cases
         # where a variable belongs to a multiprocessor component.  In that
         # case, the part of the component that runs in a given process will
         # only have a slice of each of the component's variables.
-        #mpiprint("setup_sizes Allgather (var sizes) %s: %d" % (self.name,comm.size))
         if MPI:
             comm.Allgather(self.local_var_sizes[rank,:],
                            self.local_var_sizes)
-
-            ## now zero out the 'local' size for all vars from other ranks that
-            ## are not marked as distributed vars, so we avoid duplication of
-            ## those vars in the global vectors
-            #for ivar, name in enumerate(self.vector_vars):
-            #    if name not in self.distributed_vars:
-            #        # mysize = self.local_var_sizes[rank, ivar]
-            #        # if mysize > 0:
-            #        #     self.local_var_sizes[:, ivar] = 0
-            #        #     self.local_var_sizes[rank, ivar] = mysize
-            #        # else: # otherwise, find first non-zero one and zero out the rest
-            #        for rnk in range(self.mpi.comm.size):
-            #            if self.local_var_sizes[rnk, ivar] > 0:
-            #                if rnk+1 < self.mpi.comm.size:
-            #                    self.local_var_sizes[rnk+1:, ivar] = 0
-            #                break
-            #
-            #        self.vector_vars[name]['size'] = self.local_var_sizes[rank, ivar]
-
-            #mpiprint("local_var_sizes = %s" % self.local_var_sizes)
 
         # create a (1 x nproc) vector for the sizes of all of our
         # local inputs
@@ -843,12 +830,7 @@ class System(object):
         self.initialize_gradient_solver()
 
         if mode == 'fd':
-            self.vec['df'].array[:] = 0.0
-            self.vec['du'].array[:] = 0.0
-            if self.fd_solver is None:
-                self.fd_solver = FiniteDifference(self, inputs, outputs,
-                                                  return_format)
-            return self.fd_solver.solve(iterbase=iterbase)
+            return self.solve_fd(inputs, outputs, iterbase, return_format)
         else:
             self.linearize()
             self.vec['df'].array[:] = 0.0
@@ -858,6 +840,14 @@ class System(object):
         self.sol_vec.array[:] = 0.0
         return J
 
+    def solve_fd(self, inputs, outputs, iterbase='', return_format='array'):
+        self.vec['df'].array[:] = 0.0
+        self.vec['du'].array[:] = 0.0
+        if self.fd_solver is None:
+            self.fd_solver = FiniteDifference(self, inputs, outputs,
+                                              return_format)
+        return self.fd_solver.solve(iterbase=iterbase)
+        
     def calc_newton_direction(self, options=None, iterbase=''):
         """ Solves for the new state in Newton's method and leaves it in the
         df vector."""
@@ -963,6 +953,8 @@ class SimpleSystem(System):
                 self._comp = comp
                 nodes = comp.get_full_nodeset()
                 cpus = comp.get_req_cpus()
+            else:
+                comp = None
 
         super(SimpleSystem, self).__init__(scope, graph, nodes, name)
 
@@ -971,6 +963,9 @@ class SimpleSystem(System):
         self.J = None
         self._mapped_resids = {}
 
+    def inner(self):
+        return self._comp
+    
     def stop(self):
         self._comp.stop()
 
@@ -1063,7 +1058,6 @@ class SimpleSystem(System):
         other_conns = [n for n in self._owned_args if n not in flat_args]
 
         if MPI or scatter_conns or other_conns:
-            #mpiprint("%s simple scatter %s to %s" % (self.name, src_idxs, dest_idxs))
             self.scatter_full = DataTransfer(self, src_idxs, dest_idxs,
                                              scatter_conns, other_conns)
 
@@ -1121,6 +1115,7 @@ class SimpleSystem(System):
                 vec['du'][var][:] += vec['df'][var][:]
 
             self.scatter('du', 'dp')
+
 
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
@@ -1270,6 +1265,11 @@ class AssemblySystem(SimpleSystem):
             sub_name = item.partition('.')[2:][0]
             self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
 
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this System.
+        """
+        return True
 
 class CompoundSystem(System):
     """A System that has subsystems."""
@@ -1509,6 +1509,148 @@ class ParallelSystem(CompoundSystem):
             return []
 
 
+class OpaqueSystem(CompoundSystem):
+    """A system with an external interface like that
+    of a simple system, but encapsulating a compound
+    system.
+    """
+    def __init__(self, scope, graph, subg, name):
+        # for now, just create an internal SerialSystem
+        super(OpaqueSystem, self).__init__(scope, graph, subg, name)
+
+        graph = graph.subgraph(graph.nodes_iter())
+        
+        nodes = internal_nodes(graph, subg.nodes())
+        
+        # need to create invar and outvar nodes here else inputs won't exist in
+        # internal vectors
+        for node in self._in_nodes:
+            graph.add_node(node[0], comp='var')
+            graph.add_edge(node[0], node)
+            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+            nodes.add(node)
+            nodes.add(node[0])
+            
+        for node in self._out_nodes:
+            graph.add_node(node[0], comp='var')
+            graph.add_edge(node, node[0])
+            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+            nodes.add(node)
+            nodes.add(node[0])
+              
+        graph = graph.subgraph(nodes)
+        
+        self._inner_system = SerialSystem(scope, graph, 
+                                          reduced2component(graph))
+
+        self._inner_system._provideJ_bounds = None
+
+    def inner(self):
+        return self._inner_system
+    
+    def setup_communicators(self, comm):
+        self.mpi.comm = comm
+        self._inner_system.setup_communicators(comm)
+
+    def setup_variables(self, resid_state_map=None):
+        super(OpaqueSystem, self).setup_variables(resid_state_map)
+        self._inner_system.setup_variables()
+
+    def setup_sizes(self):
+        super(OpaqueSystem, self).setup_sizes()
+        self._inner_system.setup_sizes()
+
+    def setup_vectors(self, arrays=None, state_resid_map=None):
+        super(OpaqueSystem, self).setup_vectors(arrays)
+        # internal system will create new vectors
+        self._inner_system.setup_vectors(None)
+
+    def setup_scatters(self):
+        super(OpaqueSystem, self).setup_scatters()
+        self._inner_system.setup_scatters()
+
+    def set_options(self, mode, options):
+        """ Sets all user-configurable options for the inner_system and its
+        children. """
+        super(OpaqueSystem, self).set_options(mode, options)
+        self._inner_system.set_options(mode, options)
+        
+    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+        self_u = self.vec['u']
+        inner_u = self._inner_system.vec['u']
+        
+        inner_u.set_from_scope(self.scope, self._inner_system.list_inputs_and_states())
+        
+        self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
+
+        for item in self.list_outputs_and_residuals():
+            self_u[item] = inner_u[item]
+
+    def linearize(self):
+        """Do a finite difference on the inner system to calculate a 
+        Jacobian.
+        """
+        inner_system = self._inner_system
+        inner_system.linearize()
+
+        if self.mode == 'forward':
+            arg = 'du'
+            res = 'df'
+        elif self.mode == 'adjoint':
+            arg = 'df'
+            res = 'du'
+
+        for item in self.list_inputs_and_states() + self.list_outputs_and_residuals():
+            var = self.scope._system.vec[arg][item]
+            inner_system.vec[arg][item] = var
+
+            var = self.scope._system.vec[res][item]
+            inner_system.vec[res][item] = var
+
+        inner_system.J = inner_system.solve_fd(inner_system.list_inputs_and_states(), 
+                                               inner_system.list_outputs_and_residuals())
+        
+        self.J = inner_system.J
+        
+    def applyJ(self):
+        vec = self.vec
+    
+        # Forward Mode
+        if self.mode == 'forward':
+    
+            self.scatter('du', 'dp')
+    
+            applyJ(self)
+            vec['df'].array[:] *= -1.0
+    
+            for var in self.list_outputs():
+                vec['df'][var][:] += vec['du'][var][:]
+    
+        # Adjoint Mode
+        elif self.mode == 'adjoint':
+    
+            # Sign on the local Jacobian needs to be -1 before
+            # we add in the fake residual. Since we can't modify
+            # the 'du' vector at this point without stomping on the
+            # previous component's contributions, we can multiply
+            # our local 'arg' by -1, and then revert it afterwards.
+            vec['df'].array[:] *= -1.0
+            applyJT(self)
+            vec['df'].array[:] *= -1.0
+    
+            for var in self.list_outputs():
+                vec['du'][var][:] += vec['df'][var][:]
+    
+            self.scatter('du', 'dp')
+
+    def simple_subsystems(self):
+        for sub in self._inner_system.simple_subsystems():
+            yield sub
+
+    def set_ordering(self, ordering):
+        self._inner_system.set_ordering(ordering)
+
+
 class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
@@ -1687,6 +1829,8 @@ def _create_simple_sys(scope, graph, name):
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
         sub = OutVarSystem(scope, graph, name)
+    elif graph.node[name].get('comp') == 'var':
+        sub = VarSystem(scope, graph, name)
     else:
         raise RuntimeError("don't know how to create a System for '%s'" % name)
 
@@ -1726,7 +1870,7 @@ def partition_subsystems(scope, graph, cgraph):
                     subg = cgraph.subgraph(branch)
                     partition_subsystems(scope, graph, subg)
                     system=SerialSystem(scope, graph, subg, str(branch))
-                    update_system_node(cgraph, system, branch)
+                    collapse_to_system_node(cgraph, system, branch)
 
                     gcopy.remove_nodes_from(branch)
                 else: # single comp system
@@ -1737,7 +1881,7 @@ def partition_subsystems(scope, graph, cgraph):
             to_remove.extend(parallel_group)
             subg = cgraph.subgraph(parallel_group)
             system=ParallelSystem(scope, graph, subg, str(parallel_group))
-            update_system_node(cgraph, system, parallel_group)
+            collapse_to_system_node(cgraph, system, parallel_group)
 
         elif len(zero_in_nodes) == 1:  # serial
             gcopy.remove_nodes_from(zero_in_nodes)
@@ -1749,7 +1893,7 @@ def partition_subsystems(scope, graph, cgraph):
 
     return cgraph
 
-def update_system_node(G, system, name):
+def collapse_to_system_node(G, system, name):
     G.add_node(name, system=system)
     collapse_nodes(G, name, name)
     return G

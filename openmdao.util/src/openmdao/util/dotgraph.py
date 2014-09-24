@@ -5,7 +5,7 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.depgraph import DependencyGraph, is_var_node
+from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \

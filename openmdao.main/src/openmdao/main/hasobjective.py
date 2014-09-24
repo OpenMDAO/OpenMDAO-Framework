@@ -4,6 +4,7 @@ import weakref
 
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.pseudocomp import PseudoComponent, _remove_spaces
+from openmdao.main.interfaces import IDriver
 
 
 class Objective(ConnectedExprEvaluator):
@@ -122,11 +123,12 @@ class HasObjectives(object):
 
         name = expr if name is None else name
 
-        expreval.activate(self.parent)
+        if IDriver.providedBy(self.parent):
+            expreval.activate(self.parent)
+            self.parent.config_changed()
 
         self._objectives[name] = expreval
 
-        self.parent.config_changed()
 
     def remove_objective(self, expr):
         """Removes the specified objective expression. Spaces within

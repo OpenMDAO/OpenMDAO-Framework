@@ -3184,9 +3184,7 @@ class TestMultiDriver(unittest.TestCase):
         top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
 
         top.run()
-        #J = top.inner_driver.workflow.calc_gradient()
 
-        #print top.inner_driver.list_objective_targets()
         self.assertEqual( set(top._system.vec['u'].keys()),
                           set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
                                ('_pseudo_0.out0', ('_pseudo_0.out0',)),
@@ -3215,6 +3213,7 @@ class TestMultiDriver(unittest.TestCase):
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
+        
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):
@@ -3224,12 +3223,11 @@ class TestMultiDriver(unittest.TestCase):
 
         sp = set_as_top(UnitScalableProblem())
         sp.architecture = CO()
-        sp.check_config()
 
         # Don't run it forever
         sp.driver.maxiter = 1
-        sp.local_opt_d0.maxiter = 1
-        sp.local_opt_d1.maxiter = 1
+        #sp.local_opt_d0.maxiter = 1
+        #sp.local_opt_d1.maxiter = 1
 
         # Make sure it runs.
         sp.run()

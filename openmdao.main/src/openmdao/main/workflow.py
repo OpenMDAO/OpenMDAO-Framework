@@ -15,10 +15,12 @@ from networkx.algorithms.components import strongly_connected_components
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
+                                  OpaqueSystem, \
                                   partition_subsystems, ParamSystem, \
-                                  get_comm_if_active
+                                  get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   simple_node_iter, get_nondiff_groups
+                                   simple_node_iter, get_nondiff_groups, \
+                                   internal_nodes, collapse_nodes
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree
 
@@ -222,6 +224,9 @@ class Workflow(object):
 
         parent = self.parent
         reset = False
+        
+        if not self.scope._derivs_required:
+            reset = True
 
         # TODO - Support automatic determination of mode
 
@@ -761,13 +766,15 @@ class Workflow(object):
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
 
-        # collapse non-differentiable system groups into
-        # opaque systems
-        # for group in get_nondiff_groups(cgraph):
-        #     system = OpaqueSystem(scope, reduced, 
-        #                           cgraph.subgraph(group),
-        #                           str(tuple(group)))
-        #     update_system_node(cgraph, system, group)
+        if self.scope._derivs_required:
+            # collapse non-differentiable system groups into
+            # opaque systems
+            for group in get_nondiff_groups(cgraph):
+                system = OpaqueSystem(scope, reduced, 
+                                      cgraph.subgraph(group),
+                                      str(tuple(group)))
+                collapse_to_system_node(cgraph, system, tuple(group))
+                collapse_nodes(reduced, tuple(group), internal_nodes(reduced, group))
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)

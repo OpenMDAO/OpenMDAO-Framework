@@ -815,18 +815,7 @@ class ExprEvaluator(object):
         _local_force_ = force
         if self._assignment_code is None:
             _, self._assignment_code = self._parse_set()
-        exec(self._assignment_code, _expr_dict, locals())
-
-        # # also set the value into the 'u' vector if it's there
-        # # FIXME: take another look at this when we optimize the data
-        # #        passing process between the VecWrappers and the scope
-        # if tovector and hasattr(scope, 'get_system'):
-        #     system = scope.get_system()
-        #     if system is not None:
-        #         uvec = system.vec.get('u')
-        #         if uvec and self.text in uvec:
-        #             uvec[self.text][:] = flattened_value(self.text, val)
-        
+        exec(self._assignment_code, _expr_dict, locals())        
 
     def get_metadata(self, metaname=None, scope=None):
         """Return the specified piece of metadata if metaname is provided.

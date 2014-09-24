@@ -132,6 +132,9 @@ class Driver(Component):
         if newwf is not None:
             newwf.parent = self
 
+    def requires_derivs(self):
+        return False
+
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent

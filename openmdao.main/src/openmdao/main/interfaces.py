@@ -272,6 +272,9 @@ class IDriver(IComponent):
             driver's workflow; recurse on nested drivers.
         """
 
+    def requires_derivs(self):
+        """ Returns True if this Driver requires derivatives. """
+
 
 class ISolver(IDriver):
     """An interface for drivers that are solvers.
@@ -477,41 +480,6 @@ class IHasCouplingVars(Interface):
 
     def clear_coupling_vars(self):
         """removes all coupling variables"""
-
-#class IHasGlobalDesVars(Interface):
-    #"""Interface for managing global design variables in assemblies
-
-    #parent: Assembly
-        #containing assembly where the HasGlobalDesVars lives.
-    #"""
-
-    #def add_global_des_var(name,targets,low,high,scalar=1.0,adder=0.0):
-        #"""adds a global design variable to the assembly
-
-        #name: str
-            #name given to the global design variable
-        #targets: list of str
-            #names of the component variables that this global design variable should link to
-        #low: float
-            #minimum allowed value for the global design variable
-        #high: float
-            #maximum allowed value for the global design variable
-        #scalar: float (optional)
-            #default: 1.0. scalar value which is multiplied by the value of the global design
-            #variable before setting target values
-        #adder: float (optiona)
-            #default: 0.0. amount which is added to the value of the global
-            #design variable before setting target values
-        #"""
-
-    #def remove_global_des_var(name):
-        #"""removed the global design variable from the assembly"""
-
-    #def clear_global_des_vars():
-        #"""removes all global design variables from the assembly"""
-
-    #def list_global_des_vars():
-        #"""returns a list of all the names of global design variable objects in the assembly"""
 
 
 class ISurrogate(Interface):
@@ -909,6 +877,8 @@ class IStaticGeometry(Interface):
 
         """
 
+class ISystem(Interface):
+    pass
 
 def obj_has_interface(obj, *ifaces):
     """Returns True if the specified object implements one of the interfaces

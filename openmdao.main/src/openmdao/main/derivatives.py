@@ -1,11 +1,12 @@
 """ Some functions and objects that support the component-side derivative API.
 """
+from numpy import zeros, vstack, hstack
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.util.graph import list_deriv_vars
 from openmdao.main.mpiwrap import mpiprint
-from numpy import zeros, vstack, hstack
+from openmdao.main.interfaces import ISystem
+from openmdao.util.graph import list_deriv_vars
 
 # pylint: disable=C0103
 
@@ -82,10 +83,15 @@ def applyJ(system):
     """
 
     J = system.J
-    obj = system._comp
+    obj = system.inner()
+    
+    is_sys = ISystem.providedBy(obj)   
+
     arg = {}
     for item in system.list_inputs_and_states():
-        key = item.partition('.')[-1]
+        key = item
+        if not is_sys:
+            key = key.partition('.')[-1]
         # FIXME: this is a hack. Sometimes the item we're looking
         # for can be found in the parent dp vector, but not always,
         # so we have to find it in another vector...  I guess it's
@@ -101,7 +107,9 @@ def applyJ(system):
 
     result = {}
     for item in system.list_outputs_and_residuals():
-        key = item.partition('.')[-1]
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
 
     # Bail if this component is not connected in the graph
@@ -152,7 +160,11 @@ def applyJ(system):
         #print 'applyJ', obj.name, arg, result
         return
 
-    input_keys, output_keys = list_deriv_vars(obj)
+    if is_sys:
+        input_keys = system.list_inputs_and_states()
+        output_keys = system.list_outputs_and_residuals()
+    else:
+        input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -205,15 +217,21 @@ def applyJT(system):
     """
 
     J = system.J
-    obj = system._comp
+    obj = system.inner()
+    is_sys = ISystem.providedBy(obj)
+    
     arg = {}
     for item in system.list_outputs_and_residuals():
-        key = item.partition('.')[-1]
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         arg[key] = system.sol_vec[item]
 
     result = {}
     for item in system.list_inputs_and_states():
-        key = item.partition('.')[-1]
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         # FIXME: same hack as in applyJ
         if item in system.rhs_vec:
             result[key] = system.rhs_vec[item]
@@ -271,7 +289,11 @@ def applyJT(system):
         #print 'applyJT', obj.name, arg, result
         return
 
-    input_keys, output_keys = list_deriv_vars(obj)
+    if is_sys:
+        input_keys = system.list_inputs_and_states()
+        output_keys = system.list_outputs_and_residuals()
+    else:
+        input_keys, output_keys = list_deriv_vars(obj)
 
     #mpiprint( 'J', input_keys, output_keys, J)
 

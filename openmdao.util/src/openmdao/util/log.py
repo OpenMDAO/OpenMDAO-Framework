@@ -40,6 +40,7 @@ __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
 import atexit
 import logging.config
 import logging.handlers
+import os
 import os.path
 import select
 import socket
@@ -74,17 +75,14 @@ logging.addLevelName(LOG_DEBUG3, 'D3')
 
 def _configure_root():
     """ Configure root logger with a rotating file handler. """
-    mode = 'a'  # Avoid mangling by subprocesses.
-    filename = 'openmdao_log.txt'
+
+    filename = os.environ.get('OPENMDAO_LOGFILE', 'openmdao_log.txt')
     # Ensure we can write to the log file.
     try:
-        tmplog = open(filename, mode)
+        with open(filename, 'w'):
+            pass
     except IOError:
         filename = 'openmdao_log_%d.txt' % os.getpid()
-    else:
-        tmplog.write('\n\n*********** BEGIN NEW LOG ************** (%s)'
-                     ' PID=%s\n\n' % (datetime.datetime.now(), os.getpid()))
-        tmplog.close()
 
     msg_fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
     date_fmt = '%b %d %H:%M:%S'

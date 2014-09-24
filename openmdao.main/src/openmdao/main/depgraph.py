@@ -1464,11 +1464,26 @@ def collapse_driver(g, driver, excludes=()):
     system node.
     """
     nodes = driver.get_full_nodeset()
+    nodes.remove(driver.name)
     nodes = [n for n in nodes
                 if n not in excludes]
 
     return collapse_nodes(g, driver.name, nodes)
         
+def internal_nodes(g, comps):
+    """Returns a set of nodes containing the given component
+    nodes, plus any variable nodes between them.
+    """
+    nodes = set(comps)
+    for comp1 in comps:
+        for comp2 in comps:
+            if comp1 != comp2:
+                outs1 = set([v for u,v in g.edges_iter(comp1)])
+                ins2 = set([u for u,v in g.in_edges_iter(comp2)])
+                nodes.update(outs1.intersection(ins2))
+
+    return nodes
+
 def transitive_closure(g):
     """Return a set of edge tuples where the
     existence of a tuple (u,v) means that v depends 

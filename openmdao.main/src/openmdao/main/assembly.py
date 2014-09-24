@@ -46,7 +46,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
                                    map_collapsed_nodes, simple_node_iter, \
-                                   reduced2component, collapse_nodes
+                                   reduced2component, collapse_driver
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars
@@ -149,6 +149,7 @@ class Assembly(Component):
 
         self._pseudo_count = 0  # counter for naming pseudocomps
         self._pre_driver = None
+        self._derivs_required = False
 
         # data dependency graph. Includes edges for data
         # connections as well as for all driver parameters and
@@ -1383,16 +1384,10 @@ class Assembly(Component):
             if 'comp' in data:
                 data['system'] = _create_simple_sys(self, rgraph, node)
 
-        # now set up subsystems of our driver and assembly comps
-        for node, data in rgraph.nodes_iter(data=True):
-            if 'comp' in data:
-                comp = getattr(self, node, None)
-                if IComponent.providedBy(comp):
-                    added.update(comp.setup_systems())
+        added.update(self._top_driver.setup_systems())
                 
         cgraph = reduced2component(rgraph)
-        iterset = set([c.name for c in self._top_driver.iteration_set()])
-        collapse_nodes(cgraph, self._top_driver.name, iterset)
+        collapse_driver(cgraph, self._top_driver)
         
         # remove any system nodes in the top level graph that duplicate
         # nodes already found in subsystems.
@@ -1446,7 +1441,6 @@ class Assembly(Component):
         for node, data in self._reduced_graph.nodes_iter(data=True):
             if 'comp' not in data:
                 src = node[0]
-                scomp = src.split('.',1)[0] if '.' in src else None
                 sval, idx = get_val_and_index(self, src)
                 if isinstance(sval, ndarray):
                     dests = node[1]
@@ -1489,11 +1483,15 @@ class Assembly(Component):
 
         keep = set(self._get_all_states())
 
+        if self.parent is not None:
+            self._derivs_required = self.parent._derivs_required
+        else:
+            self._derivs_required = False
+
         if inputs is None and outputs is None:
-            calc_relevant = False
             dgraph = self._depgraph
         else:
-            calc_relevant = True
+            self._derivs_required = True
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
@@ -1523,14 +1521,16 @@ class Assembly(Component):
 
         self.name2collapsed = map_collapsed_nodes(collapsed_graph)
 
-        if calc_relevant: # add ParamSystems for inputs and OutVarSystems for outputs
-            for param in inputs:
-                collapsed_graph.add_node(param, comp='param')
-                collapsed_graph.add_edge(param, self.name2collapsed[param])
-            for out in outputs:
-                if collapsed_graph.out_degree(self.name2collapsed[out]) == 0:
-                    collapsed_graph.add_node(out, comp='outvar')
-                    collapsed_graph.add_edge(self.name2collapsed[out], out)
+        if self._derivs_required: # add ParamSystems for inputs and OutVarSystems for outputs
+            if inputs:
+                for param in inputs:
+                    collapsed_graph.add_node(param, comp='param')
+                    collapsed_graph.add_edge(param, self.name2collapsed[param])
+            if outputs:
+                for out in outputs:
+                    if collapsed_graph.out_degree(self.name2collapsed[out]) == 0:
+                        collapsed_graph.add_node(out, comp='outvar')
+                        collapsed_graph.add_edge(self.name2collapsed[out], out)
 
         # add InVarSystems and OutVarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
@@ -1554,6 +1554,8 @@ class Assembly(Component):
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():
+            if has_interface(comp, IDriver) and comp.requires_derivs():
+                self._derivs_required = True
             comp.setup_graph()
 
     def _add_driver_subvar_conns(self, depgraph, collapsed):

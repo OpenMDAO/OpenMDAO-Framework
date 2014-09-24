@@ -93,3 +93,5 @@ class SensitivityDriver(Driver):
             msg = "Missing outputs for gradient calculation"
             self.raise_exception(msg, ValueError)
 
+    def requires_derivs(self):
+        return True

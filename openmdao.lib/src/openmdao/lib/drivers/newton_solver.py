@@ -110,3 +110,6 @@ class NewtonSolver(Driver):
             alpha = self.alpha
 
         print self.name, "converged"
+
+    def requires_derivs(self):
+        return True

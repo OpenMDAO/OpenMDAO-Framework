@@ -17,7 +17,7 @@ class FiniteDifference(object):
 
     def __init__(self, system, inputs, outputs, return_format='array'):
         """ Performs finite difference on the components in a given
-        pseudo_assembly. """
+        System. """
 
         self.inputs = inputs
         self.outputs = outputs
@@ -26,7 +26,6 @@ class FiniteDifference(object):
         self.system = system
         self.scope = system.scope
 
-        #driver = self.pa.wflow.parent
         options = system.options
 
         self.fd_step = options.fd_step*ones((len(self.inputs)))
