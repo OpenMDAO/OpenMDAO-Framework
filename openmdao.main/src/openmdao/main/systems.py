@@ -893,9 +893,9 @@ class System(object):
         self.initialize_gradient_solver()
         self.linearize()
 
-        print 'Newton Direction', self.vec['f'].array[:]
+        #print 'Newton Direction', self.vec['f'].array[:]
         self.vec['df'].array[:] = -self.ln_solver.solve(self.vec['f'].array)
-        print 'Newton Solution', self.vec['df'].array[:]
+        #print 'Newton Solution', self.vec['df'].array[:]
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting

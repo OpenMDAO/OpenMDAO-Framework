@@ -72,7 +72,7 @@ class NewtonSolver(Driver):
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
         print self.name, "Norm: ", f_norm, 0
-        print uvec.array, fvec.array
+        #print uvec.array, fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -82,15 +82,15 @@ class NewtonSolver(Driver):
             system.calc_newton_direction(options=options)
             #print "new direction", dfvec.array
 
-            print "LS 1", uvec.array, '+', dfvec.array
+            #print "LS 1", uvec.array, '+', dfvec.array
             uvec.array += alpha*dfvec.array
 
             # Just evaluate the model with the new points
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
-            print uvec.array, fvec.array
             print self.name, "Norm: ", f_norm, itercount+1
+            #print uvec.array, fvec.array
             itercount += 1
 
             ls_itercount = 0
@@ -100,7 +100,7 @@ class NewtonSolver(Driver):
                   f_norm > self.ls_atol and \
                   f_norm/f_norm0 > self.ls_rtol:
 
-                uvec.array += alpha*dfvec.array
+                uvec.array -= alpha*dfvec.array
                 alpha = alpha/2.0
                 uvec.array += alpha*dfvec.array
 
@@ -108,8 +108,8 @@ class NewtonSolver(Driver):
                 self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
                 f_norm = npnorm(fvec.array)
-                print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
-                print uvec.array, fvec.array
+                #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                #print uvec.array, fvec.array
                 ls_itercount += 1
 
             # Reset backtracking
