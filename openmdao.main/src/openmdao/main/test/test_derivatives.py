@@ -3200,7 +3200,7 @@ class TestMultiDriver(unittest.TestCase):
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
-        
+
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):

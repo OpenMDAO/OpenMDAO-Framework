@@ -84,8 +84,8 @@ def applyJ(system, variables):
 
     J = system.J
     obj = system.inner()
-    
-    is_sys = ISystem.providedBy(obj)   
+
+    is_sys = ISystem.providedBy(obj)
 
     arg = {}
     for item in system.list_states():
@@ -235,7 +235,7 @@ def applyJT(system, variables):
     J = system.J
     obj = system.inner()
     is_sys = ISystem.providedBy(obj)
-    
+
     arg = {}
 
     for item in system.list_outputs() + system.list_residuals():

@@ -81,7 +81,7 @@ class FixedPointIterator(Driver):
         cycle_vars = self.workflow._cycle_vars
         for name in uvec.keys():
             if name not in cycle_vars:
-                uvec[name] += fvec[name]
+                uvec[name] -= fvec[name]
 
         self.workflow.run(ffd_order=self.ffd_order)
 

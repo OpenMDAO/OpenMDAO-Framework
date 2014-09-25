@@ -1727,6 +1727,9 @@ class OpaqueSystem(CompoundSystem):
         super(OpaqueSystem, self).set_options(mode, options)
         self._inner_system.set_options(mode, options)
 
+    def pre_run(self):
+        self._inner_system.pre_run()
+
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         self_u = self.vec['u']
         inner_u = self._inner_system.vec['u']

@@ -64,9 +64,6 @@ class NewtonSolver(Driver):
         iterbase = self.workflow._iterbase()
 
         # perform an initial run
-        #self.pre_iteration()
-        #self.run_iteration()
-        #self.post_iteration()
         self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
         f_norm = norm(fvec.array)
