@@ -762,9 +762,9 @@ class Assembly(Component):
 
     def execute(self):
         """Runs driver and updates our boundary variables."""
-        # for system in self._system.local_subsystems():
-        #     system.pre_run()
-        self._system.vec['u'].set_from_scope(self)
+        for system in self._system.local_subsystems():
+            system.pre_run()
+        #self._system.vec['u'].set_from_scope(self)
         self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 

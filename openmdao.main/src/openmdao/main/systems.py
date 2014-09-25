@@ -189,6 +189,10 @@ class System(object):
         """
         return True
 
+    def pre_run(self):
+        """ Runs at assembly execution"""
+        pass
+
     def subsystems(self, local=False):
         if local:
             return self.local_subsystems()
@@ -1887,6 +1891,10 @@ class TransparentDriverSystem(SimpleSystem):
     def simple_subsystems(self):
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
+
+    def pre_run(self):
+        for s in self.local_subsystems():
+            s.pre_run()
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
