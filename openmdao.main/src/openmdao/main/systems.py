@@ -1888,6 +1888,12 @@ class TransparentDriverSystem(SimpleSystem):
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
+    def evaluate(self, iterbase, case_label='', case_uuid=None):
+        """ Evalutes a component's residuals without invoking its
+        internal solve (for implicit comps.)
+        """
+        self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
+
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
         self.vec['dp'].array[:] = 0.0
