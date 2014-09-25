@@ -108,7 +108,8 @@ class NewtonSolver(Driver):
                 self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
                 f_norm = npnorm(fvec.array)
-                #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                print uvec.array, fvec.array
                 ls_itercount += 1
 
             # Reset backtracking
