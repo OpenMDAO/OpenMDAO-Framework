@@ -1218,6 +1218,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
     def test_broadcast_graph(self):
 
         top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+
         equation = ['y = 2.0*x + 3.0*z']
         top.add('comp1', ExecComp(equation))
         top.add('comp2', ExecComp(equation))
