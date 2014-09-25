@@ -638,7 +638,7 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst), 
+                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst),
                                         sys.exc_info())
 
     def _connect(self, src, dest):
@@ -1385,16 +1385,16 @@ class Assembly(Component):
                 data['system'] = _create_simple_sys(self, rgraph, node)
 
         added.update(self._top_driver.setup_systems())
-                
+
         cgraph = reduced2component(rgraph)
         collapse_driver(cgraph, self._top_driver)
-        
+
         # remove any system nodes in the top level graph that duplicate
         # nodes already found in subsystems.
         for name in added:
             if name in cgraph:
                 cgraph.remove_node(name)
-        
+
         if len(cgraph) > 1:
             self._system = SerialSystem(self, rgraph, cgraph, '_inner_asm')
             self._system.set_ordering(nx.topological_sort(cgraph))
@@ -1406,7 +1406,7 @@ class Assembly(Component):
 
         # assemblies don't add systems to their parent
         # graph, so return an empty tuple
-        return ()  
+        return ()
 
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
@@ -1429,7 +1429,7 @@ class Assembly(Component):
 
         while sys_stack:
             system = sys_stack.pop()
-            loc_comps.extend([s.name for s in system.simple_subsystems() 
+            loc_comps.extend([s.name for s in system.simple_subsystems()
                                     if s._comp is not None])
             sys_stack.extend(system.local_subsystems())
 
@@ -1507,7 +1507,7 @@ class Assembly(Component):
                 outputs = list(simple_node_iter(outputs))
 
             dgraph = relevant_subgraph(self._depgraph,
-                                       inputs, outputs, 
+                                       inputs, outputs,
                                        keep)
             keep.update(inputs)
             keep.update(outputs)
@@ -1541,9 +1541,9 @@ class Assembly(Component):
                 elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
-                    
+
         #collapsed_graph = self._add_driver_subvar_conns(dgraph, collapsed_graph)
-                    
+
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
@@ -1570,11 +1570,11 @@ class Assembly(Component):
                     if preds:
                         collapsed.add_edge(preds[0], node)
         return collapsed
-        
+
     def _explode_vartrees(self, depgraph):
         """Given a depgraph, take all connected variable nodes corresponding
         to VariableTrees and replace them with a variable node for each
-        variable in the VariableTree. 
+        variable in the VariableTree.
         """
         conns = depgraph.list_connections()
         connvars = set([u for u,v in conns])
@@ -1585,7 +1585,7 @@ class Assembly(Component):
             obj = self.get(node)
             if isinstance(obj, VariableTree):
                 if '.' in node:
-                    allvars = ['.'.join((node.split('.',1)[0], v)) 
+                    allvars = ['.'.join((node.split('.',1)[0], v))
                                          for v in obj.list_all_vars()]
                 else:
                     allvars = obj.list_all_vars()
@@ -1601,7 +1601,7 @@ class Assembly(Component):
         for node, (vtree, allvars, ins, outs) in vtrees.items():
             for var in allvars:
                 depgraph.add_node(var, **depgraph.node[node])
-                
+
                 for u,v in ins:
                     if u in vtrees:
                         for uu in vtrees[u][1]:
@@ -1619,7 +1619,7 @@ class Assembly(Component):
 
         depgraph.remove_nodes_from(vtrees.keys())
 
-        return depgraph  
+        return depgraph
 
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):
@@ -1664,7 +1664,7 @@ class Assembly(Component):
                 mpiprint(traceback.format_exc())
             raise
         else:
-            self.post_setup()   
+            self.post_setup()
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):
