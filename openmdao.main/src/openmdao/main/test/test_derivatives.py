@@ -474,7 +474,7 @@ class GComp_noD(Component):
 class ABCDComp(Component):
 
     a = Float(1.0, iotype='in')
-    b = Float(1.0, iotype='in')
+    b = Float(1.0, iotype='in', deriv_ignore=True)
     c = Float(2.0, iotype='out')
     d = Float(0.0, iotype='out')
 
@@ -573,16 +573,16 @@ class Testcase_derivatives(unittest.TestCase):
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
-                " %d iterations for parameter '%s' at index %d",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.y', 1)
+                " %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to"
-                " converge after %d iterations for parameter '%s' at index %d",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.f_xy', 2)
+                " converge after %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
@@ -618,14 +618,14 @@ class Testcase_derivatives(unittest.TestCase):
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='forward')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient in '%s': gmres failed for parameter"
-                " '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.y', 1)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient in '%s': gmres failed for"
-                " parameter '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
@@ -905,6 +905,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
+        #top.driver.add_parameter('comp1.x', low=-100, high=100)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -2625,7 +2626,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.add_constraint('dis2.miss_out < 24.0')
 
         self.top.run()
-
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:

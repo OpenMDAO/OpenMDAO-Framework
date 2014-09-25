@@ -10,7 +10,7 @@ from zope.interface import implements
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
 from openmdao.main.exceptions import RunStopped, NoFlatError
-from openmdao.main.finite_difference import FiniteDifference
+from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
@@ -135,7 +135,8 @@ class System(object):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
 
-        if hasattr(self, '_comp') and IImplicitComponent.providedBy(self._comp):
+        if hasattr(self, '_comp') and \
+           IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self.name,s))
                                   for s in self._comp.list_states()])
         else:
