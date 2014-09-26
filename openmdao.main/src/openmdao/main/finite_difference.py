@@ -283,23 +283,11 @@ class FiniteDifference(object):
 
         uvec = self.system.vec['u']
         start = end = 0
-        
+
         for src in self.outputs:
             sz = uvec[src].size
             end += sz
             x[start:end] = uvec[src]
-            start += sz
-
-    def restore_outputs(self, x):
-        """Put saved output values back in uvec"""
-
-        uvec = self.system.vec['u']
-        start = end = 0
-        
-        for src in self.outputs:
-            sz = uvec[src].size
-            end += sz
-            uvec[src] = x[start:end]
             start += sz
 
     def set_value(self, srcs, val, index, undo_complex=False):
@@ -348,16 +336,17 @@ class DirectionalFD(object):
     """ Helper object for performing a finite difference in a single direction.
     """
 
-    def __init__(self, pa):
+    def __init__(self, system, inputs, outputs):
         """ Performs finite difference on the components in a given
         pseudo_assembly. """
 
-        self.inputs = pa.inputs
-        self.outputs = pa.outputs
+        self.inputs = inputs
+        self.outputs = outputs
         self.in_bounds = {}
         self.out_bounds = {}
-        self.pa = pa
-        self.scope = pa.wflow.scope
+
+        self.system = system
+        self.scope = system.scope
 
         in_size = 0
         for srcs in self.inputs:
@@ -388,9 +377,12 @@ class DirectionalFD(object):
         """Return Jacobian of all outputs with respect to a given direction in
         the input space."""
 
-        self.get_outputs(self.y_base)
+        iterbase = 'fd-' + iterbase
 
-        options = self.pa.wflow.parent.gradient_options
+        self.system.vec['u'].set_to_array(self.y_base,
+                                          self.outputs)
+
+        options = self.system.options
         fd_step = options.fd_step
         form = options.fd_form
 
@@ -402,7 +394,7 @@ class DirectionalFD(object):
             # Step
             self.set_value(fd_step, arg)
 
-            self.pa.run(ffd_order=1)
+            self.system.run(iterbase, ffd_order=1)
             self.get_outputs(self.y)
 
             # Forward difference
@@ -419,7 +411,7 @@ class DirectionalFD(object):
             # Step
             self.set_value(-fd_step, arg)
 
-            self.pa.run(ffd_order=1)
+            self.system.run(iterbase, ffd_order=1)
             self.get_outputs(self.y)
 
             # Backward difference
@@ -436,13 +428,13 @@ class DirectionalFD(object):
             # Forward Step
             self.set_value(fd_step, arg)
 
-            self.pa.run(ffd_order=1)
+            self.system.run(iterbase, ffd_order=1)
             self.get_outputs(self.y)
 
             # Backward Step
             self.set_value(-2.0*fd_step, arg)
 
-            self.pa.run(ffd_order=1)
+            self.system.run(iterbase, ffd_order=1)
             self.get_outputs(self.y2)
 
             # Central difference
@@ -462,7 +454,7 @@ class DirectionalFD(object):
             # Step
             self.set_value(complex_step, arg)
 
-            self.pa.run(ffd_order=1)
+            self.system.run(iterbase, ffd_order=1)
             self.get_outputs(yc)
 
             # Forward difference
@@ -471,126 +463,39 @@ class DirectionalFD(object):
             # Undo step
             self.set_value(-fd_step, arg, undo_complex=True)
 
-        # Return outputs to a clean state.
-        for j, src in enumerate(self.outputs):
-            i1, i2 = self.out_bounds[src]
-            old_val = self.scope.get(src)
-
-            # Put answer into the right spot in result.
-            key = self.pa.mapped_outputs[j]
-
-            # This happens if an array is connected in full and in slice.
-            # Only need to handle it in full.
-            if key not in result:
-                continue
-
-            if isinstance(old_val, (float, complex)):
-                new_val = float(self.y_base[i1:i2])
-                result[key] += mv_prod[i1:i2]
-            elif isinstance(old_val, ndarray):
-                shape = old_val.shape
-                if len(shape) > 1:
-                    new_val = self.y_base[i1:i2]
-                    new_val = new_val.reshape(shape)
-                    result[key] += mv_prod[i1:i2].reshape(shape)
-                else:
-                    result[key] += mv_prod[i1:i2]
-                    new_val = self.y_base[i1:i2]
-            elif has_interface(old_val, IVariableTree):
-                new_val = old_val.copy()
-                self.pa.wflow._update(src, new_val, self.y_base[i1:i2])
-                result[key] += mv_prod[i1:i2]
-            else:
-                continue
-
-            src, _, idx = src.partition('[')
-            if idx:
-                old_val = self.scope.get(src)
-                if isinstance(new_val, ndarray):
-                    exec('old_val[%s = new_val.copy()' % idx)
-                else:
-                    exec('old_val[%s = new_val' % idx)
-                self.scope.set(src, old_val, force=True)
-            else:
-                if isinstance(new_val, ndarray):
-                    self.scope.set(src, new_val.copy(), force=True)
-                else:
-                    self.scope.set(src, new_val, force=True)
+        # Restore final inputs/outputs.
+        self.system.vec['u'].set_from_array(self.y_base, self.outputs)
+        self.system.vec['u'].set_to_scope(self.scope)
 
         #print mv_prod, arg, result
 
     def set_value(self, fdstep, arg, undo_complex=False):
         """Set a value in the model"""
 
-        for j, src_tuple in enumerate(self.inputs):
+        for j, srcs in enumerate(self.inputs):
 
             # Support for Parameter Groups:
-            if isinstance(src_tuple, basestring):
-                src_tuple = (src_tuple,)
+            if isinstance(srcs, basestring):
+                srcs = (srcs,)
 
-            i1, i2 = self.in_bounds[src_tuple[0]]
+            for src in srcs:
+                if src in self.system.vec['u']:
+                    vec = self.system.vec['u'][src]
 
-            # For keeping track of arrays that share the same memory.
-            array_base_val = None
-            index_base_val = None
-
-            key = self.pa.mapped_inputs[j]
-            if not isinstance(key, basestring):
-                key = key[0]
-
-            direction = arg[key]*fdstep
-
-            if i2-i1 == 1:
-                direction = direction[0]
-
-            for src in src_tuple:
-
-                comp_name, _, var_name = src.partition('.')
-                comp = self.scope.get(comp_name)
-
-                # Indexed array
-                src, _, idx = src.partition('[')
-                if idx:
-                    old_val = self.scope.get(src)
-                    if old_val is not array_base_val or \
-                       idx != index_base_val:
-                        exec('old_val[%s += direction' % idx)
-                        array_base_val = old_val
-                        index_base_val = idx
-
-                    # In-place array editing doesn't activate callback, so we
-                    # must do it manually.
-                    if var_name:
-                        base = self.scope._depgraph.base_var(src)
-                        comp._input_updated(base.split('.')[-1],
-                                            src.split('[')[0].partition('.')[2])
-                    else:
-                        self.scope._input_updated(comp_name.split('[')[0])
-
-                # Whole Variable
-                else:
-                    old_val = self.scope.get(src)
                     if undo_complex is True:
-                        self.scope.set(src, (old_val+direction).real, force=True)
+                        vec[index] += val.real()
                     else:
-                        self.scope.set(src, old_val+direction, force=True)
+                        vec[index] += val
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
 
+        uvec = self.system.vec['u']
+        start = end = 0
+
         for src in self.outputs:
+            sz = uvec[src].size
+            end += sz
+            x[start:end] = uvec[src]
+            start += sz
 
-            # Speedhack: getting an indexed var in OpenMDAO is slow
-            if '[' in src:
-                basekey, _, index = src.partition('[')
-                base = self.scope.get(basekey)
-                exec("src_val = base[%s" % index)
-            else:
-                src_val = self.scope.get(src)
-
-            src_val = flattened_value(src, src_val)
-            i1, i2 = self.out_bounds[src]
-            if len(src_val) > 1:
-                x[i1:i2] = src_val.copy()
-            else:
-                x[i1:i2] = src_val[0]

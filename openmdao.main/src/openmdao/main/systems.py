@@ -169,6 +169,7 @@ class System(object):
         self.rhs_vec = None
         self.ln_solver = None
         self.fd_solver = None
+        self.dfd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
 
@@ -1817,6 +1818,11 @@ class OpaqueSystem(CompoundSystem):
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)
 
+    def _apply_deriv(self, arg, result):
+        """Support for directional derivatives, where this function is used
+        to perform a matrix vector product.
+        """
+        self.fd.calculate(arg, result)
 
 class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
