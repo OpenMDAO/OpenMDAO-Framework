@@ -518,7 +518,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         self.assertEqual(top.comp1.y, 2.0)
         try:
-            J = top.driver.calc_gradient(['comp1.x'], ['comp1.y'])
+            J = top.driver.workflow.calc_gradient(['comp1.x'], ['comp1.y'])
         except Exception as err:
             self.assertEqual(str(err),
                              "comp1: The return value of list_deriv_vars() was"
@@ -538,7 +538,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         self.assertEqual(top.comp2.y, 4.0)
 
-        J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
+        J = top.driver.workflow.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
     def test_error_logging1(self):

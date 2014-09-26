@@ -1475,8 +1475,8 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        if inputs == self._setup_inputs and outputs == self._setup_outputs:
-            return
+        #if inputs == self._setup_inputs and outputs == self._setup_outputs:
+        #    return
 
         self._setup_inputs = inputs if inputs is None else inputs[:]
         self._setup_outputs = outputs if outputs is None else outputs[:]

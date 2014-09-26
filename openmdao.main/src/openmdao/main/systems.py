@@ -364,7 +364,8 @@ class System(object):
         for system in self.simple_subsystems():
             try:
                 inputs.update(['.'.join((system.name,s))
-                                  for s in system._comp.list_states()])
+                                  for s in system._comp.list_states()
+                                  if system._comp.eval_only is False])
             except AttributeError:
                 pass
 
@@ -403,7 +404,8 @@ class System(object):
         for system in self.simple_subsystems():
             try:
                 outputs.extend(['.'.join((system.name, s))
-                                  for s in system._comp.list_residuals()])
+                                  for s in system._comp.list_residuals()
+                                  if system._comp.eval_only is False])
             except AttributeError:
                 pass
 
@@ -858,7 +860,7 @@ class System(object):
                 mode = options.derivative_direction
 
         if options.force_fd is True:
-            mode == 'fd'
+            mode = 'fd'
 
         self.set_options(mode, options)
         self.initialize_gradient_solver()
@@ -1466,6 +1468,12 @@ class CompoundSystem(System):
         for s in self.all_subsystems():
             s.stop()
 
+    def _apply_deriv(self, arg, result):
+        """Support for directional derivatives, where this function is used
+        to perform a matrix vector product.
+        """
+        self.dfd_solver.calculate(arg, result)
+
 
 class SerialSystem(CompoundSystem):
 
@@ -1773,9 +1781,16 @@ class OpaqueSystem(CompoundSystem):
 
         inner_system = self._inner_system
         inner_system.linearize()
+        inputs = self.list_inputs() + self.list_states()
+        outputs = self.list_outputs()
 
-        self.J = inner_system.solve_fd(self.list_inputs()+self.list_states(),
-                                       self.list_outputs())
+        if self.options.directional_fd is True:
+            self.J = None
+            inner_system.dfd_solver = DirectionalFD(inner_system, inputs,
+                                                    outputs)
+            inner_system.apply_deriv = inner_system._apply_deriv
+        else:
+            self.J = inner_system.solve_fd(inputs, outputs)
 
         #print self.J
 
@@ -1821,12 +1836,6 @@ class OpaqueSystem(CompoundSystem):
 
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)
-
-    def _apply_deriv(self, arg, result):
-        """Support for directional derivatives, where this function is used
-        to perform a matrix vector product.
-        """
-        self.fd.calculate(arg, result)
 
 class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""

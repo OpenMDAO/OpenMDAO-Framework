@@ -373,7 +373,7 @@ class DirectionalFD(object):
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
 
-    def calculate(self, arg, result):
+    def calculate(self, arg, result, iterbase=''):
         """Return Jacobian of all outputs with respect to a given direction in
         the input space."""
 
@@ -463,13 +463,36 @@ class DirectionalFD(object):
             # Undo step
             self.set_value(-fd_step, arg, undo_complex=True)
 
+        # Pack the results dictionary
+        j = 0
+        for key in self.outputs:
+            indices = self.system.vec['u'].indices(key)
+            i1, i2 = j, j+len(indices)
+
+            old_val = self.scope.get(key)
+
+            if isinstance(old_val, (float, complex)):
+                result[key] += mv_prod[i1:i2]
+            elif isinstance(old_val, ndarray):
+                shape = old_val.shape
+                if len(shape) > 1:
+                    result[key] += mv_prod[i1:i2].reshape(shape)
+                else:
+                    result[key] += mv_prod[i1:i2]
+            elif has_interface(old_val, IVariableTree):
+                result[key] += mv_prod[i1:i2]
+            else:
+                continue
+
+            j += len(indices)
+
         # Restore final inputs/outputs.
         self.system.vec['u'].set_from_array(self.y_base, self.outputs)
         self.system.vec['u'].set_to_scope(self.scope)
 
         #print mv_prod, arg, result
 
-    def set_value(self, fdstep, arg, undo_complex=False):
+    def set_value(self, fd_step, arg, undo_complex=False):
         """Set a value in the model"""
 
         for j, srcs in enumerate(self.inputs):
@@ -478,14 +501,16 @@ class DirectionalFD(object):
             if isinstance(srcs, basestring):
                 srcs = (srcs,)
 
+            direction = fd_step*arg[srcs[0]]
+
             for src in srcs:
                 if src in self.system.vec['u']:
                     vec = self.system.vec['u'][src]
 
                     if undo_complex is True:
-                        vec[index] += val.real()
+                        vec[:] += direction.real
                     else:
-                        vec[index] += val
+                        vec[:] += direction
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""

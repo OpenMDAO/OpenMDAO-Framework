@@ -175,8 +175,8 @@ class Workflow(object):
             # save old value of u to compute resids
             for node in self._cycle_vars:
                 fvec[node][:] = uvec[node][:]
-            
-            self._system.run(iterbase=iterbase, 
+
+            self._system.run(iterbase=iterbase,
                              ffd_order=ffd_order,
                              case_uuid=case_uuid)
 
@@ -201,10 +201,10 @@ class Workflow(object):
         if err is not None:
             # NOTE: cannot use 'raise err' here for some reason.  Must separate
             # the parts of the tuple.
-            raise err[0], err[1], err[2] 
+            raise err[0], err[1], err[2]
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
-                      return_format='array'):
+                      return_format='array', force_regen=False):
         """Returns the Jacobian of derivatives between inputs and outputs.
 
         inputs: list of strings
@@ -220,11 +220,16 @@ class Workflow(object):
         return_format: string in ['array', 'dict']
             Format for return value. Default is array, but some optimizers may
             want a dictionary instead.
+
+        force_regen: boolean
+            Set to True to force a regeneration of the system hierarchy.
         """
 
         parent = self.parent
-        reset = False
-        
+
+        # Global override for user testing
+        reset = force_regen
+
         if not self.scope._derivs_required:
             reset = True
 
@@ -234,7 +239,7 @@ class Workflow(object):
             reset = True
         else:
             uvec = self._system.vec['u']
-            
+
         if reset is False:
             if inputs:
                 for inp in inputs:
@@ -243,7 +248,7 @@ class Workflow(object):
                         break
             elif self.scope._setup_inputs != inputs:
                 reset = True
-                
+
             if reset is False:
                 if outputs:
                     for out in outputs:
@@ -770,7 +775,7 @@ class Workflow(object):
             # collapse non-differentiable system groups into
             # opaque systems
             for group in get_nondiff_groups(cgraph):
-                system = OpaqueSystem(scope, reduced, 
+                system = OpaqueSystem(scope, reduced,
                                       cgraph.subgraph(group),
                                       str(tuple(group)))
                 collapse_to_system_node(cgraph, system, tuple(group))
@@ -779,10 +784,10 @@ class Workflow(object):
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
-            self._system = ParallelSystem(scope, reduced, cgraph, 
+            self._system = ParallelSystem(scope, reduced, cgraph,
                                           str(tuple(cgraph.nodes())))
         else:
-            self._system = SerialSystem(scope, reduced, cgraph, 
+            self._system = SerialSystem(scope, reduced, cgraph,
                                         str(tuple(cgraph.nodes())))
 
         self._system.set_ordering(params+[c.name for c in self])
@@ -805,10 +810,10 @@ class Workflow(object):
 
         if len(cgraph) > 1:
             if len(cgraph.edges()) > 0:
-                self._system = SerialSystem(scope, reduced, 
+                self._system = SerialSystem(scope, reduced,
                                             cgraph, tuple(cgraph.nodes()))
             else:
-                self._system = ParallelSystem(scope, reduced, 
+                self._system = ParallelSystem(scope, reduced,
                                               cgraph, str(tuple(cgraph.nodes())))
         elif len(cgraph) == 1:
             name = cgraph.nodes()[0]
@@ -892,13 +897,13 @@ def get_cycle_vars(system):
             data['conn_size'] = sz
             sizes.append((sz, (u,v)))
 
-        sizes = sorted(sizes)       
+        sizes = sorted(sizes)
 
         while not is_directed_acyclic_graph(g):
             strong = strongly_connected_components(g)[0]
             if len(strong) == 1:
                 break
-            
+
             # find the connection with the smallest data xfer
             for sz, (src, dest) in sizes:
                 if src in strong and dest in strong:

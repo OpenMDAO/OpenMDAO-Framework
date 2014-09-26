@@ -306,9 +306,11 @@ class TestcaseNonDiff(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('comp2' in meta['pa_object'].comps)
+        self.assertTrue(len(model.driver.workflow._system.subsystems()) == 2)
+        comp_list = simple_node_iter(model.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 2)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
 
         model.run()
         model.driver.workflow.config_changed()
