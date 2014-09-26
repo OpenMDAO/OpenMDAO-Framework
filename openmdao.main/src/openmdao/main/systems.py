@@ -1777,7 +1777,7 @@ class OpaqueSystem(CompoundSystem):
         self.J = inner_system.solve_fd(self.list_inputs()+self.list_states(),
                                        self.list_outputs())
 
-        print self.J
+        #print self.J
 
     def applyJ(self, variables):
         vec = self.vec

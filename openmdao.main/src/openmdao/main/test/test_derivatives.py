@@ -16,6 +16,7 @@ from openmdao.lib.optproblems.api import UnitScalableProblem
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
+from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
@@ -2370,10 +2371,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp4', '~1'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 3)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 2 - differentiable (none)
 
@@ -2393,10 +2399,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 5)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 3 - differentiable (comp5)
 
@@ -2416,10 +2426,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 4)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
         # Case 4 - differentiable (comp1, comp3, comp5)
 
@@ -2440,10 +2453,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['comp1', 'comp3', '~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        self.assertTrue(len(comp_list) == 2)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+
 
         # Put everything in a single pseudo-assy, and run fd with no fake.
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
