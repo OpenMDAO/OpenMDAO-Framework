@@ -336,7 +336,7 @@ class System(object):
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
         self.vec['dp'].array[:] = 0.0
-        for system in self.subsystems():
+        for system in self.local_subsystems():
             system.clear_dp()
 
     def list_inputs(self):
@@ -1347,7 +1347,7 @@ class AssemblySystem(SimpleSystem):
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
         self.vec['dp'].array[:] = 0.0
-        for system in self.subsystems():
+        for system in self.local_subsystems():
             system.clear_dp()
 
     def linearize(self):
@@ -1407,7 +1407,7 @@ class AssemblySystem(SimpleSystem):
         in the RHS vector."""
 
         # Apply into our assembly.
-        for sub in self.subsystems():
+        for sub in self.local_subsystems():
             sub.solve_linear()
 
 
@@ -1736,7 +1736,8 @@ class OpaqueSystem(CompoundSystem):
         inner_u = self._inner_system.vec['u']
 
         inner_u.set_from_scope(self.scope,
-                               self._inner_system.list_inputs()+self._inner_system.list_states())
+                               self._inner_system.list_inputs() + \
+                               self._inner_system.list_states())
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
@@ -1909,7 +1910,7 @@ class TransparentDriverSystem(SimpleSystem):
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
         self.vec['dp'].array[:] = 0.0
-        for system in self.subsystems():
+        for system in self.local_subsystems():
             system.clear_dp()
 
     def applyJ(self, variables):
