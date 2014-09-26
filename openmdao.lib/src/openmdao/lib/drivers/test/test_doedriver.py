@@ -12,8 +12,10 @@ import unittest
 
 from math import isnan, sqrt
 
+import numpy as np
+
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.datatypes.api import Float, Bool, Array
+from openmdao.main.datatypes.api import Float, Bool, Array, Int
 from openmdao.lib.drivers.doedriver import DOEdriver, NeighborhoodDOEdriver
 from openmdao.lib.doegenerators.api import OptLatinHypercube, FullFactorial
 from openmdao.util.testutil import assert_rel_error, assert_raises
@@ -39,10 +41,12 @@ def rosen_suzuki(x0, x1, x2, x3):
     return x0**2 - 5.*x0 + x1**2 - 5.*x1 + \
            2.*x2**2 - 21.*x2 + x3**2 + 7.*x3 + 50
 
-
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
+    a = Int(0, iotype='in')
+    b = Int(0, iotype='in')
+    v = Array(np.array([0, 1, 2, 3], dtype=np.int), iotype='in')
     x0 = Float(1., iotype='in')
     y0 = Float(1., iotype='in')  # used just to get ParameterGroup
     x1 = Float(1., iotype='in')
@@ -110,6 +114,31 @@ class TestCaseDOE(unittest.TestCase):
 
     def test_sequential_errors_abort(self):
         self.run_cases(sequential=True, forced_errors=True)
+
+    def test_invalid_parameter(self):
+        logging.debug('')
+        logging.debug('test_invalid_parameter')
+
+        #test `Parameter`
+        try:
+            self.model.driver.add_parameter('driven.a')
+        except TypeError as err:
+            self.assertEqual(str(err), "driver: DOEdriver cannot add"
+                " parameter 'driven.a' because target is not of type 'Float'.")
+
+        #test `ArrayParameter`
+        try:
+            self.model.driver.add_parameter('driven.v', low=-10, high=-10)
+        except TypeError as err:
+                self.assertEqual(str(err), "driver: DOEdriver cannot add"
+                    " array parameter 'driven.v' because target is not of type 'numpy.float'.")
+
+        #test `ParameterGroup`
+        try:
+            self.model.driver.add_parameter(('driven.a', 'driven.b'))
+        except TypeError as err:
+                self.assertEqual(str(err), "driver: DOEdriver cannot add"
+                    " parameter group 'driven.a' because targets are not of type 'float'.")
 
     def test_no_parameter(self):
         logging.debug('')
@@ -400,7 +429,7 @@ class Comp(Component):
     def execute(self):
         self.y = self.x**6.+self.x**2
 
-        
+
 class Assem(Assembly):
     y = Float(iotype='in')
     def configure(self):

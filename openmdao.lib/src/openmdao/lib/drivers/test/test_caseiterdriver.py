@@ -78,12 +78,8 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, driver=None):
-        super(MyModel, self).__init__()
-        self.drv = driver or CaseIteratorDriver()
-
     def configure(self):
-        driver = self.add('driver', self.drv)
+        driver = self.add('driver', CaseIteratorDriver())
         self.add('driven', DrivenComponent())
         driver.workflow.add('driven')
         driver.add_parameter('driven.x')
@@ -263,7 +259,7 @@ class TestCase(unittest.TestCase):
             except Exception as err:
                 err = replace_uuid(str(err))
                 if not sequential:  # RemoteError has different format.
-                    err = err[:-76]
+                    err = err.strip().strip('-').strip()
                 startmsg = 'driver: Run aborted: Traceback '
                 endmsg = 'driven (4-driven): Forced error'
                 self.assertEqual(err[:len(startmsg)], startmsg)

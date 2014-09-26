@@ -3,7 +3,7 @@
 Package Metadata
 ================
 
-- **classifier**:: 
+- **classifier**::
 
     Intended Audience :: Science/Research
     Topic :: Scientific/Engineering
@@ -12,7 +12,7 @@ Package Metadata
 
 - **description-file:** README.txt
 
-- **entry_points**:: 
+- **entry_points**::
 
     [openmdao.component]
     mycomp.mycomp.MyComponent=mycomp.mycomp:MyComponent
@@ -25,12 +25,11 @@ Package Metadata
 
 - **requires-dist:** openmdao.main
 
-- **requires-python**:: 
+- **requires-python**::
 
-    >=2.6
+    >=2.7
     <3.0
 
 - **summary:** An example of a Component plugin
 
 - **version:** 0.1
-

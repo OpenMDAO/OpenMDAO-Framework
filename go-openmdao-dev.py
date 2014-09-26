@@ -1162,7 +1162,7 @@ def change_prefix(filename, dst_prefix):
             os.path.join("/Library/Python", sys.version[:3], "site-packages"),
             os.path.join(sys.prefix, "Extras", "lib", "python"),
             os.path.join("~", "Library", "Python", sys.version[:3], "site-packages"),
-            # Python 2.6 no-frameworks
+            # Python 2.7 no-frameworks
             os.path.join("~", ".local", "lib","python", sys.version[:3], "site-packages"),
             # System Python 2.7 on OSX Mountain Lion
             os.path.join("~", "Library", "Python", sys.version[:3], "lib", "python", "site-packages")))
@@ -2247,7 +2247,7 @@ def after_install(options, home_dir, activated=False):
         except ImportError:
             failed_imports.append(pkg)
 
-        #Hack to make sure scipy is up to date.   
+        #Hack to make sure scipy is up to date.
         try:
             from scipy.optimize import minimize
         except:
@@ -2318,7 +2318,7 @@ def after_install(options, home_dir, activated=False):
                     failures.append(pkg)
         finally:
             os.chdir(startdir)
-        
+
 
         # add any additional packages specified on the command line
         for req in options.reqs:
@@ -2342,7 +2342,7 @@ def after_install(options, home_dir, activated=False):
                 print "Failed to build the docs."
         else:
             print "\nSkipping build of OpenMDAO docs.\n"
-        
+
         if is_win: # retrieve MinGW DLLs from server
             try:
                 _get_mingw_dlls(bin_dir)
@@ -2404,7 +2404,7 @@ def after_install(options, home_dir, activated=False):
             print '\nto activate your environment and start using OpenMDAO.'
 
     sys.exit(1 if failures else 0)
-    
+
 
 def convert(s):
     b = base64.b64decode(s.encode('ascii'))
@@ -3076,4 +3076,3 @@ if __name__ == '__main__':
 ## TODO:
 ## Copy python.exe.manifest
 ## Monkeypatch distutils.sysconfig
-

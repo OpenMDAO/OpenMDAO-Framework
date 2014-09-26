@@ -24,7 +24,7 @@ setup(name='openmdao.examples.nozzle_geometry_doe',
             'License :: OSI Approved',
             'Natural Language :: English',
             'Operating System :: OS Independent',
-            'Programming Language :: Python :: 2.6',
+            'Programming Language :: Python :: 2.7',
             'Topic :: Scientific/Engineering',
              ],
        keywords='optimization multidisciplinary multi-disciplinary analysis',
@@ -47,5 +47,3 @@ setup(name='openmdao.examples.nozzle_geometry_doe',
           openmdao.examples.nozzle_geometry_doe.simple_nozzle.PlugNozzleGeometry = openmdao.examples.nozzle_geometry_doe.simple_nozzle:PlugNozzleGeometry
           """
       )
-
-
