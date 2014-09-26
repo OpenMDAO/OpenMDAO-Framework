@@ -864,6 +864,9 @@ class System(object):
         self.initialize_gradient_solver()
 
         if mode == 'fd':
+            self.vec['df'].array[:] = 0.0
+            self.vec['du'].array[:] = 0.0
+            self.clear_dp()
             return self.solve_fd(inputs, outputs, iterbase, return_format)
 
         self.linearize()
@@ -878,9 +881,6 @@ class System(object):
         return J
 
     def solve_fd(self, inputs, outputs, iterbase='', return_format='array'):
-        self.vec['df'].array[:] = 0.0
-        self.vec['du'].array[:] = 0.0
-        self.clear_dp()
         if self.fd_solver is None:
             self.fd_solver = FiniteDifference(self, inputs, outputs,
                                               return_format)
@@ -1692,12 +1692,17 @@ class OpaqueSystem(CompoundSystem):
             nodes.add(node)
             nodes.add(node[0])
 
+        # Out local outputs must only include the nodes on the boundary.
+        self._out_nodes = [n for n in self._out_nodes if n not in nodes]
+
         graph = graph.subgraph(nodes)
 
         self._inner_system = SerialSystem(scope, graph,
-                                          reduced2component(graph))
+                                          reduced2component(graph),
+                                          name = "FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None
+        self._comp = None
 
     def inner(self):
         return self._inner_system
@@ -1718,6 +1723,16 @@ class OpaqueSystem(CompoundSystem):
         super(OpaqueSystem, self).setup_vectors(arrays)
         # internal system will create new vectors
         self._inner_system.setup_vectors(None)
+
+        # Preload all inputs and outputs along to our inner system.
+        # This was needed for the case where you regenerate the system
+        # hierarchy on the first calc_gradient call.
+        inner_u = self._inner_system.vec['u']
+        inner_u.set_from_scope(self.scope,
+                               self._inner_system.list_inputs() + \
+                               self._inner_system.list_states() +\
+                               self._inner_system.list_outputs() +
+                               self._inner_system.list_residuals())
 
     def setup_scatters(self):
         super(OpaqueSystem, self).setup_scatters()
@@ -1755,27 +1770,14 @@ class OpaqueSystem(CompoundSystem):
         """Do a finite difference on the inner system to calculate a
         Jacobian.
         """
+
         inner_system = self._inner_system
         inner_system.linearize()
 
-        if self.mode == 'forward':
-            arg = 'du'
-            res = 'df'
-        elif self.mode == 'adjoint':
-            arg = 'df'
-            res = 'du'
+        self.J = inner_system.solve_fd(self.list_inputs()+self.list_states(),
+                                       self.list_outputs())
 
-        for item in self.list_inputs() + self.list_states() + self.list_outputs():
-            var = self.scope._system.vec[arg][item]
-            inner_system.vec[arg][item] = var
-
-            var = self.scope._system.vec[res][item]
-            inner_system.vec[res][item] = var
-
-        inner_system.J = inner_system.solve_fd(inner_system.list_inputs()+inner_system.list_states(),
-                                               inner_system.list_outputs())
-
-        self.J = inner_system.J
+        print self.J
 
     def applyJ(self, variables):
         vec = self.vec
@@ -1812,8 +1814,10 @@ class OpaqueSystem(CompoundSystem):
             self.scatter('du', 'dp')
 
     def simple_subsystems(self):
-        for sub in self._inner_system.simple_subsystems():
-            yield sub
+        yield self
+
+        #for sub in self._inner_system.simple_subsystems():
+        #    yield sub
 
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)
