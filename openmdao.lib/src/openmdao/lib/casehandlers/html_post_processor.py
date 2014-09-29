@@ -37,13 +37,14 @@ def caseset_query_to_html(query, filename='cases.html'):
     os.system("dot -T%s -o %s %s" % (fmt, dot_output_plain_formatted_file, dotfile))
 
     # read the graphviz layout info from the plain text file
+    #   All units are in inches, represented by a floating point number
     with open(dot_output_plain_formatted_file, "r") as f:
       node_content = ''
       spline_data = []
       for i, line in enumerate(f):
-        # graph scale width height
+        # Format of this line is: graph scale width height
         if line.startswith( "graph"):
-            dummy, graph_scale, graph_width, graph_height = line.split()
+            dummy, graph_scale, graph_width, graph_height = line.split()    
         elif line.startswith( "node"):
             # Format of this line is
             #     node name x y width height label style shape color fillcolor
