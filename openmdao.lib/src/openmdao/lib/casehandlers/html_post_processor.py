@@ -1,131 +1,131 @@
+import os
+import tempfile
+from jinja2 import Environment, FileSystemLoader
+import networkx as nx
+
+from openmdao.lib.casehandlers.api import CaseDataset
+
 def caseset_query_to_html(query, filename='cases.html'):
 
-    with open(filename, 'w') as fh:
-        fh.write("<html>")
-        fh.write('''
-        <head>
-        <link rel='stylesheet' type='text/css' href='http://w2ui.com/src/w2ui-1.4.1.min.css' />
-        <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
-        <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
-        </head>
-        ''')
-        fh.write("<body>")
-        fh.write('''<div id='main' style='width: 100%; height: 400px;'></div>''')
-        fh.write('''<script type='application/json' id='case-data'>''')
+    # Write query results to JSON file
+    # Wish I could write to a string or JSON object
+    tmpfile = tempfile.NamedTemporaryFile('w')
+    query.write(tmpfile.name)
+    with open(tmpfile.name, 'rt') as f:
+        case_data = f.read()
 
-        #Write JSON data to file
-        query.write(fh)
+    # Need to get at the depgraph data in this CaseDataSet file
+    cds = CaseDataset(tmpfile.name, 'json')
+    tmpfile = tempfile.NamedTemporaryFile('w')
+    with open(tmpfile.name, "w") as f:
+        f.write(cds.simulation_info['graph'])
+    with open(tmpfile.name) as f:
+        G = nx.readwrite.json_graph.load(f)
 
-    #Have to reopen because query.write closes the file
-    with open(filename, 'a') as fh:
-        #Closes script tag for JSON data
-        fh.write("</script>")
-        fh.write('''
-        <script type='text/javascript'>
-        //global variable for reference case data
-        case_data = JSON.parse(document.getElementById('case-data').innerHTML);
+    # depgraph is supposed to be openmdao.main.depgraph.DependencyGraph
+    # But what comes back from json_graph is networkx.classes.digraph.DiGraph
+    # So cannot directly call this
+    #plot_graph( depgraph, fmt='plain' )
 
-        // recursive function to build up the JavaScript structure that w2ui needs for
-        //   display of a sidebar
-        function get_nodes( root ) {
-            var nodes = [] ;
-            var children = root.children ;
-            var child ;
+    # Write the DiGraph to a dot file so we can get at the layout info
+    dotfile = 'g.dot'
+    dot_output_plain_formatted_file = 'g.plain'
+    fmt = 'plain'
+    nx.write_dot(G, dotfile)
+    # TODO: Set the size of the output. See this
+    #         http://stackoverflow.com/questions/14784405/how-to-set-the-output-size-in-graphviz-for-the-dot-format
+    os.system("dot -T%s -o %s %s" % (fmt, dot_output_plain_formatted_file, dotfile))
 
-            for (var i=0; i < children.length; i++) {
-                child = children[i] ;
-                if ( child.children.length ) {
-                    child_nodes = get_nodes( child ) ;
-                    nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString(), nodes: child_nodes } ;
-                }
-                else {
-                    nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() } ;
-                }
-            }
-            return nodes ;
-        }
+    # read the graphviz layout info from the plain text file
+    with open(dot_output_plain_formatted_file, "r") as f:
+      node_content = ''
+      spline_data = []
+      for i, line in enumerate(f):
+        # graph scale width height
+        if line.startswith( "graph"):
+            dummy, graph_scale, graph_width, graph_height = line.split()
+        elif line.startswith( "node"):
+            # Format of this line is
+            #     node name x y width height label style shape color fillcolor
+            # shape can be ellipse, diamond, box or invhouse
+            dummy, name, x, y, width, height, label, style, shape, color, fillcolor = line.split()
+            if name.startswith('"'):
+                name = name[1:-1]
+            if label.startswith('"'):
+                label = label[1:-1]
+            node_content += '{ name: "%s", id:"%s", x:%s, y:%s, shape:"%s", fixed:true},\n' % ( label, name, x, y, shape )
+        elif line.startswith( "edge"):
+            # Format of this line is
+            #     edge tail head n x1 y1 .. xn yn [label xl yl] style color
+            dummy, tail, head, n = line.split()[:4]
+            if tail.startswith('"'):
+                tail = tail[1:-1]
+            if head.startswith('"'):
+                head = head[1:-1]
+            control_points = []
+            for i in range(int(n)):
+                control_points.append( (line.split()[4+2*i], line.split()[5+2*i]) )
+            spline_data.append( control_points )
 
-        // widget configuration
-        var config = {
-            layout: {
-                name: 'layout',
-                padding: 0,
-                panels: [
-                    { type: 'left', size: 200, resizable: true, minSize: 120 },
-                    { type: 'main',  minSize: 550, overflow: 'hidden' }
-                ]
-            },
-        }
-
-
-
-        jQuery( document ).ready(function() {
-
-                var cases = [];
-                var it_case_key = "iteration_case_" ;
-                var simulation_info_key = "simulation_info" ;
-                var case_objects = new Object();
-                var simulation_info_id = "" ;
-                // var driver_info_key = "driver_info_" ;
-                // var driver_names = new Object();
-
-                // get all the cases in an associative array with the id as the key
-                jQuery.each( case_data, function( key , val ) {
-
-                   // need to add simulation info object for top of tree of cases
-                   if (key.lastIndexOf(simulation_info_key, 0) === 0) {
-                        val[ 'children'] = [] ;
-                        case_objects[ val.uuid ] = val ;
-                        simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
-                    }
-
-                    // Make a structure to hold all of the case info
-                    if (key.lastIndexOf(it_case_key, 0) === 0) {
-                        case_number = key.substring(it_case_key.length);
-                        val[ 'children'] = [] ;
-                        val[ 'case_number'] = case_number ;
-                        case_objects[ val._id ] = val ;
-                    }
-                }); // end each
-
-                // Loop over the case_objects and connect parents to children and vice versa
-                Object.keys(case_objects).forEach(function(key) {
-                    var case_object, parent_id, parent_case_object, parent_case_object_children ;
-                    if ( key != simulation_info_id )
-                    {
-                        case_object = case_objects[key];
-                        parent_id = case_object._parent_id ;
-                        parent_case_object = case_objects[parent_id] ;
-                        parent_case_object_children = parent_case_object.children ;
-                        parent_case_object_children[ parent_case_object_children.length ] = case_object ;
-                    }
-                });
-
-                // Starting from the top "case_object", which is really the sim info data,
-                // Walk down the children leaves, creating the value for nodes in the w2ui call below
-                simulation_info_object = case_objects[simulation_info_id] ;
-                node_tree = get_nodes(simulation_info_object);
+    # clean up
+    for graphviz_files in (dotfile, dot_output_plain_formatted_file):
+        if os.path.exists(graphviz_files):
+            os.remove(graphviz_files)
 
 
-        jQuery(function () {
-             // initialization
-            jQuery('#main').w2layout(config.layout);
-            w2ui.layout.content('left', jQuery().w2sidebar(
-                {
-                    name: 'cases',
-                    nodes: node_tree ,
-                    onClick: function(event) {
-                        w2ui.layout.content('main', '<div style="padding: 10px">case ' + event.target + ' clicked</div>' );
-                    }  ,
-                }
-            ));
-        });
+    # using the info on http://www.graphviz.org/content/how-convert-b-spline-bezier
+    # also, using http://www.d3noob.org/2013/03/d3js-force-directed-graph-example-basic.html to add the arrowheads
+    svg_path_edges = ''
+    for control_points in spline_data:
+        svg_path_edges += '''svg.append("svg:path")
+                    .attr("d","'''
+
+        svg_path_edges += 'M " + xscale(%s) + " " + yscale(%s) + " "' % control_points[0]
+        num_bezier = ( len(control_points) - 1 ) / 3
+        for ib in range(num_bezier):
+            if ib == 0 :
+                svg_path_edges += ' + "C " + xscale(%s) + " " + yscale(%s) + " " + xscale(%s) + " " + yscale(%s) + " " + xscale(%s) + " " + yscale(%s) ' % ( control_points[ 1 + 3 * ib ] + control_points[ 2 + 3 * ib ] + control_points[ 3 + 3 * ib ] )
+            else:
+                svg_path_edges += ' + " " + xscale(%s) + " " + yscale(%s) + " " + xscale(%s) + " " + yscale(%s) + " " + xscale(%s) + " " + yscale(%s) ' % ( control_points[ 1 + 3 * ib ] + control_points[ 2 + 3 * ib ] + control_points[ 3 + 3 * ib ] )
+        svg_path_edges += ''')
+                    .style("stroke-width", 2)
+                    .style("stroke", "black")
+                    .style("fill", "none")
+                    .attr("class", "link")
+                    .attr("marker-end", "url(#end)")
+                    ;'''
 
 
-        }); // end ready
-        </script>
-        ''')
+    # Setup Jinja2 templating
+    cds_visualizer_dir_path = os.path.join(
+        os.path.dirname(__file__), 'visual_post_processing')
+    env = Environment(loader=FileSystemLoader(cds_visualizer_dir_path))
+    template = env.get_template('case_dataset_visualizer.html')
 
-        #Close remaining tags
-        fh.write("</body>")
-        fh.write("</html>")
+    if os.path.isfile(filename):
+        os.remove(filename)
+
+    # use the existing template to write out the html file
+    outputText = template.render( case_data = case_data,
+                        node_content=node_content,
+                        svg_path_edges=svg_path_edges,
+                        graph_width = graph_width,
+                        graph_height = graph_height,
+                         )
+    with open(filename, "wb") as fh:
+        fh.write(outputText)
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 3:
+        sys.exit('Usage: %s case_records_json_file output_html_file' % sys.argv[0])
+
+    if not os.path.exists(sys.argv[1]):
+        sys.exit('ERROR: Case records JSON file %s was not found!' % sys.argv[1])
+
+
+    cds = CaseDataset(sys.argv[1], 'json')
+    data = cds.data # results
+
+    caseset_query_to_html(data, filename=sys.argv[2])

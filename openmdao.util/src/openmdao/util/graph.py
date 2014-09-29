@@ -6,7 +6,7 @@ _missing = object()
 import networkx as nx
 try:
     import matplotlib.pyplot as plt
-except ImportError:
+except (ImportError, RuntimeError):
     plt = None
 from io import BytesIO
 

@@ -168,7 +168,7 @@ class TestCase(unittest.TestCase):
             "sub.x1": 2.8984826597319301e-15
         }
         for name, val in zip(names, cases[-1]):
-            assert_rel_error(self, val, iteration_case_142[name], 0.001)
+            self.assertAlmostEqual(val, iteration_case_142[name])
 
         # Local to driver.
         # For some reason the top-level driver isn't the last recorded.
@@ -193,7 +193,7 @@ class TestCase(unittest.TestCase):
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '8207760f-078c-11e4-82c7-0800279081d0'  # iteration_case_6
+        parent = '87bafaeb-384e-11e4-83f2-a82066074ecd'  # iteration_case_6
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',

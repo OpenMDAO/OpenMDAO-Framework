@@ -12,7 +12,7 @@
     do a WHICH on compilers?
     deal with sys.exit on bad Python version?
   X make docstrings consistent
-  X make Exception handling consistent 
+  X make Exception handling consistent
     http://www.opensource.apple.com/source/python/python-3/python/Tools/freeze/modulefinder.py
 """
 
@@ -32,7 +32,7 @@ def envdump():
     finally:
         if f is not sys.stdout:
             f.close()
-    
+
 try:
     import datetime
     import os
@@ -80,8 +80,8 @@ def get_python_info(f):
     split_vers = vers.split('.')
     f_zero = float(split_vers[0])
     f_one = float(split_vers[1])
-    if ((f_zero != 2) or (f_one < 6)):
-        f.write('\nERROR: OpenMDAO WILL NOT WORK with a python version before 2.6 or after 3.0')
+    if ((f_zero != 2) or (f_one < 7)):
+        f.write('\nERROR: OpenMDAO WILL NOT WORK with a python version before 2.7 or after 3.0')
 
     f.write('\n')
     f.write('Python Compiler:  ')
@@ -94,8 +94,8 @@ def get_python_info(f):
     for subp in sys.path:
         f.write("    "+str(subp)+"\n")
     f.write('\n')
-        
-    
+
+
 def get_platform_info(f):
     """
         This function will capture specific platform information,
@@ -112,13 +112,13 @@ def get_platform_info(f):
     f.write(str(platform.architecture()))
     f.write('\n')
     if  platform.system()=="Linux":
-        try:  
-            pld = platform.linux_distribution() 
+        try:
+            pld = platform.linux_distribution()
             if(pld):
                 f.write('Linux Distribution:  ')
                 f.write(str(platform.linux_distribution()))
                 f.write('\n')
-        except Exception as exc:  
+        except Exception as exc:
             f.write('This Linux distribution does not support linux_distribution var:\n')
             f.write(str(exc))
 
@@ -128,13 +128,13 @@ def get_platform_info(f):
 
 def get_system_env(f):
     """
-        This function captures the values of a system's environment 
+        This function captures the values of a system's environment
         variables at the time of the run, and presents them
         in alphabetical order.
     """
     f.write('================ENVIRONMENT VARIABLES================\n')
 
-    #this bit sorts the environment dictionary by key name.   
+    #this bit sorts the environment dictionary by key name.
     vardump = os.environ
     env_vars = vardump.keys()
     env_vars.sort()
@@ -149,7 +149,7 @@ def get_system_env(f):
                 splitpaths = paths.split(';')
             else:
                 splitpaths = paths.split(':')
-            f.write("\n")                
+            f.write("\n")
             for path in splitpaths:
                 f.write("    "+path+"\n")
         else:
@@ -163,7 +163,7 @@ def get_aliases(f):
     """
     if  platform.system() is not "Windows":
         f.write('\n================ALIASES================\n')
-        p = subprocess.Popen('alias', shell=True, 
+        p = subprocess.Popen('alias', shell=True,
                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out = p.communicate()[0]
         f.write(out)
@@ -214,15 +214,15 @@ def find_compiler(f, name, ext=''):
             #execute code here to get version as long as it's not "cl.exe"
             if name!="cl.exe":
                 executable = os.path.abspath(binpath)
-                result = subprocess.Popen([executable, '--version'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)                
+                result = subprocess.Popen([executable, '--version'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
                 (fin, fout) = (result.stdin, result.stdout)
                 f.write('  '+name+' version info: \n')
                 f.write(fout.read())
 
     if not compiler_found:
         f.write('  '+name+ext+' NOT FOUND in PATH. \n\n')
-       
-        
+
+
 def _is_py_file(path):
     """Return True if path ends in .py, .pyc, .pyo, or .pyd"""
     return os.path.splitext(path)[1] in ['.py','.pyc','.pyo','.pyd']
@@ -233,8 +233,8 @@ def _get_real_pkg_name(path):
         f = open(initpath, 'r')
         contents = f.read()
         if 'declare_namespace(__name__)' in contents or 'pkgutil.extend_path' in contents:
-            pdirs = [f for f in os.listdir(path) 
-                         if os.path.isdir(os.path.join(path,f)) and 
+            pdirs = [f for f in os.listdir(path)
+                         if os.path.isdir(os.path.join(path,f)) and
                          os.path.isfile(os.path.join(path,f,'__init__.py'))]
             if len(pdirs) == 1:
                 return _get_real_pkg_name(os.path.join(path, pdirs[0]))
@@ -242,10 +242,10 @@ def _get_real_pkg_name(path):
 
 def _is_py_pkg(path):
     return os.path.isdir(path) and (
-        os.path.isfile(os.path.join(path,'__init__.py')) or 
+        os.path.isfile(os.path.join(path,'__init__.py')) or
         os.path.isfile(os.path.join(path,'__init__.pyc')) or
         os.path.isfile(os.path.join(path,'__init__.pyo')))
-    
+
 def _add_egg(entry, pkgs):
     if os.path.isfile(entry):
         pkgs.append(entry)
@@ -295,7 +295,7 @@ def _add_from_path_entry(entry, pkgs):
         _add_egg_link(entry, pkgs)
     elif os.path.isdir(entry):
         _add_dir(entry, pkgs)
-    
+
 def get_pkg_info(f):
     """
         This function will list Python packages found on sys.path
@@ -316,9 +316,8 @@ def get_pkg_info(f):
             else:
                 f.write("\nfrom %s:\n" % entry)
                 for p in pkgs:
-                    f.write("    %s\n" % 
+                    f.write("    %s\n" %
                             p[len(entry)+1:].replace('/','.').replace('\\','.'))
 
 if __name__ == "__main__":
     envdump()
-

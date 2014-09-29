@@ -2,7 +2,7 @@ import os.path
 import unittest
 import StringIO
 
-from numpy import array
+from numpy import array, isnan
 
 from openmdao.main.api import Assembly, Case, set_as_top
 from openmdao.main.datatypes.api import Str, Bool, Array, VarTree
@@ -183,8 +183,18 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         # Strip off trailing whitespace (newlines and carriage returns)
         # Don't check time-stamp because some OS round it.
         for exp, act in zip(expected, actual):
-            self.assertEqual(exp.rstrip().partition(",")[2],
-                             act.rstrip().partition(",")[2])
+            # skip timestamps, and uuids
+            items2 = act.rstrip().split(",")[1:-3]
+            for i, item1 in enumerate(exp.rstrip().split(",")[1:-3]):
+                item2 = items2[i]
+                try: # (str).isnumeric() only works on unicode
+                    item1, item2 = float(item1), float(item2)
+                    # nan equality check fails by definition
+                    if isnan(item1) and isnan(item2):
+                        continue
+                    self.assertEqual(item1, item2)
+                except (ValueError, TypeError):
+                    self.assertEqual(item1, item2)
 
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
         'Topic :: Scientific/Engineering',
       ],
       keywords='optimization multidisciplinary multi-disciplinary analysis',
