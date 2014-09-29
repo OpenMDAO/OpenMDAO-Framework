@@ -1,6 +1,5 @@
 import os
 import tempfile
-
 from jinja2 import Environment, FileSystemLoader
 import networkx as nx
 
@@ -33,7 +32,7 @@ def caseset_query_to_html(query, filename='cases.html'):
     dot_output_plain_formatted_file = 'g.plain'
     fmt = 'plain'
     nx.write_dot(G, dotfile)
-    # TODO: Set the size of the output. See this 
+    # TODO: Set the size of the output. See this
     #         http://stackoverflow.com/questions/14784405/how-to-set-the-output-size-in-graphviz-for-the-dot-format
     os.system("dot -T%s -o %s %s" % (fmt, dot_output_plain_formatted_file, dotfile))
 
@@ -46,7 +45,6 @@ def caseset_query_to_html(query, filename='cases.html'):
         # Format of this line is: graph scale width height
         if line.startswith( "graph"):
             dummy, graph_scale, graph_width, graph_height = line.split()    
-            #       
         elif line.startswith( "node"):
             # Format of this line is
             #     node name x y width height label style shape color fillcolor
@@ -109,8 +107,8 @@ def caseset_query_to_html(query, filename='cases.html'):
         os.remove(filename)
 
     # use the existing template to write out the html file
-    outputText = template.render( case_data = case_data, 
-                        node_content=node_content, 
+    outputText = template.render( case_data = case_data,
+                        node_content=node_content,
                         svg_path_edges=svg_path_edges,
                         graph_width = graph_width,
                         graph_height = graph_height,
@@ -118,7 +116,7 @@ def caseset_query_to_html(query, filename='cases.html'):
     with open(filename, "wb") as fh:
         fh.write(outputText)
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 3:
@@ -132,4 +130,3 @@ if __name__ == "__main__":
     data = cds.data # results
 
     caseset_query_to_html(data, filename=sys.argv[2])
-

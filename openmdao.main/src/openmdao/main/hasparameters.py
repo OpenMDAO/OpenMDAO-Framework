@@ -1246,12 +1246,12 @@ class HasVarTreeParameters(HasParameters):
         else:
             path = name[0]
 
-        path = make_legal_path(name)
+        path = make_legal_path(path)
         obj = self.parent
+
         names = ['case_inputs'] + path.split('.')
         for name in names[:-1]:
             obj = obj.get(name)
 
         name = names[-1]
         obj.remove_trait(name)
-
