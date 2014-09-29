@@ -27,6 +27,7 @@ class FiniteDifference(object):
         self.scope = system.scope
 
         options = system.options
+        driver = options.parent
 
         self.fd_step = options.fd_step*ones((len(self.inputs)))
         self.low = [None] * len(self.inputs)
@@ -42,9 +43,9 @@ class FiniteDifference(object):
         driver_params = []
         driver_targets = []
 
-        #if hasattr(driver, 'get_parameters'):
-        #    driver_params = driver.get_parameters()
-        #    driver_targets = driver.list_param_targets()
+        if hasattr(driver, 'get_parameters'):
+            driver_params = driver.get_parameters()
+            driver_targets = driver.list_param_targets()
 
         in_size = 0
         for j, srcs in enumerate(self.inputs):
