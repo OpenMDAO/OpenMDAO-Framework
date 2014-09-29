@@ -669,8 +669,10 @@ class ReductionTestCase(unittest.TestCase):
         g = nx.DiGraph()
         g.add_nodes_from(comps, comp=True)
         for n in comps:
+            g.add_nodes_from(["%s.%s" % (n, v) for v in invars], iotype='in')
             g.add_edges_from([("%s.%s"%(n,v),n) for v in invars])
         for n in comps:
+            g.add_nodes_from(["%s.%s" % (n, v) for v in outvars], iotype='out')
             g.add_edges_from([(n,"%s.%s"%(n,v)) for v in outvars])
         return g
 

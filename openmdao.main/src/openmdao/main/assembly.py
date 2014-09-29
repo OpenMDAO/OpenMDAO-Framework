@@ -46,7 +46,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
                                    map_collapsed_nodes, simple_node_iter, \
-                                   reduced2component, collapse_driver
+                                   reduced2component, collapse_driver, \
+                                   fix_state_connections, connect_subvars_to_comps
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars
@@ -1464,13 +1465,6 @@ class Assembly(Component):
     def setup_scatters(self):
         self._system.setup_scatters()
 
-    def _get_all_states(self):
-        states = []
-        for comp in self.get_comps():
-            if IImplicitComponent.providedBy(comp):
-                states.extend(['.'.join((comp.name, s)) for s in comp.list_states()])
-        return states
-
     def setup_graph(self, inputs=None, outputs=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
@@ -1481,15 +1475,18 @@ class Assembly(Component):
         self._setup_inputs = inputs if inputs is None else inputs[:]
         self._setup_outputs = outputs if outputs is None else outputs[:]
 
-        keep = set(self._get_all_states())
+        keep = set([n for n,d in self._depgraph.nodes_iter(data=True) if d.get('iotype')=='state'])
+                         #if d.get('iotype') in ('state','residual')])
 
         if self.parent is not None:
             self._derivs_required = self.parent._derivs_required
         else:
             self._derivs_required = False
 
+        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
+
         if inputs is None and outputs is None:
-            dgraph = self._depgraph
+            pass
         else:
             self._derivs_required = True
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
@@ -1506,13 +1503,42 @@ class Assembly(Component):
                 inputs = list(simple_node_iter(inputs))
                 outputs = list(simple_node_iter(outputs))
 
-            dgraph = relevant_subgraph(self._depgraph,
+            # if inputs is None:
+            #     inputs = list(ddests)
+            # else:
+            #    # identify any broadcast inputs
+            #     ins = []
+            #     for inp in inputs:
+            #         if isinstance(inp, basestring):
+            #             keep.add(inp)
+            #             ins.append(inp)
+            #         elif len(inp) == 1:
+            #             keep.add(inp[0])
+            #             ins.append(inp[0])
+            #         else:
+            #             keep.update(inp)
+            #             ins.append(inp[0])
+            #             # add input to input connections from first param in a group
+            #             # to all of the others
+            #             for pname in inp[1:]:
+            #                 dgraph.add_edge(inp[0], pname, conn=True)
+            #     inputs = ins
+                
+            # if outputs is None:
+            #     outputs = dsrcs
+
+
+            dgraph = relevant_subgraph(dgraph,
                                        inputs, outputs,
                                        keep)
             keep.update(inputs)
             keep.update(outputs)
 
+        fix_state_connections(self, dgraph)
+
         dgraph = self._explode_vartrees(dgraph)
+
+        connect_subvars_to_comps(dgraph)
 
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)

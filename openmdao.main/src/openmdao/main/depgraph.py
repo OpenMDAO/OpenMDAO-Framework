@@ -1,8 +1,8 @@
+import sys
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
 from functools import cmp_to_key
-from heapq import merge
 
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
@@ -14,10 +14,8 @@ from openmdao.main.interfaces import IDriver, IVariableTree, \
                                      IAssembly, IComponent
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val
-from openmdao.main.pseudoassembly import PseudoAssembly, from_PA_var, to_PA_var
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
-from openmdao.util.nameutil import partition_names_by_comp
 from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
@@ -458,43 +456,88 @@ class DependencyGraph(nx.DiGraph):
             elif not is_var_node(self, v):
                 raise RuntimeError("'%s' is not a variable node" % v)
 
-        # path is a list of tuples of the form (var, basevar)
-        path = [(base_src, base_src)]
+        # # path is a list of tuples of the form (var, basevar)
+        # path = [(base_src, base_src)]
 
-        if srcpath != base_src:  # srcpath is a subvar
+        # if srcpath != base_src:  # srcpath is a subvar
 
-            path.append((srcpath, base_src))
+        #     path.append((srcpath, base_src))
 
-        if destpath != base_dest:  # destpath is a subvar
-            path.append((destpath, base_dest))
+        # if destpath != base_dest:  # destpath is a subvar
+        #     path.append((destpath, base_dest))
 
-        path.append((base_dest, base_dest))
+        # path.append((base_dest, base_dest))
 
+        # if check:
+        #     self.check_connect(srcpath, destpath)
+
+        # for i in range(len(path)):
+        #     dest, base = path[i]
+        #     if dest not in self:  # create a new subvar if it's not already there
+        #         self.add_node(dest, basevar=base, **self.node[base])
+        #     if i > 0:
+        #         src = path[i-1][0]
+        #         try:
+        #             self[src][dest]
+        #         except KeyError:
+        #             self.add_edge(src, dest)
+
+        # # mark the actual connection edge to distinguish it
+        # # from other edges (for list_connections, etc.)
+        # self.edge[srcpath][destpath]['conn'] = True
+
+        # # create expression objects to handle setting of
+        # # array indces, etc.
+        # sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
+        # dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
+
+        # self.edge[srcpath][destpath]['sexpr'] = sexpr
+        # self.edge[srcpath][destpath]['dexpr'] = dexpr
+        added_nodes = []
+        added_edges = []
+        if srcpath == base_src:
+            pass  # will create connection edge later
+        else:  # srcpath is a subvar
+            if srcpath not in self:
+                self.add_node(srcpath, basevar=base_src, **self.node[base_src])
+                added_nodes.append(srcpath)
+            if self.node[base_src].get('boundary'):
+                iotypes = ('in', 'state')
+            else:
+                iotypes = ('out', 'state', 'residual')
+            if self.node[base_src]['iotype'] in iotypes:
+                self.add_edge(base_src, srcpath)
+                added_edges.append((base_src, srcpath))
+
+        if destpath == base_dest:
+            pass
+        else:  # destpath is a subvar
+            if destpath not in self:
+                self.add_node(destpath, basevar=base_dest, **self.node[base_dest])
+                added_nodes.append(destpath)
+            if self.node[base_dest].get('boundary'):
+                iotypes = ('out', 'state', 'residual')
+            else:
+                iotypes = ('in', 'state')
+            if self.node[base_dest]['iotype'] in iotypes:
+                self.add_edge(destpath, base_dest)
+                added_edges.append((destpath, base_dest))
+ 
         if check:
-            self.check_connect(srcpath, destpath)
-
-        for i in range(len(path)):
-            dest, base = path[i]
-            if dest not in self:  # create a new subvar if it's not already there
-                self.add_node(dest, basevar=base, **self.node[base])
-            if i > 0:
-                src = path[i-1][0]
-                try:
-                    self[src][dest]
-                except KeyError:
-                    self.add_edge(src, dest)
-
-        # mark the actual connection edge to distinguish it
-        # from other edges (for list_connections, etc.)
-        self.edge[srcpath][destpath]['conn'] = True
+            try:
+                self.check_connect(srcpath, destpath)
+            except Exception:
+                e = sys.exc_info()
+                self.remove_edges_from(added_edges)
+                self.remove_nodes_from(added_nodes)
+                raise e[0], e[1], e[2]
 
         # create expression objects to handle setting of
         # array indces, etc.
         sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
         dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
-
-        self.edge[srcpath][destpath]['sexpr'] = sexpr
-        self.edge[srcpath][destpath]['dexpr'] = dexpr
+ 
+        self.add_edge(srcpath, destpath, conn=True, sexpr=sexpr, dexpr=dexpr)
 
     def add_subvar(self, subvar):
         """ Adds a subvar node to the graph, properly connecting
@@ -1434,7 +1477,7 @@ def get_node_boundary(g, nodes):
     
     return set([u for u,v in ins]), set([v for u,v in outs])
      
-def collapse_nodes(g, collapsed_name, nodes):
+def collapse_nodes(g, collapsed_name, nodes, remove=True):
     """Collapse the given set of nodes into a single
     node with the specified name.
     """
@@ -1454,7 +1497,8 @@ def collapse_nodes(g, collapsed_name, nodes):
             # create our own copy of edge metadata
             g[collapsed_name][v] = g[u][v].copy()
 
-    g.remove_nodes_from(nodes)
+    if remove:
+        g.remove_nodes_from(nodes)
 
     return in_edges, out_edges
     
@@ -1588,25 +1632,41 @@ def _add_collapsed_node(g, src, dests):
             
     # if src is an input, we need to put src on the dest side so it
     # will receive scatters
-    if g.node[src].get('iotype') == 'in':
+    if g.node[src].get('iotype') == ('in', 'state'):
         if src not in dests:
             dests.append(src)
             newname = (src, tuple(dests))
 
     g.add_node(newname, meta.copy())
 
-    cname = src.split('.', 1)[0]
-    if is_comp_node(g, cname):
-        ## edge goes the other way if src is actually an input
-        #if g.node[src].get('iotype') == 'in':
-            #g.add_edge(newname, cname)
-        #else:
-        g.add_edge(cname, newname)
+    # cname = src.split('.', 1)[0]
+    # if is_comp_node(g, cname):
+    #     ## edge goes the other way if src is actually an input
+    #     #if g.node[src].get('iotype') == 'in':
+    #         #g.add_edge(newname, cname)
+    #     #else:
+    #     g.add_edge(cname, newname)
 
-    for dest in dests:
-        cname = dest.split('.', 1)[0]
-        if is_comp_node(g, cname):
-            g.add_edge(newname, cname)
+    # for dest in dests:
+    #     cname = dest.split('.', 1)[0]
+    #     if is_comp_node(g, cname):
+    #         g.add_edge(newname, cname)
+
+    # now wire up the new node
+    collapse_nodes(g, newname, [newname[0]]+list(newname[1]), remove=False)
+    
+    # and make sure its source, dests are components
+    for p in g.predecessors(newname):
+        cname = p.split('.', 1)[0]
+        g.remove_edge(p, newname)
+        if g.node[cname].get('comp'):
+            g.add_edge(cname, newname)
+            
+    for s in g.successors(newname):
+        cname = s.split('.', 1)[0]
+        g.remove_edge(newname, s)
+        if g.node[cname].get('comp'):
+             g.add_edge(newname, cname)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent
@@ -1696,7 +1756,7 @@ def prune_reduced_graph(orig_g, g, keep):
 
     for node, data in g.nodes_iter(data=True):
         if node in keep:
-           continue
+            continue
         
         # # don't prune states even if they're not connected
         # if 'state' in _find_in_meta(orig_g, node, 'iotype'):
@@ -1764,16 +1824,16 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     srcs and dests and all nodes connecting
     them.  Include any driver loops between them.
     """
-    # if g doesn't have necessary nodes or edges for any srcs or dests,
-    # then we have to copy g and modify the copy.
     to_add = [s for s in srcs if s not in g]
     to_add.extend([d for d in dests if d not in g])
 
     if to_add:
-        g = g.subgraph(g.nodes_iter())
         for node in to_add:
             base = g.base_var(node)
-            g.add_node(node, basevar=base, **g.node[base])
+            if base == node:
+                g.add_node(node, **g.node[base])
+            else:
+                g.add_node(node, basevar=base, **g.node[base])
             # connect it to its component
             if node in srcs:
                 g.add_edge(node, node.split('.',1)[0])
@@ -1892,4 +1952,70 @@ def get_nondiff_groups(graph):
         groups.append(nodeset)
 
     return groups
+
+def connect_subvars_to_comps(g):
+    """Take all subvars and connect them directly to 
+    their parent component node rather than to their
+    base var node.
+
+    This should be called on a graph before edge
+    collapsing.
+    """
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' in data:
+            comp = node
+            for base_in in g.predecessors(node):
+                for sub_in in g.predecessors(base_in):
+                    if g.node[sub_in].get('basevar') == base_in:
+                        g.add_edge(sub_in, comp)
+                        g.remove_edge(sub_in, base_in)
+
+            for base_out in g.successors(node):
+                for sub_out in g.successors(base_out):
+                    if g.node[sub_out].get('basevar') == base_out:
+                        g.add_edge(comp, sub_out)
+                        g.remove_edge(base_out, sub_out)
+
+def simple_prune(g):
+    """Remove all unconnected var nodes (except states).
+    """
+    for node, data in g.nodes(data=True):
+        if 'comp' in data:
+            for base_in in g.predecessors(node):
+                if not (g.node[base_in].get('basevar') or g.node[base_in].get('iotype') == 'state'):
+                    if g.in_degree(base_in) == 0 and g.out_degree(base_in) == 1:
+                        g.remove_node(base_in)
+
+            for base_out in g.successors(node):
+                if not (g.node[base_out].get('basevar') or g.node[base_out].get('iotype') == 'state'):
+                    if g.in_degree(base_out) == 1 and g.out_degree(base_out) == 0:
+                        g.remove_node(base_out)
+                        
+        elif 'boundary' in data:
+            if g.degree(node) == 0:
+                g.remove_node(node)
+
+
+def prune_framework_vars(g):
+    g.remove_nodes_from([n for n,data in g.nodes_iter(data=True) 
+                                    if 'framework_var' in data])
+
+def fix_state_connections(scope, g):
+    eval_only = set()
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' in data:
+            comp = getattr(scope, node)
+            if getattr(comp, 'eval_only', False):
+                eval_only.add(node)
+
+    for node, data in g.nodes_iter(data=True):
+        if data.get('iotype') == 'state':
+            cname = node.split('.', 1)[0]
+            if cname in g and g.node[cname].get('comp'):
+                if cname in eval_only: # tread states as inputs
+                    if node in g[cname]:
+                        g.remove_edge(cname, node)
+                else:
+                    if cname in g[node]:
+                        g.remove_edge(node, cname)
 

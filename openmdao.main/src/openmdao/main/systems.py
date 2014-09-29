@@ -347,10 +347,12 @@ class System(object):
         inputs = set()
         for system in self.simple_subsystems():
             for tup in system._in_nodes:
+                seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
                 for dest in tup[1]:
                     parts = dest.split('.', 1)
-                    if parts[0] in system._nodes:
+                    if parts[0] not in seen and parts[0] in system._nodes:
                         inputs.add(dest)
+                        seen.add(parts[0])
 
         top = self.scope
         return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
@@ -608,11 +610,6 @@ class System(object):
         """
         if not self.is_active():
             return
-
-        # if state_resid_map:
-        #     for out in self.list_outputs():
-        #         if out in state_resid_map:
-        #             self.state_resid_map[out] = state_resid_map[out]
 
         rank = self.mpi.rank
         if arrays is None:  # we're the top level System in our Assembly
@@ -1483,9 +1480,6 @@ class SerialSystem(CompoundSystem):
     def set_ordering(self, ordering):
         """Return the execution order of our subsystems."""
         self._ordering = [n for n in ordering if n in self.graph]
-        for node in self.graph.nodes_iter():
-            if node not in self._ordering:
-                self._ordering.append(node)
 
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
@@ -1494,7 +1488,26 @@ class SerialSystem(CompoundSystem):
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
 
-        self._ordering = gsort(transitive_closure(g), self._ordering)
+        deps = transitive_closure(g)
+        
+        for node in self.graph.nodes_iter():
+            if node not in self._ordering:
+                edges = list(nx.dfs_edges(g, node))
+                succ = [v for u,v in edges]
+                pred = [u for u,v in edges]
+                i = 0
+                for i,n in enumerate(self._ordering):
+                    if n in succ:
+                        break
+                    elif n in pred:
+                        i += 1
+                        break
+                if i < len(self._ordering):
+                    self._ordering.insert(i, node)
+                else:
+                    self._ordering.append(node)
+
+        self._ordering = gsort(deps, self._ordering)
 
         for s in self.all_subsystems():
             s.set_ordering(ordering)
@@ -1792,8 +1805,6 @@ class OpaqueSystem(CompoundSystem):
         else:
             self.J = inner_system.solve_fd(inputs, outputs)
 
-        #print self.J
-
     def applyJ(self, variables):
         vec = self.vec
         dfvec = vec['df']
@@ -1828,11 +1839,14 @@ class OpaqueSystem(CompoundSystem):
 
             self.scatter('du', 'dp')
 
+    def solve_linear(self, options=None):
+        """ Single linear solve solution applied to whatever input is sitting
+        in the RHS vector."""
+
+        self.sol_vec.array[:] = self.rhs_vec.array[:]
+
     def simple_subsystems(self):
         yield self
-
-        #for sub in self._inner_system.simple_subsystems():
-        #    yield sub
 
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)

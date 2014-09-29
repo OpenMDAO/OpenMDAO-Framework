@@ -283,6 +283,9 @@ class Workflow(object):
                     reset = True
                     break
 
+        inputs  = [_fix_tups(x) for x in inputs]
+        outputs = [_fix_tups(x) for x in outputs]
+
         if reset:
             # recreate system hierarchy
             self.scope._setup(inputs=inputs, outputs=outputs)
@@ -756,10 +759,12 @@ class Workflow(object):
                        ParamSystem(scope, reduced, param)
 
         if self.scope._setup_inputs is not None:
-            for param in simple_node_iter(self.scope._setup_inputs):
+            for param in self.scope._setup_inputs:
                 if param not in reduced:
+                    if isinstance(param, tuple):
+                        param = param[0]
                     reduced.add_node(param, comp='param')
-                    reduced.add_edge(param, name2collapsed[param])
+                    reduced.add_edge(param, name2collapsed.get(param,param))
                     reduced.node[param]['system'] = \
                                ParamSystem(scope, reduced, param)
                 added.add(param)
@@ -912,3 +917,10 @@ def get_cycle_vars(system):
                     break
 
     return cycle_vars
+
+
+def _fix_tups(x):
+    """Return x[0] if x is a single element tuple, else return x."""
+    if isinstance(x, tuple) and len(x) == 1:
+        return x[0]
+    return x
