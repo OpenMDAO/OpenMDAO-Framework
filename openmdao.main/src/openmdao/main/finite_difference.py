@@ -306,6 +306,7 @@ class FiniteDifference(object):
                     vec[index] += val.real()
                 else:
                     vec[index] += val
+                break  # avoid adding to the same array entry multiple times for param groups
 
     def get_value(self, src, i1, i2, index):
         """Get a value from the model. We only need this function for

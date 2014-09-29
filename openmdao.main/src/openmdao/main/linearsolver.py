@@ -496,7 +496,10 @@ class LinearGS(LinearSolver):
 
 
 def _detuple(x):
-    """Return x, or if x is a tuple, x[0]."""
+    """For scalar x, return x. For 1 element tuple, return x[0].
+    For multi-element tuple, return x.
+    """
     if isinstance(x, tuple):
-        return x[0]
+        if len(x) == 1:
+            return x[0]
     return x

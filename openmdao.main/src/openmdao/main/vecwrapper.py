@@ -149,7 +149,7 @@ class VecWrapperBase(object):
             array_val = self[name]
             end += array_val.size
             if end > asize:
-                raise ValueError("end index %d exceeds size of target array" % end-1)
+                raise ValueError("end index %d exceeds size of target array" % (end-1))
             array_val[:] = arr[start:end]
             start += array_val.size
 

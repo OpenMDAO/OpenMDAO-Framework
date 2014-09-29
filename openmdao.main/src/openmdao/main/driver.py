@@ -12,7 +12,7 @@ from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
-from openmdao.main.depgraph import find_all_connecting, \
+from openmdao.main.depgraph import find_all_connecting, simple_node_iter, \
                                    collapse_driver, get_reduced_subgraph
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -184,7 +184,7 @@ class Driver(Component):
         nodes = set([c.name for c in self.iteration_set()])
         nodes.add(self.name)
         if self.parent._setup_inputs:
-            nodes.update(self.parent._setup_inputs)
+            nodes.update(simple_node_iter(self.parent._setup_inputs))
         return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
 
     def check_config(self, strict=False):

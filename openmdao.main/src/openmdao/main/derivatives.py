@@ -113,12 +113,12 @@ def applyJ(system, variables):
         if not is_sys:
             key = item.partition('.')[-1]
         parent = system
-        done = False
-        while not done:
+
+        while True:
             parent = parent._parent_system
             if item in parent.vec['dp']:
                 arg[key] = parent.vec['dp'][item]
-                done = True
+                break
 
     result = {}
     for item in system.list_outputs() + system.list_residuals():
