@@ -1489,7 +1489,7 @@ class SerialSystem(CompoundSystem):
             break_cycles(g)
 
         deps = transitive_closure(g)
-        
+
         for node in self.graph.nodes_iter():
             if node not in self._ordering:
                 edges = list(nx.dfs_edges(g, node))
@@ -1817,7 +1817,7 @@ class OpaqueSystem(CompoundSystem):
             applyJ(self, variables)
             dfvec.array[:] *= -1.0
 
-            for var in variables: #self.list_outputs():
+            for var in self.list_outputs():
                 if var in dfvec:
                     dfvec[var][:] += vec['du'][var][:]
 
@@ -1833,7 +1833,7 @@ class OpaqueSystem(CompoundSystem):
             applyJT(self, variables)
             dfvec.array[:] *= -1.0
 
-            for var in variables: #self.list_outputs():
+            for var in self.list_outputs():
                 if var in dfvec:
                     vec['du'][var][:] += dfvec[var][:]
 
