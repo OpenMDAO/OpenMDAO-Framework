@@ -286,11 +286,11 @@ class Parameter(ParameterBase):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
         try:
-            vecs = self._get_scope()._system.vec
-        except AttributeError:
+            view = self._get_scope()._system.vec['u'][self._expreval.text]
+        except (KeyError, AttributeError):
             self._expreval.set(transval)
         else:
-            self._get_scope()._system.vec['u'][self._expreval.text][:] = transval
+            view[:] = transval
 
     def copy(self):
         """Return a copy of this Parameter."""
