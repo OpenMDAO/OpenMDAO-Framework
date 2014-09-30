@@ -44,7 +44,7 @@ def caseset_query_to_html(query, filename='cases.html'):
       for i, line in enumerate(f):
         # Format of this line is: graph scale width height
         if line.startswith( "graph"):
-            dummy, graph_scale, graph_width, graph_height = line.split()    
+            dummy, graph_scale, graph_width, graph_height = line.split()
         elif line.startswith( "node"):
             # Format of this line is
             #     node name x y width height label style shape color fillcolor
@@ -78,7 +78,7 @@ def caseset_query_to_html(query, filename='cases.html'):
     # also, using http://www.d3noob.org/2013/03/d3js-force-directed-graph-example-basic.html to add the arrowheads
     svg_path_edges = ''
     for control_points in spline_data:
-        svg_path_edges += '''svg.append("svg:path")
+        svg_path_edges += '''vis.append("svg:path")
                     .attr("d","'''
 
         svg_path_edges += 'M " + xscale(%s) + " " + yscale(%s) + " "' % control_points[0]
