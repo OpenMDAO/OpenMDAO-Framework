@@ -66,11 +66,11 @@ class VecWrapperTestCase(unittest.TestCase):
         top = _nested_model()
         top.run()
         self.assertEqual(set(top.sub._system.vec['u'].keys()), 
-                         set([('b2', ('comp2.b',)), 
-                              ('b6', ('comp6.b',)), 
-                              ('b4', ('comp4.b',)), 
-                              ('a3', ('comp3.a',)), 
-                              ('a1', ('comp1.a',)), 
+                         set([('b2', ('comp2.b', 'b2')), 
+                              ('b6', ('comp6.b', 'b6')), 
+                              ('b4', ('comp4.b', 'b4')), 
+                              ('a3', ('comp3.a', 'a3')), 
+                              ('a1', ('comp1.a', 'a1')), 
                               ('comp2.c', ('c2',)), 
                               ('comp2.d', ('comp5.b',)), 
                               ('comp3.c', ('comp5.a',)), 

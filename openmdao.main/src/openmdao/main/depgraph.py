@@ -1632,7 +1632,7 @@ def _add_collapsed_node(g, src, dests):
             
     # if src is an input, we need to put src on the dest side so it
     # will receive scatters
-    if g.node[src].get('iotype') == ('in', 'state'):
+    if g.node[src].get('iotype') in ('in', 'state'):
         if src not in dests:
             dests.append(src)
             newname = (src, tuple(dests))
@@ -1940,7 +1940,10 @@ def get_nondiff_groups(graph):
     # set of component names.
     sub = graph.subgraph(nondiff)
 
-    for inodes in nx.connected_components(sub.to_undirected()):
+    # don't use to_undirected() to get an undirected graph from a directed graph,
+    # as it does a deepcopy of all graph metadata. Instead, just use nx.Graph(digraph),
+    # which creates an undirected graph using shallow copies of metadata.
+    for inodes in nx.connected_components(nx.Graph(sub)):
 
         # Pull in any differentiable islands
         nodeset = set(inodes)
