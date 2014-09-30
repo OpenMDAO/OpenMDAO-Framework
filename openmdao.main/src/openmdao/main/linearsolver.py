@@ -29,7 +29,7 @@ class LinearSolver(object):
         """ Computes the norm of the linear residual """
         system = self._system
         system.rhs_vec.array[:] = 0.0
-        system.applyJ(system.variables.keys())
+        system.applyJ(system.vector_vars.keys())
         system.rhs_vec.array[:] *= -1.0
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
@@ -318,7 +318,7 @@ class PETSc_KSP(LinearSolver):
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
-        system.applyJ(system.variables.keys())
+        system.applyJ(system.vector_vars.keys())
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
         # mpiprint('names = %s' % system.sol_vec.keys())
@@ -460,7 +460,7 @@ class LinearGS(LinearSolver):
                 for subsystem in system.subsystems(local=True):
                     system.scatter('du', 'dp', subsystem=subsystem)
                     system.rhs_vec.array[:] = 0.0
-                    subsystem.applyJ(system.variables.keys())
+                    subsystem.applyJ(system.vector_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
@@ -476,8 +476,9 @@ class LinearGS(LinearSolver):
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
                             system.rhs_vec.array[:] = 0.0
-                            args = [v for v in system.variables.keys()
-                                    if v not in subsystem2.variables.keys()]
+                            #args = [v for v in system.variables.keys()
+                            #        if v not in subsystem2.variables.keys()]
+                            args = subsystem.vector_vars.keys()
                             subsystem2.applyJ(args)
                             system.scatter('du', 'dp', subsystem=subsystem2)
                             system.clear_dp()
