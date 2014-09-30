@@ -1150,11 +1150,11 @@ class SimpleSystem(System):
             vec['f'].array[:] = vec['u'].array[:]
             self.scatter('u', 'p')
 
-            if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
-                self._comp.evaluate()
-            else:
-                self._comp.set_itername('%s-%s' % (iterbase, self.name))
-                self._comp.run(case_uuid=case_uuid)
+            #if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
+            #    self._comp.evaluate()
+            #else:
+            self._comp.set_itername('%s-%s' % (iterbase, self.name))
+            self._comp.run(case_uuid=case_uuid)
 
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,
