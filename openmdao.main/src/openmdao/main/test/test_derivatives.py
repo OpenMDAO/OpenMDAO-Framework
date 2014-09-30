@@ -2642,13 +2642,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.add_constraint('dis2.miss_out < 24.0')
 
         self.top.run()
-        J = self.top.driver.workflow.calc_gradient(mode='forward')
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err),
-                             "'dis2' doesn't provide analytical derivatives"
-                             " ['miss_out']")
+                             "'dis2 (1-dis2): does not provide analytical derivatives for"
+                             " miss_out'")
         else:
             self.fail("exception expected")
 
@@ -2661,8 +2660,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
             self.assertEqual(str(err),
-                             "'dis2' doesn't provide analytical derivatives"
-                             " ['miss_in']")
+                             "'dis2 (1-dis2): does not provide analytical derivatives for"
+                             " miss_in'")
         else:
             self.fail("exception expected")
 
