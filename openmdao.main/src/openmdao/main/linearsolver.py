@@ -443,7 +443,6 @@ class LinearGS(LinearSolver):
 
     def solve(self, arg):
         """ Executes an iterative solver """
-
         system = self._system
 
         system.rhs_buf[:] = arg[:]
@@ -476,8 +475,6 @@ class LinearGS(LinearSolver):
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
                             system.rhs_vec.array[:] = 0.0
-                            #args = [v for v in system.variables.keys()
-                            #        if v not in subsystem2.variables.keys()]
                             args = subsystem.vector_vars.keys()
                             subsystem2.applyJ(args)
                             system.scatter('du', 'dp', subsystem=subsystem2)

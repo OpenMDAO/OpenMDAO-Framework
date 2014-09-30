@@ -3209,7 +3209,7 @@ class TestMultiDriver(unittest.TestCase):
         sp.architecture = MDF()
 
         # Make sure it runs.
-        sp.run()
+        #sp.run()
 
         # Test gradient
         sp.driver.gradient_options.fd_form = 'central'
@@ -3235,7 +3235,7 @@ class TestMultiDriver(unittest.TestCase):
         #sp.local_opt_d1.maxiter = 1
 
         # Make sure it runs.
-        sp.run()
+        #sp.run()
 
         # Test gradient
         sp.driver.gradient_options.fd_form = 'central'

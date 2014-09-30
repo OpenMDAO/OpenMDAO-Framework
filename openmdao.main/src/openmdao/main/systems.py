@@ -850,9 +850,14 @@ class System(object):
         # -- 3. Auto determination (when implemented)
         if mode == 'auto':
 
-            # TODO - Support automatic determination of mode
+            # Automatic determination of mode
             if options.derivative_direction == 'auto':
-                mode = 'forward'
+                num_input = self.get_size(inputs)
+                num_output = self.get_size(outputs)
+                if num_input > num_output:
+                    mode = 'adjoint'
+                else:
+                    mode = 'forward'
             else:
                 mode = options.derivative_direction
 
