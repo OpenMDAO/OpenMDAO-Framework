@@ -22,9 +22,15 @@
                 var child ;
 
                 // Add a label for the driver name at this hierarchy level
-                nodes[nodes.length] = {id: children[0].driver_name + '_' + children[0].case_number.toString(),
-                                       text: children[0].driver_name.toString(),
-                                       img: 'icon-page' } ;
+                if (children.length > 0) {
+                    nodes[nodes.length] = {id: children[0].driver_name + '_' + children[0].case_number.toString(),
+                                           text: children[0].driver_name.toString(),
+                                           img: 'icon-page' };
+                }
+                else {
+                    // there are no cases to pull driver info from, so just add a default driver node
+                    nodes[nodes.length] = {id: 'driver', text: 'driver', img: 'icon-page' };
+                }
                 for (var i=0; i < children.length; i++) {
                     child = children[i] ;
                     if ( child.children.length ) { // if node has subnodes, recurse

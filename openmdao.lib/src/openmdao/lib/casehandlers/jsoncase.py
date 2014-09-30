@@ -40,7 +40,6 @@ class _BaseRecorder(object):
 
     def get_simulation_info(self, constants):
         """ Return simulation info dictionary. """
-
         # Locate top level assembly from first driver registered.
         top = self._cfg_map.keys()[0].parent
         while top.parent:

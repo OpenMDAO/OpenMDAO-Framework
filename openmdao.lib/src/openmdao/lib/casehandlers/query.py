@@ -2,6 +2,8 @@ import bson
 import json
 import logging
 
+import StringIO
+
 from struct import pack, unpack
 from weakref import ref
 
@@ -202,6 +204,7 @@ class CaseDataset(object):
         found = False
         simulation_info = self.simulation_info
         constants = simulation_info['constants']  # Updated to reflect start.
+
         for count, case_data in enumerate(self._reader.cases()):
             data = case_data['data']
             case_id = case_data['_id']
@@ -249,6 +252,17 @@ class CaseDataset(object):
 
         if self._query_id and not found:
             raise ValueError('No case with _id %s' % self._query_id)
+        elif not found:
+            # write simulation_info even if no cases were found
+            writer.write('simulation_info', simulation_info)
+            for i, driver in enumerate(self.drivers):
+                # Remove unused variables from driver['recording'] data.
+                if query.vnames:
+                    prefix, _, name = driver['name'].rpartition('.')
+                    recording = [name for name in driver['recording']
+                                       if prefix+name in query.vnames]
+                    driver['recording'] = recording
+                writer.write('driver_info_%s' % (i+1), driver)
 
         writer.close()
 
@@ -568,7 +582,10 @@ class _Reader(object):
     """ Base class for JSON/BSON readers. """
 
     def __init__(self, filename, mode):
-        self._inp = open(filename, mode)
+        if isinstance(filename, StringIO.StringIO):
+            self._inp = filename
+        else:
+            self._inp = open(filename, mode)
         self._simulation_info = self._next()
         self._state = 'drivers'
         self._info = None
@@ -660,6 +677,8 @@ class _JSONWriter(object):
     def __init__(self, out, indent=4, sort_keys=True):
         if isinstance(out, basestring):
             self._out = open(out, 'w')
+        elif isinstance(out, StringIO.StringIO):
+            self._out = out
         elif ('w' in out.mode or 'a' in out.mode) and 'b' not in out.mode:
             self._out = out
         else:
@@ -683,8 +702,11 @@ class _JSONWriter(object):
         """ Close file. """
         self._out.write('}\n')
 
-        if self._out.mode == 'w':
+        if isinstance(self._out, StringIO.StringIO):
+            pass
+        elif self._out.mode == 'w':
             self._out.close()
+
 
 class _BSONWriter(object):
     """ Writes case data as BSON. """

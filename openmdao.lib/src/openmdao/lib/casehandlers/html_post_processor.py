@@ -1,27 +1,23 @@
 import os
-import tempfile
 from jinja2 import Environment, FileSystemLoader
 import networkx as nx
 
 from openmdao.lib.casehandlers.api import CaseDataset
 
+import StringIO
+import json
+import webbrowser
 
 def caseset_query_to_html(query, filename='cases.html'):
 
-    # Write query results to JSON file
-    # Wish I could write to a string or JSON object
-    tmpfile = tempfile.NamedTemporaryFile('w')
-    query.write(tmpfile.name)
-    with open(tmpfile.name, 'rt') as f:
-        case_data = f.read()
+    # get case data as serialized json string
+    q_str = StringIO.StringIO()
+    query.write(q_str)
+    case_data = q_str.getvalue()
 
-    # Need to get at the depgraph data in this CaseDataSet file
-    cds = CaseDataset(tmpfile.name, 'json')
-    tmpfile = tempfile.NamedTemporaryFile('w')
-    with open(tmpfile.name, "w") as f:
-        f.write(cds.simulation_info['graph'])
-    with open(tmpfile.name) as f:
-        G = nx.readwrite.json_graph.load(f)
+    # get graph from case data
+    graph = json.loads(case_data)['simulation_info']['graph']
+    G = nx.readwrite.json_graph.loads(graph)
 
     # depgraph is supposed to be openmdao.main.depgraph.DependencyGraph
     # But what comes back from json_graph is networkx.classes.digraph.DiGraph
@@ -119,13 +115,22 @@ def caseset_query_to_html(query, filename='cases.html'):
 if __name__ == "__main__":
     import sys
 
-    if len(sys.argv) < 3:
+    if len(sys.argv) == 3:
+        json_file = sys.argv[1]
+        html_file = sys.argv[2]
+    elif len(sys.argv) == 2:
+        json_file = sys.argv[1]
+        html_file = sys.argv[1]+'.html'
+    else:
         sys.exit('Usage: %s case_records_json_file output_html_file' % sys.argv[0])
 
-    if not os.path.exists(sys.argv[1]):
+    if not os.path.exists(json_file):
         sys.exit('ERROR: Case records JSON file %s was not found!' % sys.argv[1])
 
-    cds = CaseDataset(sys.argv[1], 'json')
+    cds = CaseDataset(json_file, 'json')
     data = cds.data  # results
 
-    caseset_query_to_html(data, filename=sys.argv[2])
+    caseset_query_to_html(data, filename=html_file)
+
+    browser = webbrowser.get()
+    browser.open(html_file, 1, True)
