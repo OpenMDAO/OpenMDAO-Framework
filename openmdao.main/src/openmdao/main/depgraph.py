@@ -1961,20 +1961,35 @@ def connect_subvars_to_comps(g):
     This should be called on a graph before edge
     collapsing.
     """
-    for node, data in g.nodes(data=True):
-        if 'basevar' in data:
-            base = data['basevar']
-            if base in g:
-                for u,v in g.edges(base):
-                    if g.node[v].get('comp'):
-                        g.add_edge(node, v)
-                for u,v in g.in_edges(base):
-                    if g.node[u].get('comp'):
-                        g.add_edge(u, node)
-                if base in g[node]:
-                    g.remove_edge(node, base)
-                if node in g[base]:
-                    g.remove_edge(base, node)
+    # for node, data in g.nodes(data=True):
+    #     if 'basevar' in data:
+    #         base = data['basevar']
+    #         if base in g:
+    #             for u,v in g.edges(base):
+    #                 if g.node[v].get('comp'):
+    #                     g.add_edge(node, v)
+    #             for u,v in g.in_edges(base):
+    #                 if g.node[u].get('comp'):
+    #                     g.add_edge(u, node)
+    #             if base in g[node]:
+    #                 g.remove_edge(node, base)
+    #             if node in g[base]:
+    #                 g.remove_edge(base, node)
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' in data:
+            comp = node
+            for base_in in g.predecessors(node):
+                for sub_in in g.predecessors(base_in):
+                    if g.node[sub_in].get('basevar') == base_in:
+                        g.add_edge(sub_in, comp)
+                        g.remove_edge(sub_in, base_in)
+
+            for base_out in g.successors(node):
+                for sub_out in g.successors(base_out):
+                    if g.node[sub_out].get('basevar') == base_out:
+                        g.add_edge(comp, sub_out)
+                        g.remove_edge(base_out, sub_out)
+
 
 def simple_prune(g):
     """Remove all unconnected var nodes (except states).
