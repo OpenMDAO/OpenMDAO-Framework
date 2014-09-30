@@ -121,8 +121,18 @@ def applyJ(system, variables):
                 break
 
     result = {}
-    for item in system.list_outputs() + system.list_residuals():
+    for item in system.list_outputs():
 
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        result[key] = system.rhs_vec[item]
+
+    for item in system.list_residuals():
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
@@ -251,7 +261,20 @@ def applyJT(system, variables):
 
     arg = {}
 
-    for item in system.list_outputs() + system.list_residuals():
+    for item in system.list_outputs():
+
+        # TODO - Linear GS needs these. Need to fix something there.
+        #collapsed = system.scope.name2collapsed.get(item)
+        #if collapsed not in variables:
+        #    continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    for item in system.list_residuals():
+
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
