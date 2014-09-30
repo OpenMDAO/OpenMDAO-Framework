@@ -2005,7 +2005,7 @@ def fix_state_connections(scope, g):
     for node, data in g.nodes_iter(data=True):
         if 'comp' in data:
             comp = getattr(scope, node, None)
-            if comp and has_interface(comp, IImplicitComponent) and getattr(comp, 'eval_only') is False:
+            if comp and has_interface(comp, IImplicitComponent) and getattr(comp, 'eval_only'):
                     eval_only.add(node)
 
     for node, data in g.nodes_iter(data=True):
