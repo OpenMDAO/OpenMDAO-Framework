@@ -22,7 +22,7 @@
                 var child ;
 
                 // Add a label for the driver name at this hierarchy level
-                nodes[nodes.length] = {id: children[0].driver_name + '_' + children[0].case_number.toString(), 
+                nodes[nodes.length] = {id: children[0].driver_name + '_' + children[0].case_number.toString(),
                                        text: children[0].driver_name.toString(),
                                        img: 'icon-page' } ;
                 for (var i=0; i < children.length; i++) {
@@ -47,7 +47,7 @@
                     padding: 0,
                     panels: [
                         { type: 'left', size: 200, resizable: true, minSize: 120 },
-                        { type: 'main',  minSize: 550, overflow: 'auto' }
+                        { type: 'main',  minSize: 550, overflow: 'hidden' }
                     ]
                 },
             };
@@ -107,7 +107,7 @@
                 }); // end keys
 
                 if ( num_orphan_cases > 0 ) {
-                    alert("WARNING: There were " + num_orphan_cases.toString() + " cases with no parent cases"); 
+                    alert("WARNING: There were " + num_orphan_cases.toString() + " cases with no parent cases");
                 }
                 // Starting from the top "case_object", which is really the sim info data,
                 // Walk down the children leaves, creating the value for nodes in the w2ui call below
@@ -116,7 +116,7 @@
 
                 // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
-                w2ui.layout.content('main', '<div id="svgContent"></div>' );
+                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>' );
                 w2ui.layout.content('left', jQuery().w2sidebar(
                     {
                         name: 'cases',
@@ -135,7 +135,7 @@
                 //   nodes and edges that graphviz's dot program generates
                 var w = {{graph_width}} * 72, h = {{graph_height}} * 72 ; // assuming 72 DPI
 
-                // TODO: Could probably do the scaling/sizing better 
+                // TODO: Could probably do the scaling/sizing better
                 // TODO: Also, use this option to dot to flip the direction of y
                 //         -y          - Invert y coordinate in output
                 var yscale = d3.scale.linear()
@@ -151,9 +151,30 @@
 
                 var svg = d3.select("#svgContent")
                               .append("svg")
-                              .attr("height", h)
-                              .attr("width", w)
+                              .attr("height", "100%")
+                              .attr("width", "100%")
                               .attr('preserveAspectRatio', 'xMinYMin slice') ;
+
+                var vis = svg
+                  .append('svg:g')
+                    .call(d3.behavior.zoom().on("zoom", rescale))
+                    .on("dblclick.zoom", null)
+                  .append('svg:g');
+
+
+                function rescale() {
+                  trans=d3.event.translate;
+                  scale=d3.event.scale;
+                  vis.attr("transform",
+                      "translate(" + trans + ")"
+                      + " scale(" + scale + ")");
+                }
+
+                vis.append('svg:rect')
+                    .attr('width', "100%")
+                    .attr('height', "100%")
+                    .attr('fill', 'white');
+
 
                 var dataSet = {
                     nodes: [
@@ -167,7 +188,7 @@
                     .start();
 
                 // create SVG groups for each node
-                var node = svg.selectAll(".node")
+                var node = vis.selectAll(".node")
                     .data(dataSet.nodes)
                     .enter().append("g")
                     .attr("class", function (d) {
@@ -210,7 +231,7 @@
                     ;
 
                 // build the arrowhead
-                svg.append("svg:defs").selectAll("marker")
+                vis.append("svg:defs").selectAll("marker")
                     .data(["end"])
                     .enter().append("svg:marker")
                     .attr("id", String)
