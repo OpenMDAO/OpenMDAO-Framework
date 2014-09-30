@@ -850,9 +850,14 @@ class System(object):
         # -- 3. Auto determination (when implemented)
         if mode == 'auto':
 
-            # TODO - Support automatic determination of mode
+            # Automatic determination of mode
             if options.derivative_direction == 'auto':
-                mode = 'forward'
+                num_input = self.get_size(inputs)
+                num_output = self.get_size(outputs)
+                if num_input > num_output:
+                    mode = 'adjoint'
+                else:
+                    mode = 'forward'
             else:
                 mode = options.derivative_direction
 
@@ -1145,11 +1150,11 @@ class SimpleSystem(System):
             vec['f'].array[:] = vec['u'].array[:]
             self.scatter('u', 'p')
 
-            if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
-                self._comp.evaluate()
-            else:
-                self._comp.set_itername('%s-%s' % (iterbase, self.name))
-                self._comp.run(case_uuid=case_uuid)
+            #if IImplicitComponent.providedBy(self._comp) and self._comp.eval_only==False:
+            #    self._comp.evaluate()
+            #else:
+            self._comp.set_itername('%s-%s' % (iterbase, self.name))
+            self._comp.run(case_uuid=case_uuid)
 
             # put component outputs in u vector
             self.vec['u'].set_from_scope(self.scope,

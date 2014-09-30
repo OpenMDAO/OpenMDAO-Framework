@@ -4,7 +4,7 @@ output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
 
-from openmdao.main.mpiwrap import MPI
+from openmdao.main.mpiwrap import MPI, mpiprint
 
 if not MPI:
     from numpy.linalg import norm
