@@ -2050,7 +2050,7 @@ def _create_simple_sys(scope, graph, name):
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
                and comp._subtype == 'equality':
         sub = EqConstraintSystem(scope, graph, name)
-    elif IComponent.providedBy(comp):
+    elif has_interface(comp, IComponent):
         sub = SimpleSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'param':
         sub = ParamSystem(scope, graph, name)

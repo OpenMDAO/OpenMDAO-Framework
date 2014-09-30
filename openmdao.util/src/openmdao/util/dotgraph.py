@@ -222,7 +222,7 @@ def plot_system_tree(system, fmt='pdf', outfile=None):
     os.remove(dotfile)
 
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
+def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=None,
                excludes=(), prune=False):
     """Create a plot of the given graph"""
 
