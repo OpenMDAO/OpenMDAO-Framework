@@ -3,6 +3,7 @@ Basic unit testing of OpenMDAO's derivative capability.
 """
 
 from cStringIO import StringIO
+from nose import SkipTest
 import networkx as nx
 import re
 import unittest
@@ -3222,6 +3223,8 @@ class TestMultiDriver(unittest.TestCase):
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):
+
+        raise SkipTest('Cannot specify options on architectures yet.')
 
         # There was a keyerror here too, resulting from a basevar node
         # that got removed somehow on the recursed optimizer graph.
