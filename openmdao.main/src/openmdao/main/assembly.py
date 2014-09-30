@@ -1417,7 +1417,7 @@ class Assembly(Component):
         return connectivity
 
     def clean_graph(self, format='json'):
-        ''' returns a cleaned up graph in the selected format
+        ''' returns cleaned up graph data in the selected format
 
             format: (optional) string
                 json - returns serialized graph data in JSON format
@@ -1435,8 +1435,8 @@ class Assembly(Component):
 
     def _repr_svg_(self):
         """ Returns an SVG representation of this Assembly's dependency graph
+            (if pygraphviz is not available, returns an empty string)
         """
-        # just quietly return an empty string if pygraphviz is not available
         try:
             import pygraphviz
             return self.clean_graph(format='svg')
