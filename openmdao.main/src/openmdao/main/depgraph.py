@@ -1632,7 +1632,7 @@ def _add_collapsed_node(g, src, dests):
             
     # if src is an input, we need to put src on the dest side so it
     # will receive scatters
-    if g.node[src].get('iotype') == ('in', 'state'):
+    if g.node[src].get('iotype') in ('in', 'state'):
         if src not in dests:
             dests.append(src)
             newname = (src, tuple(dests))
