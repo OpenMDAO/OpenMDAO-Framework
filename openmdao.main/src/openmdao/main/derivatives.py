@@ -5,7 +5,7 @@ from numpy import zeros, vstack, hstack
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
 from openmdao.main.mpiwrap import mpiprint
-from openmdao.main.interfaces import ISystem
+from openmdao.main.interfaces import ISystem, IAssembly
 from openmdao.util.graph import list_deriv_vars
 
 # pylint: disable=C0103
@@ -189,6 +189,9 @@ def applyJ(system, variables):
     if is_sys:
         input_keys = system.list_inputs() + system.list_states()
         output_keys = system.list_outputs() + system.list_residuals()
+    elif IAssembly.providedBy(obj):
+        input_keys = [item.partition('.')[-1] for item in system.list_inputs()]
+        output_keys = [item.partition('.')[-1] for item in system.list_outputs()]
     else:
         input_keys, output_keys = list_deriv_vars(obj)
 
@@ -364,6 +367,9 @@ def applyJT(system, variables):
     if is_sys:
         input_keys = system.list_inputs() + system.list_states()
         output_keys = system.list_outputs() + system.list_residuals()
+    elif IAssembly.providedBy(obj):
+        input_keys = [item.partition('.')[-1] for item in system.list_inputs()]
+        output_keys = [item.partition('.')[-1] for item in system.list_outputs()]
     else:
         input_keys, output_keys = list_deriv_vars(obj)
 

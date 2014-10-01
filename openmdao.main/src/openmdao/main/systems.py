@@ -1179,10 +1179,6 @@ class SimpleSystem(System):
 
         vec = self.vec
 
-        if not hasattr(self._comp, 'provideJ'):
-            msg = 'Non-differentiable comps are currently not supported.'
-            self._comp.raise_exception(msg, RuntimeError)
-
         # Forward Mode
         if self.mode == 'forward':
 
@@ -1275,6 +1271,17 @@ class InVarSystem(VarSystem):
         """
         self.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
+    def applyJ(self, variables):
+        """ Set to zero """
+        # don't do anything if we don't own our output
+        # don't do anything if we are not requesting this invar
+        if self.variables and \
+           self.scope.name2collapsed.get(self.name) in variables:
+            # mpiprint("param sys %s: adding %s to %s" %
+            #                 (self.name, self.sol_vec[self.name],
+            #                     self.rhs_vec[self.name]))
+            self.rhs_vec[self.name] += self.sol_vec[self.name]
+
     def pre_run(self):
         """ Load param value into u vector. """
         self.vec['u'].set_from_scope(self.scope, [self.name])
@@ -1323,6 +1330,10 @@ class EqConstraintSystem(SimpleSystem):
 class AssemblySystem(SimpleSystem):
     """A System to handle an Assembly."""
 
+    def __init__(self, scope, graph, name):
+        super(AssemblySystem, self).__init__(scope, graph, name)
+        self._provideJ_bounds = None
+
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
         self._comp.setup_communicators(comm)
@@ -1345,9 +1356,23 @@ class AssemblySystem(SimpleSystem):
         self._comp.setup_scatters()
 
     def set_options(self, mode, options):
-        """ Sets all user-configurable options for the inner_system and its
-        children. """
+        """ Assembly inner system determines its own mode, but we use parents
+        mode at this level. Options will be passed when the gradient is
+        calculated."""
+        self.options = options
         self.mode = mode
+
+        if mode in ('forward', 'fd'):
+            self.sol_vec = self.vec['du']
+            self.rhs_vec = self.vec['df']
+        elif mode == 'adjoint':
+            self.sol_vec = self.vec['df']
+            self.rhs_vec = self.vec['du']
+        else:
+            raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
+
+        # Note, this mode is not important, but the options are needed for
+        # linearize.
         self._comp._system.set_options(mode, options)
 
     def clear_dp(self):
@@ -1357,52 +1382,64 @@ class AssemblySystem(SimpleSystem):
             system.clear_dp()
 
     def linearize(self):
-        """ Assemblies linearize all subsystems in the Inner Assy System. """
-        self._comp._system.linearize()
-
-    def applyJ(self, variables):
-        """ Call into our assembly's top ApplyJ to get the matrix vector
-        product across the boundary variables.
-        """
+        """ Calculates and saves the Jacobian for this subassy. """
 
         inner_system = self._comp._system
-        if self.mode == 'forward':
-            arg = 'du'
-            res = 'df'
-        elif self.mode == 'adjoint':
-            arg = 'df'
-            res = 'du'
 
-        nonzero = False
-        #needed_vars = flatten_list_of_iters([item[1] for item in variables])
-        #needed_vars.extend([item[0] for item in variables])
+        # Linearize systems in the assembly
+        inner_system.linearize()
 
-        for item in self.list_inputs() + self.list_states() + \
-                    self.list_outputs() + self.list_residuals():
+        # Calculate and save Jacobian for this assy
+        inputs = [item.partition('.')[-1] for item in self.list_inputs()]
+        outputs = [item.partition('.')[-1] for item in self.list_outputs()]
+        self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
+                                            options=self.options)
 
-            var = self.scope._system.vec[arg][item]
-            if any(var != 0):
-                nonzero = True
-            sub_name = item.partition('.')[2:][0]
-            inner_system.vec[arg][sub_name] = var
+        #print self.J
 
-            var = self.scope._system.vec[res][item]
-            sub_name = item.partition('.')[2:][0]
-            inner_system.vec[res][sub_name] = var
+    #def applyJ(self, variables):
+        #""" Call into our assembly's top ApplyJ to get the matrix vector
+        #product across the boundary variables.
+        #"""
 
-        # Speedhack, don't call component's derivatives if incoming vector is zero.
-        if nonzero is False:
-            return
+        #inner_system = self._comp._system
+        #if self.mode == 'forward':
+            #arg = 'du'
+            #res = 'df'
+        #elif self.mode == 'adjoint':
+            #arg = 'df'
+            #res = 'du'
 
-        variables = inner_system.variables.keys()
-        inner_system.vec['dp'].array[:] = 0.0
-        inner_system.applyJ(variables)
+        #nonzero = False
+        ##needed_vars = flatten_list_of_iters([item[1] for item in variables])
+        ##needed_vars.extend([item[0] for item in variables])
 
-        for item in self.list_inputs() + self.list_states()  + \
-                    self.list_outputs() + self.list_residuals():
+        #for item in self.list_inputs() + self.list_states() + \
+                    #self.list_outputs() + self.list_residuals():
 
-            sub_name = item.partition('.')[2:][0]
-            self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
+            #var = self.scope._system.vec[arg][item]
+            #if any(var != 0):
+                #nonzero = True
+            #sub_name = item.partition('.')[2:][0]
+            #inner_system.vec[arg][sub_name] = var
+
+            #var = self.scope._system.vec[res][item]
+            #sub_name = item.partition('.')[2:][0]
+            #inner_system.vec[res][sub_name] = var
+
+        ## Speedhack, don't call component's derivatives if incoming vector is zero.
+        #if nonzero is False:
+            #return
+
+        #variables = inner_system.variables.keys()
+        #inner_system.vec['dp'].array[:] = 0.0
+        #inner_system.applyJ(variables)
+
+        #for item in self.list_inputs() + self.list_states()  + \
+                    #self.list_outputs() + self.list_residuals():
+
+            #sub_name = item.partition('.')[2:][0]
+            #self.scope._system.vec[res][item] = inner_system.vec[res][sub_name]
 
     def is_differentiable(self):
         """Return True if analytical derivatives can be

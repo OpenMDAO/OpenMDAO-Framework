@@ -392,8 +392,7 @@ class Driver(Component):
             self.config_parameters()
 
         # # force param pseudocomps to get updated values to start
-        # # KTM1 - probably don't need this anymore
-        # self.update_parameters()
+        self.update_parameters()
 
         # Reset the workflow.
         self.workflow.reset()
@@ -405,10 +404,14 @@ class Driver(Component):
         Returns set of paths for changing inputs."""
         return self.workflow.configure_recording(includes, excludes)
 
-    # def update_parameters(self):
-    #     if hasattr(self, 'get_parameters'):
-    #         for param in self.get_parameters().values():
-    #             param.initialize(self.get_expr_scope())
+    def update_parameters(self):
+        if hasattr(self, 'get_parameters'):
+            params = self.get_parameters()
+            for param in params.values():
+                param.initialize(self.get_expr_scope())
+            if 'u' in self.workflow._system.vec:
+                self.workflow._system.vec['u'].set_to_scope(self.parent,
+                                                            params.keys())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition

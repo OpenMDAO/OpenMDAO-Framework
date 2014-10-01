@@ -4,9 +4,10 @@ import unittest
 from numpy import array
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.interfaces import implements, IHasParameters
-from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.datatypes.api import Array, Int, Float, List, Enum, Str
+from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
+from openmdao.main.interfaces import implements, IHasParameters
+from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_raises
@@ -360,25 +361,25 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(d2val, 3.75)
 
         self.top.run()
-        
+
         uvec = self.top._system.vec['u']
 
         self.assertEqual(uvec['comp.x'][0], 15.)
         self.assertEqual(uvec['comp.y'][0], 7.0)
-        
+
         params['comp.x'].set(9.0)
         params['comp.y'].set(3.75)
-        
+
         self.assertEqual(uvec['comp.x'][0], 15.)
         self.assertEqual(uvec['comp.y'][0], 7.)
 
         self.top.driver.set_parameters([1.0, 3.0])
-        
+
         self.assertEqual(uvec['comp.x'][0], 3.)
         self.assertEqual(uvec['comp.y'][0], 4.)
-        
+
         self.top.driver.set_parameters([9.0, 3.75])
-        
+
         self.assertEqual(uvec['comp.x'][0], 15.)
         self.assertEqual(uvec['comp.y'][0], 7.)
 
@@ -387,6 +388,7 @@ class ParametersTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
+        self.top.add('driver', SimpleDriver())
         self.top.add('driver1', MyDriver())
         self.top.add('driver2', MyDriver())
         self.top.add('comp', ExecComp(exprs=['z=a+b+c+d']))
@@ -515,6 +517,9 @@ class ArrayTest(unittest.TestCase):
         driver.add_parameter('comp.x2d', low=-10, high=10, start=2)
         top.run()
 
+        comp.x1d = [1, 2, 3]
+        comp.x2d = [[1, 2, 3], [4, 5, 6]]
+
         targets = driver.list_param_targets()
         self.assertEqual(targets, ['comp.x1d', 'comp.x2d'])
 
@@ -526,28 +531,32 @@ class ArrayTest(unittest.TestCase):
                          [[1, 2, 3], [4, 5, 6]])
 
         driver.init_parameters()
-        self.assertEqual(list(comp.x1d), [1, 1, 1])
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[2, 2, 2], [2, 2, 2]])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [1, 1, 1])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [2, 2, 2, 2, 2, 2])
 
         driver.set_parameter_by_name('comp.x1d', 3)
-        self.assertEqual(list(comp.x1d), [3, 3, 3])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [3, 3, 3])
 
         driver.set_parameter_by_name('comp.x1d', array([4, 5, 6]))
-        self.assertEqual(list(comp.x1d), [4, 5, 6])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [4, 5, 6])
 
         driver.set_parameter_by_name('comp.x2d', 4)
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[4, 4, 4], [4, 4, 4]])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [4, 4, 4, 4, 4, 4])
 
         driver.set_parameter_by_name('comp.x2d', array([[5, 6, 7], [8, 9, 0]]))
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[5, 6, 7], [8, 9, 0]])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [5, 6, 7, 8, 9, 0])
 
         driver.set_parameters([7, 8, 9, 1, 2, 3, 4, 5, 6])
-        self.assertEqual(list(comp.x1d), [7, 8, 9])
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[1, 2, 3], [4, 5, 6]])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [7, 8, 9])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [1, 2, 3, 4, 5, 6])
 
         self.assertEqual(driver._hasparameters.get_expr_depends(),
                          [('driver', 'comp')])
@@ -557,16 +566,17 @@ class ArrayTest(unittest.TestCase):
                          set(['comp.x1d', 'comp.x2d']))
 
         # Still have last set_parameters() values.
-        self.assertEqual(list(comp.x1d), [7, 8, 9])
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[1, 2, 3], [4, 5, 6]])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [7, 8, 9])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [1, 2, 3, 4, 5, 6])
+
         top.run()
         # Now have init_parameters() values.
-        self.assertEqual(list(comp.x1d), [1, 1, 1])
-        self.assertEqual([list(row) for row in comp.x2d[:]],
-                         [[2, 2, 2], [2, 2, 2]])
-        self.assertEqual(comp.fx1d, 3)
-        self.assertEqual(list(comp.fx2d), [6, 6])
+        var = driver.workflow._system.vec['u']['comp.x1d']
+        self.assertEqual(list(var), [1, 1, 1])
+        var = driver.workflow._system.vec['u']['comp.x2d']
+        self.assertEqual(list(var), [2, 2, 2, 2, 2, 2])
 
     def test_mixed_use(self):
         # Connect to one element of array and use another element as parameter.

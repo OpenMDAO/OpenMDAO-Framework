@@ -108,12 +108,9 @@ class ParameterBase(object):
 
     def initialize(self, scope):
         """Set parameter to initial value."""
-        if self.start is None:
-            start = self._untransform(self._expreval.evaluate(scope))
-        else:
+        if self.start is not None:
             start = self.start
-
-        self.set(start)
+            self.set(start)
 
     def set(self, val):
         """Assigns the given value to the target referenced by this parameter,
@@ -913,7 +910,7 @@ class HasParameters(object):
                 if pname:
                     dgraph.add_edge(self.parent.name, dgraph.add_subvar(name),
                                     drv_conn=self.parent.name)
-    
+
             self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,
@@ -964,7 +961,7 @@ class HasParameters(object):
             dgraph = self._get_scope()._depgraph
             for target in param.targets:
                 dgraph.remove_edge(self.parent.name, target)
-    
+
             self.parent.config_changed()
 
     def config_parameters(self):
