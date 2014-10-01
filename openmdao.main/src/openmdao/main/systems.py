@@ -22,6 +22,7 @@ from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_c
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
+from openmdao.util.graph import flatten_list_of_iters
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -1373,6 +1374,8 @@ class AssemblySystem(SimpleSystem):
             res = 'du'
 
         nonzero = False
+        #needed_vars = flatten_list_of_iters([item[1] for item in variables])
+        #needed_vars.extend([item[0] for item in variables])
 
         for item in self.list_inputs() + self.list_states() + \
                     self.list_outputs() + self.list_residuals():

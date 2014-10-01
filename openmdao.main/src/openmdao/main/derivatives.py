@@ -121,8 +121,18 @@ def applyJ(system, variables):
                 break
 
     result = {}
-    for item in system.list_outputs() + system.list_residuals():
+    for item in system.list_outputs():
 
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        result[key] = system.rhs_vec[item]
+
+    for item in system.list_residuals():
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
@@ -199,7 +209,13 @@ def applyJ(system, variables):
             o1, o2, osh = obounds[okey]
         else:
             basekey, _, odx = okey.partition('[')
-            o1, o2, osh = obounds[basekey]
+            try:
+                o1, o2, osh = obounds[basekey]
+            except KeyError:
+                if obj.missing_deriv_policy == 'error':
+                    msg = "does not provide analytical derivatives for %s" % okey
+                    obj.raise_exception(msg, KeyError)
+                continue
 
         tmp = result[okey]
         used = set()
@@ -213,7 +229,14 @@ def applyJ(system, variables):
                 used.add((i1, i2))
             else:
                 basekey, _, idx = ikey.partition('[')
-                i1, i2, ish = ibounds[basekey]
+                try:
+                    i1, i2, ish = ibounds[basekey]
+                except KeyError:
+                    if obj.missing_deriv_policy == 'error':
+                        msg = "does not provide analytical derivatives for %s" % ikey
+                        obj.raise_exception(msg, KeyError)
+                    continue
+
                 if (i1, i2, idx) in used or (i1, i2) in used:
                     continue
                 used.add((i1, i2, idx))
@@ -238,7 +261,20 @@ def applyJT(system, variables):
 
     arg = {}
 
-    for item in system.list_outputs() + system.list_residuals():
+    for item in system.list_outputs():
+
+        # TODO - Linear GS needs these. Need to fix something there.
+        #collapsed = system.scope.name2collapsed.get(item)
+        #if collapsed not in variables:
+        #    continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        arg[key] = system.sol_vec[item]
+
+    for item in system.list_residuals():
+
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
@@ -350,7 +386,14 @@ def applyJT(system, variables):
             used.add((o1, o2))
         else:
             basekey, _, odx = okey.partition('[')
-            o1, o2, osh = obounds[basekey]
+            try:
+                o1, o2, osh = obounds[basekey]
+            except KeyError:
+                if obj.missing_deriv_policy == 'error':
+                    msg = "does not provide analytical derivatives for %s" % okey
+                    obj.raise_exception(msg, KeyError)
+                continue
+
             if (o1, o2, odx) in used or (o1, o2) in used:
                 continue
             used.add((o1, o2, odx))
@@ -362,7 +405,13 @@ def applyJT(system, variables):
                 i1, i2, ish = ibounds[ikey]
             else:
                 basekey, _, idx = ikey.partition('[')
-                i1, i2, ish = ibounds[basekey]
+                try:
+                    i1, i2, ish = ibounds[basekey]
+                except KeyError:
+                    if obj.missing_deriv_policy == 'error':
+                        msg = "does not provide analytical derivatives for %s" % ikey
+                        obj.raise_exception(msg, KeyError)
+                    continue
 
             Jsub = reduce_jacobian(J, o1, o2, odx, osh,
                                       i1, i2, idx, ish).T
