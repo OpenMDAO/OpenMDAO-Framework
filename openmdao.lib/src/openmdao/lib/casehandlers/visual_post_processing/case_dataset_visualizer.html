@@ -7,6 +7,9 @@
     </head>
     <body>
         <div id='main' style='width: 100%; height: 100%;'></div>
+        <div id='graph' style='display:none;'>
+            {{ svg_graph }}
+        </div>
         <script id='case-data' type='application/json'>
             {{ case_data }}
         </script>
@@ -120,9 +123,12 @@
                 simulation_info_object = case_objects[simulation_info_id] ;
                 node_tree = get_nodes(simulation_info_object);
 
+                // the SVG graph is in the hidden div 'graph'
+                var graph_div = document.getElementById('graph')
+
                 // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
-                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white">{{ svg_graph }}</div>' );
+                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white">'+graph_div.innerHTML+'</div>' );
                 w2ui.layout.content('left', jQuery().w2sidebar(
                     {
                         name: 'cases',
@@ -136,40 +142,14 @@
                     }
                 )); // end layout content left
 
-
-                var svg = d3.select("#svgContent")
-                              .append("svg")
+                var svg = d3.select("#svgContent svg")
                               .attr("height", "100%")
                               .attr("width", "100%")
                               .attr('preserveAspectRatio', 'xMinYMin slice') ;
 
-                // Draw the depgraph using d3 and the layout information for the
-                //   nodes and edges that graphviz's dot program generates
-                // var w = {{graph_width}} * 72, h = {{graph_height}} * 72 ; // assuming 72 DPI
-                var w = svg.style("width");
-                var h = svg.style("height");
-
-                // TODO: Could probably do the scaling/sizing better
-                // TODO: Also, use this option to dot to flip the direction of y
-                //         -y          - Invert y coordinate in output
-                // var yscale = d3.scale.linear()
-                //     .domain([0, {{graph_height}}])
-                //     .range([h, 0]);
-                // var h_scale = h / {{graph_height}} ;
-                // var xscale = d3.scale.linear()
-                //     .domain([0, {{graph_width}}])
-                //     .range([0, {{graph_width}} * h_scale ]);
-                // var xscale = d3.scale.linear()
-                //     .domain([0, {{graph_width}}])
-                //     .range([0, w]);
-
-
-                var vis = svg
-                  .append('svg:g')
+                var vis = d3.select("#svgContent svg g")
                     .call(d3.behavior.zoom().on("zoom", rescale))
-                    .on("dblclick.zoom", null)
-                  .append('svg:g');
-
+                    .on("dblclick.zoom", null);
 
                 function rescale() {
                   trans=d3.event.translate;
@@ -179,81 +159,11 @@
                       + " scale(" + scale + ")");
                 }
 
-                vis.append('svg:rect')
-                    .attr('width', "100%")
-                    .attr('height', "100%")
-                    .attr('fill', 'white');
+                // vis.append('svg:rect')
+                //     .attr('width', "100%")
+                //     .attr('height', "100%")
+                //     .attr('fill', 'white');
 
-
-                var dataSet = {
-                    nodes: [
-                            {{ node_content }}
-                           ]
-                };
-
-                // var force = self.force = d3.layout.force()
-                //     .nodes(dataSet.nodes)
-                //     .size([w,h])
-                //     .start();
-
-                // // create SVG groups for each node
-                // var node = vis.selectAll(".node")
-                //     .data(dataSet.nodes)
-                //     .enter().append("g")
-                //     .attr("class", function (d) {
-                //         return d.shape + " node";
-                //     })
-                //     .attr("transform", function(d) { return "translate(" + xscale(d.x) + "," + yscale(d.y) + " )" } )
-                //     ;
-
-                // // draw the shapes for the various kinds of nodes
-                // d3.selectAll(".ellipse").append("ellipse")
-                //     .attr("rx", 40)
-                //     .attr("fill", "none")
-                //     .attr("ry", 20)
-                //     .attr("stroke", "black")
-                //     .attr("stroke-width", 2)
-                // ;
-                // d3.selectAll(".box").append("rect")
-                //     .attr("width", 80)
-                //     .attr("fill", "none")
-                //     .attr("height", 40)
-                //     .attr("stroke", "black")
-                //     .attr("stroke-width", 2)
-                //     .attr("transform", "translate(-40,-20)")
-                // ;
-                // d3.selectAll(".diamond").append("polygon")
-                //     .attr("points", "-30,0, 0,25, 30,0 0,-25")
-                //     .attr("fill", "none")
-                //     .attr("stroke","black")
-                //     .attr("stroke-width",2);
-                // d3.selectAll(".invhouse").append("polygon")
-                //     .attr("points", "-40,-25, 40,-25, 40,10 0,25 -40,10")
-                //     .attr("fill", "none")
-                //     .attr("stroke","black")
-                //     .attr("stroke-width",2);
-
-                // // label the node
-                // node.append("text")
-                //     .text(function(d) { return d.name })
-                //     .style("text-anchor", "middle")
-                //     ;
-
-                // // build the arrowhead
-                // vis.append("svg:defs").selectAll("marker")
-                //     .data(["end"])
-                //     .enter().append("svg:marker")
-                //     .attr("id", String)
-                //     .attr("viewBox", "0 -5 10 10")
-                //     .attr("refX", 0)
-                //     .attr("refY", 0)
-                //     .attr("markerWidth", 6)
-                //     .attr("markerHeight", 6)
-                //     .attr("orient", "auto")
-                //     .append("svg:path")
-                //     .attr("d", "M0,-5L10,0L0,5");
-
-                // {{ svg_path_edges }}
             }); // end ready
         </script>
     </body>
