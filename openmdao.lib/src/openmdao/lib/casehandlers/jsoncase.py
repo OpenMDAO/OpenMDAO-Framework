@@ -113,12 +113,14 @@ class _BaseRecorder(object):
         self._uuid = str(uuid1())
         self._cases = 0
 
-        serial_graph = top.clean_graph(format='json')
+        dep_graph = top.get_graph(format='json')
+        comp_graph = top.get_graph(components_only=True, format='json')
 
         return dict(variable_metadata=variable_metadata,
                     expressions=expressions,
                     constants=constants,
-                    graph=serial_graph,
+                    graph=dep_graph,
+                    comp_graph=comp_graph,
                     name=top.name,
                     OpenMDAO_Version=__version__,
                     uuid=self._uuid)

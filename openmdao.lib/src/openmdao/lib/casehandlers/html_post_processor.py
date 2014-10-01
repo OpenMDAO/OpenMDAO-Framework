@@ -15,12 +15,23 @@ def caseset_query_to_html(query, filename='cases.html'):
     q_str = StringIO.StringIO()
     query.write(q_str)
     case_data = q_str.getvalue()
+    json_data = json.loads(case_data)
 
-    # get graph from case data and render it to SVG
-    graph = json.loads(case_data)['simulation_info']['graph']
+    # get dependency graph from case data and render it to SVG
+    graph = json_data['simulation_info']['graph']
     G = nx.readwrite.json_graph.loads(graph)
     agraph = nx.to_agraph(G)
-    svg_graph = agraph.draw(format='svg', prog='dot')
+    svg_dep_graph = agraph.draw(format='svg', prog='dot')
+
+    # get component graph from case data and render it to SVG
+    if 'comp_graph' in json_data['simulation_info'].keys():
+        graph = json_data['simulation_info']['comp_graph']
+        G = nx.readwrite.json_graph.loads(graph)
+        agraph = nx.to_agraph(G)
+        svg_comp_graph = agraph.draw(format='svg', prog='dot')
+    else:
+        # old case data file may not have comp_graph
+        svg_comp_graph = '<svg></svg>'
 
     # Setup Jinja2 templating
     cds_visualizer_dir_path = os.path.join(os.path.dirname(__file__), 'visual_post_processing')
@@ -31,7 +42,11 @@ def caseset_query_to_html(query, filename='cases.html'):
         os.remove(filename)
 
     # use the existing template to write out the html file
-    outputText = template.render(case_data=case_data, svg_graph=svg_graph)
+    outputText = template.render(
+        case_data=case_data,
+        svg_dep_graph=svg_dep_graph,
+        svg_comp_graph=svg_comp_graph
+    )
     with open(filename, "wb") as fh:
         fh.write(outputText)
 

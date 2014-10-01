@@ -7,8 +7,11 @@
     </head>
     <body>
         <div id='main' style='width: 100%; height: 100%;'></div>
-        <div id='graph' style='display:none;'>
-            {{ svg_graph }}
+        <div id='dep-graph' style='display:none;'>
+            {{ svg_dep_graph }}
+        </div>
+        <div id='comp-graph' style='display:none;'>
+            {{ svg_comp_graph }}
         </div>
         <script id='case-data' type='application/json'>
             {{ case_data }}
@@ -165,7 +168,7 @@
                     .attr('fill', 'white');
 
                 // populate SVG from hidden graph div
-                var graph = d3.select("#graph svg")
+                var graph = d3.select("#dep-graph svg")
                 vis.html(graph.html())
 
             }); // end ready

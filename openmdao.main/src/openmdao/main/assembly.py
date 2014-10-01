@@ -1416,14 +1416,22 @@ class Assembly(Component):
 
         return connectivity
 
-    def clean_graph(self, format='json'):
+    def get_graph(self, components_only=False, format='json'):
         ''' returns cleaned up graph data in the selected format
+
+            components_only: (optional) boolean
+                if True, only components will be included in the graph
+                otherwise the full dependency graph will be returned
 
             format: (optional) string
                 json - returns serialized graph data in JSON format
                 svg  - returns scalable vector graphics rendition of graph
         '''
-        graph = _clean_graph(self._depgraph)
+        if components_only:
+            graph = self._depgraph.component_graph()
+        else:
+            graph = _clean_graph(self._depgraph)
+
         if format.lower() == 'json':
             graph_data = json_graph.node_link_data(graph)
             return json.dumps(graph_data)
@@ -1439,7 +1447,7 @@ class Assembly(Component):
         """
         try:
             import pygraphviz
-            return self.clean_graph(format='svg')
+            return self.get_graph(components_only=True, format='svg')
         except ImportError:
             return ''
 
