@@ -20,6 +20,11 @@
             //global variable for reference case data
             var case_data = JSON.parse(document.getElementById('case-data').innerHTML);
 
+            function SVG(tag) // makes it easier to create SVG elements
+            {
+               return document.createElementNS('http://www.w3.org/2000/svg', tag);
+            }
+
             // recursive function to build up the JavaScript structure that w2ui needs for
             //   display of a sidebar
             function get_nodes( root ) {
@@ -72,11 +77,14 @@
                 var case_objects = new Object();
                 var simulation_info_id = "" ;
                 var driver_id_name_map = new Object() ;
+                var case_number_to_id_map = new Object() ;
                 var num_orphan_cases = 0 ;
 
                 // get all the cases in an associative array with the id as the key
+                // Also collect info on the simulation_info and the driver names
                 jQuery.each( case_data, function( key , val ) {
 
+                   // val.data has the values of the variables
                    // need to add simulation info object for top of tree of cases
                    if (key.lastIndexOf(simulation_info_key, 0) === 0) {
                         val[ 'children'] = [] ;
@@ -96,6 +104,7 @@
                         val[ 'case_number'] = case_number ;
                         val[ 'driver_name'] = driver_id_name_map[val._driver_id] ;
                         case_objects[ val._id ] = val ;
+                        case_number_to_id_map[ case_number ] = val._id ;
                     }
                 }); // end each
 
@@ -134,9 +143,58 @@
                         name: 'cases',
                         nodes: node_tree ,
                         onClick: function(event) {
-                            if ( event.node.img != "icon-page" ) { // Clicking on driver name label should not do anything for now
-                                alert( 'case ' + event.target + ' clicked'); // just a dummy thing to do for now
-                                //w2ui.layout.content('main', '<div style="padding: 10px">case ' + event.target + ' clicked</div>' );
+                            if ( event.node.img != "icon-page" ) {
+
+                                // clean up any added elements or colors from the last case selection
+                                $("text").remove(".textval");
+                                $("title").remove(".titleval");
+                                $("ellipse").attr("fill", "none");
+                                $("rect").attr("fill", "none");
+
+                                d = case_objects[case_number_to_id_map[event.target]].data ;
+                                jQuery.each( d, function( key , val ) {
+
+                                    // Get only the text element with exactly the value of key
+                                    t = $("text").filter(function() {
+                                          return $(this).text() === key;
+                                    }) ;
+
+                                    if ( t.length === 1 ) {
+                                        t.prev().attr("fill", "yellow");
+                                        if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
+                                            $(SVG('text'))
+                                                .attr('x', 0)
+                                                .attr('y', 15)
+                                                .attr('text-anchor', "middle")
+                                                .attr('alignment-baseline', "middle")
+                                                .attr('class', "textval")
+                                                .text( val.toPrecision(2).toString() )
+                                                .appendTo(t.parent());
+                                        }
+                                        else if ( Object.prototype.toString.call( val ) === '[object Array]' ) {
+
+                                            // Just say "Array" to indicate it has an array value
+                                            //   and user has to hover over it to see actual value
+                                            $(SVG('text'))
+                                                .attr('x', 0)
+                                                .attr('y', 15)
+                                                .attr('text-anchor', "middle")
+                                                .attr('alignment-baseline', "middle")
+                                                .attr('class', "textval")
+                                                .text( "Array" )
+                                                .appendTo(t.parent());
+
+                                            $(SVG('title'))
+                                                .attr('x', 0)
+                                                .attr('y', 15)
+                                                .attr('text-anchor', "middle")
+                                                .attr('alignment-baseline', "middle")
+                                                .attr('class', "titleval")
+                                                .text( val.toString().replace(/,/g, ",\n") )
+                                                .appendTo(t.parent());
+                                        }
+                                   }
+                                });
                             }
                         }  ,
                     }
@@ -170,6 +228,12 @@
                 // populate SVG from hidden graph div
                 var graph = d3.select("#dep-graph svg")
                 vis.html(graph.html())
+
+                // Change all the variable nodes to have a shape of rect
+                jQuery.each(case_data.simulation_info['variable_metadata'], function( key , val ) {
+                    console.log('convert to rect:', key, $(' g text:contains("'+key+'")'));
+                    // need to delete the neighboring ellipse and put a rect in it's place...
+                });
 
             }); // end ready
         </script>
