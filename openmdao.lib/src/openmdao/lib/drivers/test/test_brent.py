@@ -284,6 +284,8 @@ class TestBrentInvalidBracket(unittest.TestCase):
     def test_case1(self):
         #normal
 
+        self.fail("Bret: This test fails because of a comp to driver connection.")
+
         Vin = 3.0
         Vout = 25.0
         self.assembly.V = np.linspace(Vin, Vout, 50)
@@ -299,6 +301,8 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
     def test_case2(self):
         #solution does not contain bracket
+
+        self.fail("Bret: This test fails because of a comp to driver connection.")
 
         Vin = 3.0
         Vout = 25.0
@@ -317,6 +321,8 @@ class TestBrentInvalidBracket(unittest.TestCase):
     def test_case3(self):
         #solution does not contain bracket
 
+        self.fail("Bret: This test fails because of a comp to driver connection.")
+
         Vin = 3.0
         Vout = 25.0
         self.assembly.V = np.linspace(Vin, Vout, 50)
@@ -333,6 +339,8 @@ class TestBrentInvalidBracket(unittest.TestCase):
 
     def test_case4(self):
         #solution does not contain bracket
+
+        self.fail("Bret: This test fails because of a comp to driver connection.")
 
         Vin = 3.0
         Vout = 25.0
