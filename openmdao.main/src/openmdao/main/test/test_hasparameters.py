@@ -4,9 +4,10 @@ import unittest
 from numpy import array
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.interfaces import implements, IHasParameters
-from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
 from openmdao.main.datatypes.api import Array, Int, Float, List, Enum, Str
+from openmdao.main.hasparameters import HasParameters, Parameter, ParameterGroup
+from openmdao.main.interfaces import implements, IHasParameters
+from openmdao.main.test.test_derivatives import SimpleDriver
 from openmdao.test.execcomp import ExecComp
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_raises
@@ -387,6 +388,7 @@ class ParametersTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = set_as_top(Assembly())
+        self.top.add('driver', SimpleDriver())
         self.top.add('driver1', MyDriver())
         self.top.add('driver2', MyDriver())
         self.top.add('comp', ExecComp(exprs=['z=a+b+c+d']))
@@ -514,6 +516,9 @@ class ArrayTest(unittest.TestCase):
 
         driver.add_parameter('comp.x2d', low=-10, high=10, start=2)
         top.run()
+
+        comp.x1d = [1, 2, 3]
+        comp.x2d = [[1, 2, 3], [4, 5, 6]]
 
         targets = driver.list_param_targets()
         self.assertEqual(targets, ['comp.x1d', 'comp.x2d'])
