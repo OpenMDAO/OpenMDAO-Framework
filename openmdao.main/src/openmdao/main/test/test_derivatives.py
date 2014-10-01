@@ -1087,9 +1087,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.nest.y = 5
         top.run()
 
-        J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'nest.y'],
-                                              outputs=['nest.f_xy'],
-                                              mode='forward')
+        # Now we need to set a deriv policy to prevent squawking
+        # about missing deriatives.
+        top.nest.comp.missing_deriv_policy = 'assume_zero'
+
+        J = top.driver.calc_gradient(inputs=['nest.x', 'nest.y'],
+                                     outputs=['nest.f_xy'],
+                                     mode='forward')
 
         assert_rel_error(self, J[0, 0], 5.0, 0.0001)
         assert_rel_error(self, J[0, 1], 21.0, 0.0001)
@@ -1111,11 +1115,11 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('nest.junk', 'last.x')
         top.run()
 
-        top.nest.missing_deriv_policy = 'error'
+        top.nest.comp.missing_deriv_policy = 'assume_zero'
         try:
-            J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
-                                                  outputs=['nest.f_xy', 'last.f_xy'],
-                                                  mode='forward')
+            J = top.driver.calc_gradient(inputs=['nest.x', 'first.x'],
+                                         outputs=['nest.f_xy', 'last.f_xy'],
+                                         mode='forward')
         except RuntimeError as err:
             msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
             self.assertEqual(str(err), msg)
