@@ -1371,6 +1371,10 @@ class AssemblySystem(SimpleSystem):
         else:
             raise RuntimeError("invalid mode. must be 'forward' or 'adjoint' but value is '%s'" % mode)
 
+        # Note, this mode is not important, but the options are needed for
+        # linearize.
+        self._comp._system.set_options(mode, options)
+
     def clear_dp(self):
         """ Recusively sets the dp vector to zero."""
         self.vec['dp'].array[:] = 0.0

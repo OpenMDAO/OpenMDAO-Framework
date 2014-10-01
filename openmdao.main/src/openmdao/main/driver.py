@@ -406,8 +406,9 @@ class Driver(Component):
             params = self.get_parameters()
             for param in params.values():
                 param.initialize(self.get_expr_scope())
-            self.workflow._system.vec['u'].set_to_scope(self.parent,
-                                                        params.keys())
+            if 'u' in self.workflow._system.vec:
+                self.workflow._system.vec['u'].set_to_scope(self.parent,
+                                                            params.keys())
 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
