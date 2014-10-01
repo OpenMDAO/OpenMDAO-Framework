@@ -75,9 +75,9 @@ class Workflow(object):
         self._exec_count = 0     # Workflow executions since reset.
         self._initial_count = 0  # Value to reset to (typically zero).
         self._comp_count = 0     # Component index in workflow.
-        self._wf_comp_graph = None
-        self._var_graph = None
         self._system = None
+        self._reduced_graph = None
+        self._component_graph = None
 
         self._rec_required = None  # Case recording configuration.
         self._rec_parameters = None
@@ -699,8 +699,6 @@ class Workflow(object):
         """Notifies the Workflow that workflow configuration
         (dependencies, etc.) has changed.
         """
-        self._wf_comp_graph = None
-        self._var_graph = None
         self._system = None
 
     def remove(self, comp):
@@ -727,7 +725,8 @@ class Workflow(object):
     def __len__(self):
         raise NotImplementedError("This Workflow has no '__len__' function")
 
-    ## MPI stuff ##
+    def pre_setup(self):
+        self._reduced_graph = None
 
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
@@ -841,7 +840,6 @@ class Workflow(object):
         self.mpi.comm = get_comm_if_active(self, comm)
         if MPI and self.mpi.comm == MPI.COMM_NULL:
             return
-        #mpiprint("workflow for %s: setup_comms" % self.parent.name)
         self._system.setup_communicators(self.mpi.comm)
 
     def setup_variables(self):

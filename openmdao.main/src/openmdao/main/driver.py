@@ -125,6 +125,7 @@ class Driver(Component):
 
         self.workflow = Dataflow(self)
         self._required_compnames = None
+        self._reduced_graph = None
 
         # clean up unwanted trait from Component
         self.remove_trait('missing_deriv_policy')
@@ -181,11 +182,13 @@ class Driver(Component):
         return self.parent._depgraph  # May change this to use a smaller graph later
 
     def get_reduced_graph(self):
-        nodes = set([c.name for c in self.iteration_set()])
-        nodes.add(self.name)
-        if self.parent._setup_inputs:
-            nodes.update(simple_node_iter(self.parent._setup_inputs))
-        return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
+        if self._reduced_graph is None:
+            nodes = set([c.name for c in self.iteration_set()])
+            nodes.add(self.name)
+            if self.parent._setup_inputs:
+                nodes.update(simple_node_iter(self.parent._setup_inputs))
+            self._reduced_graph = get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
+        return self._reduced_graph
 
     def check_config(self, strict=False):
         """Verify that our workflow is able to resolve all of its components."""
@@ -465,14 +468,6 @@ class Driver(Component):
         self.workflow.calc_derivatives(first, second, savebase,
                                        required_inputs, required_outputs)
 
-    def calc_gradient(self, inputs=None, outputs=None):
-        """Returns the gradient of the passed outputs with respect to
-        all passed inputs. The basic driver behavior is to call calc_gradient
-        on its workflow. However, some driver (optimizers in particular) may
-        want to define their own behavior.
-        """
-        return self.workflow.calc_gradient(inputs, outputs)
-
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
@@ -612,3 +607,9 @@ class Driver(Component):
 
         return self.workflow.calc_gradient(inputs, outputs, mode, return_format,
                                            force_regen)
+
+    @rbac(('owner', 'user'))
+    def pre_setup(self):
+        self._reduced_graph = None
+        self.workflow.pre_setup()
+
