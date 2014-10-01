@@ -123,12 +123,9 @@
                 simulation_info_object = case_objects[simulation_info_id] ;
                 node_tree = get_nodes(simulation_info_object);
 
-                // the SVG graph is in the hidden div 'graph'
-                var graph_div = document.getElementById('graph')
-
                 // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
-                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white">'+graph_div.innerHTML+'</div>' );
+                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>' );
                 w2ui.layout.content('left', jQuery().w2sidebar(
                     {
                         name: 'cases',
@@ -142,14 +139,17 @@
                     }
                 )); // end layout content left
 
-                var svg = d3.select("#svgContent svg")
+                var svg = d3.select("#svgContent")
+                              .append("svg")
                               .attr("height", "100%")
                               .attr("width", "100%")
                               .attr('preserveAspectRatio', 'xMinYMin slice') ;
 
-                var vis = d3.select("#svgContent svg g")
+                var vis = svg
+                  .append('svg:g')
                     .call(d3.behavior.zoom().on("zoom", rescale))
-                    .on("dblclick.zoom", null);
+                    .on("dblclick.zoom", null)
+                  .append('svg:g');
 
                 function rescale() {
                   trans=d3.event.translate;
@@ -159,10 +159,14 @@
                       + " scale(" + scale + ")");
                 }
 
-                // vis.append('svg:rect')
-                //     .attr('width', "100%")
-                //     .attr('height', "100%")
-                //     .attr('fill', 'white');
+                vis.append('svg:rect')
+                    .attr('width', "100%")
+                    .attr('height', "100%")
+                    .attr('fill', 'white');
+
+                // populate SVG from hidden graph div
+                var graph = d3.select("#graph svg")
+                vis.html(graph.html())
 
             }); // end ready
         </script>
