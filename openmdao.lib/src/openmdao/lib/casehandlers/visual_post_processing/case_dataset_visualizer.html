@@ -151,6 +151,7 @@
                             svgContent.find("title").remove(".titleval");
                             svgContent.find("ellipse").attr("fill", "none");
                             svgContent.find("rect").attr("fill", "none");
+                            svgContent.find("title").text("");
 
                             if ( event.node.img != "icon-page" ) {
                                 d = case_objects[case_number_to_id_map[event.target]].data ;
@@ -164,45 +165,33 @@
                                         t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
                                         t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
 
-                                        console.log(Object.prototype.toString.call( val ));
                                         if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
-                                            console.log('adding text to', key, t.parent(), val.toPrecision(2).toString());
-                                            console.log('bbox before adding text:', t.parent()[0].getBBox())
                                             $(SVG('text'))
-                                                .attr('x', 0)
-                                                .attr('y', 15)
+                                                .attr('x', t.attr('x'))
+                                                .attr('y', t.attr('y'))
                                                 .attr('text-anchor', "middle")
-                                                .attr('alignment-baseline', "middle")
+                                                .attr('alignment-baseline', "text-before-edge")
                                                 .attr('class', "textval")
+                                                .attr('font-size', t.attr('font-size')-2)
+                                                .attr('font-family', t.attr('font-family'))
                                                 .text( val.toPrecision(2).toString() )
                                                 .appendTo(t.parent());
-                                            console.log('bbox after adding text:', t.parent()[0].getBBox())
                                         }
                                         else if ( Object.prototype.toString.call( val ) === '[object Array]' ) {
-                                            console.log('adding array text to', key, t.parent());
-
                                             // Just say "Array" to indicate it has an array value
                                             //   and user has to hover over it to see actual value
                                             $(SVG('text'))
-                                                .attr('x', 0)
-                                                .attr('y', 15)
+                                                .attr('x', t.attr('x'))
+                                                .attr('y', t.attr('y'))
                                                 .attr('text-anchor', "middle")
-                                                .attr('alignment-baseline', "middle")
+                                                .attr('alignment-baseline', "text-before-edge")
                                                 .attr('class', "textval")
+                                                .attr('font-size', t.attr('font-size')-2)
+                                                .attr('font-family', t.attr('font-family'))
                                                 .text( "Array" )
                                                 .appendTo(t.parent());
 
-                                            console.log('adding title to', key, t.parent(), val.toString().replace(/,/g, ",\n"));
-                                            console.log('bbox before adding title:', t.parent()[0].getBBox())
-                                            $(SVG('title'))
-                                                .attr('x', 0)
-                                                .attr('y', 15)
-                                                .attr('text-anchor', "middle")
-                                                .attr('alignment-baseline', "middle")
-                                                .attr('class', "titleval")
-                                                .text( val.toString().replace(/,/g, ",\n") )
-                                                .appendTo(t.parent());
-                                            console.log('bbox after adding title:', t.parent()[0].getBBox())
+                                            t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
                                         }
                                    }
                                 });
