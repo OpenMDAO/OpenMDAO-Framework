@@ -1549,13 +1549,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
 
         top.run()
-        #J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
-                                              #outputs=['comp2.y'],
-                                              #mode='forward')
-        #assert_rel_error(self, J[0, 0], 39.0*12, .001)
-        #assert_rel_error(self, J[0, 1], -7.0*12, .001)
-        #assert_rel_error(self, J[1, 0], -5.0*12, .001)
-        #assert_rel_error(self, J[1, 1], 44.0*12, .001)
+        J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
+                                              outputs=['comp2.y'],
+                                              mode='forward')
+        assert_rel_error(self, J[0, 0], 39.0*12, .001)
+        assert_rel_error(self, J[0, 1], -7.0*12, .001)
+        assert_rel_error(self, J[1, 0], -5.0*12, .001)
+        assert_rel_error(self, J[1, 1], 44.0*12, .001)
 
         J = top.driver.workflow.calc_gradient(inputs=['comp1.x'],
                                               outputs=['comp2.y'],
