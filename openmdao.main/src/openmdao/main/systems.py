@@ -703,7 +703,7 @@ class System(object):
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'OpaqueDriverSystem': 'drv',
-                     'TransparentDriverSystem': 'tdrv',
+                     'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
                      'AssemblySystem': 'asm', } #'InnerAssemblySystem': 'inner'}
@@ -1895,6 +1895,9 @@ class OpaqueSystem(CompoundSystem):
 
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)
+
+    def get_req_cpus(self):
+        return self._inner_system.get_req_cpus()
 
 class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
