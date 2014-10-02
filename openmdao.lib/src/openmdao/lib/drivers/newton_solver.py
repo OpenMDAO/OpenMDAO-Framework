@@ -15,7 +15,8 @@ def norm(a, order=None):
     return npnorm(numpy.asarray_chkfinite(a), ord=order)
 
 # pylint: disable=E0611, F0401
-from openmdao.main.api import Driver, CyclicWorkflow
+from openmdao.main.case import Case
+from openmdao.main.driver import Driver
 from openmdao.main.datatypes.api import Float, Int
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -51,19 +52,6 @@ class NewtonSolver(Driver):
     alpha = Float(1.0, iotype='in', low=0.0, high=1.0,
                   desc='Initial over-relaxation factor')
 
-    def __init__(self):
-
-        super(NewtonSolver, self).__init__()
-        self.workflow = CyclicWorkflow()
-
-    def check_config(self, strict=False):
-        """ This solver requires a CyclicWorkflow. """
-
-        super(NewtonSolver, self).check_config(strict=strict)
-
-        if not isinstance(self.workflow, CyclicWorkflow):
-            msg = "The NewtonSolver requires a CyclicWorkflow workflow."
-            self.raise_exception(msg, RuntimeError)
 
     def execute(self):
         """ General Newton's method. """
@@ -73,15 +61,15 @@ class NewtonSolver(Driver):
         fvec = system.vec['f']
         dfvec = system.vec['df']
         uvec = system.vec['u']
+        iterbase = self.workflow._iterbase()
 
         # perform an initial run
-        self.pre_iteration()
-        self.run_iteration()
-        self.post_iteration()
+        self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
         print self.name, "Norm: ", f_norm, 0
+        #print uvec.array, fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -91,14 +79,15 @@ class NewtonSolver(Driver):
             system.calc_newton_direction(options=options)
             #print "new direction", dfvec.array
 
-            uvec.array -= alpha*dfvec.array
+            #print "LS 1", uvec.array, '+', dfvec.array
+            uvec.array += alpha*dfvec.array
 
-            self.pre_iteration()
-            self.run_iteration()
-            self.post_iteration()
+            # Just evaluate the model with the new points
+            self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
             print self.name, "Norm: ", f_norm, itercount+1
+            #print uvec.array, fvec.array
             itercount += 1
 
             ls_itercount = 0
@@ -108,19 +97,28 @@ class NewtonSolver(Driver):
                   f_norm > self.ls_atol and \
                   f_norm/f_norm0 > self.ls_rtol:
 
-                uvec.array += alpha*dfvec.array
-                alpha = alpha/2.0
                 uvec.array -= alpha*dfvec.array
+                alpha = alpha/2.0
+                uvec.array += alpha*dfvec.array
 
-                self.pre_iteration()
-                self.run_iteration()
-                self.post_iteration()
+                # Just evaluate the model with the new points
+                self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
                 f_norm = npnorm(fvec.array)
                 #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+                #print uvec.array, fvec.array
                 ls_itercount += 1
 
             # Reset backtracking
             alpha = self.alpha
 
+        # Need to make sure the whole workflow is executed at the final
+        # point, not just evaluated.
+        self.pre_iteration()
+        self.run_iteration()
+        self.post_iteration()
+
         print self.name, "converged"
+
+    def requires_derivs(self):
+        return True

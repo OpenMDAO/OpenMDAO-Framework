@@ -296,6 +296,11 @@ class Coupled1(ImplicitWithSolver):
                         result[res] += self.J_output_input[j, k]*arg[state]
 
 
+    def apply_derivT(self, arg, result):
+        """ Not using it, so let's just define it. """
+        self.raise_exception("Should never get here.", RunTimeError)
+
+
 class Coupled2(ImplicitWithSolver):
     ''' This comp only has the last state (z).
 
@@ -373,6 +378,10 @@ class Coupled2(ImplicitWithSolver):
                 for k, state in enumerate(['c', 'x', 'y']):
                     if state in arg:
                         result[res] += self.J_output_input[j, k]*arg[state]
+
+    def apply_derivT(self, arg, result):
+        """ Not using it, so let's just define it. """
+        self.raise_exception("Should never get here.", RunTimeError)
 
 
 class MyComp_Full_Array(ImplicitWithSolver):
@@ -564,6 +573,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_state_connection_internal_solve_ProvideJ(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Deriv_ProvideJ())
         model.comp.add('c', Float(2.0, iotype="in"))
 
@@ -593,6 +604,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_state_connection_internal_solve_apply_deriv(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Deriv())
         model.comp.add('c', Float(2.0, iotype="in"))
         model.comp.eval_only = False
@@ -621,6 +634,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_state_connection_external_solve_ProvideJ(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Deriv_ProvideJ())
         model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
@@ -662,6 +677,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_state_connection_external_solve_apply_deriv_not_implicit(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Explicit())
         model.comp.add('c', Float(2.0, iotype="in", fd_step=.001))
 
@@ -700,6 +717,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_no_deriv(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_No_Deriv())
         model.driver.workflow.add('comp')
         model.comp.eval_only = False
@@ -726,6 +745,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_nested_solver(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Deriv())
         model.add('solver', BroydenSolver())
         model.driver.workflow.add('solver')
@@ -764,6 +785,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_derivative_nested_solver_no_deriv(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_No_Deriv())
         model.add('solver', BroydenSolver())
         model.driver.workflow.add('solver')
@@ -802,6 +825,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_solver_nested_under_double_nested_driver(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_Deriv())
         model.add('subdriver', SimpleDriver())
         model.add('solver', BroydenSolver())
@@ -845,6 +870,8 @@ class Testcase_implicit(unittest.TestCase):
     def test_solver_nested_under_double_nested_driver_no_deriv(self):
 
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
+
         model.add('comp', MyComp_No_Deriv())
         model.add('subdriver', SimpleDriver())
         model.add('solver', BroydenSolver())

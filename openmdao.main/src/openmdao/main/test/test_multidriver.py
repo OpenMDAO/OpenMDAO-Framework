@@ -77,7 +77,7 @@ class ExprComp(Component):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        self.f_x = eval(self.expr, self.__dict__)
+        self.f_x = eval(self.expr, globals(), self.__dict__)
 
 
 class ExprComp2(Component):
@@ -95,7 +95,7 @@ class ExprComp2(Component):
     def execute(self):
         global exec_order
         exec_order.append(self.name)
-        self.f_xy = eval(self.expr, self.__dict__)
+        self.f_xy = eval(self.expr, globals(), self.__dict__)
 
 class MultiDriverTestCase(unittest.TestCase):
 

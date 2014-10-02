@@ -3,6 +3,7 @@ Basic unit testing of OpenMDAO's derivative capability.
 """
 
 from cStringIO import StringIO
+from nose import SkipTest
 import networkx as nx
 import re
 import unittest
@@ -16,6 +17,7 @@ from openmdao.lib.optproblems.api import UnitScalableProblem
 import openmdao.main.derivatives
 from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
+from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.test.execcomp import ExecCompWithDerivatives, ExecComp
@@ -474,7 +476,7 @@ class GComp_noD(Component):
 class ABCDComp(Component):
 
     a = Float(1.0, iotype='in')
-    b = Float(1.0, iotype='in')
+    b = Float(1.0, iotype='in', deriv_ignore=True)
     c = Float(2.0, iotype='out')
     d = Float(0.0, iotype='out')
 
@@ -517,7 +519,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         self.assertEqual(top.comp1.y, 2.0)
         try:
-            J = top.driver.calc_gradient(['comp1.x'], ['comp1.y'])
+            J = top.driver.workflow.calc_gradient(['comp1.x'], ['comp1.y'])
         except Exception as err:
             self.assertEqual(str(err),
                              "comp1: The return value of list_deriv_vars() was"
@@ -537,7 +539,7 @@ class Testcase_derivatives(unittest.TestCase):
         top.run()
         self.assertEqual(top.comp2.y, 4.0)
 
-        J = top.driver.calc_gradient(['comp1.x'], ['comp2.y'])
+        J = top.driver.workflow.calc_gradient(['comp1.x'], ['comp2.y'])
         assert_rel_error(self, J[0, 0], 4.0, 0.0001)
 
     def test_error_logging1(self):
@@ -573,16 +575,16 @@ class Testcase_derivatives(unittest.TestCase):
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to converge after"
-                " %d iterations for parameter '%s' at index %d",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.y', 1)
+                " %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
 
             mocklogger.error.assert_called_with(
                 "ERROR in calc_gradient in '%s': gmres failed to"
-                " converge after %d iterations for parameter '%s' at index %d",
-                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13, 'comp.f_xy', 2)
+                " converge after %d iterations",
+                "('comp', 'comp.y', 'comp.x', '_pseudo_0')", 13)
 
         finally:
             openmdao.main.linearsolver.gmres = orig_gmres
@@ -618,14 +620,14 @@ class Testcase_derivatives(unittest.TestCase):
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='forward')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient in '%s': gmres failed for parameter"
-                " '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.y', 1)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
             top.driver.workflow.calc_gradient(outputs=['comp.f_xy'],
                                               mode='adjoint')
             mocklogger.error.assert_called_with(
-                "ERROR in calc_gradient in '%s': gmres failed for"
-                " parameter '%s' at index %d", "('comp', 'comp.y', 'comp.x')", 'comp.f_xy', 2)
+                "ERROR in calc_gradient in '%s': gmres failed",
+                "('comp', 'comp.y', 'comp.x')")
 
         finally:
             openmdao.main.derivatives.gmres = orig_gmres
@@ -905,6 +907,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.connect('comp1.y', 'comp2.x')
         top.add('driver', SimpleDriver())
         top.driver.workflow.add(['comp1', 'comp2'])
+        #top.driver.add_parameter('comp1.x', low=-100, high=100)
         top.driver.add_objective('comp1.y + comp2.y + 5*comp1.x')
 
         objs = top.driver.get_objectives().values()
@@ -1218,6 +1221,8 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
     def test_broadcast_graph(self):
 
         top = set_as_top(Assembly())
+        top.add('driver', SimpleDriver())
+
         equation = ['y = 2.0*x + 3.0*z']
         top.add('comp1', ExecComp(equation))
         top.add('comp2', ExecComp(equation))
@@ -2367,10 +2372,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp4', '~1'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 3)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 2 - differentiable (none)
 
@@ -2390,10 +2400,14 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 5)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+        self.assertTrue('comp5' in comp_list)
 
         # Case 3 - differentiable (comp5)
 
@@ -2413,10 +2427,13 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        self.assertTrue(len(comp_list) == 4)
+        self.assertTrue('comp1' in comp_list)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp3' in comp_list)
+        self.assertTrue('comp4' in comp_list)
 
         # Case 4 - differentiable (comp1, comp3, comp5)
 
@@ -2437,10 +2454,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
-        self.top.driver.workflow._derivative_graph._component_graph = None
-        cgraph = self.top.driver.workflow._derivative_graph.component_graph()
-        iterlist = nx.topological_sort(cgraph)
-        self.assertTrue(['comp1', 'comp3', '~0', 'comp5'] == iterlist)
+        self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        self.assertTrue(len(comp_list) == 2)
+        self.assertTrue('comp2' in comp_list)
+        self.assertTrue('comp4' in comp_list)
+
 
         # Put everything in a single pseudo-assy, and run fd with no fake.
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
@@ -2623,7 +2642,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.top.driver.add_constraint('dis2.miss_out < 24.0')
 
         self.top.run()
-
+        J = self.top.driver.workflow.calc_gradient(mode='forward')
         try:
             J = self.top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
@@ -3171,9 +3190,7 @@ class TestMultiDriver(unittest.TestCase):
         top.inner_driver.add_objective('2.0*target + 2.0*comp.x + 2.0*comp.y')
 
         top.run()
-        #J = top.inner_driver.workflow.calc_gradient()
 
-        #print top.inner_driver.list_objective_targets()
         self.assertEqual( set(top._system.vec['u'].keys()),
                           set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
                                ('_pseudo_0.out0', ('_pseudo_0.out0',)),
@@ -3202,21 +3219,23 @@ class TestMultiDriver(unittest.TestCase):
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
+
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):
+
+        raise SkipTest('Cannot specify options on architectures yet.')
 
         # There was a keyerror here too, resulting from a basevar node
         # that got removed somehow on the recursed optimizer graph.
 
         sp = set_as_top(UnitScalableProblem())
         sp.architecture = CO()
-        sp.check_config()
 
         # Don't run it forever
         sp.driver.maxiter = 1
-        sp.local_opt_d0.maxiter = 1
-        sp.local_opt_d1.maxiter = 1
+        #sp.local_opt_d0.maxiter = 1
+        #sp.local_opt_d1.maxiter = 1
 
         # Make sure it runs.
         sp.run()

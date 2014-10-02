@@ -46,7 +46,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
                                    map_collapsed_nodes, simple_node_iter, \
-                                   reduced2component, collapse_nodes
+                                   reduced2component, collapse_driver, \
+                                   fix_state_connections, connect_subvars_to_comps
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars
@@ -149,12 +150,14 @@ class Assembly(Component):
 
         self._pseudo_count = 0  # counter for naming pseudocomps
         self._pre_driver = None
+        self._derivs_required = False
 
         # data dependency graph. Includes edges for data
         # connections as well as for all driver parameters and
         # constraints/objectives.  This is the starting graph for
         # all later transformations.
         self._depgraph = DependencyGraph()
+        self._reduced_graph = nx.DiGraph()
 
         for name, trait in self.class_traits().items():
             if trait.iotype:  # input or output
@@ -636,7 +639,7 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst), 
+                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst),
                                         sys.exc_info())
 
     def _connect(self, src, dest):
@@ -762,6 +765,7 @@ class Assembly(Component):
         """Runs driver and updates our boundary variables."""
         for system in self._system.local_subsystems():
             system.pre_run()
+        #self._system.vec['u'].set_from_scope(self)
         self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 
@@ -1374,30 +1378,24 @@ class Assembly(Component):
     @rbac(('owner', 'user'))
     def setup_systems(self):
         added = set()
-
         rgraph = self._reduced_graph
+
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
                 data['system'] = _create_simple_sys(self, rgraph, node)
 
-        # now set up subsystems of our driver and assembly comps
-        for node, data in rgraph.nodes_iter(data=True):
-            if 'comp' in data:
-                comp = getattr(self, node, None)
-                if IComponent.providedBy(comp):
-                    added.update(comp.setup_systems())
-                
+        added.update(self._top_driver.setup_systems())
+
         cgraph = reduced2component(rgraph)
-        iterset = set([c.name for c in self._top_driver.iteration_set()])
-        collapse_nodes(cgraph, self._top_driver.name, iterset)
-        
+        collapse_driver(cgraph, self._top_driver)
+
         # remove any system nodes in the top level graph that duplicate
         # nodes already found in subsystems.
         for name in added:
             if name in cgraph:
                 cgraph.remove_node(name)
-        
+
         if len(cgraph) > 1:
             self._system = SerialSystem(self, rgraph, cgraph, '_inner_asm')
             self._system.set_ordering(nx.topological_sort(cgraph))
@@ -1409,7 +1407,7 @@ class Assembly(Component):
 
         # assemblies don't add systems to their parent
         # graph, so return an empty tuple
-        return ()  
+        return ()
 
     @rbac(('owner', 'user'))
     def get_req_cpus(self):
@@ -1432,7 +1430,7 @@ class Assembly(Component):
 
         while sys_stack:
             system = sys_stack.pop()
-            loc_comps.extend([s.name for s in system.simple_subsystems() 
+            loc_comps.extend([s.name for s in system.simple_subsystems()
                                     if s._comp is not None])
             sys_stack.extend(system.local_subsystems())
 
@@ -1444,7 +1442,6 @@ class Assembly(Component):
         for node, data in self._reduced_graph.nodes_iter(data=True):
             if 'comp' not in data:
                 src = node[0]
-                scomp = src.split('.',1)[0] if '.' in src else None
                 sval, idx = get_val_and_index(self, src)
                 if isinstance(sval, ndarray):
                     dests = node[1]
@@ -1468,30 +1465,30 @@ class Assembly(Component):
     def setup_scatters(self):
         self._system.setup_scatters()
 
-    def _get_all_states(self):
-        states = []
-        for comp in self.get_comps():
-            if IImplicitComponent.providedBy(comp):
-                states.extend(['.'.join((comp.name, s)) for s in comp.list_states()])
-        return states
-
     def setup_graph(self, inputs=None, outputs=None):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        if inputs == self._setup_inputs and outputs == self._setup_outputs:
-            return
+        #if inputs == self._setup_inputs and outputs == self._setup_outputs:
+        #    return
 
         self._setup_inputs = inputs if inputs is None else inputs[:]
         self._setup_outputs = outputs if outputs is None else outputs[:]
 
-        keep = set(self._get_all_states())
+        keep = set([n for n,d in self._depgraph.nodes_iter(data=True) if d.get('iotype')=='state'])
+                         #if d.get('iotype') in ('state','residual')])
+
+        if self.parent is not None:
+            self._derivs_required = self.parent._derivs_required
+        else:
+            self._derivs_required = False
+
+        dgraph = self._depgraph.subgraph(self._depgraph.nodes_iter())
 
         if inputs is None and outputs is None:
-            calc_relevant = False
-            dgraph = self._depgraph
+            pass
         else:
-            calc_relevant = True
+            self._derivs_required = True
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
@@ -1506,13 +1503,42 @@ class Assembly(Component):
                 inputs = list(simple_node_iter(inputs))
                 outputs = list(simple_node_iter(outputs))
 
-            dgraph = relevant_subgraph(self._depgraph,
-                                       inputs, outputs, 
+            # if inputs is None:
+            #     inputs = list(ddests)
+            # else:
+            #    # identify any broadcast inputs
+            #     ins = []
+            #     for inp in inputs:
+            #         if isinstance(inp, basestring):
+            #             keep.add(inp)
+            #             ins.append(inp)
+            #         elif len(inp) == 1:
+            #             keep.add(inp[0])
+            #             ins.append(inp[0])
+            #         else:
+            #             keep.update(inp)
+            #             ins.append(inp[0])
+            #             # add input to input connections from first param in a group
+            #             # to all of the others
+            #             for pname in inp[1:]:
+            #                 dgraph.add_edge(inp[0], pname, conn=True)
+            #     inputs = ins
+                
+            # if outputs is None:
+            #     outputs = dsrcs
+
+
+            dgraph = relevant_subgraph(dgraph,
+                                       inputs, outputs,
                                        keep)
             keep.update(inputs)
             keep.update(outputs)
 
+        fix_state_connections(self, dgraph)
+
         dgraph = self._explode_vartrees(dgraph)
+
+        connect_subvars_to_comps(dgraph)
 
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
@@ -1521,26 +1547,29 @@ class Assembly(Component):
 
         self.name2collapsed = map_collapsed_nodes(collapsed_graph)
 
-        if calc_relevant: # add paramcomps for inputs and outvarcomps for outputs
-            for param in inputs:
-                collapsed_graph.add_node(param, comp='param')
-                collapsed_graph.add_edge(param, self.name2collapsed[param])
-            for out in outputs:
-                if collapsed_graph.out_degree(self.name2collapsed[out]) == 0:
-                    collapsed_graph.add_node(out, comp='outvar')
-                    collapsed_graph.add_edge(self.name2collapsed[out], out)
+        if self._derivs_required: # add ParamSystems for inputs and OutVarSystems for outputs
+            if inputs:
+                for param in inputs:
+                    collapsed_graph.add_node(param, comp='param')
+                    collapsed_graph.add_edge(param, self.name2collapsed[param])
+            if outputs:
+                for out in outputs:
+                    if collapsed_graph.out_degree(self.name2collapsed[out]) == 0:
+                        collapsed_graph.add_node(out, comp='outvar')
+                        collapsed_graph.add_edge(self.name2collapsed[out], out)
 
         # add InVarSystems and OutVarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
             if 'boundary' in data and collapsed_graph.degree(node) > 0:
-                if collapsed_graph.in_degree(node) == 0: # input boundary node
-                    collapsed_graph.add_node(node[0], comp='invar')
-                    collapsed_graph.add_edge(node[0], node)
-                elif collapsed_graph.out_degree(node) == 0: # output bndry node
-                    collapsed_graph.add_node(node[1][0], comp='outvar')
-                    collapsed_graph.add_edge(node, node[1][0])
+                if data.get('iotype') == 'in' and collapsed_graph.in_degree(node) == 0: # input boundary node
+                    collapsed_graph.add_node(node[0].split('[',1)[0], comp='invar')
+                    collapsed_graph.add_edge(node[0].split('[',1)[0], node)
+                elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
+                    collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
+                    collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
 
-                
+        #collapsed_graph = self._add_driver_subvar_conns(dgraph, collapsed_graph)
+
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
@@ -1551,12 +1580,27 @@ class Assembly(Component):
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():
+            if has_interface(comp, IDriver) and comp.requires_derivs():
+                self._derivs_required = True
             comp.setup_graph()
+
+    def _add_driver_subvar_conns(self, depgraph, collapsed):
+        """Connect any var nodes with subvar sources that don't have an upstream component
+        to their basevar's upstream component.
+        """
+        for node, data in collapsed.nodes_iter(data=True):
+            if 'basevar' in data and collapsed.in_degree(node) == 0:
+                base = self.name2collapsed[data['basevar']]
+                if base in collapsed:
+                    preds = collapsed.predecessors(base)
+                    if preds:
+                        collapsed.add_edge(preds[0], node)
+        return collapsed
 
     def _explode_vartrees(self, depgraph):
         """Given a depgraph, take all connected variable nodes corresponding
         to VariableTrees and replace them with a variable node for each
-        variable in the VariableTree. 
+        variable in the VariableTree.
         """
         conns = depgraph.list_connections()
         connvars = set([u for u,v in conns])
@@ -1567,7 +1611,7 @@ class Assembly(Component):
             obj = self.get(node)
             if isinstance(obj, VariableTree):
                 if '.' in node:
-                    allvars = ['.'.join((node.split('.',1)[0], v)) 
+                    allvars = ['.'.join((node.split('.',1)[0], v))
                                          for v in obj.list_all_vars()]
                 else:
                     allvars = obj.list_all_vars()
@@ -1583,7 +1627,7 @@ class Assembly(Component):
         for node, (vtree, allvars, ins, outs) in vtrees.items():
             for var in allvars:
                 depgraph.add_node(var, **depgraph.node[node])
-                
+
                 for u,v in ins:
                     if u in vtrees:
                         for uu in vtrees[u][1]:
@@ -1601,7 +1645,7 @@ class Assembly(Component):
 
         depgraph.remove_nodes_from(vtrees.keys())
 
-        return depgraph  
+        return depgraph
 
     def get_comps_and_pseudos(self):
         for node, data in self._depgraph.nodes_iter(data=True):
@@ -1646,7 +1690,7 @@ class Assembly(Component):
                 mpiprint(traceback.format_exc())
             raise
         else:
-            self.post_setup()   
+            self.post_setup()
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

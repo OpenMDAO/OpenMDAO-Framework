@@ -172,7 +172,7 @@ class TestBrentResizeBracket(unittest.TestCase):
             return sin(phi)/(1-assembly.a) - cos(phi)/assembly.lambda_r/(1+assembly.ap)
 
         # openmdao
-        self.assembly = TestAssembly()
+        self.assembly = set_as_top(TestAssembly())
         self.manual_f = f
 
 
@@ -276,7 +276,7 @@ class TestBrentInvalidBracket(unittest.TestCase):
                 self.connect('comp.Vrated', 'Vrated')
 
         # openmdao
-        self.assembly = TestAssembly()
+        self.assembly = set_as_top(TestAssembly())
 
 
 

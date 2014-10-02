@@ -22,7 +22,6 @@ from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.sequentialflow import SequentialWorkflow
-from openmdao.main.cyclicflow import CyclicWorkflow
 from openmdao.main.variable import Variable
 
 from openmdao.main.exceptions import ConstraintError

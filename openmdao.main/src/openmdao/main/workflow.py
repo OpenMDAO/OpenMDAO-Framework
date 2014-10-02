@@ -8,18 +8,21 @@ import weakref
 from StringIO import StringIO
 
 from numpy import ndarray
+from networkx.algorithms.dag import is_directed_acyclic_graph
+from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.case import Case
-from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint
+from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
+                                  OpaqueSystem, \
                                   partition_subsystems, ParamSystem, \
-                                  get_comm_if_active
+                                  get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   simple_node_iter
+                                   simple_node_iter, get_nondiff_groups, \
+                                   internal_nodes, collapse_nodes
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree
-from openmdao.main.pseudocomp import PseudoComponent
 
 __all__ = ['Workflow']
 
@@ -166,8 +169,21 @@ class Workflow(object):
 
         err = None
         try:
-            self._system.run(iterbase=iterbase, ffd_order=ffd_order,
-                                case_uuid=case_uuid)
+            uvec = self._system.vec['u']
+            fvec = self._system.vec['f']
+
+            # save old value of u to compute resids
+            for node in self._cycle_vars:
+                fvec[node][:] = uvec[node][:]
+
+            self._system.run(iterbase=iterbase,
+                             ffd_order=ffd_order,
+                             case_uuid=case_uuid)
+
+            # update resid vector for cyclic vars
+            for node in self._cycle_vars:
+                fvec[node][:] -= uvec[node][:]
+
             if self._stop:
                 raise RunStopped('Stop requested')
         except Exception:
@@ -185,10 +201,10 @@ class Workflow(object):
         if err is not None:
             # NOTE: cannot use 'raise err' here for some reason.  Must separate
             # the parts of the tuple.
-            raise err[0], err[1], err[2] 
+            raise err[0], err[1], err[2]
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
-                      return_format='array'):
+                      return_format='array', force_regen=False):
         """Returns the Jacobian of derivatives between inputs and outputs.
 
         inputs: list of strings
@@ -204,10 +220,18 @@ class Workflow(object):
         return_format: string in ['array', 'dict']
             Format for return value. Default is array, but some optimizers may
             want a dictionary instead.
+
+        force_regen: boolean
+            Set to True to force a regeneration of the system hierarchy.
         """
 
         parent = self.parent
-        reset = False
+
+        # Global override for user testing
+        reset = force_regen
+
+        if not self.scope._derivs_required:
+            reset = True
 
         # TODO - Support automatic determination of mode
 
@@ -215,7 +239,7 @@ class Workflow(object):
             reset = True
         else:
             uvec = self._system.vec['u']
-            
+
         if reset is False:
             if inputs:
                 for inp in inputs:
@@ -224,7 +248,7 @@ class Workflow(object):
                         break
             elif self.scope._setup_inputs != inputs:
                 reset = True
-                
+
             if reset is False:
                 if outputs:
                     for out in outputs:
@@ -258,6 +282,9 @@ class Workflow(object):
                 if out not in uvec:
                     reset = True
                     break
+
+        inputs  = [_fix_tups(x) for x in inputs]
+        outputs = [_fix_tups(x) for x in outputs]
 
         if reset:
             # recreate system hierarchy
@@ -732,10 +759,12 @@ class Workflow(object):
                        ParamSystem(scope, reduced, param)
 
         if self.scope._setup_inputs is not None:
-            for param in simple_node_iter(self.scope._setup_inputs):
+            for param in self.scope._setup_inputs:
                 if param not in reduced:
+                    if isinstance(param, tuple):
+                        param = param[0]
                     reduced.add_node(param, comp='param')
-                    reduced.add_edge(param, name2collapsed[param])
+                    reduced.add_edge(param, name2collapsed.get(param,param))
                     reduced.node[param]['system'] = \
                                ParamSystem(scope, reduced, param)
                 added.add(param)
@@ -747,13 +776,23 @@ class Workflow(object):
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
 
+        if self.scope._derivs_required:
+            # collapse non-differentiable system groups into
+            # opaque systems
+            for group in get_nondiff_groups(cgraph):
+                system = OpaqueSystem(scope, reduced,
+                                      cgraph.subgraph(group),
+                                      str(tuple(group)))
+                collapse_to_system_node(cgraph, system, tuple(group))
+                collapse_nodes(reduced, tuple(group), internal_nodes(reduced, group))
+
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
         elif MPI and system_type == 'parallel':
-            self._system = ParallelSystem(scope, reduced, cgraph, 
+            self._system = ParallelSystem(scope, reduced, cgraph,
                                           str(tuple(cgraph.nodes())))
         else:
-            self._system = SerialSystem(scope, reduced, cgraph, 
+            self._system = SerialSystem(scope, reduced, cgraph,
                                         str(tuple(cgraph.nodes())))
 
         self._system.set_ordering(params+[c.name for c in self])
@@ -762,6 +801,8 @@ class Workflow(object):
 
         for comp in self:
             added.update(comp.setup_systems())
+
+        self._cycle_vars = get_cycle_vars(self._system)
 
         return added
 
@@ -774,9 +815,11 @@ class Workflow(object):
 
         if len(cgraph) > 1:
             if len(cgraph.edges()) > 0:
-                self._system = SerialSystem(scope, reduced, cgraph, tuple(cgraph.nodes()))
+                self._system = SerialSystem(scope, reduced,
+                                            cgraph, tuple(cgraph.nodes()))
             else:
-                self._system = ParallelSystem(scope, reduced, cgraph, str(tuple(cgraph.nodes())))
+                self._system = ParallelSystem(scope, reduced,
+                                              cgraph, str(tuple(cgraph.nodes())))
         elif len(cgraph) == 1:
             name = cgraph.nodes()[0]
             self._system = cgraph.node[name].get('system')
@@ -838,3 +881,46 @@ class Workflow(object):
                     nodeset.add(node)
 
         return nodeset
+
+def get_cycle_vars(system):
+    # examine the graph to see if we have any cycles that we need to
+    # deal with
+    cycle_vars = []
+    graph = system.graph
+
+    # make a copy of the graph since we don't want to modify it
+    g = graph.subgraph(graph.nodes_iter())
+
+    if not is_directed_acyclic_graph(g):
+        # get total data sizes for subsystem connections
+        sizes = []
+        for u,v,data in g.edges_iter(data=True):
+            sz = 0
+            for node in data['varconns']:
+                dct = system._get_var_info(node)
+                sz += dct.get('size', 0)
+            data['conn_size'] = sz
+            sizes.append((sz, (u,v)))
+
+        sizes = sorted(sizes)
+
+        while not is_directed_acyclic_graph(g):
+            strong = strongly_connected_components(g)[0]
+            if len(strong) == 1:
+                break
+
+            # find the connection with the smallest data xfer
+            for sz, (src, dest) in sizes:
+                if src in strong and dest in strong:
+                    cycle_vars.extend(g[src][dest]['varconns'])
+                    g.remove_edge(src, dest)
+                    break
+
+    return cycle_vars
+
+
+def _fix_tups(x):
+    """Return x[0] if x is a single element tuple, else return x."""
+    if isinstance(x, tuple) and len(x) == 1:
+        return x[0]
+    return x

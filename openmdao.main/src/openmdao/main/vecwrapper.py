@@ -1,10 +1,9 @@
-import sys
 
 from collections import OrderedDict
 import numpy
 
 from openmdao.main.mpiwrap import MPI, MPI_STREAM, mpiprint, create_petsc_vec, PETSc
-from openmdao.main.array_helpers import offset_flat_index, to_indices, \
+from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flat_index_start, get_val_and_index, get_shape, \
                                         get_flattened_index
 from openmdao.main.interfaces import IImplicitComponent
@@ -109,9 +108,9 @@ class VecWrapperBase(object):
         view, start = self._info[name]
         return petsc_linspace(start, start+view.size)
 
-    def set_to_vec(self, vec, vnames=None):
+    def set_to_vecwrapper(self, vec, vnames=None):
         """Pull values for the given set of names out of our array
-        and set them into the given array.
+        and set them into the given vecwrapper.
         """
         if vnames is None:
             vnames = self.keys()
@@ -119,8 +118,40 @@ class VecWrapperBase(object):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
-                #mpiprint("setting %s (%s) to vector" % (name, array_val))
                 vec[name][:] = array_val
+
+    def set_to_array(self, arr, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given array.
+        """
+        if vnames is None:
+            vnames = self.keys()
+
+        asize = arr.size
+
+        start = end = 0
+        for name in vnames:
+            array_val = self[name]
+            end += array_val.size
+            if end > asize:
+                raise ValueError("end index %d exceeds size of target array" % (end-1))
+            arr[start:end] = array_val
+            start += array_val.size
+
+    def set_from_array(self, arr, vnames):
+        """Pull values for the given set of names out of the array
+        and set them into our array.
+        """
+        asize = self.array.size
+
+        start = end = 0
+        for name in vnames:
+            array_val = self[name]
+            end += array_val.size
+            if end > asize:
+                raise ValueError("end index %d exceeds size of target array" % (end-1))
+            array_val[:] = arr[start:end]
+            start += array_val.size
 
     def dump(self, verbose=False, stream=MPI_STREAM):
         for name, (array_val, start) in self._info.items():
@@ -150,13 +181,14 @@ class VecWrapperBase(object):
 class VecWrapper(VecWrapperBase):
     def _initialize(self, system):
         scope = system.scope
+        name2collapsed = scope.name2collapsed
         allvars = system.variables
         vector_vars = system.vector_vars
         self.app_ordering = system.app_ordering
         rank = system.mpi.rank
 
         vec_srcs = set([n[0] for n in vector_vars])
-        
+
         # to detect overlapping index sets, we need all of the subvar bases
         # that are NOT included in the vectors.  If a base IS included in the vectors,
         # then all of its subvars are just subviews of the base view, so no chance
@@ -176,10 +208,10 @@ class VecWrapper(VecWrapperBase):
                 self._info[name] = (self.array[start:end], start)#, dist_start)
 
                 base = name[0].split('[',1)[0]
-                
+
                 if base in bases and base not in vec_srcs:
                     bases[base].append(name[0])
-    
+
                     if len(bases[base]) > 1:
                         # check for overlaping subvars
                         idxset = set()
@@ -207,7 +239,7 @@ class VecWrapper(VecWrapperBase):
                 if sz > 0 and var.get('flat', True):
                     idx = var['flat_idx']
                     try:
-                        basestart = self.start(var['basevar'])
+                        basestart = self.start(name2collapsed[var['basevar']])
                     except KeyError:
                         mpiprint("name: %s, base: %s, vars: %s" %
                                  (name, var['basevar'], self._info.keys()))
@@ -283,16 +315,21 @@ class VecWrapper(VecWrapperBase):
         else:
             vnames = [n for n in vnames if n in self]
 
+        done = set()
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
                 #mpiprint("setting %s to scope: %s" % (str(name),array_val))
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
+                    done.add(name[0])
                     for dest in name[1]:
-                        scope.set_flattened_value(dest, array_val)
+                        if dest not in done:
+                            scope.set_flattened_value(dest, array_val)
+                            done.add(dest)
                 else:
                     scope.set_flattened_value(name, array_val)
+                    done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -425,12 +462,11 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint':
+        if system.mode == 'adjoint' and srcvec.name.endswith('du'):
             addv = True
             mode = True
-            if MPI:
-                destvec, srcvec = srcvec, destvec
-                dest, src = src, dest
+            destvec, srcvec = srcvec, destvec
+            dest, src = src, dest
 
         if self.scatter:
             #mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
@@ -502,4 +538,7 @@ class SerialScatter(object):
         assert(len(self.src_idxs) <= srcvec.size)
         assert(len(self.src_idxs) <= len(self.dest_idxs))
 
-        destvec[self.dest_idxs] = srcvec[self.src_idxs]
+        if addv is True:
+            destvec[self.src_idxs] += srcvec[self.dest_idxs]
+        else:
+            destvec[self.dest_idxs] = srcvec[self.src_idxs]

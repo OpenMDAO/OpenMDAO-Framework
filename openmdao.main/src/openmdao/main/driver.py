@@ -7,12 +7,12 @@ from zope.interface import implementedBy
 
 # pylint: disable=E0611,F0401
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
-from openmdao.main.depgraph import find_all_connecting, \
+from openmdao.main.depgraph import find_all_connecting, simple_node_iter, \
                                    collapse_driver, get_reduced_subgraph
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
@@ -140,6 +140,9 @@ class Driver(Component):
         if newwf is not None:
             newwf.parent = self
 
+    def requires_derivs(self):
+        return False
+
     def get_expr_scope(self):
         """Return the scope to be used to evaluate ExprEvaluators."""
         return self.parent
@@ -181,7 +184,7 @@ class Driver(Component):
         nodes = set([c.name for c in self.iteration_set()])
         nodes.add(self.name)
         if self.parent._setup_inputs:
-            nodes.update(self.parent._setup_inputs)
+            nodes.update(simple_node_iter(self.parent._setup_inputs))
         return get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
 
     def check_config(self, strict=False):
@@ -544,6 +547,7 @@ class Driver(Component):
         self._system = self.parent._reduced_graph.node[self.name]['system']
         return self.workflow.setup_systems(self.system_type)
 
+
     #### MPI related methods ####
 
     @rbac(('owner', 'user'))
@@ -582,3 +586,29 @@ class Driver(Component):
             else:
                 tree[1].append(comp.get_pathname())
         return tree
+
+    def calc_gradient(self, inputs=None, outputs=None, mode='auto',
+                      return_format='array', force_regen=True):
+        """Returns the Jacobian of derivatives between inputs and outputs.
+
+        inputs: list of strings
+            List of OpenMDAO inputs to take derivatives with respect to.
+
+        outputs: list of strings
+            Lis of OpenMDAO outputs to take derivatives of.
+
+        mode: string in ['forward', 'adjoint', 'auto']
+            Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
+            forward or adjoint based on problem dimensions.
+
+        return_format: string in ['array', 'dict']
+            Format for return value. Default is array, but some optimizers may
+            want a dictionary instead.
+
+        force_regen: boolean
+            Set to True to force a regeneration of the system hierarchy. This
+            is set to True because this function is meant for manual testing.
+        """
+
+        return self.workflow.calc_gradient(inputs, outputs, mode, return_format,
+                                           force_regen)

@@ -202,3 +202,5 @@ class SLSQPdriver(Driver):
 
         return df, dg
 
+    def requires_derivs(self):
+        return True

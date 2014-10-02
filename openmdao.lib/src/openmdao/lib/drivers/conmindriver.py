@@ -571,3 +571,6 @@ class CONMINdriver(Driver):
         for name, value in consav.__dict__.items():
             setattr(consav, name, type(value)(getattr(conmin.consav, name)))
 
+    def requires_derivs(self):
+        if self.conmin_diff is False:
+            return True

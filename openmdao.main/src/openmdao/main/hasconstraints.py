@@ -11,7 +11,7 @@ import weakref
 from numpy import ndarray
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import IHas2SidedConstraints
+from openmdao.main.interfaces import IHas2SidedConstraints, IDriver
 from openmdao.main.pseudocomp import PseudoComponent, \
                                      SimpleEQConPComp, \
                                      SimpleEQ0PComp, \
@@ -595,12 +595,14 @@ class HasEqConstraints(_HasConstraintsBase):
 
         constraint = Constraint(lhs, '=', rhs, scope=_get_scope(self, scope))
         constraint.linear = linear
-        constraint.activate(self.parent)
+        
+        if IDriver.providedBy(self.parent):
+            constraint.activate(self.parent)
+            self.parent.config_changed()
 
         name = ident if name is None else name
         self._constraints[name] = constraint
 
-        self.parent.config_changed()
 
     def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
@@ -615,13 +617,14 @@ class HasEqConstraints(_HasConstraintsBase):
             expression string.
         """
         if constraint.comparator == '=':
-            constraint.activate(self.parent)
+            if IDriver.providedBy(self.parent):
+                constraint.activate(self.parent)
+                self.parent.config_changed()
             self._constraints[name] = constraint
         else:
             self.parent.raise_exception("Inequality constraint '%s' is not"
                                         " supported on this driver"
                                         % constraint, ValueError)
-        self.parent.config_changed()
 
     def get_eq_constraints(self, linear=None):
         """Returns an ordered dict of constraint objects.
@@ -728,14 +731,15 @@ class HasIneqConstraints(_HasConstraintsBase):
 
         constraint = Constraint(lhs, rel, rhs, scope=_get_scope(self, scope))
         constraint.linear = linear
-        constraint.activate(self.parent)
+        if IDriver.providedBy(self.parent):
+            constraint.activate(self.parent)
+            self.parent.config_changed()
 
         if name is None:
             self._constraints[ident] = constraint
         else:
             self._constraints[name] = constraint
 
-        self.parent.config_changed()
 
     def add_existing_constraint(self, scope, constraint, name=None):
         """Adds an existing Constraint object to the driver.
@@ -751,12 +755,13 @@ class HasIneqConstraints(_HasConstraintsBase):
         """
         if constraint.comparator != '=':
             self._constraints[name] = constraint
-            constraint.activate(self.parent)
+            if IDriver.providedBy(self.parent):
+                constraint.activate(self.parent)
+                self.parent.config_changed()
         else:
             self.parent.raise_exception("Equality constraint '%s' is not"
                                         " supported on this driver"
                                         % constraint, ValueError)
-        self.parent.config_changed()
 
     def get_ineq_constraints(self, linear=None):
         """Returns an ordered dict of inequality constraint objects.
@@ -1129,14 +1134,16 @@ class Has2SidedConstraints(_HasConstraintsBase):
         constraint = Constraint2Sided(lhs, center, rhs, rel,
                                       scope=_get_scope(self, scope))
         constraint.linear = linear
-        constraint.activate(self.parent)
+        
+        if IDriver.providedBy(self.parent):
+            constraint.activate(self.parent)
+            self.parent.config_changed()
 
         if name is None:
             self._constraints[ident] = constraint
         else:
             self._constraints[name] = constraint
 
-        self.parent.config_changed()
 
     def get_2sided_constraints(self, linear=None):
         """Returns an ordered dict of inequality constraint objects.
@@ -1177,8 +1184,9 @@ class Has2SidedConstraints(_HasConstraintsBase):
             expression string.
         """
         self._constraints[name] = constraint
-        constraint.activate(self.parent)
-        self.parent.config_changed()
+        if IDriver.providedBy(self.parent):
+            constraint.activate(self.parent)
+            self.parent.config_changed()
 
     def mimic(self, target):
         """Tries to mimic the target object's constraints.  Target constraints

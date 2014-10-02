@@ -1,11 +1,12 @@
 """ Some functions and objects that support the component-side derivative API.
 """
+from numpy import zeros, vstack, hstack
 
 # pylint: disable=E0611,F0401
 from openmdao.main.array_helpers import flatten_slice, flattened_size
-from openmdao.util.graph import list_deriv_vars
 from openmdao.main.mpiwrap import mpiprint
-from numpy import zeros, vstack, hstack
+from openmdao.main.interfaces import ISystem
+from openmdao.util.graph import list_deriv_vars
 
 # pylint: disable=C0103
 
@@ -75,33 +76,56 @@ def post_process_dicts(key, result):
         if hasattr(value, 'flatten'):
             result[key] = value.flatten()
 
-def applyJ(system):
+def applyJ(system, variables):
     """Multiply an input vector by the Jacobian. For an Explicit Component,
     this automatically forms the "fake" residual, and calls into the
     function hook "apply_deriv".
     """
 
     J = system.J
-    obj = system._comp
+    obj = system.inner()
+
+    is_sys = ISystem.providedBy(obj)
+
     arg = {}
-    for item in system.list_inputs_and_states():
-        key = item.partition('.')[-1]
-        # FIXME: this is a hack. Sometimes the item we're looking
-        # for can be found in the parent dp vector, but not always,
-        # so we have to find it in another vector...  I guess it's
-        # because input derivs will be found in dp and state derivs be
-        # found in du.  Maybe we should have a separate method for
-        # returning states and use two loops.
-        if item in system._parent_system.vec['dp']:
-            arg[key] = system._parent_system.vec['dp'][item]
-        elif item in system.sol_vec:
+    for item in system.list_states():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+
+        if item in system.sol_vec:
             arg[key] = system.sol_vec[item]
         else:
             arg[key] = system.scope._system.vec['du'][item]
 
+    for item in system.list_inputs():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        parent = system
+
+        while True:
+            parent = parent._parent_system
+            if item in parent.vec['dp']:
+                arg[key] = parent.vec['dp'][item]
+                break
+
     result = {}
-    for item in system.list_outputs_and_residuals():
-        key = item.partition('.')[-1]
+    for item in system.list_outputs() + system.list_residuals():
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         result[key] = system.rhs_vec[item]
 
     # Bail if this component is not connected in the graph
@@ -152,7 +176,11 @@ def applyJ(system):
         #print 'applyJ', obj.name, arg, result
         return
 
-    input_keys, output_keys = list_deriv_vars(obj)
+    if is_sys:
+        input_keys = system.list_inputs() + system.list_states()
+        output_keys = system.list_outputs() + system.list_residuals()
+    else:
+        input_keys, output_keys = list_deriv_vars(obj)
 
     #print 'J', input_keys, output_keys, J
 
@@ -198,29 +226,55 @@ def applyJ(system):
 
     #print 'applyJ', obj.name, arg, result
 
-def applyJT(system):
+def applyJT(system, variables):
     """Multiply an input vector by the transposed Jacobian.
     For an Explicit Component, this automatically forms the "fake"
     residual, and calls into the function hook "apply_derivT".
     """
 
     J = system.J
-    obj = system._comp
+    obj = system.inner()
+    is_sys = ISystem.providedBy(obj)
+
     arg = {}
-    for item in system.list_outputs_and_residuals():
-        key = item.partition('.')[-1]
+
+    for item in system.list_outputs() + system.list_residuals():
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         arg[key] = system.sol_vec[item]
 
     result = {}
-    for item in system.list_inputs_and_states():
-        key = item.partition('.')[-1]
-        # FIXME: same hack as in applyJ
+    for item in system.list_states():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
         if item in system.rhs_vec:
             result[key] = system.rhs_vec[item]
         elif item in system.scope._system.vec['du']:
             result[key] = system.scope._system.vec['du'][item]
-        # else :
-        #     result[key] = system._parent_system.vec['dp'][item]
+
+    for item in system.list_inputs():
+
+        collapsed = system.scope.name2collapsed.get(item)
+        if collapsed not in variables:
+            continue
+
+        key = item
+        if not is_sys:
+            key = item.partition('.')[-1]
+        parent = system
+        done = False
+        while not done:
+            parent = parent._parent_system
+            if item in parent.vec['dp']:
+                result[key] = parent.vec['dp'][item]
+                done = True
 
     # Bail if this component is not connected in the graph
     if len(arg)==0 or len(result)==0:
@@ -234,7 +288,7 @@ def applyJT(system):
             break
 
     if nonzero is False:
-        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -268,10 +322,14 @@ def applyJT(system):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJT', obj.name, arg, result
+        #print 'applyJT', obj.name, arg, result
         return
 
-    input_keys, output_keys = list_deriv_vars(obj)
+    if is_sys:
+        input_keys = system.list_inputs() + system.list_states()
+        output_keys = system.list_outputs() + system.list_residuals()
+    else:
+        input_keys, output_keys = list_deriv_vars(obj)
 
     #mpiprint( 'J', input_keys, output_keys, J)
 
@@ -312,7 +370,7 @@ def applyJT(system):
 
             tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJT', obj.name, arg, result
+    #print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the

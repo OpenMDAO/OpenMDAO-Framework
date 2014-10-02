@@ -141,30 +141,32 @@ class EarlyTestInfo(Plugin):
 
         return ':'.join((part1, part2))
 
+    def _sort_tests(self, tests):
+        tlist = []
+        for test in tests:
+            tail = test.rsplit('.',1)[1]
+            if not tail.startswith('test'):
+                continue
+            tlist.append(self._cvt_test_path(test))
+        return sorted(tlist)
+            
     def _save_passing(self, passed):
         with open("passing.cfg", "w") as f:
             f.write("\n[nosetests]\ntests=")
-            for i,test in enumerate(passed):
-                tail = test.rsplit('.',1)[1]
-                if not tail.startswith('test'):
-                    continue
+            for i,test in enumerate(self._sort_tests(passed)):
                 if i>0:
                     f.write(",\n   ")
-                tname = self._cvt_test_path(test)
-                f.write(tname)
+                f.write(test)
             f.write('\n')
 
     def _save_failing(self, failed):
         if failed:
             with open("failing.cfg", "w") as f:
                 f.write("\n[nosetests]\ntests=")
-                for i,test in enumerate(failed):
-                    tail = test.rsplit('.',1)[1]
-                    if not tail.startswith('test'):
-                        continue
+                for i,test in enumerate(self._sort_tests(failed)):
                     if i>0:
                         f.write(",\n   ")
-                    f.write(self._cvt_test_path(test))
+                    f.write(test)
                 f.write('\n')
 
     def formatErr(self, err):

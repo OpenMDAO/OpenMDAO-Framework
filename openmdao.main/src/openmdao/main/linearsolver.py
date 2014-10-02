@@ -29,7 +29,7 @@ class LinearSolver(object):
         """ Computes the norm of the linear residual """
         system = self._system
         system.rhs_vec.array[:] = 0.0
-        system.applyJ()
+        system.applyJ(system.vector_vars.keys())
         system.rhs_vec.array[:] *= -1.0
         system.rhs_vec.array[:] += system.rhs_buf[:]
 
@@ -51,7 +51,8 @@ class ScipyGMRES(LinearSolver):
 
         n_edge = system.vec['f'].array.size
 
-        self.RHS = np.zeros((n_edge, 1))
+        system.rhs_buf = np.zeros((n_edge, ))
+        system.sol_buf = np.zeros((n_edge, ))
         self.A = LinearOperator((n_edge, n_edge),
                                 matvec=self.mult,
                                 dtype=float)
@@ -62,7 +63,7 @@ class ScipyGMRES(LinearSolver):
         """
 
         system = self._system
-        RHS = self.RHS
+        RHS = system.rhs_buf
         A = self.A
 
         # Size the problem
@@ -105,12 +106,12 @@ class ScipyGMRES(LinearSolver):
 
             for irhs in in_indices:
 
-                RHS[irhs, 0] = 1.0
+                RHS[irhs] = 1.0
 
                 # Call GMRES to solve the linear system
                 dx = self.solve(RHS)
 
-                RHS[irhs, 0] = 0.0
+                RHS[irhs] = 0.0
 
                 i = 0
                 for item in outputs:
@@ -128,7 +129,7 @@ class ScipyGMRES(LinearSolver):
                             J[item][param][:, j-jbase] = dx[out_indices]
                         else:
                             if J[param][item] is None:
-                                J[param][item] = np.zeros((nk, len(in_indices)))
+                                J[param][item] = np.zeros((len(in_indices), nk))
                             J[param][item][j-jbase, :] = dx[out_indices]
 
                     else:
@@ -143,29 +144,27 @@ class ScipyGMRES(LinearSolver):
         #print inputs, '\n', outputs, '\n', J
         return J
 
-    def solve(self, rhs_vec):
+    def solve(self, arg):
         """ Solve the coupled equations for a new state vector that nulls the
         residual. Used by the Newton solvers."""
 
         system = self._system
         options = self.options
-        RHS = self.RHS
         A = self.A
 
         #print 'Linear solution start vec', rhs_vec
         # Call GMRES to solve the linear system
-        dx, info = gmres(A, rhs_vec,
+        dx, info = gmres(A, arg,
                          tol=options.atol,
                          maxiter=options.maxiter)
 
         if info > 0:
             msg = "ERROR in calc_gradient in '%s': gmres failed to converge " \
-                  "after %d iterations for parameter '%s' at index %d"
-            logger.error(msg, system.name, info, param, irhs)
+                  "after %d iterations"
+            logger.error(msg, system.name, info)
         elif info < 0:
-            msg = "ERROR in calc_gradient in '%s': gmres failed " \
-                  "for parameter '%s' at index %d"
-            logger.error(msg, system.name, param, irhs)
+            msg = "ERROR in calc_gradient in '%s': gmres failed"
+            logger.error(msg, system.name)
 
         #print 'Linear solution vec', -dx
         return dx
@@ -177,8 +176,12 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-        system.rhs_vec.array[:] = 0
-        system.applyJ()
+
+        # Start with a clean slate
+        system.rhs_vec.array[:] = 0.0
+        system.clear_dp()
+
+        system.applyJ(system.vector_vars.keys())
 
         #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
@@ -310,12 +313,14 @@ class PETSc_KSP(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = sol_vec.array[:]
-        system.rhs_vec.array[:] = 0.0
 
-        system.applyJ()
+        # Start with a clean slate
+        system.rhs_vec.array[:] = 0.0
+        system.clear_dp()
+
+        system.applyJ(system.vector_vars.keys())
 
         rhs_vec.array[:] = system.rhs_vec.array[:]
-        #print 'arg, result', sol_vec.array, rhs_vec.array
         # mpiprint('names = %s' % system.sol_vec.keys())
         # mpiprint('arg = %s, result=%s' % (sol_vec.array, rhs_vec.array))
 
@@ -395,13 +400,15 @@ class LinearGS(LinearSolver):
 
             for irhs in in_indices:
 
-                system.sol_vec.array[irhs] = 1.0
+                system.clear_dp()
+                system.sol_vec.array[:] = 0.0
                 system.rhs_vec.array[:] = 0.0
+                system.rhs_vec.array[irhs] = 1.0
 
                 # Perform LinearGS solve
-                dx = self.solve(system.sol_vec.array)
+                dx = self.solve(system.rhs_vec.array)
 
-                system.sol_vec.array[irhs] = 0.0
+                #system.rhs_vec.array[irhs] = 0.0
 
                 i = 0
                 for item in outputs:
@@ -419,7 +426,7 @@ class LinearGS(LinearSolver):
                             J[item][param][:, j-jbase] = dx[out_indices]
                         else:
                             if J[param][item] is None:
-                                J[param][item] = np.zeros((nk, len(in_indices)))
+                                J[param][item] = np.zeros((len(in_indices), nk))
                             J[param][item][j-jbase, :] = dx[out_indices]
 
                     else:
@@ -434,13 +441,12 @@ class LinearGS(LinearSolver):
         #print inputs, '\n', outputs, '\n', J
         return J
 
-    def solve(self, rhs_vec):
+    def solve(self, arg):
         """ Executes an iterative solver """
-
         system = self._system
 
-        system.rhs_buf[:] = system.rhs_vec.array[:]
-        system.sol_buf[:] = rhs_vec[:]
+        system.rhs_buf[:] = arg[:]
+        system.sol_buf[:] = system.sol_vec.array[:]
         options = self.options
         system = self._system
 
@@ -451,9 +457,9 @@ class LinearGS(LinearSolver):
 
             if system.mode == 'forward':
                 for subsystem in system.subsystems(local=True):
-                    #system.scatter('lin', subsystem)
+                    system.scatter('du', 'dp', subsystem=subsystem)
                     system.rhs_vec.array[:] = 0.0
-                    subsystem.applyJ()
+                    subsystem.applyJ(system.vector_vars.keys())
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
@@ -462,28 +468,35 @@ class LinearGS(LinearSolver):
 
             elif system.mode == 'adjoint':
 
-                rev_systems = reversed(system.subsystems(local=True))
+                rev_systems = [item for item in reversed(system.subsystems(local=True))]
 
                 for subsystem in rev_systems:
                     system.sol_buf[:] = system.rhs_buf[:]
                     for subsystem2 in rev_systems:
                         if subsystem is not subsystem2:
                             system.rhs_vec.array[:] = 0.0
-                            subsystem2.applyJ()
-                            #system.scatter('lin', subsystem2)
+                            args = subsystem.vector_vars.keys()
+                            subsystem2.applyJ(args)
+                            system.scatter('du', 'dp', subsystem=subsystem2)
+                            system.clear_dp()
                             system.sol_buf[:] -= system.rhs_vec.array[:]
                     system.rhs_vec.array[:] = system.sol_buf[:]
                     subsystem.solve_linear(options)
 
             norm = self._norm()
             counter += 1
-            print system.name, "Norm: ", norm, counter
+            #print options.parent.name, "Norm: ", norm, counter
 
-        return system.rhs_vec.array
+        #print 'return', options.parent.name, np.linalg.norm(system.rhs_vec.array), system.rhs_vec.array
+        #print 'Linear solution vec', system.sol_vec.array
+        return system.sol_vec.array
 
 
 def _detuple(x):
-    """Return x, or if x is a tuple, x[0]."""
+    """For scalar x, return x. For 1 element tuple, return x[0].
+    For multi-element tuple, return x.
+    """
     if isinstance(x, tuple):
-        return x[0]
+        if len(x) == 1:
+            return x[0]
     return x

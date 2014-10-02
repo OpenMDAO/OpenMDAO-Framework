@@ -13,3 +13,6 @@ class SimpleDriver(Driver):
 
     implements(IHasParameters, IHasConstraints, IHasObjective,
                IHas2SidedConstraints)
+
+    def requires_derivs(self):
+        return True

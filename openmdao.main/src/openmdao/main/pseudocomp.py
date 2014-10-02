@@ -221,6 +221,12 @@ class PseudoComponent(object):
     def cpath_updated(self):
         pass
 
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        return True
+
     def get_pathname(self, rel_to_scope=None):
         """ Return full pathname to this object, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -441,17 +447,17 @@ class PseudoComponent(object):
         """
         return set((self.name,))
 
-    def applyJ(self, system):
+    def applyJ(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system)
+        applyJ(system, variables)
 
-    def applyJT(self, system):
+    def applyJT(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system)
+        applyJT(system, variables)
 
 
 class SimpleEQConPComp(PseudoComponent):

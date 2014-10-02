@@ -5,7 +5,7 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.depgraph import DependencyGraph, is_var_node
+from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
@@ -222,7 +222,7 @@ def plot_system_tree(system, fmt='pdf', outfile=None):
     os.remove(dotfile)
 
 
-def plot_graph(G, fmt='pdf', outfile=None, pseudos=True, workflow=False, scope=None,
+def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=None,
                excludes=(), prune=False):
     """Create a plot of the given graph"""
 

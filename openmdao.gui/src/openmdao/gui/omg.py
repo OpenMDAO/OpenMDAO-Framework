@@ -98,6 +98,9 @@ class App(web.Application):
         session_dir = os.path.join(user_dir, 'sessions')
         ensure_dir(session_dir)
 
+        # set up GUI logfile (need different name to avoid clobbering the server log)
+        os.environ['OPENMDAO_LOGFILE'] = 'openmdao_gui_log.txt'
+
         self.session_manager = TornadoSessionManager(secret, session_dir)
         self.server_manager  = ZMQServerManager('openmdao.gui.consoleserver.ConsoleServer', external)
 

@@ -13,6 +13,7 @@ from openmdao.lib.optproblems import sellar
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.datatypes.api import Float, Array
+from openmdao.main.depgraph import simple_node_iter
 
 from openmdao.util.testutil import assert_rel_error
 
@@ -228,10 +229,13 @@ class TestCase(unittest.TestCase):
         prob.run()
 
         # In the top workflow, the subdrivers should each become a PA.
-        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
-        self.assertEqual(PA1.itercomps, ['localopt1'])
-        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
-        self.assertEqual(PA2.itercomps, ['localopt2'])
+        self.assertTrue(len(prob.driver.workflow._system.subsystems()) == 10)
+        comp_list = simple_node_iter(prob.driver.workflow._system.subsystems()[7].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('localopt2' in comp_list)
+        comp_list = simple_node_iter(prob.driver.workflow._system.subsystems()[9].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('localopt1' in comp_list)
 
         assert_rel_error(self, prob.global_des_var_targets[0], 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.global_des_var_targets[1], 1.0, 0.01)
@@ -263,10 +267,14 @@ class TestCase(unittest.TestCase):
         prob.run()
 
         # In the top workflow, the subdrivers should each become a PA.
-        PA1 = prob.driver.workflow._derivative_graph.node['~localopt1']['pa_object']
-        self.assertEqual(PA1.itercomps, ['localopt1'])
-        PA2 = prob.driver.workflow._derivative_graph.node['~localopt2']['pa_object']
-        self.assertEqual(PA2.itercomps, ['localopt2'])
+        self.assertTrue(len(prob.driver.workflow._system.subsystems()) == 10)
+        comp_list = simple_node_iter(prob.driver.workflow._system.subsystems()[7].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('localopt2' in comp_list)
+        comp_list = simple_node_iter(prob.driver.workflow._system.subsystems()[9].graph)
+        self.assertTrue(len(comp_list) == 1)
+        self.assertTrue('localopt1' in comp_list)
+
         assert_rel_error(self, prob.z1, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.z2, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)

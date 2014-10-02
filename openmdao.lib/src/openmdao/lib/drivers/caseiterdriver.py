@@ -695,9 +695,9 @@ class CaseIteratorDriver(Driver):
 
         try:
             case.apply_inputs(server.top)
-        except Exception as exc:
+        except Exception:
             case.exc = sys.exc_info()
-            msg = 'Exception setting case inputs: %s' % case.exc
+            msg = 'Exception setting case inputs: %s' % case.exc[1]
             self._logger.debug('    %s', msg)
             if case.retries < self.max_retries:
                 case.retries += 1

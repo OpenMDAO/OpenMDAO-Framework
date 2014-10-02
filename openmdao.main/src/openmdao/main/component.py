@@ -21,7 +21,7 @@ from traits.api import Property
 from openmdao.main.container import Container
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.interfaces import implements, obj_has_interface, \
-                                     IAssembly, IComponent, IDriver, \
+                                     IAssembly, IComponent, IDriver, ISolver, \
                                      IHasCouplingVars, IHasObjectives, \
                                      IHasParameters, IHasResponses, \
                                      IHasConstraints, \
@@ -253,6 +253,15 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
+    @rbac(('owner', 'user'))
+    def is_differentiable(self):
+        """Return True if analytical derivatives can be
+        computed for this Component.
+        """
+        if self.force_fd:
+            return False
+
+        return ISolver.providedBy(self) or hasattr(self, 'provideJ')
 
     @rbac(('owner', 'user'))
     def get_req_default(self, self_required=None):
@@ -503,18 +512,18 @@ class Component(Container):
 
         return J
 
-    def applyJ(self, system):
+    def applyJ(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Forward Mode.
         """
-        applyJ(system)
+        applyJ(system, variables)
 
 
-    def applyJT(self, system):
+    def applyJT(self, system, variables):
         """ Wrapper for component derivative specification methods.
         Adjoint Mode.
         """
-        applyJT(system)
+        applyJT(system, variables)
 
 
     def _post_execute(self):
@@ -651,7 +660,7 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__), 
+                                                     type(newobj).__name__),
                                         sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object

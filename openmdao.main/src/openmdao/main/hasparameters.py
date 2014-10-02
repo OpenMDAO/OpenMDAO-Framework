@@ -4,7 +4,7 @@ import sys
 
 from openmdao.main.datatypes.api import List, VarTree
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import obj_has_interface, ISolver
+from openmdao.main.interfaces import obj_has_interface, ISolver, IDriver
 from openmdao.main.variable import make_legal_path
 from openmdao.main.vartree import VariableTree
 
@@ -285,7 +285,12 @@ class Parameter(ParameterBase):
     def set(self, val):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
-        self._get_scope()._system.vec['u'][self._expreval.text][:] = transval
+        try:
+            view = self._get_scope()._system.vec['u'][self._expreval.text]
+        except (KeyError, AttributeError):
+            self._expreval.set(transval)
+        else:
+            view[:] = transval
 
     def copy(self):
         """Return a copy of this Parameter."""
@@ -720,7 +725,12 @@ class ArrayParameter(ParameterBase):
         else:
             value = value * ones(self.shape, self.dtype)
         transval = self._transform(value)
-        self._get_scope()._system.vec['u'][self._expreval.text][:] = transval.flatten()
+        try:
+            vecs = self._get_scope()._system.vec
+        except AttributeError:
+            self._expreval.set(transval)
+        else:
+            vecs['u'][self._expreval.text][:] = transval.flatten()
 
     def copy(self):
         """Return a copy of this parameter."""
@@ -895,13 +905,16 @@ class HasParameters(object):
             except Exception:
                 self.parent.reraise_exception(info=sys.exc_info())
 
-        # add a graph connection from the driver to the param target
-        dgraph = self.parent.get_depgraph()
-        for name in target.targets:
-            dgraph.add_edge(self.parent.name, dgraph.add_subvar(name),
-                            drv_conn=self.parent.name)
-
-        self.parent.config_changed()
+        if IDriver.providedBy(self.parent):
+            # add a graph connection from the driver to the param target
+            dgraph = self.parent.get_depgraph()
+            pname = self.parent.name
+            for name in target.targets:
+                if pname:
+                    dgraph.add_edge(self.parent.name, dgraph.add_subvar(name),
+                                    drv_conn=self.parent.name)
+    
+            self.parent.config_changed()
 
     def _create(self, target, low, high, scaler, adder, start, fd_step,
                 key, scope):
@@ -946,12 +959,13 @@ class HasParameters(object):
                                          "that is not in this driver."
                                          % (name,), AttributeError)
 
-        # remove param connections from dep graph
-        dgraph = self._get_scope()._depgraph
-        for target in param.targets:
-            dgraph.remove_edge(self.parent.name, target)
-
-        self.parent.config_changed()
+        if IDriver.providedBy(self.parent):
+            # remove param connections from dep graph
+            dgraph = self._get_scope()._depgraph
+            for target in param.targets:
+                dgraph.remove_edge(self.parent.name, target)
+    
+            self.parent.config_changed()
 
     def config_parameters(self):
         """Reconfigure parameters from potentially changed targets."""

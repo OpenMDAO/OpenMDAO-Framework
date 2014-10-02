@@ -561,4 +561,6 @@ class NEWSUMTdriver(Driver):
             setattr(common, name,
                     type(value)(getattr(newsumtinterruptible.countr, name)))
 
+    def requires_derivs(self):
+        return True
 
