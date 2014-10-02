@@ -975,6 +975,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf.array[:]
 
+        mpiprint('dx', self.sol_vec.array)
         return self.sol_vec
 
     # def _get_global_indices(self, var, rank):
@@ -1504,7 +1505,10 @@ class CompoundSystem(System):
             for subsystem in self.local_subsystems():
                 subsystem.applyJ(variables)
             if self.mode == 'adjoint':
+                mpiprint('pre scatter df, du, dp', self.vec['df'].array, self.vec['du'].array, self.vec['dp'].array)
                 self.scatter('du', 'dp')
+                mpiprint('post scatter df, du, dp', self.vec['df'].array, self.vec['du'].array, self.vec['dp'].array)
+                mpiprint(self.vec['du'].keys())
 
     def stop(self):
         for s in self.all_subsystems():

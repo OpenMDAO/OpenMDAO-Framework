@@ -60,25 +60,25 @@ class MPITests(MPITestCase):
         top.comp.x = 3
         top.comp.y = 5
 
-    def test_run(self):
+    #def test_run(self):
 
-        self.top.run()
+        #self.top.run()
 
-        self.assertEqual(self.top.comp.f_xy, 93.)
-        self.assertEqual(self.top._pseudo_0.out0, 93.)
+        #self.assertEqual(self.top.comp.f_xy, 93.)
+        #self.assertEqual(self.top._pseudo_0.out0, 93.)
 
-    def test_calc_gradient_fwd(self):
-        self.top.run()
+    #def test_calc_gradient_fwd(self):
+        #self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='forward',
-                                                   return_format='dict')
-        #mpiprint("J local: %s" % J)
+        #J = self.top.driver.workflow.calc_gradient(mode='forward',
+                                                   #return_format='dict')
+        ##mpiprint("J local: %s" % J)
 
-        J = self.top.driver.workflow._system.get_combined_J(J)
-        #mpiprint("final J: %s" % J)
+        #J = self.top.driver.workflow._system.get_combined_J(J)
+        ##mpiprint("final J: %s" % J)
 
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
-        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
+        #assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
+        #assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
 
     def test_calc_gradient_adjoint(self):
         self.top.run()
@@ -93,13 +93,13 @@ class MPITests(MPITestCase):
         assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
         assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
 
-    def test_calc_gradient_fd(self):
-        self.top.run()
+    #def test_calc_gradient_fd(self):
+        #self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='fd')
+        #J = self.top.driver.workflow.calc_gradient(mode='fd')
 
-        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        #assert_rel_error(self, J[0, 0], 5.0, 0.0001)
+        #assert_rel_error(self, J[0, 1], 21.0, 0.0001)
 
 
 if __name__ == '__main__':
