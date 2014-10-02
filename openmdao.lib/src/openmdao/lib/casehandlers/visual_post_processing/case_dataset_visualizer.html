@@ -64,7 +64,7 @@
                     padding: 0,
                     panels: [
                         { type: 'left', size: 200, resizable: true, minSize: 120 },
-                        { type: 'main',  minSize: 550, overflow: 'hidden' }
+                        { type: 'main',  minSize: 550, overflow: 'auto' }
                     ]
                 },
             };
@@ -138,30 +138,36 @@
                 // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
                 w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>' );
+
+                var svgContent = $("#svgContent");  // save a reference to svgContent to narrow future searches
+
                 w2ui.layout.content('left', jQuery().w2sidebar(
                     {
                         name: 'cases',
                         nodes: node_tree ,
                         onClick: function(event) {
+                            // clean up any added elements or colors from the last case selection
+                            svgContent.find("text").remove(".textval");
+                            svgContent.find("title").remove(".titleval");
+                            svgContent.find("ellipse").attr("fill", "none");
+                            svgContent.find("rect").attr("fill", "none");
+
                             if ( event.node.img != "icon-page" ) {
-
-                                // clean up any added elements or colors from the last case selection
-                                $("text").remove(".textval");
-                                $("title").remove(".titleval");
-                                $("ellipse").attr("fill", "none");
-                                $("rect").attr("fill", "none");
-
                                 d = case_objects[case_number_to_id_map[event.target]].data ;
                                 jQuery.each( d, function( key , val ) {
-
                                     // Get only the text element with exactly the value of key
-                                    t = $("text").filter(function() {
+                                    t = svgContent.find("text").filter(function() {
                                           return $(this).text() === key;
                                     }) ;
 
                                     if ( t.length === 1 ) {
-                                        t.prev().attr("fill", "yellow");
+                                        t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                        t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+
+                                        console.log(Object.prototype.toString.call( val ));
                                         if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
+                                            console.log('adding text to', key, t.parent(), val.toPrecision(2).toString());
+                                            console.log('bbox before adding text:', t.parent()[0].getBBox())
                                             $(SVG('text'))
                                                 .attr('x', 0)
                                                 .attr('y', 15)
@@ -170,8 +176,10 @@
                                                 .attr('class', "textval")
                                                 .text( val.toPrecision(2).toString() )
                                                 .appendTo(t.parent());
+                                            console.log('bbox after adding text:', t.parent()[0].getBBox())
                                         }
                                         else if ( Object.prototype.toString.call( val ) === '[object Array]' ) {
+                                            console.log('adding array text to', key, t.parent());
 
                                             // Just say "Array" to indicate it has an array value
                                             //   and user has to hover over it to see actual value
@@ -184,6 +192,8 @@
                                                 .text( "Array" )
                                                 .appendTo(t.parent());
 
+                                            console.log('adding title to', key, t.parent(), val.toString().replace(/,/g, ",\n"));
+                                            console.log('bbox before adding title:', t.parent()[0].getBBox())
                                             $(SVG('title'))
                                                 .attr('x', 0)
                                                 .attr('y', 15)
@@ -192,6 +202,7 @@
                                                 .attr('class', "titleval")
                                                 .text( val.toString().replace(/,/g, ",\n") )
                                                 .appendTo(t.parent());
+                                            console.log('bbox after adding title:', t.parent()[0].getBBox())
                                         }
                                    }
                                 });
@@ -206,6 +217,7 @@
                               .attr("width", "100%")
                               .attr('preserveAspectRatio', 'xMinYMin slice') ;
 
+                // For pan and zoom
                 var vis = svg
                   .append('svg:g')
                     .call(d3.behavior.zoom().on("zoom", rescale))
@@ -224,15 +236,34 @@
                     .attr('width', "100%")
                     .attr('height', "100%")
                     .attr('fill', 'white');
+                // end pan and zoom code
 
                 // populate SVG from hidden graph div
                 var graph = d3.select("#dep-graph svg")
                 vis.html(graph.html())
 
                 // Change all the variable nodes to have a shape of rect
-                jQuery.each(case_data.simulation_info['variable_metadata'], function( key , val ) {
-                    console.log('convert to rect:', key, $(' g text:contains("'+key+'")'));
-                    // need to delete the neighboring ellipse and put a rect in it's place...
+                $.each(case_data.simulation_info['variable_metadata'], function(varname, metadata) {
+                    svgContent.find("text").filter(function() {
+                        return $(this).text() === varname;
+                    })
+                    .each(function() {
+                        var parent = $(this).parent();
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        $(SVG('rect'))
+                            .attr('fill', 'none')
+                            .attr('stroke', 'black')
+                            .attr('x', cx-rx)
+                            .attr('y', cy-ry)
+                            .attr('width', 2*rx)
+                            .attr('height', 2*ry)
+                            .appendTo(parent);
+                        ellipse.remove();
+                    })
                 });
 
             }); // end ready
