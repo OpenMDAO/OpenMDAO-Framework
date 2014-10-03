@@ -326,6 +326,7 @@ class Newton_SolverTestCase(unittest.TestCase):
         top.driver.add_constraint('comp.y = 1.0')
 
         top.run()
+        print 'done'
 
     def test_newton_nested(self):
         # Make sure derivatives across the newton-solved system are correct.
