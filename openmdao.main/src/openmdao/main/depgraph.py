@@ -1931,37 +1931,43 @@ def get_nondiff_groups(graph, scope):
     """
     groups = []
 
-    nondiff = [n for n,data in graph.nodes_iter(data=True)
-                      if not data['system'].is_differentiable()]
+    nondiff = set([n for n,data in graph.nodes_iter(data=True)
+                    if 'system' in data 
+                        and not data['system'].is_differentiable()])
 
     # If a connection is non-differentiable, so are its src and
     # target components.
-    dgraph = scope._depgraph
-    for edge in dgraph.list_connections():
-        src, target = edge
+    data = graph.node
+    for src, target in graph.edges_iter():
+        if 'comp' in data[src]:
+            comp, var = src, target
+        else:
+            var, comp = src, target
 
         # Can't include the containing assembly as a nondiff block.
-        if '.' not in src or '.' not in target:
+        if data[var].get('boundary'):
             continue
 
         # Input-input connections don't matter
-        if dgraph.node[src]['iotype'] == 'in':
+        if data[var].get('iotype') == 'in':
             continue
 
         # Figure out if the src is differentiable
         try:
-            flattened_size(src, scope.get(src), scope=scope)
+            flattened_size(var[0], scope.get(var[0]), scope=scope)
         except NoFlatError:
-            nondiff.append(src.split('.')[0])
-            nondiff.append(target.split('.')[0])
-            print "Non-differentiable connection: ", src, target
+            nondiff.add(comp)
+            #print "Non-differentiable connection: ", src, target
 
     # TODO: add pseudocomps to nondiff groups if they're
     # connected to nondiff systems on both sides
 
+    # get the component graph for the given reduced graph
+    cgraph = reduced2component(graph)
+
     # Groups any connected non-differentiable blocks. Each block is a
     # set of component names.
-    sub = graph.subgraph(nondiff)
+    sub = cgraph.subgraph(nondiff)
 
     # don't use to_undirected() to get an undirected graph from a directed graph,
     # as it does a deepcopy of all graph metadata. Instead, just use nx.Graph(digraph),
@@ -1973,7 +1979,7 @@ def get_nondiff_groups(graph, scope):
         for src in inodes:
             for targ in inodes:
                 if src != targ:
-                    nodeset.update(find_all_connecting(graph, src,
+                    nodeset.update(find_all_connecting(cgraph, src,
                                                        targ))
         groups.append(nodeset)
 
