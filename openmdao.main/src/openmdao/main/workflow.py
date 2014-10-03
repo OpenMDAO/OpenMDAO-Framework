@@ -778,7 +778,7 @@ class Workflow(object):
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
-            for group in get_nondiff_groups(cgraph, self.scope):
+            for group in get_nondiff_groups(reduced, self.scope):
                 system = OpaqueSystem(scope, reduced,
                                       cgraph.subgraph(group),
                                       str(tuple(group)))
