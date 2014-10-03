@@ -41,10 +41,10 @@ class CO(Architecture):
 
         #set initial values 
         for comp,param in global_dvs: 
-            param.initialize(self.parent)
+            param.initialize(self.parent, self.parent)
 
         for comp,param in local_dvs: 
-            param.initialize(self.parent)
+            param.initialize(self.parent, self.parent)
 
         for key,couple in coupling.iteritems(): 
             couple.indep.set(couple.start)   

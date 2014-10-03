@@ -106,13 +106,13 @@ class ParameterBase(object):
         """A one element list containing the target of this parameter."""
         return [self._expreval.text]
 
-    def initialize(self, scope):
+    def initialize(self, scope, param_owner):
         """Set parameter to initial value."""
         if self.start is not None:
             start = self.start
-            self.set(start)
+            self.set(start, param_owner)
 
-    def set(self, val):
+    def set(self, val, param_owner):
         """Assigns the given value to the target referenced by this parameter,
         must be overridden."""
         raise NotImplementedError('set')
@@ -279,11 +279,11 @@ class Parameter(ParameterBase):
         """Returns the value of this parameter as a sequence."""
         return [self._untransform(self._expreval.evaluate(scope))]
 
-    def set(self, val):
+    def set(self, val, param_owner):
         """Assigns the given value to the target of this parameter."""
         transval = self._transform(val)
         try:
-            view = self._get_scope()._system.vec['u'][self._expreval.text]
+            view = param_owner._system.vec['u'][self._expreval.text]
         except (KeyError, AttributeError):
             self._expreval.set(transval)
         else:
@@ -392,10 +392,10 @@ class ParameterGroup(object):
         """Returns finite difference step size as a sequence."""
         return self._params[0].get_fd_step()
 
-    def set(self, value):
+    def set(self, value, param_owner):
         """Set all targets to the given value."""
         for param in self._params:
-            param.set(value)
+            param.set(value, param_owner)
 
     def evaluate(self, scope=None):
         """Return the value of the first parameter in our target list as a
@@ -484,10 +484,10 @@ class ParameterGroup(object):
         if name is not None:
             self.name = name
 
-    def initialize(self, scope):
+    def initialize(self, scope, param_owner):
         """Set parameter to initial value."""
         for param in self._params:
-            param.initialize(scope)
+            param.initialize(scope, param_owner)
 
 
 class ArrayParameter(ParameterBase):
@@ -704,7 +704,7 @@ class ArrayParameter(ParameterBase):
         # Forcing a copy to isolate data ownership.
         return self._untransform(self._expreval.evaluate(scope)).flatten()
 
-    def set(self, value):
+    def set(self, value, param_owner):
         """Assigns the given value to the array referenced by this parameter."""
         copied = False
         if isinstance(value, (list, tuple)):
@@ -723,7 +723,7 @@ class ArrayParameter(ParameterBase):
             value = value * ones(self.shape, self.dtype)
         transval = self._transform(value)
         try:
-            vecs = self._get_scope()._system.vec
+            vecs = param_owner._system.vec
         except AttributeError:
             self._expreval.set(transval)
         else:
@@ -1049,7 +1049,7 @@ class HasParameters(object):
         """
         for param in self._parameters.itervalues():
             if param.start is not None:
-                param.set(param.start)
+                param.set(param.start, self.parent)
 
     def set_parameter_by_name(self, name, value, case=None, scope=None):
         """Sets a single parameter by its name attribute.
@@ -1069,7 +1069,7 @@ class HasParameters(object):
         """
         param = self._parameters[name]
         if case is None:
-            param.set(value)
+            param.set(value, self.parent)
         else:
             for target in param.targets:
                 case.add_input(target, value)
@@ -1095,17 +1095,15 @@ class HasParameters(object):
                              " values (%s)" %
                              (len(values), self.total_parameters()))
         if case is None:
-            uvec = self.parent._system.vec['u']
-            #scope = self._get_scope(scope)
             start = 0
             for param in self._parameters.values():
                 size = param.size
                 if size == 1:
-                    param.set(values[start])
+                    param.set(values[start], self.parent)
                     start += 1
                 else:
                     end = start + size
-                    param.set(values[start:end])
+                    param.set(values[start:end], self.parent)
                     start = end
         else:
             start = 0

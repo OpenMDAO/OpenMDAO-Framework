@@ -2056,3 +2056,35 @@ def fix_state_connections(scope, g):
                     if cname in g[node]:
                         g.remove_edge(node, cname)
 
+
+def collapse_comps(g, collapsed_name, comps):
+    nodes, in_vars, out_vars = comp_boundary(g, comps)
+
+    collapse_nodes(g, collapsed_name, nodes)
+ 
+    return in_vars, out_vars    
+
+def comp_boundary(g, comps):
+    """Return the internal nodes, input nodes and 
+    output nodes for the given group of comps.
+    """
+    nodes = comp_group_nodes(g, comps)
+    in_edges, out_edges = \
+                  get_edge_boundary(g, nodes)
+    in_vars = set([v for u,v in in_edges])
+    out_vars = set([u for u,v in out_edges])
+
+    nodes = nodes.difference(in_vars)
+    nodes = nodes.difference(out_vars)
+
+    return nodes, in_vars, out_vars   
+
+def comp_group_nodes(g, comps):
+    """For a given list of comps, return those comps plus
+    all variable nodes that are connected to them.
+    """
+    nodes = set(comps)
+    for comp in comps:
+        nodes.update(g.predecessors(comp))
+        nodes.update(g.successors(comp))
+    return nodes

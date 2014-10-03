@@ -703,7 +703,7 @@ class System(object):
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
                      'SimpleSystem': 'simp', 'OpaqueDriverSystem': 'drv',
-                     'TransparentDriverSystem': 'tdrv',
+                     'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
                      'AssemblySystem': 'asm', } #'InnerAssemblySystem': 'inner'}
@@ -1756,7 +1756,7 @@ class OpaqueSystem(CompoundSystem):
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
-            graph.add_node(node[0], comp='var')
+            graph.add_node(node[0], comp='dumbvar')
             graph.add_edge(node[0], node)
             graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
             nodes.add(node)
@@ -1828,7 +1828,7 @@ class OpaqueSystem(CompoundSystem):
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
         for item in self.list_outputs():
-            self_u[item] = inner_u[item]
+            self_u[item][:] = inner_u[item][:]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1899,6 +1899,9 @@ class OpaqueSystem(CompoundSystem):
 
     def set_ordering(self, ordering):
         self._inner_system.set_ordering(ordering)
+
+    def get_req_cpus(self):
+        return self._inner_system.get_req_cpus()
 
 class OpaqueDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
@@ -2107,7 +2110,7 @@ def _create_simple_sys(scope, graph, name):
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
         sub = OutVarSystem(scope, graph, name)
-    elif graph.node[name].get('comp') == 'var':
+    elif graph.node[name].get('comp') == 'dumbvar':
         sub = VarSystem(scope, graph, name)
     else:
         raise RuntimeError("don't know how to create a System for '%s'" % name)

@@ -31,11 +31,11 @@ class BLISS(Architecture):
 
         #set initial values
         for comp, param in global_dvs:
-            param.initialize(self.parent)
+            param.initialize(self.parent, self.parent)
 
         for comp, local_params in local_dvs.iteritems():
             for param in local_params:
-                param.initialize(self.parent)
+                param.initialize(self.parent, self.parent)
 
         for couple in coupling.values():
             couple.indep.set(couple.start)
