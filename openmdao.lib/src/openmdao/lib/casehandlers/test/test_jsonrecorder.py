@@ -72,8 +72,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-#        with open('jsonrecorder.new', 'w') as out:
-#            out.write(sout.getvalue())
+        # with open('jsonrecorder.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
@@ -87,8 +87,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-#        with open('multiobj.new', 'w') as out:
-#            out.write(sout.getvalue())
+        # with open('multiobj.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'multiobj.json')
 
     def test_nested(self):
@@ -128,8 +128,8 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-#        with open('nested.new', 'w') as out:
-#            out.write(sout.getvalue())
+        # with open('nested.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
     def verify(self, sout, filename):
@@ -264,8 +264,8 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-#        with open('vtree.new', 'w') as out:
-#            out.write(sout.getvalue())
+        # with open('vtree.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'vtree.json')
 
 

@@ -1,7 +1,8 @@
 {
-"__length_1": 30096
+"__length_1": 30565
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.1", 
+    "OpenMDAO_Version": "0.10.2", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"id\": \"comp1\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"asm2\"}], \"links\": [{\"source\": 2, \"target\": 0}, {\"source\": 2, \"target\": 4}, {\"source\": 4, \"target\": 1}], \"multigraph\": false}", 
     "constants": {
         "asm2.asm3.comp1.directory": "", 
         "asm2.asm3.comp1.force_fd": false, 
@@ -111,7 +112,7 @@
     }, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"_pseudo_1.in0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\"}, {\"full\": \"driver.output_filename\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"output_filename\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.output_filename\"}, {\"short\": \"comp1\", \"color_idx\": 2, \"full\": \"comp1\", \"title\": \"{}\", \"comp\": true, \"id\": \"comp1\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"full\": \"driver.iprint\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"comp1.z\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"comp1.z\", \"short\": \"z\"}, {\"full\": \"comp1.y\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.y\", \"short\": \"y\"}, {\"full\": \"comp1.x\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"comp1.x\", \"short\": \"x\"}, {\"full\": \"driver.accuracy\", \"color_idx\": 3, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.accuracy\", \"short\": \"accuracy\"}, {\"full\": \"driver.error_code\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"error_code\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.error_code\"}, {\"short\": \"driver\", \"color_idx\": 3, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"driver.iout\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iout\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iout\"}, {\"full\": \"_pseudo_1.out0\", \"color_idx\": 0, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 0, \"full\": \"_pseudo_1\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 1, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"short\": \"asm2\", \"color_idx\": 4, \"full\": \"asm2\", \"title\": \"{}\", \"comp\": true, \"id\": \"asm2\"}, {\"full\": \"driver.maxiter\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"maxiter\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.maxiter\"}, {\"full\": \"asm2.x\", \"color_idx\": 4, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"asm2.x\", \"short\": \"x\"}, {\"full\": \"asm2.z\", \"color_idx\": 4, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"asm2.z\", \"short\": \"z\"}], \"links\": [{\"source\": 0, \"target\": 13}, {\"source\": 1, \"target\": 10}, {\"source\": 2, \"target\": 5}, {\"source\": 3, \"target\": 14}, {\"source\": 4, \"target\": 10}, {\"source\": 5, \"target\": 0, \"conn\": true}, {\"source\": 5, \"target\": 18, \"conn\": true}, {\"source\": 6, \"target\": 2}, {\"source\": 7, \"target\": 2}, {\"source\": 8, \"target\": 10}, {\"source\": 10, \"target\": 9}, {\"source\": 11, \"target\": 10}, {\"source\": 13, \"target\": 12}, {\"source\": 14, \"target\": 15}, {\"source\": 16, \"target\": 19}, {\"source\": 17, \"target\": 10}, {\"source\": 19, \"target\": 3, \"conn\": true}, {\"source\": 18, \"target\": 16}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "84b27cb5-3520-11e4-b5c2-a82066074ecd", 
+    "uuid": "010b0ffc-4b2a-11e4-9f96-080027a1f086", 
     "variable_metadata": {
         "asm2.asm3.comp1.derivative_exec_count": {
             "assumed_default": false, 
@@ -824,9 +825,9 @@
         }
     }
 }
-, "__length_2": 476
+, "__length_2": 481
 , "driver_info_1": {
-    "_id": 4602226256, 
+    "_id": 139787201446064, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -849,9 +850,9 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_3": 582
+, "__length_3": 587
 , "driver_info_2": {
-    "_id": 4602225392, 
+    "_id": 139787200374448, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -878,9 +879,9 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_4": 577
+, "__length_4": 582
 , "driver_info_3": {
-    "_id": 4602225680, 
+    "_id": 139787200374832, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "comp1.z >= 0"
@@ -907,11 +908,11 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_5": 541
+, "__length_5": 546
 , "iteration_case_1": {
-    "_driver_id": 4602226256, 
-    "_id": "84b44140-3520-11e4-8040-a82066074ecd", 
-    "_parent_id": "84b405d7-3520-11e4-803f-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010ca6f0-4b2a-11e4-8040-080027a1f086", 
+    "_parent_id": "010c5a75-4b2a-11e4-803f-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -924,13 +925,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.960287
+    "timestamp": 1412360450.628792
 }
-, "__length_6": 541
+, "__length_6": 546
 , "iteration_case_2": {
-    "_driver_id": 4602226256, 
-    "_id": "84b485ba-3520-11e4-8041-a82066074ecd", 
-    "_parent_id": "84b405d7-3520-11e4-803f-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010cf69e-4b2a-11e4-8041-080027a1f086", 
+    "_parent_id": "010c5a75-4b2a-11e4-803f-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -943,13 +944,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.960851
+    "timestamp": 1412360450.629605
 }
-, "__length_7": 667
+, "__length_7": 672
 , "iteration_case_3": {
-    "_driver_id": 4602225392, 
-    "_id": "84b405d7-3520-11e4-803f-a82066074ecd", 
-    "_parent_id": "84b3e735-3520-11e4-803e-a82066074ecd", 
+    "_driver_id": 139787200374448, 
+    "_id": "010c5a75-4b2a-11e4-803f-080027a1f086", 
+    "_parent_id": "010c3ed4-4b2a-11e4-803e-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -966,13 +967,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.965239
+    "timestamp": 1412360450.634313
 }
-, "__length_8": 541
+, "__length_8": 546
 , "iteration_case_4": {
-    "_driver_id": 4602226256, 
-    "_id": "84b55075-3520-11e4-8043-a82066074ecd", 
-    "_parent_id": "84b544dc-3520-11e4-8042-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010dcd14-4b2a-11e4-8043-080027a1f086", 
+    "_parent_id": "010dc0f8-4b2a-11e4-8042-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -985,13 +986,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.966028
+    "timestamp": 1412360450.635079
 }
-, "__length_9": 541
+, "__length_9": 546
 , "iteration_case_5": {
-    "_driver_id": 4602226256, 
-    "_id": "84b566cc-3520-11e4-8044-a82066074ecd", 
-    "_parent_id": "84b544dc-3520-11e4-8042-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010ddedc-4b2a-11e4-8044-080027a1f086", 
+    "_parent_id": "010dc0f8-4b2a-11e4-8042-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1004,13 +1005,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.966608
+    "timestamp": 1412360450.635536
 }
-, "__length_10": 667
+, "__length_10": 671
 , "iteration_case_6": {
-    "_driver_id": 4602225392, 
-    "_id": "84b544dc-3520-11e4-8042-a82066074ecd", 
-    "_parent_id": "84b3e735-3520-11e4-803e-a82066074ecd", 
+    "_driver_id": 139787200374448, 
+    "_id": "010dc0f8-4b2a-11e4-8042-080027a1f086", 
+    "_parent_id": "010c3ed4-4b2a-11e4-803e-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1027,13 +1028,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.967847
+    "timestamp": 1412360450.63656
 }
-, "__length_11": 646
+, "__length_11": 651
 , "iteration_case_7": {
-    "_driver_id": 4602225680, 
-    "_id": "84b3e735-3520-11e4-803e-a82066074ecd", 
-    "_parent_id": "84b27cb5-3520-11e4-b5c2-a82066074ecd", 
+    "_driver_id": 139787200374832, 
+    "_id": "010c3ed4-4b2a-11e4-803e-080027a1f086", 
+    "_parent_id": "010b0ffc-4b2a-11e4-9f96-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1050,13 +1051,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.974442
+    "timestamp": 1412360450.642765
 }
-, "__length_12": 541
+, "__length_12": 546
 , "iteration_case_8": {
-    "_driver_id": 4602226256, 
-    "_id": "84b6c078-3520-11e4-8047-a82066074ecd", 
-    "_parent_id": "84b6b5eb-3520-11e4-8046-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010f3640-4b2a-11e4-8047-080027a1f086", 
+    "_parent_id": "010f2bd1-4b2a-11e4-8046-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1069,13 +1070,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.975439
+    "timestamp": 1412360450.644731
 }
-, "__length_13": 541
+, "__length_13": 546
 , "iteration_case_9": {
-    "_driver_id": 4602226256, 
-    "_id": "84b6d278-3520-11e4-8048-a82066074ecd", 
-    "_parent_id": "84b6b5eb-3520-11e4-8046-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010f5830-4b2a-11e4-8048-080027a1f086", 
+    "_parent_id": "010f2bd1-4b2a-11e4-8046-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1088,13 +1089,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.975902
+    "timestamp": 1412360450.645261
 }
-, "__length_14": 666
+, "__length_14": 672
 , "iteration_case_10": {
-    "_driver_id": 4602225392, 
-    "_id": "84b6b5eb-3520-11e4-8046-a82066074ecd", 
-    "_parent_id": "84b6ac8c-3520-11e4-8045-a82066074ecd", 
+    "_driver_id": 139787200374448, 
+    "_id": "010f2bd1-4b2a-11e4-8046-080027a1f086", 
+    "_parent_id": "010f0f45-4b2a-11e4-8045-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1111,13 +1112,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.97867
+    "timestamp": 1412360450.647991
 }
-, "__length_15": 542
+, "__length_15": 547
 , "iteration_case_11": {
-    "_driver_id": 4602226256, 
-    "_id": "84b75b8c-3520-11e4-804a-a82066074ecd", 
-    "_parent_id": "84b750b8-3520-11e4-8049-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010fdc26-4b2a-11e4-804a-080027a1f086", 
+    "_parent_id": "010fd507-4b2a-11e4-8049-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1130,13 +1131,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.979407
+    "timestamp": 1412360450.648932
 }
-, "__length_16": 542
+, "__length_16": 547
 , "iteration_case_12": {
-    "_driver_id": 4602226256, 
-    "_id": "84b76cbd-3520-11e4-804b-a82066074ecd", 
-    "_parent_id": "84b750b8-3520-11e4-8049-a82066074ecd", 
+    "_driver_id": 139787201446064, 
+    "_id": "010ffc42-4b2a-11e4-804b-080027a1f086", 
+    "_parent_id": "010fd507-4b2a-11e4-8049-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1149,13 +1150,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.979853
+    "timestamp": 1412360450.649402
 }
-, "__length_17": 667
+, "__length_17": 672
 , "iteration_case_13": {
-    "_driver_id": 4602225392, 
-    "_id": "84b750b8-3520-11e4-8049-a82066074ecd", 
-    "_parent_id": "84b6ac8c-3520-11e4-8045-a82066074ecd", 
+    "_driver_id": 139787200374448, 
+    "_id": "010fd507-4b2a-11e4-8049-080027a1f086", 
+    "_parent_id": "010f0f45-4b2a-11e4-8045-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1172,13 +1173,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.981279
+    "timestamp": 1412360450.650598
 }
-, "__length_18": 645
+, "__length_18": 651
 , "iteration_case_14": {
-    "_driver_id": 4602225680, 
-    "_id": "84b6ac8c-3520-11e4-8045-a82066074ecd", 
-    "_parent_id": "84b27cb5-3520-11e4-b5c2-a82066074ecd", 
+    "_driver_id": 139787200374832, 
+    "_id": "010f0f45-4b2a-11e4-8045-080027a1f086", 
+    "_parent_id": "010b0ffc-4b2a-11e4-9f96-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0, 
         "_pseudo_1": -0.0, 
@@ -1195,6 +1196,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1409937450.98446
+    "timestamp": 1412360450.655269
 }
 }
