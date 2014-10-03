@@ -274,6 +274,12 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
     def test_initial_run(self):
         # Test the fix that put run_iteration at the top
         #   of the start_iteration method
+
+        # Ken's notes on why this fails!
+        # 1. Only the outermost non-diff driver needs an opaque system.
+        # 2. When we set parameters in a scope, they need to point to the scope in their parent-most opaque system,
+        # not the assy scope. (or alternatively, we should poke the values into both)
+
         class MyComp(Component):
 
             x = Float(0.0, iotype='in', low=-10, high=10)
@@ -294,7 +300,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
 
             def execute(self):
                 self.set_parameters([1.0])
-                self.workflow.run()
+                super(SpecialDriver, self).run_iteration()
 
         top = set_as_top(Assembly())
         top.add('comp', MyComp())
