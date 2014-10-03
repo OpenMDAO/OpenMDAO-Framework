@@ -408,7 +408,7 @@ class Driver(Component):
         if hasattr(self, 'get_parameters'):
             params = self.get_parameters()
             for param in params.values():
-                param.initialize(self.get_expr_scope())
+                param.initialize(self.get_expr_scope(), self)
             if 'u' in self.workflow._system.vec:
                 self.workflow._system.vec['u'].set_to_scope(self.parent,
                                                             params.keys())

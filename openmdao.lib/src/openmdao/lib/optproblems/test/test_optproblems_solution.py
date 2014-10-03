@@ -29,7 +29,8 @@ class OptProblemSolutionCheck(Architecture):
         
         for k,v in des_vars.iteritems(): 
             for param in v: 
-                param.set(self.parent.solution[param.name])
+                param.set(self.parent.solution[param.name],
+                          self.parent.solution[param.name])
             self.parent.driver.workflow.add(k)
             
         self.parent.init_coupling_vars()

@@ -295,8 +295,8 @@ def applyJT(system, variables):
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
-        parent = system
 
+        parent = system
         while True:
             if item in parent.vec['du']:
                 result[key] = parent.vec['du'][item]
@@ -312,6 +312,7 @@ def applyJT(system, variables):
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
+
         parent = system
         while True:
             parent = parent._parent_system

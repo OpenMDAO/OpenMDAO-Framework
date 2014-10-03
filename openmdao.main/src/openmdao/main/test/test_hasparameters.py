@@ -367,8 +367,8 @@ class HasParametersTestCase(unittest.TestCase):
         self.assertEqual(uvec['comp.x'][0], 15.)
         self.assertEqual(uvec['comp.y'][0], 7.0)
 
-        params['comp.x'].set(9.0)
-        params['comp.y'].set(3.75)
+        params['comp.x'].set(9.0, self.top.driver)
+        params['comp.y'].set(3.75, self.top.driver)
 
         self.assertEqual(uvec['comp.x'][0], 15.)
         self.assertEqual(uvec['comp.y'][0], 7.)
