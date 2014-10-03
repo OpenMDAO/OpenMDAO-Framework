@@ -1944,6 +1944,10 @@ def get_nondiff_groups(graph, scope):
         if '.' not in src or '.' not in target:
             continue
 
+        # Input-input connections don't matter
+        if dgraph.node[src]['iotype'] == 'in':
+            continue
+
         # Figure out if the src is differentiable
         try:
             flattened_size(src, scope.get(src), scope=scope)

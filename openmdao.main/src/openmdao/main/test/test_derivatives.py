@@ -1039,7 +1039,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         sub.driver.workflow.add(['c1', 'c2', 'c3'])
         top.driver.workflow.add('sub')
         top.run()
-        J = top.driver.workflow.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
+        J = top.driver.calc_gradient(('sub.a',), ('sub.c', 'sub.d'))
         self.assertEqual(J.shape, (2, 1))
         self.assertEqual(J[0, 0], 1.)
         self.assertEqual(J[1, 0], 0.)
