@@ -287,6 +287,7 @@ class FiniteDifference(object):
                     # Undo step
                     self.set_value(src, -fd_step, i-i1, undo_complex=True)
 
+                # Pack Jacobian in either an array or a dictionary.
                 if self.return_format == 'dict':
                     start = end = 0
                     for okey in self.outputs:
