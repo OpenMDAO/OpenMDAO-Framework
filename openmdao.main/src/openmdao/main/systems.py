@@ -350,10 +350,10 @@ class System(object):
             for tup in system._in_nodes:
                 seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
                 for dest in tup[1]:
-                    parts = dest.split('.', 1)
-                    if parts[0] not in seen and parts[0] in system._nodes:
+                    comp = dest.split('.', 1)[0]
+                    if comp not in seen and comp in system._nodes:
                         inputs.add(dest)
-                        seen.add(parts[0])
+                        seen.add(comp)
 
         top = self.scope
         return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
@@ -662,11 +662,6 @@ class System(object):
         if scatter is not None:
             srcvec = self.vec[srcvecname]
             destvec = self.vec[destvecname]
-
-            # if subsystem is None:
-            #    mpiprint("scattering (full) to %s" % str(self.name))
-            # else:
-            #    mpiprint("%s scattering to %s" % (str(self.name),str(subsystem.name)))
 
             scatter(self, srcvec, destvec)
 
