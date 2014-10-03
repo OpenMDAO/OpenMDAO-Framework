@@ -324,6 +324,7 @@ class Newton_SolverTestCase(unittest.TestCase):
         top.subdriver.add_parameter('comp.xx')
         top.driver.add_parameter('comp.x')
         top.driver.add_constraint('comp.y = 1.0')
+        top.driver.max_iteration = 2
 
         top.run()
 
