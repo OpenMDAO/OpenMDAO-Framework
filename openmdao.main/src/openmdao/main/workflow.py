@@ -314,18 +314,23 @@ class Workflow(object):
                 pname = tuple(group)
                 name = group[0]
 
-            width = len(self._system.vec['u'][name])
-
-            if pname in params:
-                scaler = params[pname].scaler
-                if scaler != 1.0:
-                    if return_format == 'dict':
+            # Note: 'dict' is the only valid return_format for MPI runs.
+            if return_format == 'dict':
+                if pname in params:
+                    scaler = params[pname].scaler
+                    if scaler != 1.0:
                         for okey in J.keys():
                             J[okey][name] = J[okey][name]*scaler
-                    else:
+
+            else:
+                width = len(self._system.vec['u'][name])
+
+                if pname in params:
+                    scaler = params[pname].scaler
+                    if scaler != 1.0:
                         J[:, i:i+width] = J[:, i:i+width]*scaler
 
-            i += width
+                i += width
 
         #print J
         return J

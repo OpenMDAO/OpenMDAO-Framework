@@ -96,10 +96,11 @@ class MPITests(MPITestCase):
     def test_calc_gradient_fd(self):
         self.top.run()
 
-        J = self.top.driver.workflow.calc_gradient(mode='fd')
+        J = self.top.driver.workflow.calc_gradient(mode='fd',
+                                                   return_format='dict')
 
-        assert_rel_error(self, J[0, 0], 5.0, 0.0001)
-        assert_rel_error(self, J[0, 1], 21.0, 0.0001)
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.x'][0][0], 5.0, 0.0001)
+        assert_rel_error(self, J['_pseudo_0.out0']['comp.y'][0][0], 21.0, 0.0001)
 
 
 if __name__ == '__main__':

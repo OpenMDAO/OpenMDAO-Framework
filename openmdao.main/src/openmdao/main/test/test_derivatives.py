@@ -1751,11 +1751,18 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = J - top.comp1.J
         assert_rel_error(self, diff.max(), 0.0, .000001)
 
+        J = top.driver.calc_gradient(inputs=['comp1.x'],
+                                     outputs=['comp1.y'],
+                                     mode='fd',
+                                     return_format='dict')
+        diff = J['comp1.y']['comp1.x'] - top.comp1.J
+        assert_rel_error(self, diff.max(), 0.0, .000001)
+
         top.run()
         Jsub = top.comp1.J[2:3, 2:3]
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x[1][:]'],
-                                              outputs=['comp1.y[1][:]'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x[1][:]'],
+                                     outputs=['comp1.y[1][:]'],
+                                     mode='forward')
 
         diff = J - Jsub
         assert_rel_error(self, diff.max(), 0.0, .000001)

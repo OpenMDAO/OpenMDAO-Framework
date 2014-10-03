@@ -7,6 +7,7 @@ from sys import float_info
 from openmdao.main.array_helpers import flattened_size, flattened_value
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
+from openmdao.main.mpiwrap import mpiprint
 
 from numpy import ndarray, zeros, ones, unravel_index, complex128
 
@@ -22,9 +23,9 @@ class FiniteDifference(object):
         self.inputs = inputs
         self.outputs = outputs
         self.in_bounds = {}
-        self.out_bounds = {}
         self.system = system
         self.scope = system.scope
+        self.return_format = return_format
 
         options = system.options
         driver = options.parent
@@ -136,10 +137,23 @@ class FiniteDifference(object):
         for src in self.outputs:
             val = self.scope.get(src)
             width = flattened_size(src, val)
-            self.out_bounds[src] = (out_size, out_size+width)
             out_size += width
 
-        self.J = zeros((out_size, in_size))
+        # Size our Jacobian
+        if return_format == 'dict':
+            self.J = {}
+            for okey in outputs:
+                self.J[okey] = {}
+                for ikey in inputs:
+                    if isinstance(ikey, tuple):
+                        ikey = ikey[0]
+
+                    osize = self.system.vec['u'][okey].size
+                    isize = self.system.vec['p'][ikey].size
+                    self.J[okey][ikey] = zeros((osize, isize))
+        else:
+            self.J = zeros((out_size, in_size))
+
         self.y_base = zeros((out_size,))
         self.y = zeros((out_size,))
         self.y2 = zeros((out_size,))
@@ -148,9 +162,10 @@ class FiniteDifference(object):
         """Return Jacobian for all inputs and outputs."""
 
         iterbase = 'fd-' + iterbase
+        uvec = self.system.vec['u']
 
-        self.system.vec['u'].set_to_array(self.y_base,
-                                          self.outputs)
+        uvec.set_to_array(self.y_base,
+                          self.outputs)
 
         for j, src, in enumerate(self.inputs):
             # Users can customize the FD per variable
@@ -207,7 +222,7 @@ class FiniteDifference(object):
                     self.get_outputs(self.y)
 
                     # Forward difference
-                    self.J[:, i] = (self.y - self.y_base)/fd_step
+                    Jfd = (self.y - self.y_base)/fd_step
 
                     # Undo step
                     self.set_value(src, -fd_step, i-i1)
@@ -224,7 +239,7 @@ class FiniteDifference(object):
                     self.get_outputs(self.y)
 
                     # Backward difference
-                    self.J[:, i] = (self.y_base - self.y)/fd_step
+                    Jfd = (self.y_base - self.y)/fd_step
 
                     # Undo step
                     self.set_value(src, fd_step, i-i1)
@@ -247,7 +262,7 @@ class FiniteDifference(object):
                     self.get_outputs(self.y2)
 
                     # Central difference
-                    self.J[:, i] = (self.y - self.y2)/(2.0*fd_step)
+                    Jfd = (self.y - self.y2)/(2.0*fd_step)
 
                     # Undo step
                     self.set_value(src, fd_step, i-i1)
@@ -267,10 +282,22 @@ class FiniteDifference(object):
                     self.get_outputs(yc)
 
                     # Forward difference
-                    self.J[:, i] = (yc/fd_step).imag
+                    Jfd = (yc/fd_step).imag
 
                     # Undo step
                     self.set_value(src, -fd_step, i-i1, undo_complex=True)
+
+                if self.return_format == 'dict':
+                    start = end = 0
+                    for okey in self.outputs:
+
+                        sz = uvec[okey].size
+                        end += sz
+                        mpiprint(Jfd, start, end, i, self.J)
+                        self.J[okey][src][:, i-i1] = Jfd[start:end]
+                        start += sz
+                else:
+                    self.J[:, i] = Jfd
 
         # Restore final inputs/outputs.
         self.system.vec['u'].set_from_array(self.y_base, self.outputs)
@@ -345,7 +372,6 @@ class DirectionalFD(object):
         self.inputs = inputs
         self.outputs = outputs
         self.in_bounds = {}
-        self.out_bounds = {}
 
         self.system = system
         self.scope = system.scope
@@ -368,7 +394,6 @@ class DirectionalFD(object):
         for src in self.outputs:
             val = self.scope.get(src)
             width = flattened_size(src, val)
-            self.out_bounds[src] = (out_size, out_size+width)
             out_size += width
 
         self.y_base = zeros((out_size,))

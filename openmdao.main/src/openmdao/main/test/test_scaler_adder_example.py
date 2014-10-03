@@ -125,6 +125,13 @@ class ScalerAdderExampleTestCase(unittest.TestCase):
         self.assertTrue(J[0][0] == Jdict['_pseudo_0.out0']['paraboloid.x'])
         self.assertTrue(J[0][1] == Jdict['_pseudo_0.out0']['paraboloid.y'])
 
+        Jfd = opt_problem.driver.calc_gradient(mode='fd')
+        Jfddict = opt_problem.driver.calc_gradient(mode='fd', return_format='dict')
+
+        # Make sure untransforming works for dicts too
+        self.assertTrue(Jfd[0][0] == Jfddict['_pseudo_0.out0']['paraboloid.x'])
+        self.assertTrue(Jfd[0][1] == Jfddict['_pseudo_0.out0']['paraboloid.y'])
+
     def test_scale_adder(self):
 
         opt_problem = OptimizationUnconstrainedScaleShift()
