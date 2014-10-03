@@ -29,9 +29,11 @@ class Loads(VariableTree):
     Fy = Array()
     Fz = Array()
 
+
 class LoadsArray(VariableTree):
 
     loads = List(Loads)
+
 
 class LoadsComp(Component):
 
@@ -210,7 +212,7 @@ class TestCase(unittest.TestCase):
             # graph sometimes serializes with nodes in differant order
             # between json and bson. The graphs are still equivalent, but the
             # assertion below will fail
-            if key not in ('uuid','graph',):
+            if key not in ('uuid', 'graph',):
                 self.assertEqual(obj[key], json_run['simulation_info'][key])
 
         driver_count = 1
@@ -269,4 +271,3 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

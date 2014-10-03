@@ -15,19 +15,25 @@ from openmdao.lib.drivers.api import SimpleCaseIterDriver
 
 from openmdao.test.execcomp import ExecComp
 
+
 class CSVPostProcessorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = top = set_as_top(Assembly())
+
         driver = top.add('driver', SimpleCaseIterDriver())
+
         top.add('comp1', ExecComp(exprs=['z=x+y']))
         top.add('comp2', ExecComp(exprs=['z=x+1']))
+
         top.connect('comp1.z', 'comp2.x')
+
         top.comp1.add('a_string', Str("Hello',;','", iotype='out'))
         top.comp1.add('a_array', Array(array([1.0, 3.0, 5.5]), iotype='out'))
         top.comp1.add('x_array', Array(array([1.0, 1.0, 1.0]), iotype='in'))
         top.comp1.add('b_bool', Bool(False, iotype='in'))
         top.comp1.add('vt', VarTree(DumbVT(), iotype='out'))
+
         driver.workflow.add(['comp1', 'comp2'])
 
         # now create some Cases
@@ -53,7 +59,6 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             os.remove(self.filename_json)
 
     def test_simple(self):
-
         # Make sure the CSV file can be read and has the correct number of cases
 
         self.top.recorders = [JSONCaseRecorder(self.filename_json)]
@@ -61,7 +66,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         self.top.run()
 
         cds = CaseDataset(self.filename_json, 'json')
-        data = cds.data.fetch() # results
+        data = cds.data.fetch()  # results
         caseset_query_to_csv( data, self.filename_csv)
 
         cases = [case for case in CSVCaseIterator(filename=self.filename_csv)]
@@ -83,7 +88,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
         self.top.run()
 
         cds = CaseDataset(self.filename_json, 'json')
-        data = cds.data.fetch() # results
+        data = cds.data.fetch()  # results
         caseset_query_to_csv( data, self.filename_csv)
 
         # check recorded cases
@@ -135,7 +140,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             '      comp2.itername: 1-comp2',
             '      comp2.z: 1.0',
             '      driver.workflow.itername: 1',
-            ]
+        ]
 
         #print sout.getvalue()
         lines = sout.getvalue().split('\n')
@@ -187,7 +192,7 @@ class CSVPostProcessorTestCase(unittest.TestCase):
             items2 = act.rstrip().split(",")[1:-3]
             for i, item1 in enumerate(exp.rstrip().split(",")[1:-3]):
                 item2 = items2[i]
-                try: # (str).isnumeric() only works on unicode
+                try:  # (str).isnumeric() only works on unicode
                     item1, item2 = float(item1), float(item2)
                     # nan equality check fails by definition
                     if isnan(item1) and isnan(item2):
@@ -199,4 +204,3 @@ class CSVPostProcessorTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
