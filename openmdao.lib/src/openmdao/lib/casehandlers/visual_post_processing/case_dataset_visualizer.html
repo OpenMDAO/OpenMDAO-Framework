@@ -20,9 +20,69 @@
             //global variable for reference case data
             var case_data = JSON.parse(document.getElementById('case-data').innerHTML);
 
-            function SVG(tag) // makes it easier to create SVG elements
-            {
+            // makes it easier to create SVG elements
+            function SVG(tag) {
                return document.createElementNS('http://www.w3.org/2000/svg', tag);
+            }
+
+            // load a graph from the div with the specified ID (dep-graph or comp-graph)
+            function load_graph(graph_id) {
+                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>');
+
+                var svg = d3.select("#svgContent")
+                              .append("svg")
+                              .attr("height", "100%")
+                              .attr("width", "100%")
+                              .attr('preserveAspectRatio', 'xMinYMin slice') ;
+
+                // For pan and zoom
+                var vis = svg
+                  .append('svg:g')
+                    .call(d3.behavior.zoom().on("zoom", rescale))
+                    .on("dblclick.zoom", null)
+                  .append('svg:g');
+
+                function rescale() {
+                  trans=d3.event.translate;
+                  scale=d3.event.scale;
+                  vis.attr("transform", "translate(" + trans + ")" + " scale(" + scale + ")");
+                }
+
+                vis.append('svg:rect')
+                    .attr('width', "100%")
+                    .attr('height', "100%")
+                    .attr('fill', 'white');
+                // end pan and zoom code
+
+                // populate SVG from hidden graph div
+                var graph = d3.select(graph_id+" svg")
+                vis.html(graph.html())
+
+                // Change all the variable nodes to have a shape of rect
+                $.each(case_data.simulation_info['variable_metadata'], function(varname, metadata) {
+                    $("#svgContent").find("text").filter(function() {
+                        return $(this).text() === varname;
+                    })
+                    .each(function() {
+                        var parent = $(this).parent();
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        $(SVG('rect'))
+                            .attr('fill', 'none')
+                            .attr('stroke', 'black')
+                            .attr('x', cx-rx)
+                            .attr('y', cy-ry)
+                            .attr('width', 2*rx)
+                            .attr('height', 2*ry)
+                            .appendTo(parent);
+                        ellipse.remove();
+                    })
+                });
+
+                return graph_id;
             }
 
             // recursive function to build up the JavaScript structure that w2ui needs for
@@ -57,6 +117,8 @@
                 return nodes ;
             } ; // end get_nodes function
 
+            var current_graph;
+
             // widget configuration
             var config = {
                 layout: {
@@ -64,7 +126,26 @@
                     padding: 0,
                     panels: [
                         { type: 'left', size: 200, resizable: true, minSize: 120 },
-                        { type: 'main',  minSize: 550, overflow: 'auto' }
+                        { type: 'main',  minSize: 550, overflow: 'auto',
+                            tabs: {
+                                active : 'tab1',
+                                tabs   : [
+                                    { id: 'tab1', caption: 'Dependency Graph' },
+                                    { id: 'tab2', caption: 'Component Graph' },
+                                ],
+                                onClick: function (event) {
+                                    if (event.target === 'tab1' && current_graph !== '#dep-graph') {
+                                        current_graph = load_graph('#dep-graph');
+                                    }
+                                    else if (event.target === 'tab2' && current_graph !== '#comp-graph') {;
+                                        current_graph = load_graph('#comp-graph');
+                                    }
+                                    else {
+                                        alert('Already looking at that tab!')
+                                    }
+                                }
+                            }
+                        }
                     ]
                 },
             };
@@ -87,7 +168,7 @@
                    // val.data has the values of the variables
                    // need to add simulation info object for top of tree of cases
                    if (key.lastIndexOf(simulation_info_key, 0) === 0) {
-                        val[ 'children'] = [] ;
+                        val['children'] = [] ;
                         case_objects[ val.uuid ] = val ;
                         simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
                     }
@@ -100,9 +181,9 @@
                     // Make a structure to hold all of the case info
                     if (key.lastIndexOf(it_case_key, 0) === 0) {
                         case_number = key.substring(it_case_key.length);
-                        val[ 'children'] = [] ;
-                        val[ 'case_number'] = case_number ;
-                        val[ 'driver_name'] = driver_id_name_map[val._driver_id] ;
+                        val['children'] = [] ;
+                        val['case_number'] = case_number ;
+                        val['driver_name'] = driver_id_name_map[val._driver_id] ;
                         case_objects[ val._id ] = val ;
                         case_number_to_id_map[ case_number ] = val._id ;
                     }
@@ -137,124 +218,66 @@
 
                 // use w2ui to do the layout of the divs
                 jQuery('#main').w2layout(config.layout);
-                w2ui.layout.content('main', '<div id="svgContent" style="background-color:white"></div>' );
 
-                var svgContent = $("#svgContent");  // save a reference to svgContent to narrow future searches
+                w2ui.layout.content('left', jQuery().w2sidebar({
+                    name: 'cases',
+                    nodes: node_tree ,
+                    onClick: function(event) {
+                        // clean up any added elements or colors from the last case selection
+                        var svgContent = $("#svgContent");
+                        svgContent.find("text").remove(".textval");
+                        svgContent.find("title").remove(".titleval");
+                        svgContent.find("ellipse").attr("fill", "none");
+                        svgContent.find("rect").attr("fill", "none");
+                        svgContent.find("title").text("");
 
-                w2ui.layout.content('left', jQuery().w2sidebar(
-                    {
-                        name: 'cases',
-                        nodes: node_tree ,
-                        onClick: function(event) {
-                            // clean up any added elements or colors from the last case selection
-                            svgContent.find("text").remove(".textval");
-                            svgContent.find("title").remove(".titleval");
-                            svgContent.find("ellipse").attr("fill", "none");
-                            svgContent.find("rect").attr("fill", "none");
-                            svgContent.find("title").text("");
+                        if ( event.node.img != "icon-page" ) {
+                            d = case_objects[case_number_to_id_map[event.target]].data ;
+                            jQuery.each( d, function( key , val ) {
+                                // Get only the text element with exactly the value of key
+                                t = svgContent.find("text").filter(function() {
+                                      return $(this).text() === key;
+                                }) ;
 
-                            if ( event.node.img != "icon-page" ) {
-                                d = case_objects[case_number_to_id_map[event.target]].data ;
-                                jQuery.each( d, function( key , val ) {
-                                    // Get only the text element with exactly the value of key
-                                    t = svgContent.find("text").filter(function() {
-                                          return $(this).text() === key;
-                                    }) ;
+                                if ( t.length === 1 ) {
+                                    t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
 
-                                    if ( t.length === 1 ) {
-                                        t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
-                                        t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
+                                        $(SVG('text'))
+                                            .attr('x', t.attr('x'))
+                                            .attr('y', t.attr('y'))
+                                            .attr('text-anchor', "middle")
+                                            .attr('alignment-baseline', "text-before-edge")
+                                            .attr('class', "textval")
+                                            .attr('font-size', t.attr('font-size')-2)
+                                            .attr('font-family', t.attr('font-family'))
+                                            .text( val.toPrecision(2).toString() )
+                                            .appendTo(t.parent());
+                                    }
+                                    else if ( Object.prototype.toString.call( val ) === '[object Array]' ) {
+                                        // Just say "Array" to indicate it has an array value
+                                        //   and user has to hover over it to see actual value
+                                        $(SVG('text'))
+                                            .attr('x', t.attr('x'))
+                                            .attr('y', t.attr('y'))
+                                            .attr('text-anchor', "middle")
+                                            .attr('alignment-baseline', "text-before-edge")
+                                            .attr('class', "textval")
+                                            .attr('font-size', t.attr('font-size')-2)
+                                            .attr('font-family', t.attr('font-family'))
+                                            .text( "Array" )
+                                            .appendTo(t.parent());
 
-                                        if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
-                                            $(SVG('text'))
-                                                .attr('x', t.attr('x'))
-                                                .attr('y', t.attr('y'))
-                                                .attr('text-anchor', "middle")
-                                                .attr('alignment-baseline', "text-before-edge")
-                                                .attr('class', "textval")
-                                                .attr('font-size', t.attr('font-size')-2)
-                                                .attr('font-family', t.attr('font-family'))
-                                                .text( val.toPrecision(2).toString() )
-                                                .appendTo(t.parent());
-                                        }
-                                        else if ( Object.prototype.toString.call( val ) === '[object Array]' ) {
-                                            // Just say "Array" to indicate it has an array value
-                                            //   and user has to hover over it to see actual value
-                                            $(SVG('text'))
-                                                .attr('x', t.attr('x'))
-                                                .attr('y', t.attr('y'))
-                                                .attr('text-anchor', "middle")
-                                                .attr('alignment-baseline', "text-before-edge")
-                                                .attr('class', "textval")
-                                                .attr('font-size', t.attr('font-size')-2)
-                                                .attr('font-family', t.attr('font-family'))
-                                                .text( "Array" )
-                                                .appendTo(t.parent());
-
-                                            t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
-                                        }
-                                   }
-                                });
-                            }
-                        }  ,
+                                        t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
+                                    }
+                               }
+                            });
+                        }
                     }
-                )); // end layout content left
+                })); // end layout content left
 
-                var svg = d3.select("#svgContent")
-                              .append("svg")
-                              .attr("height", "100%")
-                              .attr("width", "100%")
-                              .attr('preserveAspectRatio', 'xMinYMin slice') ;
-
-                // For pan and zoom
-                var vis = svg
-                  .append('svg:g')
-                    .call(d3.behavior.zoom().on("zoom", rescale))
-                    .on("dblclick.zoom", null)
-                  .append('svg:g');
-
-                function rescale() {
-                  trans=d3.event.translate;
-                  scale=d3.event.scale;
-                  vis.attr("transform",
-                      "translate(" + trans + ")"
-                      + " scale(" + scale + ")");
-                }
-
-                vis.append('svg:rect')
-                    .attr('width', "100%")
-                    .attr('height', "100%")
-                    .attr('fill', 'white');
-                // end pan and zoom code
-
-                // populate SVG from hidden graph div
-                var graph = d3.select("#dep-graph svg")
-                vis.html(graph.html())
-
-                // Change all the variable nodes to have a shape of rect
-                $.each(case_data.simulation_info['variable_metadata'], function(varname, metadata) {
-                    svgContent.find("text").filter(function() {
-                        return $(this).text() === varname;
-                    })
-                    .each(function() {
-                        var parent = $(this).parent();
-                        var ellipse = parent.find('ellipse');
-                        var cx = ellipse.attr('cx');
-                        var cy = ellipse.attr('cy');
-                        var rx = ellipse.attr('rx');
-                        var ry = ellipse.attr('ry');
-                        $(SVG('rect'))
-                            .attr('fill', 'none')
-                            .attr('stroke', 'black')
-                            .attr('x', cx-rx)
-                            .attr('y', cy-ry)
-                            .attr('width', 2*rx)
-                            .attr('height', 2*ry)
-                            .appendTo(parent);
-                        ellipse.remove();
-                    })
-                });
-
+                current_graph = load_graph('#dep-graph');
             }); // end ready
         </script>
     </body>
