@@ -1824,7 +1824,7 @@ class OpaqueSystem(CompoundSystem):
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
         for item in self.list_outputs():
-            self_u[item] = inner_u[item]
+            self_u[item][:] = inner_u[item][:]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its

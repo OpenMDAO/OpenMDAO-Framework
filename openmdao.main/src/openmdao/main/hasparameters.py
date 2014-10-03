@@ -1095,8 +1095,6 @@ class HasParameters(object):
                              " values (%s)" %
                              (len(values), self.total_parameters()))
         if case is None:
-            uvec = self.parent._system.vec['u']
-            #scope = self._get_scope(scope)
             start = 0
             for param in self._parameters.values():
                 size = param.size
