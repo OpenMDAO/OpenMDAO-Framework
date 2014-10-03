@@ -350,29 +350,6 @@ class InputVecWrapper(VecWrapperBase):
                                      (system.name,name, [start,end],self[name].size))
                     start += sz
 
-        # # now add views for subvars that are subviews of their
-        # # basevars
-        # for name, var in allvars.items():
-        #     if name not in vector_vars and name in vset:
-        #         sz = var['size']
-        #         if sz > 0 and var.get('flat', True):
-        #             idx = var['flat_idx']
-        #             try:
-        #                 basestart = self.start(var['basevar'])
-        #             except KeyError:
-        #                 mpiprint("name: %s, base: %s, vars: %s" %
-        #                          (name, var['basevar'], self._info.keys()))
-        #                 raise
-        #             sub_idx = offset_flat_index(idx, basestart)
-        #             substart = get_flat_index_start(sub_idx)
-        #             self._info[name] = (self.array[sub_idx], substart)
-        #             self._subviews.add(name)
-        #             if self.array[sub_idx].size != sz:
-        #                 raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-        #                                      (system.name, name,
-        #                                      list(self.bounds(name)),
-        #                                      sub_idx,self.array[sub_idx].size))
-
     def _map_resids_to_states(self, system):
         pass
 
@@ -390,11 +367,9 @@ class InputVecWrapper(VecWrapperBase):
             if start is not None:
                 if isinstance(name, tuple):
                     for dest in name[1]:
-                        #mpiprint("set %s to %s" % (str(dest),array_val))
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
-                    #mpiprint("set %s to %s" % (str(name),array_val))
 
 
 class DataTransfer(object):
