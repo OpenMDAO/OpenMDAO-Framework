@@ -1752,7 +1752,7 @@ class OpaqueSystem(CompoundSystem):
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
-            graph.add_node(node[0], comp='var')
+            graph.add_node(node[0], comp='dumbvar')
             graph.add_edge(node[0], node)
             graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
             nodes.add(node)
@@ -2106,7 +2106,7 @@ def _create_simple_sys(scope, graph, name):
         sub = InVarSystem(scope, graph, name)
     elif graph.node[name].get('comp') == 'outvar':
         sub = OutVarSystem(scope, graph, name)
-    elif graph.node[name].get('comp') == 'var':
+    elif graph.node[name].get('comp') == 'dumbvar':
         sub = VarSystem(scope, graph, name)
     else:
         raise RuntimeError("don't know how to create a System for '%s'" % name)
