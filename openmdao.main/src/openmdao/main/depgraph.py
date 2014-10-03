@@ -1940,9 +1940,9 @@ def get_nondiff_groups(graph, scope):
     for edge in dgraph.list_connections():
         src, target = edge
 
-        # passing non-diff stuff up and down and assy scope won't work anyway.
-        #if src.startswith('@') or target.startswith('@') or '.' not in src:
-        #    continue
+        # Can't include the containing assembly as a nondiff block.
+        if '.' not in src or '.' not in target:
+            continue
 
         # Figure out if the src is differentiable
         try:
@@ -2061,11 +2061,11 @@ def collapse_comps(g, collapsed_name, comps):
     nodes, in_vars, out_vars = comp_boundary(g, comps)
 
     collapse_nodes(g, collapsed_name, nodes)
- 
-    return in_vars, out_vars    
+
+    return in_vars, out_vars
 
 def comp_boundary(g, comps):
-    """Return the internal nodes, input nodes and 
+    """Return the internal nodes, input nodes and
     output nodes for the given group of comps.
     """
     nodes = comp_group_nodes(g, comps)
@@ -2077,7 +2077,7 @@ def comp_boundary(g, comps):
     nodes = nodes.difference(in_vars)
     nodes = nodes.difference(out_vars)
 
-    return nodes, in_vars, out_vars   
+    return nodes, in_vars, out_vars
 
 def comp_group_nodes(g, comps):
     """For a given list of comps, return those comps plus

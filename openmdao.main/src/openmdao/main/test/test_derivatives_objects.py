@@ -309,19 +309,13 @@ class TestcaseNonDiff(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        comp_list = simple_node_iter(model.driver.workflow._system.graph)
-        self.assertTrue(len(comp_list) == 2)
-        self.assertTrue('comp1' in comp_list)
-        self.assertTrue('comp2' in comp_list)
+        msystem = model.driver.workflow._system
+        self.assertTrue(len(msystem.subsystems()) == 2)
+        self.assertTrue(len(msystem.subsystems()[1]._inner_system.subsystems()) == 3)
+        self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[1].name == 'comp1')
+        self.assertTrue(msystem.subsystems()[1]._inner_system.subsystems()[2].name == 'comp2')
 
-        model.run()
-        model.driver.workflow.config_changed()
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
-
-        self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('comp2' in meta['pa_object'].comps)
 
         # What about subassys?
 
@@ -343,9 +337,6 @@ class TestcaseNonDiff(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        meta = model.driver.workflow._derivative_graph.node['~0']
-        self.assertTrue('comp1' in meta['pa_object'].comps)
-        self.assertTrue('sub' in meta['pa_object'].comps)
 
 if __name__ == '__main__':
     import nose
