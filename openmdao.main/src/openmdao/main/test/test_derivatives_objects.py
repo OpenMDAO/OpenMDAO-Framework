@@ -11,8 +11,10 @@ from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Str, Int
+from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.interfaces import IParametricGeometry, implements, \
                                      IStaticGeometry
+from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
 
@@ -294,6 +296,7 @@ class TestcaseNonDiff(unittest.TestCase):
     def test_non_diff(self):
         # Test grouping comps with non-differentiable connections.
         model = set_as_top(Assembly())
+        model.add('driver', SimpleDriver())
         model.add('comp1', ND_Send())
         model.add('comp2', ND_Receive())
         model.connect('comp1.y', 'comp2.x')
@@ -306,8 +309,7 @@ class TestcaseNonDiff(unittest.TestCase):
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
 
         self.assertAlmostEqual(J[0, 0], 2.5)
-        self.assertTrue(len(model.driver.workflow._system.subsystems()) == 2)
-        comp_list = simple_node_iter(model.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(model.driver.workflow._system.graph)
         self.assertTrue(len(comp_list) == 2)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
