@@ -290,10 +290,45 @@ class Workflow(object):
             # recreate system hierarchy
             self.scope._setup(inputs=inputs, outputs=outputs)
 
-        return self._system.calc_gradient(inputs, outputs, mode=mode,
-                                          options=self.parent.gradient_options,
-                                          iterbase=self._iterbase(),
-                                          return_format=return_format)
+        J = self._system.calc_gradient(inputs, outputs, mode=mode,
+                                       options=self.parent.gradient_options,
+                                       iterbase=self._iterbase(),
+                                       return_format=return_format)
+
+        # Finally, we need to untransform the jacobian if any parameters have
+        # scalers.
+        if not hasattr(parent, 'get_parameters'):
+            return J
+
+        params = parent.get_parameters()
+
+        if len(params) == 0:
+            return J
+
+        i = 0
+        for group in inputs:
+
+            if isinstance(group, str):
+                pname = name = group
+            else:
+                pname = tuple(group)
+                name = group[0]
+
+            width = len(self._system.vec['u'][name])
+
+            if pname in params:
+                scaler = params[pname].scaler
+                if scaler != 1.0:
+                    if return_format == 'dict':
+                        for okey in J.keys():
+                            J[okey][name] = J[okey][name]*scaler
+                    else:
+                        J[:, i:i+width] = J[:, i:i+width]*scaler
+
+            i += width
+
+        #print J
+        return J
 
     def calc_newton_direction(self):
         """ Solves for the new state in Newton's method and leaves it in the
