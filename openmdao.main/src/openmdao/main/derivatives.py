@@ -97,11 +97,13 @@ def applyJ(system, variables):
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
+        parent = system
 
-        if item in system.sol_vec:
-            arg[key] = system.sol_vec[item]
-        else:
-            arg[key] = system.scope._system.vec['du'][item]
+        while True:
+            if item in parent.vec['du']:
+                arg[key] = parent.vec['du'][item]
+                break
+            parent = parent._parent_system
 
     for item in system.list_inputs():
 
@@ -293,10 +295,13 @@ def applyJT(system, variables):
         key = item
         if not is_sys:
             key = item.partition('.')[-1]
-        if item in system.rhs_vec:
-            result[key] = system.rhs_vec[item]
-        elif item in system.scope._system.vec['du']:
-            result[key] = system.scope._system.vec['du'][item]
+        parent = system
+
+        while True:
+            if item in parent.vec['du']:
+                result[key] = parent.vec['du'][item]
+                break
+            parent = parent._parent_system
 
     for item in system.list_inputs():
 
@@ -327,7 +332,7 @@ def applyJT(system, variables):
             break
 
     if nonzero is False:
-        mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
+        #mpiprint('applyJT %s: %s, %s' % (obj.name, arg, result))
         return
 
     # If storage of the local Jacobian is a problem, the user can
@@ -361,7 +366,7 @@ def applyJT(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJT', obj.name, arg, result
+        #print 'applyJT', obj.name, arg, result
         return
 
     if is_sys:
@@ -425,7 +430,7 @@ def applyJT(system, variables):
 
             tmp += Jsub.dot(arg[ikey])
 
-    print 'applyJT', obj.name, arg, result
+    #print 'applyJT', obj.name, arg, result
 
 def applyMinv(obj, inputs, shape_cache):
     """Simple wrapper around a component's applyMinv where we can reshape the
