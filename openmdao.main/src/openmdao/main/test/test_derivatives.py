@@ -3111,7 +3111,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.nest.driver.workflow.add(['comp1', 'comp2', 'comp3'])
         top.nest.create_passthrough('comp1.x')
         top.nest.create_passthrough('comp2.y')
-        top.nest.add('yyy', Array(iotype='out'))
+        top.nest.add('yyy', Array([0.0, 0.0], iotype='out'))
         top.nest.add('dumb', Array(array([2.0, 4.0]), iotype='in'))
         top.nest.connect('comp1.y', 'yyy')
         top.nest.connect('dumb', 'comp3.x')

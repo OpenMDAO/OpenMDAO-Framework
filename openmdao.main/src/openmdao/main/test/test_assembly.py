@@ -703,7 +703,7 @@ class AssemblyTestCase(unittest.TestCase):
         #         subassy
         #             comp3
         trace_buf = []
-        top = TracedAssembly(trace_buf)
+        top = set_as_top(TracedAssembly(trace_buf))
         top.add('driver', TracedIterator(trace_buf, 2))
         top.add('comp1', TracedComponent(trace_buf))
         top.add('driverA', TracedIterator(trace_buf, 3))

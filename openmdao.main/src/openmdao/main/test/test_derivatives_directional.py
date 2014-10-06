@@ -141,15 +141,15 @@ class TestDirectionalFD(unittest.TestCase):
                                               mode='fd')
         assert_rel_error(self, J[0, 0], 12.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=['comp1.x1', ('comp1.x2')],
-                                              outputs=['comp1.y1'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=['comp1.x1', ('comp1.x2')],
+                                     outputs=['comp1.y1'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 5.0, .001)
         assert_rel_error(self, J[0, 1], 7.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
-                                              outputs=['comp1.y1'],
-                                              mode='forward')
+        J = top.driver.calc_gradient(inputs=[('comp1.x1', 'comp1.x2', 'comp1.x3')],
+                                     outputs=['comp1.y1'],
+                                     mode='forward')
         assert_rel_error(self, J[0, 0], 9.0, .001)
 
     def test_arrays(self):
