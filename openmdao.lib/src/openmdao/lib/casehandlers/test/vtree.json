@@ -1,520 +1,482 @@
 {
 "__length_1": 12648
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.1",
+    "OpenMDAO_Version": "0.10.1", 
     "constants": {
-        "directory": "",
-        "driver.directory": "",
-        "driver.force_fd": false,
-        "driver.gradient_options.atol": 1e-09,
-        "driver.gradient_options.derivative_direction": "auto",
-        "driver.gradient_options.directional_fd": false,
-        "driver.gradient_options.fd_blocks": [],
-        "driver.gradient_options.fd_form": "forward",
-        "driver.gradient_options.fd_step": 1e-06,
-        "driver.gradient_options.fd_step_type": "absolute",
-        "driver.gradient_options.force_fd": false,
-        "driver.gradient_options.lin_solver": "scipy_gmres",
-        "driver.gradient_options.maxiter": 100,
-        "driver.gradient_options.rtol": 1e-09,
-        "excludes": [],
-        "force_fd": false,
+        "directory": "", 
+        "driver.directory": "", 
+        "driver.force_fd": false, 
+        "driver.gradient_options.derivative_direction": "auto", 
+        "driver.gradient_options.directional_fd": false, 
+        "driver.gradient_options.fd_blocks": [], 
+        "driver.gradient_options.fd_form": "forward", 
+        "driver.gradient_options.fd_step": 1e-06, 
+        "driver.gradient_options.fd_step_type": "absolute", 
+        "driver.gradient_options.force_fd": false, 
+        "driver.gradient_options.gmres_maxiter": 100, 
+        "driver.gradient_options.gmres_tolerance": 1e-09, 
+        "excludes": [], 
+        "force_fd": false, 
         "includes": [
             "*"
-        ],
-        "missing_deriv_policy": "assume_zero",
-        "sub.comp.directory": "",
-        "sub.comp.force_fd": false,
-        "sub.comp.missing_deriv_policy": "error",
-        "sub.directory": "",
-        "sub.driver.directory": "",
-        "sub.driver.force_fd": false,
-        "sub.driver.gradient_options.atol": 1e-09,
-        "sub.driver.gradient_options.derivative_direction": "auto",
-        "sub.driver.gradient_options.directional_fd": false,
-        "sub.driver.gradient_options.fd_blocks": [],
-        "sub.driver.gradient_options.fd_form": "forward",
-        "sub.driver.gradient_options.fd_step": 1e-06,
-        "sub.driver.gradient_options.fd_step_type": "absolute",
-        "sub.driver.gradient_options.force_fd": false,
-        "sub.driver.gradient_options.lin_solver": "scipy_gmres",
-        "sub.driver.gradient_options.maxiter": 100,
-        "sub.driver.gradient_options.rtol": 1e-09,
-        "sub.excludes": [],
-        "sub.force_fd": false,
+        ], 
+        "missing_deriv_policy": "assume_zero", 
+        "sub.comp.directory": "", 
+        "sub.comp.force_fd": false, 
+        "sub.comp.missing_deriv_policy": "error", 
+        "sub.directory": "", 
+        "sub.driver.directory": "", 
+        "sub.driver.force_fd": false, 
+        "sub.driver.gradient_options.derivative_direction": "auto", 
+        "sub.driver.gradient_options.directional_fd": false, 
+        "sub.driver.gradient_options.fd_blocks": [], 
+        "sub.driver.gradient_options.fd_form": "forward", 
+        "sub.driver.gradient_options.fd_step": 1e-06, 
+        "sub.driver.gradient_options.fd_step_type": "absolute", 
+        "sub.driver.gradient_options.force_fd": false, 
+        "sub.driver.gradient_options.gmres_maxiter": 100, 
+        "sub.driver.gradient_options.gmres_tolerance": 1e-09, 
+        "sub.excludes": [], 
+        "sub.force_fd": false, 
         "sub.includes": [
             "*"
-        ],
+        ], 
         "sub.loads_in.loads": [
             {
                 "Fx": [
-                    1,
-                    2,
+                    1, 
+                    2, 
                     3
-                ],
+                ], 
                 "Fy": [
-                    4,
-                    5,
+                    4, 
+                    5, 
                     6
-                ],
+                ], 
                 "Fz": [
-                    7,
-                    8,
+                    7, 
+                    8, 
                     9
                 ]
             }
-        ],
+        ], 
         "sub.missing_deriv_policy": "assume_zero"
-    },
-    "expressions": {},
-    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}",
-    "name": "",
-    "uuid": "6a9ed221-3520-11e4-a268-a82066074ecd",
+    }, 
+    "expressions": {}, 
+    "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}", 
+    "name": "", 
+    "uuid": "6a9ed221-3520-11e4-a268-a82066074ecd", 
     "variable_metadata": {
         "directory": {
-            "deriv_ignore": true,
-            "iotype": "in",
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Str"
-        },
+        }, 
         "driver.directory": {
-            "deriv_ignore": true,
-            "iotype": "in",
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Str"
-        },
+        }, 
         "driver.force_fd": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
-        "driver.gradient_options.atol": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
-            "vartypename": "Float"
-        },
+        }, 
         "driver.gradient_options.derivative_direction": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "auto",
-                "forward",
+                "auto", 
+                "forward", 
                 "adjoint"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "driver.gradient_options.directional_fd": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
+        }, 
         "driver.gradient_options.fd_blocks": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "driver.gradient_options.fd_form": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "forward",
-                "backward",
-                "central",
+                "forward", 
+                "backward", 
+                "central", 
                 "complex_step"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "driver.gradient_options.fd_step": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
             "vartypename": "Float"
-        },
+        }, 
         "driver.gradient_options.fd_step_type": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "absolute",
-                "relative",
+                "absolute", 
+                "relative", 
                 "bounds_scaled"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "driver.gradient_options.force_fd": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
-        "driver.gradient_options.lin_solver": {
-            "assumed_default": false,
-            "iotype": "in",
-            "values": [
-                "scipy_gmres",
-                "petsc_ksp",
-                "linear_gs"
-            ],
-            "vartypename": "Enum"
-        },
-        "driver.gradient_options.maxiter": {
-            "assumed_default": false,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "in",
-            "low": -9223372036854775807,
+        }, 
+        "driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
-        "driver.gradient_options.rtol": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
+        }, 
+        "driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
             "vartypename": "Float"
-        },
+        }, 
         "excludes": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "force_fd": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
+        }, 
         "includes": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "missing_deriv_policy": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "values": [
-                "error",
+                "error", 
                 "assume_zero"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "sub.comp.derivative_exec_count": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "out",
-            "low": -9223372036854775807,
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
+        }, 
         "sub.comp.directory": {
-            "deriv_ignore": true,
-            "iotype": "in",
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Str"
-        },
+        }, 
         "sub.comp.exec_count": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "out",
-            "low": -9223372036854775807,
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
+        }, 
         "sub.comp.force_fd": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
+        }, 
         "sub.comp.itername": {
-            "deriv_ignore": true,
-            "iotype": "out",
+            "deriv_ignore": true, 
+            "iotype": "out", 
             "vartypename": "Str"
-        },
+        }, 
         "sub.comp.loads_out": {
-            "copy": "deep",
+            "copy": "deep", 
             "default_value": {
                 "loads": []
-            },
-            "iotype": "out",
-            "target": "comp.loads_out",
+            }, 
+            "iotype": "out", 
+            "target": "comp.loads_out", 
             "vartypename": "VarTree"
-        },
+        }, 
         "sub.comp.missing_deriv_policy": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "values": [
-                "error",
+                "error", 
                 "assume_zero"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "sub.derivative_exec_count": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "out",
-            "low": -9223372036854775807,
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
+        }, 
         "sub.directory": {
-            "deriv_ignore": true,
-            "iotype": "in",
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Str"
-        },
+        }, 
         "sub.driver.directory": {
-            "deriv_ignore": true,
-            "iotype": "in",
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Str"
-        },
+        }, 
         "sub.driver.force_fd": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
-        "sub.driver.gradient_options.atol": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
-            "vartypename": "Float"
-        },
+        }, 
         "sub.driver.gradient_options.derivative_direction": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "auto",
-                "forward",
+                "auto", 
+                "forward", 
                 "adjoint"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "sub.driver.gradient_options.directional_fd": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
+        }, 
         "sub.driver.gradient_options.fd_blocks": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "sub.driver.gradient_options.fd_form": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "forward",
-                "backward",
-                "central",
+                "forward", 
+                "backward", 
+                "central", 
                 "complex_step"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "sub.driver.gradient_options.fd_step": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
             "vartypename": "Float"
-        },
+        }, 
         "sub.driver.gradient_options.fd_step_type": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "values": [
-                "absolute",
-                "relative",
+                "absolute", 
+                "relative", 
                 "bounds_scaled"
-            ],
+            ], 
             "vartypename": "Enum"
-        },
+        }, 
         "sub.driver.gradient_options.force_fd": {
-            "assumed_default": false,
-            "iotype": "in",
+            "assumed_default": false, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
-        "sub.driver.gradient_options.lin_solver": {
-            "assumed_default": false,
-            "iotype": "in",
-            "values": [
-                "scipy_gmres",
-                "petsc_ksp",
-                "linear_gs"
-            ],
-            "vartypename": "Enum"
-        },
-        "sub.driver.gradient_options.maxiter": {
-            "assumed_default": false,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "in",
-            "low": -9223372036854775807,
+        }, 
+        "sub.driver.gradient_options.gmres_maxiter": {
+            "assumed_default": false, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "in", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
-        "sub.driver.gradient_options.rtol": {
-            "assumed_default": false,
-            "high": null,
-            "iotype": "in",
-            "low": null,
+        }, 
+        "sub.driver.gradient_options.gmres_tolerance": {
+            "assumed_default": false, 
+            "high": null, 
+            "iotype": "in", 
+            "low": null, 
             "vartypename": "Float"
-        },
+        }, 
         "sub.excludes": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "sub.exec_count": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "exclude_high": false,
-            "exclude_low": false,
-            "high": 9223372036854775807,
-            "iotype": "out",
-            "low": -9223372036854775807,
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "exclude_high": false, 
+            "exclude_low": false, 
+            "high": 9223372036854775807, 
+            "iotype": "out", 
+            "low": -9223372036854775807, 
             "vartypename": "Int"
-        },
+        }, 
         "sub.force_fd": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "vartypename": "Bool"
-        },
+        }, 
         "sub.includes": {
-            "copy": "deep",
-            "iotype": "in",
+            "copy": "deep", 
+            "iotype": "in", 
             "vartypename": "List"
-        },
+        }, 
         "sub.itername": {
-            "deriv_ignore": true,
-            "iotype": "out",
+            "deriv_ignore": true, 
+            "iotype": "out", 
             "vartypename": "Str"
-        },
+        }, 
         "sub.loads_in.loads": {
-            "copy": "deep",
-            "instance_handler": "_list_changed_handler",
-            "iotype": "",
+            "copy": "deep", 
+            "instance_handler": "_list_changed_handler", 
+            "iotype": "", 
             "vartypename": "List"
-        },
+        }, 
         "sub.loads_out": {
-            "copy": "deep",
-            "iotype": "out",
-            "target": "comp.loads_out",
+            "copy": "deep", 
+            "iotype": "out", 
+            "target": "comp.loads_out", 
             "vartypename": "VarTree"
-        },
+        }, 
         "sub.missing_deriv_policy": {
-            "assumed_default": false,
-            "deriv_ignore": true,
-            "iotype": "in",
+            "assumed_default": false, 
+            "deriv_ignore": true, 
+            "iotype": "in", 
             "values": [
-                "error",
+                "error", 
                 "assume_zero"
-            ],
+            ], 
             "vartypename": "Enum"
         }
     }
 }
 , "__length_2": 226
 , "driver_info_1": {
-    "_id": 4360005872,
-    "name": "driver",
+    "_id": 4360005872, 
+    "name": "driver", 
     "recording": [
-        "sub.derivative_exec_count",
-        "sub.exec_count",
-        "sub.loads_out",
-        "sub.itername",
+        "sub.derivative_exec_count", 
+        "sub.exec_count", 
+        "sub.loads_out", 
+        "sub.itername", 
         "driver.workflow.itername"
     ]
 }
 , "__length_3": 234
 , "driver_info_2": {
-    "_id": 4360006064,
-    "name": "sub.driver",
+    "_id": 4360006064, 
+    "name": "sub.driver", 
     "recording": [
-        "comp.loads_out",
-        "comp.derivative_exec_count",
-        "comp.exec_count",
-        "comp.itername",
+        "comp.loads_out", 
+        "comp.derivative_exec_count", 
+        "comp.exec_count", 
+        "comp.itername", 
         "driver.workflow.itername"
     ]
 }
 , "__length_4": 929
 , "iteration_case_1": {
-    "_driver_id": 4360006064,
-    "_id": "6a9f9a02-3520-11e4-8057-a82066074ecd",
-    "_parent_id": "6a9f94cf-3520-11e4-8056-a82066074ecd",
+    "_driver_id": 4360006064, 
+    "_id": "6a9f9a02-3520-11e4-8057-a82066074ecd", 
+    "_parent_id": "6a9f94cf-3520-11e4-8056-a82066074ecd", 
     "data": {
-        "comp.derivative_exec_count": 0,
-        "comp.exec_count": 1,
-        "comp.itername": "1-sub.1-comp",
+        "comp.derivative_exec_count": 0, 
+        "comp.exec_count": 1, 
+        "comp.itername": "1-sub.1-comp", 
         "comp.loads_out": {
             "loads": [
                 {
                     "Fx": [
-                        1,
-                        2,
+                        1, 
+                        2, 
                         3
-                    ],
+                    ], 
                     "Fy": [
-                        4,
-                        5,
+                        4, 
+                        5, 
                         6
-                    ],
+                    ], 
                     "Fz": [
-                        7,
-                        8,
+                        7, 
+                        8, 
                         9
                     ]
                 }
             ]
-        },
+        }, 
         "driver.workflow.itername": "1-sub.1"
-    },
-    "error_message": "",
-    "error_status": null,
+    }, 
+    "error_message": "", 
+    "error_status": null, 
     "timestamp": 1409937407.204121
 }
 , "__length_5": 912
 , "iteration_case_2": {
-    "_driver_id": 4360005872,
-    "_id": "6a9f94cf-3520-11e4-8056-a82066074ecd",
-    "_parent_id": "6a9ed221-3520-11e4-a268-a82066074ecd",
+    "_driver_id": 4360005872, 
+    "_id": "6a9f94cf-3520-11e4-8056-a82066074ecd", 
+    "_parent_id": "6a9ed221-3520-11e4-a268-a82066074ecd", 
     "data": {
-        "driver.workflow.itername": "1",
-        "sub.derivative_exec_count": 0,
-        "sub.exec_count": 1,
-        "sub.itername": "1-sub",
+        "driver.workflow.itername": "1", 
+        "sub.derivative_exec_count": 0, 
+        "sub.exec_count": 1, 
+        "sub.itername": "1-sub", 
         "sub.loads_out": {
             "loads": [
                 {
                     "Fx": [
-                        1,
-                        2,
+                        1, 
+                        2, 
                         3
-                    ],
+                    ], 
                     "Fy": [
-                        4,
-                        5,
+                        4, 
+                        5, 
                         6
-                    ],
+                    ], 
                     "Fz": [
-                        7,
-                        8,
+                        7, 
+                        8, 
                         9
                     ]
                 }
             ]
         }
-    },
-    "error_message": "",
-    "error_status": null,
+    }, 
+    "error_message": "", 
+    "error_status": null, 
     "timestamp": 1409937407.205368
 }
 }

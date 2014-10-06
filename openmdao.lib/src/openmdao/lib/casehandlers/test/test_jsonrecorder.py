@@ -70,8 +70,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-#        with open('jsonrecorder.new', 'w') as out:
-#            out.write(sout.getvalue())
+        with open('jsonrecorder.new', 'w') as out:
+            out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
@@ -263,8 +263,8 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-        with open('vtree.new', 'w') as out:
-            out.write(sout.getvalue())
+        #with open('vtree.new', 'w') as out:
+        #    out.write(sout.getvalue())
         self.verify(sout, 'vtree.json')
 
 
