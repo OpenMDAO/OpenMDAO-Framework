@@ -239,6 +239,13 @@
             "iotype": "in",
             "vartypename": "Bool"
         },
+        "driver.gradient_options.atol": {
+            "assumed_default": false,
+            "high": null,
+            "iotype": "in",
+            "low": null,
+            "vartypename": "Float"
+        },
         "driver.gradient_options.derivative_direction": {
             "assumed_default": false,
             "iotype": "in",
@@ -292,7 +299,17 @@
             "iotype": "in",
             "vartypename": "Bool"
         },
-        "driver.gradient_options.gmres_maxiter": {
+        "driver.gradient_options.lin_solver": {
+            "assumed_default": false,
+            "iotype": "in",
+            "values": [
+                "scipy_gmres",
+                "petsc_ksp",
+                "linear_gs"
+            ],
+            "vartypename": "Enum"
+        },
+        "driver.gradient_options.maxiter": {
             "assumed_default": false,
             "exclude_high": false,
             "exclude_low": false,
@@ -301,7 +318,7 @@
             "low": -9223372036854775807,
             "vartypename": "Int"
         },
-        "driver.gradient_options.gmres_tolerance": {
+        "driver.gradient_options.rtol": {
             "assumed_default": false,
             "high": null,
             "iotype": "in",

@@ -100,12 +100,14 @@ Case:
         expected = expected_constants.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
             for i in range(len(expected)):
                 self.assertEqual(lines[i], expected[i])
 
         expected = expected_case.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
+            lines = [line.rstrip() for line in lines]
             start = 0
             for i in range(9):
                 index = start + lines[start:].index('Case:')
@@ -177,6 +179,7 @@ Case:
 #        print sout.getvalue()
         expected = expected.split('\n')
         lines = sout.getvalue().split('\n')
+        lines = [line.rstrip() for line in lines]
         for i in range(len(expected)):
             if expected[i].startswith('   uuid:'):
                 self.assertTrue(lines[i].startswith('   uuid:'))

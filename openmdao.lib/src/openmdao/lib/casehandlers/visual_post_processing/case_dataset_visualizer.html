@@ -109,7 +109,7 @@
                 //   nodes and edges that graphviz's dot program generates
                 var w = 700, h = 700;
 
-                // TODO: Could really use dot's size attribute to scale things properly. 
+                // TODO: Could really use dot's size attribute to scale things properly.
                 // TODO: Also, use this option to dot to flip the direction of y
                 //         -y          - Invert y coordinate in output
                 var yscale = d3.scale.linear()
@@ -130,7 +130,7 @@
                               .attr('preserveAspectRatio', 'xMinYMin slice') ;
 
                 var dataSet = {
-                    nodes: [ 
+                    nodes: [
                             {{ node_content }}
                            ]
                 };
@@ -186,7 +186,7 @@
                 // build the arrowhead
                 svg.append("svg:defs").selectAll("marker")
                     .data(["end"])
-                    .enter().append("svg:marker")    
+                    .enter().append("svg:marker")
                     .attr("id", String)
                     .attr("viewBox", "0 -5 10 10")
                     .attr("refX", 0)
