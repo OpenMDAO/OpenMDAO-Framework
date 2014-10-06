@@ -1391,7 +1391,7 @@ class AssemblySystem(SimpleSystem):
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=self.options)
 
-        #print self.J
+        print self.J
 
     #def applyJ(self, variables):
         #""" Call into our assembly's top ApplyJ to get the matrix vector
@@ -1758,7 +1758,16 @@ class OpaqueSystem(CompoundSystem):
             nodes.add(node[0])
 
         # Out local outputs must only include the nodes on the boundary.
-        self._out_nodes = [n for n in self._out_nodes if n not in nodes]
+        ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
+
+        # Some interior nodes may also have a connection:
+        int_out_nodes = []
+        for node in self._out_nodes:
+            target_comps = [x.partition('.')[0] for x in node[1] if '.' in x]
+            if len(target_comps)> 1 and any(target_comps) not in nodes:
+                int_out_nodes.append(node)
+
+        self.out_nodes = ext_out_nodes + int_out_nodes
 
         graph = graph.subgraph(nodes)
 
@@ -1848,6 +1857,8 @@ class OpaqueSystem(CompoundSystem):
             inner_system.apply_deriv = inner_system._apply_deriv
         else:
             self.J = inner_system.solve_fd(inputs, outputs)
+
+        #print self.J, inputs, outputs
 
     def applyJ(self, variables):
         vec = self.vec

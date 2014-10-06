@@ -237,7 +237,6 @@ class MultiDriverTestCase(unittest.TestCase):
         nested = self.top.add('nested', Assembly())
         # create the inner driver
         inner_driver = nested.add('driver', CONMINdriver())
-        #inner_driver = nested.driver
 
         nested.add('comp1', ExprComp(expr='x-3'))
         nested.add('comp2', ExprComp(expr='-3'))
