@@ -1758,7 +1758,16 @@ class OpaqueSystem(CompoundSystem):
             nodes.add(node[0])
 
         # Out local outputs must only include the nodes on the boundary.
-        self._out_nodes = [n for n in self._out_nodes if n not in nodes]
+        ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
+
+        # Some interior nodes may also have a connection:
+        int_out_nodes = []
+        for node in self._out_nodes:
+            target_comps = [x.partition('.')[0] for x in node[1] if '.' in x]
+            if len(target_comps)> 1 and any(target_comps) not in nodes:
+                int_out_nodes.append(node)
+
+        self.out_nodes = ext_out_nodes + int_out_nodes
 
         graph = graph.subgraph(nodes)
 
@@ -1849,7 +1858,7 @@ class OpaqueSystem(CompoundSystem):
         else:
             self.J = inner_system.solve_fd(inputs, outputs)
 
-        print self.J, inputs, outputs
+        #print self.J, inputs, outputs
 
     def applyJ(self, variables):
         vec = self.vec

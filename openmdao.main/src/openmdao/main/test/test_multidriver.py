@@ -96,7 +96,6 @@ class ExprComp2(Component):
         global exec_order
         exec_order.append(self.name)
         self.f_xy = eval(self.expr, globals(), self.__dict__)
-        print self.name, self.x, self.y, self.f_xy
 
 class MultiDriverTestCase(unittest.TestCase):
 
