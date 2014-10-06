@@ -1760,7 +1760,8 @@ class OpaqueSystem(CompoundSystem):
         # Out local outputs must only include the nodes on the boundary.
         ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
 
-        # Some interior nodes may also have a connection:
+        # Some interior nodes may also have a connection that we don't want
+        # to lose:
         int_out_nodes = []
         for node in self._out_nodes:
             target_comps = [x.partition('.')[0] for x in node[1] if '.' in x]

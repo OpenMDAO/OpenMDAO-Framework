@@ -54,7 +54,7 @@ class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
     x = Array([1., 1., 1., 1.], iotype='in')
-    y = Array([1., 1., 1., 1.], iotype='in')
+    y = Array([1., 1., 1., 1., 1., 1., 1., 1., 1., 1.], iotype='in')
     raise_error = Bool(False, iotype='in')
     sleep = Float(0., iotype='in')
 
@@ -707,7 +707,7 @@ class SampleAssembly(Assembly):
 class MultiPoint(unittest.TestCase):
 
     def test_multipoint(self):
-        top = SampleAssembly()
+        top = set_as_top(SampleAssembly())
         top.run()
         self.assertEqual(list(top.d.in1), [14., 15., 16., 17., 18., 19.])
         self.assertEqual(list(top.d.in2), [13., 26., 39., 52., 65., 78.])
@@ -744,7 +744,7 @@ class Connections(unittest.TestCase):
 
     def test_connections(self):
         print '---- sequential ----'
-        a1 = ConnectA(True)
+        a1 = set_as_top(ConnectA(True))
         a1.i1 = range(10)
         a1.run()
         print a1.driver.case_inputs.c.i1

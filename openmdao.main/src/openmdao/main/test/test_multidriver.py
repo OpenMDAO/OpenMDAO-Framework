@@ -266,7 +266,7 @@ class MultiDriverTestCase(unittest.TestCase):
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
-        outer_driver.conmin_diff = True
+        #outer_driver.conmin_diff = True
         outer_driver.add_objective('nested.f_xy')   # comp4.f_xy passthrough
         outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
 
