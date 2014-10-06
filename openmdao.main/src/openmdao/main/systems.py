@@ -1027,6 +1027,7 @@ class SimpleSystem(System):
 
     def stop(self):
         self._comp.stop()
+        self._stop = True
 
     def is_differentiable(self):
         """Return True if analytical derivatives can be
@@ -1506,6 +1507,7 @@ class CompoundSystem(System):
                 #mpiprint(self.vec['du'].keys())
 
     def stop(self):
+        self._stop = True
         for s in self.all_subsystems():
             s.stop()
 
