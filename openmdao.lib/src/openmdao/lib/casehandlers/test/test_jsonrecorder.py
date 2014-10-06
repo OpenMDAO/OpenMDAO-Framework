@@ -132,6 +132,7 @@ class TestCase(unittest.TestCase):
 
     def verify(self, sout, filename):
         lines = sout.getvalue().split('\n')
+        lines = [line.rstrip() for line in lines]
 
         directory = os.path.dirname(__file__)
         path = os.path.join(directory, filename)
@@ -145,7 +146,7 @@ class TestCase(unittest.TestCase):
             elif expect.startswith(', "__length_'):
                 self.assertTrue(lines[i].startswith(', "__length_'))
             elif expect.startswith('    "OpenMDAO_Version":'):
-                expect_fixed = expect[:25] + __version__ + '", '
+                expect_fixed = expect[:25] + __version__ + '",'
                 self.assertEqual(lines[i], expect_fixed)
             elif expect.startswith('    "_driver_id":'):
                 self.assertTrue(lines[i].startswith('    "_driver_id":'))

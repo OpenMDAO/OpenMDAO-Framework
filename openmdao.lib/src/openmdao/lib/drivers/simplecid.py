@@ -60,18 +60,7 @@ class SimpleCaseIterDriver(Driver):
             for j, path in enumerate(inputs):
                 value = values[j][i]
                 expr = exprs.get(path)
-                if expr:
-                    expr.set(value, self.parent) #, tovector=True)
-                else:
-                    self.parent.set(path, value)
-                    # FIXME: this extra setting of the vector is messy...
-                    scope = self.parent
-                    if hasattr(scope, 'get_system'):
-                        system = scope.get_system()
-                        if system is not None:
-                            uvec = system.vec.get('u')
-                            if uvec and path in uvec:
-                                uvec[path][:] = flattened_value(path, value)
+                self.set_parameter_by_name(path, value)
 
             # Run workflow.
             self.workflow.run()
