@@ -786,11 +786,13 @@ class Workflow(object):
             reduced.remove_node(self.parent.name)
 
         params = []
-        if hasattr(self.parent, 'list_param_targets'):
-            params = self.parent.list_param_targets()
+        if hasattr(self.parent, 'list_param_group_targets'):
+            params = self.parent.list_param_group_targets()
 
         # we need to connect a param comp node to all param nodes
         for param in params:
+            if isinstance(param, tuple):
+                param = param[0]
             reduced.add_node(param, comp='param')
             reduced.add_edge(param, name2collapsed[param])
             added.add(param)
@@ -799,9 +801,9 @@ class Workflow(object):
 
         if self.scope._setup_inputs is not None:
             for param in self.scope._setup_inputs:
+                if isinstance(param, tuple):
+                    param = param[0]
                 if param not in reduced:
-                    if isinstance(param, tuple):
-                        param = param[0]
                     reduced.add_node(param, comp='param')
                     reduced.add_edge(param, name2collapsed.get(param,param))
                     reduced.node[param]['system'] = \

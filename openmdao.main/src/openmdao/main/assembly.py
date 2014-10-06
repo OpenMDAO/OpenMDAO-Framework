@@ -47,7 +47,8 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    vars2tuples, relevant_subgraph, \
                                    map_collapsed_nodes, simple_node_iter, \
                                    reduced2component, collapse_driver, \
-                                   fix_state_connections, connect_subvars_to_comps
+                                   fix_state_connections, connect_subvars_to_comps, \
+                                   add_boundary_comps
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars
@@ -1469,13 +1470,11 @@ class Assembly(Component):
         """Create the graph we need to do the breakdown of the model
         into Systems.
         """
-        #if inputs == self._setup_inputs and outputs == self._setup_outputs:
-        #    return
-
         self._setup_inputs = inputs if inputs is None else inputs[:]
         self._setup_outputs = outputs if outputs is None else outputs[:]
 
-        keep = set([n for n,d in self._depgraph.nodes_iter(data=True) if d.get('iotype')=='state'])
+        keep = set([n for n,d in self._depgraph.nodes_iter(data=True) 
+                         if d.get('iotype')=='state'])
                          #if d.get('iotype') in ('state','residual')])
 
         if self.parent is not None:
@@ -1493,43 +1492,41 @@ class Assembly(Component):
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
 
-            if inputs is None and outputs is not None:
-                inputs = list(ddests)
-                outputs = list(simple_node_iter(outputs))
-            elif outputs is None and inputs is not None:
-                inputs = list(simple_node_iter(inputs))
-                outputs = list(dsrcs)
-            else:
-                inputs = list(simple_node_iter(inputs))
-                outputs = list(simple_node_iter(outputs))
-
-            # if inputs is None:
+            # if inputs is None and outputs is not None:
             #     inputs = list(ddests)
+            #     outputs = list(simple_node_iter(outputs))
+            # elif outputs is None and inputs is not None:
+            #     inputs = list(simple_node_iter(inputs))
+            #     outputs = list(dsrcs)
             # else:
-            #    # identify any broadcast inputs
-            #     ins = []
-            #     for inp in inputs:
-            #         if isinstance(inp, basestring):
-            #             keep.add(inp)
-            #             ins.append(inp)
-            #         elif len(inp) == 1:
-            #             keep.add(inp[0])
-            #             ins.append(inp[0])
-            #         else:
-            #             keep.update(inp)
-            #             ins.append(inp[0])
-            #             # add input to input connections from first param in a group
-            #             # to all of the others
-            #             for pname in inp[1:]:
-            #                 dgraph.add_edge(inp[0], pname, conn=True)
-            #     inputs = ins
+            #     inputs = list(simple_node_iter(inputs))
+            #     outputs = list(simple_node_iter(outputs))
+
+            if inputs is None:
+                inputs = list(ddests)
+            else:
+               # identify any broadcast inputs
+                ins = []
+                for inp in inputs:
+                    if isinstance(inp, basestring):
+                        keep.add(inp)
+                        ins.append(inp)
+                    elif len(inp) == 1:
+                        keep.add(inp[0])
+                        ins.append(inp[0])
+                    else:
+                        keep.update(inp)
+                        ins.append(inp[0])
+                        # add input to input connections from first 
+                        # param in a group to all of the others
+                        for pname in inp[1:]:
+                            dgraph.add_edge(inp[0], pname, conn=True)
+                inputs = ins
                 
-            # if outputs is None:
-            #     outputs = dsrcs
+            if outputs is None:
+                outputs = dsrcs
 
-
-            dgraph = relevant_subgraph(dgraph,
-                                       inputs, outputs,
+            dgraph = relevant_subgraph(dgraph, inputs, outputs,
                                        keep)
             keep.update(inputs)
             keep.update(outputs)
@@ -1537,9 +1534,14 @@ class Assembly(Component):
         fix_state_connections(self, dgraph)
 
         dgraph = self._explode_vartrees(dgraph)
+        
+        add_boundary_comps(dgraph)
 
         connect_subvars_to_comps(dgraph)
 
+        # get rid of fake boundary comps
+        dgraph.remove_nodes_from(['#in', '#out'])
+        
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
 
