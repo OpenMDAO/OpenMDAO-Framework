@@ -1391,7 +1391,7 @@ class AssemblySystem(SimpleSystem):
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=self.options)
 
-        #print self.J
+        print self.J
 
     #def applyJ(self, variables):
         #""" Call into our assembly's top ApplyJ to get the matrix vector
@@ -1848,6 +1848,8 @@ class OpaqueSystem(CompoundSystem):
             inner_system.apply_deriv = inner_system._apply_deriv
         else:
             self.J = inner_system.solve_fd(inputs, outputs)
+
+        print self.J, inputs, outputs
 
     def applyJ(self, variables):
         vec = self.vec

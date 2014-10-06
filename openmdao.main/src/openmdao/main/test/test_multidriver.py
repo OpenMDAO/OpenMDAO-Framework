@@ -96,6 +96,7 @@ class ExprComp2(Component):
         global exec_order
         exec_order.append(self.name)
         self.f_xy = eval(self.expr, globals(), self.__dict__)
+        print self.name, self.x, self.y, self.f_xy
 
 class MultiDriverTestCase(unittest.TestCase):
 
@@ -237,7 +238,6 @@ class MultiDriverTestCase(unittest.TestCase):
         nested = self.top.add('nested', Assembly())
         # create the inner driver
         inner_driver = nested.add('driver', CONMINdriver())
-        #inner_driver = nested.driver
 
         nested.add('comp1', ExprComp(expr='x-3'))
         nested.add('comp2', ExprComp(expr='-3'))
