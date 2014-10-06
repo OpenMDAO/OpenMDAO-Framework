@@ -1628,6 +1628,20 @@ def collapse_connections(orig_graph):
         if len(src2dests) == size:
             break
 
+    # clean up any driver connections to params that have already been
+    # included in a param group node
+    dparams = {}
+    for src, dests, in src2dests.items():
+        if '@' in src:
+            drv, var = src.split('@',1)
+            dparams.setdefault(drv, set()).update([d for d in dests if d != var])
+            
+    for src, dests, in src2dests.items():
+        if '@' in src:
+            drv, var = src.split('@',1)
+            if var in dparams[drv]:
+                del src2dests[src]
+            
     for src, dests in src2dests.items():
         _add_collapsed_node(g, src, dests)
 
@@ -1884,7 +1898,7 @@ def get_nondiff_groups(graph, scope):
         groups.append(nodeset)
 
     return groups
-
+    
 def connect_subvars_to_comps(g):
     """Take all subvars and connect them directly to
     their parent component node rather than to their
@@ -1959,14 +1973,31 @@ def fix_state_connections(scope, g):
         if data.get('iotype') == 'state':
             cname = node.split('.', 1)[0]
             if cname in g and g.node[cname].get('comp'):
-                if cname in eval_only: # tread states as inputs
+                if cname in eval_only: # treat states as inputs
                     if node in g[cname]:
                         g.remove_edge(cname, node)
                 else:
                     if cname in g[node]:
                         g.remove_edge(node, cname)
+                        
+    return g
 
-
+def add_boundary_comps(g):
+    """Add fake boundary components and connect them to boundary 
+    basevars.
+    """
+    g.add_node('#in', comp=True)
+    g.add_node('#out', comp=True)
+    
+    for node, data in g.nodes_iter(data=True):
+        if 'boundary' in data and 'basevar' not in data:
+            if data['iotype'] == 'in':
+                g.add_edge('#in', node)
+            elif data['iotype'] == 'out':
+                g.add_edge(node, '#out')
+                
+    return g
+        
 def collapse_comps(g, collapsed_name, comps):
     nodes, in_vars, out_vars = comp_boundary(g, comps)
 
