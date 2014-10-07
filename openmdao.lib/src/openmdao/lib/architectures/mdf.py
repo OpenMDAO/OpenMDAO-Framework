@@ -19,7 +19,7 @@ class MDF(Architecture):
         #create the top level optimizer
         self.parent.add("driver", SLSQPdriver())
         self.parent.driver.iprint = 0
-        self.parent.recorders = self.data_recorders
+        self.parent.recorders.extend(self.data_recorders)
 
         global_dvs = []
         local_dvs = []
@@ -58,5 +58,7 @@ class MDF(Architecture):
                                               % (couple.indep.target,
                                                  couple.dep.target))
         #setup the workflows
+        components = self.parent.list_components()
+        self.parent.solver.workflow.add([comp for comp in components if comp != 'driver'])
         self.parent.driver.workflow.add(['solver'])
         #self.parent.solver.workflow.add(disciplines)

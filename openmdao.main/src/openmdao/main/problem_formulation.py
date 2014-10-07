@@ -187,6 +187,12 @@ class ArchitectureAssembly(Assembly):
         self.init_parameters()
         self.init_coupling_vars()
 
+    def configure_recording(self, includes=None, excludes=None, inputs=None):
+        self.architecture.configure()
+        self.architecture.configured = True
+
+        super(ArchitectureAssembly, self).configure_recording(includes, excludes, inputs)
+
     def check_config(self, strict=False):
         """Checks the configuration of the assembly to make sure it's compatible
         with the architecture. Then initializes all the values in the
@@ -196,9 +202,6 @@ class ArchitectureAssembly(Assembly):
         super(ArchitectureAssembly, self).check_config(strict=strict)
         if self.architecture is not None:
             self.architecture.check_config(strict=strict)
-            if not self.architecture.configured:
-                self.architecture.configure()
-                self.architecture.configured = True
 
     def get_local_des_vars_by_comp(self):
         """Return a dictionary of component names/list of parameters for
