@@ -118,7 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-#        create_files()  # Uncomment to create 'sellar.new'
+        # create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -193,7 +193,7 @@ class TestCase(unittest.TestCase):
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '87bafaeb-384e-11e4-83f2-a82066074ecd'  # iteration_case_6
+        parent = '1b192a75-4b4f-11e4-83f2-080027a1f086'  # iteration_case_6
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',

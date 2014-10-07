@@ -247,7 +247,6 @@ class Component(Container):
             if trait.iotype == 'in':
                 self._set_input_callback(name)
 
-
     @rbac(('owner', 'user'))
     def get_req_default(self, self_required=None):
         """Returns a list of all inputs that are required but still have
@@ -259,7 +258,7 @@ class Component(Container):
                 obj = getattr(self, name)
                 if is_instance(obj, VariableTree):
                     if self.name:
-                        req.extend(['.'.join((self.name, n)) 
+                        req.extend(['.'.join((self.name, n))
                                      for n in obj.get_req_default(trait.required)])
                     else:
                         req.extend(obj.get_req_default(trait.required))
@@ -625,7 +624,7 @@ class Component(Container):
                 self.reraise_exception("Couldn't replace '%s' of type %s with"
                                        " type %s" % (target_name,
                                                      type(tobj).__name__,
-                                                     type(newobj).__name__), 
+                                                     type(newobj).__name__),
                                         sys.exc_info())
 
         self.add(target_name, newobj)  # this will remove the old object
@@ -1494,7 +1493,7 @@ class Component(Container):
             partially_connected_indices = []
 
             for inp in connected_inputs:
-                cname = inp.split('[', 1)[0].split('.',1)[1]  # Could be 'inp[0]'.
+                cname = inp.split('[', 1)[0].split('.', 1)[1]  # Could be 'inp[0]'.
 
                 if cname == name:
                     connections = self.parent._depgraph._var_connections(inp)
