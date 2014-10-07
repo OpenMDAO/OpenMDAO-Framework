@@ -11,7 +11,7 @@ from openmdao.util.graph import list_deriv_vars
 # pylint: disable=C0103
 
 
-def pre_process_dicts(obj, key, arg_or_result, shape_cache):
+def pre_process_dicts(obj, key, arg_or_result, shape_cache, scope, is_sys):
     '''If the component supplies apply_deriv or applyMinv or their adjoint
     counterparts, it expects the contents to be shaped like the original
     variables. Also, it doesn't know how to handle array elements, so we need
@@ -19,6 +19,8 @@ def pre_process_dicts(obj, key, arg_or_result, shape_cache):
     '''
 
     value = arg_or_result[key]
+    if is_sys is True:
+        obj = scope
 
     # For arrays, apply_deriv expects full arrays, not
     # indexed ones. We need to create the full array on
@@ -84,13 +86,14 @@ def applyJ(system, variables):
 
     J = system.J
     obj = system.inner()
+    scope = system.scope
 
     is_sys = ISystem.providedBy(obj)
 
     arg = {}
     for item in system.list_states():
 
-        collapsed = system.scope.name2collapsed.get(item)
+        collapsed = scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
@@ -107,7 +110,7 @@ def applyJ(system, variables):
 
     for item in system.list_inputs():
 
-        collapsed = system.scope.name2collapsed.get(item)
+        collapsed = scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
@@ -125,7 +128,7 @@ def applyJ(system, variables):
     result = {}
     for item in system.list_outputs():
 
-        collapsed = system.scope.name2collapsed.get(item)
+        collapsed = scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
@@ -167,11 +170,11 @@ def applyJ(system, variables):
         # each input and output to have the same shape as the input/output.
         resultkeys = sorted(result.keys())
         for key in resultkeys:
-            pre_process_dicts(obj, key, result, shape_cache)
+            pre_process_dicts(obj, key, result, shape_cache, scope, is_sys)
 
         argkeys = arg.keys()
         for key in sorted(argkeys):
-            pre_process_dicts(obj, key, arg, shape_cache)
+            pre_process_dicts(obj, key, arg, shape_cache, scope, is_sys)
 
         obj.apply_deriv(arg, result)
 
@@ -185,7 +188,7 @@ def applyJ(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        #print 'applyJ', obj.name, arg, result
+        print 'applyJ', obj.name, arg, result
         return
 
     if is_sys:
@@ -262,6 +265,7 @@ def applyJT(system, variables):
 
     J = system.J
     obj = system.inner()
+    scope = system.scope
     is_sys = ISystem.providedBy(obj)
 
     arg = {}
@@ -288,7 +292,7 @@ def applyJT(system, variables):
     result = {}
     for item in system.list_states():
 
-        collapsed = system.scope.name2collapsed.get(item)
+        collapsed = scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
@@ -305,7 +309,7 @@ def applyJT(system, variables):
 
     for item in system.list_inputs():
 
-        collapsed = system.scope.name2collapsed.get(item)
+        collapsed = scope.name2collapsed.get(item)
         if collapsed not in variables:
             continue
 
@@ -348,11 +352,11 @@ def applyJT(system, variables):
         # same shape as the input/output.
         resultkeys = sorted(result.keys())
         for key in resultkeys:
-            pre_process_dicts(obj, key, result, shape_cache)
+            pre_process_dicts(obj, key, result, shape_cache, scope, is_sys)
 
         argkeys = arg.keys()
         for key in sorted(argkeys):
-            pre_process_dicts(obj, key, arg, shape_cache)
+            pre_process_dicts(obj, key, arg, shape_cache, scope, is_sys)
 
         obj.apply_derivT(arg, result)
 

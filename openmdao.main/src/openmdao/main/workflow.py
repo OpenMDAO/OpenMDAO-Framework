@@ -204,7 +204,7 @@ class Workflow(object):
             raise err[0], err[1], err[2]
 
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
-                      return_format='array', force_regen=False):
+                      return_format='array', force_regen=False, options=None):
         """Returns the Jacobian of derivatives between inputs and outputs.
 
         inputs: list of strings
@@ -223,6 +223,9 @@ class Workflow(object):
 
         force_regen: boolean
             Set to True to force a regeneration of the system hierarchy.
+
+        options: Gradient_Options Vartree
+            Override this driver's Gradient_Options with others.
         """
 
         parent = self.parent
@@ -290,8 +293,12 @@ class Workflow(object):
             # recreate system hierarchy
             self.scope._setup(inputs=inputs, outputs=outputs)
 
+
+        if options is None:
+            options = self.parent.gradient_options
+
         J = self._system.calc_gradient(inputs, outputs, mode=mode,
-                                       options=self.parent.gradient_options,
+                                       options=options,
                                        iterbase=self._iterbase(),
                                        return_format=return_format)
 

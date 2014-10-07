@@ -329,11 +329,11 @@ class TestFiniteDifference(unittest.TestCase):
 
         top.driver.add_parameter('comp.x', low=-100, high=100)
         top.driver.add_constraint('comp.y[0][-1] < 1.0')
-        top.driver.add_constraint('sum(comp.y) < 4.0')
+        top.driver.add_constraint('numpy.sum(comp.y) < 4.0')
 
         top.run()
         J = top.driver.calc_gradient(mode='forward')
-
+        print J
         assert_rel_error(self, J[0, 0], 4.0, 0.001)
         assert_rel_error(self, J[0, 1], 2.0, 0.001)
         assert_rel_error(self, J[0, 2], 6.0, 0.001)

@@ -518,7 +518,7 @@ class DirectionalFD(object):
         self.system.vec['u'].set_from_array(self.y_base, self.outputs)
         self.system.vec['u'].set_to_scope(self.scope)
 
-        #print mv_prod, arg, result
+        #print 'after DFD', mv_prod, arg, result
 
     def set_value(self, fd_step, arg, undo_complex=False):
         """Set a value in the model"""
@@ -529,7 +529,7 @@ class DirectionalFD(object):
             if isinstance(srcs, basestring):
                 srcs = (srcs,)
 
-            direction = fd_step*arg[srcs[0]]
+            direction = fd_step*arg[srcs[0]].flatten()
 
             for src in srcs:
                 if src in self.system.vec['u']:
