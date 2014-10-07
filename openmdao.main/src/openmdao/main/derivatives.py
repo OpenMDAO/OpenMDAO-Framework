@@ -188,7 +188,7 @@ def applyJ(system, variables):
             if hasattr(value, 'flatten'):
                 arg[key] = value.flatten()
 
-        print 'applyJ', obj.name, arg, result
+        #print 'applyJ', obj.name, arg, result
         return
 
     if is_sys:

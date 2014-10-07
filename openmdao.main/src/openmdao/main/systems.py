@@ -1442,7 +1442,9 @@ class AssemblySystem(SimpleSystem):
         """Return True if analytical derivatives can be
         computed for this System.
         """
-        return True
+        driver = self._comp.driver
+        return ISolver.providedBy(self._comp.driver) or \
+               driver.__class__.__name__ == 'Driver'
 
     def solve_linear(self, options=None):
         """ Single linear solve solution applied to whatever input is sitting

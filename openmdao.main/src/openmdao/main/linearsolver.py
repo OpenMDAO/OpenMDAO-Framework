@@ -166,7 +166,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed"
             logger.error(msg, system.name)
 
-        print 'Linear solution vec', -dx
+        #print 'Linear solution vec', -dx
         return dx
 
 
@@ -183,7 +183,7 @@ class ScipyGMRES(LinearSolver):
 
         system.applyJ(system.vector_vars.keys())
 
-        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         return system.rhs_vec.array[:]
 
 
