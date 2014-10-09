@@ -34,13 +34,21 @@ class DataObject(object):
     def get(self):
         return self.x, self.y, self.z
 
+    def get_flattened_value(self):
+        return np.array([self.x, self.y, self.z])
+
+    def set_flattened_value(self, val):
+        self.x = val[0]
+        self.y = val[1]
+        self.z = val[2]
+
 class Comp_Send(Component):
     '''Passes a data object as output.'''
 
     p1 = Float(0.0, iotype='in')
     p2 = Float(0.0, iotype='in')
 
-    data = Variable(DataObject(), iotype='out', data_shape=(3, ))
+    data = Variable(DataObject(), iotype='out')
     dummy = Float(1.0, iotype='out')
 
     def execute(self):
@@ -87,7 +95,7 @@ class Comp_Send(Component):
 class Comp_Receive(Component):
     '''Takes a data object as input.'''
 
-    data = Variable(iotype='in')
+    data = Variable(DataObject(), iotype='in')
 
     q1 = Float(0.0, iotype='out')
     q2 = Float(0.0, iotype='out')
@@ -182,9 +190,6 @@ class TestcaseDerivObj(unittest.TestCase):
         top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
-
-        edges = top.driver.workflow._edges
-        self.assertTrue(edges['c1.data'] == ['c2.data'])
 
     def _check_J(self, J):
         assert_rel_error(self, J[0, 0], -6.0, .00001)

@@ -1072,7 +1072,7 @@ class Container(SafeHasTraits):
         else:
             val = getattr(self, path.split('[',1)[0])
             idx = get_index(path)
-            if isinstance(val, int_types): 
+            if isinstance(val, int_types):
                 pass  # fall through to exception
             if isinstance(val, real_types):
                 if idx is None:
@@ -1088,9 +1088,12 @@ class Container(SafeHasTraits):
                 return
             elif IVariableTree.providedBy(val):
                 raise NotImplementedError("no support for setting flattened values into vartrees")
+            elif hasattr(val, 'set_flattened_value'):
+                val.set_flattened_value(value)
+                return
 
             self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
-                
+
     def _set_failed(self, path, value, index=None, force=False):
         """If set() cannot locate the specified variable, raise an exception.
         Inherited classes can override this to locate the variable elsewhere
