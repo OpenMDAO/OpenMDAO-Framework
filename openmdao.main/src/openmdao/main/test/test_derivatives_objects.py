@@ -34,6 +34,9 @@ class DataObject(object):
     def get(self):
         return self.x, self.y, self.z
 
+    def get_flattened_size(self):
+        return 3
+
     def get_flattened_value(self):
         return np.array([self.x, self.y, self.z])
 

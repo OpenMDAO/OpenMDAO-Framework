@@ -102,17 +102,18 @@ class DummyGeometry(object):
     def get_visualization_data(self, wv): #stub
         pass
 
+    def get_flattened_size(self):
+        return 2
+
     def get_flattened_value(self):
-        return np.array([self.x, self.y, self.z])
+        return self.vars['z']
 
     def set_flattened_value(self, val):
-        self.x = val[0]
-        self.y = val[1]
-        self.z = val[2]
+        self.vars['z'] = val[0]
 
 class GeomRecieve(Component):
 
-    geom_in = Variable(iotype='in', data_shape=(2,))
+    geom_in = Variable(DummyGeometry(), iotype='in', data_shape=(2,))
     out = Array([0,0], iotype='out')
 
     def execute(self):
@@ -185,15 +186,12 @@ class Testcase_deriv_obj(unittest.TestCase):
         inputs = self.inputs
         outputs = self.outputs
 
-        self.top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
         self._check_J(J)
 
-        top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='adjoint')
         self._check_J(J)
 
-        self.top.driver.workflow.config_changed()
         J = top.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
         self._check_J(J)
 
