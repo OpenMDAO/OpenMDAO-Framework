@@ -156,7 +156,7 @@ class Workflow(object):
         if err is not None:
             # NOTE: cannot use 'raise err' here for some reason.  Must separate
             # the parts of the tuple.
-            raise err[0], err[1], err[2] 
+            raise err[0], err[1], err[2]
 
     def configure_recording(self, includes, excludes):
         """Called at start of top-level run to configure case recording.
@@ -189,6 +189,10 @@ class Workflow(object):
         if hasattr(driver, 'eval_objectives'):
             for key, objective in driver.get_objectives().items():
                 name = objective.pcomp_name
+                if key != objective.text:
+                    name = key
+
+                #name = objective.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
@@ -228,6 +232,7 @@ class Workflow(object):
             srcs.extend(param.target
                         for param in driver.get_parameters().values())
         dsts = scope.list_outputs()
+
         if hasattr(driver, 'get_objectives'):
             dsts.extend(objective.pcomp_name+'.out0'
                         for objective in driver.get_objectives().values())

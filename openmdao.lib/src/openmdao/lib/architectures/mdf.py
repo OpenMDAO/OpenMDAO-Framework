@@ -1,4 +1,4 @@
-from openmdao.main.api import Architecture
+from openmdao.main.api import Architecture, Driver
 from openmdao.lib.drivers.api import SLSQPdriver, BroydenSolver#, COBYLAdriver as SLSQPdriver
 
 class MDF(Architecture):
@@ -16,6 +16,7 @@ class MDF(Architecture):
     def configure(self):
         """Setup an MDF architecture inside this assembly.
         """
+
         #create the top level optimizer
         self.parent.add("driver", SLSQPdriver())
         self.parent.driver.iprint = 0
@@ -58,7 +59,4 @@ class MDF(Architecture):
                                               % (couple.indep.target,
                                                  couple.dep.target))
         #setup the workflows
-        components = self.parent.list_components()
-        self.parent.solver.workflow.add([comp for comp in components if comp != 'driver'])
         self.parent.driver.workflow.add(['solver'])
-        #self.parent.solver.workflow.add(disciplines)
