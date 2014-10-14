@@ -188,8 +188,7 @@ class ArchitectureAssembly(Assembly):
         self.init_coupling_vars()
 
     def configure_recording(self, includes=None, excludes=None, inputs=None):
-        self.check_config()
-
+        self.check_config(True)
         super(ArchitectureAssembly, self).configure_recording(includes, excludes, inputs)
 
     def check_config(self, strict=False):
