@@ -843,8 +843,8 @@ class Testcase_implicit(unittest.TestCase):
         model.solver.add_constraint('comp.res[1] = 0')
         model.solver.add_constraint('comp.res[2] = 0')
 
-        model.subdriver.add_parameter('comp.c', low=-100, high=100)
-        model.subdriver.add_objective('comp.y_out')
+        model.driver.add_parameter('comp.c', low=-100, high=100)
+        model.driver.add_objective('comp.y_out')
 
         model.comp.eval_only = True
         model.run()
