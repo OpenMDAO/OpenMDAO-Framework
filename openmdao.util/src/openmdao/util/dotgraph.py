@@ -10,7 +10,7 @@ from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
                                   OpaqueDriverSystem, TransparentDriverSystem
-
+from openmdao.util.graph import base_var
 
 _cluster_count = 0
 
@@ -150,7 +150,7 @@ def _update_graph_metadata(G, scope):
                 if len(parts) > 1 and not is_var_node(G, parts[0]):
                     data['label'] = parts[1]
                 if hasattr(G, 'base_var'):
-                    base = G.base_var(node)
+                    base = base_var(G, node)
                     if G.node[base].get('iotype') == 'state':
                         data['shape'] = 'doubleoctagon'
                     else:

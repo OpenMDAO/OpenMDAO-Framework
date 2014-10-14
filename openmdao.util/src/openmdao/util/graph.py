@@ -133,3 +133,26 @@ def list_deriv_vars(comp):
         tup1 = (tup1,)
 
     return (tup0, tup1)
+
+def base_var(g, node):
+    """Returns the name of the variable node that is the 'base' for
+    the given node name.  For example, for the node A.b[4], the
+    base variable is A.b.  For the node d.x.y, the base variable
+    is d if d is a boundary variable node, or d.x otherwise.
+    """
+    if node in g:
+        base = g.node[node].get('basevar')
+        if base:
+            return base
+        elif 'var' in g.node[node]:
+            return node
+
+    parts = node.split('[', 1)[0].split('.')
+
+    base = parts[0]
+    if base in g:
+        data = g.node[base]
+        if 'var' in data and not data.get('basevar'):
+            return base
+
+    return '.'.join(parts[:2])

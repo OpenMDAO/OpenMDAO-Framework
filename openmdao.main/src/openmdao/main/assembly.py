@@ -54,7 +54,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    add_boundary_comps
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
-from openmdao.util.graph import list_deriv_vars
+from openmdao.util.graph import list_deriv_vars, base_var
 from openmdao.util.log import logger
 from openmdao.util.debug import strict_chk_config
 
@@ -534,7 +534,7 @@ class Assembly(Component):
     def _check_input_collisions(self):
         graph = self._depgraph
         dests = set([v for u, v in self.list_connections()])
-        allbases = set([graph.base_var(v) for v in dests])
+        allbases = set([base_var(graph, v) for v in dests])
         unconnected_bases = allbases - dests
         connected_bases = allbases - unconnected_bases
 
@@ -543,7 +543,7 @@ class Assembly(Component):
                           self._top_driver.subdrivers(recurse=True)):
             if has_interface(drv, IHasParameters):
                 for target in drv.list_param_targets():
-                    tbase = graph.base_var(target)
+                    tbase = base_var(graph, target)
                     if target == tbase:  # target is a base var
                         if target in allbases:
                             collisions.append("%s in %s"
@@ -612,7 +612,7 @@ class Assembly(Component):
                 for vname in obj.get_req_default(self.trait(name).required):
                     # each var must be connected, otherwise value will not
                     # be set to a non-default value
-                    base = graph.base_var(vname)
+                    base = base_var(graph, vname)
                     indeg = graph.in_degree(base)
                     io = graph.node[base]['iotype']
                     if (io == 'in' and indeg < 1) or \

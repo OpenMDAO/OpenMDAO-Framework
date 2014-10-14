@@ -8,6 +8,7 @@ from openmdao.main.array_helpers import flattened_size, flattened_value
 from openmdao.main.interfaces import IVariableTree
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import mpiprint
+from openmdao.util.graph import base_var
 
 from numpy import ndarray, zeros, ones, unravel_index, complex128
 
@@ -58,7 +59,7 @@ class FiniteDifference(object):
                 srcs = [srcs]
 
             # Local stepsize support
-            meta = self.scope.get_metadata(dgraph.base_var(srcs[0]))
+            meta = self.scope.get_metadata(base_var(dgraph, srcs[0]))
 
             if 'fd_step' in meta:
                 self.fd_step[j] = meta['fd_step']
