@@ -319,8 +319,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.connect('comp2.f_x', 'comp4.x')
 
         # Driver process definition
-        outer_driver.workflow.add('driver1')
-        inner_driver.workflow.add(['comp1','comp2','comp3','comp4'])
+        outer_driver.workflow.add(['comp1', 'driver1', 'comp2', 'comp4'])
+        inner_driver.workflow.add(['comp3'])
 
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
@@ -345,16 +345,14 @@ class MultiDriverTestCase(unittest.TestCase):
         stream = StringIO()
         dump_iteration_tree(top, full=False, f=stream, tabsize=3)
         s = stream.getvalue()
-        s = s.replace('comp2', 'comp2or3')
-        s = s.replace('comp3', 'comp2or3')
         self.assertEqual(s,
-            '\n   driver\n      driver1\n         comp1\n         comp2or3\n'
-            '         comp2or3\n         comp4\n')
+            '\n   driver\n      comp1\n      driver1\n         comp3\n      comp2\n'
+            '      comp4\n')
 
         # test all_wflows_order
         comps = top.all_wflows_order()
         self.assertEqual(comps,
-                         ['driver', 'driver1', 'comp1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
+                         ['driver', 'comp1', 'driver1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
 
     def test_2_nested_drivers_same_assembly_extra_comp(self):
         print "*** test_2_nested_drivers_same_assembly ***"
