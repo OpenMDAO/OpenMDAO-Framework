@@ -934,6 +934,7 @@ def get_cycle_vars(system):
     # deal with
     cycle_vars = []
     graph = system.graph
+    varmeta = system.scope._var_meta
 
     # make a copy of the graph since we don't want to modify it
     g = graph.subgraph(graph.nodes_iter())
@@ -944,7 +945,7 @@ def get_cycle_vars(system):
         for u,v,data in g.edges_iter(data=True):
             sz = 0
             for node in data['varconns']:
-                dct = system._get_var_info(node)
+                dct = varmeta[node]
                 sz += dct.get('size', 0)
             data['conn_size'] = sz
             sizes.append((sz, (u,v)))

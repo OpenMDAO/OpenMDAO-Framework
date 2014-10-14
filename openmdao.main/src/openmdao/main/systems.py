@@ -119,11 +119,12 @@ class System(object):
         self.scope = scope
         self._nodes = nodes
 
-        self._var_meta = {} # dict of metadata (size, flat, etc. for all vars (local and global))
         self.variables = OrderedDict() # dict of all vars owned by this System (flat and non-flat)
         self.flat_vars = OrderedDict() # all vars used in vectors, whether they add to vector size or not
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
+
+        self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
 
         self._mapped_resids = {}
 
@@ -233,7 +234,8 @@ class System(object):
         """Returns the names from the given list that refer
         to variables that are flattenable to float arrays.
         """
-        return [n for n in names if self._var_meta[n].get('flat')]
+        varmeta = self.scope._var_meta
+        return [n for n in names if varmeta[n].get('flat')]
 
     def get_unique_vars(self, vnames):
         """
@@ -460,70 +462,14 @@ class System(object):
     def get_req_cpus(self):
         return self.mpi.requested_cpus
 
-    def _get_var_info(self, node):
-        """Collect any variable metadata from the
-        model here.
-        """
-        info = { 'size': 0, 'flat': True }
-
-        base = None
-
-        # use the name of the src
-        name = node[0]
-
-        parts = name.split('.',1)
-        if len(parts) > 1:
-            cname, vname = parts
-            child = getattr(self.scope, cname)
-        else:
-            cname, vname = '', name
-            child = self.scope
-
-        try:
-            # TODO: add checking of local_size metadata...
-            parts = vname.split('.')
-            val, idx = get_val_and_index(child, vname)
-
-            if '[' in vname:  # array index into basevar
-                base = vname.split('[',1)[0]
-                flat_idx = get_flattened_index(idx,
-                                        get_var_shape(base, child))
-            else:
-                base = None
-                flat_idx = None
-
-            info['size'] = flattened_size(vname, val, scope=child)
-            if flat_idx is not None:
-                info['flat_idx'] = flat_idx
-
-        except NoFlatError:
-            info['flat'] = False
-
-        if base is not None:
-            if cname:
-                bname = '.'.join((cname, base))
-            else:
-                bname = base
-            info['basevar'] = bname
-
-        # get any other metadata we want
-        for mname in ['deriv_ignore']:
-            meta = child.get_metadata(vname, mname)
-            if meta is not None:
-                info[mname] = meta
-
-        return info
-
     def setup_variables(self, resid_state_map=None):
         self.variables = OrderedDict()
-        self._var_meta = {}
         if resid_state_map is None:
             resid_state_map = {}
 
         for sub in self.local_subsystems():
             sub.setup_variables(resid_state_map)
             self.variables.update(sub.variables)
-            self._var_meta.update(sub._var_meta)
 
         self._create_var_dicts(resid_state_map)
 
@@ -552,7 +498,7 @@ class System(object):
         """Given a dict of variables, set the sizes for
         those that are local.
         """
-        #mpiprint("setup_sizes: %s" % self.name)
+        varmeta = self.scope._var_meta
         comm = self.mpi.comm
 
         if not self.is_active():
@@ -589,7 +535,7 @@ class System(object):
         self.input_sizes = numpy.zeros(size, int)
 
         for arg in self.flat(self._owned_args):
-            self.input_sizes[rank] += self._var_meta[arg]['size']
+            self.input_sizes[rank] += varmeta[arg]['size']
 
         if MPI:
             comm.Allgather(self.input_sizes[rank], self.input_sizes)
@@ -603,7 +549,7 @@ class System(object):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
-            self.arg_idx[name] = numpy.array(range(self._var_meta[name]['size']), 'i')
+            self.arg_idx[name] = numpy.array(range(varmeta[name]['size']), 'i')
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
         """Creates vector wrapper objects to manage local and
@@ -1047,6 +993,8 @@ class SimpleSystem(System):
         self.mpi.comm = comm
 
     def _create_var_dicts(self, resid_state_map):
+        varmeta = self.scope._var_meta
+
         if IImplicitComponent.providedBy(self._comp):
             states = set(['.'.join((self._comp.name, s))
                              for s in self._comp.list_states()])
@@ -1062,8 +1010,7 @@ class SimpleSystem(System):
 
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
-                self._var_meta[vname] = self._get_var_info(vname)
-                self.variables[vname] = self._var_meta[vname].copy()
+                self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
 
@@ -1077,8 +1024,7 @@ class SimpleSystem(System):
             for out in self._out_nodes:
                 state = resid_state_map.get(out)
                 if state and state not in self.variables:
-                    self._var_meta[state] = self._get_var_info(state)
-                    self.variables[state] = self._var_meta[state].copy()
+                    self.variables[state] = varmeta[state].copy()
                     self._mapped_resids[out] = state
                     if out in self.variables:
                         to_remove.add(out)
@@ -1699,7 +1645,7 @@ class ParallelSystem(CompoundSystem):
 
     def setup_variables(self, resid_state_map=None):
         """ Determine variables from local subsystems """
-        #mpiprint("setup_variables: %s" % self.name)
+        varmeta = self.scope._var_meta
         self.variables = OrderedDict()
         if not self.is_active():
             return
@@ -1718,16 +1664,12 @@ class ParallelSystem(CompoundSystem):
 
         for varkeys in varkeys_list:
             for name in varkeys:
-                self._var_meta[name] = self._get_var_info(name)
-                self.variables[name] = self._var_meta[name].copy()
+                self.variables[name] = varmeta[name].copy()
                 self.variables[name]['size'] = 0
 
         if sub:
             for name, var in sub.variables.items():
                 self.variables[name] = var
-
-            for name, var in sub._var_meta.items():
-                self._var_meta[name] = var
 
         self._create_var_dicts(resid_state_map)
 
@@ -1752,15 +1694,6 @@ class OpaqueSystem(CompoundSystem):
 
         nodes = internal_nodes(graph, subg.nodes())
 
-        # need to create invar nodes here else inputs won't exist in
-        # internal vectors
-        for node in self._in_nodes:
-            graph.add_node(node[0], comp='dumbvar')
-            graph.add_edge(node[0], node)
-            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
-            nodes.add(node)
-            nodes.add(node[0])
-
         # Out local outputs must only include the nodes on the boundary.
         ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
 
@@ -1772,9 +1705,21 @@ class OpaqueSystem(CompoundSystem):
             if len(target_comps)> 1 and any(target_comps) not in nodes:
                 int_out_nodes.append(node)
 
-        self.out_nodes = ext_out_nodes + int_out_nodes
-
         graph = graph.subgraph(nodes)
+        
+        # need to create invar nodes here else inputs won't exist in
+        # internal vectors
+        for node in self._in_nodes:
+            graph.add_node(node[0], comp='dumbvar')
+            graph.add_edge(node[0], node)
+            comp = node[0].split('.', 1)[0]
+            if comp != node[0] and comp in graph:
+                graph.add_edge(node, comp)
+            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+            nodes.add(node)
+            nodes.add(node[0])
+
+        self.out_nodes = ext_out_nodes + int_out_nodes
 
         self._inner_system = SerialSystem(scope, graph,
                                           reduced2component(graph),
@@ -2037,6 +1982,8 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
 
     def _get_resid_state_map(self):
 
+        varmeta = self.scope._var_meta
+
         # map of individual var names to collapsed names
         nodemap = self.scope.name2collapsed
 
@@ -2058,8 +2005,7 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
                     break
             if not skip:  # add to the size dict so we can match on size
                 node = nodemap[params[0]]
-                self._var_meta[node] = self._get_var_info(node)
-                szdict.setdefault(self._var_meta[node]['size'], []).append(node)
+                szdict.setdefault(varmeta[node]['size'], []).append(node)
 
         # get rid of any residuals we already mapped
         resids = [r for r in resids if nodemap[r] not in resid_state_map]
@@ -2067,8 +2013,7 @@ class SolverSystem(TransparentDriverSystem):  # Implicit
         # match remaining residuals and states by size
         for resid in resids:
             resnode = nodemap[resid]
-            self._var_meta[resnode] = self._get_var_info(resnode)
-            sz = self._var_meta[resnode]['size']
+            sz = varmeta[resnode]['size']
             try:
                 pnode = szdict[sz].pop()
             except:

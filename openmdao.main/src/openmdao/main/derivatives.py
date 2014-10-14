@@ -492,12 +492,17 @@ def get_bounds(obj, input_keys, output_keys, J):
     ibounds = {}
     nvar = 0
     scope = getattr(obj, 'parent', None)
+    #varmeta = obj.scope._var_meta
 
     for key in input_keys:
 
         # For parameter group, all should be equal so just get first.
         if not isinstance(key, tuple):
             key = [key]
+
+        #meta = varmeta[key[0]]
+        #width = meta['size']
+        #shape = meta.get('shape')
 
         val = obj.get(key[0])
 
@@ -513,6 +518,9 @@ def get_bounds(obj, input_keys, output_keys, J):
     obounds = {}
     nvar = 0
     for key in output_keys:
+        #meta = varmeta[key]
+        #width = meta['size']
+        #shape = meta.get('shape')
         val = obj.get(key)
         width = flattened_size('.'.join((obj.name, key)), val)
         shape = getattr(val, 'shape', None)

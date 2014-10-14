@@ -568,8 +568,11 @@ class DependencyGraph(nx.DiGraph):
 
         if destpath is None:
             if is_comp_node(self, srcpath):
-                edges = self.edges(self.successors(srcpath))
-                edges.extend(self.in_edges_iter(self.predecessors(srcpath)))
+                srcdot = srcpath + '.'
+                edges = [(u,v) for u,v in self.edges_iter(self.successors(srcpath)) if u.startswith(srcdot)]
+                edges.extend([(u,v) for u,v in self.in_edges_iter(self.predecessors(srcpath)) if v.startswith(srcdot)])
+                edges.extend([(u,v) for u,v in self.edges_iter(srcpath) if not v.startswith(srcdot)])
+                edges.extend([(u,v) for u,v in self.in_edges_iter(srcpath) if not u.startswith(srcdot)])
 
             elif is_subvar_node(self, srcpath):
                 # for a single subvar, add all of its downstream

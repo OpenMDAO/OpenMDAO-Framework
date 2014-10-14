@@ -19,6 +19,7 @@ import networkx as nx
 
 from openmdao.main.mpiwrap import MPI, mpiprint
 
+from openmdao.main.exceptions import NoFlatError
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
                                      ICaseIterator, ICaseRecorder, \
@@ -41,7 +42,9 @@ from openmdao.main.printexpr import eliminate_expr_ws
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.exprmapper import ExprMapper
 from openmdao.main.pseudocomp import PseudoComponent, UnitConversionPComp
-from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
+from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index, \
+                                        get_flattened_index, \
+                                        get_var_shape, flattened_size
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
                                    vars2tuples, relevant_subgraph, \
@@ -1381,6 +1384,9 @@ class Assembly(Component):
         added = set()
         rgraph = self._reduced_graph
 
+        # store metadata (size, etc.) for all relevant vars
+        self._var_meta = self._get_all_var_metadata(self._reduced_graph)
+        
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
@@ -1585,6 +1591,98 @@ class Assembly(Component):
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
             comp.setup_graph()
+
+
+    def _get_var_info(self, node):
+        """Collect any variable metadata from the
+        model here.
+        """
+        info = { 'size': 0, 'flat': True }
+
+        base = None
+
+        if isinstance(node, tuple):
+            # use the name of the src
+            name = node[0]
+        else:
+            name = node
+
+        parts = name.split('.',1)
+        if len(parts) > 1:
+            cname, vname = parts
+            child = getattr(self, cname)
+        else:
+            cname, vname = '', name
+            child = self
+
+        try:
+            # TODO: add checking of local_size metadata...
+            parts = vname.split('.')
+            val, idx = get_val_and_index(child, vname)
+
+            if hasattr(val, 'shape'):
+                info['shape'] = val.shape
+
+            if '[' in vname:  # array index into basevar
+                base = vname.split('[',1)[0]
+                flat_idx = get_flattened_index(idx,
+                                        get_var_shape(base, child))
+            else:
+                base = None
+                flat_idx = None
+
+            info['size'] = flattened_size(vname, val, scope=child)
+            if flat_idx is not None:
+                info['flat_idx'] = flat_idx
+
+        except NoFlatError:
+            info['flat'] = False
+
+        if base is not None:
+            if cname:
+                bname = '.'.join((cname, base))
+            else:
+                bname = base
+            info['basevar'] = bname
+
+        # get any other metadata we want
+        for mname in ['deriv_ignore']:
+            meta = child.get_metadata(vname, mname)
+            if meta is not None:
+                info[mname] = meta
+
+        return info
+
+    def _get_all_var_metadata(self, graph):
+        """Collect size, shape, etc. info for all variables referenced
+        in the graph.  This info can then be used by all subsystems
+        contained in this Assembly.
+        """
+        varmeta = {}
+        for node, data in graph.nodes_iter(data=True):
+            if 'comp' not in data and node not in varmeta:
+                meta = self._get_var_info(node)
+                varmeta[node] = meta
+                for name in simple_node_iter(node):
+                    if name not in varmeta:
+                        varmeta[name] = meta
+                        
+        # there are cases where a component will return names from
+        # its list_deriv_vars that are not found in the graph, so add them
+        # all here just in case
+        for node, data in graph.nodes_iter(data=True):
+            if 'comp' in data and '.' not in node:
+                comp = getattr(self, node)
+                try:
+                    ins, outs = comp.list_deriv_vars()
+                except AttributeError:
+                    continue
+                for name in chain(ins,outs):
+                    name = '.'.join((node, name))
+                    if name not in varmeta:
+                        varmeta[name] = self._get_var_info(name)
+        
+        return varmeta
 
     def _add_driver_subvar_conns(self, depgraph, collapsed):
         """Connect any var nodes with subvar sources that don't have an upstream component

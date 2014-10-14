@@ -335,6 +335,8 @@ class VecWrapper(VecWrapperBase):
 class InputVecWrapper(VecWrapperBase):
     def _initialize(self, system):
 
+        varmeta = system.scope._var_meta
+        name2collapsed = system.scope.name2collapsed
         flat_ins = system.flat(system._owned_args)
         start, end = 0, 0
         arg_idx = system.arg_idx
@@ -349,6 +351,39 @@ class InputVecWrapper(VecWrapperBase):
                         raise RuntimeError("size mismatch: in system %s view for %s is %s, size=%d" %
                                      (system.name,name, [start,end],self[name].size))
                     start += sz
+
+        all_ins = set()
+        for sub in system.simple_subsystems():
+            for arg in sub._in_nodes:
+                all_ins.add(arg)
+                
+        # now add views for subvars that are subviews of their
+        # basevars
+        for name in all_ins:
+            var = varmeta[name]
+
+            if name in system.vector_vars or name2collapsed.get(var.get('basevar')) not in self:
+                continue
+            
+            sz = var['size']
+            if sz > 0 and var.get('flat', True):
+                idx = var['flat_idx']
+                try:
+                    basestart = self.start(name2collapsed[var['basevar']])
+                except KeyError:
+                    mpiprint("name: %s, base: %s, vars: %s" %
+                             (name, var['basevar'], self._info.keys()))
+                    raise
+                sub_idx = offset_flat_index(idx, basestart)
+                substart = get_flat_index_start(sub_idx)
+                self._info[name] = (self.array[sub_idx], substart)
+                self._subviews.add(name)
+
+                if self.array[sub_idx].size != sz:
+                    raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                         (system.name, name,
+                                         list(self.bounds(name)),
+                                         sub_idx,self.array[sub_idx].size))
 
     def _map_resids_to_states(self, system):
         pass

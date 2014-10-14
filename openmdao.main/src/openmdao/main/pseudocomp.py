@@ -459,6 +459,26 @@ class PseudoComponent(object):
         """
         applyJT(system, variables)
 
+    def raise_exception(self, msg, exception_class=Exception):
+        """Raise an exception."""
+        coords = ''
+        obj = self
+        while obj is not None:
+            try:
+                coords = obj.get_itername()
+            except AttributeError:
+                try:
+                    obj = obj.parent
+                except AttributeError:
+                    break
+            else:
+                break
+        if coords:
+            full_msg = '%s (%s): %s' % (self.get_pathname(), coords, msg)
+        else:
+            full_msg = '%s: %s' % (self.get_pathname(), msg)
+        raise exception_class(full_msg)
+
 
 class SimpleEQConPComp(PseudoComponent):
     """ This is a simple pseudocomponent used to encapsulate expressions of
