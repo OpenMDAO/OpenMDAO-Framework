@@ -10,14 +10,14 @@ from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
-                                     IImplicitComponent, ISolver, \
+                                     IImplicitComponent, \
                                      IAssembly, IComponent
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val, flattened_size
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
-from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
+from openmdao.util.graph import list_deriv_vars, base_var
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -180,69 +180,6 @@ class DependencyGraph(nx.DiGraph):
         self._allow_config_changed = True
         self.config_changed()
 
-    def base_var(self, node):
-        """Returns the name of the variable node that is the 'base' for
-        the given node name.  For example, for the node A.b[4], the
-        base variable is A.b.  For the node d.x.y, the base variable
-        is d if d is a boundary variable node, or d.x otherwise.
-        """
-        if node in self:
-            base = self.node[node].get('basevar')
-            if base:
-                return base
-            elif 'var' in self.node[node]:
-                return node
-
-        parts = node.split('[', 1)[0].split('.')
-
-        base = parts[0]
-        if base in self and 'var' in self.node[base]:
-            return base
-
-        return '.'.join(parts[:2])
-
-    # def sever_edges(self, edges):
-    #     """Temporarily remove the specified edges but save
-    #     them and their metadata for later restoration.
-    #     """
-    #     # Note: This will NOT call config_changed(), and if
-    #     # component_graph() has not been called since the last
-    #     # config_changed, it WILL create a temporary new
-    #     # component graph which will be overwritten by the original
-    #     # one when unsever_edges() is called.
-    #     if self._severed_edges:
-    #         raise RuntimeError("only one set of severed edges is permitted")
-
-    #     # save old stuff to restore later
-    #     self._saved_comp_graph = self._component_graph
-    #     self._saved_loops = self._loops
-
-    #     self._severed_edges = list(edges)
-
-    #     self._allow_config_changed = False
-    #     try:
-    #         for u,v in edges:
-    #             self.disconnect(u, v)
-    #     finally:
-    #         self._allow_config_changed = True
-
-    # def unsever_edges(self, scope):
-    #     """Restore previously severed edges."""
-    #     if not self._severed_edges:
-    #         return
-
-    #     self._allow_config_changed = False
-    #     try:
-    #         for u,v in self._severed_edges:
-    #             self.connect(scope, u, v)
-    #     finally:
-    #         self._allow_config_changed = True
-
-    #     self._severed_edges = []
-
-    #     self._loops = self._saved_loops
-    #     self._component_graph = self._saved_comp_graph
-
     def config_changed(self):
         if self._allow_config_changed:
             self._component_graph = None
@@ -266,8 +203,8 @@ class DependencyGraph(nx.DiGraph):
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
         old_outs = set(self.list_outputs(cname))
-        old_states = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'state'])
-        old_resids = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'residual'])
+        old_states = set([n for n in old_outs if self.node[base_var(self, n)]['iotype'] == 'state'])
+        old_resids = set([n for n in old_outs if self.node[base_var(self, n)]['iotype'] == 'residual'])
 
         # remove states from old_ins
         old_ins -= old_states
@@ -410,7 +347,7 @@ class DependencyGraph(nx.DiGraph):
         """Raise an exception if the specified destination is already
         connected.
         """
-        dpbase = self.base_var(destpath)
+        dpbase = base_var(self, destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
         if dest_iotype in ('out','residual') and \
@@ -448,8 +385,8 @@ class DependencyGraph(nx.DiGraph):
         and another edge from B.c.x to base variable B.c.
         """
 
-        base_src  = self.base_var(srcpath)
-        base_dest = self.base_var(destpath)
+        base_src  = base_var(self,srcpath)
+        base_dest = base_var(self,destpath)
 
         for v in [base_src, base_dest]:
             if v not in self:
@@ -544,7 +481,7 @@ class DependencyGraph(nx.DiGraph):
         """ Adds a subvar node to the graph, properly connecting
         it to its basevar.
         """
-        base = self.base_var(subvar)
+        base = base_var(self,subvar)
         if base not in self:
             raise RuntimeError("can't find basevar '%s' in graph" % base)
         elif subvar in self:
@@ -942,7 +879,7 @@ class DependencyGraph(nx.DiGraph):
                                            'residuals': [],
                                            'states': []}
 
-                        basevar = self.base_var(target)
+                        basevar = base_var(self,target)
                         if basevar not in basevars:
                             comps[comp]['inputs'].append(var)
 
@@ -958,7 +895,7 @@ class DependencyGraph(nx.DiGraph):
                                        'residuals': [],
                                        'states': []}
 
-                    basevar = self.base_var(src)
+                    basevar = base_var(self,src)
                     if basevar not in basevars:
                         comps[comp]['outputs'].append(var)
                         if src == basevar:
@@ -992,7 +929,7 @@ class DependencyGraph(nx.DiGraph):
         conns.extend([(u,v) for u,v in list_driver_connections(self)])
         convars = set([u for u,v in conns])
         convars.update([v for u,v in conns])
-        convars.update([self.base_var(v) for v in convars])
+        convars.update([base_var(self,v) for v in convars])
         to_remove = [v for v in self.nodes_iter()
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
@@ -1745,18 +1682,35 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     to_add = [s for s in srcs if s not in g]
     to_add.extend([d for d in dests if d not in g])
 
-    if to_add:
-        for node in to_add:
-            base = g.base_var(node)
-            if base == node:
-                g.add_node(node, **g.node[base])
-            else:
-                g.add_node(node, basevar=base, **g.node[base])
-            # connect it to its component
+    for node in to_add:
+        base = base_var(g, node)
+        if base == node:
+            g.add_node(node, **g.node[base])
+        else:
+            g.add_node(node, basevar=base, **g.node[base])
+        # connect it to its component
+        if '.' in node: # it's a component var. connect to its component
             if node in srcs:
                 g.add_edge(node, node.split('.',1)[0])
             else:
                 g.add_edge(node.split('.',1)[0], node)
+        elif base in g:
+            if node in srcs:
+                for s in g.successors(base):
+                    dest = s+node[len(base):]
+                    if dest not in g:
+                        g.add_node(dest, basevar=s, **g.node[s])
+                        g.add_edge(dest, s)
+                    g.add_edge(node, dest, conn=True)
+                    g.add_edge(base, node)
+            else:
+                for p in g.predecessors(base):
+                    src = p+node[len(base):]
+                    if src not in g:
+                        g.add_node(src, basevar=p, **g.node[p])
+                        g.add_edge(p, src)
+                    g.add_edge(src, node, conn=True)
+                    g.add_edge(node, base)
 
     # create a 'fake' driver loop and grab
     # everything that's strongly connected to
@@ -1766,6 +1720,10 @@ def relevant_subgraph(g, srcs, dests, keep=()):
         g.add_edge('@driver', src)
     for dest in dests:
         g.add_edge(dest, '@driver')
+    for k in keep:
+        if '.' not in k:
+            g.add_edge('@driver', k)
+            g.add_edge(k, '@driver')
 
     for comps in strongly_connected_components(g):
         if '@driver' in comps:

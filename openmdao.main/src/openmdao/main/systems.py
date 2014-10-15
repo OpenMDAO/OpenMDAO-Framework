@@ -1190,7 +1190,7 @@ class ParamSystem(VarSystem):
 
     def applyJ(self, variables):
         """ Set to zero """
-        if self.variables: # don't do anything if we don't own our output
+        if self.vector_vars: # don't do anything if we don't own our output
             # mpiprint("param sys %s: adding %s to %s" %
             #                 (self.name, self.sol_vec[self.name],
             #                     self.rhs_vec[self.name]))

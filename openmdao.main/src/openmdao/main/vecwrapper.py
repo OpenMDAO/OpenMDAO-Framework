@@ -8,6 +8,7 @@ from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flattened_index
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
+from openmdao.util.graph import base_var
 
 
 class VecWrapperBase(object):
@@ -233,27 +234,28 @@ class VecWrapper(VecWrapperBase):
 
         # now add views for subvars that are subviews of their
         # basevars
-        for name, var in allvars.items():
-            if name not in vector_vars:
-                sz = var['size']
-                if sz > 0 and var.get('flat', True):
-                    idx = var['flat_idx']
-                    try:
-                        basestart = self.start(name2collapsed[var['basevar']])
-                    except KeyError:
-                        mpiprint("name: %s, base: %s, vars: %s" %
-                                 (name, var['basevar'], self._info.keys()))
-                        raise
-                    sub_idx = offset_flat_index(idx, basestart)
-                    substart = get_flat_index_start(sub_idx)
-                    self._info[name] = (self.array[sub_idx], substart)
-                    self._subviews.add(name)
-
-                    if self.array[sub_idx].size != sz:
-                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                             (system.name, name,
-                                             list(self.bounds(name)),
-                                             sub_idx,self.array[sub_idx].size))
+        if vector_vars:
+            for name, var in allvars.items():
+                if name not in vector_vars:
+                    sz = var['size']
+                    if sz > 0 and var.get('flat', True):
+                        idx = var['flat_idx']
+                        try:
+                            basestart = self.start(name2collapsed[var['basevar']])
+                        except KeyError:
+                            mpiprint("name: %s, base: %s, vars: %s" %
+                                     (name, var['basevar'], self._info.keys()))
+                            raise
+                        sub_idx = offset_flat_index(idx, basestart)
+                        substart = get_flat_index_start(sub_idx)
+                        self._info[name] = (self.array[sub_idx], substart)
+                        self._subviews.add(name)
+    
+                        if self.array[sub_idx].size != sz:
+                            raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                                 (system.name, name,
+                                                 list(self.bounds(name)),
+                                                 sub_idx,self.array[sub_idx].size))
 
         # TODO: handle cases where we have overlapping subvars but no basevar
 
