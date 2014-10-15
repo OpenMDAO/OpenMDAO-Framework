@@ -183,7 +183,8 @@ class ScipyGMRES(LinearSolver):
 
         system.applyJ(system.vector_vars.keys())
 
-        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
 

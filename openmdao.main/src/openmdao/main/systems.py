@@ -22,7 +22,7 @@ from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_c
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.util.graph import flatten_list_of_iters
+from openmdao.util.graph import flatten_list_of_iters, base_var
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -358,8 +358,27 @@ class System(object):
                         seen.add(comp)
 
         top = self.scope
-        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
-                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+
+        unignored_inputs = []
+        topvars = top._system.vector_vars
+        # Remove any inputs that the user designates as 'deriv_ignore'
+        for name in inputs:
+            collapsed_name = top.name2collapsed[name]
+            if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
+                continue
+
+            # The user sets 'deriv_ignore' in the basevar, so we have to check that for
+            # subvars.
+            base = base_var(top._depgraph, name)
+            if base != name:
+                collapsed_name = top.name2collapsed.get(base)
+                if collapsed_name and collapsed_name in topvars and \
+                   topvars[collapsed_name].get('deriv_ignore'):
+                    continue
+
+            unignored_inputs.append(name)
+
+        return unignored_inputs
 
     def list_states(self):
         """Returns names of states (not collapsed edges) from this System and
@@ -1706,7 +1725,7 @@ class OpaqueSystem(CompoundSystem):
                 int_out_nodes.append(node)
 
         graph = graph.subgraph(nodes)
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
