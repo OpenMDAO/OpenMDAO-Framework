@@ -147,8 +147,6 @@ def _update_graph_metadata(G, scope):
             except AttributeError:
                 pass
             else:
-                if len(parts) > 1 and not is_var_node(G, parts[0]):
-                    data['label'] = parts[1]
                 if hasattr(G, 'base_var'):
                     base = base_var(G, node)
                     if G.node[base].get('iotype') == 'state':

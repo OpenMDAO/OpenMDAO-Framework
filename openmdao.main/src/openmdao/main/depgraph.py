@@ -1682,18 +1682,35 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     to_add = [s for s in srcs if s not in g]
     to_add.extend([d for d in dests if d not in g])
 
-    if to_add:
-        for node in to_add:
-            base = base_var(g, node)
-            if base == node:
-                g.add_node(node, **g.node[base])
-            else:
-                g.add_node(node, basevar=base, **g.node[base])
-            # connect it to its component
+    for node in to_add:
+        base = base_var(g, node)
+        if base == node:
+            g.add_node(node, **g.node[base])
+        else:
+            g.add_node(node, basevar=base, **g.node[base])
+        # connect it to its component
+        if '.' in node: # it's a component var. connect to its component
             if node in srcs:
                 g.add_edge(node, node.split('.',1)[0])
             else:
                 g.add_edge(node.split('.',1)[0], node)
+        elif base in g:
+            if node in srcs:
+                for s in g.successors(base):
+                    dest = s+node[len(base):]
+                    if dest not in g:
+                        g.add_node(dest, basevar=s, **g.node[s])
+                        g.add_edge(dest, s)
+                    g.add_edge(node, dest, conn=True)
+                    g.add_edge(base, node)
+            else:
+                for p in g.predecessors(base):
+                    src = p+node[len(base):]
+                    if src not in g:
+                        g.add_node(src, basevar=p, **g.node[p])
+                        g.add_edge(p, src)
+                    g.add_edge(src, node, conn=True)
+                    g.add_edge(node, base)
 
     # create a 'fake' driver loop and grab
     # everything that's strongly connected to
@@ -1703,6 +1720,10 @@ def relevant_subgraph(g, srcs, dests, keep=()):
         g.add_edge('@driver', src)
     for dest in dests:
         g.add_edge(dest, '@driver')
+    for k in keep:
+        if '.' not in k:
+            g.add_edge('@driver', k)
+            g.add_edge(k, '@driver')
 
     for comps in strongly_connected_components(g):
         if '@driver' in comps:

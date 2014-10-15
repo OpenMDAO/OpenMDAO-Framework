@@ -51,7 +51,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    map_collapsed_nodes, simple_node_iter, \
                                    reduced2component, collapse_driver, \
                                    fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps
+                                   add_boundary_comps, list_driver_connections
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars, base_var
@@ -459,6 +459,7 @@ class Assembly(Component):
                 val_copy = val.copy()
                 val_copy.parent = self
                 val = val_copy
+                val.name = newname
             else:
                 val = _copydict[ttype.copy](val)
 
@@ -1497,16 +1498,8 @@ class Assembly(Component):
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
-
-            # if inputs is None and outputs is not None:
-            #     inputs = list(ddests)
-            #     outputs = list(simple_node_iter(outputs))
-            # elif outputs is None and inputs is not None:
-            #     inputs = list(simple_node_iter(inputs))
-            #     outputs = list(dsrcs)
-            # else:
-            #     inputs = list(simple_node_iter(inputs))
-            #     outputs = list(simple_node_iter(outputs))
+            keep.update(self._flat(self.list_inputs()))
+            keep.update(self._flat(self.list_outputs()))
 
             if inputs is None:
                 inputs = list(ddests)
@@ -1590,7 +1583,9 @@ class Assembly(Component):
         for comp in self.get_comps():
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
-            comp.setup_graph()
+            if has_interface(comp, IAssembly):
+                comp.setup_graph(inputs=_get_scoped_inputs(comp, inputs, collapsed_graph), 
+                                 outputs=_get_scoped_outputs(comp, outputs, collapsed_graph))
 
 
     def _get_var_info(self, node):
@@ -1653,6 +1648,9 @@ class Assembly(Component):
 
         return info
 
+    def _flat(self, lst):
+        return [n for n in lst if self._get_var_info(n).get('flat')]
+            
     def _get_all_var_metadata(self, graph):
         """Collect size, shape, etc. info for all variables referenced
         in the graph.  This info can then be used by all subsystems
@@ -1672,8 +1670,8 @@ class Assembly(Component):
         # all here just in case
         for node, data in graph.nodes_iter(data=True):
             if 'comp' in data and '.' not in node:
-                comp = getattr(self, node)
                 try:
+                    comp = getattr(self, node)
                     ins, outs = comp.list_deriv_vars()
                 except AttributeError:
                     continue
@@ -1703,47 +1701,113 @@ class Assembly(Component):
         variable in the VariableTree.
         """
         conns = depgraph.list_connections()
-        connvars = set([u for u,v in conns])
-        connvars.update([v for u,v in conns])
+        conns = [(u,v) for u,v in conns if isinstance(self.get(u), VariableTree) 
+                                       and isinstance(self.get(v), VariableTree)]
 
-        vtrees = {}
-        for node in connvars:
-            obj = self.get(node)
-            if isinstance(obj, VariableTree):
-                if '.' in node:
-                    allvars = ['.'.join((node.split('.',1)[0], v))
-                                         for v in obj.list_all_vars()]
-                else:
-                    allvars = obj.list_all_vars()
+        #connvars = set([u for u,v in conns])
+        #connvars.update([v for u,v in conns])
+        
+        ## get rid of any driver in the list (due to driver connections)
+        #connvars = [v for v in connvars if not has_interface(getattr(self, v, _missing), IComponent)]
+        
+        vtconns = {}
+        for u,v in conns:
+            varlist = []
+            for node in (u,v):
+                obj = self.get(node)
+                #if '.' in node:
+                allvars = ['.'.join((node, n.split('.',1)[1]))
+                                     for n in obj.list_all_vars()]
+                #else:
+                #    allvars = obj.list_all_vars()
+                varlist.append(allvars)
 
-                vtrees[node] = (obj, set(allvars),
-                                depgraph.in_edges(node),
-                                depgraph.out_edges(node))
-
+            if len(varlist[0]) != len(varlist[1]):
+                self.raise_exception("connected vartrees '%s' and '%s' do not have the same variable list" %
+                                     (u, v))
+                
+            for src, dest in zip(varlist[0], varlist[1]):
+                if src.split('.')[-1] != dest.split('.')[-1]:
+                    self.raise_exception("variables '%s' and '%s' in vartree connection '%s' -> '%s' do not match" %
+                                         (src, dest, u, v))
+            
+            vtconns[(u,v)] = varlist
+                
+            
         # if we're modifying the graph, make a copy
-        if vtrees:
+        if vtconns:
             depgraph = depgraph.subgraph(depgraph.nodes_iter())
+            
+        for (u,v), varlist in vtconns.items():
+            ucomp = udestcomp = vcomp = None
+            
+            # see if there's a u component
+            comp = u.split('.', 1)[0]
+            if comp in depgraph and depgraph.node[comp].get('comp'):
+                if comp in depgraph.predecessors(u):
+                    ucomp = comp
+                elif comp in depgraph.successors(u):  # handle input as output case
+                    udestcomp = comp
+            
+            # see if there's a v component
+            comp = v.split('.', 1)[0]
+            if comp in depgraph and depgraph.node[comp].get('comp'):
+                if comp in depgraph.successors(v):
+                    vcomp = comp
+                    
+            for src, dest in zip(varlist[0], varlist[1]):
+                if src not in depgraph:
+                    depgraph.add_node(src, var=True, basevar=u)
+                if dest not in depgraph:
+                    depgraph.add_node(dest, var=True, basevar=v)
+                depgraph.add_edge(src, dest, conn=True)
+                if ucomp:
+                    depgraph.add_edge(ucomp, src)
+                if udestcomp:
+                    depgraph.add_edge(src, udestcomp)
+                if vcomp:
+                    depgraph.add_edge(dest, vcomp)
+                    
+            depgraph.remove_nodes_from((u,v))
+            
+        #vtrees = {}
+        #for node in connvars:
+            #obj = self.get(node)
+            #if isinstance(obj, VariableTree):
+                #if '.' in node:
+                    #allvars = ['.'.join((node.split('.',1)[0], v))
+                                         #for v in obj.list_all_vars()]
+                #else:
+                    #allvars = obj.list_all_vars()
 
-        for node, (vtree, allvars, ins, outs) in vtrees.items():
-            for var in allvars:
-                depgraph.add_node(var, **depgraph.node[node])
+                #vtrees[node] = (obj, set(allvars),
+                                #depgraph.in_edges(node),
+                                #depgraph.out_edges(node))
 
-                for u,v in ins:
-                    if u in vtrees:
-                        for uu in vtrees[u][1]:
-                            if uu[len(u):] == var[len(node):]:
-                                depgraph.add_edge(uu, var, conn=True)
-                    else:
-                        depgraph.add_edge(u, var)
-                for u,v in outs:
-                    if v in vtrees:
-                        for vv in vtrees[v][1]:
-                            if vv[len(v):] == var[len(node):]:
-                                depgraph.add_edge(var, vv, conn=True)
-                    else:
-                        depgraph.add_edge(var, v)
+        ## if we're modifying the graph, make a copy
+        #if vtrees:
+            #depgraph = depgraph.subgraph(depgraph.nodes_iter())
 
-        depgraph.remove_nodes_from(vtrees.keys())
+        #for node, (vtree, allvars, ins, outs) in vtrees.items():
+            #for var in allvars:
+                #depgraph.add_node(var, **depgraph.node[node])
+
+                #for u,v in ins:
+                    #if u in vtrees:
+                        #for uu in vtrees[u][1]:
+                            #if uu[len(u):] == var[len(node):]:
+                                #depgraph.add_edge(uu, var, conn=True)
+                    #else:
+                        #depgraph.add_edge(u, var)
+                #for u,v in outs:
+                    #if v in vtrees:
+                        #for vv in vtrees[v][1]:
+                            #if vv[len(v):] == var[len(node):]:
+                                #depgraph.add_edge(var, vv, conn=True)
+                    #else:
+                        #depgraph.add_edge(var, v)
+
+        #depgraph.remove_nodes_from(vtrees.keys())
 
         return depgraph
 
@@ -1841,4 +1905,46 @@ def _get_wflow_names(iter_tree):
         else:
             names.append(n[0])
     return names
+    
+def _get_scoped_inputs(comp, ins, g):
+    """Return a list of inputs varnames scoped to the given name."""
+    if ins is None:
+        return None
+    
+    cname = comp.name
+    inputs = []
+    for p in g.predecessors(cname):
+        if isinstance(p, tuple):
+            tlist = [n.split('.',1)[1] for n in p[1] if n.startswith(cname+'.')]
+            if len(tlist) > 1:
+                inputs.append(tuple(tlist))
+            elif len(tlist) == 1:
+                inputs.append(tlist[0])
+        else:
+            if p.startswith(cname+'.'):
+                inputs.append(p.split('.',1)[1])
+            
+    if not inputs:
+        return None
+    
+    return inputs
 
+def _get_scoped_outputs(comp, outs, g):
+    """Return a list of outputs varnames scoped to the given name."""
+    if outs is None:
+        return None
+    
+    cname = comp.name
+    outputs = []
+    for s in g.successors(cname):
+        if isinstance(s, tuple):
+            if s[0].startswith(cname+'.'):
+                outputs.append(s[0].split('.',1)[1])
+        else:
+            if p.startswith(cname+'.'):
+                outputs.append(s.split('.',1)[1])
+            
+    if not outputs:
+        return None
+    
+    return outputs
