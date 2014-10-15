@@ -367,6 +367,10 @@ class System(object):
             if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
                 continue
 
+            # Non-flat vars must be ignored.
+            if collapsed_name in top._system.noflat_vars:
+                continue
+
             # The user sets 'deriv_ignore' in the basevar, so we have to check that for
             # subvars.
             base = base_var(top._depgraph, name)
