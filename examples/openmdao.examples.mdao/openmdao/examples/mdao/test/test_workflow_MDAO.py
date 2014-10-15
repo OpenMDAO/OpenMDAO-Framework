@@ -350,7 +350,7 @@ class TestSubOptInclusion(unittest.TestCase):
     def test_SolverCO2(self):
         # Fix for a bug reported on the forum
         sim = set_as_top(SolverCO2())
-        sim.driver.workflow.run()
+        sim.run()
         J = sim.driver.workflow.calc_gradient()
 
         assert_rel_error(self, J[0, 0], -2.0, .001)
