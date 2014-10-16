@@ -1257,11 +1257,11 @@ class HasVarTreeParameters(HasParameters):
                 val = obj.get(name)
             else:
                 val = VariableTree()
-                obj.add_trait(name, VarTree(val, iotype='in'))
+                obj.add_trait(name, VarTree(val, iotype='in', deriv_ignore=True))
             obj = val
 
         name = names[-1]
-        obj.add_trait(name, List(iotype='in'))
+        obj.add_trait(name, List(iotype='in', deriv_ignore=True))
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""

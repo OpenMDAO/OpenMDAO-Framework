@@ -1387,7 +1387,7 @@ class Assembly(Component):
 
         # store metadata (size, etc.) for all relevant vars
         self._var_meta = self._get_all_var_metadata(self._reduced_graph)
-        
+
         # create systems for all simple components
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
@@ -1480,7 +1480,7 @@ class Assembly(Component):
         self._setup_inputs = inputs if inputs is None else inputs[:]
         self._setup_outputs = outputs if outputs is None else outputs[:]
 
-        keep = set([n for n,d in self._depgraph.nodes_iter(data=True) 
+        keep = set([n for n,d in self._depgraph.nodes_iter(data=True)
                          if d.get('iotype')=='state'])
                          #if d.get('iotype') in ('state','residual')])
 
@@ -1516,12 +1516,12 @@ class Assembly(Component):
                     else:
                         keep.update(inp)
                         ins.append(inp[0])
-                        # add input to input connections from first 
+                        # add input to input connections from first
                         # param in a group to all of the others
                         for pname in inp[1:]:
                             dgraph.add_edge(inp[0], pname, conn=True)
                 inputs = ins
-                
+
             if outputs is None:
                 outputs = dsrcs
 
@@ -1533,14 +1533,14 @@ class Assembly(Component):
         fix_state_connections(self, dgraph)
 
         dgraph = self._explode_vartrees(dgraph)
-        
+
         add_boundary_comps(dgraph)
 
         connect_subvars_to_comps(dgraph)
 
         # get rid of fake boundary comps
         dgraph.remove_nodes_from(['#in', '#out'])
-        
+
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
 
@@ -1584,7 +1584,7 @@ class Assembly(Component):
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
             if has_interface(comp, IAssembly):
-                comp.setup_graph(inputs=_get_scoped_inputs(comp, inputs, collapsed_graph), 
+                comp.setup_graph(inputs=_get_scoped_inputs(comp, inputs, collapsed_graph),
                                  outputs=_get_scoped_outputs(comp, outputs, collapsed_graph))
 
 
@@ -1650,7 +1650,7 @@ class Assembly(Component):
 
     def _flat(self, lst):
         return [n for n in lst if self._get_var_info(n).get('flat')]
-            
+
     def _get_all_var_metadata(self, graph):
         """Collect size, shape, etc. info for all variables referenced
         in the graph.  This info can then be used by all subsystems
@@ -1664,7 +1664,7 @@ class Assembly(Component):
                 for name in simple_node_iter(node):
                     if name not in varmeta:
                         varmeta[name] = meta
-                        
+
         # there are cases where a component will return names from
         # its list_deriv_vars that are not found in the graph, so add them
         # all here just in case
@@ -1679,7 +1679,7 @@ class Assembly(Component):
                     name = '.'.join((node, name))
                     if name not in varmeta:
                         varmeta[name] = self._get_var_info(name)
-        
+
         return varmeta
 
     def _add_driver_subvar_conns(self, depgraph, collapsed):
@@ -1701,15 +1701,15 @@ class Assembly(Component):
         variable in the VariableTree.
         """
         conns = depgraph.list_connections()
-        conns = [(u,v) for u,v in conns if isinstance(self.get(u), VariableTree) 
+        conns = [(u,v) for u,v in conns if isinstance(self.get(u), VariableTree)
                                        and isinstance(self.get(v), VariableTree)]
 
         #connvars = set([u for u,v in conns])
         #connvars.update([v for u,v in conns])
-        
+
         ## get rid of any driver in the list (due to driver connections)
         #connvars = [v for v in connvars if not has_interface(getattr(self, v, _missing), IComponent)]
-        
+
         vtconns = {}
         for u,v in conns:
             varlist = []
@@ -1725,22 +1725,22 @@ class Assembly(Component):
             if len(varlist[0]) != len(varlist[1]):
                 self.raise_exception("connected vartrees '%s' and '%s' do not have the same variable list" %
                                      (u, v))
-                
+
             for src, dest in zip(varlist[0], varlist[1]):
                 if src.split('.')[-1] != dest.split('.')[-1]:
                     self.raise_exception("variables '%s' and '%s' in vartree connection '%s' -> '%s' do not match" %
                                          (src, dest, u, v))
-            
+
             vtconns[(u,v)] = varlist
-                
-            
+
+
         # if we're modifying the graph, make a copy
         if vtconns:
             depgraph = depgraph.subgraph(depgraph.nodes_iter())
-            
+
         for (u,v), varlist in vtconns.items():
             ucomp = udestcomp = vcomp = None
-            
+
             # see if there's a u component
             comp = u.split('.', 1)[0]
             if comp in depgraph and depgraph.node[comp].get('comp'):
@@ -1748,13 +1748,13 @@ class Assembly(Component):
                     ucomp = comp
                 elif comp in depgraph.successors(u):  # handle input as output case
                     udestcomp = comp
-            
+
             # see if there's a v component
             comp = v.split('.', 1)[0]
             if comp in depgraph and depgraph.node[comp].get('comp'):
                 if comp in depgraph.successors(v):
                     vcomp = comp
-                    
+
             for src, dest in zip(varlist[0], varlist[1]):
                 if src not in depgraph:
                     depgraph.add_node(src, var=True, basevar=u)
@@ -1767,9 +1767,9 @@ class Assembly(Component):
                     depgraph.add_edge(src, udestcomp)
                 if vcomp:
                     depgraph.add_edge(dest, vcomp)
-                    
+
             depgraph.remove_nodes_from((u,v))
-            
+
         #vtrees = {}
         #for node in connvars:
             #obj = self.get(node)
@@ -1905,12 +1905,12 @@ def _get_wflow_names(iter_tree):
         else:
             names.append(n[0])
     return names
-    
+
 def _get_scoped_inputs(comp, ins, g):
     """Return a list of inputs varnames scoped to the given name."""
     if ins is None:
         return None
-    
+
     cname = comp.name
     inputs = []
     for p in g.predecessors(cname):
@@ -1923,17 +1923,17 @@ def _get_scoped_inputs(comp, ins, g):
         else:
             if p.startswith(cname+'.'):
                 inputs.append(p.split('.',1)[1])
-            
+
     if not inputs:
         return None
-    
+
     return inputs
 
 def _get_scoped_outputs(comp, outs, g):
     """Return a list of outputs varnames scoped to the given name."""
     if outs is None:
         return None
-    
+
     cname = comp.name
     outputs = []
     for s in g.successors(cname):
@@ -1943,8 +1943,8 @@ def _get_scoped_outputs(comp, outs, g):
         else:
             if p.startswith(cname+'.'):
                 outputs.append(s.split('.',1)[1])
-            
+
     if not outputs:
         return None
-    
+
     return outputs
