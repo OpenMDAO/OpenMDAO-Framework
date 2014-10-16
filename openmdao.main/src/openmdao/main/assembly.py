@@ -51,7 +51,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    map_collapsed_nodes, simple_node_iter, \
                                    reduced2component, collapse_driver, \
                                    fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps, list_driver_connections
+                                   add_boundary_comps, list_driver_connections, fix_dangling_vars
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars, base_var
@@ -1578,6 +1578,8 @@ class Assembly(Component):
         prune_reduced_graph(self._depgraph, collapsed_graph,
                             coll_keep)
 
+        fix_dangling_vars(collapsed_graph)
+        
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():

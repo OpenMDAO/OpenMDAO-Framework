@@ -1944,3 +1944,26 @@ def comp_group_nodes(g, comps):
         nodes.update(g.predecessors(comp))
         nodes.update(g.successors(comp))
     return nodes
+
+def fix_dangling_vars(g):
+    """If there are any dangling var nodes left in the
+    collapsed graph g, connect them to a dumbvar comp."""
+    to_add = []
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' not in data:
+            if g.in_degree(node) == 0:
+                to_add.append(('@in', node))
+            if g.out_degree(node) == 0:
+                to_add.append((node, '@out'))
+    
+    if to_add:
+        g.add_nodes_from(['@in', '@out'], comp='dumbvar')
+        g.add_edges_from(to_add)
+        
+    if g.degree('@out') == 0:
+        g.remove_node('@out')
+        
+    if g.degree('@in') == 0:
+        g.remove_node('@in')
+        
+        
