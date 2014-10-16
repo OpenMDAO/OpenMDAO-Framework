@@ -4,6 +4,7 @@
 __all__ = ["Driver"]
 
 from zope.interface import implementedBy
+from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable=E0611,F0401
 
@@ -188,6 +189,25 @@ class Driver(Component):
             if self.parent._setup_inputs:
                 nodes.update(simple_node_iter(self.parent._setup_inputs))
             self._reduced_graph = get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
+
+            # get a graph containing only stuff local to iterations of this driver
+            g = self._reduced_graph
+            g = g.subgraph(g.nodes_iter())
+            to_add = []
+            for name in nodes:
+                if name == self.name:
+                    continue
+                if not g.has_edge(self.name, name):
+                    to_add.append((self.name, name))
+                if not g.has_edge(name, self.name):
+                    to_add.append((name, self.name))
+            g.add_edges_from(to_add)
+            for comps in strongly_connected_components(g):
+                if self.name in comps:
+                    break
+            g.remove_edges_from(to_add)
+            self._reduced_internal_graph = g.subgraph(comps)
+
         return self._reduced_graph
 
     def check_config(self, strict=False):

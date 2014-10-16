@@ -2154,7 +2154,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = Jdict['nest.y1']['nest.x'] - Jbase
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
-        diff = Jdict['nest.y2']['nest.x']
+        diff = Jdict['nest.y2']['nest.x'] - J[4:, :]
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
         J = top.driver.workflow.calc_gradient(inputs=['nest.x'],
@@ -2174,7 +2174,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         diff = Jdict['nest.y1']['nest.x'] - Jbase
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
-        diff = Jdict['nest.y2']['nest.x']
+        diff = Jdict['nest.y2']['nest.x'] - J[4:, :]
         assert_rel_error(self, diff.max(), 0.0, .00001)
 
     def test_large_dataflow(self):
