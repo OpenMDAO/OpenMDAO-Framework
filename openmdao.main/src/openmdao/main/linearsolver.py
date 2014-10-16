@@ -176,12 +176,16 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-
+        name2collapsed = system.scope.name2collapsed
+        
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
-        system.applyJ(system.vector_vars.keys())
+        vnames = set(system.flat_vars.keys())
+        vnames.update([name2collapsed[n] for n in system.list_inputs()])
+        #system.applyJ(system.flat_vars.keys())
+        system.applyJ(vnames)
 
         #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         #print system.rhs_vec.keys()

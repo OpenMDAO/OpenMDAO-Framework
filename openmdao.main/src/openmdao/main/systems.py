@@ -348,6 +348,7 @@ class System(object):
         children.
         """
         inputs = set()
+        bases = set()
         for system in self.simple_subsystems():
             for tup in system._in_nodes:
                 seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
@@ -355,8 +356,14 @@ class System(object):
                     comp = dest.split('.', 1)[0]
                     if comp not in seen and comp in system._nodes:
                         inputs.add(dest)
+                        base = base_var(self.scope._depgraph, dest)
+                        if base == dest:
+                            bases.add(base)
                         seen.add(comp)
 
+        # filter out subvars of included basevars
+        inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
+        
         top = self.scope
 
         unignored_inputs = []
