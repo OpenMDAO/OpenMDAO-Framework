@@ -368,7 +368,7 @@ class System(object):
                 continue
 
             # Non-flat vars must be ignored.
-            if collapsed_name in top._system.noflat_vars:
+            if top._var_meta[collapsed_name].get('flat') != True:
                 continue
 
             # The user sets 'deriv_ignore' in the basevar, so we have to check that for
@@ -1730,25 +1730,25 @@ class OpaqueSystem(CompoundSystem):
 
         graph = graph.subgraph(nodes)
         
-        srcs = sorted([node[0] for node in self._in_nodes])
+        srcs = sorted([(node[0], node) for node in self._in_nodes])
         
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
-        for node in self._in_nodes:
-            base = base_var(graph, node[0])
+        for src, node in srcs:
+            base = base_var(graph, src)
             if base in graph:
                 graph.add_edge(base, node)
             else:
-                graph.add_node(node[0], comp='dumbvar')
-                graph.add_edge(node[0], node)
+                graph.add_node(src, comp='dumbvar')
+                graph.add_edge(src, node)
 
-            comp = node[0].split('.', 1)[0]
-            if comp != node[0] and comp in graph:
+            comp = src.split('.', 1)[0]
+            if comp != src and comp in graph:
                 graph.add_edge(node, comp)
                 
-            if node[0] in graph:
-                graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
-                nodes.add(node[0])
+            if src in graph:
+                graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
+                nodes.add(src)
             nodes.add(node)
 
         self.out_nodes = ext_out_nodes + int_out_nodes
