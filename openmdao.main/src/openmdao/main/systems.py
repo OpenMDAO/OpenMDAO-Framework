@@ -1729,18 +1729,27 @@ class OpaqueSystem(CompoundSystem):
                 int_out_nodes.append(node)
 
         graph = graph.subgraph(nodes)
-
+        
+        srcs = sorted([node[0] for node in self._in_nodes])
+        
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
-            graph.add_node(node[0], comp='dumbvar')
-            graph.add_edge(node[0], node)
+            base = base_var(graph, node[0])
+            if base in graph:
+                graph.add_edge(base, node)
+            else:
+                graph.add_node(node[0], comp='dumbvar')
+                graph.add_edge(node[0], node)
+
             comp = node[0].split('.', 1)[0]
             if comp != node[0] and comp in graph:
                 graph.add_edge(node, comp)
-            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+                
+            if node[0] in graph:
+                graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+                nodes.add(node[0])
             nodes.add(node)
-            nodes.add(node[0])
 
         self.out_nodes = ext_out_nodes + int_out_nodes
 
