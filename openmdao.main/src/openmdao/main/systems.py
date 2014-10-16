@@ -22,7 +22,7 @@ from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_c
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.util.graph import flatten_list_of_iters
+from openmdao.util.graph import flatten_list_of_iters, base_var
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -1707,17 +1707,26 @@ class OpaqueSystem(CompoundSystem):
 
         graph = graph.subgraph(nodes)
         
+        srcs = sorted([node[0] for node in self._in_nodes])
+        
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for node in self._in_nodes:
-            graph.add_node(node[0], comp='dumbvar')
-            graph.add_edge(node[0], node)
+            base = base_var(graph, node[0])
+            if base in graph:
+                graph.add_edge(base, node)
+            else:
+                graph.add_node(node[0], comp='dumbvar')
+                graph.add_edge(node[0], node)
+
             comp = node[0].split('.', 1)[0]
             if comp != node[0] and comp in graph:
                 graph.add_edge(node, comp)
-            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+                
+            if node[0] in graph:
+                graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
+                nodes.add(node[0])
             nodes.add(node)
-            nodes.add(node[0])
 
         self.out_nodes = ext_out_nodes + int_out_nodes
 

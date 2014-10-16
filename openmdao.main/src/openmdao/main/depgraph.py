@@ -394,72 +394,24 @@ class DependencyGraph(nx.DiGraph):
             elif not is_var_node(self, v):
                 raise RuntimeError("'%s' is not a variable node" % v)
 
-        # # path is a list of tuples of the form (var, basevar)
-        # path = [(base_src, base_src)]
-
-        # if srcpath != base_src:  # srcpath is a subvar
-
-        #     path.append((srcpath, base_src))
-
-        # if destpath != base_dest:  # destpath is a subvar
-        #     path.append((destpath, base_dest))
-
-        # path.append((base_dest, base_dest))
-
-        # if check:
-        #     self.check_connect(srcpath, destpath)
-
-        # for i in range(len(path)):
-        #     dest, base = path[i]
-        #     if dest not in self:  # create a new subvar if it's not already there
-        #         self.add_node(dest, basevar=base, **self.node[base])
-        #     if i > 0:
-        #         src = path[i-1][0]
-        #         try:
-        #             self[src][dest]
-        #         except KeyError:
-        #             self.add_edge(src, dest)
-
-        # # mark the actual connection edge to distinguish it
-        # # from other edges (for list_connections, etc.)
-        # self.edge[srcpath][destpath]['conn'] = True
-
-        # # create expression objects to handle setting of
-        # # array indces, etc.
-        # sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
-        # dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
-
-        # self.edge[srcpath][destpath]['sexpr'] = sexpr
-        # self.edge[srcpath][destpath]['dexpr'] = dexpr
         added_nodes = []
         added_edges = []
         if srcpath == base_src:
             pass  # will create connection edge later
         else:  # srcpath is a subvar
             if srcpath not in self:
-                self.add_node(srcpath, basevar=base_src, **self.node[base_src])
+                self.add_subvar(srcpath)
                 added_nodes.append(srcpath)
-            if self.node[base_src].get('boundary'):
-                iotypes = ('in', 'state')
-            else:
-                iotypes = ('out', 'state', 'residual')
-            if self.node[base_src]['iotype'] in iotypes:
-                self.add_edge(base_src, srcpath)
-                added_edges.append((base_src, srcpath))
+                if self.in_degree(srcpath) == 0:
+                    self.add_edge(base_var(self, srcpath), srcpath)
+                    #self.remove_edge(srcpath, base_var(self, srcpath))
 
         if destpath == base_dest:
             pass
         else:  # destpath is a subvar
             if destpath not in self:
-                self.add_node(destpath, basevar=base_dest, **self.node[base_dest])
+                self.add_subvar(destpath)
                 added_nodes.append(destpath)
-            if self.node[base_dest].get('boundary'):
-                iotypes = ('out', 'state', 'residual')
-            else:
-                iotypes = ('in', 'state')
-            if self.node[base_dest]['iotype'] in iotypes:
-                self.add_edge(destpath, base_dest)
-                added_edges.append((destpath, base_dest))
 
         if check:
             try:
@@ -1501,13 +1453,15 @@ def _add_collapsed_node(g, src, dests):
         cname = p.split('.', 1)[0]
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
-            g.add_edge(cname, newname)
+            if p == cname or p in g[cname]:
+                g.add_edge(cname, newname)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
-             g.add_edge(newname, cname)
+            if s == cname or cname in g[s]:
+                g.add_edge(newname, cname)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent
