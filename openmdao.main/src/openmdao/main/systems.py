@@ -174,6 +174,7 @@ class System(object):
         self.dfd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
+        self._parent_system = None
 
     def find(self, name):
         """A convenience method to allow easy access to descendant

@@ -183,7 +183,15 @@ class ScipyGMRES(LinearSolver):
         system.clear_dp()
 
         vnames = set(system.flat_vars.keys())
-        vnames.update([name2collapsed[n] for n in system.list_inputs()])
+        if system._parent_system:
+            g = system._parent_system._comp._reduced_internal_graph
+            vnames.update([n for n,data in g.nodes_iter(data=True) if 'comp' not in data])
+
+        ## add inputs, filtered so that we don't include any inputs from 
+        ## outside of this workflow system
+        #ins = [name2collapsed[n] for n in system.list_inputs()]
+        #vnames.update([n for n in ins if n[0].split('.',1)[0] in system._nodes])
+
         #system.applyJ(system.flat_vars.keys())
         system.applyJ(vnames)
 
