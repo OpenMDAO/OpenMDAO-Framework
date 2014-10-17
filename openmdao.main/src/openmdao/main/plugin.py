@@ -673,12 +673,43 @@ def plugin_install(parser, options, args=None, capture=None):
     the specified plugin distribution into the current environment.
 
     """
+    print parser, options, args, capture
+
     if args:
         print_sub_help(parser, 'install')
         return -1
 
+    #EXPERIMENTAL
+    if options.repo:
+      print "REPO:", options.repo
+      plugin_url = options.repo
+      #plugin_url = 'https://api.github.com/orgs/WISDEM/repos?type=public'
+      custom_github_plugins = []
+
+      if options.all:
+          #go get names of all the github plugins
+          plugin_page = urllib2.urlopen(plugin_url)
+          for line in plugin_page.fp:
+              text = json.loads(line)
+              for item in sorted(text):
+                  custom_github_plugins.append(item['name'])
+
+      else:
+          #just use the name of the specific plugin requested
+          custom_github_plugins.append(options.dist_name)
+
+      for plugin in custom_github_plugins:
+          try:
+              print "Installing plugin:", plugin
+              _github_install(plugin, options.findlinks)
+          except Exception:
+              traceback.print_exc()
+      return 0
+    ####END EXPERIMENTAL
+
     # Interact with github (but not when testing).
     if options.github or options.all:  # pragma no cover
+        #plugin_url = options.github
         plugin_url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
         github_plugins = []
 
@@ -1042,16 +1073,28 @@ def _get_plugin_parser():
                         help='name of plugin distribution'
                              ' (defaults to distrib found in current dir)',
                         nargs='?')
+
     parser.add_argument("--github",
                         help='Find plugin in the official OpenMDAO-Plugins'
                              ' repository on github',
                         action='store_true')
+
+    parser.add_argument("--repo", action='store', type=str, dest='repo',  #GET RID OF DEFAULT
+                        #default='https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public',
+                        help='Find plugin in a specified repository on github' )
+
     parser.add_argument("-f", "--find-links", action="store", type=str,
                         dest='findlinks', default='http://openmdao.org/dists',
                         help="URL of find-links server")
-    parser.add_argument("--all", help='Install all plugins in the official'
-                        ' OpenMDAO-Plugins repository on github',
+
+    #parser.add_argument("--all", help='Install all plugins in the official'
+    #                    ' OpenMDAO-Plugins repository on github',
+    #                    action='store_true')
+
+    parser.add_argument("--all", help='Install all plugins in the specified'
+                        ' github repository ',
                         action='store_true')
+
     parser.set_defaults(func=plugin_install)
 
     parser = subparsers.add_parser('build_docs',
@@ -1115,4 +1158,3 @@ def plugin():  # pragma no cover
     parser = _get_plugin_parser()
     options, args = parser.parse_known_args()
     sys.exit(options.func(parser, options, args))
-
