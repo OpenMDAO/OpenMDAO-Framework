@@ -1518,7 +1518,11 @@ class Assembly(Component):
                         ins.append(inp[0])
                         # add input to input connections from first
                         # param in a group to all of the others
+                        if inp[0] not in dgraph:
+                            dgraph.add_subvar(inp[0])
                         for pname in inp[1:]:
+                            if pname not in dgraph:
+                                dgraph.add_subvar(pname)
                             dgraph.add_edge(inp[0], pname, conn=True)
                 inputs = ins
 

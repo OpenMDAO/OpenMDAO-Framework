@@ -124,7 +124,7 @@ class System(object):
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
-        self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
+        #self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
 
         self._mapped_resids = {}
 
@@ -151,6 +151,8 @@ class System(object):
 
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, all_outs)
+        
+        self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
         # mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
@@ -175,6 +177,12 @@ class System(object):
         self.sol_buf = None
         self.rhs_buf = None
         self._parent_system = None
+
+    def __getitem__(self, ident):
+        if isinstance(ident, basestring):
+            return self.find(ident)
+        else:
+            return self.subsystems()[ident]
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
