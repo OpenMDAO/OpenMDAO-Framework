@@ -501,16 +501,16 @@ class Testcase_implicit(unittest.TestCase):
         model.comp1.eval_only = False
         model.comp2.eval_only = False
 
-        model.connect('comp1.x', 'comp2.x')
-        model.connect('comp1.y', 'comp2.y')
-        model.connect('comp2.z', 'comp1.z')
-        #model.driver.add_parameter('comp2.x', low=-100, high=100)
-        #model.driver.add_parameter('comp2.y', low=-100, high=100)
-        #model.driver.add_parameter('comp1.z', low=-100, high=100)
+        #model.connect('comp1.x', 'comp2.x')
+        #model.connect('comp1.y', 'comp2.y')
+        #model.connect('comp2.z', 'comp1.z')
+        model.driver.add_parameter('comp2.x', low=-100, high=100)
+        model.driver.add_parameter('comp2.y', low=-100, high=100)
+        model.driver.add_parameter('comp1.z', low=-100, high=100)
 
-        #model.driver.add_constraint('comp2.x = comp1.x')
-        #model.driver.add_constraint('comp2.y = comp1.y')
-        #model.driver.add_constraint('comp1.z = comp2.z')
+        model.driver.add_constraint('comp2.x = comp1.x')
+        model.driver.add_constraint('comp2.y = comp1.y')
+        model.driver.add_constraint('comp1.z = comp2.z')
 
         model.run()
 
