@@ -15,7 +15,7 @@ from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
 
 import openmdao.main.derivatives
-from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
+from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top, Dataflow
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
 from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -2714,7 +2714,6 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        from openmdao.main.api import Dataflow
         top.driver.workflow = Dataflow()
         top.driver.workflow.add('c2')
         J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
