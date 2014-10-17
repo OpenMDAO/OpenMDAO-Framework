@@ -43,6 +43,11 @@ from openmdao.util.graph import list_deriv_vars
 from openmdao.util.log import logger
 from openmdao.util.debug import strict_chk_config
 
+from openmdao.util.graphplot import _clean_graph
+from networkx.readwrite import json_graph
+import json
+
+
 _iodict = {'out': 'output', 'in': 'input'}
 
 _missing = object()
@@ -629,7 +634,7 @@ class Assembly(Component):
             try:
                 self._connect(src, dst)
             except Exception:
-                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst), 
+                self.reraise_exception("Can't connect '%s' to '%s'" % (src, dst),
                                         sys.exc_info())
 
     def _connect(self, src, dest):
@@ -816,7 +821,7 @@ class Assembly(Component):
                         continue  # Not to be included.
                     for pattern in excludes:
                         if fnmatch(path, pattern):
-                            break # Excluded.
+                            break  # Excluded.
                     else:
                         val = getattr(obj, name)
                         if isinstance(val, VariableTree):
@@ -1411,13 +1416,40 @@ class Assembly(Component):
 
         return connectivity
 
-    # def _repr_svg_(self):
-    #     """ Returns an SVG representation of this Assembly's dependency graph
-    #         Note: the graph_to_svg() function currently uses tkinter which
-    #               requires a display and thus will cause an exception when
-    #               running headless (e.g. during non-interactive testing)
-    #     """
-    #     return graph_to_svg(self._depgraph.component_graph())
+    def get_graph(self, components_only=False, format='json'):
+        ''' returns cleaned up graph data in the selected format
+
+            components_only: (optional) boolean
+                if True, only components will be included in the graph
+                otherwise the full dependency graph will be returned
+
+            format: (optional) string
+                json - returns serialized graph data in JSON format
+                svg  - returns scalable vector graphics rendition of graph
+        '''
+        if components_only:
+            graph = self._depgraph.component_graph()
+        else:
+            graph = _clean_graph(self._depgraph)
+
+        if format.lower() == 'json':
+            graph_data = json_graph.node_link_data(graph)
+            return json.dumps(graph_data)
+        elif format.lower() == 'svg':
+            agraph = nx.to_agraph(graph)
+            return agraph.draw(format='svg', prog='dot')
+        else:
+            self.raise_exception("'%s' is not a supported graph data format" % format)
+
+    def _repr_svg_(self):
+        """ Returns an SVG representation of this Assembly's dependency graph
+            (if pygraphviz is not available, returns an empty string)
+        """
+        try:
+            import pygraphviz
+            return self.get_graph(components_only=True, format='svg')
+        except ImportError:
+            return ''
 
 
 def dump_iteration_tree(obj, f=sys.stdout, full=True, tabsize=4, derivs=False):

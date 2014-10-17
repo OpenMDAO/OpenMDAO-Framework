@@ -187,6 +187,10 @@ class ArchitectureAssembly(Assembly):
         self.init_parameters()
         self.init_coupling_vars()
 
+    def configure_recording(self, includes=None, excludes=None, inputs=None):
+        self.check_config()
+        super(ArchitectureAssembly, self).configure_recording(includes, excludes, inputs)
+
     def check_config(self, strict=False):
         """Checks the configuration of the assembly to make sure it's compatible
         with the architecture. Then initializes all the values in the
