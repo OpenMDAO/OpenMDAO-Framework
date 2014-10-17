@@ -364,7 +364,7 @@ class System(object):
 
         # filter out subvars of included basevars
         inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
-        
+
         top = self.scope
 
         unignored_inputs = []
@@ -1737,9 +1737,9 @@ class OpaqueSystem(CompoundSystem):
                 int_out_nodes.append(node)
 
         graph = graph.subgraph(nodes)
-        
+
         srcs = sorted([(node[0], node) for node in self._in_nodes])
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for src, node in srcs:
@@ -1753,7 +1753,7 @@ class OpaqueSystem(CompoundSystem):
             comp = src.split('.', 1)[0]
             if comp != src and comp in graph:
                 graph.add_edge(node, comp)
-                
+
             if src in graph:
                 graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
                 nodes.add(src)
