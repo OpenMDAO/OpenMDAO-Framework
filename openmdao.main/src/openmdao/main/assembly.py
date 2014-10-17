@@ -1406,7 +1406,7 @@ class Assembly(Component):
 
         if len(cgraph) > 1:
             self._system = SerialSystem(self, rgraph, cgraph, '_inner_asm')
-            self._system.set_ordering(nx.topological_sort(cgraph))
+            self._system.set_ordering(nx.topological_sort(cgraph), {})
         else:
             # TODO: if top driver has no params/constraints, possibly
             # remove driver system entirely and just go directly to workflow

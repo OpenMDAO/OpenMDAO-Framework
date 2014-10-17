@@ -18,7 +18,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
                                    collapse_nodes, simple_node_iter, get_reduced_subgraph, \
-                                   internal_nodes, reduced2component
+                                   internal_nodes, reduced2component, unique
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
@@ -478,7 +478,7 @@ class System(object):
 
         return size
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         pass
 
     def is_active(self):
@@ -1496,16 +1496,41 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
-
+def _get_counts(names):
+    """Return a dict with each name keyed to a number indicating the 
+    number of times it occurs in the list.
+    """
+    counts = dict([(n,0) for n in names])
+    for name in names:
+        counts[name] += 1
+            
+    return counts
+    
 class SerialSystem(CompoundSystem):
 
     def all_subsystems(self):
         return [self.graph.node[node]['system'] for node in self._ordering]
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         """Return the execution order of our subsystems."""
-        self._ordering = [n for n in ordering if n in self.graph]
-
+        counts = _get_counts(ordering)
+        self._ordering = []
+        seen = {}
+        mapcount = dict([(v, 0) for v in opaque_map.values()])
+        for name in ordering:
+            if name in self.graph:
+                self._ordering.append(name)
+                continue
+            
+            opaque_name = opaque_map.get(name, name)
+            if opaque_name in mapcount:
+                mapcount[opaque_name] += 1
+            if opaque_name in self.graph:
+                count = counts[name]
+                if opaque_name in mapcount and mapcount[opaque_name] > count:
+                    continue
+                self._ordering.append(opaque_name)
+                
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
         else:
@@ -1535,7 +1560,7 @@ class SerialSystem(CompoundSystem):
         self._ordering = gsort(deps, self._ordering)
 
         for s in self.all_subsystems():
-            s.set_ordering(ordering)
+            s.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         cpus = []
@@ -1893,8 +1918,8 @@ class OpaqueSystem(CompoundSystem):
     def simple_subsystems(self):
         yield self
 
-    def set_ordering(self, ordering):
-        self._inner_system.set_ordering(ordering)
+    def set_ordering(self, ordering, opaque_map):
+        self._inner_system.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
