@@ -24,7 +24,7 @@ from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.datatypes.api import List, Slot, Bool, VarTree
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
@@ -114,6 +114,17 @@ def _find_common_interface(obj1, obj2):
     return None
 
 
+class RecordingOptions(VariableTree):
+    """Container for options that control case recording. """
+
+    save_problem_formulation = Bool(True, desc='Save problem formulation '
+                                               '(parameters, constraints, etc.)')
+
+    includes = List(['*'], desc='Patterns for variables to include in the recorders')
+
+    excludes = List([], desc='Patterns for variables to exclude from the recorders')
+
+
 class Assembly(Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
@@ -130,13 +141,8 @@ class Assembly(Component):
                      desc='Case recorders for iteration data'
                           ' (only valid at top level).')
 
-    includes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to include in the recorders'
-                         ' (only valid at top level).')
-
-    excludes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to exclude from the recorders'
-                         ' (only valid at top level).')
+    recording_options = VarTree(RecordingOptions(),
+                    desc='Case recording options (only valid at top level).')
 
     def __init__(self):
 
@@ -170,8 +176,8 @@ class Assembly(Component):
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
 
-        self.includes = ['*']
-        self.excludes = []
+        self.add('recording_options', RecordingOptions())
+
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -766,8 +772,8 @@ class Assembly(Component):
         Returns set of paths for changing inputs."""
         if self.parent is None:
             if self.recorders:
-                includes = self.includes
-                excludes = self.excludes
+                includes = self.recording_options.includes
+                excludes = self.recording_options.excludes
                 for recorder in self.recorders:
                     recorder.startup()
             else:

@@ -1,5 +1,5 @@
 {
-"__length_1": 12848
+"__length_1": 12178
 , "simulation_info": {
     "OpenMDAO_Version": "0.10.2", 
     "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"sub\"}], \"links\": [], \"multigraph\": false}", 
@@ -16,11 +16,7 @@
         "driver.gradient_options.force_fd": false, 
         "driver.gradient_options.gmres_maxiter": 100, 
         "driver.gradient_options.gmres_tolerance": 1e-09, 
-        "excludes": [], 
         "force_fd": false, 
-        "includes": [
-            "*"
-        ], 
         "missing_deriv_policy": "assume_zero", 
         "sub.comp.directory": "", 
         "sub.comp.force_fd": false, 
@@ -37,11 +33,7 @@
         "sub.driver.gradient_options.force_fd": false, 
         "sub.driver.gradient_options.gmres_maxiter": 100, 
         "sub.driver.gradient_options.gmres_tolerance": 1e-09, 
-        "sub.excludes": [], 
         "sub.force_fd": false, 
-        "sub.includes": [
-            "*"
-        ], 
         "sub.loads_in.loads": [
             {
                 "Fx": [
@@ -66,7 +58,7 @@
     "expressions": {}, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "4650afe0-4b2a-11e4-a880-080027a1f086", 
+    "uuid": "b6a6f0ac-588a-11e4-ab07-080027a1f086", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -153,21 +145,11 @@
             "low": null, 
             "vartypename": "Float"
         }, 
-        "excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "missing_deriv_policy": {
             "assumed_default": false, 
@@ -329,11 +311,6 @@
             "low": null, 
             "vartypename": "Float"
         }, 
-        "sub.excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "sub.exec_count": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -349,11 +326,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "sub.includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "sub.itername": {
             "deriv_ignore": true, 
@@ -386,7 +358,7 @@
 }
 , "__length_2": 231
 , "driver_info_1": {
-    "_id": 140551191790128, 
+    "_id": 139748248123824, 
     "name": "driver", 
     "recording": [
         "sub.derivative_exec_count", 
@@ -398,7 +370,7 @@
 }
 , "__length_3": 239
 , "driver_info_2": {
-    "_id": 140551191790416, 
+    "_id": 139748247144976, 
     "name": "sub.driver", 
     "recording": [
         "comp.loads_out", 
@@ -410,9 +382,9 @@
 }
 , "__length_4": 934
 , "iteration_case_1": {
-    "_driver_id": 140551191790416, 
-    "_id": "465174de-4b2a-11e4-8057-080027a1f086", 
-    "_parent_id": "46516f0c-4b2a-11e4-8056-080027a1f086", 
+    "_driver_id": 139748247144976, 
+    "_id": "b6a7fb0a-588a-11e4-8061-080027a1f086", 
+    "_parent_id": "b6a7f45c-588a-11e4-8060-080027a1f086", 
     "data": {
         "comp.derivative_exec_count": 0, 
         "comp.exec_count": 1, 
@@ -442,13 +414,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1412360566.842402
+    "timestamp": 1413831352.116573
 }
 , "__length_5": 917
 , "iteration_case_2": {
-    "_driver_id": 140551191790128, 
-    "_id": "46516f0c-4b2a-11e4-8056-080027a1f086", 
-    "_parent_id": "4650afe0-4b2a-11e4-a880-080027a1f086", 
+    "_driver_id": 139748248123824, 
+    "_id": "b6a7f45c-588a-11e4-8060-080027a1f086", 
+    "_parent_id": "b6a6f0ac-588a-11e4-ab07-080027a1f086", 
     "data": {
         "driver.workflow.itername": "1", 
         "sub.derivative_exec_count": 0, 
@@ -478,6 +450,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1412360566.845599
+    "timestamp": 1413831352.117988
 }
 }

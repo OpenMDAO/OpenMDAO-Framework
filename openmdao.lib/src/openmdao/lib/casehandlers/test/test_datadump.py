@@ -103,9 +103,7 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
    nested.comp1.force_fd: False
@@ -140,9 +138,7 @@ Constants:
    nested.doublenest.driver.gradient_options.force_fd: False
    nested.doublenest.driver.gradient_options.gmres_maxiter: 100
    nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.doublenest.excludes: []
    nested.doublenest.force_fd: False
-   nested.doublenest.includes: ['*']
    nested.doublenest.missing_deriv_policy: assume_zero
    nested.driver.directory:
    nested.driver.force_fd: False
@@ -155,9 +151,7 @@ Constants:
    nested.driver.gradient_options.force_fd: False
    nested.driver.gradient_options.gmres_maxiter: 100
    nested.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.excludes: []
    nested.force_fd: False
-   nested.includes: ['*']
    nested.missing_deriv_policy: assume_zero
 Case:
    uuid: 87008694-e042-11e3-8005-005056000100
@@ -250,9 +244,7 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
    nested.comp1.force_fd: False
@@ -287,9 +279,7 @@ Constants:
    nested.doublenest.driver.gradient_options.force_fd: False
    nested.doublenest.driver.gradient_options.gmres_maxiter: 100
    nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.doublenest.excludes: []
    nested.doublenest.force_fd: False
-   nested.doublenest.includes: ['*']
    nested.doublenest.missing_deriv_policy: assume_zero
    nested.driver.directory:
    nested.driver.force_fd: False
@@ -302,9 +292,7 @@ Constants:
    nested.driver.gradient_options.force_fd: False
    nested.driver.gradient_options.gmres_maxiter: 100
    nested.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.excludes: []
    nested.force_fd: False
-   nested.includes: ['*']
    nested.missing_deriv_policy: assume_zero
 Case:
    uuid: 84c2195c-e043-11e3-8008-005056000100
@@ -402,9 +390,7 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
 Case:
    uuid: 0d85f3c5-e044-11e3-8001-005056000100
@@ -461,9 +447,7 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
 Case:
    uuid: 4f3ca163-e044-11e3-8002-005056000100
