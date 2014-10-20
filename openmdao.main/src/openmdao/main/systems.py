@@ -151,7 +151,7 @@ class System(object):
 
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, all_outs)
-        
+
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
@@ -436,6 +436,11 @@ class System(object):
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
+            #for src, srcs in out_nodes:
+                #for item in list(srcs) + [src]:
+                    #parts = item.split('.', 1)
+                    #if parts[0] in system._nodes and item not in states:
+                        #outputs.append(item)
 
         top = self.scope
         return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
@@ -1505,15 +1510,15 @@ class CompoundSystem(System):
         self.dfd_solver.calculate(arg, result)
 
 def _get_counts(names):
-    """Return a dict with each name keyed to a number indicating the 
+    """Return a dict with each name keyed to a number indicating the
     number of times it occurs in the list.
     """
     counts = dict([(n,0) for n in names])
     for name in names:
         counts[name] += 1
-            
+
     return counts
-    
+
 class SerialSystem(CompoundSystem):
 
     def all_subsystems(self):
@@ -1529,7 +1534,7 @@ class SerialSystem(CompoundSystem):
             if name in self.graph:
                 self._ordering.append(name)
                 continue
-            
+
             opaque_name = opaque_map.get(name, name)
             if opaque_name in mapcount:
                 mapcount[opaque_name] += 1
@@ -1538,7 +1543,7 @@ class SerialSystem(CompoundSystem):
                 if opaque_name in mapcount and mapcount[opaque_name] > count:
                     continue
                 self._ordering.append(opaque_name)
-                
+
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
         else:
@@ -1854,8 +1859,14 @@ class OpaqueSystem(CompoundSystem):
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
-        for item in self.list_outputs():
-            self_u[item][:] = inner_u[item][:]
+        # TODO - Bret, i needed to do this to get further in CO, but there
+        # may be a deeper fix to make instead.
+        #for item in self.list_outputs():
+        for item in self.out_nodes:
+            # TODO - same as above
+            #self_u[item][:] = inner_u[item][:]
+            if item in inner_u:
+                self_u[item][:] = inner_u[item][:]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
