@@ -495,7 +495,7 @@ class DirectionalFD(object):
         # Pack the results dictionary
         j = 0
         for key in self.outputs:
-            indices = self.system.vec['u'].indices(key)
+            indices = self.system.vec['u'].indices(self.system.scope, key)
             i1, i2 = j, j+len(indices)
 
             old_val = self.scope.get(key)

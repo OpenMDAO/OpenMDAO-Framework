@@ -20,7 +20,7 @@ from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_c
                                    collapse_nodes, simple_node_iter, get_reduced_subgraph, \
                                    internal_nodes, reduced2component, unique
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
-                                        get_var_shape, flattened_size
+                                        get_var_shape, flattened_size, get_shape
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.util.graph import flatten_list_of_iters, base_var
 
@@ -466,6 +466,7 @@ class System(object):
         if isinstance(names, basestring):
             names = [names]
         uvec = self.scope._system.vec['u']
+        varmeta = self.scope._var_meta
         var_sizes = self.scope._system.local_var_sizes
         varkeys = self.scope._system.vector_vars.keys()
         collnames = self.scope.name2collapsed
@@ -477,12 +478,19 @@ class System(object):
 
             if name in uvec:
                 size += uvec[name].size
-            else:
+            #elif name.split('[',1)[0] in uvec:
+                #bval = self.scope.get(name.split('[',1)[0])
+                #_, idx = get_val_and_index(self.scope, name)
+                #idxs = get_flattened_index(idx, get_shape(bval))
+                #size += bval[idxs].size
+            elif collnames[name] in varkeys:
                 idx = varkeys.index(collnames[name])
                 for proc in procs:
                     if var_sizes[proc, idx] > 0:
                         size += var_sizes[proc, idx]
                         break
+            else:
+                size += varmeta[name]['size']
 
         return size
 
@@ -1049,6 +1057,9 @@ class SimpleSystem(System):
 
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
+                base = base_var(self.scope._depgraph, vname[0])
+                if base != vname[0] and base in self.scope._reduced_graph:
+                    continue
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()

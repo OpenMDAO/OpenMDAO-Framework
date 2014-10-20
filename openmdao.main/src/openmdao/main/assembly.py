@@ -1846,6 +1846,8 @@ class Assembly(Component):
         else:
             comm = None
 
+        self._var_meta = {}
+        
         try:
             self.pre_setup()
             self.setup_graph(inputs, outputs)

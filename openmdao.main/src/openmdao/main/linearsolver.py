@@ -101,7 +101,7 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(param)
+            in_indices = system.vec['u'].indices(system.scope, param)
             jbase = j
 
             for irhs in in_indices:
@@ -119,7 +119,7 @@ class ScipyGMRES(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(item)
+                    out_indices = system.vec['u'].indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -409,7 +409,7 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(param)
+            in_indices = system.vec['u'].indices(system.scope, param)
             jbase = j
 
             for irhs in in_indices:
@@ -430,7 +430,7 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(item)
+                    out_indices = system.vec['u'].indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':

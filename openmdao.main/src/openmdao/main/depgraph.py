@@ -51,7 +51,9 @@ def _sub_or_super(s1, s2):
 
 
 def unique(seq):
-    """Return a list of unique values, preserving order"""
+    """Return a list of unique values, preserving order. 
+    Items in sequence must be hashable.
+    """
     seen = set()
     sadd = seen.add
     return [x for x in seq if x not in seen and not sadd(x)]
