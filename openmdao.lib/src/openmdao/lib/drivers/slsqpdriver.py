@@ -185,6 +185,15 @@ class SLSQPdriver(Driver):
         if self.iprint > 0:
             pyflush(self.iout)
 
+        print '------------------------------'
+        print self.name
+        print '------------------------------'
+        print 'Params'
+        print xnew
+        print 'Obj'
+        print f
+        print 'Con'
+        print g
         return f, g
 
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
