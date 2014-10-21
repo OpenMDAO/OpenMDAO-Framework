@@ -561,7 +561,7 @@ class ListConnectTestCase(unittest.TestCase):
         top.driver.workflow.add('asm')
         test_asm.f_in = 10
 
-        test_asm.run()
+        top.run()
 
         self.assertEqual(100, test_asm.f_out)
 

@@ -1583,7 +1583,7 @@ class Assembly(Component):
                             coll_keep)
 
         fix_dangling_vars(collapsed_graph)
-        
+
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():
