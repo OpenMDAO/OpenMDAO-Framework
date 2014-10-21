@@ -1771,13 +1771,13 @@ def get_reduced_subgraph(g, compnodes):
     vnodes.update([v for u,v in edges if u in compset])
     return g.subgraph(vnodes.union(compset))
 
-def get_nondiff_groups(graph, scope):
+def get_nondiff_groups(graph, cgraph, scope):
     """Return a modified graph with connected
     nondifferentiable systems grouped together.
     """
     groups = []
 
-    nondiff = set([n for n,data in graph.nodes_iter(data=True)
+    nondiff = set([n for n,data in cgraph.nodes_iter(data=True)
                     if 'system' in data 
                         and not data['system'].is_differentiable()])
 
@@ -1786,9 +1786,15 @@ def get_nondiff_groups(graph, scope):
     data = graph.node
     for src, target in graph.edges_iter():
         if 'comp' in data[src]:
+            #if src not in cgraph:
+            #    continue
             comp, var = src, target
-        else:
+        elif 'comp' in data[target]:
+            #if target not in cgraph:
+            #    continue
             var, comp = src, target
+        else:
+            raise RuntimeError("malformed graph in get_nondiff_groups()")
 
         # Can't include the containing assembly as a nondiff block.
         if data[var].get('boundary'):
@@ -1809,7 +1815,7 @@ def get_nondiff_groups(graph, scope):
     # connected to nondiff systems on both sides
 
     # get the component graph for the given reduced graph
-    cgraph = reduced2component(graph)
+    #cgraph = reduced2component(graph)
 
     # Groups any connected non-differentiable blocks. Each block is a
     # set of component names.
