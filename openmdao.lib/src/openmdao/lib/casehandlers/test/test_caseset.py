@@ -4,6 +4,7 @@ from openmdao.main.api import Case
 from openmdao.lib.casehandlers.api import CaseSet, CaseArray, \
                                           ListCaseIterator, caseiter_to_caseset
 
+
 class CaseArrayTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -15,10 +16,11 @@ class CaseArrayTestCase(unittest.TestCase):
         self.case2 = Case(inputs=inputs, outputs=outputs)
 
     def test_from_dict(self):
-        dct = {'comp1.a': [2, 4, 6],
-               'comp1.b': [4, 8, 12],
-               'comp2.b': [1, 2, 3],
-            }
+        dct = {
+            'comp1.a': [2, 4, 6],
+            'comp1.b': [4, 8, 12],
+            'comp2.b': [1, 2, 3],
+        }
         cs = CaseArray(dct)
         self.assertEqual(3, len(cs))
         self.assertEqual(set(['comp1.a', 'comp1.b', 'comp2.b']),
@@ -84,20 +86,21 @@ class CaseSetTestCase(unittest.TestCase):
         inputs = [('comp1.a', 4), ('comp1.b', 8), ('comp2.b', 2)]
         outputs = ['comp2.c+comp2.d', 'max(comp1.d,comp2.d)']
         self.case1 = Case(inputs=inputs, outputs=outputs)
-        self.case1_dup = Case(inputs=inputs, outputs=outputs) # a duplicate case
+        self.case1_dup = Case(inputs=inputs, outputs=outputs)  # a duplicate case
         inputs[1] = ('comp1.b', 9)
         self.case2 = Case(inputs=inputs, outputs=outputs)
         self.caselist = [self.case1, self.case2, self.case1_dup]
         for i in range(5):
             inputs[1] = ('comp1.b', 10+i)
             self.caselist.append(Case(inputs=inputs, outputs=outputs))
-        self.caselist.append(Case(inputs=inputs, outputs=outputs)) # another dup
+        self.caselist.append(Case(inputs=inputs, outputs=outputs))  # another dup
 
     def test_from_dict(self):
-        dct = {'comp1.a': [2, 4, 6],
-               'comp1.b': [4, 8, 12],
-               'comp2.b': [1, 2, 3],
-            }
+        dct = {
+            'comp1.a': [2, 4, 6],
+            'comp1.b': [4, 8, 12],
+            'comp2.b': [1, 2, 3],
+        }
         cs = CaseSet(dct)
         self.assertEqual(3, len(cs))
         self.assertEqual(set(['comp1.a', 'comp1.b', 'comp2.b']),
@@ -108,10 +111,11 @@ class CaseSetTestCase(unittest.TestCase):
         self.assertEqual(case._inputs, expected._inputs)
 
     def test_subset_from_dict(self):
-        dct = {'comp1.a': [2, 4, 6],
-               'comp1.b': [4, 8, 12],
-               'comp2.b': [1, 2, 3],
-            }
+        dct = {
+            'comp1.a': [2, 4, 6],
+            'comp1.b': [4, 8, 12],
+            'comp2.b': [1, 2, 3],
+        }
         cs = CaseSet(dct, names=['comp1.a', 'comp2.b'])
         self.assertEqual(3, len(cs))
         self.assertEqual(set(['comp1.a', 'comp2.b']),
@@ -263,5 +267,3 @@ class CaseSetTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-

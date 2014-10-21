@@ -178,7 +178,6 @@ class Assembly(Component):
 
         self.add('recording_options', RecordingOptions())
 
-
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
         """
@@ -767,17 +766,23 @@ class Assembly(Component):
 
         self._depgraph.update_boundary_outputs(self)
 
-    def configure_recording(self, includes=None, excludes=None, inputs=None):
+    def configure_recording(self, recording_options=None, inputs=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         if self.parent is None:
             if self.recorders:
-                includes = self.recording_options.includes
-                excludes = self.recording_options.excludes
+                recording_options = self.recording_options
                 for recorder in self.recorders:
                     recorder.startup()
             else:
-                includes = excludes = None
+                recording_options = None
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
 
         # Determine (changing) inputs and outputs to record
         inputs = set()
@@ -785,12 +790,12 @@ class Assembly(Component):
         for name in self.list_containers():
             obj = getattr(self, name)
             if has_interface(obj, IDriver, IAssembly):
-                inps, consts = obj.configure_recording(includes, excludes)
+                inps, consts = obj.configure_recording(recording_options)
                 inputs.update(inps)
                 constants.update(consts)
 
         # If nothing to record, return after configuring workflows.
-        if not includes:
+        if not save_problem_formulation and not includes:
             return (inputs, constants)
 
         # Locate top level assembly.

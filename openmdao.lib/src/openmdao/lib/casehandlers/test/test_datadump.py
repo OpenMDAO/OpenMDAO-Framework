@@ -202,7 +202,7 @@ Case:
       nested.itername: 1-nested"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for line, template in zip(lines, expected):
             line = line.rstrip()
@@ -224,6 +224,7 @@ Case:
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recording_options.includes = ['*comp1.*']
         self.top.run()
 
         expected = """\
@@ -232,68 +233,14 @@ Constants:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.x1: 0.0
-   directory:
-   driver.directory:
-   driver.force_fd: False
-   driver.gradient_options.derivative_direction: auto
-   driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
-   driver.gradient_options.fd_form: forward
-   driver.gradient_options.fd_step: 1e-06
-   driver.gradient_options.fd_step_type: absolute
-   driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
-   force_fd: False
-   missing_deriv_policy: assume_zero
    nested.comp1.directory:
    nested.comp1.force_fd: False
    nested.comp1.missing_deriv_policy: error
    nested.comp1.x1: 0.0
-   nested.comp2.directory:
-   nested.comp2.force_fd: False
-   nested.comp2.missing_deriv_policy: error
-   nested.comp3.directory:
-   nested.comp3.force_fd: False
-   nested.comp3.missing_deriv_policy: error
-   nested.directory:
    nested.doublenest.comp1.directory:
    nested.doublenest.comp1.force_fd: False
    nested.doublenest.comp1.missing_deriv_policy: error
    nested.doublenest.comp1.x1: 0.0
-   nested.doublenest.comp2.directory:
-   nested.doublenest.comp2.force_fd: False
-   nested.doublenest.comp2.missing_deriv_policy: error
-   nested.doublenest.comp3.directory:
-   nested.doublenest.comp3.force_fd: False
-   nested.doublenest.comp3.missing_deriv_policy: error
-   nested.doublenest.directory:
-   nested.doublenest.driver.directory:
-   nested.doublenest.driver.force_fd: False
-   nested.doublenest.driver.gradient_options.derivative_direction: auto
-   nested.doublenest.driver.gradient_options.directional_fd: False
-   nested.doublenest.driver.gradient_options.fd_blocks: []
-   nested.doublenest.driver.gradient_options.fd_form: forward
-   nested.doublenest.driver.gradient_options.fd_step: 1e-06
-   nested.doublenest.driver.gradient_options.fd_step_type: absolute
-   nested.doublenest.driver.gradient_options.force_fd: False
-   nested.doublenest.driver.gradient_options.gmres_maxiter: 100
-   nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.doublenest.force_fd: False
-   nested.doublenest.missing_deriv_policy: assume_zero
-   nested.driver.directory:
-   nested.driver.force_fd: False
-   nested.driver.gradient_options.derivative_direction: auto
-   nested.driver.gradient_options.directional_fd: False
-   nested.driver.gradient_options.fd_blocks: []
-   nested.driver.gradient_options.fd_form: forward
-   nested.driver.gradient_options.fd_step: 1e-06
-   nested.driver.gradient_options.fd_step_type: absolute
-   nested.driver.gradient_options.force_fd: False
-   nested.driver.gradient_options.gmres_maxiter: 100
-   nested.driver.gradient_options.gmres_tolerance: 1e-09
-   nested.force_fd: False
-   nested.missing_deriv_policy: assume_zero
 Case:
    uuid: 84c2195c-e043-11e3-8008-005056000100
    timestamp: 1400606634.601406
@@ -303,15 +250,6 @@ Case:
       nested.doublenest.comp1.exec_count: 1
       nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
       nested.doublenest.comp1.y1: 1.0
-      nested.doublenest.comp2.derivative_exec_count: 0
-      nested.doublenest.comp2.exec_count: 1
-      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
-      nested.doublenest.comp2.y1: 101.0
-      nested.doublenest.comp3.derivative_exec_count: 0
-      nested.doublenest.comp3.exec_count: 1
-      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
-      nested.doublenest.comp3.y1: 10101.0
-      nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
    uuid: 84c1b666-e043-11e3-8007-005056000100
    timestamp: 1400606634.601622
@@ -321,29 +259,10 @@ Case:
       nested.comp1.exec_count: 1
       nested.comp1.itername: 1-nested.1-comp1
       nested.comp1.y1: 1.0
-      nested.comp2.derivative_exec_count: 0
-      nested.comp2.exec_count: 1
-      nested.comp2.itername: 1-nested.1-comp2
-      nested.comp2.y1: 101.0
-      nested.comp3.derivative_exec_count: 0
-      nested.comp3.exec_count: 1
-      nested.comp3.itername: 1-nested.1-comp3
-      nested.comp3.y1: 10101.0
-      nested.doublenest.derivative_exec_count: 0
-      nested.doublenest.exec_count: 1
-      nested.doublenest.itername: 1-nested.1-doublenest
-      nested.driver.workflow.itername: 1-nested.1
-Case:
-   uuid: 84c1b0f8-e043-11e3-8006-005056000100
-   timestamp: 1400606634.601857
-   outputs:
-      driver.workflow.itername: 1
-      nested.derivative_exec_count: 0
-      nested.exec_count: 1
-      nested.itername: 1-nested"""
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -518,7 +437,7 @@ Case:
          'subassy.driver.workflow.itername: 1-driverB.4-subassy.1',
          'driverB.workflow.itername: 1-driverB.4',
          'driver.workflow.itername: 1'
-         ]
+        ]
         lines = [l.strip() for l in sout.getvalue().split('\n')
                                  if 'workflow.itername' in l]
         for i, line in enumerate(lines):
