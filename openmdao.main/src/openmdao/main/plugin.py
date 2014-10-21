@@ -14,7 +14,7 @@ except ImportError:
     import json
 import pprint
 import StringIO
-from ConfigParser import SafeConfigParser, NoOptionError
+from ConfigParser import SafeConfigParser, NoSectionError, NoOptionError
 from argparse import ArgumentParser
 from subprocess import call, check_call, STDOUT
 import fnmatch
@@ -683,7 +683,7 @@ def plugin_install(parser, options, args=None, capture=None):
             owner = options.owner
         else:
             owner = 'OpenMDAO-Plugins'
-            
+
         #Get everything from OpenMDAO-Plugins
         plugin_url = "https://api.github.com/orgs/{owner}/repos?type=public"
         plugin_url = plugin_url.format(owner=owner)
@@ -693,21 +693,22 @@ def plugin_install(parser, options, args=None, capture=None):
            text = json.loads(line)
            for item in sorted(text):
                custom_github_plugins.append(item['name'])
-               
+
         for plugin in custom_github_plugins:
             try:
                 print "Installing plugin:", plugin
                 _github_install(plugin, options.findlinks, owner)
             except Exception:
                traceback.print_exc()
-                   
+
     elif options.owner:
         #Get specified plugin from owner
         _github_install(options.dist_name, options.findlinks, options.owner)
-        
-        
+
+
     else:  # Install plugin from local file or directory
         develop = False
+
         if not options.dist_name:
             print "installing distribution from current directory as a 'develop' egg"
             develop = True
@@ -732,44 +733,14 @@ def plugin_install(parser, options, args=None, capture=None):
         if retcode:
             sys.stderr.write("\nERROR: command '%s' returned error code: %s\n"
                              % (cmd, retcode))
-            return -1   
-            
+            return -1
+
     return 0
-    ##########
-
-    # # Interact with github (but not when testing).
-    # if options.owner or options.all:  # pragma no cover
-    #     plugin_url = 'https://api.github.com/orgs/%s/repos?type=public' % owner
-    #     github_plugins = []
-
-    #     if options.all:
-    #         #go get names of all the github plugins
-    #         plugin_page = urllib2.urlopen(plugin_url)
-    #         for line in plugin_page.fp:
-    #             text = json.loads(line)
-    #             for item in sorted(text):
-    #                 github_plugins.append(item['name'])
-
-    #     else:
-    #         #just use the name of the specific plugin requested
-    #         github_plugins.append(options.dist_name)
-
-    #     for plugin in github_plugins:
-    #         try:
-    #             print "Installing plugin:", plugin
-    #             _github_install(plugin, options.findlinks)
-    #         except Exception:
-    #             traceback.print_exc()
-
-    
-
-
-
 
 def _github_install(dist_name, findLinks, owner):
     # Get plugin from github.
     #FIXME: this should support all valid version syntax (>=, <=, etc.)
-    
+
     pieces = dist_name.split('==')
     name = pieces[0]
 
@@ -807,7 +778,7 @@ def _github_install(dist_name, findLinks, owner):
             print "You may want to contact the repository owner to create a tag."
             print "Grabbing the most recent version of default branch instead..."
             #return -1
-        
+
         if tags:
             version = tags[-1]
             url = 'https://nodeload.github.com/%s/%s/tarball/%s' \
@@ -815,18 +786,18 @@ def _github_install(dist_name, findLinks, owner):
         else:
             url = 'https://api.github.com/repos/{owner}/{repo}/tarball'
             url = url.format(owner=owner, repo=dist_name)
-            
+
             resp = requests.get(url, allow_redirects=False)
-            
+
             if resp.status_code == 302:
                 version = resp.headers['location'].split('/')[-1]
-                
+
             else:
                 print "\nERROR: plugin named '%s' not found in %s" % (name, owner)
-                return -1    
-            
+                return -1
+
     print url
-            
+
     build_docs_and_install(owner, name, version, findLinks)
 
 def _bld_sdist_and_install(deps=True):
@@ -870,26 +841,43 @@ def build_docs_and_install(owner, name, version, findlinks):  # pragma no cover
         os.chdir(files[0])  # should be in distrib directory now
 
         cfg = SafeConfigParser(dict_type=OrderedDict)
-        
-        import pdb;pdb.set_trace()
+
         try:
             cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
+
+        except IOError as io_error:
+            raise IOError, \
+                "OpenMDAO plugins must have a setup.cfg: {}".format(io_error), \
+                sys.exc_info()[2]
+
+        try:
             reqs = cfg.get('metadata', 'requires-dist').strip()
             reqs = reqs.replace(',', ' ')
             reqs = [n.strip() for n in reqs.split()]
-    
-        except (IOError, NoOptionError):
+
+            try:
+                flinks = cfg.get('easy_install', 'find_links').strip()
+                flinks = flinks.split('\n')
+                flinks = [n.strip() for n in flinks]
+
+                flinks.append(findlinks)
+
+                findlinks = ' '.join(flinks)
+
+            except (NoSectionError, NoOptionError):
+                pass
+
+        except NoOptionError:
             # couldn't find requires-dist in setup.cfg, so
             # create an sdist so we can query metadata for distrib dependencies
             tarname = _bld_sdist_and_install(deps=False)
-    
+
             # now find any dependencies
             metadict = get_metadata(tarname)
             reqs = metadict.get('requires', [])
 
         # install dependencies (some may be needed by sphinx)
         ws = WorkingSet()
-        pdb.set_trace()
         for r in reqs:
             print "Installing dependency '%s'" % r
             req = Requirement.parse(r)
