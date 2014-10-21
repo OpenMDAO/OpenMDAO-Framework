@@ -407,9 +407,9 @@ class System(object):
         inputs = set()
         for system in self.simple_subsystems():
             try:
-                inputs.update(['.'.join((system.name,s))
-                                  for s in system._comp.list_states()
-                                  if system._comp.eval_only is False])
+                if system._comp.eval_only is False:
+                    inputs.update(['.'.join((system.name,s))
+                                      for s in system._comp.list_states()])
             except AttributeError:
                 pass
 

@@ -2714,32 +2714,32 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        top.driver.workflow = Dataflow()
+        top.driver.workflow.clear()
         top.driver.workflow.add('c2')
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+        J = top.driver.calc_gradient(inputs=[('c2.a', 'c2.b')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
         top.disconnect('c1.y', 'c2.b')
         top.c2.b = array([0.0, 0.0, 0.0, 0.0])
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
         assert_rel_error(self, J[0, 1], 4.0, .001)
@@ -2753,9 +2753,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.comp1.x = zeros((3, 2))
         try:
-            J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')],
-                                                  outputs=['comp1.y'],
-                                                  mode='forward')
+            J = top.driver.calc_gradient(inputs=[('comp1.x')],
+                                         outputs=['comp1.y'],
+                                         mode='forward')
         except RuntimeError as err:
             msg = 'comp1: Jacobian is the wrong size. Expected (4x6) but got (4x4)'
             self.assertEqual(str(err), msg)

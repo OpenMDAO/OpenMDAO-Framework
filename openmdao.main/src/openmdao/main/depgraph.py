@@ -1274,7 +1274,8 @@ def get_node_boundary(g, nodes):
 
 def collapse_nodes(g, collapsed_name, nodes, remove=True):
     """Collapse the given set of nodes into a single
-    node with the specified name.
+    node with the specified name. The node for the collapsed
+    name must be preexisting.
     """
     in_edges, out_edges = \
                   get_edge_boundary(g, nodes)
@@ -1311,15 +1312,29 @@ def collapse_driver(g, driver, excludes=()):
 
 def internal_nodes(g, comps):
     """Returns a set of nodes containing the given component
-    nodes, plus any variable nodes between them.
+    nodes, plus any variable nodes between them that are not 
+    connected to any external nodes.
     """
     nodes = set(comps)
-    for comp1 in comps:
-        for comp2 in comps:
-            if comp1 != comp2:
-                outs1 = set([v for u,v in g.edges_iter(comp1)])
-                ins2 = set([u for u,v in g.in_edges_iter(comp2)])
-                nodes.update(outs1.intersection(ins2))
+    ins = set()
+    outs = set()
+
+    for comp in comps:
+        outs.update(g.successors_iter(comp))
+        ins.update(g.predecessors_iter(comp))
+
+    inner = outs.intersection(ins)
+    
+    to_remove = set()
+    for var in inner:
+        if set(g.successors(var)).difference(nodes):
+            to_remove.add(var)
+        if set(g.predecessors(var)).difference(nodes):
+            to_remove.add(var)
+    
+    inner = inner - to_remove
+
+    nodes.update(inner)
 
     return nodes
 
