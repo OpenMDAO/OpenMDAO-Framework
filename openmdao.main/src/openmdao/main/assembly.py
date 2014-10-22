@@ -825,15 +825,18 @@ class Assembly(Component):
                     path = prefix+name
                     if path in inputs:
                         continue  # Changing input.
+
+                    record_constant = False
                     for pattern in includes:
                         if fnmatch(path, pattern):
-                            break
-                    else:
-                        continue  # Not to be included.
-                    for pattern in excludes:
-                        if fnmatch(path, pattern):
-                            break  # Excluded.
-                    else:
+                            record_constant = True
+
+                    if record_constant:
+                        for pattern in excludes:
+                            if fnmatch(path, pattern):
+                                record_constant = False
+
+                    if record_constant:
                         val = getattr(obj, name)
                         if isinstance(val, VariableTree):
                             for path, val in self._expand_tree(path, val):

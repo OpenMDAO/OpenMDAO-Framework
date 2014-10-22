@@ -185,7 +185,7 @@ class Workflow(object):
                 if isinstance(name, tuple):
                     name = name[0]
                 path = prefix+name
-                if recording_options.save_problem_formulation or \
+                if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
@@ -196,7 +196,7 @@ class Workflow(object):
             for key, objective in driver.get_objectives().items():
                 name = objective.pcomp_name
                 path = prefix+name
-                if recording_options.save_problem_formulation or \
+                if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
                     outputs.append(name)
@@ -207,7 +207,7 @@ class Workflow(object):
             for key, response in driver.get_responses().items():
                 name = response.pcomp_name
                 path = prefix+name
-                if recording_options.save_problem_formulation or \
+                if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
                     outputs.append(name)
@@ -218,7 +218,7 @@ class Workflow(object):
             for con in driver.get_eq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if recording_options.save_problem_formulation or \
+                if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
@@ -226,7 +226,7 @@ class Workflow(object):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if recording_options.save_problem_formulation or \
+                if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     outputs.append(name)
@@ -257,8 +257,7 @@ class Workflow(object):
                 continue
             path = prefix+src
             if src not in inputs and src not in outputs and \
-               (recording_options.save_problem_formulation or
-                   self._check_path(path, includes, excludes)):
+               (save_problem_formulation or self._check_path(path, includes, excludes)):
                 self._rec_outputs.append(src)
                 outputs.append(src)
 
@@ -291,16 +290,20 @@ class Workflow(object):
     @staticmethod
     def _check_path(path, includes, excludes):
         """ Return True if `path` should be recorded. """
+        record = False
+
+        # first see if it's included
         for pattern in includes:
             if fnmatch(path, pattern):
-                break
-        else:
-            return False
+                record = True
 
-        for pattern in excludes:
-            if fnmatch(path, pattern):
-                return False
-        return True
+        # if it passes include filter, check exclude filter
+        if record:
+            for pattern in excludes:
+                if fnmatch(path, pattern):
+                    record = False
+
+        return record
 
     def _record_case(self, case_uuid, err):
         """ Record case in all recorders. """
