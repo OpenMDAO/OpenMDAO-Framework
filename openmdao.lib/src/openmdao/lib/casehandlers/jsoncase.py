@@ -31,6 +31,8 @@ class _BaseRecorder(object):
         self._cfg_map = {}
         self._uuid = None
         self._cases = None
+        
+        self._last_child_case_uuids = {} # keyed by driver id qqq
 
     def startup(self):
         """ Prepare for new run. """
@@ -167,9 +169,15 @@ class _BaseRecorder(object):
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
+        subdriver_last_case_uuids = {}
+        for subdriver in driver.subdrivers():
+            subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
+        self._last_child_case_uuids[ id(driver) ] = case_uuid
+        
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
                     _driver_id=id(driver),
+                    subdriver_last_case_uuids = subdriver_last_case_uuids,
                     error_status=None,
                     error_message=str(exc) if exc else '',
                     timestamp=time.time(),
