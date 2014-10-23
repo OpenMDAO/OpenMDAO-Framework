@@ -503,6 +503,8 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.workflow.add(['comp1', 'comp2'])
         model.comp1.eval_only = False
         model.comp2.eval_only = False
+        model.comp1.force_fd = False
+        model.comp2.force_fd = False
 
         #model.connect('comp1.x', 'comp2.x')
         #model.connect('comp1.y', 'comp2.y')
