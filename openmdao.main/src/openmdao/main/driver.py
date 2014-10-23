@@ -79,6 +79,7 @@ class GradientOptions(VariableTree):
                                 "are equal, then forward direction is used.",
                                 framework_var=True)
 
+
 @add_delegate(HasEvents)
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
@@ -308,7 +309,7 @@ class Driver(Component):
         super(Driver, self).run(ffd_order, case_uuid)
 
     @rbac(('owner', 'user'))
-    def configure_recording(self, recording_options):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         return self.workflow.configure_recording(recording_options)
@@ -428,4 +429,3 @@ class Driver(Component):
                     'interfaces': inames,
                 })
         return ret
-

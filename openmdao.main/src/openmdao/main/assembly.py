@@ -766,7 +766,7 @@ class Assembly(Component):
 
         self._depgraph.update_boundary_outputs(self)
 
-    def configure_recording(self, recording_options=None, inputs=None):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         if self.parent is None:

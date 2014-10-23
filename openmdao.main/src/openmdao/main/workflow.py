@@ -158,15 +158,18 @@ class Workflow(object):
             # the parts of the tuple.
             raise err[0], err[1], err[2]
 
-    def configure_recording(self, recording_options):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
 
-        save_problem_formulation = recording_options.save_problem_formulation
-        includes = recording_options.includes
-        excludes = recording_options.excludes
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
 
-        if not save_problem_formulation and not includes:
+        if not recording_options or not (save_problem_formulation or includes):
             self._rec_required = False
             return (set(), dict())
 

@@ -39,6 +39,15 @@ class RecordingOptionsTestCase(unittest.TestCase):
             else:
                 self.assertEqual(lines[i].rstrip(), expected[i])
 
+    def test_no_recorder(self):
+        """ verify recording options are ignored if there are no recorders
+            (i.e. the Assembly runs without errors)
+        """
+        self.top.recorders = []
+        self.top.run()
+        self.assertEqual(self.top.comp1.z, 0.0)
+        self.assertEqual(self.top.comp2.z, 1.0)
+
     def test_default_options(self):
         """ verify default options:
                 save_problem_formulation = True
@@ -126,7 +135,7 @@ Case:
     def test_includes_only(self):
         """ verify options with includes but not problem formulation:
                 save_problem_formulation = False
-                includes = ['comp2']
+                includes = ['comp2*']
                 excludes = []
         """
         sout = StringIO.StringIO()
@@ -198,7 +207,7 @@ Case:
         """ verify options with includes and excludes (excludes are processed after includes):
                 save_problem_formulation = True
                 includes = ['comp1']
-                excludes = ['*exec_count']
+                excludes = ['*directory', '*force_fd', '*missing_deriv_policy']
         """
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]

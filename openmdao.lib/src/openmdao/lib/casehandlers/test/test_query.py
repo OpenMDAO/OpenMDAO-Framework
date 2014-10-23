@@ -18,21 +18,21 @@ from openmdao.util.testutil import assert_rel_error
 
 
 class States(VariableTree):
-
     y = Array([0.0, 0.0])
 
-class Globals(VariableTree):
 
+class Globals(VariableTree):
     z1 = Float(0.0)
     z2 = Float(0.0)
 
-class Half(Component):
 
-    z2a = Float(0.0, iotype = 'in')
-    z2b = Float(0.0, iotype = 'out')
+class Half(Component):
+    z2a = Float(0.0, iotype='in')
+    z2b = Float(0.0, iotype='out')
 
     def execute(self):
         self.z2b = 0.5*self.z2a
+
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -92,7 +92,7 @@ class SellarMDF(Assembly):
 
         # Add Parameters to optimizer
         self.driver.add_parameter('sub.globals.z1', low=-10.0, high=10.0)
-        self.driver.add_parameter('half.z2a', low= 0.0,  high=10.0)
+        self.driver.add_parameter('half.z2a', low=0.0, high=10.0)
         self.driver.add_parameter('sub.x1', low=0.0, high=10.0)
 
         # Optimization parameters
@@ -118,7 +118,7 @@ def create_files():
 class TestCase(unittest.TestCase):
 
     def setUp(self):
-        create_files()  # Uncomment to create 'sellar.new'
+        # create_files()  # Uncomment to create 'sellar.new'
         path = os.path.join(os.path.dirname(__file__), 'sellar.json')
         self.cds = CaseDataset(path, 'json')
 
@@ -367,4 +367,3 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
