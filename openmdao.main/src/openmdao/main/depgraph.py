@@ -444,17 +444,65 @@ class DependencyGraph(nx.DiGraph):
 
         self.add_node(subvar, basevar=base, **self.node[base])
         if is_boundary_node(self, base):
-            u, v = base, subvar
+            if is_input_node(self, base):
+                self.add_edge(base, subvar)
+            else:
+                self.add_edge(subvar, base)
         else: # it's a var of a child component
-            u, v = subvar, base
-
-        if is_input_node(self, base):
-            self.add_edge(u, v)
-        else:
-            self.add_edge(v, u)
+            if is_input_node(self, base):
+                self.add_edge(subvar, base)
+            else:
+                self.add_edge(base, subvar)
 
         return subvar
 
+    def add_connected_subvar(self, subvar):
+        """ Adds a subvar node to the graph, properly connecting
+        it to its basevar and to anything that its basevar is connected to.
+        """
+        base = base_var(self,subvar)
+        if base not in self:
+            raise RuntimeError("can't find basevar '%s' in graph" % base)
+        elif subvar in self:
+            # adding something that's already there
+            return subvar
+
+        diff = subvar[len(base):]
+        
+        self.add_node(subvar, basevar=base, **self.node[base])
+        if is_boundary_node(self, base):
+            if is_input_node(self, base):
+                #self.add_edge(base, subvar)
+                for s in self.successors(base):
+                    if s == subvar or base_var(self, s) == base:
+                        continue
+                    self.add_subvar(s+diff)
+                    self.add_edge(subvar, s+diff, conn=True)
+            else:
+                #self.add_edge(subvar, base)
+                for p in self.predecessors(base):
+                    if p == subvar or base_var(self, p) == base:
+                        continue
+                    self.add_subvar(p+diff)
+                    self.add_edge(p+diff, subvar, conn=True)
+        else: # it's a var of a child component
+            if is_input_node(self, base):
+                #self.add_edge(subvar, base)
+                for p in self.predecessors(base):
+                    if p == subvar or base_var(self, p) == base:
+                        continue
+                    self.add_subvar(p+diff)
+                    self.add_edge(p+diff, subvar, conn=True)
+            else:
+                #self.add_edge(base, subvar)
+                for s in self.successors(base):
+                    if s == subvar or base_var(self, s) == base:
+                        continue
+                    self.add_subvar(s+diff)
+                    self.add_edge(subvar, s+diff, conn=True)
+        
+        return subvar
+    
     def disconnect(self, srcpath, destpath=None):
 
         if destpath is None:

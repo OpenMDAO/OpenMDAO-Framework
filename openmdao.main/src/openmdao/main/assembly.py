@@ -1500,9 +1500,9 @@ class Assembly(Component):
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
 
-            # keep all boundary inputs/outputs, even if they're not connected
-            keep.update(self._flat(self.list_inputs()))
-            keep.update(self._flat(self.list_outputs()))
+            ## keep all boundary inputs/outputs, even if they're not connected
+            #keep.update(self._flat(self.list_inputs()))
+            #keep.update(self._flat(self.list_outputs()))
 
             if inputs is None:
                 inputs = list(ddests)
@@ -1524,14 +1524,36 @@ class Assembly(Component):
             if outputs is None:
                 outputs = dsrcs
 
+            dgraph = self._explode_vartrees(dgraph)
+            
+            # add any variables requested that don't exist in the graph
+            for inp in inputs:
+                if inp not in dgraph:
+                    base = base_var(dgraph, inp)
+                    for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
+                        if base_var(dgraph, n) != base:
+                            keep.add(base)
+                    dgraph.add_connected_subvar(inp)
+                    
+            for out in outputs:
+                if out not in dgraph:
+                    base = base_var(dgraph, out)
+                    for n in chain(dgraph.successors(base), dgraph.predecessors(base)):
+                        if base_var(dgraph, n) != base:
+                            keep.add(base)
+                    dgraph.add_connected_subvar(out)
+                    
             dgraph = relevant_subgraph(dgraph, inputs, outputs,
                                        keep)
+            
             keep.update(inputs)
             keep.update(outputs)
+        else:
+            dgraph = self._explode_vartrees(dgraph)
 
         fix_state_connections(self, dgraph)
 
-        dgraph = self._explode_vartrees(dgraph)
+        #dgraph = self._explode_vartrees(dgraph)
 
         add_boundary_comps(dgraph)
 
