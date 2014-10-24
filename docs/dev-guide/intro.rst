@@ -78,7 +78,8 @@ compilers.
 
          XCode's *Downloads* Screen     
 
-    - `gfortran 4.6.2 <http://quatramaran.ens.fr/~coudert/gfortran/gfortran-4.6.2-x86_64-Lion.dmg>`_, or use Homebrew 
+    - As mentioned previously, you may install and use the package manager `Homebrew <http://www.thisisthegreenroom.com/2011/installing-python-numpy-scipy-matplotlib-and-ipython-on-lion/>`_.
+     
 
 
   - On **Leopard:**

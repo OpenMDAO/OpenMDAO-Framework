@@ -66,7 +66,7 @@ use it, you must have compilers (C and Fortran) on your system.
   - python-matplotlib
 
   - gfortran
-  
+ 
 
 .. note::   
 
@@ -103,7 +103,7 @@ use it, you must have compilers (C and Fortran) on your system.
 
     **Please note**: Some users have reported that this method of installation may somehow uninstall
     Matplotlib. In the event that occurs, you may have to install `Matplotlib
-    <http://sourceforge.net/projects/matplotlib/files/matlab>`__ in the same fashion as the packages above. 
+    <http://sourceforge.net/projects/matplotlib/files/>`__ in the same fashion as the packages above. 
 
 
 **Windows**: 
