@@ -156,3 +156,13 @@ def base_var(g, node):
             return base
 
     return '.'.join(parts[:2])
+
+
+def fix_single_tuple(x):
+    """For scalar x, return x. For 1 element tuple, return x[0].
+    For multi-element tuple, return x.
+    """
+    if isinstance(x, tuple):
+        if len(x) == 1:
+            return x[0]
+    return x

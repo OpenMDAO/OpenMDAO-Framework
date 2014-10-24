@@ -289,8 +289,8 @@ class PseudoComponent(object):
             scope.connect(src, dest)
 
         if driver is not None:
-            scope._depgraph.add_edge(self.name+'.out0', driver.name,
-                                     drv_conn=driver.name)
+            scope._depgraph.add_driver_input(driver.name, 
+                                             self.name+'.out0')
 
     def run(self, ffd_order=0, case_uuid=''):
         if self._negate:
@@ -387,6 +387,9 @@ class PseudoComponent(object):
 
     def pre_setup(self):
         self.ensure_init()
+
+    def setup_depgraph(self, dgraph):
+        pass
 
     def setup_systems(self):
         return ()

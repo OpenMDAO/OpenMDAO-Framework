@@ -150,8 +150,12 @@ class System(object):
         all_outs.update(pure_outs)
 
         # get our input nodes from the depgraph
-        self._in_nodes, _ = get_node_boundary(graph, all_outs)
+        ins, _ = get_node_boundary(graph, all_outs)
         
+        # filter out any comps labeled as inputs. this happens when multiple comps
+        # output the same variable
+        self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+                
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
@@ -183,6 +187,9 @@ class System(object):
             return self.find(ident)
         else:
             return self.subsystems()[ident]
+
+    def is_opaque(self):
+        return False
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
@@ -359,11 +366,12 @@ class System(object):
         inputs = set()
         bases = set()
         for system in self.simple_subsystems():
+            comps = set(simple_node_iter(system._nodes))
             for tup in system._in_nodes:
                 seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
                 for dest in tup[1]:
                     comp = dest.split('.', 1)[0]
-                    if comp not in seen and comp in system._nodes:
+                    if comp not in seen and comp in comps:
                         inputs.add(dest)
                         base = base_var(self.scope._depgraph, dest)
                         if base == dest:
@@ -398,24 +406,28 @@ class System(object):
 
             unignored_inputs.append(name)
 
+        #print "%s inputs: %s" % (self.name, unignored_inputs)
         return unignored_inputs
 
     def list_states(self):
         """Returns names of states (not collapsed edges) from this System and
         all of its children.
         """
-        inputs = set()
+        states = set()
         for system in self.simple_subsystems():
             try:
                 if system._comp.eval_only is False:
-                    inputs.update(['.'.join((system.name,s))
+                    states.update(['.'.join((system.name,s))
                                       for s in system._comp.list_states()])
             except AttributeError:
                 pass
 
         top = self.scope
-        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
-                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+        states = [i for i in states if top.name2collapsed[i] in top._system.vector_vars
+                    and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+
+        #print "%s states: %s" % (self.name, states)
+        return states
 
     def list_outputs(self):
         """Returns names of output variables (not collapsed edges)
@@ -432,14 +444,18 @@ class System(object):
                 pass
             out_nodes = [node for node in system._out_nodes \
                          if node not in self._mapped_resids]
+            comps = set(simple_node_iter(system._nodes))
             for src, _ in out_nodes:
                 parts = src.split('.', 1)
-                if parts[0] in system._nodes and src not in states:
+                if parts[0] in comps and src not in states:
                     outputs.append(src)
 
         top = self.scope
-        return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
-                   and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
+        outputs = [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
+                     and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
+
+        #print "%s outputs: %s" % (self.name, outputs)
+        return outputs
 
     def list_residuals(self):
         """Returns names of all residuals.
@@ -454,6 +470,7 @@ class System(object):
                 pass
 
         outputs.extend([n for n, m in self._mapped_resids.keys()])
+        #print "%s residuals: %s" % (self.name, outputs)
         return outputs
 
     def get_size(self, names):
@@ -690,15 +707,17 @@ class System(object):
             world_rank = MPI.COMM_WORLD.rank
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'OpaqueDriverSystem': 'drv',
+                     'SimpleSystem': 'simp', 'FiniteDiffDriverSystem': 'drv',
                      'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', } #'InnerAssemblySystem': 'inner'}
+                     'AssemblySystem': 'asm', } 
+
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
+        klass = self.__class__.__name__
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                                          (name_map[self.__class__.__name__],
+                                          (name_map.get(klass, klass.lower()[:3]),
                                            self.get_req_cpus(),
                                            world_rank,
                                            self.vec['u'].array.size,
@@ -735,8 +754,11 @@ class System(object):
             stream.write("%s --> %s\n" % (src, dest))
 
         nest += 4
-        for sub in self.local_subsystems():
-            sub.dump(nest, stream)
+        if isinstance(self, OpaqueSystem):
+            self._inner_system.dump(nest, stream)
+        else:
+            for sub in self.local_subsystems():
+                sub.dump(nest, stream)
 
         return stream.getvalue() if getval else None
 
@@ -904,7 +926,8 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
-        self.set_options(self.mode, options)
+        if options is not None:
+            self.set_options(self.mode, options)
         self.initialize_gradient_solver()
 
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
@@ -1081,7 +1104,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, (SolverSystem, OpaqueDriverSystem)):
+            if not isinstance(self, (SolverSystem, FiniteDiffDriverSystem)):
                 for name in to_remove:
                     del self.variables[name]
 
@@ -1220,9 +1243,6 @@ class VarSystem(SimpleSystem):
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
-        """ Evalutes a component's residuals without invoking its
-        internal solve (for implicit comps.)
-        """
         pass
 
     def applyJ(self, variables):
@@ -1241,9 +1261,9 @@ class ParamSystem(VarSystem):
     def applyJ(self, variables):
         """ Set to zero """
         if self.vector_vars: # don't do anything if we don't own our output
-            # mpiprint("param sys %s: adding %s to %s" %
-            #                 (self.name, self.sol_vec[self.name],
-            #                     self.rhs_vec[self.name]))
+            #mpiprint("param sys %s: adding %s to %s" %
+                            #(self.name, self.sol_vec[self.name],
+                                #self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1270,9 +1290,9 @@ class InVarSystem(VarSystem):
         # don't do anything if we are not requesting this invar
         if self.variables and \
            self.scope.name2collapsed.get(self.name) in variables:
-            # mpiprint("param sys %s: adding %s to %s" %
-            #                 (self.name, self.sol_vec[self.name],
-            #                     self.rhs_vec[self.name]))
+            #mpiprint("invar sys %s: adding %s to %s" %
+                            #(self.name, self.sol_vec[self.name],
+                                #self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1326,6 +1346,9 @@ class AssemblySystem(SimpleSystem):
     def __init__(self, scope, graph, name):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
+
+    def is_opaque(self):
+        return True
 
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
@@ -1388,7 +1411,7 @@ class AssemblySystem(SimpleSystem):
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=self.options)
 
-        #print self.J
+        #print inputs, outputs, self.J
 
     #def applyJ(self, variables):
         #""" Call into our assembly's top ApplyJ to get the matrix vector
@@ -1457,7 +1480,7 @@ class CompoundSystem(System):
     def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope,
                                              graph,
-                                             get_full_nodeset(scope, subg.nodes()),
+                                             subg.nodes(), #get_full_nodeset(scope, subg.nodes()),
                                              name)
         self.driver = None
         self.graph = subg
@@ -1756,31 +1779,24 @@ class ParallelSystem(CompoundSystem):
             return []
 
 
-class OpaqueSystem(CompoundSystem):
+class OpaqueSystem(SimpleSystem):
     """A system with an external interface like that
     of a simple system, but encapsulating a compound
     system.
     """
     def __init__(self, scope, graph, subg, name):
-        # for now, just create an internal SerialSystem
-        super(OpaqueSystem, self).__init__(scope, graph, subg, name)
+        nodes = set(subg.nodes())
+        
+        # take the graph we're given, collapse our nodes into a single
+        # node, and create a simple system for that
+        ograph = graph.subgraph(graph.nodes_iter())
+        int_nodes = internal_nodes(ograph, nodes)
+        ograph.add_node(tuple(nodes), comp='opaque')
+        collapse_nodes(ograph, tuple(nodes), int_nodes)
+        
+        super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
-        graph = graph.subgraph(graph.nodes_iter())
-
-        nodes = internal_nodes(graph, subg.nodes())
-
-        # Out local outputs must only include the nodes on the boundary.
-        ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
-
-        # Some interior nodes may also have a connection that we don't want
-        # to lose:
-        int_out_nodes = []
-        for node in self._out_nodes:
-            target_comps = [x.partition('.')[0] for x in node[1] if '.' in x]
-            if len(target_comps)> 1 and any(target_comps) not in nodes:
-                int_out_nodes.append(node)
-
-        graph = graph.subgraph(nodes)
+        graph = graph.subgraph(int_nodes)
 
         srcs = sorted([(node[0], node) for node in self._in_nodes])
 
@@ -1800,10 +1816,6 @@ class OpaqueSystem(CompoundSystem):
 
             if src in graph:
                 graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
-                nodes.add(src)
-            nodes.add(node)
-
-        self.out_nodes = ext_out_nodes + int_out_nodes
 
         self._inner_system = SerialSystem(scope, graph,
                                           reduced2component(graph),
@@ -1811,6 +1823,9 @@ class OpaqueSystem(CompoundSystem):
 
         self._inner_system._provideJ_bounds = None
         self._comp = None
+
+    def is_opaque(self):
+        return True
 
     def inner(self):
         return self._inner_system
@@ -1836,11 +1851,11 @@ class OpaqueSystem(CompoundSystem):
         # This was needed for the case where you regenerate the system
         # hierarchy on the first calc_gradient call.
         inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope,
-                               self._inner_system.list_inputs() + \
-                               self._inner_system.list_states() +\
-                               self._inner_system.list_outputs() +
-                               self._inner_system.list_residuals())
+        inner_u.set_from_scope(self.scope)#,
+                               #self._inner_system.list_inputs() + \
+                               #self._inner_system.list_states() +\
+                               #self._inner_system.list_outputs() +
+                               #self._inner_system.list_residuals())
 
     def setup_scatters(self):
         super(OpaqueSystem, self).setup_scatters()
@@ -1865,8 +1880,12 @@ class OpaqueSystem(CompoundSystem):
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
-        for item in self.list_outputs():
-            self_u[item][:] = inner_u[item][:]
+        #for item in self.list_outputs():
+            #self_u[item][:] = inner_u[item][:]
+        for name, val in inner_u.items():
+            if name in self_u:
+                self_u[name][:] = val
+
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1943,23 +1962,20 @@ class OpaqueSystem(CompoundSystem):
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-class OpaqueDriverSystem(SimpleSystem):
+class FiniteDiffDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, graph, driver):
         scope = driver.parent
-        super(OpaqueDriverSystem, self).__init__(scope, graph, driver.name)
+        super(FiniteDiffDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
-        super(OpaqueDriverSystem, self).setup_communicators(comm)
+        super(FiniteDiffDriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
-    # FIXME: I'm inconsistent in the way that base methods are handled.  The System
-    # base class should call setup methods on subsystems or local_subsystems in
-    # order to avoid overriding setup methods like this one in derived classes.
     def setup_scatters(self):
-        #super(OpaqueDriverSystem, self).setup_scatters()
+        #super(FiniteDiffDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
 
@@ -2136,7 +2152,7 @@ def _create_simple_sys(scope, graph, name):
         if comp.__class__ == Driver:
             sub = TransparentDriverSystem(graph, comp)
         else:
-            sub = OpaqueDriverSystem(graph, comp)
+            sub = FiniteDiffDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, graph, name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
@@ -2257,4 +2273,3 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
-

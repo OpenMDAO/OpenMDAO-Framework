@@ -264,7 +264,7 @@ class TestFiniteDifference(unittest.TestCase):
                                      mode='forward')
 
         self.assertTrue(len(top.driver.workflow._system.subsystems()) == 4)
-        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2].graph)
+        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2]._nodes)
         self.assertTrue(len(comp_list) == 3)
         self.assertTrue('comp2' in comp_list)
         self.assertTrue('comp3' in comp_list)
@@ -280,7 +280,7 @@ class TestFiniteDifference(unittest.TestCase):
                                      mode='forward')
 
         self.assertTrue(len(top.driver.workflow._system.subsystems()) == 6)
-        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2].graph)
+        comp_list = simple_node_iter(top.driver.workflow._system.subsystems()[2]._nodes)
         self.assertTrue(len(comp_list) == 1)
         self.assertTrue('comp2' in comp_list)
 

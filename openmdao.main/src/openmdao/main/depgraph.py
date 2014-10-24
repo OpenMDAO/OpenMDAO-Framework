@@ -17,7 +17,7 @@ from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val, flattened_size
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
-from openmdao.util.graph import list_deriv_vars, base_var
+from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -720,6 +720,10 @@ class DependencyGraph(nx.DiGraph):
 
             for group in loops:
                 _break_loop(csub, group)
+                
+        # get rid of any self loops
+        to_remove = [(u,v) for u,v in csub.edges() if u == v]
+        csub.remove_edges_from(to_remove)
 
         return nx.topological_sort(csub)
 
@@ -887,6 +891,81 @@ class DependencyGraph(nx.DiGraph):
         to_remove = [v for v in self.nodes_iter()
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
+
+    def get_pruned(self):
+        """Return a copy of the graph with all unconnected 
+        var nodes (except states) removed.
+        """
+        g = self.subgraph(self.nodes_iter())
+
+        for node, data in g.nodes(data=True):
+            if 'comp' in data:
+                for base_in in g.predecessors(node):
+                    if not (g.node[base_in].get('basevar') or g.node[base_in].get('iotype') == 'state'):
+                        if g.in_degree(base_in) == 0 and g.out_degree(base_in) == 1:
+                            g.remove_node(base_in)
+
+                for base_out in g.successors(node):
+                    if not (g.node[base_out].get('basevar') or g.node[base_out].get('iotype') == 'state'):
+                        if g.in_degree(base_out) == 1 and g.out_degree(base_out) == 0:
+                            g.remove_node(base_out)
+
+            elif 'boundary' in data:
+                if g.degree(node) == 0:
+                    g.remove_node(node)
+
+        return g
+
+    def add_param(self, drvname, param):
+
+        if drvname:
+            param = fix_single_tuple(param)
+            if isinstance(param, tuple):
+                self.add_edge(drvname, self.add_subvar(param[0]),
+                              drv_conn=drvname)
+
+                # now connect the first member of the param group as a 
+                # source for all of the other members
+                for i,p in enumerate(param[1:]):
+                    if self.has_edge(param[0], p):
+                        self[param[0]][p]['drv_conn'] = drvname
+                    else:
+                        self.add_edge(param[0], self.add_subvar(p),
+                                      conn=True, drv_conn_ext=drvname)
+            else:
+                self.add_edge(drvname, self.add_subvar(param),
+                              drv_conn=drvname)
+
+    def remove_param(self, drvname, param):
+        if drvname:
+            param = fix_single_tuple(param)
+
+            if isinstance(param, tuple):
+                self.remove_edge(drvname, param[0])
+
+                # now disconnect the first member of the param group 
+                # from all of the other members
+                for i,p in enumerate(param[1:]):
+                    ## if it was a connection before adding param,
+                    ## don't remove edge
+                    #if 'conn' in self[param[0]][p]:
+                    #    del self[param[0]][p]['drv_conn_ext']
+                    #else:
+                    self.remove_edge(param[0], p)
+            else:
+                self.remove_edge(drvname, param)
+
+    def add_driver_input(self, drvname, vname):
+        # use this to add driver connections from objectives
+        # and constraints to a driver
+
+        if drvname:
+            self.add_edge(self.add_subvar(vname), drvname, 
+                          drv_conn=drvname)
+
+    def remove_driver_input(self, drvname, vname):
+        if drvname:
+            self.remove_edge(vname, drvname)
 
     # The following group of methods are overridden so we can
     # call config_changed when the graph structure is modified
@@ -1301,11 +1380,66 @@ def collapse_nodes(g, collapsed_name, nodes, remove=True):
 def collapse_driver(g, driver, excludes=()):
     """For the given driver object, collapse the
     driver's iteration set nodes into a single driver
-    system node.
+    system node. (this only works on component graphs)
     """
     nodes = driver.get_full_nodeset()
     nodes.remove(driver.name)
     nodes = [n for n in nodes
+                if n not in excludes]
+
+    return collapse_nodes(g, driver.name, nodes)
+
+def collapse_subdrivers(g, names, subdrivers):
+    """collapse subdriver iteration sets into single nodes in a
+    reduced graph.
+    """
+    # collapse all subdrivers in our graph
+    itercomps = {}
+    itercomps['#parent'] = set(names)
+
+    for comp in subdrivers:
+        cnodes = set([c.name for c in comp.iteration_set()])
+        #if hasattr(comp, 'list_param_group_targets'):
+            #targs = []
+            #for p in comp.list_param_group_targets():
+                #if isinstance(p, tuple):
+                    #targs.append(p[0])
+                #else:
+                    #targs.append(p)
+            #cnodes.extend([t for t in targs if t in g])
+        itercomps[comp.name] = cnodes
+
+    for child_drv in subdrivers:
+        excludes = set()
+        for name, comps in itercomps.items():
+            if name != child_drv.name:
+                for cname in comps:
+                    if cname in itercomps[child_drv.name]:
+                        excludes.add(cname)
+
+        collapse_driver_reduced(g, child_drv, excludes)
+
+    # now remove any comps that are shared by subdrivers but are not found
+    # in our workflow
+    to_remove = set()
+    for name, comps in itercomps.items():
+        if name != '#parent':
+            for comp in comps:
+                if comp not in itercomps['#parent']:
+                    to_remove.add(comp)
+
+    g.remove_nodes_from(to_remove)
+
+def collapse_driver_reduced(g, driver, excludes=()):
+    """For the given driver object, collapse the
+    driver's iteration set nodes into a single driver
+    system node in a reduced graph.
+    """
+    excludes = set(excludes)
+    excludes.add(driver.name)
+    names = [c.name for c in driver.iteration_set()]
+    names.append(driver.name)
+    nodes = [n for n in internal_nodes(g, names)
                 if n not in excludes]
 
     return collapse_nodes(g, driver.name, nodes)
@@ -1425,8 +1559,10 @@ def _add_collapsed_node(g, src, dests):
         meta = g.node[dests[0]]
         newname = (dests[0], tuple(dests))
         src = src.split('@')[0]
+        drvsrc = src
     else:
         meta = g.node[src]
+        drvsrc = None
 
         for i, dest in enumerate(dests):
             if '@' in dest: # dest is a driver node
@@ -1471,7 +1607,10 @@ def _add_collapsed_node(g, src, dests):
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
-                g.add_edge(cname, newname)
+                if drvsrc == p:
+                    g.add_edge(cname, newname, drv_conn=drvsrc)
+                else:
+                    g.add_edge(cname, newname)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
@@ -1513,7 +1652,7 @@ def collapse_connections(orig_graph):
         if is_driver_node(g, u):
             drvconns[i] = ('%s@%s' % (u,v), v)
             dest2src[v] = drvconns[i][0]
-        else:
+        elif is_driver_node(g, v):
             drvconns[i] = (u, '%s@%s' % (v,u))
 
     for u,v in drvconns:
@@ -1668,6 +1807,8 @@ def relevant_subgraph(g, srcs, dests, keep=()):
         elif base in g:
             if node in srcs:
                 for s in g.successors(base):
+                    if base_var(g, s) == base:
+                        continue
                     dest = s+node[len(base):]
                     if dest not in g:
                         g.add_node(dest, basevar=s, **g.node[s])
@@ -1676,6 +1817,8 @@ def relevant_subgraph(g, srcs, dests, keep=()):
                     g.add_edge(base, node)
             else:
                 for p in g.predecessors(base):
+                    if base_var(g, p) == base:
+                        continue
                     src = p+node[len(base):]
                     if src not in g:
                         g.add_node(src, basevar=p, **g.node[p])
@@ -1765,7 +1908,7 @@ def get_reduced_subgraph(g, compnodes):
     to those nodes.
     """
     compset = set(compnodes)
-    vnodes = set([])
+    vnodes = set()
     edges = g.edges()
     vnodes.update([u for u,v in edges if v in compset])
     vnodes.update([v for u,v in edges if u in compset])
@@ -1875,26 +2018,6 @@ def connect_subvars_to_comps(g):
                         g.remove_edge(base_out, sub_out)
 
 
-def simple_prune(g):
-    """Remove all unconnected var nodes (except states).
-    """
-    for node, data in g.nodes(data=True):
-        if 'comp' in data:
-            for base_in in g.predecessors(node):
-                if not (g.node[base_in].get('basevar') or g.node[base_in].get('iotype') == 'state'):
-                    if g.in_degree(base_in) == 0 and g.out_degree(base_in) == 1:
-                        g.remove_node(base_in)
-
-            for base_out in g.successors(node):
-                if not (g.node[base_out].get('basevar') or g.node[base_out].get('iotype') == 'state'):
-                    if g.in_degree(base_out) == 1 and g.out_degree(base_out) == 0:
-                        g.remove_node(base_out)
-
-        elif 'boundary' in data:
-            if g.degree(node) == 0:
-                g.remove_node(node)
-
-
 def prune_framework_vars(g):
     g.remove_nodes_from([n for n,data in g.nodes_iter(data=True)
                                     if 'framework_var' in data])
@@ -1928,7 +2051,7 @@ def add_boundary_comps(g):
     g.add_node('#out', comp=True)
     
     for node, data in g.nodes_iter(data=True):
-        if 'boundary' in data and 'basevar' not in data:
+        if 'boundary' in data:# and 'basevar' not in data:
             if data['iotype'] == 'in':
                 g.add_edge('#in', node)
             elif data['iotype'] == 'out':
@@ -1937,56 +2060,62 @@ def add_boundary_comps(g):
     return g
         
 def collapse_comps(g, collapsed_name, comps):
-    nodes, in_vars, out_vars = comp_boundary(g, comps)
-
-    collapse_nodes(g, collapsed_name, nodes)
-
-    return in_vars, out_vars
-
-def comp_boundary(g, comps):
-    """Return the internal nodes, input nodes and
-    output nodes for the given group of comps.
-    """
-    nodes = comp_group_nodes(g, comps)
-    in_edges, out_edges = \
-                  get_edge_boundary(g, nodes)
-    in_vars = set([v for u,v in in_edges])
-    out_vars = set([u for u,v in out_edges])
-
-    nodes = nodes.difference(in_vars)
-    nodes = nodes.difference(out_vars)
-
-    return nodes, in_vars, out_vars
-
-def comp_group_nodes(g, comps):
-    """For a given list of comps, return those comps plus
-    all variable nodes that are connected to them.
-    """
-    nodes = set(comps)
-    for comp in comps:
-        nodes.update(g.predecessors(comp))
-        nodes.update(g.successors(comp))
-    return nodes
+    return collapse_nodes(g, collapsed_name, 
+                          internal_nodes(g, comps))
 
 def fix_dangling_vars(g):
     """If there are any dangling var nodes left in the
-    collapsed graph g, connect them to a dumbvar comp."""
+    collapsed graph g, connect them to a var comp.
+    """
     to_add = []
-    for node, data in g.nodes_iter(data=True):
+    for node, data in g.nodes(data=True):
         if 'comp' not in data:
             if g.in_degree(node) == 0:
-                to_add.append(('@in', node))
+                #to_add.append(('@in', node))
+                if data['iotype'] == 'in':
+                    newname = node[0]
+                else:
+                    newname = '@'+node[0]
+                to_add.append((newname, node))
+                g.add_node(newname, comp='invar')
             if g.out_degree(node) == 0:
-                to_add.append((node, '@out'))
+                #to_add.append((node, '@out'))
+                if data['iotype'] == 'out':
+                    newname = node[0]
+                else:
+                    newname = '@'+node[0]
+                to_add.append((node, newname))
+                g.add_node(newname, comp='outvar')
     
     if to_add:
-        g.add_nodes_from(['@in', '@out'], comp='dumbvar')
+        # g.add_node('@in', comp='invar')
+        # g.add_node('@out', comp='outvar')
         g.add_edges_from(to_add)
         
-    if g.degree('@out') == 0:
-        g.remove_node('@out')
+    # if g.degree('@out') == 0:
+    #     g.remove_node('@out')
         
-    if g.degree('@in') == 0:
-        g.remove_node('@in')
-        
-        
+    # if g.degree('@in') == 0:
+    #     g.remove_node('@in')
+
+def fix_duplicate_dests(g):
+    """If a dest has multiple sources, there will be multiple
+    varnodes for it in the reduced graph, so consolidate
+    those.
+    """
+    dests2node = {}
+    drivers = []
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' not in data:
+            dests2node.setdefault(node[1], set()).add(node)
+        elif is_driver_node(g, node):
+            drivers.append(node)
+                
+    to_add = set()
+    to_remove = set()
+    for drv in drivers:
+        for s in g.successors(drv):
+            if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in g:
+                g.remove_node(s)
+                        
+                

@@ -9,7 +9,7 @@ from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
-                                  OpaqueDriverSystem, TransparentDriverSystem
+                                  FiniteDiffDriverSystem, TransparentDriverSystem
 from openmdao.util.graph import base_var
 
 _cluster_count = 0
@@ -176,7 +176,7 @@ def write_system_dot(system, dotfile):
 def _dot_shape(system):
     if isinstance(system, AssemblySystem):
         return "box3d"
-    elif isinstance(system, OpaqueDriverSystem):
+    elif isinstance(system, FiniteDiffDriverSystem):
         return "invhouse"
     elif isinstance(system, TransparentDriverSystem):
         return "invhouse"

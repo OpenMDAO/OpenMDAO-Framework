@@ -2364,12 +2364,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 3)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
         self.assertTrue('comp3' in comp_list)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
         self.assertTrue(len(comp_list) == 1)
         self.assertTrue('comp5' in comp_list)
 
@@ -2392,7 +2392,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 5)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
@@ -2419,7 +2419,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 4)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
@@ -2446,7 +2446,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
         self.assertTrue(len(comp_list) == 2)
         self.assertTrue('comp2' in comp_list)
         self.assertTrue('comp4' in comp_list)
@@ -3023,7 +3023,7 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'],
                                               mode='forward')
 
-        print J
+        #print J
         # TODO: transform back to original coords
         #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
         #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
@@ -3057,7 +3057,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 82.0, 0.0001)
@@ -3080,7 +3080,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
@@ -3115,10 +3115,10 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
+        #print J
 
 
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
@@ -3155,7 +3155,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 475.0, 0.0001)

@@ -302,8 +302,8 @@ class FiniteDifference(object):
                     self.J[:, i] = Jfd
 
         # Restore final inputs/outputs.
-        self.system.vec['u'].set_from_array(self.y_base, self.outputs)
-        self.system.vec['u'].set_to_scope(self.scope)
+        uvec.set_from_array(self.y_base, self.outputs)
+        uvec.set_to_scope(self.scope)
 
         #print 'after FD', self.J
         return self.J
