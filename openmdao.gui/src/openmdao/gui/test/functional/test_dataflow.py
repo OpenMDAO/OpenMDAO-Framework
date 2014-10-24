@@ -634,16 +634,12 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
+        ['', ' recording_options', '', '',
+         'Case recording options (only valid at top level).'],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'excludes', '[]', '',
-         'Patterns for variables to exclude from the recorders'
-         ' (only valid at top level).'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'includes', "['*']", '',
-         'Patterns for variables to include in the recorders'
-         ' (only valid at top level).'],
         ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided'
          ' but some are missing'],

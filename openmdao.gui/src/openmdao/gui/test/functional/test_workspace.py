@@ -428,6 +428,7 @@ b = Float(0.0, iotype='out')
     # Clean up.
     closeout(project_dict, workspace_page)
 
+
 def _test_properties(browser):
     # Checks right-hand side properties display.
     project_dict, workspace_page = startup(browser)
@@ -642,12 +643,12 @@ def _test_console_errors(browser):
     editor = top.editor_page(double_click=False, base_type='Assembly')
     editor.move(-100, -40)  # Make viewable on small screen.
     inputs = editor.get_inputs()
+    inputs.rows[0].cells[1].click()
     inputs.rows[1].cells[2].click()
     inputs[1][2] = '42'  # 'excludes'
-    expected = "TraitError: The 'excludes' trait of an "     \
-               "Assembly instance must be a list of items "  \
-               "which are a legal value, but a value of 42 " \
-               "<type 'int'> was specified."
+    expected = "TraitError: The 'excludes' trait of a RecordingOptions instance" \
+               " must be a list of items which are any value, but a value of 42" \
+               " <type 'int'> was specified."
     time.sleep(0.5)
     assert workspace_page.history.endswith(expected)
     editor.close()

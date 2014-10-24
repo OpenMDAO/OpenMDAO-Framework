@@ -24,7 +24,7 @@ from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.datatypes.api import List, Slot, Bool, VarTree
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
@@ -114,6 +114,18 @@ def _find_common_interface(obj1, obj2):
     return None
 
 
+class RecordingOptions(VariableTree):
+    """Container for options that control case recording. """
+
+    save_problem_formulation = Bool(True, desc='Save problem formulation '
+                                               '(parameters, constraints, etc.)')
+
+    includes = List(['*'], desc='Patterns for variables to include in recording')
+
+    excludes = List([], desc='Patterns for variables to exclude from recording '
+                             '(processed after includes')
+
+
 class Assembly(Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
@@ -130,13 +142,8 @@ class Assembly(Component):
                      desc='Case recorders for iteration data'
                           ' (only valid at top level).')
 
-    includes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to include in the recorders'
-                         ' (only valid at top level).')
-
-    excludes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to exclude from the recorders'
-                         ' (only valid at top level).')
+    recording_options = VarTree(RecordingOptions(), iotype='in',
+                    desc='Case recording options (only valid at top level).')
 
     def __init__(self):
 
@@ -170,8 +177,7 @@ class Assembly(Component):
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
 
-        self.includes = ['*']
-        self.excludes = []
+        self.add('recording_options', RecordingOptions())
 
     @rbac(('owner', 'user'))
     def set_itername(self, itername, seqno=0):
@@ -763,17 +769,23 @@ class Assembly(Component):
 
         self._depgraph.update_boundary_outputs(self)
 
-    def configure_recording(self, includes=None, excludes=None, inputs=None):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         if self.parent is None:
             if self.recorders:
-                includes = self.includes
-                excludes = self.excludes
+                recording_options = self.recording_options
                 for recorder in self.recorders:
                     recorder.startup()
             else:
-                includes = excludes = None
+                recording_options = None
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
 
         # Determine (changing) inputs and outputs to record
         inputs = set()
@@ -781,12 +793,12 @@ class Assembly(Component):
         for name in self.list_containers():
             obj = getattr(self, name)
             if has_interface(obj, IDriver, IAssembly):
-                inps, consts = obj.configure_recording(includes, excludes)
+                inps, consts = obj.configure_recording(recording_options)
                 inputs.update(inps)
                 constants.update(consts)
 
         # If nothing to record, return after configuring workflows.
-        if not includes:
+        if not save_problem_formulation and not includes:
             return (inputs, constants)
 
         # Locate top level assembly.
@@ -816,15 +828,18 @@ class Assembly(Component):
                     path = prefix+name
                     if path in inputs:
                         continue  # Changing input.
+
+                    record_constant = False
                     for pattern in includes:
                         if fnmatch(path, pattern):
-                            break
-                    else:
-                        continue  # Not to be included.
-                    for pattern in excludes:
-                        if fnmatch(path, pattern):
-                            break  # Excluded.
-                    else:
+                            record_constant = True
+
+                    if record_constant:
+                        for pattern in excludes:
+                            if fnmatch(path, pattern):
+                                record_constant = False
+
+                    if record_constant:
                         val = getattr(obj, name)
                         if isinstance(val, VariableTree):
                             for path, val in self._expand_tree(path, val):
