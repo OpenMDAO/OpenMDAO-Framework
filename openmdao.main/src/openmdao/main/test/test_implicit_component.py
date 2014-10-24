@@ -248,7 +248,7 @@ class Coupled1(ImplicitWithSolver):
         self.res[1] = 2*x - 2*y + 4*z + 2
 
         self.y_out = c + x + y + z
-        print x, y, z, c, self.y_out, self.res
+        #print x, y, z, c, self.y_out, self.res
 
     def list_deriv_vars(self):
         return ('x', 'y', 'z', 'c'), ('res', 'y_out')
@@ -333,7 +333,7 @@ class Coupled2(ImplicitWithSolver):
         self.res[0] = -x + y/2. - z
 
         self.y_out = c + x + y + z
-        print x, y, z, c, self.y_out, self.res
+        #print x, y, z, c, self.y_out, self.res
 
     def provideJ(self):
         #partial w.r.t c
