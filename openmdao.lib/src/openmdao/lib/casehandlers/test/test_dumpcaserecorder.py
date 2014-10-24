@@ -148,9 +148,12 @@ Constants:
    driver.gradient_options.gmres_tolerance: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
+   uuid: 766f9b47-5bc0-11e4-803d-080027a1f086
+   timestamp: 1414184290.686166
    inputs:
       comp1.x: 0.0
    outputs:
@@ -164,9 +167,10 @@ Case:
       comp2.exec_count: 1
       comp2.itername: 1-comp2
       comp2.z: 1.0
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+"""
 
-#        print sout.getvalue()
+        # print sout.getvalue()
         expected = expected.split('\n')
         lines = sout.getvalue().split('\n')
         for i in range(len(expected)):

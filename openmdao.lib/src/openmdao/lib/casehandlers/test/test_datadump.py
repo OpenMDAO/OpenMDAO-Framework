@@ -140,6 +140,9 @@ Constants:
    nested.doublenest.driver.gradient_options.gmres_tolerance: 1e-09
    nested.doublenest.force_fd: False
    nested.doublenest.missing_deriv_policy: assume_zero
+   nested.doublenest.recording_options.excludes: []
+   nested.doublenest.recording_options.includes: ['*']
+   nested.doublenest.recording_options.save_problem_formulation: True
    nested.driver.directory:
    nested.driver.force_fd: False
    nested.driver.gradient_options.derivative_direction: auto
@@ -153,10 +156,16 @@ Constants:
    nested.driver.gradient_options.gmres_tolerance: 1e-09
    nested.force_fd: False
    nested.missing_deriv_policy: assume_zero
+   nested.recording_options.excludes: []
+   nested.recording_options.includes: ['*']
+   nested.recording_options.save_problem_formulation: True
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 87008694-e042-11e3-8005-005056000100
-   timestamp: 1400606208.869153
-   parent_uuid: 87001ef0-e042-11e3-8004-005056000100
+   uuid: d3f91eee-5bc0-11e4-8005-080027a1f086
+   timestamp: 1414184447.614453
+   parent_uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
    outputs:
       nested.doublenest.comp1.derivative_exec_count: 0
       nested.doublenest.comp1.exec_count: 1
@@ -172,9 +181,9 @@ Case:
       nested.doublenest.comp3.y1: 10101.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
-   uuid: 87001ef0-e042-11e3-8004-005056000100
-   timestamp: 1400606208.869368
-   parent_uuid: 870019e8-e042-11e3-8003-005056000100
+   uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
+   timestamp: 1414184447.614583
+   parent_uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
    outputs:
       nested.comp1.derivative_exec_count: 0
       nested.comp1.exec_count: 1
@@ -193,13 +202,14 @@ Case:
       nested.doublenest.itername: 1-nested.1-doublenest
       nested.driver.workflow.itername: 1-nested.1
 Case:
-   uuid: 870019e8-e042-11e3-8003-005056000100
-   timestamp: 1400606208.869599
+   uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
+   timestamp: 1414184447.614670
    outputs:
       driver.workflow.itername: 1
       nested.derivative_exec_count: 0
       nested.exec_count: 1
-      nested.itername: 1-nested"""
+      nested.itername: 1-nested
+"""
 
         expected = expected.split('\n')
         # print sout.getvalue()
@@ -311,9 +321,12 @@ Constants:
    driver.gradient_options.gmres_tolerance: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 0d85f3c5-e044-11e3-8001-005056000100
-   timestamp: 1400606864.054437
+   uuid: 0a159cf8-5bc1-11e4-8001-080027a1f086
+   timestamp: 1414184538.397483
    outputs:
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
@@ -323,10 +336,11 @@ Case:
       comp2.exec_count: 1
       comp2.itername: 1-comp2
       comp2.y1: 101.0
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -368,18 +382,23 @@ Constants:
    driver.gradient_options.gmres_tolerance: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 4f3ca163-e044-11e3-8002-005056000100
-   timestamp: 1400606974.301962
+   uuid: 22e98e75-5bc1-11e4-8002-080027a1f086
+   timestamp: 1414184580.050823
    outputs:
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
       comp1.string: Testing
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
