@@ -201,9 +201,12 @@ class Driver(Component):
         parameters and those referenced by objectives and/or constraints.
         """
         if self._required_compnames is None:
+            boundary_vars = self.parent.list_vars()
             conns = super(Driver, self).get_expr_depends()
-            getcomps = set([u for u, v in conns if u != self.name])
-            setcomps = set([v for u, v in conns if v != self.name])
+            getcomps = set([u for u, v in conns if u != self.name \
+                            if u not in boundary_vars and v not in boundary_vars])
+            setcomps = set([v for u, v in conns if v != self.name \
+                            if u not in boundary_vars and v not in boundary_vars])
 
             full = set(setcomps)
             full.update(getcomps)
