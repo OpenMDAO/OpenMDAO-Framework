@@ -16,7 +16,7 @@ except ImportError:
 import pprint
 import StringIO
 from ConfigParser import SafeConfigParser, NoSectionError, NoOptionError
-from argparse import ArgumentParser
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from subprocess import call, check_call, STDOUT
 import fnmatch
 
@@ -1109,10 +1109,22 @@ def _get_plugin_parser():
 
     parser = subparsers.add_parser('install',
                                    help="install an OpenMDAO plugin into the"
-                                        " current environment")
-    parser.usage = "plugin install [dist_name] [options]"
-    parser.add_argument('dist_name',
-                        help='name of plugin distribution '
+                                        " current environment",
+                                   description="Install selected plugin or plugins either locally or from github.",
+                                   formatter_class=RawDescriptionHelpFormatter)
+
+    parser.usage = "plugin install [dist_name] [options] \n"
+
+    parser.epilog = "example: get the plugin pyopt_driver from github \n" \
+                    ">plugin install pyopt_driver --github\n\n" \
+                    "example: install all OpenMDAO-compatible plugins from GithubMember's repo.\n" \
+                    ">plugin install --github GithubMember --all" 
+
+    #can't do a single component and --all in same command, make them m.e.
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument('dist_name',
+                        help='name of a single plugin distribution.  cannot be used with --all.'
                              '(defaults to distrib found in current dir)',
                         nargs='?')
 
@@ -1126,9 +1138,9 @@ def _get_plugin_parser():
                         help="URL of find-links server. Defaults to "
                              "'http://openmdao.org/dists'")
 
-    parser.add_argument("--all",
+    group.add_argument("--all",
                         help='Install all plugins owned by OWNER as specified '
-                             'with \'--github\'',
+                             'with --github.  Defaults to OpenMDAO-Plugins.',
                         action='store_true')
 
     parser.set_defaults(func=plugin_install)
