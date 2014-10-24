@@ -120,9 +120,10 @@ class RecordingOptions(VariableTree):
     save_problem_formulation = Bool(True, desc='Save problem formulation '
                                                '(parameters, constraints, etc.)')
 
-    includes = List(['*'], desc='Patterns for variables to include in the recorders')
+    includes = List(['*'], desc='Patterns for variables to include in recording')
 
-    excludes = List([], desc='Patterns for variables to exclude from the recorders')
+    excludes = List([], desc='Patterns for variables to exclude from recording '
+                             '(processed after includes')
 
 
 class Assembly(Component):

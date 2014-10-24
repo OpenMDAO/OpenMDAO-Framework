@@ -81,9 +81,12 @@ Constants:
    driver.gradient_options.gmres_tolerance: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
+   uuid: 578b2d91-5b94-11e4-8001-08002764016b
+   timestamp: 1414165341.001852
    inputs:
       comp1.x: 0.0
    outputs:
@@ -181,9 +184,12 @@ Case:
         expected = """\
 Constants:
    comp1.y: 0.0
+   recording_options.excludes: ['*directory', '*force_fd', '*missing_deriv_policy', '*gradient_options*']
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
+   uuid: 80dd42d1-5b94-11e4-8004-08002764016b
+   timestamp: 1414165410.332183
    inputs:
       comp1.x: 0.0
    outputs:
