@@ -142,7 +142,8 @@ class Assembly(Component):
                      desc='Case recorders for iteration data'
                           ' (only valid at top level).')
 
-    recording_options = VarTree(RecordingOptions(), iotype='in', framework_var=True,
+    recording_options = VarTree(RecordingOptions(), iotype='in',
+                    framework_var=True, deriv_ignore=True,
                     desc='Case recording options (only valid at top level).')
 
     def __init__(self):
