@@ -1546,10 +1546,13 @@ class Assembly(Component):
             dgraph = relevant_subgraph(dgraph, inputs, outputs,
                                        keep)
             
+            self._remove_vartrees(dgraph)
+            
             keep.update(inputs)
             keep.update(outputs)
         else:
             dgraph = self._explode_vartrees(dgraph)
+            self._remove_vartrees(dgraph)
 
         fix_state_connections(self, dgraph)
 
@@ -1598,8 +1601,8 @@ class Assembly(Component):
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
             if has_interface(comp, IAssembly):
-                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, inputs, collapsed_graph),
-                                         outputs=_get_scoped_outputs(comp, outputs, collapsed_graph))
+                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, inputs, dgraph),
+                                         outputs=_get_scoped_outputs(comp, outputs, dgraph))
 
 
     def _get_var_info(self, node):
@@ -1709,43 +1712,50 @@ class Assembly(Component):
                         collapsed.add_edge(preds[0], node)
         return collapsed
 
-    def _explode_vartrees(self, depgraph):
+    def _remove_vartrees(self, g):
+        """Remove all vartree nodes."""
+        vtnodes = [n for n in g if self.contains(n) and isinstance(self.get(n), VariableTree)]
+        
+        for vt in vtnodes:
+            succ = g.successors(vt)
+            pred = g.predecessors(vt)
+            
+            if '.' in vt:
+                # connect subs to parent comp
+                cname = vt.split('.', 1)[0]
+                if cname in succ:
+                    for p in pred:
+                        if p != cname and base_var(g, p) == vt:
+                            g.add_edge(p, cname)
+                elif cname in pred:
+                    for s in succ:
+                        if s != cname and base_var(g, s) == vt:
+                            g.add_edge(cname, s)
+                            
+        g.remove_nodes_from(vtnodes)
+                
+    def _explode_vartrees(self, dgraph):
         """Given a depgraph, take all connected variable nodes corresponding
         to VariableTrees and replace them with a variable node for each
         variable in the VariableTree.
         """
-        conns = depgraph.list_connections()
-        conns = [(u,v) for u,v in conns if isinstance(self.get(u), VariableTree)
-                                       and isinstance(self.get(v), VariableTree)]
-
-        connvars = set([u for u,v in conns])
-        connvars.update([v for u,v in conns])
+        vtvars = dict([(n,None) for n in dgraph if isinstance(self.get(n), VariableTree)])        
+        conns = [(u,v) for u,v in dgraph.list_connections() if u in vtvars]
         
-        unconn_bndry_vts = [(n,d['iotype']) for n,d in depgraph.nodes_iter(data=True)
-                             if 'boundary' in d and n not in connvars 
-                                   and isinstance(self.get(n), VariableTree)]
+        depgraph = dgraph.subgraph(dgraph.nodes_iter())
         
-        for vt, io in unconn_bndry_vts:
+        # explode all vt nodes first
+        for vt in vtvars:
             obj = self.get(vt)
-            allvars = ['.'.join((vt, n.split('.',1)[1]))
-                                 for n in obj.list_all_vars()]
-            for v in allvars:
-                #depgraph.add_node(v, basevar=vt, **depgraph.node[vt]) 
-                depgraph.add_subvar(v)
-
-            depgraph.remove_node(vt)
-
+            vtvars[vt] = ['.'.join((vt, n.split('.',1)[1]))
+                                     for n in obj.list_all_vars()]
+            for sub in vtvars[vt]:
+                if sub not in depgraph:
+                    depgraph.add_subvar(sub)
+        
         vtconns = {}
         for u,v in conns:
-            varlist = []
-            for node in (u,v):
-                obj = self.get(node)
-                #if '.' in node:
-                allvars = ['.'.join((node, n.split('.',1)[1]))
-                                     for n in obj.list_all_vars()]
-                #else:
-                #    allvars = obj.list_all_vars()
-                varlist.append(allvars)
+            varlist = [vtvars[u], vtvars[v]]
 
             if len(varlist[0]) != len(varlist[1]):
                 self.raise_exception("connected vartrees '%s' and '%s' do not have the same variable list" %
@@ -1758,9 +1768,6 @@ class Assembly(Component):
 
             vtconns[(u,v)] = varlist
 
-        # if we're modifying the graph, make a copy
-        if vtconns:
-            depgraph = depgraph.subgraph(depgraph.nodes_iter())
 
         for (u,v), varlist in vtconns.items():
             ucomp = udestcomp = vcomp = None
@@ -1780,12 +1787,6 @@ class Assembly(Component):
                     vcomp = comp
 
             for src, dest in zip(varlist[0], varlist[1]):
-                if src not in depgraph:
-                    depgraph.add_node(src, basevar=u, **depgraph.node[u])
-                    #depgraph.add_subvar(src)
-                if dest not in depgraph:
-                    depgraph.add_node(dest, basevar=v, **depgraph.node[v])
-                    #depgraph.add_subvar(dest)
                 depgraph.add_edge(src, dest, conn=True)
                 if ucomp:
                     depgraph.add_edge(ucomp, src)
@@ -1793,8 +1794,6 @@ class Assembly(Component):
                     depgraph.add_edge(src, udestcomp)
                 if vcomp:
                     depgraph.add_edge(dest, vcomp)
-
-            depgraph.remove_nodes_from((u,v))
 
         return depgraph
 
@@ -1905,15 +1904,8 @@ def _get_scoped_inputs(comp, ins, g):
     cname = comp.name
     inputs = []
     for p in g.predecessors(cname):
-        if isinstance(p, tuple):
-            tlist = [n.split('.',1)[1] for n in p[1] if n.startswith(cname+'.')]
-            if len(tlist) > 1:
-                inputs.append(tuple(tlist))
-            elif len(tlist) == 1:
-                inputs.append(tlist[0])
-        else:
-            if p.startswith(cname+'.'):
-                inputs.append(p.split('.',1)[1])
+        if p.startswith(cname+'.'):
+            inputs.append(p.split('.',1)[1])
 
     if not inputs:
         return None
@@ -1928,12 +1920,8 @@ def _get_scoped_outputs(comp, outs, g):
     cname = comp.name
     outputs = []
     for s in g.successors(cname):
-        if isinstance(s, tuple):
-            if s[0].startswith(cname+'.'):
-                outputs.append(s[0].split('.',1)[1])
-        else:
-            if p.startswith(cname+'.'):
-                outputs.append(s.split('.',1)[1])
+        if s.startswith(cname+'.'):
+            outputs.append(s.split('.',1)[1])
 
     if not outputs:
         return None

@@ -2166,4 +2166,9 @@ def fix_duplicate_dests(g):
             if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in g:
                 g.remove_node(s)
                         
-                
+def connects_to(g, src, dest):
+    """Return True if dest is downstream of src."""
+    for u,v in nx.bfs_edges(g, src):
+        if v == dest:
+            return True
+    return False

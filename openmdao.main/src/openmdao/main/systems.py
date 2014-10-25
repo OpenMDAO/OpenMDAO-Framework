@@ -756,6 +756,8 @@ class System(object):
         nest += 4
         if isinstance(self, OpaqueSystem):
             self._inner_system.dump(nest, stream)
+        elif isinstance(self, AssemblySystem):
+            self._comp._system.dump(nest, stream)
         else:
             for sub in self.local_subsystems():
                 sub.dump(nest, stream)

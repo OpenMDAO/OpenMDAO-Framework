@@ -807,11 +807,12 @@ class Workflow(object):
             
         if outs:
             for out in outs:
-                if reduced.out_degree(self.name2collapsed[out]) == 0:
-                    reduced.add_node(out, comp='dumbvar')
-                    reduced.add_edge(self.name2collapsed[out], out)
+                vname = out[1][0]
+                if reduced.out_degree(vname) == 0:
+                    reduced.add_node(vname, comp='dumbvar')
+                    reduced.add_edge(out, vname)
                     reduced.node[out]['system'] = \
-                               VarSystem(scope, reduced, out)
+                               VarSystem(scope, reduced, vname)
 
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
