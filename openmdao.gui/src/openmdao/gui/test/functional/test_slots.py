@@ -146,8 +146,6 @@ def _test_slot_subclass(browser):
     inputs = editor.get_inputs()
     expected = [
         ['', 'input', '0', '', ''],
-        ['', ' recording_options', '', '',
-         'Case recording options (only valid at top level).'],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_fd', 'False', '',
@@ -155,6 +153,8 @@ def _test_slot_subclass(browser):
         ['', 'missing_deriv_policy', 'assume_zero', '',
          'Determines behavior when some analytical derivatives are provided but'
          ' some are missing'],
+        ['', ' recording_options', '', '',
+         'Case recording options (only valid at top level).'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -343,7 +343,6 @@ def _test_dict_slot(browser):
 
     # Clean up.
     closeout(project_dict, workspace_page)
-
 
 
 if __name__ == '__main__':

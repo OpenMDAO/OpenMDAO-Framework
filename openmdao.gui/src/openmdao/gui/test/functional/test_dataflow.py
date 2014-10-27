@@ -634,8 +634,6 @@ def _test_replace(browser):
     editor.move(-400, 0)
     inputs = editor.get_inputs()
     expected = [
-        ['', ' recording_options', '', '',
-         'Case recording options (only valid at top level).'],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
         ['', 'force_fd', 'False', '',
@@ -643,6 +641,8 @@ def _test_replace(browser):
         ['', 'missing_deriv_policy', 'error', '',
          'Determines behavior when some analytical derivatives are provided'
          ' but some are missing'],
+        ['', ' recording_options', '', '',
+         'Case recording options (only valid at top level).'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
