@@ -4,6 +4,82 @@
         <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
         <script src="http://d3js.org/d3.v3.min.js"></script>
         <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
+        <script type='text/javascript' src='http://www.flotcharts.org/javascript/jquery.flot.min.js'></script>
+        <style>
+            .d3-context-menu {
+                position: absolute;
+                display: none;
+                background-color: #f2f2f2;
+                border-radius: 4px;
+
+                font-family: Arial, sans-serif;
+                font-size: 14px;
+                min-width: 150px;
+                border: 1px solid #d4d4d4;
+
+                z-index:1200;
+            }
+            .d3-context-menu ul {
+                list-style-type: none;
+                margin: 4px 0px;
+                padding: 0px;
+                cursor: default;
+            }
+            .d3-context-menu ul li {
+                padding: 4px 16px;
+            }
+            .d3-context-menu ul li:hover {
+                background-color: #4677f8;
+                color: #fefefe;
+            }
+        </style>
+        <script>
+            d3.contextMenu = function (menu, evt, openCallback) {
+                console.log('contextMenu event:', evt);
+
+                // create the div element that will hold the context menu
+                d3.selectAll('.d3-context-menu').data([1])
+                    .enter()
+                    .append('div')
+                    .attr('class', 'd3-context-menu');
+
+                // close menu
+                d3.select('body').on('click.d3-context-menu', function() {
+                    d3.select('.d3-context-menu').style('display', 'none');
+                });
+
+                // this gets executed when a contextmenu event occurs
+                return function(data, index) {
+                    var elm = this;
+
+                    d3.selectAll('.d3-context-menu').html('');
+                    var list = d3.selectAll('.d3-context-menu').append('ul');
+                    list.selectAll('li').data(menu).enter()
+                        .append('li')
+                        .html(function(d) {
+                            return d.title;
+                        })
+                        .on('click', function(d, i) {
+                            d.action(elm, data, index);
+                            d3.select('.d3-context-menu').style('display', 'none');
+                        });
+
+                    // the openCallback allows an action to fire before the menu is displayed
+                    // an example usage would be closing a tooltip
+                    if (openCallback) openCallback(data, index);
+
+                    var coord = d3.mouse();
+
+                    // display context menu
+                    d3.select('.d3-context-menu')
+                        .style('left', (evt.pageX - 2) + 'px')
+                        .style('top', (evt.pageY - 2) + 'px')
+                        .style('display', 'block');
+
+                    evt.preventDefault();
+                };
+            };
+        </script>
     </head>
     <body>
         <div id='main' style='width: 100%; height: 100%;'></div>
@@ -12,6 +88,8 @@
         </div>
         <div id='comp-graph' style='display:none;'>
             {{ svg_comp_graph }}
+        </div>
+        <div id='d3-context-menu' class='d3-context-menu' style='display:none;'>
         </div>
         <script id='case-data' type='application/json'>
             {{ case_data }}
@@ -24,6 +102,23 @@
             function SVG(tag) {
                return document.createElementNS('http://www.w3.org/2000/svg', tag);
             }
+
+            var variableMenu = [
+                {
+                    title: 'Item #1',
+                    action: function(elm, d, i) {
+                        console.log('Item #1 clicked!');
+                        console.log('The data for this circle is: ' + d);
+                    }
+                },
+                {
+                    title: 'Item #2',
+                    action: function(elm, d, i) {
+                        console.log('You have clicked the second item!');
+                        console.log('The data for this circle is: ' + d);
+                    }
+                }
+            ]
 
             // load a graph from the div with the specified ID (dep-graph or comp-graph)
             function load_graph(graph_id) {
@@ -80,6 +175,10 @@
                             .appendTo(parent);
                         ellipse.remove();
                     })
+                    .on("contextmenu", function(evt, index) {
+                        console.log('evt:', evt, evt.pageX)
+                        d3.contextMenu(variableMenu, evt);
+                    });
                 });
 
                 return graph_id;
