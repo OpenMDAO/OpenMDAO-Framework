@@ -285,7 +285,7 @@ of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 *Tagging Plugins: How and Why*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Tagging in git is a way to signify that a certain point in a repository's history is important.
+If you're using git while developing your plugin, tagging is a way to signify that a certain point in a repository's history is important.
 When relating to a plugin, the most common way that we at OpenMDAO tag a repoistory is with a 
 version number.  So when your plugin is in a state of stability between enhancements, it can be a
 good idea to tag it with a version number, using the 'git tag' command.  If you tag certain versions
