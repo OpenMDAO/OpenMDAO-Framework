@@ -1490,7 +1490,8 @@ def collapse_driver_reduced(g, driver, excludes=()):
     nodes = [n for n in internal_nodes(g, names)
                 if n not in excludes]
 
-    return collapse_nodes(g, driver.name, nodes)
+    collapse_nodes(g, driver.name, nodes)
+    g.node[driver.name]['comp'] = True
 
 def internal_nodes(g, comps):
     """Returns a set of nodes containing the given component

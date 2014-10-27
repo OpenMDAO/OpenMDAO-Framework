@@ -1401,6 +1401,9 @@ class Assembly(Component):
         cgraph = reduced2component(rgraph)
 
         if len(cgraph) > 1:
+            for u,v in cgraph.edges():
+                if u == v:  # get rid of self cycles
+                    cgraph.remove_edge(u, v)
             self._system = SerialSystem(self, rgraph, cgraph, self.name+'._inner_asm')
             self._system.set_ordering(nx.topological_sort(cgraph), {})
         else:
@@ -1599,8 +1602,8 @@ class Assembly(Component):
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
             if has_interface(comp, IAssembly):
-                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, inputs, dgraph),
-                                         outputs=_get_scoped_outputs(comp, outputs, dgraph))
+                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, dgraph),
+                                         outputs=_get_scoped_outputs(comp, dgraph))
 
 
     def _get_var_info(self, node):
@@ -1894,11 +1897,8 @@ def _get_wflow_names(iter_tree):
             names.append(n[0])
     return names
 
-def _get_scoped_inputs(comp, ins, g):
+def _get_scoped_inputs(comp, g):
     """Return a list of inputs varnames scoped to the given name."""
-    if ins is None:
-        return None
-
     cname = comp.name
     inputs = []
     for p in g.predecessors(cname):
@@ -1910,11 +1910,8 @@ def _get_scoped_inputs(comp, ins, g):
 
     return inputs
 
-def _get_scoped_outputs(comp, outs, g):
+def _get_scoped_outputs(comp, g):
     """Return a list of outputs varnames scoped to the given name."""
-    if outs is None:
-        return None
-
     cname = comp.name
     outputs = []
     for s in g.successors(cname):

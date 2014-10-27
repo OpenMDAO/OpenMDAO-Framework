@@ -21,7 +21,7 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
                                    get_nondiff_groups, collapse_subdrivers, \
-                                   internal_nodes, collapse_nodes
+                                   internal_nodes, collapse_nodes, simple_node_iter
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -208,16 +208,30 @@ class Workflow(object):
         if force_regen or not self.scope._derivs_required or self._system is None:
             return True
         
+        if inputs is None and self._calc_gradient_inputs is not None:
+            return True
+        
+        if outputs is None and self._calc_gradient_outputs is not None:
+            return True
+        
+        wfgraph = self._reduced_graph
         if self._calc_gradient_inputs is None:
-            return inputs is not None
+            oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
+                                         if 'comp' not in d and wfgraph.out_degree(n) > 0
+                                                            and wfgraph.in_degree(n) > 0])
+        else:
+            oldins = self._calc_gradient_inputs
         
         if self._calc_gradient_outputs is None:
-            return outputs is not None
-        
-        if set(self._calc_gradient_inputs) ^ set(inputs):
+            oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
+                                         if 'comp' not in d and wfgraph.in_degree(n) > 0])
+        else:
+            oldouts = self._calc_gradient_outputs
+            
+        if set(inputs) - set(oldins):
             return True
 
-        if set(self._calc_gradient_outputs) ^ set(outputs):
+        if set(outputs) - set(oldouts):
             return True
                        
         return False
@@ -837,7 +851,9 @@ class Workflow(object):
 
             for gtup, system in systems.items():
                 collapse_to_system_node(cgraph, system, gtup)
+                reduced.add_node(gtup, comp=True)
                 collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
+                reduced.node[gtup]['comp'] = True
                 for c in group:
                     opaque_map[c] = gtup
 
