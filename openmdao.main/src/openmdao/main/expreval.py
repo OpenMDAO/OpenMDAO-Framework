@@ -577,7 +577,7 @@ class ExprEvaluator(object):
         # compile the transformed AST
         ast.fix_missing_locations(new_ast)
         mode = 'exec' if isinstance(new_ast, ast.Module) else 'eval'
-        return (new_ast, compile(new_ast, '<string>', mode))
+        return (new_ast, compile(new_ast, self.text, mode))
 
     def _parse_set(self):
         self._pre_parse()
@@ -588,7 +588,7 @@ class ExprEvaluator(object):
         ## transform into a 'set' call to set the specified variable
         assign_ast = ExprTransformer(self, getter=self.getter).visit(root)
         ast.fix_missing_locations(assign_ast)
-        code = compile(assign_ast, '<string>', 'exec')
+        code = compile(assign_ast, "%s=_local_setter"%self.text, 'exec')
         return (assign_ast, code)
 
     def _parse(self):

@@ -1005,6 +1005,21 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple).
         """
+        #expr = self._code_cache.get(path)
+        #if expr is not None:
+        #    return eval(expr, self.__dict__, locals())
+        # 
+        #if '.' in path or '[' in path or '(' in path:
+        #    expr = compile(path, path, mode='eval')
+        #    try:
+        #        val = eval(expr, self.__dict__, locals())
+        #    except AttributeError:
+        #        # fall through
+        #        pass
+        #    else:
+        #        self._code_cache[path] = expr
+        #        return val
+
         if '.' in path:
             childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)

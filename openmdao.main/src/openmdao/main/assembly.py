@@ -1556,8 +1556,6 @@ class Assembly(Component):
 
         fix_state_connections(self, dgraph)
 
-        #dgraph = self._explode_vartrees(dgraph)
-
         add_boundary_comps(dgraph)
 
         connect_subvars_to_comps(dgraph)
@@ -1583,8 +1581,6 @@ class Assembly(Component):
                 elif data.get('iotype') == 'out' and collapsed_graph.out_degree(node) == 0: # output bndry node
                     collapsed_graph.add_node(node[1][0].split('[',1)[0], comp='outvar')
                     collapsed_graph.add_edge(node, node[1][0].split('[',1)[0])
-
-        #collapsed_graph = self._add_driver_subvar_conns(dgraph, collapsed_graph)
 
         # translate kept nodes to collapsed form
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
