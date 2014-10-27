@@ -359,6 +359,13 @@ class System(object):
         for system in self.local_subsystems():
             system.clear_dp()
 
+    def _get_comps(self):
+        """Return a set of comps for this system and all subsystems."""
+        comps = set()
+        for s in self.local_subsystems():
+            comps.update(simple_node_iter(s._get_comps()))
+        return comps
+            
     def list_inputs(self):
         """Returns names of input variables from this System and all of its
         children.
@@ -366,7 +373,7 @@ class System(object):
         inputs = set()
         bases = set()
         for system in self.simple_subsystems():
-            comps = set(simple_node_iter(system._nodes))
+            comps = self._get_comps()
             for tup in system._in_nodes:
                 seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
                 for dest in tup[1]:
@@ -381,33 +388,7 @@ class System(object):
         # filter out subvars of included basevars
         inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
 
-        top = self.scope
-
-        unignored_inputs = []
-        topvars = top._system.vector_vars
-        # Remove any inputs that the user designates as 'deriv_ignore'
-        for name in inputs:
-            collapsed_name = top.name2collapsed[name]
-            if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
-                continue
-
-            # Non-flat vars must be ignored.
-            if top._var_meta[collapsed_name].get('flat') != True:
-                continue
-
-            # The user sets 'deriv_ignore' in the basevar, so we have to check that for
-            # subvars.
-            base = base_var(top._depgraph, name)
-            if base != name:
-                collapsed_name = top.name2collapsed.get(base)
-                if collapsed_name and collapsed_name in topvars and \
-                   topvars[collapsed_name].get('deriv_ignore'):
-                    continue
-
-            unignored_inputs.append(name)
-
-        #print "%s inputs: %s" % (self.name, unignored_inputs)
-        return unignored_inputs
+        return _filter(self.scope, inputs)
 
     def list_states(self):
         """Returns names of states (not collapsed edges) from this System and
@@ -444,23 +425,13 @@ class System(object):
                 pass
             out_nodes = [node for node in system._out_nodes \
                          if node not in self._mapped_resids]
-            comps = set(simple_node_iter(system._nodes))
+            comps = self._get_comps()
             for src, _ in out_nodes:
                 parts = src.split('.', 1)
                 if parts[0] in comps and src not in states:
                     outputs.append(src)
-            #for src, srcs in out_nodes:
-                #for item in list(srcs) + [src]:
-                    #parts = item.split('.', 1)
-                    #if parts[0] in system._nodes and item not in states:
-                        #outputs.append(item)
 
-        top = self.scope
-        outputs = [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
-                     and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
-
-        #print "%s outputs: %s" % (self.name, outputs)
-        return outputs
+        return _filter(self.scope, outputs)
 
     def list_residuals(self):
         """Returns names of all residuals.
@@ -1060,6 +1031,9 @@ class SimpleSystem(System):
             return self._comp.is_differentiable()
 
         return True
+
+    def _get_comps(self):
+        return self._nodes
 
     def simple_subsystems(self):
         yield self
@@ -1837,6 +1811,9 @@ class OpaqueSystem(SimpleSystem):
     def inner(self):
         return self._inner_system
 
+    def _get_comps(self):
+        return self._inner_system._get_comps()
+
     def setup_communicators(self, comm):
         self.mpi.comm = comm
         self._inner_system.setup_communicators(comm)
@@ -2279,3 +2256,52 @@ def get_full_nodeset(scope, group):
         else:
             names.add(name)
     return names
+
+def _filter(scope, lst):
+    filtered = _filter_subs(lst)
+    filtered = _filter_flat(scope, filtered)
+    return _filter_ignored(scope, filtered)
+
+def _filter_subs(lst):
+    """Return a copy of the list with any subvars of basevars in the list
+    removed.
+    """
+    bases = [n.split('[',1)[0] for n in lst]
+    
+    return [n for i,n in enumerate(lst) 
+               if not (bases[i] in lst and n != bases[i])]
+    
+def _filter_ignored(scope, lst):
+    # Remove any vars that the user designates as 'deriv_ignore'
+    unignored = []
+    topvars = scope._system.vector_vars
+    
+    for name in lst:
+        collapsed_name = scope.name2collapsed[name]
+        if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
+            continue
+    
+        # The user sets 'deriv_ignore' in the basevar, so we have to check that for
+        # subvars.
+        base = base_var(scope._depgraph, name)
+        if base != name:
+            collname = scope.name2collapsed.get(base)
+            if collname and collname in topvars and \
+               topvars[collname].get('deriv_ignore'):
+                continue
+            
+        unignored.append(name)
+
+    return unignored
+
+def _filter_flat(scope, lst):
+    filtered = []
+    
+    for name in lst:
+        collapsed_name = scope.name2collapsed[name]
+        
+        # ignore non-float-flattenable vars
+        if scope._var_meta[collapsed_name].get('flat'):
+            filtered.append(name)
+
+    return filtered

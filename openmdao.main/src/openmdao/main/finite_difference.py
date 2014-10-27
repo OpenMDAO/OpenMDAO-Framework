@@ -295,7 +295,7 @@ class FiniteDifference(object):
 
                         sz = uvec[okey].size
                         end += sz
-                        mpiprint(Jfd, start, end, i, self.J)
+                        #mpiprint(Jfd, start, end, i, self.J)
                         self.J[okey][src][:, i-i1] = Jfd[start:end]
                         start += sz
                 else:
