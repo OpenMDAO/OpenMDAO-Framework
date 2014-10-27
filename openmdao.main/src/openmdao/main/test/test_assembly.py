@@ -7,8 +7,8 @@ import unittest
 import logging
 
 from openmdao.main.api import Assembly, Component, Driver, SequentialWorkflow, \
-                              set_as_top, SimulationRoot
-from openmdao.main.datatypes.api import Float, Instance, Int, Str, List, Array
+                              set_as_top, SimulationRoot, VariableTree
+from openmdao.main.datatypes.api import Float, Instance, Int, Str, List, Array, VarTree
 from openmdao.util.log import enable_trace, disable_trace
 from openmdao.util.fileutil import onerror
 from openmdao.util.decorators import add_delegate
@@ -515,6 +515,32 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.disconnect('comp2.r')
         self.asm.connect('3.0*comp1.rout', 'comp2.r')
         self.asm.disconnect('3.0*comp1.rout', 'comp2.r')
+
+    def test_disconnect_boundaries(self):
+
+        # This test is from a user-reported bug where an exception was raised
+        # if you tried to disconnect a boundary-var variable tree connection.
+
+        class VTINputs(VariableTree):
+
+            Lp = Float( units='m')
+
+        class Top(Assembly):
+
+            Src = VarTree(VTINputs(), iotype='in')
+            Targ = VarTree(VTINputs(), iotype='out')
+
+            def configure(self):
+                pass
+
+
+        top = set_as_top(Top())
+        top.connect('Src.Lp', 'Targ.Lp')
+        conn = top.list_connections()
+        self.assertTrue(len(conn) == 1)
+        top.disconnect('Src.Lp', 'Targ.Lp')
+        conn = top.list_connections()
+        self.assertTrue(len(conn) == 0)
 
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())

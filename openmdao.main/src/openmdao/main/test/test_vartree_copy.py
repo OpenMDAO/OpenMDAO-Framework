@@ -1,6 +1,6 @@
 import unittest
 
-from openmdao.main.api import VariableTree, Component, Assembly
+from openmdao.main.api import VariableTree, Component, Assembly, set_as_top
 from openmdao.lib.datatypes.api import VarTree, Float, List
 
 class RegionVT(VariableTree):
@@ -82,7 +82,7 @@ class Blade(Assembly):
 
 class VTreeCopyTestCase(unittest.TestCase):
     def test_copy(self):
-        top = Blade()
+        top = set_as_top(Blade())
         top.run()  # this raised an Exception when the bug was present
 
 if __name__ == '__main__':

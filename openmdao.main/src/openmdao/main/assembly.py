@@ -702,8 +702,10 @@ class Assembly(Component):
             cnames = ExprEvaluator(varpath, self).get_referenced_compnames()
             if varpath2 is not None:
                 cnames.update(ExprEvaluator(varpath2, self).get_referenced_compnames())
+            boundary_vars = self.list_inputs() + self.list_outputs()
             for cname in cnames:
-                getattr(self, cname).config_changed(update_parent=False)
+                if cname not in boundary_vars:
+                    getattr(self, cname).config_changed(update_parent=False)
 
             to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
@@ -1590,7 +1592,7 @@ class Assembly(Component):
                             coll_keep)
 
         fix_dangling_vars(collapsed_graph)
-        
+
         self._reduced_graph = collapsed_graph
 
         for comp in self.get_comps():

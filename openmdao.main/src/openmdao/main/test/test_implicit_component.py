@@ -22,9 +22,10 @@ class ImplicitWithSolver(ImplicitComponent):
     def solve(self):
         """Calculates the states that satisfy residuals using scipy.fsolve.
         You can override this function to provide your own internal solve."""
-
+        print "start solve", self.name
         x0 = self.get_state()
         fsolve(self._solve_callback, x0, xtol=1e-12)
+        print "end solve", self.name
 
     def _solve_callback(self, X):
         """This function is passed to the internal solver to set a new state,
@@ -247,6 +248,7 @@ class Coupled1(ImplicitWithSolver):
         self.res[1] = 2*x - 2*y + 4*z + 2
 
         self.y_out = c + x + y + z
+        print x, y, z, c, self.y_out, self.res
 
     def list_deriv_vars(self):
         return ('x', 'y', 'z', 'c'), ('res', 'y_out')
@@ -331,6 +333,7 @@ class Coupled2(ImplicitWithSolver):
         self.res[0] = -x + y/2. - z
 
         self.y_out = c + x + y + z
+        print x, y, z, c, self.y_out, self.res
 
     def provideJ(self):
         #partial w.r.t c
@@ -504,13 +507,13 @@ class Testcase_implicit(unittest.TestCase):
         #model.connect('comp1.x', 'comp2.x')
         #model.connect('comp1.y', 'comp2.y')
         #model.connect('comp2.z', 'comp1.z')
+        model.driver.add_parameter('comp1.z', low=-100, high=100)
         model.driver.add_parameter('comp2.x', low=-100, high=100)
         model.driver.add_parameter('comp2.y', low=-100, high=100)
-        model.driver.add_parameter('comp1.z', low=-100, high=100)
 
+        model.driver.add_constraint('comp1.z = comp2.z')
         model.driver.add_constraint('comp2.x = comp1.x')
         model.driver.add_constraint('comp2.y = comp1.y')
-        model.driver.add_constraint('comp1.z = comp2.z')
 
         model.run()
 

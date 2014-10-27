@@ -449,6 +449,11 @@ class System(object):
                 parts = src.split('.', 1)
                 if parts[0] in comps and src not in states:
                     outputs.append(src)
+            #for src, srcs in out_nodes:
+                #for item in list(srcs) + [src]:
+                    #parts = item.split('.', 1)
+                    #if parts[0] in system._nodes and item not in states:
+                        #outputs.append(item)
 
         top = self.scope
         outputs = [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
@@ -1541,15 +1546,15 @@ class CompoundSystem(System):
         self.dfd_solver.calculate(arg, result)
 
 def _get_counts(names):
-    """Return a dict with each name keyed to a number indicating the 
+    """Return a dict with each name keyed to a number indicating the
     number of times it occurs in the list.
     """
     counts = dict([(n,0) for n in names])
     for name in names:
         counts[name] += 1
-            
+
     return counts
-    
+
 class SerialSystem(CompoundSystem):
 
     def all_subsystems(self):
@@ -1565,7 +1570,7 @@ class SerialSystem(CompoundSystem):
             if name in self.graph:
                 self._ordering.append(name)
                 continue
-            
+
             opaque_name = opaque_map.get(name, name)
             if opaque_name in mapcount:
                 mapcount[opaque_name] += 1
@@ -1574,7 +1579,7 @@ class SerialSystem(CompoundSystem):
                 if opaque_name in mapcount and mapcount[opaque_name] > count:
                     continue
                 self._ordering.append(opaque_name)
-                
+
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
         else:
@@ -1887,7 +1892,6 @@ class OpaqueSystem(SimpleSystem):
         for name, val in inner_u.items():
             if name in self_u:
                 self_u[name][:] = val
-
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
