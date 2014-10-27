@@ -18,7 +18,19 @@ haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
           will need to have the necessary compiler(s) installed on your system. See the
           *Developer Guide* installation instructions for :ref:`Windows <Windows>` for help installing
           Visual C++ 2008 and mingw32.
+          
+.. note:: When developing a plugin for OpenMDAO, a plugin author should be wary of certain
+          conventions that will make the end product more available and installable to other
+          users.  Taking certain measures (like using plugin_quickstart to begin the process)
+          will make things less painful later on.  Never fear, if you have created a plugin
+          without using plugin quickstart, we can still help you.  And if you have multiple 
+          plugins that you would like to be able to install with one command, we can help
+          with setting those up correctly as well.
 
+          Our plugin install command originally was written to work only with local plugins and 
+          with the OpenMDAO-Plugins account on github.  As OpenMDAO's popularity has grown, new users 
+          are creating plugins, and would like the option to install all of the plugins they have written 
+          using our plugin install command.
 
 .. index:: Component plugin
 
@@ -27,7 +39,6 @@ haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
 
 How Do I Put My Plugin into OpenMDAO?
 -------------------------------------
-
 Plugins within OpenMDAO are just Python classes that provide an expected
 interface, so as long as your class provides the necessary interface and can
 be imported into your Python script, you'll be able to use it as a plugin. But
@@ -43,9 +54,8 @@ defined to determine if any applicable plugins exist within a given
 distribution.  In the case of OpenMDAO, we look for entry point group names
 that correspond to the types of plugin interfaces that we support.
 
-
 Types of Plugin Interfaces
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 OpenMDAO supports a number of different plugin interfaces. Each one maps to a
 different entry point group. The following table shows the mapping of each
@@ -66,7 +76,6 @@ group:
 -------------------------------  -------------------------------------------------------------------------------------------------
 ``openmdao.resource_allocator``  To add custom handling of allocation of computing resources
 ===============================  =================================================================================================
-
 
 .. note:: The entry point group names look like they could be the names of Python
      modules or packages, but they're not.  They're just strings that a plugin 
@@ -96,35 +105,6 @@ belongs to:
 
 Note that every plugin in ``openmdao.driver`` is also assumed to be a member 
 of ``openmdao.component`` since Driver inherits from Component. 
-
-
-*Plugin Development Tools*
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is a script called ``plugin`` available to simplify the process of
-developing and installing plugin distributions. The table below shows each
-subcommand of ``plugin`` with a brief description of its purpose. All of the
-subcommands are described in more detail in
-:ref:`build-pure-python-plugin-label`.
-
-
-======================  ===========================================================================
-**Command**             **Purpose**
-======================  ===========================================================================
-``plugin build_docs``   To build the html docs for the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin docs``         To view the html docs for the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin install``      To install the plugin into the active environment
-----------------------  ---------------------------------------------------------------------------
-``plugin list``         To list installed or available plugins
-----------------------  ---------------------------------------------------------------------------
-``plugin makedist``     To create a source distribution containing the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin quickstart``   To create the directory structure needed to build the plugin distribution
-======================  ===========================================================================
-
-
 
 *Defining Entry Points*
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,11 +149,121 @@ that the SimpleAdder plugin is an OpenMDAO Component.  The list of entry point
 groups that OpenMDAO recognizes is the same as the list of plugin types shown
 in the table above. 
 
-
 .. note:: You should always use the full module dotted name as the name of your entry
    point to be consistent with other OpenMDAO plugins.
-   
-   
+
+*setup.cfg*
+~~~~~~~~~~~
+
+A ``setup.cfg`` file is required for specifying metadata for your distribution.
+You should set all metadata files that are applicable to your plugin.
+The *name* and *version* values are the only ones that are mandatory. You should
+also set *requires-dist* if your distribution has dependencies. In general, 
+you should fill in as many as possible to better inform potential users about
+your plugin. 
+
+.. note::
+    Distributions tend to evolve over time, so providing a **version** id for a
+    package is extremely important. It is assumed that once a distribution is
+    created from a particular version of a package, that distribution will
+    never change. People may build things that depend on a particular
+    version of your distribution, so changing that version could break their
+    code. If, however, you update your distribution's version id, then users
+    have the option of either using the updated distribution and modifying
+    their own code to make it work or sticking with an older version that
+    already works with their code. 
+
+
+More descriptions of the various metadata values can be found `here`__.
+
+.. __: http://alexis.notmyidea.org/distutils2/setupcfg.html
+
+
+The values in the *metadata* section are specified by **PEP 345** and 
+apply to any Python distribution.  We've added an *openmdao* section to the
+file to provide a place to put metadata that isn't mentioned in PEP 345, for
+example, the copyright notice for the documentation. Additionally, you can create 
+an *easy_install* section to list URLs to be used when searching for requirements. 
+Doing so is an alternative to using the find-links option from the command line
+and makes it easier for users to install your plugin. 
+An example of specifying find-links in ``setup.cfg`` can be read `here`__.
+
+.. __: https://pythonhosted.org/setuptools/easy_install.html#configuration-files
+
+
+*Adding documentation*
+~~~~~~~~~~~~~~~~~~~~~~
+OpenMDAO allows plugins to have thier own documentation and has built-in support
+for building, distributing and viewing them.
+
+If you would like to include documentation with your plugin, there are a few 
+steps involved.
+
+First, you'll want to create a `docs` directory within the root directory of your
+distribution. 
+
+Next, you'll need to add the following files to the `docs` directory:
+    - index.rst : A reStructuredText file containing the index for plugin
+                  documentation
+                
+    - usage.rst : A reStructuredText file containing any docs that we want to add 
+                  to those that are generated automatically.
+                
+    - conf.py : Configuration file used by Sphinx for building documentation
+    
+    - srcdocs.rst : A reStructuredText file containing source documentation for
+                  the plugin
+                  
+    - pkgdocs.rst : A restructuredText file with documentation to support plugins
+                    with multiple packages
+ 
+ 
+*MANIFEST.in*
+~~~~~~~~~~~~~
+A ``MANIFEST.in`` file is required for directing python to include files in 
+your distribution that were not specified via ``setup.py``. Because
+OpenMDAO builds documentation in a specific location, you will need to update
+MANIFEST.in to ensure that the built version of your documentation is installed
+with your plugin. To do so, you should add the following line to your ``MANIFEST.in``
+file:
+
+``graft docs/sphinx_build/html``
+
+More information about writing a ``MANIFEST.in`` file can be read `here`__.
+
+.. __: https://docs.python.org/2/distutils/sourcedist.html#manifest-template
+    
+*Plugin Development Tools*
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is a script called ``plugin`` available to simplify the process of
+developing and installing plugin distributions. The table below shows each
+subcommand of ``plugin`` with a brief description of its purpose. All of the
+subcommands are described in more detail in
+:ref:`build-pure-python-plugin-label`.
+
+
+======================  ===========================================================================
+**Command**             **Purpose**
+======================  ===========================================================================
+``plugin build_docs``   To build the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin docs``         To view the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin install``      To install the plugin into the active environment
+----------------------  ---------------------------------------------------------------------------
+``plugin list``         To list installed or available plugins
+----------------------  ---------------------------------------------------------------------------
+``plugin makedist``     To create a source distribution containing the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin quickstart``   To create the directory structure needed to build the plugin distribution
+======================  ===========================================================================
+
+
+
+
+*Building a Source Distribution*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Once you have your ``setup.py`` file and your plugin class is complete, you're ready
 to build a distribution.  If you're not able to use ``plugin makedist`` for some 
 reason, you can build your distribution by executing your ``setup.py`` file in the following
@@ -189,6 +279,87 @@ distribution is named ``simple_adder``, for example, the source distribution wil
 ``simple_adder-1.0.tar.gz``, or possibly ``simple_adder-1.0.zip`` on Windows.  The version 
 of the packaged distribution is *1.0* as was specified in the ``setup.py`` file.
 
+
+
+
+*Tagging Plugins: How and Why*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Tagging in git is a way to signify that a certain point in a repository's history is important.
+When relating to a plugin, the most common way that we at OpenMDAO tag a repoistory is with a 
+version number.  So when your plugin is in a state of stability between enhancements, it can be a
+good idea to tag it with a version number, using the 'git tag' command.  If you tag certain versions
+of your plugin, then even when you make changes that break the plugin for your users, a user can still
+jump back and access a version before your latest changes had an adverse effect.  Without plugin tagging,
+users would be stuck with whatever the most recent version of your repository is.
+
+*Tagging Basics:*
+To see the tags available in a local repository, switch to the repository and type 'git tag':
+
+::
+
+    (devenv):CADRE $ git tag
+    0.1
+    0.2
+    0.3
+    0.4
+    0.5
+    0.6
+    0.7
+    0.8
+
+If you want to see what tags exist on a plugin, but don't have a local copy of a repository, 
+if it's public, you can still see what the tags are, but you will need to use the github api of the form: 
+
+::
+
+    https://api.github.com/repos/OWNER/PLUGIN/tags
+
+going to: https://api.github.com/repos/OpenMDAO-Plugins/CADRE/tags, for example, will return a page like this
+[edited for length to show just one tag]:
+
+::
+
+    [
+      {
+        "name": "0.8",
+        "zipball_url": "https://api.github.com/repos/OpenMDAO-Plugins/CADRE/zipball/0.8",
+        "tarball_url": "https://api.github.com/repos/OpenMDAO-Plugins/CADRE/tarball/0.8",
+        "commit": {
+          "sha": "00349ff3f07c537a56ba4a049b7c18c8b34dd34a",
+          "url": "https://api.github.com/repos/OpenMDAO-Plugins/CADRE/commits/00349ff3f07c537a56ba4a049b7c18c8b34dd34a"
+        }
+      },
+    ]
+
+To create a tag in a plugin repository, we just give the tag text and a description
+of what's been done.
+
+::
+ 
+    git tag -a 0.8 -m 'Adding such and such functionality into v 0.8'
+
+Setting that tag will associate the current state of the code with that tag.  Later on,
+this tag will allow our plugin installer to roll back install the exact version of CADRE 
+(say, for instance, the latest 0.9 version didn't work) by saying:
+
+::
+
+    plugin install CADRE==0.8  --github
+
+If one wants the latest version of a plugin, trying simply:
+
+::
+
+    plugin install CADRE --github
+
+would get the user the latest tagged release.  If a repository has never been tagged, however,
+'plugin install' will simply go get the latest version of the default branch of that repository,
+which may not be guaranteed to be stable.  This is why plugins found at OpenMDAO-Plugins are all tagged.
+
+There will be further discussion of plugin install later in this document.  For further discussion about the general git tagging:  
+   
+    .. _http://git-scm.com/book/en/Git-Basics-Tagging: http://git-scm.com/book/en/Git-Basics-Tagging
 
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -227,6 +398,40 @@ strings.  If there is no version specifier in the ``distrib_requirement``, then 
 version compatible with the current platform will be installed.
 
 
+If you are trying to install a plugin that exists in a public repository on github.com, 
+there's a way to do that as well, using the --github [github owner] command line option.
+The github owner "OpenMDAO-Plugins" is our own special account that contains the official
+OpenMDAO plugins.  If you don't specify an owner, we default to OpenMDAO-Plugins.  When used
+in conjunction with the --all command, plugin install will try to install all plugins the
+owner has available.  Here are some examples.
+
+Install pyopt_driver from github, by default OpenMDAO-Plugins
+
+::
+
+    plugin install pyopt_driver --github      
+    
+Install every OpenMDAO plugin listed under OpenMDAO-Plugins owner
+
+::
+
+    plugin install --github --all
+
+    
+Install plugin named generic-plugin from owner JohnDoe
+
+::
+
+    plugin install generic-plugin --github JohnDoe
+    
+Install all plugins from owner JohnDoe.  Warning: This will attempt to get every public 
+repository this owner owns that has the proper setup mentioned above.
+    
+::
+
+    plugin install -all --github JohnDoe
+
+
 *Making Your Plugin Available to Others*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
@@ -243,7 +448,6 @@ environment as follows:
 
     plugin install -f http://openmdao.org/dists MyDist
 
-
 If you want to distribute your plugin to the whole world but don't happen to
 have your own public server, you can put your plugin up on the 
 `Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
@@ -255,7 +459,6 @@ PyPI is the default package index for ``plugin install``, so the command
 ::
 
     plugin install MyDist
-    
     
 will attempt to download the MyDist distribution from PyPI. See this `link`__
 for more information about how to register your plugin with PyPI.
