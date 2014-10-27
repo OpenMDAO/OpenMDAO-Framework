@@ -195,7 +195,7 @@ class ScipyGMRES(LinearSolver):
         #system.applyJ(system.flat_vars.keys())
         system.applyJ(vnames)
 
-        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         #print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
@@ -469,16 +469,22 @@ class LinearGS(LinearSolver):
         while counter < options.maxiter and norm > options.atol and \
               norm/norm0 > options.rtol:
 
+            print "Begin GS"
             if system.mode == 'forward':
                 for subsystem in system.subsystems(local=True):
                     system.scatter('du', 'dp', subsystem=subsystem)
+                    print 'L1', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.vector_vars.keys())
+                    print 'L2', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
+                    print 'L3', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     subsystem.solve_linear(sub_options)
+                    print 'L4', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
+                print "End GS"
 
             elif system.mode == 'adjoint':
 
