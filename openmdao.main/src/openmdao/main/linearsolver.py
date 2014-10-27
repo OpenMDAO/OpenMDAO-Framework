@@ -195,7 +195,7 @@ class ScipyGMRES(LinearSolver):
         #system.applyJ(system.flat_vars.keys())
         system.applyJ(vnames)
 
-        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        mpiprint ('arg, result', arg, system.rhs_vec.array[:])
         #print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
