@@ -7,15 +7,45 @@ Overview of OpenMDAO Plugin Development
 Plugins provide a way to extend the functionality of OpenMDAO without modifying
 the framework itself. This is possible because a :term:`plugin`
 implements a particular interface that the framework knows how to interact
-with. While there are OpenMDAO commands that simplify the process of creating 
-plugin distributions, this document focuses on doing so manually. It is 
-targeted at users experienced with creating Python distributions or who already
-have an existing plugin distribution that was manually created.
+with. Users can create plugins in one of two ways: using the ``plugin`` script
+or manually creating a distribution.
 
-If you need to start a plugin from scratch, and are not familiar with creating
-or maintaing Python distributions, we greatly recommend using OpenMDAO's 
-``plugin quickstart`` and ``plugin makedist``. More information on the ``plugin``
-can be read at <insert link>.
+*Plugin Development Tools*
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is a script called ``plugin`` available to simplify the process of
+developing and installing plugin distributions. The table below shows each
+subcommand of ``plugin`` with a brief description of its purpose. All of the
+subcommands are described in more detail in :ref:`build-pure-python-plugin-label`, 
+and is a great resource if you are starting a new plugin and are not familiar 
+with creating Python distributions .
+
+
+======================  ===========================================================================
+**Command**             **Purpose**
+======================  ===========================================================================
+``plugin build_docs``   To build the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin docs``         To view the html docs for the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin install``      To install the plugin into the active environment
+----------------------  ---------------------------------------------------------------------------
+``plugin list``         To list installed or available plugins
+----------------------  ---------------------------------------------------------------------------
+``plugin makedist``     To create a source distribution containing the plugin
+----------------------  ---------------------------------------------------------------------------
+``plugin quickstart``   To create the directory structure needed to build the plugin distribution
+======================  ===========================================================================
+
+
+*Manual Plugin Distribution Creation*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While the above commands simplify the process of creating 
+plugin distributions, they cannot always be used. Because they are best 
+used when starting a plugin distribution from scratch and do not work well with
+existing plugin distributions, it's useful to understand how to manually develop
+a plugin. 
 
 The following are guidelines describing the types of plugins available to extend the
 functionality of OpenMDAO and configurations of files used for creating
@@ -43,10 +73,11 @@ haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
           are creating plugins, and would like the option to install all of the plugins they have written 
           using our ``plugin install`` command.
 
-.. index:: Component plugin
-
 
 .. index:: entry point
+
+*Plugin Interface*
+~~~~~~~~~~~~~~~~~~
 
 Plugins within OpenMDAO are just Python classes that provide an expected
 interface, so as long as your class provides the necessary interface and can
@@ -240,33 +271,6 @@ More information about writing a ``MANIFEST.in`` file can be read `here`__.
 
 .. __: https://docs.python.org/2/distutils/sourcedist.html#manifest-template
     
-*Plugin Development Tools*
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-There is a script called ``plugin`` available to simplify the process of
-developing and installing plugin distributions. The table below shows each
-subcommand of ``plugin`` with a brief description of its purpose. All of the
-subcommands are described in more detail in
-:ref:`build-pure-python-plugin-label`.
-
-
-======================  ===========================================================================
-**Command**             **Purpose**
-======================  ===========================================================================
-``plugin build_docs``   To build the html docs for the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin docs``         To view the html docs for the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin install``      To install the plugin into the active environment
-----------------------  ---------------------------------------------------------------------------
-``plugin list``         To list installed or available plugins
-----------------------  ---------------------------------------------------------------------------
-``plugin makedist``     To create a source distribution containing the plugin
-----------------------  ---------------------------------------------------------------------------
-``plugin quickstart``   To create the directory structure needed to build the plugin distribution
-======================  ===========================================================================
-
-
 
 
 *Building a Source Distribution*
@@ -320,7 +324,7 @@ if it's public, you can still see what the tags are, but you will need to use th
 
 ::
 
-    https://api.github.com/repos/OWNER/PLUGIN/tags
+    .. __: https://api.github.com/repos/OWNER/PLUGIN/tags
 
 going to: https://api.github.com/repos/OpenMDAO-Plugins/CADRE/tags, for example, will return a page like this
 [edited for length to show just one tag]:
@@ -364,7 +368,7 @@ would get the user the latest tagged release.  If a repository has never been ta
 'plugin install' will simply go get the latest version of the default branch of that repository,
 which may not be guaranteed to be stable.  This is why plugins found at OpenMDAO-Plugins are all tagged.
 
-There will be further discussion of plugin install later in this document.  For further discussion about the general git tagging:  
+There will be further discussion of plugin install :ref:`plugin-install` later in this document.  For further discussion about the general git tagging:  
    
     .. _http://git-scm.com/book/en/Git-Basics-Tagging: http://git-scm.com/book/en/Git-Basics-Tagging
     
@@ -374,32 +378,25 @@ There will be further discussion of plugin install later in this document.  For 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
 You can make your plugin available to others in a number of ways, from simply emailing your distribution
-to others or giving it to them on a thumb drive, CD, etc., or placing your
-distribution on a file server that they can access. As mentioned above,
-``plugin install`` allows you to download and install Python distributions
-from remote web servers. For example, if there were a distribution called
-*MyDist* on the ``openmdao.org`` server and you wanted to grab the newest version
-of it, you could ``plugin install`` it into your activated OpenMDAO virtual
-environment as follows:
-
-::
-
-    plugin install -f http://openmdao.org/dists MyDist
+to others or giving it to them on a thumb drive, CD, etc. To simplify plugin installation
+for users via ``plugin install``,  it's best to place your distributions on a file server.
 
 If you want to distribute your plugin to the whole world but don't happen to
 have your own public server, you can put your plugin up on the 
 `Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
-PyPI is the default package index for ``plugin install``, so the command
 
 .. __: https://pypi.python.org/pypi
 
+Another option is to host your plugin source code at `GitHub`__, allowing
+users to use a github-specific option with ``plugin install``. 
 
-::
+.. _: https://github.com
 
-    plugin install MyDist
-    
-will attempt to download the MyDist distribution from PyPI. See this `link`__
-for more information about how to register your plugin with PyPI.
+You're free to host your plugin where ever you'd like. However, if your plugin
+is not hosted at  Github or  PYPI users will need to know the URL to pass to 
+``plugin install`` so that your distribution can be downloaded. 
+
+.. note: Hosting plugins at PyPI requires registration. See this `link`__ for more information about how to register your plugin with PyPI.
 
 .. __: https://docs.python.org/2/distutils/packageindex.html
 
