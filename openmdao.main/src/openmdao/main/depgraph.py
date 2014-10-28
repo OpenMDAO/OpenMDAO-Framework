@@ -1605,9 +1605,9 @@ def _add_collapsed_node(g, src, dests):
     """
     dests = list(dests)
     if '@' in src: # src is a driver node
-        meta = g.node[dests[0]]
-        newname = (dests[0], tuple(dests))
-        src = src.split('@')[0]
+        src, vsrc = src.split('@', 1)
+        meta = g.node[vsrc]
+        newname = (vsrc, tuple(dests))
         drvsrc = src
     else:
         meta = g.node[src]
@@ -1653,6 +1653,8 @@ def _add_collapsed_node(g, src, dests):
     # and make sure its source, dests are components
     for p in g.predecessors(newname):
         cname = p.split('.', 1)[0]
+        if cname not in g:
+            continue
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
@@ -2160,8 +2162,6 @@ def fix_duplicate_dests(g):
         elif is_driver_node(g, node):
             drivers.append(node)
                 
-    to_add = set()
-    to_remove = set()
     for drv in drivers:
         for s in g.successors(drv):
             if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in g:

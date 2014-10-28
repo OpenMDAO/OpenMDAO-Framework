@@ -3187,9 +3187,9 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual( set(top._system.vec['u'].keys()),
                           set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
                                ('_pseudo_0.out0', ('_pseudo_0.out0',)),
-                               ('_pseudo_0.in0', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
+                               ('target', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
                                ('_pseudo_1.out0', ('_pseudo_1.out0',)),
-                               ('_pseudo_1.in1', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
+                               ('comp.x', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
                               ]))
 
     def test_PA_subvar_solver_edges(self):

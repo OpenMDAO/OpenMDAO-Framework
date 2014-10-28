@@ -155,6 +155,7 @@ class Assembly(Component):
         self._pseudo_count = 0  # counter for naming pseudocomps
         self._pre_driver = None
         self._derivs_required = False
+        self._unexecuted = []
 
         # data dependency graph. Includes edges for data
         # connections as well as for all driver parameters and
@@ -558,6 +559,7 @@ class Assembly(Component):
                                  RuntimeError)
 
     def _check_unexecuted_comps(self, strict):
+        self._unexecuted = []
         cgraph = self._depgraph.component_graph()
         wfcomps = set([c.name for c in self.driver.iteration_set()])
         wfcomps.add('driver')
@@ -574,9 +576,8 @@ class Assembly(Component):
                        "this Assembly"
 
             out_edges = nx.edge_boundary(cgraph, diff)
-            in_edges = nx.edge_boundary(cgraph, wfcomps)
             pre = [u for u, v in out_edges]
-            post = [v for u, v in in_edges]
+            post = diff - set(pre)
 
             if pre:
                 msg += ": %s" % pre
@@ -599,6 +600,7 @@ class Assembly(Component):
             if post:
                 errfunct("The following components are not in any workflow"
                          " and WILL NOT EXECUTE: %s" % list(diff))
+                self._unexecuted = list(post)
 
     def _check_unset_req_vars(self):
         """Find 'required' variables that have not been set."""
@@ -1390,6 +1392,11 @@ class Assembly(Component):
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
                 data['system'] = _create_simple_sys(self, rgraph, node)
+                
+        for name in self._unexecuted:
+            comp = getattr(self, name)
+            if name not in rgraph and has_interface(comp, IDriver):
+                comp.setup_systems()
 
         self._top_driver.setup_systems()
         
