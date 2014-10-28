@@ -8,7 +8,6 @@ from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable=E0611,F0401
 
-from openmdao.main.mpiwrap import MPI
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
@@ -184,15 +183,15 @@ class Driver(Component):
 
     def get_reduced_graph(self):
         if self._reduced_graph is None:
+            parent_graph = self.parent.get_reduced_graph()
             nodes = set([c.name for c in self.iteration_set()])
             nodes.add(self.name)
-            if self.parent._setup_inputs:
-                nodes.update(simple_node_iter(self.parent._setup_inputs))
-            self._reduced_graph = get_reduced_subgraph(self.parent.get_reduced_graph(), nodes)
+            # if self.workflow._calc_gradient_inputs:
+            #     nodes.update(simple_node_iter(self.workflow._calc_gradient_inputs))
+            g = parent_graph.subgraph(parent_graph.nodes_iter())
+            g = get_reduced_subgraph(parent_graph, nodes)
+            self._reduced_graph = g.subgraph(g.nodes_iter())
 
-            # get a graph containing only stuff local to iterations of this driver
-            g = self._reduced_graph
-            g = g.subgraph(g.nodes_iter())
             to_add = []
             for name in nodes:
                 if name == self.name:
@@ -630,6 +629,30 @@ class Driver(Component):
 
         return self.workflow.calc_gradient(inputs, outputs, mode, return_format,
                                            force_regen)
+
+    @rbac(('owner', 'user'))
+    def setup_depgraph(self, dgraph):
+        self._reduced_graph = None
+        # # add connections for params, constraints, etc.
+        # pass
+
+        if self.workflow._calc_gradient_inputs is not None:
+            for param in self.workflow._calc_gradient_inputs:
+                dgraph.add_param(self.name, param)
+        else:  # add connections for our params/constraints/objectives
+            # if hasattr(self, 'list_param_group_targets'):
+            #     params = self.list_param_group_targets()
+
+            # for now do nothing here because params are already 
+            # in the depgraph
+            pass
+
+        # add connections for calc gradient outputs
+        if self.workflow._calc_gradient_outputs is not None:
+            for vname in self.workflow._calc_gradient_outputs:
+                dgraph.add_driver_input(self.name, vname)
+        else:
+            pass # for now, do nothing
 
     @rbac(('owner', 'user'))
     def pre_setup(self):

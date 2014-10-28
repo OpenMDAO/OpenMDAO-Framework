@@ -295,15 +295,15 @@ class FiniteDifference(object):
 
                         sz = uvec[okey].size
                         end += sz
-                        mpiprint(Jfd, start, end, i, self.J)
+                        #mpiprint(Jfd, start, end, i, self.J)
                         self.J[okey][src][:, i-i1] = Jfd[start:end]
                         start += sz
                 else:
                     self.J[:, i] = Jfd
 
         # Restore final inputs/outputs.
-        self.system.vec['u'].set_from_array(self.y_base, self.outputs)
-        self.system.vec['u'].set_to_scope(self.scope)
+        uvec.set_from_array(self.y_base, self.outputs)
+        uvec.set_to_scope(self.scope)
 
         #print 'after FD', self.J
         return self.J
@@ -495,7 +495,7 @@ class DirectionalFD(object):
         # Pack the results dictionary
         j = 0
         for key in self.outputs:
-            indices = self.system.vec['u'].indices(key)
+            indices = self.system.vec['u'].indices(self.system.scope, key)
             i1, i2 = j, j+len(indices)
 
             old_val = self.scope.get(key)

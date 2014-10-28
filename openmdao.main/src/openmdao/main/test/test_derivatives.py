@@ -1935,15 +1935,15 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         top.driver.add_constraint('nest.y[0][1] < 0')
         top.run()
 
-        J = top.driver.workflow.calc_gradient(mode='forward')
+        J = top.driver.calc_gradient(mode='forward')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='adjoint')
+        J = top.driver.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
-        J = top.driver.workflow.calc_gradient(mode='fd')
+        J = top.driver.calc_gradient(mode='fd')
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
@@ -2364,12 +2364,12 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 4)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 3)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
         self.assertTrue('comp3' in comp_list)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
         self.assertTrue(len(comp_list) == 1)
         self.assertTrue('comp5' in comp_list)
 
@@ -2392,7 +2392,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 2)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 5)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
@@ -2419,7 +2419,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 3)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[1]._nodes)
         self.assertTrue(len(comp_list) == 4)
         self.assertTrue('comp1' in comp_list)
         self.assertTrue('comp2' in comp_list)
@@ -2446,7 +2446,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 313.0, .001)
 
         self.assertTrue(len(self.top.driver.workflow._system.subsystems()) == 5)
-        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3].graph)
+        comp_list = simple_node_iter(self.top.driver.workflow._system.subsystems()[3]._nodes)
         self.assertTrue(len(comp_list) == 2)
         self.assertTrue('comp2' in comp_list)
         self.assertTrue('comp4' in comp_list)
@@ -2714,32 +2714,32 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        top.driver.workflow = Dataflow()
+        top.driver.workflow.clear()
         top.driver.workflow.add('c2')
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+        J = top.driver.calc_gradient(inputs=[('c2.a', 'c2.b')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[:2]', 'c2.b[:2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[1]', 'c2.b[1]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 5.0, .001)
 
         top.disconnect('c1.y', 'c2.b')
         top.c2.b = array([0.0, 0.0, 0.0, 0.0])
         top.run()
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0]', 'c2.a[2]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
 
-        J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
+        J = top.driver.calc_gradient(inputs=[('c2.a[0:2]', 'c2.a[2:4]')],
                                               outputs=['c2.y'], mode='fd')
         assert_rel_error(self, J[0, 0], 4.0, .001)
         assert_rel_error(self, J[0, 1], 4.0, .001)
@@ -2753,9 +2753,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.comp1.x = zeros((3, 2))
         try:
-            J = top.driver.workflow.calc_gradient(inputs=[('comp1.x')],
-                                                  outputs=['comp1.y'],
-                                                  mode='forward')
+            J = top.driver.calc_gradient(inputs=[('comp1.x')],
+                                         outputs=['comp1.y'],
+                                         mode='forward')
         except RuntimeError as err:
             msg = 'comp1: Jacobian is the wrong size. Expected (4x6) but got (4x4)'
             self.assertEqual(str(err), msg)
@@ -3023,7 +3023,7 @@ class Testcase_preconditioning(unittest.TestCase):
                                               outputs=['comp.y1', 'comp.y2'],
                                               mode='forward')
 
-        print J
+        #print J
         # TODO: transform back to original coords
         #assert_rel_error(self, J[0, 0], 2.0, 0.0001)
         #assert_rel_error(self, J[0, 1], 7.0, 0.0001)
@@ -3057,7 +3057,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 82.0, 0.0001)
@@ -3080,7 +3080,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
@@ -3115,10 +3115,10 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
-        print J
+        #print J
 
 
         assert_rel_error(self, J[0, 0], 95.0, 0.0001)
@@ -3155,7 +3155,7 @@ class Testcase_preconditioning(unittest.TestCase):
         top.run()
 
         J = top.driver.workflow.calc_gradient(mode='forward')
-        print J
+        #print J
 
         J = top.driver.workflow.calc_gradient(mode='adjoint')
         assert_rel_error(self, J[0, 0], 475.0, 0.0001)
@@ -3187,9 +3187,9 @@ class TestMultiDriver(unittest.TestCase):
         self.assertEqual( set(top._system.vec['u'].keys()),
                           set([('comp.y', ('_pseudo_0.in2', '_pseudo_1.in2')),
                                ('_pseudo_0.out0', ('_pseudo_0.out0',)),
-                               ('_pseudo_0.in0', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
+                               ('target', ('_pseudo_0.in0', '_pseudo_1.in0', 'target')),
                                ('_pseudo_1.out0', ('_pseudo_1.out0',)),
-                               ('_pseudo_1.in1', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
+                               ('comp.x', ('_pseudo_1.in1', '_pseudo_0.in1', 'comp.x')),
                               ]))
 
     def test_PA_subvar_solver_edges(self):

@@ -22,10 +22,10 @@ class ImplicitWithSolver(ImplicitComponent):
     def solve(self):
         """Calculates the states that satisfy residuals using scipy.fsolve.
         You can override this function to provide your own internal solve."""
-        print "start solve", self.name
+        #print "start solve", self.name
         x0 = self.get_state()
         fsolve(self._solve_callback, x0, xtol=1e-12)
-        print "end solve", self.name
+        #print "end solve", self.name
 
     def _solve_callback(self, X):
         """This function is passed to the internal solver to set a new state,

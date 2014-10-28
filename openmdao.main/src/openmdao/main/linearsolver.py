@@ -6,7 +6,8 @@
 import numpy as np
 from scipy.sparse.linalg import gmres, LinearOperator
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+from openmdao.main.mpiwrap import MPI
+from openmdao.util.graph import fix_single_tuple
 from openmdao.util.log import logger
 
 if MPI:
@@ -101,7 +102,7 @@ class ScipyGMRES(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(param)
+            in_indices = system.vec['u'].indices(system.scope, param)
             jbase = j
 
             for irhs in in_indices:
@@ -119,7 +120,7 @@ class ScipyGMRES(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(item)
+                    out_indices = system.vec['u'].indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -152,7 +153,7 @@ class ScipyGMRES(LinearSolver):
         options = self.options
         A = self.A
 
-        #print 'Linear solution start vec', rhs_vec
+        #print system.name, 'Linear solution start vec', system.rhs_vec.array
         # Call GMRES to solve the linear system
         dx, info = gmres(A, arg,
                          tol=options.atol,
@@ -166,7 +167,7 @@ class ScipyGMRES(LinearSolver):
             msg = "ERROR in calc_gradient in '%s': gmres failed"
             logger.error(msg, system.name)
 
-        #print 'Linear solution vec', -dx
+        #print system.name, 'Linear solution vec', -dx
         return dx
 
 
@@ -176,16 +177,19 @@ class ScipyGMRES(LinearSolver):
 
         system = self._system
         system.sol_vec.array[:] = arg[:]
-        name2collapsed = system.scope.name2collapsed
+        #name2collapsed = system.scope.name2collapsed
 
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
 
+        varmeta = system.scope._var_meta
         vnames = set(system.flat_vars.keys())
         if system._parent_system:
             g = system._parent_system._comp._reduced_internal_graph
-            vnames.update([n for n,data in g.nodes_iter(data=True) if 'comp' not in data])
+            #g = system._parent_system._comp.get_reduced_graph()
+            vnames.update([n for n,data in g.nodes_iter(data=True) 
+                               if 'comp' not in data and varmeta[n].get('flat')])
 
         ## add inputs, filtered so that we don't include any inputs from
         ## outside of this workflow system
@@ -195,7 +199,7 @@ class ScipyGMRES(LinearSolver):
         #system.applyJ(system.flat_vars.keys())
         system.applyJ(vnames)
 
-        #mpiprint ('arg, result', arg, system.rhs_vec.array[:])
+        #print system.name, 'mult: arg, result', arg, system.rhs_vec.array[:]
         #print system.rhs_vec.keys()
         return system.rhs_vec.array[:]
 
@@ -249,8 +253,8 @@ class PETSc_KSP(LinearSolver):
         options = self.options
         name2collapsed = system.scope.name2collapsed
 
-        inputs = [_detuple(x) for x in inputs]
-        outputs = [_detuple(x) for x in outputs]
+        inputs = [fix_single_tuple(x) for x in inputs]
+        outputs = [fix_single_tuple(x) for x in outputs]
 
         J = {}
         for okey in outputs:
@@ -409,7 +413,7 @@ class LinearGS(LinearSolver):
             if isinstance(param, tuple):
                 param = param[0]
 
-            in_indices = system.vec['u'].indices(param)
+            in_indices = system.vec['u'].indices(system.scope, param)
             jbase = j
 
             for irhs in in_indices:
@@ -430,7 +434,7 @@ class LinearGS(LinearSolver):
                     if isinstance(item, tuple):
                         item = item[0]
 
-                    out_indices = system.vec['u'].indices(item)
+                    out_indices = system.vec['u'].indices(system.scope, item)
                     nk = len(out_indices)
 
                     if return_format == 'dict':
@@ -511,12 +515,3 @@ class LinearGS(LinearSolver):
         #print 'Linear solution vec', system.sol_vec.array
         return system.sol_vec.array
 
-
-def _detuple(x):
-    """For scalar x, return x. For 1 element tuple, return x[0].
-    For multi-element tuple, return x.
-    """
-    if isinstance(x, tuple):
-        if len(x) == 1:
-            return x[0]
-    return x

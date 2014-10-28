@@ -1900,7 +1900,7 @@ class Component(Container):
         return set((self.name,))
 
     @rbac(('owner', 'user'))
-    def setup_graph(self, inputs=None, outputs=None):
+    def setup_depgraph(self, inputs=None, outputs=None):
         pass
 
     @rbac(('owner', 'user'))

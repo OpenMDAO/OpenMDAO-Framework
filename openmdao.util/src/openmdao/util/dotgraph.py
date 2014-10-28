@@ -9,7 +9,7 @@ from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
-                                  OpaqueDriverSystem, TransparentDriverSystem
+                                  FiniteDiffDriverSystem, TransparentDriverSystem, OpaqueSystem
 from openmdao.util.graph import base_var
 
 _cluster_count = 0
@@ -176,7 +176,7 @@ def write_system_dot(system, dotfile):
 def _dot_shape(system):
     if isinstance(system, AssemblySystem):
         return "box3d"
-    elif isinstance(system, OpaqueDriverSystem):
+    elif isinstance(system, FiniteDiffDriverSystem):
         return "invhouse"
     elif isinstance(system, TransparentDriverSystem):
         return "invhouse"
@@ -193,16 +193,31 @@ def _dot_shape(system):
 
     return "box"
 
-def _sys_dot(system, indent, f):
+def _get_subsystems(system, prefix):
+    """Returns an iterator containing ALL internal subsystems."""
+    if isinstance(system, OpaqueSystem):
+        prefix = prefix + system.name + '.'
+        return [(system._inner_system, prefix)]
+    elif isinstance(system, AssemblySystem):
+        prefix = prefix + system.name + '.'
+        return [(system._comp._system, prefix)]
+    else:
+        return [(s,prefix) for s in system.subsystems()]
 
-    for i,s in enumerate(system.subsystems()):
-        name = s.name
-        write_node(f, {'shape': _dot_shape(s)}, name, indent)
+def _sys_dot(system, indent, f, prefix=''):
+
+    for i,(s,pre) in enumerate(_get_subsystems(system, prefix)):
+        name = pre + s.name
+        meta = {
+            'shape': _dot_shape(s),
+            #'label': s.name
+        }
+        write_node(f, meta, name, indent)
         f.write('%s"%s" -> "%s" [label=%d];\n' %
-                        (' '*indent, system.name, name, i))
-        _sys_dot(s, indent+3, f)
+                        (' '*indent, prefix+system.name, name, i))
+        _sys_dot(s, indent+3, f, pre)
 
-def plot_system_tree(system, fmt='pdf', outfile=None):
+def plot_system_tree(system, outfile=None, fmt='pdf'):
     if outfile is None:
         outfile = 'system_graph.'+fmt
 
