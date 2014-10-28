@@ -392,8 +392,8 @@ users to use a github-specific option with ``plugin install``.
 
 .. _: https://github.com
 
-You're free to host your plugin where ever you'd like. However, if your plugin
-is not hosted at  Github or  PYPI users will need to know the URL to pass to 
+While you're free to host your plugin where ever you'd like, if your plugin
+is not hosted at Github or PYPI, users will need to know the URL to pass to 
 ``plugin install`` so that your distribution can be downloaded. 
 
 .. note: Hosting plugins at PyPI requires registration. See this `link`__ for more information about how to register your plugin with PyPI.
