@@ -396,8 +396,8 @@ While you're free to host your plugin where ever you'd like, if your plugin
 is not hosted at Github or PYPI, users will need to know the URL to pass to 
 ``plugin install`` so that your distribution can be downloaded. 
 
-.. note: Hosting plugins at PyPI requires registration. See this `link`__ for more information about how to register your plugin with PyPI.
+.. note: Hosting plugins at PyPI requires registration. See this `link`_ for more information about how to register your plugin with PyPI.
 
-.. __link: https://docs.python.org/2/distutils/packageindex.html
+.. _link: https://docs.python.org/2/distutils/packageindex.html
 
 
