@@ -18,7 +18,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
                                    collapse_nodes, simple_node_iter, get_reduced_subgraph, \
-                                   internal_nodes, reduced2component
+                                   internal_nodes, reduced2component, unique
 from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
@@ -124,7 +124,7 @@ class System(object):
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
-        self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
+        #self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
 
         self._mapped_resids = {}
 
@@ -152,6 +152,8 @@ class System(object):
         # get our input nodes from the depgraph
         self._in_nodes, _ = get_node_boundary(graph, all_outs)
 
+        self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
+
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
         # mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
 
@@ -175,6 +177,12 @@ class System(object):
         self.sol_buf = None
         self.rhs_buf = None
         self._parent_system = None
+
+    def __getitem__(self, ident):
+        if isinstance(ident, basestring):
+            return self.find(ident)
+        else:
+            return self.subsystems()[ident]
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
@@ -364,7 +372,7 @@ class System(object):
 
         # filter out subvars of included basevars
         inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
-        
+
         top = self.scope
 
         unignored_inputs = []
@@ -428,6 +436,11 @@ class System(object):
                 parts = src.split('.', 1)
                 if parts[0] in system._nodes and src not in states:
                     outputs.append(src)
+            #for src, srcs in out_nodes:
+                #for item in list(srcs) + [src]:
+                    #parts = item.split('.', 1)
+                    #if parts[0] in system._nodes and item not in states:
+                        #outputs.append(item)
 
         top = self.scope
         return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
@@ -478,7 +491,7 @@ class System(object):
 
         return size
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         pass
 
     def is_active(self):
@@ -1496,15 +1509,40 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
+def _get_counts(names):
+    """Return a dict with each name keyed to a number indicating the
+    number of times it occurs in the list.
+    """
+    counts = dict([(n,0) for n in names])
+    for name in names:
+        counts[name] += 1
+
+    return counts
 
 class SerialSystem(CompoundSystem):
 
     def all_subsystems(self):
         return [self.graph.node[node]['system'] for node in self._ordering]
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         """Return the execution order of our subsystems."""
-        self._ordering = [n for n in ordering if n in self.graph]
+        counts = _get_counts(ordering)
+        self._ordering = []
+        seen = {}
+        mapcount = dict([(v, 0) for v in opaque_map.values()])
+        for name in ordering:
+            if name in self.graph:
+                self._ordering.append(name)
+                continue
+
+            opaque_name = opaque_map.get(name, name)
+            if opaque_name in mapcount:
+                mapcount[opaque_name] += 1
+            if opaque_name in self.graph:
+                count = counts[name]
+                if opaque_name in mapcount and mapcount[opaque_name] > count:
+                    continue
+                self._ordering.append(opaque_name)
 
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
@@ -1535,7 +1573,7 @@ class SerialSystem(CompoundSystem):
         self._ordering = gsort(deps, self._ordering)
 
         for s in self.all_subsystems():
-            s.set_ordering(ordering)
+            s.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         cpus = []
@@ -1737,9 +1775,9 @@ class OpaqueSystem(CompoundSystem):
                 int_out_nodes.append(node)
 
         graph = graph.subgraph(nodes)
-        
+
         srcs = sorted([(node[0], node) for node in self._in_nodes])
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for src, node in srcs:
@@ -1753,7 +1791,7 @@ class OpaqueSystem(CompoundSystem):
             comp = src.split('.', 1)[0]
             if comp != src and comp in graph:
                 graph.add_edge(node, comp)
-                
+
             if src in graph:
                 graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
                 nodes.add(src)
@@ -1821,8 +1859,14 @@ class OpaqueSystem(CompoundSystem):
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
-        for item in self.list_outputs():
-            self_u[item][:] = inner_u[item][:]
+        # TODO - Bret, i needed to do this to get further in CO, but there
+        # may be a deeper fix to make instead.
+        #for item in self.list_outputs():
+        for item in self.out_nodes:
+            # TODO - same as above
+            #self_u[item][:] = inner_u[item][:]
+            if item in inner_u:
+                self_u[item][:] = inner_u[item][:]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1893,8 +1937,8 @@ class OpaqueSystem(CompoundSystem):
     def simple_subsystems(self):
         yield self
 
-    def set_ordering(self, ordering):
-        self._inner_system.set_ordering(ordering)
+    def set_ordering(self, ordering, opaque_map):
+        self._inner_system.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()

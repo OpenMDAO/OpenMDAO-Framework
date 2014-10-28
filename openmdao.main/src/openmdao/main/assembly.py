@@ -51,7 +51,7 @@ from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    map_collapsed_nodes, simple_node_iter, \
                                    reduced2component, collapse_driver, \
                                    fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps, list_driver_connections
+                                   add_boundary_comps, list_driver_connections, fix_dangling_vars
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars, base_var
@@ -704,8 +704,10 @@ class Assembly(Component):
             cnames = ExprEvaluator(varpath, self).get_referenced_compnames()
             if varpath2 is not None:
                 cnames.update(ExprEvaluator(varpath2, self).get_referenced_compnames())
+            boundary_vars = self.list_inputs() + self.list_outputs()
             for cname in cnames:
-                getattr(self, cname).config_changed(update_parent=False)
+                if cname not in boundary_vars:
+                    getattr(self, cname).config_changed(update_parent=False)
 
             to_remove, pcomps = self._exprmapper.disconnect(varpath, varpath2)
 
@@ -1406,7 +1408,7 @@ class Assembly(Component):
 
         if len(cgraph) > 1:
             self._system = SerialSystem(self, rgraph, cgraph, '_inner_asm')
-            self._system.set_ordering(nx.topological_sort(cgraph))
+            self._system.set_ordering(nx.topological_sort(cgraph), {})
         else:
             # TODO: if top driver has no params/constraints, possibly
             # remove driver system entirely and just go directly to workflow
@@ -1518,7 +1520,11 @@ class Assembly(Component):
                         ins.append(inp[0])
                         # add input to input connections from first
                         # param in a group to all of the others
+                        if inp[0] not in dgraph:
+                            dgraph.add_subvar(inp[0])
                         for pname in inp[1:]:
+                            if pname not in dgraph:
+                                dgraph.add_subvar(pname)
                             dgraph.add_edge(inp[0], pname, conn=True)
                 inputs = ins
 
@@ -1577,6 +1583,8 @@ class Assembly(Component):
         # remove all vars that don't connect components
         prune_reduced_graph(self._depgraph, collapsed_graph,
                             coll_keep)
+
+        fix_dangling_vars(collapsed_graph)
 
         self._reduced_graph = collapsed_graph
 

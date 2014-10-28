@@ -177,7 +177,7 @@ class ScipyGMRES(LinearSolver):
         system = self._system
         system.sol_vec.array[:] = arg[:]
         name2collapsed = system.scope.name2collapsed
-        
+
         # Start with a clean slate
         system.rhs_vec.array[:] = 0.0
         system.clear_dp()
@@ -187,7 +187,7 @@ class ScipyGMRES(LinearSolver):
             g = system._parent_system._comp._reduced_internal_graph
             vnames.update([n for n,data in g.nodes_iter(data=True) if 'comp' not in data])
 
-        ## add inputs, filtered so that we don't include any inputs from 
+        ## add inputs, filtered so that we don't include any inputs from
         ## outside of this workflow system
         #ins = [name2collapsed[n] for n in system.list_inputs()]
         #vnames.update([n for n in ins if n[0].split('.',1)[0] in system._nodes])
@@ -469,16 +469,22 @@ class LinearGS(LinearSolver):
         while counter < options.maxiter and norm > options.atol and \
               norm/norm0 > options.rtol:
 
+            print "Begin GS"
             if system.mode == 'forward':
                 for subsystem in system.subsystems(local=True):
                     system.scatter('du', 'dp', subsystem=subsystem)
+                    print 'L1', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     system.rhs_vec.array[:] = 0.0
                     subsystem.applyJ(system.vector_vars.keys())
+                    print 'L2', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     system.rhs_vec.array[:] *= -1.0
                     system.rhs_vec.array[:] += system.rhs_buf[:]
                     sub_options = options if subsystem.options is None \
                                           else subsystem.options
+                    print 'L3', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
                     subsystem.solve_linear(sub_options)
+                    print 'L4', system.vec['dp'].array, system.vec['du'].array, system.vec['df'].array
+                print "End GS"
 
             elif system.mode == 'adjoint':
 

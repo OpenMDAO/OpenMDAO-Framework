@@ -805,6 +805,8 @@ class Workflow(object):
             added.add(param)
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
+            
+        singleparams = list(added)
 
         if self.scope._setup_inputs is not None:
             for param in self.scope._setup_inputs:
@@ -824,15 +826,20 @@ class Workflow(object):
         # that are in the iteration set of their parent driver.
         self.parent._collapse_subdrivers(cgraph)
 
+        opaque_map = {} # map of all internal comps to collapsed
+                              # name of opaque system
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
             for group in get_nondiff_groups(reduced, self.scope):
+                gtup = tuple(group)
                 system = OpaqueSystem(scope, reduced,
                                       cgraph.subgraph(group),
-                                      str(tuple(group)))
-                collapse_to_system_node(cgraph, system, tuple(group))
-                collapse_nodes(reduced, tuple(group), internal_nodes(reduced, group))
+                                      str(gtup))
+                collapse_to_system_node(cgraph, system, gtup)
+                collapse_nodes(reduced, gtup, internal_nodes(reduced, group))
+                for c in group:
+                    opaque_map[c] = gtup
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
@@ -843,7 +850,7 @@ class Workflow(object):
             self._system = SerialSystem(scope, reduced, cgraph,
                                         str(tuple(cgraph.nodes())))
 
-        self._system.set_ordering(params+[c.name for c in self])
+        self._system.set_ordering(singleparams+[c.name for c in self], opaque_map)
 
         self._system._parent_system = self.scope._reduced_graph.node[self.parent.name]['system']
 

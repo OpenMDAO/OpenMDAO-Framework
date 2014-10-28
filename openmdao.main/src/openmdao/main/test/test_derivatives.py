@@ -15,7 +15,7 @@ from openmdao.lib.architectures.api import MDF, CO
 from openmdao.lib.optproblems.api import UnitScalableProblem
 
 import openmdao.main.derivatives
-from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top
+from openmdao.main.api import Component, VariableTree, Driver, Assembly, set_as_top, Dataflow
 from openmdao.main.datatypes.api import Array, Float, VarTree, Int
 from openmdao.main.depgraph import simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
@@ -1114,16 +1114,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.nest.comp.missing_deriv_policy = 'assume_zero'
         top.run()
-        #try:
-        if True:
-            J = top.driver.calc_gradient(inputs=['nest.x', 'first.x'],
-                                         outputs=['nest.f_xy', 'last.f_xy'],
-                                         mode='forward')
-        #except RuntimeError as err:
-            #msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            #self.assertEqual(str(err), msg)
-        #else:
-            #self.fail("RuntimeError expected")
+        J = top.driver.calc_gradient(inputs=['nest.x', 'first.x'],
+                                     outputs=['nest.f_xy', 'last.f_xy'],
+                                     mode='forward')
 
         top.nest.missing_deriv_policy = 'assume_zero'
         J = top.driver.workflow.calc_gradient(inputs=['nest.x', 'first.x'],
@@ -1137,15 +1130,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.nest.missing_deriv_policy = 'error'
 
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['first.x'],
-                                                  outputs=['last.f_xy'],
-                                                  mode='forward')
-        except RuntimeError as err:
-            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("RuntimeError expected")
+        J = top.driver.workflow.calc_gradient(inputs=['first.x'],
+                                              outputs=['last.f_xy'],
+                                              mode='forward')
 
         top.nest.missing_deriv_policy = 'assume_zero'
         J = top.driver.workflow.calc_gradient(inputs=['first.x'],
@@ -1211,15 +1198,9 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 0.0, .001)
 
         top.nest.missing_deriv_policy = 'error'
-        try:
-            J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
-                                                  outputs=['nest.junk'],
-                                                  mode='forward')
-        except RuntimeError as err:
-            msg = "'nest' doesn't provide analytical derivatives ['junk', 'stuff']"
-            self.assertEqual(str(err), msg)
-        else:
-            self.fail("RuntimeError expected")
+        J = top.driver.workflow.calc_gradient(inputs=['nest.stuff'],
+                                              outputs=['nest.junk'],
+                                              mode='forward')
 
     def test_broadcast_graph(self):
 
@@ -2733,9 +2714,11 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
 
         top.run()
 
-        #J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
-                                              #outputs=['c2.y'], mode='fd')
-        #assert_rel_error(self, J[0, 0], 5.0, .001)
+        top.driver.workflow = Dataflow()
+        top.driver.workflow.add('c2')
+        J = top.driver.workflow.calc_gradient(inputs=[('c2.a', 'c2.b')],
+                                              outputs=['c2.y'], mode='fd')
+        assert_rel_error(self, J[0, 0], 5.0, .001)
 
         J = top.driver.workflow.calc_gradient(inputs=[('c2.a[0:2]', 'c2.b[0:2]')],
                                               outputs=['c2.y'], mode='fd')

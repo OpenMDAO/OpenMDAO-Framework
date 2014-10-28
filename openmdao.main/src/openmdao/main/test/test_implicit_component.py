@@ -22,9 +22,10 @@ class ImplicitWithSolver(ImplicitComponent):
     def solve(self):
         """Calculates the states that satisfy residuals using scipy.fsolve.
         You can override this function to provide your own internal solve."""
-
+        print "start solve", self.name
         x0 = self.get_state()
-        fsolve(self._solve_callback, x0)
+        fsolve(self._solve_callback, x0, xtol=1e-12)
+        print "end solve", self.name
 
     def _solve_callback(self, X):
         """This function is passed to the internal solver to set a new state,
@@ -247,6 +248,7 @@ class Coupled1(ImplicitWithSolver):
         self.res[1] = 2*x - 2*y + 4*z + 2
 
         self.y_out = c + x + y + z
+        #print x, y, z, c, self.y_out, self.res
 
     def list_deriv_vars(self):
         return ('x', 'y', 'z', 'c'), ('res', 'y_out')
@@ -255,12 +257,12 @@ class Coupled1(ImplicitWithSolver):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
-        dc = [3*x + 2*y - z, 0, 0]
-        dx = [3*c, 2, -1]
-        dy = [2*c, -2, .5]
-        dz = [-c, 4, -1]
+        dc = [3*x + 2*y - z, 0]
+        dx = [3*c, 2]
+        dy = [2*c, -2]
+        dz = [-c, 4]
 
-        self.J_res_state = np.array([dx, dy])
+        self.J_res_state = np.array([dx, dy]).T
         self.J_res_input = np.array([dc, dz]).T
 
         self.J_output_input = np.array([[1.0, 1.0]])
@@ -277,7 +279,7 @@ class Coupled1(ImplicitWithSolver):
                     result['res'] += self.J_res_state[:, k]*arg[state]
 
             # wrt External inputs
-            for k, state in enumerate(['c']):
+            for k, state in enumerate(['c', 'z']):
                 if state in arg:
                     result['res'] += self.J_res_input[:, k]*arg[state]
 
@@ -331,15 +333,16 @@ class Coupled2(ImplicitWithSolver):
         self.res[0] = -x + y/2. - z
 
         self.y_out = c + x + y + z
+        #print x, y, z, c, self.y_out, self.res
 
     def provideJ(self):
         #partial w.r.t c
         c, x, y, z = self.c, self.x, self.y, self.z
 
-        dc = [3*x + 2*y - z, 0, 0]
-        dx = [3*c, 2, -1]
-        dy = [2*c, -2, .5]
-        dz = [-c, 4, -1]
+        dc = [0]
+        dx = [-1.0]
+        dy = [.5]
+        dz = [-1.0]
 
         self.J_res_state = np.array([dz])
         self.J_res_input = np.array([dc, dx, dy]).T
@@ -361,7 +364,7 @@ class Coupled2(ImplicitWithSolver):
                     result['res'] += self.J_res_state[:, k]*arg[state]
 
             # wrt External inputs
-            for k, state in enumerate(['c']):
+            for k, state in enumerate(['c', 'x', 'y']):
                 if state in arg:
                     result['res'] += self.J_res_input[:, k]*arg[state]
 
@@ -469,7 +472,8 @@ class Testcase_implicit(unittest.TestCase):
 
         model = set_as_top(Assembly())
         model.add('comp', MyComp_Deriv())
-        model.add('driver', BroydenSolver())
+        #model.add('driver', BroydenSolver())
+        model.add('driver', NewtonSolver())
         model.driver.workflow.add('comp')
 
         model.driver.add_parameter('comp.x', low=-100, high=100)
@@ -499,10 +503,19 @@ class Testcase_implicit(unittest.TestCase):
         model.driver.workflow.add(['comp1', 'comp2'])
         model.comp1.eval_only = False
         model.comp2.eval_only = False
+        model.comp1.force_fd = False
+        model.comp2.force_fd = False
 
-        model.connect('comp1.x', 'comp2.x')
-        model.connect('comp1.y', 'comp2.y')
-        model.connect('comp2.z', 'comp1.z')
+        #model.connect('comp1.x', 'comp2.x')
+        #model.connect('comp1.y', 'comp2.y')
+        #model.connect('comp2.z', 'comp1.z')
+        model.driver.add_parameter('comp1.z', low=-100, high=100)
+        model.driver.add_parameter('comp2.x', low=-100, high=100)
+        model.driver.add_parameter('comp2.y', low=-100, high=100)
+
+        model.driver.add_constraint('comp1.z = comp2.z')
+        model.driver.add_constraint('comp2.x = comp1.x')
+        model.driver.add_constraint('comp2.y = comp1.y')
 
         model.run()
 
