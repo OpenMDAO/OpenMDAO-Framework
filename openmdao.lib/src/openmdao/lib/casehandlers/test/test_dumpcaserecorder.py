@@ -49,16 +49,16 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
 
         expected_constants = """\
 Constants:
-   comp1.directory: 
+   comp1.directory:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
-   comp2.directory: 
+   comp2.directory:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
-   directory: 
+   directory:
    driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
    driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
-   driver.directory: 
+   driver.directory:
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -69,9 +69,7 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero"""
 
         expected_case = """\
@@ -94,12 +92,12 @@ Case:
       comp2.z: 25.0
       driver.workflow.itername: 9"""
 
-#        print sout1.getvalue()
+        # print sout1.getvalue()
         expected = expected_constants.split('\n')
         for sout in [sout1, sout2]:
             lines = sout.getvalue().split('\n')
             for i in range(len(expected)):
-                self.assertEqual(lines[i], expected[i])
+                self.assertEqual(lines[i].rstrip(), expected[i])
 
         expected = expected_case.split('\n')
         for sout in [sout1, sout2]:
@@ -129,15 +127,15 @@ Case:
 
         expected = """\
 Constants:
-   comp1.directory: 
+   comp1.directory:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.y: 0.0
-   comp2.directory: 
+   comp2.directory:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
-   directory: 
-   driver.directory: 
+   directory:
+   driver.directory:
    driver.force_fd: False
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
@@ -148,13 +146,14 @@ Constants:
    driver.gradient_options.force_fd: False
    driver.gradient_options.gmres_maxiter: 100
    driver.gradient_options.gmres_tolerance: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: ad4c1b76-64fb-11e0-95a8-001e8cf75fe
-   timestamp: 1383239074.309192
+   uuid: 766f9b47-5bc0-11e4-803d-080027a1f086
+   timestamp: 1414184290.686166
    inputs:
       comp1.x: 0.0
    outputs:
@@ -168,9 +167,10 @@ Case:
       comp2.exec_count: 1
       comp2.itername: 1-comp2
       comp2.z: 1.0
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+"""
 
-#        print sout.getvalue()
+        # print sout.getvalue()
         expected = expected.split('\n')
         lines = sout.getvalue().split('\n')
         for i in range(len(expected)):
@@ -179,7 +179,7 @@ Case:
             elif expected[i].startswith('   timestamp:'):
                 self.assertTrue(lines[i].startswith('   timestamp:'))
             else:
-                self.assertEqual(lines[i], expected[i])
+                self.assertEqual(lines[i].rstrip(), expected[i])
 
     def test_close(self):
         sout1 = StringIO.StringIO()

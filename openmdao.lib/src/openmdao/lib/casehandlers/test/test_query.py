@@ -18,21 +18,21 @@ from openmdao.util.testutil import assert_rel_error
 
 
 class States(VariableTree):
-
     y = Array([0.0, 0.0])
 
-class Globals(VariableTree):
 
+class Globals(VariableTree):
     z1 = Float(0.0)
     z2 = Float(0.0)
 
-class Half(Component):
 
-    z2a = Float(0.0, iotype = 'in')
-    z2b = Float(0.0, iotype = 'out')
+class Half(Component):
+    z2a = Float(0.0, iotype='in')
+    z2b = Float(0.0, iotype='out')
 
     def execute(self):
         self.z2b = 0.5*self.z2a
+
 
 class SellarMDF(Assembly):
     """ Optimization of the Sellar problem using MDF
@@ -92,7 +92,7 @@ class SellarMDF(Assembly):
 
         # Add Parameters to optimizer
         self.driver.add_parameter('sub.globals.z1', low=-10.0, high=10.0)
-        self.driver.add_parameter('half.z2a', low= 0.0,  high=10.0)
+        self.driver.add_parameter('half.z2a', low=0.0, high=10.0)
         self.driver.add_parameter('sub.x1', low=0.0, high=10.0)
 
         # Optimization parameters
@@ -193,7 +193,7 @@ class TestCase(unittest.TestCase):
 
     def test_parent(self):
         # Full dataset names by specifying a top-level case.
-        parent = '1b192a75-4b4f-11e4-83f2-080027a1f086'  # iteration_case_6
+        parent = 'e52a477a-588e-11e4-8355-080027a1f086'  # iteration_case_6
         vnames = self.cds.data.parent_case(parent).var_names().fetch()
         expected = [
             '_driver_id', '_id', '_parent_id', '_pseudo_0', '_pseudo_1',
@@ -367,4 +367,3 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
