@@ -317,7 +317,6 @@ To see the tags available in a local repository, switch to the repository and ty
     0.5
     0.6
     0.7
-    0.8
 
 If you want to see what tags exist on a plugin, but don't have a local copy of a repository, 
 if it's public, you can still see what the tags are, but you will need to use the github api of the form: 
@@ -333,7 +332,7 @@ going to: https://api.github.com/repos/OpenMDAO-Plugins/CADRE/tags, for example,
 
     [
       {
-        "name": "0.8",
+        "name": "0.7",
         "zipball_url": "https://api.github.com/repos/OpenMDAO-Plugins/CADRE/zipball/0.8",
         "tarball_url": "https://api.github.com/repos/OpenMDAO-Plugins/CADRE/tarball/0.8",
         "commit": {
@@ -352,7 +351,7 @@ of what's been done.
 
 Setting that tag will associate the current state of the code with that tag.  Later on,
 this tag will allow our plugin installer to roll back install the exact version of CADRE 
-(say, for instance, the latest 0.9 version didn't work) by saying:
+(say, for instance, the latest version didn't work) by saying:
 
 ::
 
@@ -368,7 +367,8 @@ would get the user the latest tagged release.  If a repository has never been ta
 'plugin install' will simply go get the latest version of the default branch of that repository,
 which may not be guaranteed to be stable.  This is why plugins found at OpenMDAO-Plugins are all tagged.
 
-There will be further discussion of plugin install :ref:`plugin-install` later in this document.  For further discussion about the general git tagging:  
+There will be further discussion of plugin install :ref:`plugin-install` later in this document.  
+For further discussion about the general git tagging:  
    
     .. _http://git-scm.com/book/en/Git-Basics-Tagging: http://git-scm.com/book/en/Git-Basics-Tagging
     
@@ -383,14 +383,14 @@ for users via ``plugin install``,  it's best to place your distributions on a fi
 
 If you want to distribute your plugin to the whole world but don't happen to
 have your own public server, you can put your plugin up on the 
-`Python Package Index`__ (PyPI), which is also known as the *Cheeseshop*. 
+`Python Package Index`_ (PyPI), which is also known as the *Cheeseshop*. 
 
-.. __: https://pypi.python.org/pypi
+.. _Python Package Index: https://pypi.python.org/pypi
 
-Another option is to host your plugin source code at `GitHub`__, allowing
+Another option is to host your plugin source code at `GitHub`_, allowing
 users to use a github-specific option with ``plugin install``. 
 
-.. _: https://github.com
+.. _Github: https://github.com
 
 While you're free to host your plugin where ever you'd like, if your plugin
 is not hosted at Github or PYPI, users will need to know the URL to pass to 
@@ -398,6 +398,6 @@ is not hosted at Github or PYPI, users will need to know the URL to pass to
 
 .. note: Hosting plugins at PyPI requires registration. See this `link`__ for more information about how to register your plugin with PyPI.
 
-.. __: https://docs.python.org/2/distutils/packageindex.html
+.. __link: https://docs.python.org/2/distutils/packageindex.html
 
 
