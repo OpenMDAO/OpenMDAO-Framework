@@ -34,8 +34,8 @@
             }
         </style>
         <script>
-            d3.contextMenu = function (menu, evt, openCallback) {
-                console.log('contextMenu event:', evt);
+            d3.contextMenu = function (menu, openCallback) {
+                console.log('contextMenu event:', d3.event);
 
                 // create the div element that will hold the context menu
                 d3.selectAll('.d3-context-menu').data([1])
@@ -72,11 +72,11 @@
 
                     // display context menu
                     d3.select('.d3-context-menu')
-                        .style('left', (evt.pageX - 2) + 'px')
-                        .style('top', (evt.pageY - 2) + 'px')
+                        .style('left', (d3.event.pageX - 2) + 'px')
+                        .style('top', (d3.event.pageY - 2) + 'px')
                         .style('display', 'block');
 
-                    evt.preventDefault();
+                    d3.event.preventDefault();
                 };
             };
         </script>
@@ -89,8 +89,7 @@
         <div id='comp-graph' style='display:none;'>
             {{ svg_comp_graph }}
         </div>
-        <div id='d3-context-menu' class='d3-context-menu' style='display:none;'>
-        </div>
+        <div id='d3-context-menu' class='d3-context-menu' style='display:none;'/>
         <script id='case-data' type='application/json'>
             {{ case_data }}
         </script>
@@ -153,33 +152,149 @@
                 var graph = d3.select(graph_id+" svg")
                 vis.html(graph.html())
 
-                // Change all the variable nodes to have a shape of rect
-                $.each(case_data.simulation_info['variable_metadata'], function(varname, metadata) {
-                    $("#svgContent").find("text").filter(function() {
-                        return $(this).text() === varname;
-                    })
-                    .each(function() {
+                console.log('sim_info:', case_data.simulation_info);
+
+                var comps = [];
+                $('#comp-graph').find('.node').each(function() {
+                    var comp_name = $(this).find('text')[0].innerHTML;
+                    if (comp_name.indexOf('_pseudo_') < 0) {
+                        comps.push(comp_name);
+                    }
+                });
+
+                var pseudo_to_expr = {};
+                $.each(case_data.simulation_info.expressions, function(key, value) {
+                    var expr = {
+                        'expr': key,
+                        'type': value.data_type
+                    }
+                    pseudo_to_expr[value.pcomp_name] = expr;
+                });
+
+                console.log('pseudo_to_expr:', pseudo_to_expr);
+
+                // identify type of each node based on it's text label
+                $("#svgContent").find("text").each(function() {
+                    var label = $(this).text();
+
+                    if ($.inArray(label, comps) >= 0) {
+
+                        // get parent and flag it as a component
                         var parent = $(this).parent();
+                        parent.attr('class', expr_type);
+
+                        // replace ellipse with rect
                         var ellipse = parent.find('ellipse');
                         var cx = ellipse.attr('cx');
                         var cy = ellipse.attr('cy');
                         var rx = ellipse.attr('rx');
                         var ry = ellipse.attr('ry');
                         $(SVG('rect'))
-                            .attr('fill', 'none')
+                            .attr('fill', 'tan')
                             .attr('stroke', 'black')
                             .attr('x', cx-rx)
                             .attr('y', cy-ry)
                             .attr('width', 2*rx)
                             .attr('height', 2*ry)
-                            .appendTo(parent);
+                            .attr('rx', 5)
+                            .attr('ry', 5)
+                            .prependTo(parent);
                         ellipse.remove();
-                    })
-                    .on("contextmenu", function(evt, index) {
-                        console.log('evt:', evt, evt.pageX)
-                        d3.contextMenu(variableMenu, evt);
-                    });
-                });
+                    }
+                    else if (label.indexOf('[') >= 0 ||
+                        (label.indexOf('_pseudo_') >= 0 && label.indexOf('.') >= 0) ||
+                        case_data.simulation_info.variable_metadata.hasOwnProperty(label)) {
+
+                        // get parent and flag it as a variable node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'variable')
+
+                        // get metadata, if available
+                        metadata = case_data.simulation_info.variable_metadata[label];
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        if (metadata && metadata.iotype=='in') {
+                            ellipse.attr('fill', 'aqua');
+                        }
+                    }
+                    else if (pseudo_to_expr.hasOwnProperty(label)) {
+                        var expr_type = pseudo_to_expr[label].type;
+
+                        // get parent and flag it as an expression typenode
+                        var parent = $(this).parent();
+                        parent.attr('class', 'expression '+expr_type.toLowerCase());
+
+                        // set title (tooltip) to be the actual expression
+                        parent.find('title').text(pseudo_to_expr[label].expr);
+
+                        // set shape
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        var x = cx-rx,
+                            y = cy-ry,
+                            width = 2*rx,
+                            height = 2*ry;
+
+                        var points = x.toString()             + ',' + cy.toString()         + ' ' +
+                                     (x+1*width/5).toString() + ',' + y.toString()          + ' ' +
+                                     (x+4*width/5).toString() + ',' + y.toString()          + ' ' +
+                                     (x+width).toString()     + ',' + cy.toString()         + ' ' +
+                                     (x+4*width/5).toString() + ',' + (y+height).toString() + ' ' +
+                                     (x+1*width/5).toString() + ',' + (y+height).toString() + ' ' +
+                                     x.toString()             + ',' + cy.toString()         ;
+                        console.log('points:', points);
+
+                        // set color
+                        if (expr_type == 'Constraint') {
+                            $(SVG('polygon'))
+                                .attr('points', points)
+                                .attr('fill', 'red')
+                                .attr('stroke', 'black')
+                                .attr('x', cx-rx)
+                                .attr('y', cy-ry)
+                                .attr('width', 2*rx)
+                                .attr('height', 2*ry)
+                                .attr('rx', 5)
+                                .attr('ry', 5)
+                                .prependTo(parent);
+                        }
+                        else if (expr_type == 'Objective') {
+                            $(SVG('polygon'))
+                                .attr('points', points)
+                                .attr('fill', 'gold')
+                                .attr('stroke', 'black')
+                                .attr('x', cx-rx)
+                                .attr('y', cy-ry)
+                                .attr('width', 2*rx)
+                                .attr('height', 2*ry)
+                                .attr('rx', 5)
+                                .attr('ry', 5)
+                                .prependTo(parent);
+                        }
+                        ellipse.remove();
+                    }
+                    else {
+                        console.log(label, 'is an unknown');
+
+                        // get parent and flag it as a variable node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'unknown');
+
+                        // set color
+                        var ellipse = parent.find('ellipse');
+                        ellipse.attr('fill', 'violet');
+
+                    }
+                })
+
+
+                // add context menu to all variable nodes
+                d3.selectAll('.variable')
+                    .on("contextmenu", d3.contextMenu(variableMenu));
 
                 return graph_id;
             }
