@@ -1395,7 +1395,7 @@ class Assembly(Component):
                 
         for name in self._unexecuted:
             comp = getattr(self, name)
-            if name not in rgraph and has_interface(comp, IDriver):
+            if name not in rgraph and has_interface(comp, IDriver) or has_interface(comp, IAssembly):
                 comp.setup_systems()
 
         self._top_driver.setup_systems()

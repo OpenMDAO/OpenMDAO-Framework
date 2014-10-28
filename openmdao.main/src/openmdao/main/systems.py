@@ -1538,7 +1538,7 @@ class SerialSystem(CompoundSystem):
         """Return the execution order of our subsystems."""
         counts = _get_counts(ordering)
         self._ordering = []
-        seen = {}
+
         mapcount = dict([(v, 0) for v in opaque_map.values()])
         for name in ordering:
             if name in self.graph:

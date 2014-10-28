@@ -215,19 +215,13 @@ class Workflow(object):
             return True
         
         wfgraph = self._reduced_graph
-        if self._calc_gradient_inputs is None:
-            oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
-                                         if 'comp' not in d and wfgraph.out_degree(n) > 0
-                                                            and wfgraph.in_degree(n) > 0])
-        else:
-            oldins = self._calc_gradient_inputs
+        oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
+                                     if 'comp' not in d and wfgraph.out_degree(n) > 0
+                                                        and wfgraph.in_degree(n) > 0])
         
-        if self._calc_gradient_outputs is None:
-            oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
-                                         if 'comp' not in d and wfgraph.in_degree(n) > 0])
-        else:
-            oldouts = self._calc_gradient_outputs
-            
+        oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
+                                     if 'comp' not in d and wfgraph.in_degree(n) > 0]) 
+        
         if set(inputs) - set(oldins):
             return True
 
