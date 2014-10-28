@@ -729,6 +729,19 @@ class System(object):
             stream.write(" "*(nest+2))
             stream.write("%s --> %s\n" % (src, dest))
 
+        stream.write(" "*(nest+2))
+        stream.write("_in_nodes: %s\n" % self._in_nodes)
+        stream.write(" "*(nest+2))
+        stream.write("_out_nodes: %s\n" % self._out_nodes)
+        stream.write(" "*(nest+2))
+        stream.write("list_inputs(): %s\n" % self.list_inputs())
+        stream.write(" "*(nest+2))
+        stream.write("list_outputs(): %s\n" % self.list_outputs())
+        stream.write(" "*(nest+2))
+        stream.write("list_states(): %s\n" % self.list_states())
+        stream.write(" "*(nest+2))
+        stream.write("list_residuals(): %s\n" % self.list_residuals())
+
         nest += 4
         if isinstance(self, OpaqueSystem):
             self._inner_system.dump(nest, stream)
@@ -1777,6 +1790,10 @@ class OpaqueSystem(SimpleSystem):
         
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
+        print 'int_nodes',int_nodes
+        print '_in_nodes',self._in_nodes
+        print '_out_nodes',self._out_nodes
+        
         graph = graph.subgraph(int_nodes)
 
         srcs = sorted([(node[0], node) for node in self._in_nodes])

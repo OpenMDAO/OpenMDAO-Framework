@@ -1395,7 +1395,7 @@ class Assembly(Component):
                 
         for name in self._unexecuted:
             comp = getattr(self, name)
-            if name not in rgraph and has_interface(comp, IDriver) or has_interface(comp, IAssembly):
+            if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
                 comp.setup_systems()
 
         self._top_driver.setup_systems()
@@ -1493,6 +1493,8 @@ class Assembly(Component):
         into Systems.
         """
         dgraph = self._setup_depgraph
+        
+        print self.name, 'inputs=',inputs, 'outputs=', outputs
 
         # keep all states
         # FIXME: I think this should only keep states of comps that are directly relevant...
@@ -1511,10 +1513,6 @@ class Assembly(Component):
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
-
-            ## keep all boundary inputs/outputs, even if they're not connected
-            #keep.update(self._flat(self.list_inputs()))
-            #keep.update(self._flat(self.list_outputs()))
 
             if inputs is None:
                 inputs = list(ddests)
@@ -1609,8 +1607,8 @@ class Assembly(Component):
             if has_interface(comp, IDriver) and comp.requires_derivs():
                 self._derivs_required = True
             if has_interface(comp, IAssembly):
-                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, dgraph),
-                                         outputs=_get_scoped_outputs(comp, dgraph))
+                comp.setup_reduced_graph(inputs=_get_scoped_inputs(comp, dgraph, inputs),
+                                         outputs=_get_scoped_outputs(comp, dgraph, outputs))
 
 
     def _get_var_info(self, node):
@@ -1904,12 +1902,15 @@ def _get_wflow_names(iter_tree):
             names.append(n[0])
     return names
 
-def _get_scoped_inputs(comp, g):
-    """Return a list of inputs varnames scoped to the given name."""
+def _get_scoped_inputs(comp, g, explicit_ins):
+    """Return a list of input varnames scoped to the given name."""
     cname = comp.name
     inputs = []
+    if explicit_ins is None:
+        explicit_ins = ()
+        
     for p in g.predecessors(cname):
-        if p.startswith(cname+'.'):
+        if p.startswith(cname+'.'):# and (g.in_degree(p) > 0 or p in explicit_ins):
             inputs.append(p.split('.',1)[1])
 
     if not inputs:
@@ -1917,15 +1918,41 @@ def _get_scoped_inputs(comp, g):
 
     return inputs
 
-def _get_scoped_outputs(comp, g):
-    """Return a list of outputs varnames scoped to the given name."""
+def _get_scoped_outputs(comp, g, explicit_outs):
+    """Return a list of output varnames scoped to the given name."""
     cname = comp.name
     outputs = []
+    if explicit_outs is None:
+        explicit_outs = ()
+        
     for s in g.successors(cname):
-        if s.startswith(cname+'.'):
+        if s.startswith(cname+'.'):# and (g.out_degree(s) > 0 or s in explicit_outs):
             outputs.append(s.split('.',1)[1])
 
     if not outputs:
         return None
 
     return outputs
+
+def _gdump(g):
+    print "nodes:"
+    for n,d in g.nodes_iter(data=True):
+        print n, d
+    print "edges"
+    for u,v,d in g.edges(data=True):
+        print "   ",u," --> ",v, d
+
+def _dump_all(asm):
+    """a debugging function to help track down diffs between models."""
+    asm._system.dump(stream=sys.stdout)
+    print "%s reduced graph" % asm.get_pathname()
+    _gdump(asm._reduced_graph)
+    for drv in [asm._top_driver] + list(asm._top_driver.subdrivers(recurse=True)):
+        print "driver", drv.name
+        print "reduced graph"
+        _gdump(drv.get_reduced_graph())
+        print "wf reduced_graph"
+        _gdump(drv.workflow._reduced_graph)
+        for comp in drv.workflow:
+            if has_interface(comp, IAssembly):
+                _dump_all(comp)

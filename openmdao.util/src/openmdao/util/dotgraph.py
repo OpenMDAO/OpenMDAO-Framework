@@ -159,17 +159,31 @@ def _update_graph_metadata(G, scope):
 
     G.add_edges_from(conns, style='dotted')
 
+def _map_systems(system, dct):
+    if len(dct) == 0:
+        dct[id(system)] = "%s!0" % system.name
+    for s in _get_subsystems(system):
+        dct[id(s)] = "%s!%d" % (s.name, len(dct))
+        _map_systems(s, dct)
+    return dct
+
 def write_system_dot(system, dotfile):
+    # first, create a mapping of unique names to each system
+    
+    sysmap = _map_systems(system, {})
 
     with open(dotfile, 'w') as f:
         indent = 3
 
         f.write("strict digraph {\n")
 
-        name = system.name
-        write_node(f, {'shape': _dot_shape(system)}, name, indent)
+        meta = {
+            'shape': _dot_shape(system),
+            'label': '"' + system.name + '"'
+        }
+        write_node(f, meta, sysmap[id(system)], indent)
 
-        _sys_dot(system, indent, f)
+        _sys_dot(system, indent, f, sysmap)
 
         f.write("}\n")
 
@@ -193,29 +207,26 @@ def _dot_shape(system):
 
     return "box"
 
-def _get_subsystems(system, prefix):
-    """Returns an iterator containing ALL internal subsystems."""
+def _get_subsystems(system):
+    """Returns immediate subsystems, even for opaque systems."""
     if isinstance(system, OpaqueSystem):
-        prefix = prefix + system.name + '.'
-        return [(system._inner_system, prefix)]
+        return [system._inner_system]
     elif isinstance(system, AssemblySystem):
-        prefix = prefix + system.name + '.'
-        return [(system._comp._system, prefix)]
+        return [system._comp._system]
     else:
-        return [(s,prefix) for s in system.subsystems()]
+        return system.subsystems()
 
-def _sys_dot(system, indent, f, prefix=''):
+def _sys_dot(system, indent, f, sysmap):
 
-    for i,(s,pre) in enumerate(_get_subsystems(system, prefix)):
-        name = pre + s.name
+    for i, s in enumerate(_get_subsystems(system)):
         meta = {
             'shape': _dot_shape(s),
-            #'label': s.name
+            'label': '"' + s.name + '"'
         }
-        write_node(f, meta, name, indent)
-        f.write('%s"%s" -> "%s" [label=%d];\n' %
-                        (' '*indent, prefix+system.name, name, i))
-        _sys_dot(s, indent+3, f, pre)
+        write_node(f, meta, sysmap[id(s)], indent)
+        f.write('%s"%s" -> "%s" [label="%d"];\n' %
+                        (' '*indent, sysmap[id(system)], sysmap[id(s)], i))
+        _sys_dot(s, indent+3, f, sysmap)
 
 def plot_system_tree(system, outfile=None, fmt='pdf'):
     if outfile is None:

@@ -325,6 +325,7 @@ class TestcaseNonDiff(unittest.TestCase):
 
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
 
+    def test_non_diff_subassy(self):
         # What about subassys?
 
         model = set_as_top(Assembly())
@@ -343,6 +344,11 @@ class TestcaseNonDiff(unittest.TestCase):
         inputs = ['comp1.x']
         outputs = ['sub.y']
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
+        
+        #from openmdao.util.dotgraph import plot_graph, plot_system_tree
+        #plot_graph(model.sub._reduced_graph, 'topred.pdf')
+        #plot_system_tree(model._system, 'topsys.pdf')
+        
 
         self.assertAlmostEqual(J[0, 0], 2.5)
 
