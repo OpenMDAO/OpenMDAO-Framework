@@ -7,11 +7,22 @@ Overview of OpenMDAO Plugin Development
 Plugins provide a way to extend the functionality of OpenMDAO without modifying
 the framework itself. This is possible because a :term:`plugin`
 implements a particular interface that the framework knows how to interact
-with. This section describes the types of plugins available to extend the
-functionality of OpenMDAO and explains how to build them and how to make
-them usable by the framework.
+with. While there are OpenMDAO commands that simplify the process of creating 
+plugin distributions, this document focuses on doing so manually. It is 
+targeted at users experienced with creating Python distributions or who already
+have an existing plugin distribution that was manually created.
 
-The rest of this document assumes that you have already installed OpenMDAO. If you
+If you need to start a plugin from scratch, and are not familiar with creating
+or maintaing Python distributions, we greatly recommend using OpenMDAO's 
+``plugin quickstart`` and ``plugin makedist``. More information on the ``plugin``
+can be read at <insert link>.
+
+The following are guidelines describing the types of plugins available to extend the
+functionality of OpenMDAO and configurations of files used for creating
+Python distributions. These guidelines should lead to creating a plugin distribution 
+that OpenMDAO can install successfully.
+
+The rest of this page assumes that you have already installed OpenMDAO. If you
 haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
 
 .. note:: If you intend to develop a plugin on Windows that requires compilation, you
@@ -21,24 +32,22 @@ haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
           
 .. note:: When developing a plugin for OpenMDAO, a plugin author should be wary of certain
           conventions that will make the end product more available and installable to other
-          users.  Taking certain measures (like using plugin_quickstart to begin the process)
+          users.  Taking certain measures (like using ``plugin quickstart`` to begin the process)
           will make things less painful later on.  Never fear, if you have created a plugin
-          without using plugin quickstart, we can still help you.  And if you have multiple 
+          without using ``plugin quickstart``, we can still help you.  And if you have multiple 
           plugins that you would like to be able to install with one command, we can help
           with setting those up correctly as well.
 
-          Our plugin install command originally was written to work only with local plugins and 
+          Our ``plugin install`` command originally was written to work only with local plugins and 
           with the OpenMDAO-Plugins account on github.  As OpenMDAO's popularity has grown, new users 
           are creating plugins, and would like the option to install all of the plugins they have written 
-          using our plugin install command.
+          using our ``plugin install`` command.
 
 .. index:: Component plugin
 
 
 .. index:: entry point
 
-How Do I Put My Plugin into OpenMDAO?
--------------------------------------
 Plugins within OpenMDAO are just Python classes that provide an expected
 interface, so as long as your class provides the necessary interface and can
 be imported into your Python script, you'll be able to use it as a plugin. But
@@ -156,8 +165,8 @@ in the table above.
 ~~~~~~~~~~~
 
 A ``setup.cfg`` file is required for specifying metadata for your distribution.
-You should set all metadata files that are applicable to your plugin.
-The *name* and *version* values are the only ones that are mandatory. You should
+You should set all metadata fields that are applicable to your plugin.
+While *name* and *version* values are the only required fields, you should
 also set *requires-dist* if your distribution has dependencies. In general, 
 you should fill in as many as possible to better inform potential users about
 your plugin. 
@@ -203,19 +212,15 @@ First, you'll want to create a `docs` directory within the root directory of you
 distribution. 
 
 Next, you'll need to add the following files to the `docs` directory:
-    - index.rst : A reStructuredText file containing the index for plugin
-                  documentation
+    - **index.rst** : A reStructuredText file containing the index for plugin documentation
                 
-    - usage.rst : A reStructuredText file containing any docs that we want to add 
-                  to those that are generated automatically.
+    - **usage.rst** : A reStructuredText file containing any docs that we want to add to those that are generated automatically.
                 
-    - conf.py : Configuration file used by Sphinx for building documentation
+    - **conf.py** : Configuration file used by Sphinx for building documentation
     
-    - srcdocs.rst : A reStructuredText file containing source documentation for
-                  the plugin
+    - **srcdocs.rst** : A reStructuredText file containing source documentation for the plugin
                   
-    - pkgdocs.rst : A restructuredText file with documentation to support plugins
-                    with multiple packages
+    - **pkgdocs.rst** : A restructuredText file with documentation to support plugins with multiple packages
  
  
 *MANIFEST.in*
@@ -223,11 +228,13 @@ Next, you'll need to add the following files to the `docs` directory:
 A ``MANIFEST.in`` file is required for directing python to include files in 
 your distribution that were not specified via ``setup.py``. Because
 OpenMDAO builds documentation in a specific location, you will need to update
-MANIFEST.in to ensure that the built version of your documentation is installed
-with your plugin. To do so, you should add the following line to your ``MANIFEST.in``
+MANIFEST.in to ensure that the built version of your documentation is included
+with distributions of your plugin. To do so, you should add a line, similar to the following, to your ``MANIFEST.in``
 file:
 
-``graft docs/sphinx_build/html``
+``graft <package-root>/sphinx_build/html``
+
+where `<package-root>` would be the root directory of your package as specified in your ``setup.py`` file.
 
 More information about writing a ``MANIFEST.in`` file can be read `here`__.
 
@@ -360,76 +367,7 @@ which may not be guaranteed to be stable.  This is why plugins found at OpenMDAO
 There will be further discussion of plugin install later in this document.  For further discussion about the general git tagging:  
    
     .. _http://git-scm.com/book/en/Git-Basics-Tagging: http://git-scm.com/book/en/Git-Basics-Tagging
-
-*Installing an OpenMDAO Plugin*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If you run ``plugin install`` from the top directory of your plugin
-distribution, it will install your plugin as a *develop* egg, meaning that it
-places a link to your distribution on the Python path so that you can make
-changes to your plugin and test it in the environment without having to keep
-reinstalling it.
-
-If you have a distrbution tar or zip file, created either by using ``plugin makedist`` 
-or by running ``setup.py`` directly, you can install your plugin into an OpenMDAO virtual 
-environment by running ``plugin install`` and passing it the name of the file, for 
-example:
-
-::
-
-    plugin install myplugin-0.5.tar.gz
     
-
-which will install the distribution into the ``site-packages`` directory
-of your OpenMDAO virtual environment.
-
-Finally, if you want to install a plugin distribution from a remote server, it
-would look like:
-
-::
-
-    plugin install [-f <find_links_url>] <distrib_requirement>
-    
-
-where ``find_links_url`` is the url for a ``find_links`` server and ``distrib_reqirement`` is
-a requirement string in the same form as you would pass to ``easy_install`` or ``pip``.
-For example, ``myplugin``, ``myplugin==0.5``, and ``myplugin>=0.3`` are all valid requirement
-strings.  If there is no version specifier in the ``distrib_requirement``, then the latest
-version compatible with the current platform will be installed.
-
-
-If you are trying to install a plugin that exists in a public repository on github.com, 
-there's a way to do that as well, using the --github [github owner] command line option.
-The github owner "OpenMDAO-Plugins" is our own special account that contains the official
-OpenMDAO plugins.  If you don't specify an owner, we default to OpenMDAO-Plugins.  When used
-in conjunction with the --all command, plugin install will try to install all plugins the
-owner has available.  Here are some examples.
-
-Install pyopt_driver from github, by default OpenMDAO-Plugins
-
-::
-
-    plugin install pyopt_driver --github      
-    
-Install every OpenMDAO plugin listed under OpenMDAO-Plugins owner
-
-::
-
-    plugin install --github --all
-
-    
-Install plugin named generic-plugin from owner JohnDoe
-
-::
-
-    plugin install generic-plugin --github JohnDoe
-    
-Install all plugins from owner JohnDoe.  Warning: This will attempt to get every public 
-repository this owner owns that has the proper setup mentioned above.
-    
-::
-
-    plugin install -all --github JohnDoe
 
 
 *Making Your Plugin Available to Others*
