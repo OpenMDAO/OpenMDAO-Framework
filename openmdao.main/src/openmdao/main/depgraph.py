@@ -1980,12 +1980,8 @@ def get_nondiff_groups(graph, cgraph, scope):
     data = graph.node
     for src, target in graph.edges_iter():
         if 'comp' in data[src]:
-            #if src not in cgraph:
-            #    continue
             comp, var = src, target
         elif 'comp' in data[target]:
-            #if target not in cgraph:
-            #    continue
             var, comp = src, target
         else:
             raise RuntimeError("malformed graph in get_nondiff_groups()")

@@ -848,7 +848,7 @@ class Workflow(object):
                 reduced.add_node(gtup, comp=True)
                 collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
                 reduced.node[gtup]['comp'] = True
-                for c in group:
+                for c in gtup:
                     opaque_map[c] = gtup
 
             # get rid of any back edges for opaque boundary nodes that originate inside
