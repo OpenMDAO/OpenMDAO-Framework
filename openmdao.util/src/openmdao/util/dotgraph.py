@@ -159,17 +159,36 @@ def _update_graph_metadata(G, scope):
 
     G.add_edges_from(conns, style='dotted')
 
+def _map_systems(system, dct):
+    """in our dotfile, all graph nodes must have unique names,
+    but not all openmdao systems have unique names, so just 
+    create a map where every system is mapped to a unique
+    name.
+    """
+    if len(dct) == 0:
+        dct[id(system)] = "%s!0" % system.name
+    for s in _get_subsystems(system):
+        dct[id(s)] = "%s!%d" % (s.name, len(dct))
+        _map_systems(s, dct)
+    return dct
+
 def write_system_dot(system, dotfile):
+    # first, create a mapping of unique names to each system
+    
+    sysmap = _map_systems(system, {})
 
     with open(dotfile, 'w') as f:
         indent = 3
 
         f.write("strict digraph {\n")
 
-        name = system.name
-        write_node(f, {'shape': _dot_shape(system)}, name, indent)
+        meta = {
+            'shape': _dot_shape(system),
+            'label': '"' + system.name + '"'
+        }
+        write_node(f, meta, sysmap[id(system)], indent)
 
-        _sys_dot(system, indent, f)
+        _sys_dot(system, indent, f, sysmap)
 
         f.write("}\n")
 
@@ -193,29 +212,26 @@ def _dot_shape(system):
 
     return "box"
 
-def _get_subsystems(system, prefix):
-    """Returns an iterator containing ALL internal subsystems."""
+def _get_subsystems(system):
+    """Returns immediate subsystems, even for opaque systems."""
     if isinstance(system, OpaqueSystem):
-        prefix = prefix + system.name + '.'
-        return [(system._inner_system, prefix)]
+        return [system._inner_system]
     elif isinstance(system, AssemblySystem):
-        prefix = prefix + system.name + '.'
-        return [(system._comp._system, prefix)]
+        return [system._comp._system]
     else:
-        return [(s,prefix) for s in system.subsystems()]
+        return system.subsystems()
 
-def _sys_dot(system, indent, f, prefix=''):
+def _sys_dot(system, indent, f, sysmap):
 
-    for i,(s,pre) in enumerate(_get_subsystems(system, prefix)):
-        name = pre + s.name
+    for i, s in enumerate(_get_subsystems(system)):
         meta = {
             'shape': _dot_shape(s),
-            #'label': s.name
+            'label': '"' + s.name + '"'
         }
-        write_node(f, meta, name, indent)
-        f.write('%s"%s" -> "%s" [label=%d];\n' %
-                        (' '*indent, prefix+system.name, name, i))
-        _sys_dot(s, indent+3, f, pre)
+        write_node(f, meta, sysmap[id(s)], indent)
+        f.write('%s"%s" -> "%s" [label="%d"];\n' %
+                        (' '*indent, sysmap[id(system)], sysmap[id(s)], i))
+        _sys_dot(s, indent+3, f, sysmap)
 
 def plot_system_tree(system, outfile=None, fmt='pdf'):
     if outfile is None:
@@ -279,42 +295,51 @@ def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=N
 
     os.remove(dotfile)
 
-def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False):
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False, sysdone=False):
     if IAssembly.providedBy(obj):
-        if obj.name == '':
-            obj.name = 'top'
+        name = 'top' if obj.get_pathname()=='' else obj.get_pathname()
+
         try:
-            plot_graph(obj._depgraph, fmt=fmt,
-                       outfile=obj.name+'_depgraph'+'.'+fmt, pseudos=pseudos)
+            plot_graph(obj._depgraph.get_pruned(), fmt=fmt,
+                       outfile=name+'_depgraph'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
-            print "Can't plot depgraph of '%s': %s" % (obj.name, str(err))
+            print "Can't plot depgraph of '%s': %s" % (name, str(err))
         try:
             plot_graph(obj._reduced_graph, fmt=fmt,
-                       outfile=obj.name+'_reduced'+'.'+fmt, pseudos=pseudos)
+                       outfile=name+'_reduced'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
-            print "Can't plot reduced graph of '%s': %s" % (obj.name, str(err))
-        try:
-            plot_system_tree(obj._system, fmt=fmt,
-                       outfile=obj.name+'_system_tree'+'.'+fmt)
-        except Exception as err:
-            print "Can't plot system graph of '%s': %s" % (obj.name, str(err))
+            print "Can't plot reduced graph of '%s': %s" % (name, str(err))
+
+        if not sysdone:
+            try:
+                plot_system_tree(obj._system, fmt=fmt,
+                           outfile=name+'_system_tree'+'.'+fmt)
+            except Exception as err:
+                print "Can't plot system graph of '%s': %s" % (name, str(err))
+
         try:
             plot_graph(obj._depgraph.component_graph(),
-                       fmt=fmt, outfile=obj.name+'_compgraph'+'.'+fmt,
+                       fmt=fmt, outfile=name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
-            print "Can't plot component_graph of '%s': %s" % (obj.name, str(err))
+            print "Can't plot component_graph of '%s': %s" % (name, str(err))
+
+        try:
+            plot_graph(obj._top_driver.get_reduced_graph(), fmt=fmt,
+                       outfile=obj._top_driver.get_pathname()+'_reduced'+'.'+fmt, pseudos=pseudos)
+        except Exception as err:
+            print "Can't plot reduced graph of '%s': %s" % (obj._top_driver.get_pathname(), str(err))
+        
+        try:
+            plot_graph(obj._top_driver.workflow._reduced_graph, fmt=fmt,
+                       outfile=obj._top_driver.get_pathname()+'_wflow_reduced'+'.'+fmt, pseudos=pseudos)
+        except Exception as err:
+            print "Can't plot reduced graph of '%s' workflow: %s" % (obj._top_driver.get_pathname(), str(err))
+
         if recurse:
-            for comp in obj.driver.iteration_set():
-                if IAssembly.providedBy(comp) or IDriver.providedBy(comp):
-                    plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow)
-    elif isinstance(obj, System):
-        plot_system_tree(obj, fmt=fmt, outfile=obj.name+'_system_tree'+'.'+fmt)
-        if recurse:
-            for s in obj.iterate_all():
-                if isinstance(s, AssemblySystem):
-                    plot_system_tree(getattr(s.scope, s.name)._system,
-                                     fmt=fmt, outfile=s.name+'_system'+'.'+fmt)
+            for comp in obj._top_driver.workflow:
+                if IAssembly.providedBy(comp):
+                    plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow, sysdone=True)
 
 def main():
     from argparse import ArgumentParser
