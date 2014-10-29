@@ -486,9 +486,8 @@ class IHasCouplingVars(Interface):
 
     #def list_global_des_vars():
         #"""returns a list of all the names of global design variable objects in the assembly"""
-
-
-class ISurrogate(Interface):
+        
+class IPredictor(Interface):
 
     def get_uncertain_value(value):
         """Converts a deterministic value into an uncertain quantity which
@@ -503,6 +502,8 @@ class ISurrogate(Interface):
         Returns the predicted output value.
         """
 
+class ISurrogate(IPredictor):
+
     def train(X, Y):
         """Trains the surrogate model, based on the given training data set.
 
@@ -511,6 +512,20 @@ class ISurrogate(Interface):
         y: iterator
             Training case output history for this surrogate's output,
             which corresponds to the training case input history given by X.
+        """
+
+
+class IMultiFiSurrogate(IPredictor):
+
+    def train_multifi(X, Y):
+        """Trains the surrogate model, based on the given training data set.
+
+        X: list of (m samples, n inputs) lists of lists
+            Values representing the multi-fidelity training case input history.
+        y: list of lists
+            Training case output history for this surrogate's output,
+            which corresponds to the multi-fidelity training case input history 
+            given by X.
         """
 
 
