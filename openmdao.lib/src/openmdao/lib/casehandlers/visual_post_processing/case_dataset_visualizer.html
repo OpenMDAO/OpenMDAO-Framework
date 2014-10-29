@@ -38,7 +38,7 @@
                 console.log('contextMenu event:', d3.event);
 
                 // create the div element that will hold the context menu
-                d3.selectAll('.d3-context-menu').data([1])
+                d3.selectAll('d3-context-menu').data([1])
                     .enter()
                     .append('div')
                     .attr('class', 'd3-context-menu');
@@ -94,8 +94,20 @@
             {{ case_data }}
         </script>
         <script id='visualizer' type='text/javascript'>
-            //global variable for reference case data
+            //global variables
             var case_data = JSON.parse(document.getElementById('case-data').innerHTML);
+            var cases = [];
+            var it_case_key = "iteration_case_" ;
+            var simulation_info_key = "simulation_info" ;
+            var driver_info_key = "driver_info" ;
+            var case_objects = new Object();
+            var simulation_info_id = "" ;
+            var driver_id_name_map = new Object() ;
+            var driver_info = new Object();
+            var case_number_to_id_map = new Object() ;
+            var num_orphan_cases = 0 ;
+            var comps = [];
+            var pseudo_to_expr = {};
 
             // makes it easier to create SVG elements
             function SVG(tag) {
@@ -152,36 +164,37 @@
                 var graph = d3.select(graph_id+" svg")
                 vis.html(graph.html())
 
-                console.log('sim_info:', case_data.simulation_info);
-
-                var comps = [];
-                $('#comp-graph').find('.node').each(function() {
-                    var comp_name = $(this).find('text')[0].innerHTML;
-                    if (comp_name.indexOf('_pseudo_') < 0) {
-                        comps.push(comp_name);
-                    }
-                });
-
-                var pseudo_to_expr = {};
-                $.each(case_data.simulation_info.expressions, function(key, value) {
-                    var expr = {
-                        'expr': key,
-                        'type': value.data_type
-                    }
-                    pseudo_to_expr[value.pcomp_name] = expr;
-                });
-
-                console.log('pseudo_to_expr:', pseudo_to_expr);
-
                 // identify type of each node based on it's text label
                 $("#svgContent").find("text").each(function() {
                     var label = $(this).text();
 
-                    if ($.inArray(label, comps) >= 0) {
+                    if (driver_info.hasOwnProperty(label)) {
+                        // get parent and flag it as a driver node
+                        var parent = $(this).parent();
+                        parent.attr('class', 'driver');
 
+                        // replace ellipse with rect
+                        var ellipse = parent.find('ellipse');
+                        var cx = ellipse.attr('cx');
+                        var cy = ellipse.attr('cy');
+                        var rx = ellipse.attr('rx');
+                        var ry = ellipse.attr('ry');
+                        $(SVG('rect'))
+                            .attr('fill', 'lime')
+                            .attr('stroke', 'black')
+                            .attr('x', cx-rx)
+                            .attr('y', cy-ry)
+                            .attr('width', 2*rx)
+                            .attr('height', 2*ry)
+                            .attr('rx', 5)
+                            .attr('ry', 5)
+                            .prependTo(parent);
+                        ellipse.remove();
+                    }
+                    else if ($.inArray(label, comps) >= 0) {
                         // get parent and flag it as a component
                         var parent = $(this).parent();
-                        parent.attr('class', expr_type);
+                        parent.attr('class', 'component');
 
                         // replace ellipse with rect
                         var ellipse = parent.find('ellipse');
@@ -201,54 +214,54 @@
                             .prependTo(parent);
                         ellipse.remove();
                     }
-                    else if (label.indexOf('[') >= 0 ||
-                        (label.indexOf('_pseudo_') >= 0 && label.indexOf('.') >= 0) ||
-                        case_data.simulation_info.variable_metadata.hasOwnProperty(label)) {
+                    else if (case_data.simulation_info.variable_metadata.hasOwnProperty(label)) {
+                        // some additional ways to infer it's a variable ...
+                        // (label.indexOf('[') >= 0) ||
+                        // (label.indexOf('_pseudo_') >= 0 && label.indexOf('.') >= 0) ||
 
                         // get parent and flag it as a variable node
                         var parent = $(this).parent();
-                        parent.attr('class', 'variable')
+                        parent.attr('class', 'variable');
 
                         // get metadata, if available
                         metadata = case_data.simulation_info.variable_metadata[label];
 
                         // set color
                         var ellipse = parent.find('ellipse');
-                        if (metadata && metadata.iotype=='in') {
+                        // if (metadata && metadata.iotype=='in') {
                             ellipse.attr('fill', 'aqua');
-                        }
+                        // }
                     }
                     else if (pseudo_to_expr.hasOwnProperty(label)) {
+                        // get the type of the expression (constraint, objective, ...)
                         var expr_type = pseudo_to_expr[label].type;
 
-                        // get parent and flag it as an expression typenode
+                        // get parent and flag it as an expression type node
                         var parent = $(this).parent();
-                        parent.attr('class', 'expression '+expr_type.toLowerCase());
+                        parent.attr('class', expr_type.toLowerCase() + ' expression');
 
                         // set title (tooltip) to be the actual expression
                         parent.find('title').text(pseudo_to_expr[label].expr);
 
-                        // set shape
+                        // define 6-sided polygon to replace the ellipse
                         var ellipse = parent.find('ellipse');
                         var cx = ellipse.attr('cx');
                         var cy = ellipse.attr('cy');
                         var rx = ellipse.attr('rx');
                         var ry = ellipse.attr('ry');
-                        var x = cx-rx,
-                            y = cy-ry,
-                            width = 2*rx,
-                            height = 2*ry;
+                        var x = cx-rx;
+                        var y = cy-ry;
+                        var width = 2*rx;
+                        var height = 2*ry;
+                        var points = x             + ',' + cy         + ' ' +
+                                     (x+1*width/5) + ',' + y          + ' ' +
+                                     (x+4*width/5) + ',' + y          + ' ' +
+                                     (x+width)     + ',' + cy         + ' ' +
+                                     (x+4*width/5) + ',' + (y+height) + ' ' +
+                                     (x+1*width/5) + ',' + (y+height) + ' ' +
+                                     x             + ',' + cy         ;
 
-                        var points = x.toString()             + ',' + cy.toString()         + ' ' +
-                                     (x+1*width/5).toString() + ',' + y.toString()          + ' ' +
-                                     (x+4*width/5).toString() + ',' + y.toString()          + ' ' +
-                                     (x+width).toString()     + ',' + cy.toString()         + ' ' +
-                                     (x+4*width/5).toString() + ',' + (y+height).toString() + ' ' +
-                                     (x+1*width/5).toString() + ',' + (y+height).toString() + ' ' +
-                                     x.toString()             + ',' + cy.toString()         ;
-                        console.log('points:', points);
-
-                        // set color
+                        // set color and shape
                         if (expr_type == 'Constraint') {
                             $(SVG('polygon'))
                                 .attr('points', points)
@@ -261,6 +274,7 @@
                                 .attr('rx', 5)
                                 .attr('ry', 5)
                                 .prependTo(parent);
+                            ellipse.remove();
                         }
                         else if (expr_type == 'Objective') {
                             $(SVG('polygon'))
@@ -274,23 +288,22 @@
                                 .attr('rx', 5)
                                 .attr('ry', 5)
                                 .prependTo(parent);
+                            ellipse.remove();
                         }
-                        ellipse.remove();
                     }
                     else {
-                        console.log(label, 'is an unknown');
+                        // console.log(label, 'is an unknown (probably a variable');
 
-                        // get parent and flag it as a variable node
+                        // get parent and flag it as an unknown node
                         var parent = $(this).parent();
                         parent.attr('class', 'unknown');
 
                         // set color
                         var ellipse = parent.find('ellipse');
-                        ellipse.attr('fill', 'violet');
-
+                        // ellipse.attr('fill', 'violet');  // color code it as unknown
+                        ellipse.attr('fill', 'aqua');    // color code it as variable
                     }
                 })
-
 
                 // add context menu to all variable nodes
                 d3.selectAll('.variable')
@@ -365,16 +378,6 @@
             };
 
             jQuery( document ).ready(function() {
-                var cases = [];
-                var it_case_key = "iteration_case_" ;
-                var simulation_info_key = "simulation_info" ;
-                var driver_info_key = "driver_info" ;
-                var case_objects = new Object();
-                var simulation_info_id = "" ;
-                var driver_id_name_map = new Object() ;
-                var case_number_to_id_map = new Object() ;
-                var num_orphan_cases = 0 ;
-
                 // get all the cases in an associative array with the id as the key
                 // Also collect info on the simulation_info and the driver names
                 jQuery.each( case_data, function( key , val ) {
@@ -390,6 +393,7 @@
                     // Make a structure to hold all of the driver info
                     if (key.lastIndexOf(driver_info_key, 0) === 0) {
                         driver_id_name_map[ val._id ] = val.name;
+                        driver_info[val.name] = val;
                     }
 
                     // Make a structure to hold all of the case info
@@ -403,6 +407,26 @@
                     }
                 }); // end each
 
+                console.log('sim_info:', case_data.simulation_info);
+                console.log('driver_id_name_map:', driver_id_name_map);
+                console.log('driver_info:', driver_info);
+
+                $('#comp-graph').find('.node').each(function() {
+                    var comp_name = $(this).find('text')[0].innerHTML;
+                    if (comp_name.indexOf('_pseudo_') < 0) {
+                        comps.push(comp_name);
+                    }
+                });
+
+                $.each(case_data.simulation_info.expressions, function(key, value) {
+                    var expr = {
+                        'expr': key,
+                        'type': value.data_type
+                    }
+                    pseudo_to_expr[value.pcomp_name] = expr;
+                });
+
+                console.log('pseudo_to_expr:', pseudo_to_expr);
                 // Loop over the case_objects and connect parents to children and vice versa
                 Object.keys(case_objects).forEach(function(key) {
                     var case_object, parent_id, parent_case_object, parent_case_object_children ;
@@ -440,10 +464,15 @@
                         // clean up any added elements or colors from the last case selection
                         var svgContent = $("#svgContent");
                         svgContent.find("text").remove(".textval");
-                        svgContent.find("title").remove(".titleval");
-                        svgContent.find("ellipse").attr("fill", "none");
-                        svgContent.find("rect").attr("fill", "none");
-                        svgContent.find("title").text("");
+                        // svgContent.find("title").remove(".titleval");
+                        // svgContent.find("ellipse").attr("fill", "none");
+                        // svgContent.find("rect").attr("fill", "none");
+                        svgContent.find('polygon').attr('stroke-width', '1').attr('stroke', 'black');
+                        svgContent.find('ellipse').attr('stroke-width', '1').attr('stroke', 'black');
+                        svgContent.find('rect').attr('stroke-width', '1').attr('stroke', 'black');
+                        // keep outer frame hidden and remove bad tooltip
+                        svgContent.find('polygon').first().attr('stroke-width', '0').removeAttr('title');
+                        // svgContent.find("title").text("");
 
                         if ( event.node.img != "icon-page" ) {
                             d = case_objects[case_number_to_id_map[event.target]].data ;
@@ -454,8 +483,9 @@
                                 }) ;
 
                                 if ( t.length === 1 ) {
-                                    t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
-                                    t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    // t.siblings('rect').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    // t.siblings('ellipse').attr('fill', 'yellow').attr('fill-opacity', '0.5');
+                                    t.siblings().attr('stroke-width', '5').attr('stroke', 'orange');
 
                                     if ( Object.prototype.toString.call( val ) === '[object Number]' ) {
                                         $(SVG('text'))
@@ -482,7 +512,7 @@
                                             .attr('font-family', t.attr('font-family'))
                                             .text( "Array" )
                                             .appendTo(t.parent());
-
+                                        console.log('array value for',key);
                                         t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
                                     }
                                }
