@@ -268,10 +268,10 @@ class TestCase(unittest.TestCase):
 
         # In the top workflow, the subdrivers should each become a PA.
         self.assertTrue(len(prob.driver.workflow._system.subsystems()) == 10)
-        comp_list = prob.driver.workflow._system.subsystems()[5]._nodes
+        comp_list = prob.driver.workflow._system.subsystems()[6]._nodes
         self.assertTrue(len(comp_list) == 1)
         self.assertTrue(('localopt2',) in comp_list)
-        comp_list = prob.driver.workflow._system.subsystems()[6]._nodes
+        comp_list = prob.driver.workflow._system.subsystems()[5]._nodes
         self.assertTrue(len(comp_list) == 1)
         self.assertTrue(('localopt1',) in comp_list)
 
