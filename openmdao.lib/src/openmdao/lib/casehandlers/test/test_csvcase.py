@@ -36,6 +36,7 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z', 'comp1.a_string', 'comp1.a_array[2]']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i+0.1), ('comp1.y', i*2 + .1),
                       ('comp1.x_array[1]', 99.88), ('comp1.b_bool', True)]
             cases.append(Case(inputs=inputs, outputs=outputs))

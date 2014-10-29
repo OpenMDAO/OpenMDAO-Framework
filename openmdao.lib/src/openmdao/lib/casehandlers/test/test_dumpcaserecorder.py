@@ -26,6 +26,7 @@ class DumpCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2)]
             cases.append(Case(inputs=inputs, outputs=outputs))
 
@@ -56,8 +57,8 @@ Constants:
    comp2.force_fd: False
    comp2.missing_deriv_policy: error
    directory:
-   driver.case_inputs.comp1.x: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-   driver.case_inputs.comp1.y: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+   driver.case_inputs.comp1.x: [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]
+   driver.case_inputs.comp1.y: [0.0, 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
    driver.directory:
    driver.force_fd: False
    driver.gradient_options.atol: 1e-09

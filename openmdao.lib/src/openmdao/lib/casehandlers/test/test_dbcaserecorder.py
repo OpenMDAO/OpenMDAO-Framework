@@ -46,6 +46,7 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(10):
+            i = float(i)
             inputs = [('comp1.x', i), ('comp1.y', i*2),
                       ('comp1.a_dict', {'a': 'b'}),
                       ('comp1.a_list', ['a', 'b'])]
@@ -318,6 +319,7 @@ class NestedCaseTestCase(unittest.TestCase):
         outputs = ['comp1.z', 'comp2.z']
         cases = []
         for i in range(self.num_cases):
+            i = float(i)
             inputs = [('comp1.x', 100*level+i),
                       ('comp1.y', 100*level+i+1),
                       ('comp1.label', 'L%d_case%d' % (level, i))]
