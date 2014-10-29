@@ -164,7 +164,6 @@ class FiniteDifference(object):
 
         iterbase = 'fd-' + iterbase
         uvec = self.system.vec['u']
-        print 'uvec = ',uvec.array
 
         uvec.set_to_array(self.y_base,
                           self.outputs)
