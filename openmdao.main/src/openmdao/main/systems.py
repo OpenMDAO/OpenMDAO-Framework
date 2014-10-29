@@ -1781,10 +1781,6 @@ class OpaqueSystem(SimpleSystem):
         
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
-        print 'int_nodes',int_nodes
-        print '_in_nodes',self._in_nodes
-        print '_out_nodes',self._out_nodes
-        
         graph = graph.subgraph(int_nodes)
 
         srcs = sorted([(node[0], node) for node in self._in_nodes])
