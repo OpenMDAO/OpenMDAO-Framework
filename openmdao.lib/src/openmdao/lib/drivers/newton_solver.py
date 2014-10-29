@@ -81,6 +81,9 @@ class NewtonSolver(Driver):
 
             #print "LS 1", uvec.array, '+', dfvec.array
             uvec.array += alpha*dfvec.array
+            #for param in self.list_param_targets():
+                #p_edge = self.parent.name2collapsed.get(param)
+                #uvec[p_edge] += alpha*dfvec[p_edge]
 
             # Just evaluate the model with the new points
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
@@ -98,8 +101,14 @@ class NewtonSolver(Driver):
                   f_norm/f_norm0 > self.ls_rtol:
 
                 uvec.array -= alpha*dfvec.array
+                #for param in self.list_param_targets():
+                    #p_edge = self.parent.name2collapsed.get(param)
+                    #uvec[p_edge] -= alpha*dfvec[p_edge]
                 alpha = alpha/2.0
                 uvec.array += alpha*dfvec.array
+                #for param in self.list_param_targets():
+                    #p_edge = self.parent.name2collapsed.get(param)
+                    #uvec[p_edge] += alpha*dfvec[p_edge]
 
                 # Just evaluate the model with the new points
                 self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
