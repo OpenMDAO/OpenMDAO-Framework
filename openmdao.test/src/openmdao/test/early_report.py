@@ -108,6 +108,7 @@ class EarlyTestInfo(Plugin):
         self.stream.writeln("\n\n")
         
         total_failed = sorted(chain(failed, errors))
+        skips = sorted(skips)
 
         if skips:
             stream.writeln("The following tests were skipped")

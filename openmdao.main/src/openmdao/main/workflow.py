@@ -848,8 +848,17 @@ class Workflow(object):
                 reduced.add_node(gtup, comp=True)
                 collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
                 reduced.node[gtup]['comp'] = True
-                for c in group:
+                for c in gtup:
                     opaque_map[c] = gtup
+
+            # get rid of any back edges for opaque boundary nodes that originate inside
+            # of the opaque system
+            to_remove = []
+            for node in systems:
+                for s in reduced.successors(node):
+                    if node in reduced.predecessors(s):
+                        to_remove.append((s, node))
+            reduced.remove_edges_from(to_remove)
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
