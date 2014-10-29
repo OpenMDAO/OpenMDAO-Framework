@@ -141,13 +141,6 @@ class SLSQPdriver(Driver):
         jw = zeros([ljw], 'i')
 
         try:
-            print self.ncon, self.neqcon, la, self.nparam, \
-                    self.x, self.x_lower_bounds, self.x_upper_bounds, \
-                    self.ff, gg, df, dg, self.accuracy, self.maxiter, \
-                    self.iprint-1, self.iout, self.output_filename, \
-                    self.error_code, w, lw, jw, ljw, \
-                    self.nfunc, self.ngrad, \
-                    self._func, self._grad
             dg, self.error_code, self.nfunc, self.ngrad = \
               slsqp(self.ncon, self.neqcon, la, self.nparam,
                     self.x, self.x_lower_bounds, self.x_upper_bounds,
@@ -194,15 +187,6 @@ class SLSQPdriver(Driver):
         if self.iprint > 0:
             pyflush(self.iout)
 
-        print '------------------------------'
-        print self.name
-        print '------------------------------'
-        print 'Params'
-        print xnew
-        print 'Obj'
-        print f
-        print 'Con'
-        print g
         return f, g
 
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -218,14 +202,6 @@ class SLSQPdriver(Driver):
         if self.ncon > 0:
             dg[0:self.ncon, 0:self.nparam] = -J[1:1+self.ncon, :]
 
-        print '------------------------------'
-        print self.name
-        print '------------------------------'
-        print 'Derivs'
-        print 'Obj'
-        print df
-        print 'Con'
-        print dg
         return df, dg
 
     def requires_derivs(self):
