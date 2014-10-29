@@ -38,7 +38,7 @@
                 console.log('contextMenu event:', d3.event);
 
                 // create the div element that will hold the context menu
-                d3.selectAll('d3-context-menu').data([1])
+                d3.selectAll('.d3-context-menu').data([1])
                     .enter()
                     .append('div')
                     .attr('class', 'd3-context-menu');
@@ -68,8 +68,6 @@
                     // an example usage would be closing a tooltip
                     if (openCallback) openCallback(data, index);
 
-                    var coord = d3.mouse();
-
                     // display context menu
                     d3.select('.d3-context-menu')
                         .style('left', (d3.event.pageX - 2) + 'px')
@@ -89,7 +87,7 @@
         <div id='comp-graph' style='display:none;'>
             {{ svg_comp_graph }}
         </div>
-        <div id='d3-context-menu' class='d3-context-menu' style='display:none;'/>
+        <div id='plot-frame' style='display:none;width:600px;height:300px;z-index:999;background-color:white'/>
         <script id='case-data' type='application/json'>
             {{ case_data }}
         </script>
@@ -116,10 +114,32 @@
 
             var variableMenu = [
                 {
-                    title: 'Item #1',
+                    title: 'Plot over Cases',
                     action: function(elm, d, i) {
-                        console.log('Item #1 clicked!');
-                        console.log('The data for this circle is: ' + d);
+                        console.log('Plot', elm, d, i);
+                        var var_name = $(elm).find('text:first').text().trim();
+                        console.log('plotting "', var_name, '"');
+                        var vals = [];
+                        $.each(case_data, function(key, val ) {
+                            if (key.lastIndexOf('iteration_case', 0) === 0) {
+                                if (val['data'].hasOwnProperty(var_name)) {
+                                    vals.push(val['data'][var_name])
+                                }
+                            }
+                        });
+                        // var vals = [1, 5, 7, 9, 3, 11, 15];
+                        console.log('plotting', vals);
+                        var series = vals.map(function(e, i) {
+                            return [i, vals[i]]
+                        })
+                        var plot_frame = $('#plot-frame');
+                        plot_frame.css({
+                            position: "fixed",
+                            top: d3.event.pageY,
+                            left: d3.event.pageX
+                        });
+                        $.plot('#plot-frame', [series]);
+                        plot_frame.show()
                     }
                 },
                 {
@@ -296,7 +316,8 @@
 
                         // get parent and flag it as an unknown node
                         var parent = $(this).parent();
-                        parent.attr('class', 'unknown');
+                        // parent.attr('class', 'unknown');
+                        parent.attr('class', 'variable');
 
                         // set color
                         var ellipse = parent.find('ellipse');
@@ -306,8 +327,7 @@
                 })
 
                 // add context menu to all variable nodes
-                d3.selectAll('.variable')
-                    .on("contextmenu", d3.contextMenu(variableMenu));
+                d3.selectAll('.variable').on("contextmenu", d3.contextMenu(variableMenu));
 
                 return graph_id;
             }
