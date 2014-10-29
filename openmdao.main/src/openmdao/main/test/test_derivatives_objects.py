@@ -345,11 +345,6 @@ class TestcaseNonDiff(unittest.TestCase):
         outputs = ['sub.y']
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
         
-        #from openmdao.util.dotgraph import plot_graph, plot_system_tree
-        #plot_graph(model.sub._reduced_graph, 'topred.pdf')
-        #plot_system_tree(model._system, 'topsys.pdf')
-        
-
         self.assertAlmostEqual(J[0, 0], 2.5)
 
 if __name__ == '__main__':

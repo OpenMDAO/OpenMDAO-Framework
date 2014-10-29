@@ -1494,8 +1494,6 @@ class Assembly(Component):
         """
         dgraph = self._setup_depgraph
         
-        print self.name, 'inputs=',inputs, 'outputs=', outputs
-
         # keep all states
         # FIXME: I think this should only keep states of comps that are directly relevant...
         keep = set([n for n,d in dgraph.nodes_iter(data=True)

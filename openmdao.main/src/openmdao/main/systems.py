@@ -931,15 +931,6 @@ class System(object):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
 
-    def iterate_all(self, local=False):
-        """Returns a generator that will iterate over this
-        System and all of its children recursively.
-        """
-        yield self
-        for child in self.subsystems(local=local):
-            for s in child.iterate_all(local=local):
-                yield s
-
     def _compute_derivatives(self, vname, ind):
         """ Solves derivatives of system (direct/adjoint).
         ind must be a global petsc index.
