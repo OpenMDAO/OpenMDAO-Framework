@@ -1890,7 +1890,6 @@ class OpaqueSystem(SimpleSystem):
         """
 
         inner_system = self._inner_system
-        inner_system.linearize()
         inputs = self.list_inputs() + self.list_states()
         outputs = self.list_outputs()
 
