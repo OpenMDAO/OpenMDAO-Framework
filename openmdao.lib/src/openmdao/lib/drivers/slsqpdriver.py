@@ -11,8 +11,8 @@ inequality constraints.
 from math import isnan
 
 from numpy import zeros, array
-import numpy as np
-np.set_printoptions(precision=15)
+#import numpy as np
+#np.set_printoptions(precision=15)
 
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
