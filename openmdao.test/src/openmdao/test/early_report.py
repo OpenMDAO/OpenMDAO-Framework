@@ -66,6 +66,10 @@ class EarlyTestInfo(Plugin):
                           dest="report",
                           default="test_report.out",
                           help="name of report file. (defaults to 'test_report.out')")
+        parser.add_option("--quicktime", action="store", type="float",
+                          dest="quicktime",
+                          default=1.0,
+                          help="cutoff time for tests saved in quick.cfg")
         parser.add_option("--save-configs", action="store_true",
                           dest="save_configs",
                           help="set this to save passing/failing tests in passing.cfg and failing.cfg files")
@@ -80,6 +84,7 @@ class EarlyTestInfo(Plugin):
         self._error_tests = []
         self._report_path = os.path.abspath(options.report)
         self._save_configs = options.save_configs
+        self._quick_time = options.quicktime
 
     def report(self, stream):
         """Report the test failures."""
@@ -90,11 +95,15 @@ class EarlyTestInfo(Plugin):
         errors = []
         skips = []
         passed = []
+        quick = []
 
         total_time = 0.
 
         for v in self._tests.values():
             total_time += v.elapsed
+
+            if v.elapsed <= self._quick_time:
+                quick.append(v.name)
 
             if v.status == 'F':
                 failed.append(v.name)
@@ -131,6 +140,7 @@ class EarlyTestInfo(Plugin):
         if self._save_configs:
             self._save_passing(sorted(passed))
             self._save_failing(total_failed)
+            self._save_quick(quick)
 
     def _cvt_test_path(self, tname):
         """Converts from an all dotted name to a name
@@ -161,14 +171,25 @@ class EarlyTestInfo(Plugin):
             f.write('\n')
 
     def _save_failing(self, failed):
-        if failed:
-            with open("failing.cfg", "w") as f:
-                f.write("\n[nosetests]\ntests=")
-                for i,test in enumerate(self._sort_tests(failed)):
-                    if i>0:
-                        f.write(",\n   ")
-                    f.write(test)
-                f.write('\n')
+        with open("failing.cfg", "w") as f:
+            f.write("\n[nosetests]\ntests=")
+            for i,test in enumerate(self._sort_tests(failed)):
+                if i>0:
+                    f.write(",\n   ")
+                f.write(test)
+            f.write('\n')
+
+    def _save_quick(self, quick):
+        with open("quick.cfg", "w") as f:
+            f.write("# all tests here ran in <= %s seconds\n" % self._quick_time)
+            f.write("# (if they failed at the time of recording, \n")
+            f.write("#   they may take significantly longer when they pass)\n")
+            f.write("\n[nosetests]\ntests=")
+            for i,test in enumerate(self._sort_tests(quick)):
+                if i>0:
+                    f.write(",\n   ")
+                f.write(test)
+            f.write('\n')
 
     def formatErr(self, err):
         exctype, value, tb = err

@@ -1095,11 +1095,11 @@ class Container(SafeHasTraits):
                     setattr(self, path, value[0])
                     return
                 # else, fall through to error
+            elif hasattr(val, '__setitem__') and idx is not None:
+                val[idx] = value
+                return
             elif isinstance(val, ndarray):
-                if idx is None:
-                    setattr(self, path, value.reshape(val.shape))
-                else:
-                    val[idx] = value
+                setattr(self, path, value.reshape(val.shape))
                 return
             elif IVariableTree.providedBy(val):
                 raise NotImplementedError("no support for setting flattened values into vartrees")
