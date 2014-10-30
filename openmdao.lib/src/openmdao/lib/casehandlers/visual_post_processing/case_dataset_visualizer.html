@@ -112,12 +112,20 @@
                return document.createElementNS('http://www.w3.org/2000/svg', tag);
             }
 
-            function showPlot(series) {
+            function showPlot(var_name, series) {
                 // hide any existing plot
                 plot_frame.hide();
 
                 // create new plot
                 $.plot('#plot-frame', [series]);
+
+                // add title to plot canvas
+                var canvas = plot_frame.find('canvas')[0];
+                var context = canvas.getContext("2d");
+                var cx = canvas.width / 2;
+                context.font="bold 20px sans-serif";
+                context.textAlign = 'center';
+                context.fillText(var_name, cx, 35);
 
                 // set plot location
                 plot_frame.css({
@@ -167,7 +175,7 @@
                             var series = vals.map(function(e, i) {
                                 return [i, vals[i]]
                             })
-                            showPlot(series);
+                            showPlot(var_name, series);
                         }
                         else {
                             alert(var_name+' is not a scalar! \n (Can only plot history of a scalar)');
@@ -189,7 +197,7 @@
                                     return [i, vals[i]]
                                 }
                             });
-                            showPlot(series);
+                            showPlot(var_name, series);
                         }
                         else {
                             alert(var_name + ' does not have an Array value! \n (Did you select a case?)');
