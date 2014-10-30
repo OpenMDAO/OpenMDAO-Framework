@@ -403,6 +403,23 @@
                 // add variable context menu to all variable nodes
                 d3.selectAll('.variable').on("contextmenu", d3.contextMenu(variableMenu));
 
+                $("#svgContent").find(".edge").each(function() {
+                    var label = $(this).find('title').text();
+                    var tokens = label.split('->');
+                    var src = tokens[0];
+                    var dst = tokens[1];
+                    console.log('label:', label, src, dst);
+                    if (driver_info.hasOwnProperty(src) && (parameter_list.indexOf(dst) >= 0)) {
+                        // dashed line for connection between driver and parameter
+                        $(this).find('path').attr('stroke-dasharray', '5,5');
+                    }
+                    else if (pseudo_to_expr.hasOwnProperty(dst)) {
+                        // wide gray line for connection between vars and expressions
+                        $(this).find('path').attr('stroke', 'gray').attr('stroke-width', '6');
+                        $(this).find('polygon').attr('stroke', 'gray').attr('fill', 'gray');
+                    }
+                })
+
                 return graph_id;
             }
 
