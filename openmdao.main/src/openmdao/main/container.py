@@ -1096,7 +1096,10 @@ class Container(SafeHasTraits):
                     return
                 # else, fall through to error
             elif hasattr(val, '__setitem__') and idx is not None:
-                val[idx] = value
+                if isinstance(val[idx], real_types):
+                    val[idx] = value[0]
+                else:
+                    val[idx] = value
                 return
             elif isinstance(val, ndarray):
                 setattr(self, path, value.reshape(val.shape))
