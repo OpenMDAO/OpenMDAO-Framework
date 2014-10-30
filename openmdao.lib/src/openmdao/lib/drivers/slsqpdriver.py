@@ -11,6 +11,8 @@ inequality constraints.
 from math import isnan
 
 from numpy import zeros, array
+#import numpy as np
+#np.set_printoptions(precision=15)
 
 from slsqp.slsqp import slsqp, closeunit, pyflush
 
@@ -185,15 +187,6 @@ class SLSQPdriver(Driver):
         if self.iprint > 0:
             pyflush(self.iout)
 
-        #print '------------------------------'
-        #print self.name
-        #print '------------------------------'
-        #print 'Params'
-        #print xnew
-        #print 'Obj'
-        #print f
-        #print 'Con'
-        #print g
         return f, g
 
     def _grad(self, m, me, la, n, f, g, df, dg, xnew):
@@ -209,14 +202,6 @@ class SLSQPdriver(Driver):
         if self.ncon > 0:
             dg[0:self.ncon, 0:self.nparam] = -J[1:1+self.ncon, :]
 
-        #print '------------------------------'
-        #print self.name
-        #print '------------------------------'
-        #print 'Derivs'
-        #print 'Obj'
-        #print df
-        #print 'Con'
-        #print dg
         return df, dg
 
     def requires_derivs(self):

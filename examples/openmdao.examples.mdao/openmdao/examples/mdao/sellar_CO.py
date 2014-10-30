@@ -134,4 +134,5 @@ if __name__ == "__main__":
     print "Elapsed time: ", time.time()-tt, "seconds"
 
 
+    prob.driver.workflow.check_gradient()
 # End sellar_CO.py
