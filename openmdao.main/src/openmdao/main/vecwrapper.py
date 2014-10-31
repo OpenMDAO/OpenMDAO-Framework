@@ -410,6 +410,24 @@ class InputVecWrapper(VecWrapperBase):
 
     def _map_resids_to_states(self, system):
         pass
+    
+    def get_dests_by_comp(self):
+        """Return a dict of comp name keyed to a list of input nodes, with
+        any subvars removed that have basevars in the vector.
+        """
+        ret = OrderedDict()
+        for node, (start, view) in self._info.items():
+            if isinstance(node, tuple) and len(node) > 1:
+                src, dests = node
+                for d in dests:
+                    cname, _, vname = d.partition('.')
+                    ret.setdefault(cname, []).append(node)
+                        
+        for cname, in_nodes in ret.items():
+            bases = [n[0] for n in in_nodes if n[0].split('[',1)[0]==n[0]]
+            ret[cname] = [n for n in in_nodes if n[0] in bases or n[0].split('[',1)[0] not in bases]
+            
+        return ret
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -423,6 +441,7 @@ class InputVecWrapper(VecWrapperBase):
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
+                #print "SETTING %s to %s" % (name, array_val)
                 if isinstance(name, tuple):
                     for dest in name[1]:
                         scope.set_flattened_value(dest, array_val)

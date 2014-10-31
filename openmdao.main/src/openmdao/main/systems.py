@@ -56,7 +56,10 @@ def compound_setup_scatters(self):
     varkeys = self.vector_vars.keys()
 
     visited = {}
-
+    
+    # collect all destinations from p vector
+    ret = self.vec['p'].get_dests_by_comp()
+    
     for subsystem in self.all_subsystems():
         src_partial = []
         dest_partial = []
@@ -92,11 +95,17 @@ def compound_setup_scatters(self):
                         dest_full.append(dest_idxs)
 
             for node in sub._in_nodes:
-                if node in noflats or (node in self.vec['p'] and node not in visited):
+                if node in noflats:
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
+                else:
+                    snames = [c for c in sub._get_comps()]
+                    for sname in snames:
+                        if sname in ret and node in self.vec['p'] and node in ret[sname]:
+                            scatter_conns.add(node)
+                            scatter_conns_full.add(node)
 
         if MPI or scatter_conns or noflat_conns:
             subsystem.scatter_partial = DataTransfer(self, src_partial,
