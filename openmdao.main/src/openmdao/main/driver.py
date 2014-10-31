@@ -186,6 +186,7 @@ class Driver(Component):
             parent_graph = self.parent.get_reduced_graph()
             nodes = set([c.name for c in self.iteration_set()])
             nodes.add(self.name)
+
             # if self.workflow._calc_gradient_inputs:
             #     nodes.update(simple_node_iter(self.workflow._calc_gradient_inputs))
             g = parent_graph.subgraph(parent_graph.nodes_iter())

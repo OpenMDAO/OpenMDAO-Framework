@@ -2037,6 +2037,7 @@ class FiniteDiffDriverSystem(SimpleSystem):
         return (self._comp.workflow._system,)
 
     def simple_subsystems(self):
+        yield self
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
@@ -2080,6 +2081,7 @@ class TransparentDriverSystem(SimpleSystem):
         return (self._comp.workflow._system,)
 
     def simple_subsystems(self):
+        yield self
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
