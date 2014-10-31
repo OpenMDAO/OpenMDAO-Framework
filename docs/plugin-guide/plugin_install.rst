@@ -2,8 +2,8 @@
 .. index:: plugin install
 .. _plugin-install:
 
-*Installing an OpenMDAO Plugin*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Installing an OpenMDAO Plugin
+==============================
 
 If you run ``plugin install`` from the top directory of your plugin
 distribution, it will install your plugin as a *develop* egg, meaning that it
@@ -21,11 +21,11 @@ example:
     plugin install myplugin-0.5.tar.gz
 
 
-which will install the distribution into the ``site-packages`` directory
+Using this command will install the distribution into the ``site-packages`` directory
 of your OpenMDAO virtual environment.
 
-If you want to install a plugin distribution from a remote server, it
-would look like:
+If you want to install a plugin distribution from a remote server, you would do it like
+this:
 
 ::
 
@@ -35,72 +35,70 @@ would look like:
 where ``find_links_url`` is the url for a ``find_links`` server and ``distrib_reqirement`` is
 a requirement string in the same form as you would pass to ``easy_install`` or ``pip``.
 For example, ``myplugin``, ``myplugin==0.5``, and ``myplugin>=0.3`` are all valid requirement
-strings.  If there is no version specifier in the ``distrib_requirement``, then the latest
+strings.  If there is no version specified in the ``distrib_requirement``, then the latest
 version compatible with the current platform will be installed.
 
 
-If you are trying to install a plugin that exists in a public repository on github.com,
-there's a way to do that as well, using the --github [github owner] command line option.
-The github owner "OpenMDAO-Plugins" is our own special account that contains the official
-OpenMDAO plugins.  If you don't specify an owner, we default that argument to OpenMDAO-Plugins.
-When used in conjunction with the --all command, plugin install will try to install all plugins
-the owner has available.  Here are some examples.
+If you are trying to install a plugin that exists in a public repository on ``github.com``,
+there's a way to do that as well, using the ``--github [github owner]`` command line option.
+The GitHub owner "OpenMDAO-Plugins" is our own special account that contains the official
+OpenMDAO plugins.  If you don't specify an owner, we default that argument to
+OpenMDAO-Plugins. When used in conjunction with the ``--all`` command, plugin install will try
+to install all plugins the owner has available.  Here are some examples.
 
-Install pyopt_driver from github, by default OpenMDAO-Plugins
+  Install ``pyopt_driver`` from GitHub, by default OpenMDAO-Plugins:
 
-::
+    ::
 
-    plugin install pyopt_driver --github
+       plugin install pyopt_driver --github
 
-Install every OpenMDAO plugin listed under OpenMDAO-Plugins owner
+  Install every OpenMDAO plugin listed under OpenMDAO-Plugins owner:
 
-::
+    ::
 
-    plugin install --github --all
-
-
-Install plugin named generic-plugin from owner JohnDoe
-
-::
-
-    plugin install generic-plugin --github JohnDoe
-
-Install all plugins from owner JohnDoe.  Warning: This will attempt to get every public
-repository this owner owns that has the proper setup mentioned above.
-
-::
-
-    plugin install -all --github JohnDoe
+       plugin install --github --all
 
 
-Install a plugin of a certain version number from github.
+  Install plugin named *generic-plugin* from owner JohnDoe:
 
-::
+    ::
 
-    plugin install CADRE==0.8  --github
+       plugin install generic-plugin --github JohnDoe
 
-If one wants the latest version of a plugin, trying simply:
+  Install all plugins from owner JohnDoe. **Warning:** The system will attempt to get every public repository this person owns that has the proper setup mentioned above.
 
-::
+    ::
 
-    plugin install CADRE --github
-
-would get the user the latest tagged release (in this case, from owner OpenMDAO-Plugins, the default).
-If a repository has never been tagged, however, 'plugin install' will simply go get the
-latest version of the default branch of that repository, which may not be guaranteed to be stable.
+       plugin install -all --github JohnDoe
 
 
-*Sharing Plugins*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  Install a plugin of a certain version number (in this example, v 0.8 of the CADRE plugin) from GitHub:
+
+    ::
+
+       plugin install CADRE==0.8  --github
+
+  If you want the latest version of a plugin, simply type the plugin name:
+
+    ::
+
+       plugin install CADRE --github
+
+The last command will get you the latest tagged release (in this case, from owner OpenMDAO-Plugins,
+which is the default). If a repository has never been tagged, however, ``plugin install`` will
+simply get the latest version of the default branch of that repository, which may not be stable.
+
+
+Sharing Plugins
+=================
    
-You can make your plugin available to others in a number of ways, from simply emailing your distribution
-to others or giving it to them on a thumb drive, CD, etc., putting your plugin in a public
-repository on Github, or placing your distribution on a file server that they can access. 
+You can make your plugin available to others in a number of ways -- you can simply email your
+distribution to others or give it to them on a thumb drive, CD, etc.; you can put your plugin in a public
+repository on GitHub; or you can place your distribution on a file server that users can
+access. 
 
-``plugin install`` allows you to download and install Python distributions
-from remote web servers using the ``-f`` or ``--findlinks`` option. 
-
-For example, if there were a distribution called
+The ``plugin install`` command allows you to download and install Python distributions
+from remote web servers using the ``-f`` or ``--findlinks`` option. For example, if there were a distribution called
 *MyDist* on the ``openmdao.org`` server and you wanted to grab the newest version
 of it, you could ``plugin install`` it into your activated OpenMDAO virtual
 environment as follows:
