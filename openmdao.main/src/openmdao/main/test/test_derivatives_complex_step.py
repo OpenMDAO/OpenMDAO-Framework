@@ -131,8 +131,13 @@ class Testcase_ComplexStep_Traits(unittest.TestCase):
         model.add('comp2', SimpleCompFloat())
         model.driver.workflow.add('comp2')
         model.connect('comp.y', 'comp2.x')
-
+        
         model.comp.x = 3+4j
+        model.run()
+
+        # Note, this stuff is not meant to be done interactively, so we have to
+        # work around a little.
+        model._system.set_complex_step(True)
         model.run()
 
         self.assertEqual(model.comp.x, 3+4j)
@@ -281,7 +286,7 @@ class Testcase_ComplexStep_Derivatives(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp', SimpleCompArray())
         model.driver.workflow.add('comp')
-        #model.driver.gradient_options.fd_form = 'complex_step'
+        model.driver.gradient_options.fd_form = 'complex_step'
         model.run()
 
         J = model.driver.workflow.calc_gradient(inputs=['comp.x'],
