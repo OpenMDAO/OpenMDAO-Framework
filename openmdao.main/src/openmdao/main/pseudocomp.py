@@ -16,7 +16,7 @@ from openmdao.main.mpiwrap import MPI_info
 from openmdao.main.index import deep_getattr
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types, complex_types
 
 
 
@@ -425,7 +425,7 @@ class PseudoComponent(object):
         idx = get_index(path)
         if isinstance(val, int_types):
             pass  # fall through to exception
-        if isinstance(val, real_types):
+        if isinstance(val, real_types + complex_types):
             if idx is None:
                 setattr(self, path, value[0])
                 return

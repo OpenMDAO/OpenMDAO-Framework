@@ -190,6 +190,7 @@ class System(object):
         self.sol_buf = None
         self.rhs_buf = None
         self._parent_system = None
+        self.complex_step = False
 
     def __getitem__(self, ident):
         if isinstance(ident, basestring):
@@ -663,13 +664,23 @@ class System(object):
             destvec = self.vec[destvecname]
 
             scatter(self, srcvec, destvec)
-
+            
             if destvecname == 'p':
+                
+                if self.complex_step is True:
+                    scatter(self, self.vec['du'], self.vec['dp'],
+                            complex_step = True)
+
                 if scatter is self.scatter_full:
                     self.vec['p'].set_to_scope(self.scope)
+                    if self.complex_step is True:
+                        self.vec['dp'].set_to_scope_complex(self.scope)
                 else:
                     if subsystem._in_nodes:
                         self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
+                        if self.complex_step is True:
+                            self.vec['dp'].set_to_scope_complex(self.scope, 
+                                                                subsystem._in_nodes)
 
         return scatter
 
@@ -854,6 +865,14 @@ class System(object):
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
+            
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. """
+
+        self.complex_step = complex_step
+        for subsystem in self.local_subsystems():
+            subsystem.set_complex_step(complex_step)
 
     def calc_gradient(self, inputs, outputs, mode='auto', options=None,
                       iterbase='', return_format='array'):
@@ -1150,9 +1169,12 @@ class SimpleSystem(System):
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
 
             # put component outputs in u vector
-            self.vec['u'].set_from_scope(self.scope,
-                             [n for n in graph.successors(self.name)
-                                   if n in self.vector_vars])
+            vnames = [n for n in graph.successors(self.name)
+                                   if n in self.vector_vars]
+            self.vec['u'].set_from_scope(self.scope, vnames)
+
+            if self.complex_step is True:
+                self.vec['du'].set_from_scope_complex(self.scope, vnames)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1275,6 +1297,9 @@ class InVarSystem(VarSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
+            
+            if self.complex_step is True:
+                self.vec['du'].set_from_scope_complex(self.scope, self._nodes)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1408,6 +1433,13 @@ class AssemblySystem(SimpleSystem):
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=self.options)
+
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. Assemblies must prepare their inner system."""
+
+        self.complex_step = complex_step
+        self._comp._system.set_complex_step(complex_step)
 
         #print inputs, outputs, self.J
 
@@ -1875,9 +1907,11 @@ class OpaqueSystem(SimpleSystem):
         self_u = self.vec['u']
         inner_u = self._inner_system.vec['u']
 
-        inner_u.set_from_scope(self.scope,
-                               self._inner_system.list_inputs() + \
-                               self._inner_system.list_states())
+        vnames = self._inner_system.list_inputs() + \
+                 self._inner_system.list_states()
+        inner_u.set_from_scope(self.scope, vnames)
+        if self.complex_step is True:
+            self._inner_system.vec['du'].set_from_scope_complex(self.scope, vnames)
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
@@ -1886,6 +1920,8 @@ class OpaqueSystem(SimpleSystem):
         for name, val in inner_u.items():
             if name in self_u:
                 self_u[name][:] = val
+                if self.complex_step is True:
+                    self.vec['du'][name][:] = self._inner_system.vec['du'][name]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1903,6 +1939,9 @@ class OpaqueSystem(SimpleSystem):
         outputs = self.list_outputs()
 
         if self.options.directional_fd is True:
+            if self.mode == 'adjoint':
+                msg = "Directional derivatives can only be used with forward mode."
+                raise RuntimeError(msg)
             self.J = None
             inner_system.dfd_solver = DirectionalFD(inner_system, inputs,
                                                     outputs)
@@ -1911,6 +1950,13 @@ class OpaqueSystem(SimpleSystem):
             self.J = inner_system.solve_fd(inputs, outputs)
 
         #print self.J, inputs, outputs
+
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. The Opaque System must call its inner system."""
+
+        self.complex_step = complex_step
+        self._inner_system.set_complex_step(complex_step)
 
     def applyJ(self, variables):
         vec = self.vec

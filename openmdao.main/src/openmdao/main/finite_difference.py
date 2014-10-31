@@ -273,20 +273,23 @@ class FiniteDifference(object):
                 #--------------------
                 elif form == 'complex_step':
 
-                    complex_step = fd_step*1j
+                    complex_step = fd_step
                     yc = zeros(len(self.y), dtype=complex128)
+                    self.system.set_complex_step(True)
 
                     # Step
-                    self.set_value(src, complex_step, i-i1)
+                    self.set_value_complex(src, complex_step, i-i1)
 
                     self.system.run(iterbase, ffd_order=1)
-                    self.get_outputs(yc)
+                    self.get_complex_outputs(yc)
 
                     # Forward difference
                     Jfd = (yc/fd_step).imag
 
                     # Undo step
-                    self.set_value(src, -fd_step, i-i1, undo_complex=True)
+                    self.set_value_complex(src, complex_step, i-i1, 
+                                           undo_complex=True)
+                    self.system.set_complex_step(False)
 
                 # Pack Jacobian in either an array or a dictionary.
                 if self.return_format == 'dict':
@@ -320,7 +323,21 @@ class FiniteDifference(object):
             x[start:end] = uvec[src]
             start += sz
 
-    def set_value(self, srcs, val, index, undo_complex=False):
+    def get_complex_outputs(self, x):
+        """Return matrix of flattened values from output edges.
+        This version is used by complex step."""
+
+        uvec = self.system.vec['u']
+        duvec = self.system.vec['du']
+        start = end = 0
+
+        for src in self.outputs:
+            sz = uvec[src].size
+            end += sz
+            x[start:end] = uvec[src] + duvec[src]*1j
+            start += sz
+
+    def set_value(self, srcs, val, index):
         """Set a value in the model"""
 
         # Support for Parameter Groups:
@@ -330,11 +347,24 @@ class FiniteDifference(object):
         for src in srcs:
             if src in self.system.vec['u']:
                 vec = self.system.vec['u'][src]
+                vec[index] += val
+                break  # avoid adding to the same array entry multiple times for param groups
+
+    def set_value_complex(self, srcs, val, index, undo_complex=False):
+        """Set/unset a complex value in the model"""
+
+        # Support for Parameter Groups:
+        if isinstance(srcs, basestring):
+            srcs = [srcs]
+
+        for src in srcs:
+            if src in self.system.vec['du']:
+                vec = self.system.vec['du'][src]
 
                 if undo_complex is True:
-                    vec[index] += val.real()
+                    vec[index] = 0.0
                 else:
-                    vec[index] += val
+                    vec[index] = val
                 break  # avoid adding to the same array entry multiple times for param groups
 
     def get_value(self, src, i1, i2, index):
@@ -477,20 +507,21 @@ class DirectionalFD(object):
         #--------------------
         elif form == 'complex_step':
 
-            complex_step = fd_step*1j
             yc = zeros(len(self.y), dtype=complex128)
+            self.system.set_complex_step(True)
 
             # Step
-            self.set_value(complex_step, arg)
+            self.set_value_complex(fd_step, arg)
 
             self.system.run(iterbase, ffd_order=1)
-            self.get_outputs(yc)
+            self.get_outputs_complex(yc)
 
             # Forward difference
             mv_prod = (yc/fd_step).imag
 
             # Undo step
-            self.set_value(-fd_step, arg, undo_complex=True)
+            self.set_value_complex(fd_step, arg, undo_complex=True)
+            self.system.set_complex_step(False)
 
         # Pack the results dictionary
         j = 0
@@ -521,7 +552,7 @@ class DirectionalFD(object):
 
         #print 'after DFD', mv_prod, arg, result
 
-    def set_value(self, fd_step, arg, undo_complex=False):
+    def set_value(self, fd_step, arg):
         """Set a value in the model"""
 
         for j, srcs in enumerate(self.inputs):
@@ -535,11 +566,27 @@ class DirectionalFD(object):
             for src in srcs:
                 if src in self.system.vec['u']:
                     vec = self.system.vec['u'][src]
+                    vec[:] += direction
+
+    def set_value_complex(self, fd_step, arg, undo_complex=False):
+        """Set a complex value in the model"""
+
+        for j, srcs in enumerate(self.inputs):
+
+            # Support for Parameter Groups:
+            if isinstance(srcs, basestring):
+                srcs = (srcs,)
+
+            direction = fd_step*arg[srcs[0]].flatten()
+
+            for src in srcs:
+                if src in self.system.vec['du']:
+                    vec = self.system.vec['du'][src]
 
                     if undo_complex is True:
-                        vec[:] += direction.real
+                        vec[:] = 0.0
                     else:
-                        vec[:] += direction
+                        vec[:] = direction
 
     def get_outputs(self, x):
         """Return matrix of flattened values from output edges."""
@@ -551,5 +598,19 @@ class DirectionalFD(object):
             sz = uvec[src].size
             end += sz
             x[start:end] = uvec[src]
+            start += sz
+
+    def get_outputs_complex(self, x):
+        """Return matrix of flattened values from output edges.
+        For complex step."""
+
+        uvec = self.system.vec['u']
+        duvec = self.system.vec['du']
+        start = end = 0
+
+        for src in self.outputs:
+            sz = uvec[src].size
+            end += sz
+            x[start:end] = uvec[src] + 1j*duvec[src]
             start += sz
 

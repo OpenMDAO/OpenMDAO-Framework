@@ -54,7 +54,7 @@ from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types, complex_types
 from openmdao.main.mpiwrap import mpiprint
 
 _copydict = {
@@ -1089,7 +1089,7 @@ class Container(SafeHasTraits):
             idx = get_index(path)
             if isinstance(val, int_types):
                 pass  # fall through to exception
-            if isinstance(val, real_types):
+            if isinstance(val, real_types + complex_types):
                 if idx is None:
                     #mpiprint("SETTING %s.%s to %s" % (self.name,path, value))
                     setattr(self, path, value[0])

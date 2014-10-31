@@ -329,6 +329,22 @@ class VecWrapper(VecWrapperBase):
                     array_val[:] = scope.get_flattened_value(name)
                 #mpiprint("getting %s from scope (%s)" % (name, array_val))
 
+    def set_from_scope_complex(self, scope, vnames=None):
+        """Get the named values from the given scope and set flattened
+        versions of just the complex portion into our array.
+        """
+        if vnames is None:
+            vnames = self.keys()
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None:
+                if isinstance(name, tuple):
+                    array_val[:] = scope.get_flattened_value(name[0]).imag
+                else:
+                    array_val[:] = scope.get_flattened_value(name).imag
+                #mpiprint("getting %s from scope (%s)" % (name, array_val))
+
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given scope.
@@ -353,6 +369,34 @@ class VecWrapper(VecWrapperBase):
                 else:
                     scope.set_flattened_value(name, array_val)
                     done.add(name)
+
+    #def set_to_scope_complex(self, scope, vnames=None):
+        #"""Pull values for the given set of names out of our array
+        #and set them into the given scope.
+        #"""
+        #if vnames is None:
+            #vnames = self.keys()
+        #else:
+            #vnames = [n for n in vnames if n in self]
+
+        #done = set()
+        #for name in vnames:
+            #step, start = self._info.get(name,(None,None))
+            #if start is not None:
+                ##mpiprint("setting %s to scope: %s" % (str(name),array_val))
+                #if isinstance(name, tuple):
+                    #array_val = scope.get_flattened_value(name[0])
+                    #scope.set_flattened_value(name[0], array_val + step*1j)
+                    #done.add(name[0])
+                    #for dest in name[1]:
+                        #if dest not in done:
+                            #array_val = scope.get_flattened_value(dest)
+                            #scope.set_flattened_value(dest, array_val + step*1j)
+                            #done.add(dest)
+                #else:
+                    #array_val = scope.get_flattened_value(name)
+                    #scope.set_flattened_value(name, array_val + step*1j)
+                    #done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -439,7 +483,7 @@ class InputVecWrapper(VecWrapperBase):
             vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
+            array_val, start = self._info.get(name,(None, None))
             if start is not None:
                 #print "SETTING %s to %s" % (name, array_val)
                 if isinstance(name, tuple):
@@ -447,6 +491,27 @@ class InputVecWrapper(VecWrapperBase):
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
+
+    def set_to_scope_complex(self, scope, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given scope as the complex part of the value.
+        """
+        if vnames is None:
+            vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
+
+        for name in vnames:
+            step, start = self._info.get(name,(None, None))
+            
+            if start is not None:
+                if isinstance(name, tuple):
+                    for dest in name[1]:
+                        array_val = scope.get_flattened_value(dest)
+                        scope.set_flattened_value(dest, array_val + step*1j)
+                else:
+                    array_val = scope.get_flattened_value(name)
+                    scope.set_flattened_value(name, array_val + step*1j)
 
 
 class DataTransfer(object):
@@ -499,7 +564,7 @@ class DataTransfer(object):
                 self.scatter = SerialScatter(system.vec['u'], var_idxs,
                                              system.vec['p'], input_idxs)
 
-    def __call__(self, system, srcvec, destvec):
+    def __call__(self, system, srcvec, destvec, complex_step=False):
 
         if self.scatter is None and not self.noflat_vars:
             #mpiprint("dataxfer is a noop for system %s" % system.name)
@@ -514,7 +579,8 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint' and srcvec.name.endswith('du'):
+        if system.mode == 'adjoint' and srcvec.name.endswith('du') and \
+           complex_step == False:
             addv = True
             mode = True
             destvec, srcvec = srcvec, destvec
