@@ -446,19 +446,15 @@ class ArrayComp2D_der(Component):
 
     def apply_deriv(self, arg, result):
 
-        result['y'] = result['y'].flatten()
         if 'x' in arg and 'y' in result:
-            result['y'] += self.J.dot(arg['x'].flatten())
-
-        result['y'] = result['y'].reshape(2, 2)
+            dy = self.J.dot(arg['x'].flatten()).reshape(2, 2)
+            result['y'][:] += dy
 
     def apply_derivT(self, arg, result):
 
-        result['x'] = result['x'].flatten()
         if 'y' in arg and 'x' in result:
-            result['x'] += self.J.T.dot(arg['y'].flatten())
-
-        result['x'] = result['x'].reshape(2, 2)
+            dx = self.J.T.dot(arg['y'].flatten()).reshape(2, 2)
+            result['x'][:] = dx
 
 
 class GComp_noD(Component):
