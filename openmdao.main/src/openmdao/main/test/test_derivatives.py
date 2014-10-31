@@ -1947,6 +1947,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection2(self):
         # Slightly different config
 
         top = Assembly()
@@ -1980,6 +1981,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs(self):
         # Do it all over with apply_deriv defined derivatives
 
         top = Assembly()
@@ -2011,6 +2013,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs2(self):
         # Slightly different config
 
         top = Assembly()
@@ -2044,6 +2047,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_multi_param(self):
         # Multi param
 
         top = Assembly()

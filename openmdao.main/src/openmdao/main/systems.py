@@ -52,7 +52,7 @@ def compound_setup_scatters(self):
     noflats = set([k for k,v in self.variables.items()
                        if not v.get('flat',True)])
 
-    start = end = numpy.sum(input_sizes[:rank])
+    start = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
 
     visited = {}
@@ -92,7 +92,7 @@ def compound_setup_scatters(self):
                         dest_full.append(dest_idxs)
 
             for node in sub._in_nodes:
-                if node in noflats:
+                if node in noflats or (node in self.vec['p'] and node not in visited):
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
                     noflat_conns.add(node)
@@ -589,6 +589,10 @@ class System(object):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
+            #flat_idx = varmeta[name].get('flat_idx')
+            #if flat_idx and varmeta[name]['basevar'] in varmeta:  # var is an array index into a basevar
+            #    self.arg_idx[name] = to_indices(flat_idx, self.scope.get(varmeta[name]['basevar']))
+            #else:
             self.arg_idx[name] = numpy.array(range(varmeta[name]['size']), 'i')
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
