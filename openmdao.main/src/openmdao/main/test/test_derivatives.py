@@ -446,19 +446,15 @@ class ArrayComp2D_der(Component):
 
     def apply_deriv(self, arg, result):
 
-        result['y'] = result['y'].flatten()
         if 'x' in arg and 'y' in result:
-            result['y'] += self.J.dot(arg['x'].flatten())
-
-        result['y'] = result['y'].reshape(2, 2)
+            dy = self.J.dot(arg['x'].flatten()).reshape(2, 2)
+            result['y'][:] += dy
 
     def apply_derivT(self, arg, result):
 
-        result['x'] = result['x'].flatten()
         if 'y' in arg and 'x' in result:
-            result['x'] += self.J.T.dot(arg['y'].flatten())
-
-        result['x'] = result['x'].reshape(2, 2)
+            dx = self.J.T.dot(arg['y'].flatten()).reshape(2, 2)
+            result['x'][:] = dx
 
 
 class GComp_noD(Component):
@@ -1947,6 +1943,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection2(self):
         # Slightly different config
 
         top = Assembly()
@@ -1980,6 +1977,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs(self):
         # Do it all over with apply_deriv defined derivatives
 
         top = Assembly()
@@ -2011,6 +2009,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_apply_derivs2(self):
         # Slightly different config
 
         top = Assembly()
@@ -2044,6 +2043,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         assert_rel_error(self, J[0, 0], 24.0, .000001)
         assert_rel_error(self, J[1, 0], 4.0, .000001)
 
+    def test_nested_2Darray_simul_element_and_full_connection_multi_param(self):
         # Multi param
 
         top = Assembly()

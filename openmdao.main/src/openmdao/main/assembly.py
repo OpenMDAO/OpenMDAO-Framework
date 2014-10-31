@@ -689,6 +689,11 @@ class Assembly(Component):
             self._depgraph.connect(self, src, dest)
 
         self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
+        
+        dest = destexpr.evaluate()
+        if isinstance(dest, ndarray) and dest.size == 0:
+            destexpr.set(srcexpr.evaluate(), self)
+            
 
         self.config_changed(update_parent=False)
 

@@ -5,7 +5,7 @@ import webbrowser
 
 import networkx as nx
 from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes
+from openmdao.main.depgraph import DependencyGraph, is_var_node, collapse_nodes, reduced2component
 from openmdao.main.problem_formulation import ArchitectureAssembly
 from openmdao.main.systems import System, AssemblySystem, SerialSystem, ParallelSystem, \
                                   OutVarSystem, InVarSystem, SolverSystem, \
@@ -138,7 +138,7 @@ def _update_graph_metadata(G, scope):
                 for pcomp in driver.list_pseudocomps():
                     conns.append((pcomp, node))
                 if hasattr(driver, 'list_param_targets'):
-                    conns.extend([(node, p) for p in driver.list_param_targets()])
+                    conns.extend([(node, p) for p in driver.list_param_targets() if p in G])
         elif 'comp' in data:
             data['shape'] = 'box'
         elif 'var' in data or 'basevar' in data: # var node
@@ -340,7 +340,7 @@ def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False, sysd
                 print "Can't plot system graph of '%s': %s" % (name, str(err))
 
         try:
-            plot_graph(obj._depgraph.component_graph(),
+            plot_graph(reduced2component(obj._reduced_graph),
                        fmt=fmt, outfile=name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
