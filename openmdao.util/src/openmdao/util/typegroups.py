@@ -19,6 +19,7 @@ else:
 # use these with isinstance to test for various types that include builtins
 # and numpy types (if numpy is available)
     
+complex_or_real_types = tuple(real_types+complex_types)
 real_types = tuple(real_types)
 int_types = tuple(int_types)
 complex_types = tuple(complex_types)
