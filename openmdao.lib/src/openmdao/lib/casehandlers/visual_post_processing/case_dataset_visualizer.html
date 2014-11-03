@@ -85,7 +85,8 @@
         <div id='comp-graph' style='display:none;'>
             {{ svg_comp_graph }}
         </div>
-        <div id='plot-frame' style='display:none;width:600px;height:300px;z-index:999;background-color:white'/>
+        <div id='plot-frame' style='display:none;width:600px;height:300px;z-index:999;background-color:white'>
+        </div>
         <script id='case-data' type='application/json'>
             {{ case_data }}
         </script>
@@ -112,6 +113,7 @@
                return document.createElementNS('http://www.w3.org/2000/svg', tag);
             }
 
+            // show plot in a pop-up at current mouse position
             function showPlot(var_name, series) {
                 // hide any existing plot
                 plot_frame.hide();
@@ -158,34 +160,41 @@
                 plot_frame.show();
             }
 
+            // get history of values for a variable
+            function getHistory(var_name) {
+                var vals = [];
+                $.each(case_data, function(key, val) {
+                    if (key.lastIndexOf('iteration_case', 0) === 0) {
+                        if (val['data'].hasOwnProperty(var_name)) {
+                            vals.push(val['data'][var_name])
+                        }
+                    }
+                });
+                return vals;
+            }
+
+            // a context menu for variable nodes
             var variableMenu = [
                 {
                     title: 'Plot Variable History',
                     action: function(elm, d, i) {
-                        var var_name = $(elm).find('text').filter(":first").text().trim();
-                        var vals = [];
-                        $.each(case_data, function(key, val) {
-                            if (key.lastIndexOf('iteration_case', 0) === 0) {
-                                if (val['data'].hasOwnProperty(var_name)) {
-                                    vals.push(val['data'][var_name])
-                                }
-                            }
-                        });
+                        var name = $(elm).find('text').filter(":first").text().trim();
+                        var vals = getHistory(name);
                         if (! Array.isArray(vals[0])) {
                             var series = vals.map(function(e, i) {
                                 return [i, vals[i]]
                             })
-                            showPlot(var_name, series);
+                            showPlot(name, series);
                         }
                         else {
-                            alert(var_name+' is not a scalar! \n (Can only plot history of a scalar)');
+                            alert(name+' is not a scalar! \n (Can only plot history of a scalar)');
                         }
                     }
                 },
                 {
                     title: 'Plot Array Value',
                     action: function(elm, d, i) {
-                        var var_name = $(elm).find('text').filter(":first").text().trim();
+                        var name = $(elm).find('text').filter(":first").text().trim();
                         if ($(elm).find('text').eq(1).text().trim() === 'Array') {
                             var vals = JSON.parse('['+$(elm).find('title').text()+']');
                             var series = vals.map(function(e, i) {
@@ -197,10 +206,10 @@
                                     return [i, vals[i]]
                                 }
                             });
-                            showPlot(var_name, series);
+                            showPlot(name, series);
                         }
                         else {
-                            alert(var_name + ' does not have an Array value! \n (Did you select a case?)');
+                            alert(name + ' does not have an Array value! \n (Did you select a case?)');
                         }
                     }
                 }
@@ -408,7 +417,6 @@
                     var tokens = label.split('->');
                     var src = tokens[0];
                     var dst = tokens[1];
-                    console.log('label:', label, src, dst);
                     if (driver_info.hasOwnProperty(src) && (parameter_list.indexOf(dst) >= 0)) {
                         // dashed line for connection between driver and parameter
                         $(this).find('path').attr('stroke-dasharray', '5,5');
@@ -421,6 +429,58 @@
                 })
 
                 return graph_id;
+            }
+
+            // load a UI for plotting the history of values for a variable
+            function load_plotting() {
+                w2ui.layout.content('main', '<div id="plotContent" style="background-color:white"></div>');
+
+                var plotContent = $('#plotContent');
+                var plotDiv = plotContent.append('<div id="plotDiv" style="height:80%"></div>');
+                var queryDiv = plotContent.append('<div id="queryDiv" style="height:20%></div>');
+
+                // function to generate plot
+                function plotSeries(title, series) {
+                    // create new plot
+                    $.plot('#plotDiv', [series]);
+
+                    // add title to plot canvas
+                    var canvas = plotDiv.find('canvas')[0];
+                    var context = canvas.getContext("2d");
+                    var cx = canvas.width / 2;
+                    context.font="bold 20px sans-serif";
+                    context.textAlign = 'center';
+                    context.fillText(title, cx, 35);
+                }
+
+                // function to handle click event on a variable name
+                function clickHandler() {
+                    var name = $(this).text();
+                    var vals = getHistory(name);
+                    var series = vals.map(function(e, i) {
+                        return [i, vals[i]]
+                    })
+                    plotSeries(name, series);
+                }
+
+                // add a button for every numeric variable in variable_metadata
+                $.each(case_data.simulation_info.variable_metadata, function(name, value) {
+                    var color = 'white';
+                    if ((value.vartypename === 'Float') || (value.vartypename === 'Int')) {
+                        if (parameter_list.indexOf(name) >= 0) {
+                            color = 'pink';  // color parameters pink
+                        }
+                        else if (case_data.simulation_info.constants.hasOwnProperty(name)) {
+                            console.log('excluding constant:', name);
+                            return true;    // don't include constants (except for parameters)
+                        }
+                        $('<div style="float:left;border-style:groove;background-color:'+color+'">'+name+'</div>')
+                            .on('click', clickHandler)
+                            .appendTo(queryDiv);
+                    }
+                });
+
+                return 'plotting';
             }
 
             // recursive function to build up the JavaScript structure that w2ui needs for
@@ -453,9 +513,9 @@
                     }
                 }
                 return nodes ;
-            } ; // end get_nodes function
+            };
 
-            var current_graph;
+            var now_showing;
 
             // widget configuration
             var config = {
@@ -470,13 +530,17 @@
                                 tabs   : [
                                     { id: 'tab1', caption: 'Dependency Graph' },
                                     { id: 'tab2', caption: 'Component Graph' },
+                                    { id: 'tab3', caption: 'Plotting'}
                                 ],
                                 onClick: function (event) {
-                                    if (event.target === 'tab1' && current_graph !== '#dep-graph') {
-                                        current_graph = load_graph('#dep-graph');
+                                    if (event.target === 'tab1' && now_showing !== '#dep-graph') {
+                                        now_showing = load_graph('#dep-graph');
                                     }
-                                    else if (event.target === 'tab2' && current_graph !== '#comp-graph') {;
-                                        current_graph = load_graph('#comp-graph');
+                                    else if (event.target === 'tab2' && now_showing !== '#comp-graph') {;
+                                        now_showing = load_graph('#comp-graph');
+                                    }
+                                    else if (event.target === 'tab3' && now_showing !== 'plotting') {;
+                                        now_showing = load_plotting();
                                     }
                                     else {
                                         alert('Already looking at that tab!')
@@ -589,7 +653,7 @@
 
                         if (event.node.img != "icon-page") {
                             d = case_objects[case_number_to_id_map[event.target]].data ;
-                            jQuery.each( d, function(key, val) {
+                            jQuery.each(d, function(key, val) {
                                 // Get only the text element with exactly the value of key
                                 t = svgContent.find("text").filter(function() {
                                       return $(this).text() === key;
@@ -625,7 +689,6 @@
                                             .attr('font-family', t.attr('font-family'))
                                             .text('Array')
                                             .appendTo(t.parent());
-                                        console.log('array value for',key);
                                         t.siblings('title').text(val.toString().replace(/,/g, ",\n"));
                                     }
                                }
@@ -634,7 +697,7 @@
                     }
                 })); // end layout content left
 
-                current_graph = load_graph('#dep-graph');
+                now_showing = load_graph('#dep-graph');
             }); // end ready
         </script>
     </body>
