@@ -173,10 +173,10 @@
                 return vals;
             }
 
-            // a context menu for variable nodes
-            var variableMenu = [
+            // a context menu for plotting
+            var plotMenu = [
                 {
-                    title: 'Plot Variable History',
+                    title: 'Plot History',
                     action: function(elm, d, i) {
                         var name = $(elm).find('text').filter(":first").text().trim();
                         var vals = getHistory(name);
@@ -184,7 +184,7 @@
                             var series = vals.map(function(e, i) {
                                 return [i, vals[i]]
                             })
-                            showPlot(name, series);
+                            showPlot($(elm).find('title').text(), series);
                         }
                         else {
                             alert(name+' is not a scalar! \n (Can only plot history of a scalar)');
@@ -364,7 +364,7 @@
                                      x             + ',' + cy         ;
 
                         // set color and shape
-                        if (expr_type == 'Constraint') {
+                        if (expr_type === 'Constraint') {
                             $(SVG('polygon'))
                                 .attr('points', points)
                                 .attr('fill', 'red')
@@ -378,7 +378,7 @@
                                 .prependTo(parent);
                             ellipse.remove();
                         }
-                        else if (expr_type == 'Objective') {
+                        else if (expr_type === 'Objective') {
                             $(SVG('polygon'))
                                 .attr('points', points)
                                 .attr('fill', 'gold')
@@ -410,7 +410,8 @@
                 })
 
                 // add variable context menu to all variable nodes
-                d3.selectAll('.variable').on("contextmenu", d3.contextMenu(variableMenu));
+                d3.selectAll('.variable').on("contextmenu", d3.contextMenu(plotMenu));
+                d3.selectAll('.expression').on("contextmenu", d3.contextMenu(plotMenu));
 
                 $("#svgContent").find(".edge").each(function() {
                     var label = $(this).find('title').text();
@@ -455,12 +456,12 @@
 
                 // function to handle click event on a variable name
                 function clickHandler() {
-                    var name = $(this).text();
+                    var name = $(this).attr('title');
                     var vals = getHistory(name);
                     var series = vals.map(function(e, i) {
                         return [i, vals[i]]
                     })
-                    plotSeries(name, series);
+                    plotSeries($(this).text(), series);
                 }
 
                 // add a button for every numeric variable in variable_metadata
@@ -468,16 +469,32 @@
                     var color = 'white';
                     if ((value.vartypename === 'Float') || (value.vartypename === 'Int')) {
                         if (parameter_list.indexOf(name) >= 0) {
-                            color = 'pink';  // color parameters pink
+                            // color parameters pink
+                            color = 'pink';
                         }
                         else if (case_data.simulation_info.constants.hasOwnProperty(name)) {
-                            console.log('excluding constant:', name);
-                            return true;    // don't include constants (except for parameters)
+                            // don't include constants that are not parameters
+                            // console.log('excluding constant:', name);
+                            return true;
                         }
-                        $('<div style="float:left;border-style:groove;background-color:'+color+'">'+name+'</div>')
+                        $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+name+'</div>')
                             .on('click', clickHandler)
                             .appendTo(queryDiv);
                     }
+                });
+
+                // add a button for every (objective/constraint) expression
+                $.each(pseudo_to_expr, function(name, value) {
+                    var color = 'white';
+                    if (value.type === 'Constraint') {
+                        color = 'red';
+                    }
+                    else if (value.type === 'Objective') {
+                        color = 'gold';
+                    }
+                    $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.expr+'</div>')
+                        .on('click', clickHandler)
+                        .appendTo(queryDiv);
                 });
 
                 return 'plotting';
