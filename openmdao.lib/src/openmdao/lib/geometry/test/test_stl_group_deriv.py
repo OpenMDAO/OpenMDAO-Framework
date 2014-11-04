@@ -8,10 +8,7 @@ import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Array
-from openmdao.main.variable import Variable
 
 import openmdao.lib.geometry.stl as stl
 from openmdao.lib.geometry.ffd_axisymetric import Body, Shell
@@ -37,7 +34,7 @@ class PlugNozzleGeometry(STLGroup):
         shell = Shell(cowl.copy(),cowl.copy(),n_c,n_c)
         shell2 = Shell(cowl.copy(),cowl.copy(),n_c,n_c)
 
-        geom_parts = (("plug",body),("cowl", shell),("plug2", body2),("shell2", cowl2))
+        geom_parts = (("plug",body),("cowl", shell),("plug2", body2),("cowl2", shell2))
 
         super(PlugNozzleGeometry,self).__init__(geom_parts=geom_parts)
 
