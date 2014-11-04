@@ -9,7 +9,6 @@ __all__ = ["Array"]
 from openmdao.units import PhysicalQuantity
 
 from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
-from openmdao.main.index import get_indexed_value
 from openmdao.main.interfaces import implements, IVariable
 from openmdao.main.variable import gui_excludes
 

@@ -283,7 +283,7 @@ class GeomComponent(Component):
         if self.parametric_geometry is not None and name in self._input_var_names:
             self.parametric_geometry.set_parameter(name, attr)
 
-    def _set_failed(self, path, value, index=None):
+    def _set_failed(self, path, value):
         # check to see if dest attribute is inside of our parametric_geometry
         # object
         obj = self
@@ -292,12 +292,9 @@ class GeomComponent(Component):
             if len(parts) > 1:
                 for name in parts[:-1]:
                     obj = getattr(obj, name)
-            if index is None:
-                setattr(obj, parts[-1], value)
-            else:
-                raise RuntimeError('index not supported')
+            setattr(obj, parts[-1], value)
         except AttributeError:
-            super(GeomComponent, self)._set_failed(path, value, index)
+            super(GeomComponent, self)._set_failed(path, value)
 
     def _update_deriv_functs(self, geom):
         functs = ['apply_deriv','apply_derivT','provideJ']

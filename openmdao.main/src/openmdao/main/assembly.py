@@ -105,8 +105,12 @@ class PassthroughProperty(Variable):
         super(PassthroughProperty, self).__init__(**metadata)
 
     def get(self, obj, name):
-        return self._vals.get(obj, {}).get(name, self._trait.default_value)
-
+        v = self._vals.get(obj, _missing)
+        if v is not _missing:
+            return v.get(name, self._trait.default_value)
+        else:
+            return self._trait.default_value
+        
     def set(self, obj, name, value):
         if obj not in self._vals:
             self._vals[obj] = {}
@@ -765,12 +769,12 @@ class Assembly(Component):
         self._system = None
 
 
-    def _set_failed(self, path, value, index=None, force=False):
+    def _set_failed(self, path, value):
         parts = path.split('.', 1)
         if len(parts) > 1:
             obj = getattr(self, parts[0])
             if isinstance(obj, PseudoComponent):
-                obj.set(parts[1], value, index, force)
+                obj.set(parts[1], value)
 
     def execute(self):
         """Runs driver and updates our boundary variables."""

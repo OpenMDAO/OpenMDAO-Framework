@@ -73,5 +73,5 @@ class SimpleCaseIterDriver(Driver):
                 else:
                     value = self.parent.get(path)
                 path = case_paths[path]
-                self.set('case_outputs.'+path, value, index=(i,), force=True)
+                self.set('case_outputs.%s[%d]'%(path,i), value)
 

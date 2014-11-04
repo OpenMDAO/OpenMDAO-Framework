@@ -287,7 +287,7 @@ class HasVarTreeResponses(HasResponses):
         nans = [float('NaN')] * length
         for path in self._responses:
             path = make_legal_path(path)
-            self.parent.set('case_outputs.'+path, list(nans), force=True)
+            self.parent.set('case_outputs.'+path, list(nans))
 
     def remove_response(self, expr):
         """Removes the specified response expression. Spaces within
