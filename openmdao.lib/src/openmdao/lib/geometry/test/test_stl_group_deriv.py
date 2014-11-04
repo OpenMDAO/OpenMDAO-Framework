@@ -60,8 +60,6 @@ class TestcaseSTLGroup(unittest.TestCase):
         self.assertTrue(plug.X.shape, (10,))
         self.assertTrue(hasattr(plug,'R'))
         self.assertTrue(plug.R.shape, (10,))
-        self.assertTrue(hasattr(plug,'thickness'))
-        self.assertTrue(plug.thickness.shape, (10,))
 
         self.assertTrue(hasattr(pn, 'plug2'))
         plug2 = pn.plug2
@@ -69,9 +67,6 @@ class TestcaseSTLGroup(unittest.TestCase):
         self.assertTrue(plug2.X.shape, (10,))
         self.assertTrue(hasattr(plug2,'R'))
         self.assertTrue(plug2.R.shape, (10,))
-        self.assertTrue(hasattr(plug2,'thickness'))
-        self.assertTrue(plug2.thickness.shape, (10,))
-
         self.assertTrue(hasattr(pn, 'cowl'))
         cowl = pn.cowl
         self.assertTrue(hasattr(cowl,'X'))
