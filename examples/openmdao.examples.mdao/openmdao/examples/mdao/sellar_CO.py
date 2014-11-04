@@ -78,6 +78,7 @@ class SellarCO(Assembly):
         self.localopt1.add_parameter('dis1.y2', low=-1e99, high=1e99)
         self.localopt1.add_constraint('dis1.y1 > 3.16')
         self.localopt1.iprint = 0
+        self.localopt1.accuracy = 1e-12
 
 
         #Parameters - Local Optimization 2
@@ -90,6 +91,7 @@ class SellarCO(Assembly):
         self.localopt2.add_parameter('dis2.y1', low=-1e99, high=1e99)
         self.localopt2.add_constraint('dis2.y2 < 24.0')
         self.localopt2.iprint = 0
+        self.localopt2.accuracy = 1e-12
 
 
 
@@ -134,5 +136,5 @@ if __name__ == "__main__":
     print "Elapsed time: ", time.time()-tt, "seconds"
 
 
-    prob.driver.workflow.check_gradient()
+    #prob.driver.workflow.check_gradient()
 # End sellar_CO.py
