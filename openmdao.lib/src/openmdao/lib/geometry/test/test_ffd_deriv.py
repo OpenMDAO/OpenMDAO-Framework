@@ -1,14 +1,11 @@
 """
 Testing differentiation of ffd body and shell objects.
 """
-
-
 import os
 import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Array
 from openmdao.main.variable import Variable
