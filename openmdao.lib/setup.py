@@ -87,7 +87,6 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.mux.DeMux = openmdao.lib.components.mux:DeMux
       openmdao.lib.components.broadcaster.Broadcaster = openmdao.lib.components.broadcaster:Broadcaster
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
-      openmdao.lib.components.geomcomp.GeomComponent = openmdao.lib.components.geomcomp:GeomComponent
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
 
