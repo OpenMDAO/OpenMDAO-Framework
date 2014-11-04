@@ -38,7 +38,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, \
+                                     IContainer, \
                                      IComponent, IVariableTree
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
@@ -1583,7 +1583,6 @@ def _get_entry_group(obj):
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
             (Variable,             'openmdao.variable'),
-            (IParametricGeometry,  'openmdao.parametric_geometry'),
             (Driver,               'openmdao.driver'),
             (ICaseIterator,        'openmdao.case_iterator'),
             (IResourceAllocator,   'openmdao.resource_allocator'),
