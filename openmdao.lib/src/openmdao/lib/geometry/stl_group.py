@@ -45,7 +45,6 @@ class STLGroup(Component):
 
         io = self._build_io()
         for (comp_name, var_name), meta in io: 
-            print comp_name, var_name
             comp = self.get(comp_name)
             val = meta['value']
             del meta['value']
