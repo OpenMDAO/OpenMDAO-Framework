@@ -101,7 +101,7 @@ class TestcaseDerivSTLGroup(unittest.TestCase):
         p3 = self.top.rec.out.copy()
         self.assertFalse(np.any(p1-p3)) #p1-p3 should be all 0
 
-        self.top.geom.set('plug.X', 2, index=(1,))
+        self.top.geom.set('plug.X[1]', 2)
         self.top.run()
         p4 = self.top.rec.out.copy()
         self.assertFalse(np.any(p0-p4)) #p0-p4 should be all 0

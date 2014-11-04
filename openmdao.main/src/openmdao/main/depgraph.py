@@ -425,8 +425,8 @@ class DependencyGraph(nx.DiGraph):
 
         # create expression objects to handle setting of
         # array indces, etc.
-        sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
-        dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
+        sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr_w_copy')
+        dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr_w_copy', is_dest=True)
 
         self.add_edge(srcpath, destpath, conn=True, sexpr=sexpr, dexpr=dexpr)
 

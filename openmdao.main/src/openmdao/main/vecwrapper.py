@@ -598,14 +598,9 @@ class DataTransfer(object):
                     for dest in dests:
                         if src != dest:
                             try:
-                                system.scope.set(dest, system.scope.get_attr(src))
+                                system.scope.set(dest, system.scope.get_attr_w_copy(src))
                             except Exception:
                                 system.scope.reraise_exception("cannot set '%s' from '%s'" % (dest, src))
-        #elif system.mode == 'rev':
-        #    scatter.scatter(dest_petsc, src_petsc, addv=True, mode=True)
-        #else:
-        #    raise Exception('mode type not recognized')
-        #srcvec.array /= system.vec['u0'].array
 
 def idx_merge(idxs):
     """Combines a mixed iterator of int and iterator indices into an

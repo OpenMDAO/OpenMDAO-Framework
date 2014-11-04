@@ -217,9 +217,9 @@ class GolinskiTestCase(unittest.TestCase):
             g16 = self.top.comp.x[6]
             # print 'starting initial design variables ****** x0 to x6'
             # print  g00, g11, g12, g13, g14, g15, g16
-            self.top.comp.set('x', self.getx0(g11, g12), [0])
-            self.top.comp.set('x', self.getx5(g11, g12, g13), [5])
-            self.top.comp.set('x', self.getx6(g11, g12, g14), [6])
+            self.top.comp.set('x[0]', self.getx0(g11, g12))
+            self.top.comp.set('x[5]', self.getx5(g11, g12, g13))
+            self.top.comp.set('x[6]', self.getx6(g11, g12, g14))
             # print ' *********************************'
             # print ' *********************************'
             # pylint: disable-msg=C0301

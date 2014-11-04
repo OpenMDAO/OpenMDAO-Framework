@@ -304,14 +304,10 @@ class PseudoComponent(object):
         else:
             setattr(self, 'out0', self._srcexpr.evaluate())
 
-    def get(self, name, index=None):
-        if index is not None:
-            raise RuntimeError("index not supported in PseudoComponent.get")
+    def get(self, name):
         return getattr(self, name)
 
-    def set(self, path, value, index=None, force=False):
-        if index is not None:
-            raise ValueError("index not supported in PseudoComponent.set")
+    def set(self, path, value):
         setattr(self, path, value)
 
     def get_metadata(self, traitpath, metaname=None):
@@ -421,7 +417,7 @@ class PseudoComponent(object):
 
     def set_flattened_value(self, path, value):
         self.ensure_init()
-        val = deep_getattr(self, path.split('[',1)[0])
+        val,rop = deep_getattr(self, path.split('[',1)[0])
         idx = get_index(path)
         if isinstance(val, int_types):
             pass  # fall through to exception

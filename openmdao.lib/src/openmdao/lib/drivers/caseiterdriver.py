@@ -721,8 +721,7 @@ class CaseIteratorDriver(Driver):
                 path = make_legal_path(path)
                 if self.sequential and isinstance(value, VariableTree):
                     value = value.copy()
-                self.set('case_outputs.'+path, value,
-                         index=(index,), force=True)
+                self.set('case_outputs.%s[%d]'%(path,index), value)
 
         # Record workflow data in recorders.
         workflow = self.workflow

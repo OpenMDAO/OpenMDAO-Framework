@@ -1352,7 +1352,7 @@ class EqConstraintSystem(SimpleSystem):
 
             # Propagate residuals.
             if state:
-                self.vec['f'][state][:] = -self._comp.out0
+                self.vec['f'][state][:] = -self._comp.get_flattened_value('out0')
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its

@@ -10,7 +10,7 @@ import copy
 from traits.api import HasTraits
 
 from openmdao.util import eggsaver as constants
-from openmdao.main.container import Container, deep_hasattr, \
+from openmdao.main.container import Container, \
                                     get_default_name, find_name, \
                                     find_trait_and_value, _get_entry_group, \
                                     create_io_traits
@@ -181,25 +181,6 @@ class ContainerTestCase(unittest.TestCase):
         cont = MyContainer()
         io = cont.get_metadata('uncertain.mu', 'iotype')
         self.assertEqual(io, 'out')
-
-    def test_deep_hasattr(self):
-        class MyClass(object):
-            pass
-        obj = MyClass()
-        obj.sub = MyClass()
-        obj.sub.sub = MyClass()
-        obj.a = 1
-        obj.sub.b = 2
-        obj.sub.sub.c = 3
-        self.assertEqual(deep_hasattr(obj, 'a'), True)
-        self.assertEqual(deep_hasattr(obj, 'z'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub'), True)
-        self.assertEqual(deep_hasattr(obj, 'bus'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.b'), True)
-        self.assertEqual(deep_hasattr(obj, 'sub.y'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.sub.c'), True)
-        self.assertEqual(deep_hasattr(obj, 'sub.sub.d'), False)
-        self.assertEqual(deep_hasattr(obj, 'sub.blah.foo.d'), False)
 
     def test_get_default_name(self):
         class MyClass(object):

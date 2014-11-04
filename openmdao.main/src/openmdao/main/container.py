@@ -36,26 +36,23 @@ from openmdao.main.datatypes.file import FileRef
 from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
                                      IContainer, IParametricGeometry, \
-                                     IComponent, IVariableTree
-from openmdao.main.index import get_indexed_value, deep_hasattr, \
-                                INDEX, ATTR, SLICE, _index_functs
-from openmdao.main.mp_support import ObjectManager, OpenMDAO_Proxy, \
+                                     IVariableTree, IContainerProxy
+#from openmdao.main.index import get_indexed_value, deep_hasattr, \
+                                #INDEX, ATTR, SLICE, _index_functs
+from openmdao.main.mp_support import ObjectManager, \
                                      is_instance, CLASSES_TO_PROXY, \
                                      has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
-from openmdao.main.array_helpers import flattened_value, get_val_and_index, \
-                                        get_index
+from openmdao.main.array_helpers import flattened_value, get_index
 from openmdao.main.pseudocomp import PseudoComponent
 
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.typegroups import real_types, int_types, complex_or_real_types
-from openmdao.main.mpiwrap import mpiprint
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -66,36 +63,54 @@ _iodict = {'out': 'output', 'in': 'input'}
 
 __missing__ = object()
 
-def get_closest_proxy(start_scope, pathname):
-    """Resolve down to the closest in-process parent object
-    of the object indicated by pathname.
-    Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+def get_closest_proxy(obj, pathname):
+    """Returns a tuple of the form (val, restofpath), where val
+    is either the object specified by dotted name 'pathname'
+    within obj, or the closest in-process proxy object that can be
+    resolved.  If val is a proxy, restofpath will contain the 
+    remaining part of pathname needed to resolve the desired attribute
+    within the proxy.  Otherwise, val is the actual desired attribute
+    and restofpath is the empty string.
     """
-    obj = start_scope
     names = pathname.split('.')
-    i = -1
-    for i, name in enumerate(names[:-1]):
-        if isinstance(obj, Container):
+
+    i = 0
+    for name in names:
+        if IContainerProxy.providedBy(obj):
+            return (obj, '.'.join(names[i:]))
+
+        try:
             obj = getattr(obj, name)
-        else:
+        except AttributeError:
             break
-    else:
         i += 1
+
     return (obj, '.'.join(names[i:]))
 
+proxy_get = get_closest_proxy
 
-def build_container_hierarchy(dct):
-    """Create a hierarchy of Containers based on the contents of a nested dict.
-    There will always be a single top level scoping Container regardless of the
-    contents of dct.
+def proxy_parent(obj, pathname):
+    """Returns a tuple of the form (par, restofpath), where par
+    is either the parent of the object specified by dotted name 'pathname'
+    within obj, or the closest in-process proxy object that can be
+    resolved.  restofpath will contain the 
+    remaining part of pathname needed to resolve the desired attribute
+    within the parent or proxy object.
     """
-    top = Container()
-    for key, val in dct.items():
-        if isinstance(val, dict):  # it's a dict, so this is a Container
-            top.add(key, build_container_hierarchy(val))
-        else:
-            setattr(top, key, val)
-    return top
+    names = pathname.split('.')
+
+    i = 0
+    for name in names[:-1]:
+        if IContainerProxy.providedBy(obj):
+            return (obj, '.'.join(names[i:]))
+
+        try:
+            obj = getattr(obj, name)
+        except AttributeError:
+            break
+        i += 1
+
+    return (obj, '.'.join(names[i:]))
 
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
@@ -162,8 +177,10 @@ class Container(SafeHasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}
 
-        # keep track of ExprEvaluators to save some overhead
-        self._exprcache = {}
+        # keep track of compiled expressions to save some overhead
+        self._getcache = {}
+        self._setcache = {}
+        self._copycache = {}
 
         self._cached_traits_ = None
         self._repair_trait_info = None
@@ -296,13 +313,19 @@ class Container(SafeHasTraits):
 
         saved_p = self._parent
         saved_c = self._cached_traits_
+        saved_s = self._setcache
+        saved_g = self._getcache
         self._parent = None
         self._cached_traits_ = None
+        self._getcache = {}
+        self._setcache = {}
         try:
             result = super(Container, self).__deepcopy__(memo)
         finally:
             self._parent = saved_p
             self._cached_traits_ = saved_c
+            self._getcache = saved_g
+            self._setcache = saved_s
 
         # Instance traits are not created properly by deepcopy, so we need
         # to manually recreate them. Note, self._added_traits is the most
@@ -331,6 +354,8 @@ class Container(SafeHasTraits):
 
         state['_added_traits'] = dct
         state['_cached_traits_'] = None
+        state['_getcache'] = {}
+        state['_setcache'] = {}
         return state
 
     def __setstate__(self, state):
@@ -506,52 +531,26 @@ class Container(SafeHasTraits):
         super(Container, self).remove_trait(name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, path, index=None):
+    def get_attr_w_copy(self, path):
         """Same as the 'get' method, except that the value will be copied
         if the variable has a 'copy' metadata attribute that is not None.
         Possible values for 'copy' are 'shallow' and 'deep'.
         Raises an exception if the variable cannot be found.
 
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
-                return self._get_failed(path, index)
-            return obj.get_attr(restofpath, index)
+        obj = self.get(path)
 
-        if index is None:
-            if '[' in path:
-                try:
-                    obj = get_val_and_index(self, path)[0]
-                except:
-                    return self._get_failed(path, index)
-                trait = self.get_trait(path.split('[',1)[0])
+        copy = self._copycache.get(path, _missing)
+        if copy is _missing:
+            copy = self.get_metadata(path.split('[',1)[0], 'copy')
+            self._copycache[path] = copy
+
+        # copy value if 'copy' found in metadata
+        if copy:
+            if isinstance(obj, Container):
+                obj = obj.copy()
             else:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    return self._get_failed(path, index)
-                trait = self.get_trait(path)
-
-            if trait is None:
-                self.raise_exception("trait '%s' does not exist" %
-                                     path, AttributeError)
-
-            # copy value if 'copy' found in metadata
-            if trait.copy:
-                if isinstance(obj, Container):
-                    obj = obj.copy()
-                else:
-                    obj = _copydict[trait.copy](obj)
-        else:  # index is not None
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            for idx in index:
-                if isinstance(idx, tuple):
-                    obj = _index_functs[idx[0]](obj, idx)
-                else:
-                    obj = obj[idx]
+                obj = _copydict[copy](obj)
 
         return obj
 
@@ -579,7 +578,7 @@ class Container(SafeHasTraits):
 
         if has_interface(obj, IContainer):
             self._check_recursion(obj)
-            if isinstance(obj, OpenMDAO_Proxy):
+            if IContainerProxy.providedBy(obj):
                 obj.parent = self._get_proxy(obj)
             else:
                 obj.parent = self
@@ -961,103 +960,34 @@ class Container(SafeHasTraits):
                                  % (metaname, traitpath), TypeError)
         self.get_metadata(traitpath)[metaname] = value
 
-    def _get_failed(self, path, index=None):
-        """If get() cannot locate the variable specified by the given
-        path, either because the parent object is not a Container or because
-        getattr() fails, raise an exception.  Inherited classes can override
-        this to return the value of the specified variable.
-        """
-        obj = self
-        try:
-            for name in path.split('.'):
-                obj = getattr(obj, name)
-        except AttributeError as err:
-            self.raise_exception(str(err), AttributeError)
-        return get_indexed_value(obj, '', index)
-
     @rbac(('owner', 'user'), proxy_types=[FileRef])
-    def get(self, path, index=None):
+    def get(self, path):
         """Return the object specified by the given path, which may
-        contain '.' characters.  *index*, if not None,
-        should be either a list of non-tuple hashable objects (at most one
-        for each array dimension of the target value) or a list of tuples of
-        the form (operation_id, stuff).
-
-        The forms of the various tuples are:
-
-        ::
-
-            INDEX:   (0, idx)
-                where idx is some hashable value
-            ATTR:    (1, name)
-                where name is the attribute name
-            CALL:    (2, args, kwargs)
-                where args is a list of values and kwargs is a list of
-                tuples of the form (keyword,value).
-                kwargs can be left out if empty.  args can be left out
-                if empty as long as kwargs are also empty, for example,
-                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
-            SLICE:   (3, lower, upper, step)
-                All members must be present and should have a value
-                of None if not set.
-
-        If you want to use a tuple as a key into a dict, you'll have to
-        nest your key tuple inside of an INDEX tuple to avoid ambiguity,
-        for example, (0, my_tuple).
+        contain '.' characters.
         """
-        #expr = self._code_cache.get(path)
-        #if expr is not None:
-        #    return eval(expr, self.__dict__, locals())
-        # 
-        #if '.' in path or '[' in path or '(' in path:
-        #    expr = compile(path, path, mode='eval')
-        #    try:
-        #        val = eval(expr, self.__dict__, locals())
-        #    except AttributeError:
-        #        # fall through
-        #        pass
-        #    else:
-        #        self._code_cache[path] = expr
-        #        return val
+        expr = self._getcache.get(path)
+        if expr is not None:
+            return eval(expr, self.__dict__)
+        
+        obj, restofpath = get_closest_proxy(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
+            return obj.get(restofpath)
 
-        if '.' in path:
-            childname, _, restofpath = path.partition('.')
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
-                return self._get_failed(path, index)
-            return obj.get(restofpath, index)
-
-        if index is None:
-            if '[' in path:
-                try:
-                    return get_val_and_index(self, path)[0]
-                except:
-                    return self._get_failed(path, index)
-            elif '(' in path:
-                # caller is doing something funky and not using the
-                # indexing protocol, so just create/cache an expression
-                # and evaluate it (which will call this method again using
-                # the indexing protocol)
-                expr = self._exprcache.get(path)
-                if expr is None:
-                    expr = ExprEvaluator(path, scope=self)
-                    self._exprcache[path] = expr
-                return expr.evaluate()
-            else:
-                obj = getattr(self, path, Missing)
-                if obj is Missing:
-                    return self._get_failed(path, index)
-            return obj
-        else:  # has an index
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                return self._get_failed(path, index)
-            for idx in index:
-                if isinstance(idx, tuple):
-                    obj = _index_functs[idx[0]](obj, idx)
-                else:
-                    obj = obj[idx]
-            return obj
+        # assume all local.  just compile the expr and cache it if
+        # it can be evaluated
+        expr = compile(path, path, mode='eval')
+        try:
+            val = eval(expr, self.__dict__)
+        except (AttributeError, NameError) as err:
+            if not restofpath: # to get around issue with PassthroughProperty
+                return obj
+            self.raise_exception(str(err), AttributeError)
+        else:
+            self._getcache[path] = expr
+            return val
 
     @rbac(('owner', 'user'), proxy_types=[FileRef])
     def get_flattened_value(self, path):
@@ -1066,139 +996,83 @@ class Container(SafeHasTraits):
         the value is not flattenable into an array of floats,
         raise a TypeError.
         """
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
-                self.raise_exception("%s was not found" % path)
-            return obj.get_flattened_value(restofpath)
-        else:
-            val, idx = get_val_and_index(self, path)
-            return flattened_value(path, val)
+        return flattened_value(path, self.get(path))
 
     @rbac(('owner', 'user'))
     def set_flattened_value(self, path, value):
-        childname, _, restofpath = path.partition('.')
-        if restofpath:
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, (Container, PseudoComponent)):
-                self.raise_exception("%s not found" % path)
+        obj, restofpath = proxy_parent(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
             obj.set_flattened_value(restofpath, value)
-        else:
-            val = getattr(self, path.split('[',1)[0])
-            idx = get_index(path)
-            if isinstance(val, int_types):
-                pass  # fall through to exception
-            if isinstance(val, complex_or_real_types):
-                if idx is None:
-                    #mpiprint("SETTING %s.%s to %s" % (self.name,path, value))
-                    setattr(self, path, value[0])
-                    return
-                # else, fall through to error
-            elif hasattr(val, '__setitem__') and idx is not None:
-                if isinstance(val[idx], real_types):
-                    val[idx] = value[0]
-                else:
-                    val[idx] = value
-                return
-            elif isinstance(val, ndarray):
-                setattr(self, path, value.reshape(val.shape))
-                return
-            elif IVariableTree.providedBy(val):
-                raise NotImplementedError("no support for setting flattened values into vartrees")
-            elif hasattr(val, 'set_flattened_value'):
-                val.set_flattened_value(value)
-                return
+            return
+        
+        # get current value
+        val = self.get(path)
+        if not isinstance(val, int_types) and isinstance(val, complex_or_real_types):
+            self.set(path, value[0])
+            return
+        elif hasattr(val, 'set_flattened_value'):
+            val.set_flattened_value(value)
+            return
+        elif isinstance(val, ndarray):
+            self.set(path, value.reshape(val.shape))
+            return
+        
+        # now get the non-indexed value and the index
+        val = self.get(path.split('[',1)[0])
+        idx = get_index(path)
+        
+        if isinstance(val, int_types):
+            pass  # fall through to exception
+        elif hasattr(val, '__setitem__') and idx is not None:
+            if isinstance(val[idx], complex_or_real_types):
+                val[idx] = value[0]
+            else:
+                val[idx] = value
+            return
+        elif IVariableTree.providedBy(val):
+            raise NotImplementedError("no support for setting flattened values into vartrees")
+        elif hasattr(val, 'set_flattened_value'):
+            val.set_flattened_value(value)
+            return
 
-            self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
-
-    def _set_failed(self, path, value, index=None, force=False):
-        """If set() cannot locate the specified variable, raise an exception.
-        Inherited classes can override this to locate the variable elsewhere
-        and set its value.
-        """
-        self.raise_exception("object has no attribute '%s'" % path,
-                             AttributeError)
+        self.raise_exception("Failed to set flattened value to variable %s" % path, TypeError)
 
     def get_iotype(self, name):
         return self.get_trait(name).iotype
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. *index*, if not None,
-        should be either a list of non-tuple hashable objects, at most one
-        for each array dimension of the target value, or a list of tuples of
-        the form (operation_id, stuff).
-
-        The forms of the various tuples are:
-
-        ::
-
-            INDEX:   (0, idx)
-                where idx is some hashable value
-            ATTR:    (1, name)
-                where name is the attribute name
-            CALL:    (2, args, kwargs)
-                where args is a list of values, and kwargs is a list of
-                tuples of the form (keyword,value).
-                kwargs can be left out if empty.  args can be left out
-                if empty as long as kwargs are also empty, for example,
-                (2,) and (2,[],[('foo',1)]) are valid but (2,[('foo',1)]) is not.
-            SLICE:   (3, lower, upper, step)
-                All members must be present and should have a value
-                of None if not set.
-
-        If you want to use a tuple as a key into a dict, you'll have to
-        nest your key tuple inside of an INDEX tuple to avoid ambiguity,
-        for example, (0, my_tuple)
+        value, subject to validation and constraints. 
         """
-        if '.' in path:
-            childname, _, restofpath = path.partition('.')
-            obj = getattr(self, childname, Missing)
-            if obj is Missing or not is_instance(obj, Container):
-                return self._set_failed(path, value, index, force=force)
-            obj.set(restofpath, value, index, force=force)
-        elif index:  # array index specified
-            self._index_set(path, value, index)
-        else:
-            if '[' in path or '(' in path:
-                # caller has put indexing in the string instead of
-                # using the indexing protocol.
-                # FIXME: this will make an extra call to set() from
-                #        ExprEvaluator.set()
-                expr = self._exprcache.get(path)
-                if expr is None:
-                    expr = ExprEvaluator(path, scope=self)
-                    self._exprcache[path] = expr
-                expr.set(value)
-            else:
-                if isinstance(value, ndarray):
-                    dest = getattr(self, path)
-                    if dest.size != value.size:
-                        setattr(self, path, value.copy())
-                    else:
-                        dest[:] = value
-                else:
-                    setattr(self, path, value)
+        _local_setter_ = value
+        expr = self._setcache.get(path)
+        if expr is not None:
+            exec(expr)
+            return
+        
+        obj, restofpath = proxy_parent(self, path)
+        # if restofpath is truthy, it means either that path
+        # contains a proxy or it contains some syntax that causes
+        # getattr to fail, e.g., a function eval, array element ref, etc.
+        if restofpath and IContainerProxy.providedBy(obj):
+            obj.set(restofpath, value)
+            return
 
-    def _index_set(self, name, value, index):
-        if len(index) == 1:
-            obj = getattr(self, name)
+        # assume all local.  just compile the expr and cache it if
+        # it can be evaluated
+        assign = "self.%s=_local_setter_" % path
+        expr = compile(assign, assign, mode='exec')
+        try:
+            exec(expr)
+        except Exception as err:
+            self.raise_exception(str(err), err.__class__)
         else:
-            obj = self.get(name, index[:-1])
-        idx = index[-1]
-
-        if isinstance(idx, tuple):
-            if idx[0] == INDEX:
-                obj[idx[1]] = value
-            elif idx[0] == ATTR:
-                setattr(obj, idx[1], value)
-            elif idx[0] == SLICE:
-                obj.__setitem__(slice(idx[1][0], idx[1][1], idx[1][2]), value)
-        else:
-            obj[idx] = value
+            self._setcache[path] = expr
 
     def _add_path(self, msg):
         """Adds our pathname to the beginning of the given message."""
