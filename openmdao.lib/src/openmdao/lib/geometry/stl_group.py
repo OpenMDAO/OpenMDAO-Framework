@@ -9,6 +9,7 @@ from ffd_axisymetric import Body, Shell
 
 from openmdao.main.api import Component, VariableTree
 from openmdao.lib.datatypes.api import VarTree, Array
+from openmdao.lib.geometry.geom_data import GeomData
 
 
 
@@ -49,6 +50,13 @@ class STLGroup(Component):
             val = meta['value']
             del meta['value']
             comp.add(var_name, Array(val, **meta))
+
+        #add the geometry var tree
+        n_points = self.points.shape[0]
+        n_edges = self.triangles.shape[0]
+        self.add('geom_data', VarTree(GeomData(n_points, n_edges), iotype="out", desc="geometry points and connectivity"))
+        self.geom_data.points = self.points
+        self.geom_data.edges = self.triangles
         
         self._needs_linerize = True
 
@@ -129,7 +137,7 @@ class STLGroup(Component):
         self.points = np.array(points)
         self.n_controls = n_controls
         self.n_points = len(points)
-        self.triangles = triangles
+        self.triangles = np.array(triangles)
         self.n_triangles = len(triangles)
 
         return params
@@ -305,7 +313,7 @@ class STLGroup(Component):
     def provideJ(self):
         if not self._needs_linerize:
             return
-        self.list_parameters()
+        self._build_io()
 
         param_J_offset_map = {}
 
@@ -411,32 +419,28 @@ class STLGroup(Component):
 
     def apply_deriv(self, arg, result):
         for name, value in arg.iteritems():
-            if name == "geom_out": continue #TODO: this should not be in the args? Bug?
             Jx, Jy, Jz = self.param_J_map[name]
             if Jx is not False:
-                result['geom_out'][:,0] += Jx.dot(value)
+                result['geom_data.points'][:,0] += Jx.dot(value)
             if Jy is not False:
-                result['geom_out'][:,1] += Jy.dot(value)
-                result['geom_out'][:,2] += Jz.dot(value)
+                result['geom_data.points'][:,1] += Jy.dot(value)
+                result['geom_data.points'][:,2] += Jz.dot(value)
 
         return result
 
     def apply_derivT(self, arg, result):
 
         for name, value in result.iteritems():
-            if name == "geom_out": continue #TODO: this should not be in the result? Bug?
             Jx, Jy, Jz = self.param_J_map[name]
             if Jx is not False:
-                result[name] -= Jx.T.dot(result['geom_out'][:,0])
+                result[name] += Jx.T.dot(arg['geom_data.points'][:,0])
             if Jy is not False:
-                result[name] -= Jy.T.dot(result['geom_out'][:,1])
-                result[name] -= Jz.T.dot(result['geom_out'][:,2])
+                result[name] += Jy.T.dot(arg['geom_data.points'][:,1])
+                result[name] += Jz.T.dot(arg['geom_data.points'][:,2])
 
         return result
 
-    #end methods for OpenMDAO geometry derivatives
 
-    #begin methods for IParametricGeometry
 
 
     def execute(self):
@@ -465,7 +469,10 @@ class STLGroup(Component):
                 # need both delta_Cc and delta_Ct for shells
                 comp.deform(delta_Cc=del_Cc, delta_Ct=del_Ct)
 
+
         self._build_io() #needed for book-keeping
+        self.geom_data.points = self.points
+        self.geom_data.edges = self.triangles
 
 
 
