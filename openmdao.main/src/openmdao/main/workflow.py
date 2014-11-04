@@ -776,6 +776,8 @@ class Workflow(object):
 
     def pre_setup(self):
         self._reduced_graph = None
+        for comp in self:
+            comp.pre_setup()
 
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
