@@ -13,7 +13,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, simple_node_iter, \
-                                   collapse_driver, get_reduced_subgraph
+                                   collapse_driver, get_reduced_subgraph, reduced2component
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -322,7 +322,8 @@ class Driver(Component):
             full.update(getcomps)
             full.update(self.list_pseudocomps())
 
-            compgraph = self.get_depgraph().component_graph()
+            #compgraph = self.get_depgraph().component_graph()
+            compgraph = reduced2component(self.get_reduced_graph())
 
             for end in getcomps:
                 for start in setcomps:
@@ -419,10 +420,10 @@ class Driver(Component):
         super(Driver, self).run(ffd_order, case_uuid)
 
     @rbac(('owner', 'user'))
-    def configure_recording(self, includes, excludes):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        return self.workflow.configure_recording(includes, excludes)
+        return self.workflow.configure_recording(recording_options)
 
     def update_parameters(self):
         if hasattr(self, 'get_parameters'):
@@ -659,4 +660,3 @@ class Driver(Component):
     def pre_setup(self):
         self._reduced_graph = None
         self.workflow.pre_setup()
-

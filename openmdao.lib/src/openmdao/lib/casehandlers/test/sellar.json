@@ -1,7 +1,8 @@
 {
-"__length_1": 24487
+"__length_1": 24385
 , "simulation_info": {
-    "OpenMDAO_Version": "0.10.1", 
+    "OpenMDAO_Version": "0.10.2", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"id\": \"sub\"}, {\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"half\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_2\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 0, \"target\": 4}, {\"source\": 0, \"target\": 5}, {\"source\": 2, \"target\": 0}], \"multigraph\": false}", 
     "constants": {
         "directory": "", 
         "driver.accuracy": 1e-06, 
@@ -20,15 +21,11 @@
         "driver.iprint": 0, 
         "driver.maxiter": 50, 
         "driver.output_filename": "slsqp.out", 
-        "excludes": [], 
         "force_fd": false, 
         "half.directory": "", 
         "half.force_fd": false, 
         "half.missing_deriv_policy": "error", 
         "half.z2a": 2.0, 
-        "includes": [
-            "*"
-        ], 
         "missing_deriv_policy": "assume_zero", 
         "sub.directory": "", 
         "sub.dis1.directory": "", 
@@ -51,11 +48,7 @@
         "sub.driver.gradient_options.gmres_tolerance": 1e-09, 
         "sub.driver.max_iteration": 100, 
         "sub.driver.tolerance": 1e-05, 
-        "sub.excludes": [], 
         "sub.force_fd": false, 
-        "sub.includes": [
-            "*"
-        ], 
         "sub.missing_deriv_policy": "assume_zero", 
         "sub.x1": 1.0
     }, 
@@ -79,7 +72,7 @@
     }, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"full\": \"_pseudo_1.in0\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_1.in0\"}, {\"full\": \"half.z2a\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"half.z2a\", \"short\": \"z2a\"}, {\"full\": \"driver.output_filename\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"output_filename\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.output_filename\"}, {\"short\": \"half\", \"color_idx\": 2, \"full\": \"half\", \"title\": \"{}\", \"comp\": true, \"id\": \"half\"}, {\"short\": \"globals.z2\", \"color_idx\": 0, \"full\": \"sub.globals.z2\", \"title\": \"{'basevar': 'sub.globals'}\", \"basevar\": \"sub.globals\", \"id\": \"sub.globals.z2\"}, {\"full\": \"_pseudo_0.in0\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in0\"}, {\"full\": \"_pseudo_0.in1\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in1\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in1\"}, {\"full\": \"_pseudo_0.in2\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in2\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in2\"}, {\"full\": \"_pseudo_0.in3\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in3\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_0.in3\"}, {\"short\": \"sub\", \"color_idx\": 0, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"half.z2b\", \"color_idx\": 2, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"half.z2b\", \"short\": \"z2b\"}, {\"full\": \"driver.iprint\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iprint\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iprint\"}, {\"full\": \"sub.states\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.states\", \"short\": \"states\"}, {\"short\": \"states.y[1]\", \"color_idx\": 0, \"full\": \"sub.states.y[1]\", \"title\": \"{'basevar': 'sub.states'}\", \"basevar\": \"sub.states\", \"id\": \"sub.states.y[1]\"}, {\"full\": \"driver.accuracy\", \"color_idx\": 1, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.accuracy\", \"short\": \"accuracy\"}, {\"full\": \"driver.error_code\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"error_code\", \"var\": true, \"iotype\": \"out\", \"id\": \"driver.error_code\"}, {\"short\": \"states.y[0]\", \"color_idx\": 0, \"full\": \"sub.states.y[0]\", \"title\": \"{'basevar': 'sub.states'}\", \"basevar\": \"sub.states\", \"id\": \"sub.states.y[0]\"}, {\"full\": \"driver.iout\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"iout\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.iout\"}, {\"full\": \"_pseudo_1.out0\", \"color_idx\": 3, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_1.out0\"}, {\"short\": \"_pseudo_1\", \"color_idx\": 3, \"full\": \"_pseudo_1\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_1\"}, {\"short\": \"_pseudo_0\", \"color_idx\": 4, \"full\": \"_pseudo_0\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"objective\", \"id\": \"_pseudo_0\"}, {\"full\": \"_pseudo_2.in0\", \"color_idx\": 5, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"in0\", \"var\": true, \"iotype\": \"in\", \"id\": \"_pseudo_2.in0\"}, {\"short\": \"_pseudo_2\", \"color_idx\": 5, \"full\": \"_pseudo_2\", \"title\": \"{}\", \"comp\": true, \"pseudo\": \"constraint\", \"id\": \"_pseudo_2\"}, {\"short\": \"driver\", \"color_idx\": 1, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"_pseudo_0.out0\", \"color_idx\": 4, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_0.out0\"}, {\"full\": \"_pseudo_2.out0\", \"color_idx\": 5, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"out0\", \"var\": true, \"iotype\": \"out\", \"id\": \"_pseudo_2.out0\"}, {\"full\": \"sub.globals\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.globals\", \"short\": \"globals\"}, {\"full\": \"driver.maxiter\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"maxiter\", \"var\": true, \"iotype\": \"in\", \"id\": \"driver.maxiter\"}, {\"full\": \"sub.x1\", \"color_idx\": 0, \"title\": \"{}\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.x1\", \"short\": \"x1\"}], \"links\": [{\"source\": 0, \"target\": 19}, {\"source\": 1, \"target\": 3}, {\"source\": 2, \"target\": 23}, {\"source\": 4, \"target\": 26}, {\"source\": 4, \"target\": 8, \"conn\": true}, {\"source\": 5, \"target\": 20}, {\"source\": 6, \"target\": 20}, {\"source\": 7, \"target\": 20}, {\"source\": 8, \"target\": 20}, {\"source\": 9, \"target\": 12}, {\"source\": 10, \"target\": 4, \"conn\": true}, {\"source\": 11, \"target\": 23}, {\"source\": 12, \"target\": 13}, {\"source\": 12, \"target\": 16}, {\"source\": 13, \"target\": 5, \"conn\": true}, {\"source\": 13, \"target\": 21, \"conn\": true}, {\"source\": 14, \"target\": 23}, {\"source\": 17, \"target\": 23}, {\"source\": 3, \"target\": 10}, {\"source\": 19, \"target\": 18}, {\"source\": 20, \"target\": 24}, {\"source\": 21, \"target\": 22}, {\"source\": 22, \"target\": 25}, {\"source\": 23, \"target\": 15}, {\"source\": 16, \"target\": 6, \"conn\": true}, {\"source\": 16, \"target\": 0, \"conn\": true}, {\"source\": 26, \"target\": 4}, {\"source\": 26, \"target\": 9}, {\"source\": 27, \"target\": 23}, {\"source\": 28, \"target\": 7, \"conn\": true}, {\"source\": 28, \"target\": 9}], \"multigraph\": false}", 
     "name": "top", 
-    "uuid": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "uuid": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -206,11 +199,6 @@
             "iotype": "in", 
             "vartypename": "Str"
         }, 
-        "excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -276,11 +264,6 @@
             "iotype": "out", 
             "low": null, 
             "vartypename": "Float"
-        }, 
-        "includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "missing_deriv_policy": {
             "assumed_default": false, 
@@ -516,11 +499,6 @@
             "low": null, 
             "vartypename": "Float"
         }, 
-        "sub.excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "sub.exec_count": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -543,11 +521,6 @@
             "iotype": "in", 
             "low": null, 
             "vartypename": "Float"
-        }, 
-        "sub.includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "sub.itername": {
             "deriv_ignore": true, 
@@ -586,9 +559,9 @@
         }
     }
 }
-, "__length_2": 856
+, "__length_2": 861
 , "driver_info_1": {
-    "_id": 4587867984, 
+    "_id": 140452196350480, 
     "eq_constraints": [], 
     "ineq_constraints": [
         "3.16 < sub.states.y[0]", 
@@ -617,15 +590,15 @@
         "half.exec_count", 
         "half.itername", 
         "sub.states", 
+        "sub.derivative_exec_count", 
         "sub.exec_count", 
         "sub.itername", 
-        "sub.derivative_exec_count", 
         "driver.workflow.itername"
     ]
 }
-, "__length_3": 488
+, "__length_3": 493
 , "driver_info_2": {
-    "_id": 4588241456, 
+    "_id": 140452196348464, 
     "eq_constraints": [
         "dis2.y2 = dis1.y2"
     ], 
@@ -647,11 +620,11 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_4": 663
+, "__length_4": 669
 , "iteration_case_1": {
-    "_driver_id": 4588241456, 
-    "_id": "87bb22e1-384e-11e4-83f3-a82066074ecd", 
-    "_parent_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52aa3ca-588e-11e4-8356-080027a1f086", 
+    "_parent_id": "e52a477a-588e-11e4-8355-080027a1f086", 
     "data": {
         "_pseudo_0": 10.176871642217915, 
         "dis1.derivative_exec_count": 0, 
@@ -667,13 +640,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.37911
+    "timestamp": 1413833148.137263
 }
-, "__length_5": 695
+, "__length_5": 700
 , "iteration_case_2": {
-    "_driver_id": 4588241456, 
-    "_id": "87bc2a8f-384e-11e4-83f4-a82066074ecd", 
-    "_parent_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52bb314-588e-11e4-8357-080027a1f086", 
+    "_parent_id": "e52a477a-588e-11e4-8355-080027a1f086", 
     "data": {
         "_pseudo_0": -0.20046473848140245, 
         "dis1.derivative_exec_count": 0, 
@@ -689,13 +662,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.382198
+    "timestamp": 1413833148.140956
 }
-, "__length_6": 694
+, "__length_6": 700
 , "iteration_case_3": {
-    "_driver_id": 4588241456, 
-    "_id": "87bc538a-384e-11e4-83f5-a82066074ecd", 
-    "_parent_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52bed5c-588e-11e4-8358-080027a1f086", 
+    "_parent_id": "e52a477a-588e-11e4-8355-080027a1f086", 
     "data": {
         "_pseudo_0": 0.004026673699561556, 
         "dis1.derivative_exec_count": 0, 
@@ -711,13 +684,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.38323
+    "timestamp": 1413833148.142489
 }
-, "__length_7": 698
+, "__length_7": 703
 , "iteration_case_4": {
-    "_driver_id": 4588241456, 
-    "_id": "87bc7b8a-384e-11e4-83f6-a82066074ecd", 
-    "_parent_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52c3063-588e-11e4-8359-080027a1f086", 
+    "_parent_id": "e52a477a-588e-11e4-8355-080027a1f086", 
     "data": {
         "_pseudo_0": -8.0850518752839662e-05, 
         "dis1.derivative_exec_count": 0, 
@@ -733,13 +706,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.384216
+    "timestamp": 1413833148.144253
 }
-, "__length_8": 697
+, "__length_8": 702
 , "iteration_case_5": {
-    "_driver_id": 4588241456, 
-    "_id": "87bca017-384e-11e4-83f7-a82066074ecd", 
-    "_parent_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52c6566-588e-11e4-835a-080027a1f086", 
+    "_parent_id": "e52a477a-588e-11e4-8355-080027a1f086", 
     "data": {
         "_pseudo_0": 1.6233891457773097e-06, 
         "dis1.derivative_exec_count": 0, 
@@ -755,13 +728,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.385155
+    "timestamp": 1413833148.145493
 }
-, "__length_9": 982
+, "__length_9": 987
 , "iteration_case_6": {
-    "_driver_id": 4587867984, 
-    "_id": "87bafaeb-384e-11e4-83f2-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e52a477a-588e-11e4-8355-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 26.803946487677322, 
         "_pseudo_1": -21.643929454616536, 
@@ -788,13 +761,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.390219
+    "timestamp": 1413833148.151856
 }
-, "__length_10": 697
+, "__length_10": 702
 , "iteration_case_7": {
-    "_driver_id": 4588241456, 
-    "_id": "87bd9e00-384e-11e4-83f9-a82066074ecd", 
-    "_parent_id": "87bd94a8-384e-11e4-83f8-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52defba-588e-11e4-835c-080027a1f086", 
+    "_parent_id": "e52dbd9e-588e-11e4-835b-080027a1f086", 
     "data": {
         "_pseudo_0": 1.6233891457773097e-06, 
         "dis1.derivative_exec_count": 0, 
@@ -810,13 +783,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.391646
+    "timestamp": 1413833148.155476
 }
-, "__length_11": 697
+, "__length_11": 701
 , "iteration_case_8": {
-    "_driver_id": 4588241456, 
-    "_id": "87bdc345-384e-11e4-83fa-a82066074ecd", 
-    "_parent_id": "87bd94a8-384e-11e4-83f8-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52e1f00-588e-11e4-835d-080027a1f086", 
+    "_parent_id": "e52dbd9e-588e-11e4-835b-080027a1f086", 
     "data": {
         "_pseudo_0": -3.2595856680472934e-08, 
         "dis1.derivative_exec_count": 0, 
@@ -832,13 +805,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.392594
+    "timestamp": 1413833148.15704
 }
-, "__length_12": 979
+, "__length_12": 984
 , "iteration_case_9": {
-    "_driver_id": 4587867984, 
-    "_id": "87bd94a8-384e-11e4-83f8-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e52dbd9e-588e-11e4-835b-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 26.803946163000049, 
         "_pseudo_1": -21.643929129938705, 
@@ -865,13 +838,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.393582
+    "timestamp": 1413833148.158251
 }
-, "__length_13": 691
+, "__length_13": 696
 , "iteration_case_10": {
-    "_driver_id": 4588241456, 
-    "_id": "87be8811-384e-11e4-83fb-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52eef0a-588e-11e4-835e-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 6.7798605840607706e-08, 
         "dis1.derivative_exec_count": 0, 
@@ -887,13 +860,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.397645
+    "timestamp": 1413833148.161981
 }
-, "__length_14": 692
+, "__length_14": 697
 , "iteration_case_11": {
-    "_driver_id": 4588241456, 
-    "_id": "87bead66-384e-11e4-83fc-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52f1661-588e-11e4-835f-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -1.3613217220154183e-09, 
         "dis1.derivative_exec_count": 0, 
@@ -909,13 +882,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.398603
+    "timestamp": 1413833148.162991
 }
-, "__length_15": 692
+, "__length_15": 697
 , "iteration_case_12": {
-    "_driver_id": 4588241456, 
-    "_id": "87bee897-384e-11e4-83fd-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52f8494-588e-11e4-8360-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 4.4844144753142245e-07, 
         "dis1.derivative_exec_count": 0, 
@@ -931,13 +904,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.400098
+    "timestamp": 1413833148.166057
 }
-, "__length_16": 693
+, "__length_16": 698
 , "iteration_case_13": {
-    "_driver_id": 4588241456, 
-    "_id": "87bf0bc0-384e-11e4-83fe-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e52fcb21-588e-11e4-8361-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -9.0042071576590388e-09, 
         "dis1.derivative_exec_count": 0, 
@@ -953,13 +926,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.401003
+    "timestamp": 1413833148.167868
 }
-, "__length_17": 692
+, "__length_17": 695
 , "iteration_case_14": {
-    "_driver_id": 4588241456, 
-    "_id": "87bf41b8-384e-11e4-83ff-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5307051-588e-11e4-8362-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.4447431979647263e-06, 
         "dis1.derivative_exec_count": 0, 
@@ -975,13 +948,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.402379
+    "timestamp": 1413833148.1717
 }
-, "__length_18": 693
+, "__length_18": 698
 , "iteration_case_15": {
-    "_driver_id": 4588241456, 
-    "_id": "87bf64b8-384e-11e4-8400-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e530c4f8-588e-11e4-8363-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -2.9008837998389936e-08, 
         "dis1.derivative_exec_count": 0, 
@@ -997,2954 +970,2954 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.403282
+    "timestamp": 1413833148.174275
 }
-, "__length_19": 696
+, "__length_19": 701
 , "iteration_case_16": {
-    "_driver_id": 4588241456, 
-    "_id": "87bfdd14-384e-11e4-8402-a82066074ecd", 
-    "_parent_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5316745-588e-11e4-8365-080027a1f086", 
+    "_parent_id": "e531586e-588e-11e4-8364-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.7979211048684656, 
+        "_pseudo_0": -4.7979211048685748, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 14, 
         "dis1.itername": "3-sub.1-dis1", 
-        "dis1.y1": 6.7710559963205625, 
+        "dis1.y1": 6.7710559963202588, 
         "dis1.y2": 10.980356311289718, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 14, 
         "dis2.itername": "3-sub.1-dis2", 
-        "dis2.y2": 6.1824352064212524, 
+        "dis2.y2": 6.1824352064211432, 
         "driver.workflow.itername": "3-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.406361
+    "timestamp": 1413833148.178223
 }
-, "__length_20": 696
+, "__length_20": 701
 , "iteration_case_17": {
-    "_driver_id": 4588241456, 
-    "_id": "87c00117-384e-11e4-8403-a82066074ecd", 
-    "_parent_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e531a8b5-588e-11e4-8366-080027a1f086", 
+    "_parent_id": "e531586e-588e-11e4-8364-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.17827760306899076, 
+        "_pseudo_0": 0.17827760306899698, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 15, 
         "dis1.itername": "3-sub.2-dis1", 
-        "dis1.y1": 7.7306402172942548, 
-        "dis1.y2": 6.1824352064212524, 
+        "dis1.y1": 7.7306402172939732, 
+        "dis1.y2": 6.1824352064211432, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 15, 
         "dis2.itername": "3-sub.2-dis2", 
-        "dis2.y2": 6.3607128094902432, 
+        "dis2.y2": 6.3607128094901402, 
         "driver.workflow.itername": "3-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.407284
+    "timestamp": 1413833148.179858
 }
-, "__length_21": 698
+, "__length_21": 704
 , "iteration_case_18": {
-    "_driver_id": 4588241456, 
-    "_id": "87c0238a-384e-11e4-8404-a82066074ecd", 
-    "_parent_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e531d730-588e-11e4-8367-080027a1f086", 
+    "_parent_id": "e531586e-588e-11e4-8364-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.006419344613409983, 
+        "_pseudo_0": -0.0064193446134090948, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 16, 
         "dis1.itername": "3-sub.3-dis1", 
-        "dis1.y1": 7.6949846966804571, 
-        "dis1.y2": 6.3607128094902432, 
+        "dis1.y1": 7.6949846966801738, 
+        "dis1.y2": 6.3607128094901402, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 16, 
         "dis2.itername": "3-sub.3-dis2", 
-        "dis2.y2": 6.3542934648768332, 
+        "dis2.y2": 6.3542934648767311, 
         "driver.workflow.itername": "3-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.408165
+    "timestamp": 1413833148.181047
 }
-, "__length_22": 698
+, "__length_22": 702
 , "iteration_case_19": {
-    "_driver_id": 4588241456, 
-    "_id": "87c04a0f-384e-11e4-8405-a82066074ecd", 
-    "_parent_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e531fccf-588e-11e4-8368-080027a1f086", 
+    "_parent_id": "e531586e-588e-11e4-8364-080027a1f086", 
     "data": {
         "_pseudo_0": 0.0002314028463974438, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 17, 
         "dis1.itername": "3-sub.4-dis1", 
-        "dis1.y1": 7.6962685656031393, 
-        "dis1.y2": 6.3542934648768332, 
+        "dis1.y1": 7.696268565602856, 
+        "dis1.y2": 6.3542934648767311, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 17, 
         "dis2.itername": "3-sub.4-dis2", 
-        "dis2.y2": 6.3545248677232307, 
+        "dis2.y2": 6.3545248677231285, 
         "driver.workflow.itername": "3-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.409158
+    "timestamp": 1413833148.181997
 }
-, "__length_23": 700
+, "__length_23": 704
 , "iteration_case_20": {
-    "_driver_id": 4588241456, 
-    "_id": "87c06d6b-384e-11e4-8406-a82066074ecd", 
-    "_parent_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5322207-588e-11e4-8369-080027a1f086", 
+    "_parent_id": "e531586e-588e-11e4-8364-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.3412135971627777e-06, 
+        "_pseudo_0": -8.3412135989391345e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 18, 
         "dis1.itername": "3-sub.5-dis1", 
-        "dis1.y1": 7.6962222850338593, 
-        "dis1.y2": 6.3545248677232307, 
+        "dis1.y1": 7.696222285033576, 
+        "dis1.y2": 6.3545248677231285, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 18, 
         "dis2.itername": "3-sub.5-dis2", 
-        "dis2.y2": 6.3545165265096335, 
+        "dis2.y2": 6.3545165265095296, 
         "driver.workflow.itername": "3-sub.5"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.410055
+    "timestamp": 1413833148.182951
 }
-, "__length_24": 1047
+, "__length_24": 1048
 , "iteration_case_21": {
-    "_driver_id": 4587867984, 
-    "_id": "87bfd3e6-384e-11e4-8401-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e531586e-588e-11e4-8364-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 8.4040728312925221, 
-        "_pseudo_1": -4.5362222850338592, 
-        "_pseudo_2": -17.645483473490366, 
+        "_pseudo_0": 8.4040728312922379, 
+        "_pseudo_1": -4.5362222850335758, 
+        "_pseudo_2": -17.645483473490472, 
         "driver.workflow.itername": "3", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 6, 
         "half.itername": "3-half", 
-        "half.z2a": 1.4122233411259635, 
-        "half.z2b": 0.70611167056298174, 
+        "half.z2a": 1.4122233411259613, 
+        "half.z2b": 0.70611167056298063, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 6, 
-        "sub.globals.z1": 2.8741982513416771, 
+        "sub.globals.z1": 2.8741982513416264, 
         "sub.itername": "3-sub", 
         "sub.states": {
             "y": [
-                7.696222285033859, 
-                6.3545165265096335
+                7.696222285033576, 
+                6.35451652650953
             ]
         }, 
-        "sub.states.y[0]": 7.6962222850338593, 
-        "sub.states.y[1]": 6.3545165265096335, 
-        "sub.x1": -3.0198066269804258e-14
+        "sub.states.y[0]": 7.696222285033576, 
+        "sub.states.y[1]": 6.3545165265095296, 
+        "sub.x1": -4.241051954068098e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.410904
+    "timestamp": 1413833148.183919
 }
-, "__length_25": 694
+, "__length_25": 697
 , "iteration_case_22": {
-    "_driver_id": 4588241456, 
-    "_id": "87c0c4f3-384e-11e4-8407-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e532a173-588e-11e4-836a-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -8.1609818938233047e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 19, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 7.6962232850338586, 
-        "dis1.y2": 6.3545248677232307, 
+        "dis1.y1": 7.696223285033577, 
+        "dis1.y2": 6.3545248677231285, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 19, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 6.3545167067413368, 
+        "dis2.y2": 6.3545167067412347, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.412308
+    "timestamp": 1413833148.18623
 }
-, "__length_26": 693
+, "__length_26": 697
 , "iteration_case_23": {
-    "_driver_id": 4588241456, 
-    "_id": "87c0ebd1-384e-11e4-8408-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e532ca00-588e-11e4-836b-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 2.9417351044003226e-07, 
+        "_pseudo_0": 2.9417350866367542e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 20, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 7.6962249172302375, 
-        "dis1.y2": 6.3545167067413368, 
+        "dis1.y1": 7.6962249172299559, 
+        "dis1.y2": 6.3545167067412347, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 20, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 6.3545170009148473, 
+        "dis2.y2": 6.3545170009147434, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.413308
+    "timestamp": 1413833148.18726
 }
-, "__length_27": 692
+, "__length_27": 698
 , "iteration_case_24": {
-    "_driver_id": 4588241456, 
-    "_id": "87c1253d-384e-11e4-8409-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53337eb-588e-11e4-836c-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 7.0405766816605819e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 21, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 7.6962244172302388, 
-        "dis1.y2": 6.3545167067413368, 
+        "dis1.y1": 7.6962244172299537, 
+        "dis1.y2": 6.3545167067412347, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 21, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 6.354517410799005, 
+        "dis2.y2": 6.3545174107989029, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.414771
+    "timestamp": 1413833148.190082
 }
-, "__length_28": 692
+, "__length_28": 699
 , "iteration_case_25": {
-    "_driver_id": 4588241456, 
-    "_id": "87c14adc-384e-11e4-840a-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5336140-588e-11e4-836d-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -2.5378700030387336e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 22, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 7.6962242764187057, 
-        "dis1.y2": 6.354517410799005, 
+        "dis1.y1": 7.6962242764184197, 
+        "dis1.y2": 6.3545174107989029, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 22, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 6.354517385420305, 
+        "dis2.y2": 6.3545173854202028, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.415739
+    "timestamp": 1413833148.191126
 }
-, "__length_29": 692
+, "__length_29": 698
 , "iteration_case_26": {
-    "_driver_id": 4588241456, 
-    "_id": "87c185b0-384e-11e4-840b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53394b3-588e-11e4-836e-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.4205486733587236e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 23, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 7.6962295248162071, 
-        "dis1.y2": 6.354517410799005, 
+        "dis1.y1": 7.6962295248159247, 
+        "dis1.y2": 6.3545174107989029, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 23, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 6.3545188313476784, 
+        "dis2.y2": 6.3545188313475762, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.417241
+    "timestamp": 1413833148.192469
 }
-, "__length_30": 692
+, "__length_30": 699
 , "iteration_case_27": {
-    "_driver_id": 4588241456, 
-    "_id": "87c1ab00-384e-11e4-840c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e533bc07-588e-11e4-836f-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -5.1205559792322219e-08, 
+        "_pseudo_0": -5.1205560680500639e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 24, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 7.6962292407064723, 
-        "dis1.y2": 6.3545188313476784, 
+        "dis1.y1": 7.6962292407061907, 
+        "dis1.y2": 6.3545188313475762, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 24, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 6.3545187801421186, 
+        "dis2.y2": 6.3545187801420155, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.4182
+    "timestamp": 1413833148.193446
 }
-, "__length_31": 696
+, "__length_31": 699
 , "iteration_case_28": {
-    "_driver_id": 4588241456, 
-    "_id": "87c225f5-384e-11e4-840e-a82066074ecd", 
-    "_parent_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53437b5-588e-11e4-8371-080027a1f086", 
+    "_parent_id": "e5342d82-588e-11e4-8370-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.3494183285371406, 
+        "_pseudo_0": -1.3494183288016472, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 25, 
         "dis1.itername": "4-sub.1-dis1", 
-        "dis1.y1": 4.8998525236629931, 
-        "dis1.y2": 6.3545188313476784, 
+        "dis1.y1": 4.8998525237309085, 
+        "dis1.y2": 6.3545188313475762, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 25, 
         "dis2.itername": "4-sub.1-dis2", 
-        "dis2.y2": 5.0051005028105378, 
+        "dis2.y2": 5.005100502545929, 
         "driver.workflow.itername": "4-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.421368
+    "timestamp": 1413833148.19644
 }
-, "__length_32": 695
+, "__length_32": 699
 , "iteration_case_29": {
-    "_driver_id": 4588241456, 
-    "_id": "87c24dba-384e-11e4-840f-a82066074ecd", 
-    "_parent_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5345cb3-588e-11e4-8372-080027a1f086", 
+    "_parent_id": "e5342d82-588e-11e4-8370-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.060144337191014863, 
+        "_pseudo_0": 0.060144337202242326, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 26, 
         "dis1.itername": "4-sub.2-dis1", 
-        "dis1.y1": 5.169736189370421, 
-        "dis1.y2": 5.0051005028105378, 
+        "dis1.y1": 5.1697361894912373, 
+        "dis1.y2": 5.005100502545929, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 26, 
         "dis2.itername": "4-sub.2-dis2", 
-        "dis2.y2": 5.0652448400015526, 
+        "dis2.y2": 5.0652448397481713, 
         "driver.workflow.itername": "4-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.42237
+    "timestamp": 1413833148.1976
 }
-, "__length_33": 698
+, "__length_33": 703
 , "iteration_case_30": {
-    "_driver_id": 4588241456, 
-    "_id": "87c271b3-384e-11e4-8410-a82066074ecd", 
-    "_parent_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53483b8-588e-11e4-8373-080027a1f086", 
+    "_parent_id": "e5342d82-588e-11e4-8370-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.0026467529181930516, 
+        "_pseudo_0": -0.0026467529186566807, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 27, 
         "dis1.itername": "4-sub.3-dis1", 
-        "dis1.y1": 5.157707321932218, 
-        "dis1.y2": 5.0652448400015526, 
+        "dis1.y1": 5.157707322050789, 
+        "dis1.y2": 5.0652448397481713, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 27, 
         "dis2.itername": "4-sub.3-dis2", 
-        "dis2.y2": 5.0625980870833596, 
+        "dis2.y2": 5.0625980868295146, 
         "driver.workflow.itername": "4-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.423286
+    "timestamp": 1413833148.198619
 }
-, "__length_34": 699
+, "__length_34": 702
 , "iteration_case_31": {
-    "_driver_id": 4588241456, 
-    "_id": "87c29517-384e-11e4-8411-a82066074ecd", 
-    "_parent_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e534bb80-588e-11e4-8374-080027a1f086", 
+    "_parent_id": "e5342d82-588e-11e4-8370-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.00011653970400971048, 
+        "_pseudo_0": 0.00011653970402836222, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 28, 
         "dis1.itername": "4-sub.4-dis1", 
-        "dis1.y1": 5.1582366725158568, 
-        "dis1.y2": 5.0625980870833596, 
+        "dis1.y1": 5.158236672634521, 
+        "dis1.y2": 5.0625980868295146, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 28, 
         "dis2.itername": "4-sub.4-dis2", 
-        "dis2.y2": 5.0627146267873693, 
+        "dis2.y2": 5.062714626533543, 
         "driver.workflow.itername": "4-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.424194
+    "timestamp": 1413833148.201201
 }
-, "__length_35": 700
+, "__length_35": 704
 , "iteration_case_32": {
-    "_driver_id": 4588241456, 
-    "_id": "87c2b96b-384e-11e4-8412-a82066074ecd", 
-    "_parent_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53521c5-588e-11e4-8375-080027a1f086", 
+    "_parent_id": "e5342d82-588e-11e4-8370-080027a1f086", 
     "data": {
-        "_pseudo_0": -5.1312570237271871e-06, 
+        "_pseudo_0": -5.1312570246153655e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 29, 
         "dis1.itername": "4-sub.5-dis1", 
-        "dis1.y1": 5.1582133645750545, 
-        "dis1.y2": 5.0627146267873693, 
+        "dis1.y1": 5.1582133646937152, 
+        "dis1.y2": 5.062714626533543, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 29, 
         "dis2.itername": "4-sub.5-dis2", 
-        "dis2.y2": 5.0627094955303455, 
+        "dis2.y2": 5.0627094952765184, 
         "driver.workflow.itername": "4-sub.5"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.425121
+    "timestamp": 1413833148.202844
 }
-, "__length_36": 1048
+, "__length_36": 1051
 , "iteration_case_33": {
-    "_driver_id": 4587867984, 
-    "_id": "87c21b38-384e-11e4-840d-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e5342d82-588e-11e4-8370-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 5.5510308561672899, 
-        "_pseudo_1": -1.9982133645750544, 
-        "_pseudo_2": -18.937290504469654, 
+        "_pseudo_0": 5.5510308559164114, 
+        "_pseudo_1": -1.998213364693715, 
+        "_pseudo_2": -18.937290504723482, 
         "driver.workflow.itername": "4", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 10, 
         "half.itername": "4-half", 
-        "half.z2a": 0.7729782041458978, 
-        "half.z2b": 0.3864891020729489, 
+        "half.z2a": 0.77297820340360646, 
+        "half.z2b": 0.38648910170180323, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 10, 
-        "sub.globals.z1": 2.4050503503793674, 
+        "sub.globals.z1": 2.4050503504705634, 
         "sub.itername": "4-sub", 
         "sub.states": {
             "y": [
-                5.1582133645750545, 
-                5.0627094955303455
+                5.158213364693715, 
+                5.062709495276518
             ]
         }, 
-        "sub.states.y[0]": 5.1582133645750545, 
-        "sub.states.y[1]": 5.0627094955303455, 
-        "sub.x1": -3.3798307292845565e-13
+        "sub.states.y[0]": 5.1582133646937152, 
+        "sub.states.y[1]": 5.0627094952765184, 
+        "sub.x1": 4.0165945666943827e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.42602
+    "timestamp": 1413833148.20468
 }
-, "__length_37": 693
+, "__length_37": 696
 , "iteration_case_34": {
-    "_driver_id": 4588241456, 
-    "_id": "87c31663-384e-11e4-8413-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e535c0dc-588e-11e4-8376-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -4.9111061919404619e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 30, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 5.1582143645750547, 
-        "dis1.y2": 5.0627146267873693, 
+        "dis1.y1": 5.1582143646937153, 
+        "dis1.y2": 5.062714626533543, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 30, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 5.0627097156811773, 
+        "dis2.y2": 5.062709715427351, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.42749
+    "timestamp": 1413833148.20679
 }
-, "__length_38": 691
+, "__length_38": 697
 , "iteration_case_35": {
-    "_driver_id": 4588241456, 
-    "_id": "87c33a02-384e-11e4-8414-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e535fe47-588e-11e4-8377-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 2.1623680268589851e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 31, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 5.1582153467962932, 
-        "dis1.y2": 5.0627097156811773, 
+        "dis1.y1": 5.1582153469149539, 
+        "dis1.y2": 5.062709715427351, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 31, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 5.06270993191798, 
+        "dis2.y2": 5.0627099316641537, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.428401
+    "timestamp": 1413833148.208505
 }
-, "__length_39": 693
+, "__length_39": 696
 , "iteration_case_36": {
-    "_driver_id": 4588241456, 
-    "_id": "87c371b5-384e-11e4-8415-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5367663-588e-11e4-8378-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 6.0616139929692281e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 32, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 5.1582148467962927, 
-        "dis1.y2": 5.0627097156811773, 
+        "dis1.y1": 5.1582148469149534, 
+        "dis1.y2": 5.062709715427351, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 32, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 5.0627103218425766, 
+        "dis2.y2": 5.0627103215887503, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.429821
+    "timestamp": 1413833148.21142
 }
-, "__length_40": 693
+, "__length_40": 698
 , "iteration_case_37": {
-    "_driver_id": 4588241456, 
-    "_id": "87c39559-384e-11e4-8416-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e536a9cc-588e-11e4-8379-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -2.668938492433881e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 33, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 5.1582147255640125, 
-        "dis1.y2": 5.0627103218425766, 
+        "dis1.y1": 5.1582147256826731, 
+        "dis1.y2": 5.0627103215887503, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 33, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 5.0627102951531917, 
+        "dis2.y2": 5.0627102948993654, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.430742
+    "timestamp": 1413833148.212645
 }
-, "__length_41": 693
+, "__length_41": 698
 , "iteration_case_38": {
-    "_driver_id": 4588241456, 
-    "_id": "87c3cbae-384e-11e4-8417-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e536e611-588e-11e4-837a-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4221828168459183e-06, 
+        "_pseudo_0": 1.4221828159577399e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 34, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 5.1582190356657147, 
-        "dis1.y2": 5.0627103218425766, 
+        "dis1.y1": 5.1582190357843745, 
+        "dis1.y2": 5.0627103215887503, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 34, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 5.0627117440253935, 
+        "dis2.y2": 5.0627117437715663, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.432126
+    "timestamp": 1413833148.214251
 }
-, "__length_42": 693
+, "__length_42": 698
 , "iteration_case_39": {
-    "_driver_id": 4588241456, 
-    "_id": "87c3eec0-384e-11e4-8418-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5371d30-588e-11e4-837b-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -6.261891627445948e-08, 
+        "_pseudo_0": -6.261891538628106e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 35, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 5.1582187512291515, 
-        "dis1.y2": 5.0627117440253935, 
+        "dis1.y1": 5.1582187513478113, 
+        "dis1.y2": 5.0627117437715663, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 35, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 5.0627116814064772, 
+        "dis2.y2": 5.0627116811526509, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.433028
+    "timestamp": 1413833148.217275
 }
-, "__length_43": 697
+, "__length_43": 701
 , "iteration_case_40": {
-    "_driver_id": 4588241456, 
-    "_id": "87c46635-384e-11e4-841a-a82066074ecd", 
-    "_parent_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e537d194-588e-11e4-837d-080027a1f086", 
+    "_parent_id": "e537c72e-588e-11e4-837c-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.84663679272300474, 
+        "_pseudo_0": -0.84663679278555648, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 36, 
         "dis1.itername": "5-sub.1-dis1", 
-        "dis1.y1": 3.9543824572996771, 
-        "dis1.y2": 5.0627117440253935, 
+        "dis1.y1": 3.9543824566637991, 
+        "dis1.y2": 5.0627117437715663, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 36, 
         "dis2.itername": "5-sub.1-dis2", 
-        "dis2.y2": 4.2160749513023887, 
+        "dis2.y2": 4.2160749509860098, 
         "driver.workflow.itername": "5-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.436082
+    "timestamp": 1413833148.22007
 }
-, "__length_44": 696
+, "__length_44": 701
 , "iteration_case_41": {
-    "_driver_id": 4588241456, 
-    "_id": "87c489a3-384e-11e4-841b-a82066074ecd", 
-    "_parent_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e537f366-588e-11e4-837e-080027a1f086", 
+    "_parent_id": "e537c72e-588e-11e4-837c-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.04212904235383963, 
+        "_pseudo_0": 0.042129042360237179, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 37, 
         "dis1.itername": "5-sub.2-dis1", 
-        "dis1.y1": 4.1237098158442782, 
-        "dis1.y2": 4.2160749513023887, 
+        "dis1.y1": 4.1237098152209102, 
+        "dis1.y2": 4.2160749509860098, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 37, 
         "dis2.itername": "5-sub.2-dis2", 
-        "dis2.y2": 4.2582039936562284, 
+        "dis2.y2": 4.258203993346247, 
         "driver.workflow.itername": "5-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.436998
+    "timestamp": 1413833148.221065
 }
-, "__length_45": 699
+, "__length_45": 702
 , "iteration_case_42": {
-    "_driver_id": 4588241456, 
-    "_id": "87c4acae-384e-11e4-841c-a82066074ecd", 
-    "_parent_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5381923-588e-11e4-837f-080027a1f086", 
+    "_parent_id": "e537c72e-588e-11e4-837c-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.0020756759490074828, 
+        "_pseudo_0": -0.0020756759494799937, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 38, 
         "dis1.itername": "5-sub.3-dis1", 
-        "dis1.y1": 4.1152840073735106, 
-        "dis1.y2": 4.2582039936562284, 
+        "dis1.y1": 4.1152840067488627, 
+        "dis1.y2": 4.258203993346247, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 38, 
         "dis2.itername": "5-sub.3-dis2", 
-        "dis2.y2": 4.2561283177072209, 
+        "dis2.y2": 4.256128317396767, 
         "driver.workflow.itername": "5-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.437893
+    "timestamp": 1413833148.222038
 }
-, "__length_46": 699
+, "__length_46": 703
 , "iteration_case_43": {
-    "_driver_id": 4588241456, 
-    "_id": "87c4cf51-384e-11e4-841d-a82066074ecd", 
-    "_parent_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5383e54-588e-11e4-8380-080027a1f086", 
+    "_parent_id": "e537c72e-588e-11e4-837c-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.00010231721131503946, 
+        "_pseudo_0": 0.00010231721134523752, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 39, 
         "dis1.itername": "5-sub.4-dis1", 
-        "dis1.y1": 4.1156991425633116, 
-        "dis1.y2": 4.2561283177072209, 
+        "dis1.y1": 4.1156991419387587, 
+        "dis1.y2": 4.256128317396767, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 39, 
         "dis2.itername": "5-sub.4-dis2", 
-        "dis2.y2": 4.2562306349185359, 
+        "dis2.y2": 4.2562306346081122, 
         "driver.workflow.itername": "5-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.438778
+    "timestamp": 1413833148.222994
 }
-, "__length_47": 700
+, "__length_47": 704
 , "iteration_case_44": {
-    "_driver_id": 4588241456, 
-    "_id": "87c4f1c0-384e-11e4-841e-a82066074ecd", 
-    "_parent_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53863ab-588e-11e4-8381-080027a1f086", 
+    "_parent_id": "e537c72e-588e-11e4-837c-080027a1f086", 
     "data": {
-        "_pseudo_0": -5.0434465723725452e-06, 
+        "_pseudo_0": -5.0434465732607237e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 40, 
         "dis1.itername": "5-sub.5-dis1", 
-        "dis1.y1": 4.1156786791210482, 
-        "dis1.y2": 4.2562306349185359, 
+        "dis1.y1": 4.1156786784964901, 
+        "dis1.y2": 4.2562306346081122, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 40, 
         "dis2.itername": "5-sub.5-dis2", 
-        "dis2.y2": 4.2562255914719636, 
+        "dis2.y2": 4.256225591161539, 
         "driver.workflow.itername": "5-sub.5"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.439657
+    "timestamp": 1413833148.223947
 }
-, "__length_48": 1054
+, "__length_48": 1058
 , "iteration_case_45": {
-    "_driver_id": 4587867984, 
-    "_id": "87c45cde-384e-11e4-8419-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e537c72e-588e-11e4-837c-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 4.129880548035171, 
-        "_pseudo_1": -0.95567867912104809, 
-        "_pseudo_2": -19.743774408528036, 
+        "_pseudo_0": 4.1298805474125952, 
+        "_pseudo_1": -0.95567867849648991, 
+        "_pseudo_2": -19.743774408838462, 
         "driver.workflow.itername": "5", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 14, 
         "half.itername": "5-half", 
-        "half.z2a": 4.4335646265381001e-12, 
-        "half.z2b": 2.2167823132690501e-12, 
+        "half.z2a": -4.4486636596730023e-13, 
+        "half.z2b": -2.2243318298365011e-13, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 14, 
-        "sub.globals.z1": 2.2275120387173999, 
+        "sub.globals.z1": 2.227512038563344, 
         "sub.itername": "5-sub", 
         "sub.states": {
             "y": [
-                4.115678679121048, 
-                4.2562255914719636
+                4.11567867849649, 
+                4.256225591161539
             ]
         }, 
-        "sub.states.y[0]": 4.1156786791210482, 
-        "sub.states.y[1]": 4.2562255914719636, 
-        "sub.x1": 0.0051149234715918094
+        "sub.states.y[0]": 4.1156786784964901, 
+        "sub.states.y[1]": 4.256225591161539, 
+        "sub.x1": 0.0051149234737096804
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.440498
+    "timestamp": 1413833148.224799
 }
-, "__length_49": 694
+, "__length_49": 699
 , "iteration_case_46": {
-    "_driver_id": 4588241456, 
-    "_id": "87c548f8-384e-11e4-841f-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e538cae8-588e-11e4-8382-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.7969849816809074e-06, 
+        "_pseudo_0": -4.7969849825690858e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 41, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 4.1156796791210493, 
-        "dis1.y2": 4.2562306349185359, 
+        "dis1.y1": 4.1156796784964902, 
+        "dis1.y2": 4.2562306346081122, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 41, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 4.2562258379335542, 
+        "dis2.y2": 4.2562258376231297, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.441914
+    "timestamp": 1413833148.226612
 }
-, "__length_50": 691
+, "__length_50": 697
 , "iteration_case_47": {
-    "_driver_id": 4588241456, 
-    "_id": "87c56d91-384e-11e4-8420-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e538f2a3-588e-11e4-8383-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 2.364544817723413e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 42, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 4.1156806385180449, 
-        "dis1.y2": 4.2562258379335542, 
+        "dis1.y1": 4.1156806378934867, 
+        "dis1.y2": 4.2562258376231297, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 42, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 4.256226074388036, 
+        "dis2.y2": 4.2562260740776114, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.442842
+    "timestamp": 1413833148.227613
 }
-, "__length_51": 693
+, "__length_51": 698
 , "iteration_case_48": {
-    "_driver_id": 4588241456, 
-    "_id": "87c5a4a6-384e-11e4-8421-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5393c80-588e-11e4-8384-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 6.1322370381589053e-07, 
+        "_pseudo_0": 6.1322370470406895e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 43, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 4.1156801385180444, 
-        "dis1.y2": 4.2562258379335542, 
+        "dis1.y1": 4.1156801378934862, 
+        "dis1.y2": 4.2562258376231297, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 43, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 4.2562264511572581, 
+        "dis2.y2": 4.2562264508468344, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.444233
+    "timestamp": 1413833148.229559
 }
-, "__length_52": 694
+, "__length_52": 698
 , "iteration_case_49": {
-    "_driver_id": 4588241456, 
-    "_id": "87c5c7c2-384e-11e4-8422-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5396c14-588e-11e4-8385-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -3.0227214509181977e-08, 
+        "_pseudo_0": -3.0227215397360396e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 44, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 4.1156800158733038, 
-        "dis1.y2": 4.2562264511572581, 
+        "dis1.y1": 4.1156800152487447, 
+        "dis1.y2": 4.2562264508468344, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 44, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 4.2562264209300436, 
+        "dis2.y2": 4.256226420619619, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.445136
+    "timestamp": 1413833148.230742
 }
-, "__length_53": 693
+, "__length_53": 697
 , "iteration_case_50": {
-    "_driver_id": 4588241456, 
-    "_id": "87c5fe91-384e-11e4-8423-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e539a74f-588e-11e4-8386-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4445342255697824e-06, 
+        "_pseudo_0": 1.444534224681604e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 45, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 4.1156839708983819, 
-        "dis1.y2": 4.2562264511572581, 
+        "dis1.y1": 4.1156839702738228, 
+        "dis1.y2": 4.2562264508468344, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 45, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 4.2562278956914836, 
+        "dis2.y2": 4.2562278953810591, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.446532
+    "timestamp": 1413833148.232337
 }
-, "__length_54": 693
+, "__length_54": 699
 , "iteration_case_51": {
-    "_driver_id": 4588241456, 
-    "_id": "87c62200-384e-11e4-8424-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e539d763-588e-11e4-8387-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -7.1204400597935091e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 46, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 4.1156836819915368, 
-        "dis1.y2": 4.2562278956914836, 
+        "dis1.y1": 4.1156836813669777, 
+        "dis1.y2": 4.2562278953810591, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 46, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 4.256227824487083, 
+        "dis2.y2": 4.2562278241766585, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.447469
+    "timestamp": 1413833148.233599
 }
-, "__length_55": 696
+, "__length_55": 702
 , "iteration_case_52": {
-    "_driver_id": 4588241456, 
-    "_id": "87c69991-384e-11e4-8426-a82066074ecd", 
-    "_parent_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53a8a19-588e-11e4-8389-080027a1f086", 
+    "_parent_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.39999474986305961, 
+        "_pseudo_0": -0.39999474964759685, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 47, 
         "dis1.itername": "6-sub.1-dis1", 
-        "dis1.y1": 3.3041928578158144, 
-        "dis1.y2": 4.2562278956914836, 
+        "dis1.y1": 3.3041928576546487, 
+        "dis1.y2": 4.2562278953810591, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 47, 
         "dis2.itername": "6-sub.1-dis2", 
-        "dis2.y2": 3.856233145828424, 
+        "dis2.y2": 3.8562331457334622, 
         "driver.workflow.itername": "6-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.450519
+    "timestamp": 1413833148.238119
 }
-, "__length_56": 695
+, "__length_56": 701
 , "iteration_case_53": {
-    "_driver_id": 4588241456, 
-    "_id": "87c6bed4-384e-11e4-8427-a82066074ecd", 
-    "_parent_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53abf80-588e-11e4-838a-080027a1f086", 
+    "_parent_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.021873407023071056, 
+        "_pseudo_0": 0.021873407011885782, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 48, 
         "dis1.itername": "6-sub.2-dis1", 
-        "dis1.y1": 3.3841918077884263, 
-        "dis1.y2": 3.856233145828424, 
+        "dis1.y1": 3.3841918075841679, 
+        "dis1.y2": 3.8562331457334622, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 48, 
         "dis2.itername": "6-sub.2-dis2", 
-        "dis2.y2": 3.8781065528514951, 
+        "dis2.y2": 3.878106552745348, 
         "driver.workflow.itername": "6-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.45148
+    "timestamp": 1413833148.239522
 }
-, "__length_57": 699
+, "__length_57": 702
 , "iteration_case_54": {
-    "_driver_id": 4588241456, 
-    "_id": "87c6e242-384e-11e4-8428-a82066074ecd", 
-    "_parent_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53ae94a-588e-11e4-838b-080027a1f086", 
+    "_parent_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.0011894039287536629, 
+        "_pseudo_0": -0.001189403928181676, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 49, 
         "dis1.itername": "6-sub.3-dis1", 
-        "dis1.y1": 3.3798171263838124, 
-        "dis1.y2": 3.8781065528514951, 
+        "dis1.y1": 3.3798171261817909, 
+        "dis1.y2": 3.878106552745348, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 49, 
         "dis2.itername": "6-sub.3-dis2", 
-        "dis2.y2": 3.8769171489227414, 
+        "dis2.y2": 3.8769171488171663, 
         "driver.workflow.itername": "6-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.452379
+    "timestamp": 1413833148.240643
 }
-, "__length_58": 699
+, "__length_58": 704
 , "iteration_case_55": {
-    "_driver_id": 4588241456, 
-    "_id": "87c705bd-384e-11e4-8429-a82066074ecd", 
-    "_parent_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53b28c5-588e-11e4-838c-080027a1f086", 
+    "_parent_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
     "data": {
-        "_pseudo_0": 6.4695656768698484e-05, 
+        "_pseudo_0": 6.4695656739832685e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 50, 
         "dis1.itername": "6-sub.4-dis1", 
-        "dis1.y1": 3.3800550071695632, 
-        "dis1.y2": 3.8769171489227414, 
+        "dis1.y1": 3.3800550069674271, 
+        "dis1.y2": 3.8769171488171663, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 50, 
         "dis2.itername": "6-sub.4-dis2", 
-        "dis2.y2": 3.8769818445795101, 
+        "dis2.y2": 3.8769818444739061, 
         "driver.workflow.itername": "6-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.453297
+    "timestamp": 1413833148.242567
 }
-, "__length_59": 699
+, "__length_59": 705
 , "iteration_case_56": {
-    "_driver_id": 4588241456, 
-    "_id": "87c729f3-384e-11e4-842a-a82066074ecd", 
-    "_parent_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53b6e6e-588e-11e4-838d-080027a1f086", 
+    "_parent_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
     "data": {
-        "_pseudo_0": -3.518954549974751e-06, 
+        "_pseudo_0": -3.5189545486424834e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 51, 
         "dis1.itername": "6-sub.5-dis1", 
-        "dis1.y1": 3.3800420680382093, 
-        "dis1.y2": 3.8769818445795101, 
+        "dis1.y1": 3.3800420678360794, 
+        "dis1.y2": 3.8769818444739061, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 51, 
         "dis2.itername": "6-sub.5-dis2", 
-        "dis2.y2": 3.8769783256249601, 
+        "dis2.y2": 3.8769783255193575, 
         "driver.workflow.itername": "6-sub.5"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.454207
+    "timestamp": 1413833148.244215
 }
-, "__length_60": 1058
+, "__length_60": 1062
 , "iteration_case_57": {
-    "_driver_id": 4587867984, 
-    "_id": "87c68fe3-384e-11e4-8425-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e53a7afd-588e-11e4-8388-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.4007553876594221, 
-        "_pseudo_1": -0.22004206803820914, 
-        "_pseudo_2": -20.123021674375039, 
+        "_pseudo_0": 3.4007553874650598, 
+        "_pseudo_1": -0.22004206783607927, 
+        "_pseudo_2": -20.123021674480643, 
         "driver.workflow.itername": "6", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 18, 
         "half.itername": "6-half", 
-        "half.z2a": -2.2984655568570848e-12, 
-        "half.z2b": -1.1492327784285424e-12, 
+        "half.z2a": 8.8625483018952064e-12, 
+        "half.z2b": 4.4312741509476032e-12, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 18, 
-        "sub.globals.z1": 2.0384892535785735, 
+        "sub.globals.z1": 2.0384892535223624, 
         "sub.itername": "6-sub", 
         "sub.states": {
             "y": [
-                3.3800420680382093, 
-                3.87697832562496
+                3.3800420678360794, 
+                3.8769783255193575
             ]
         }, 
-        "sub.states.y[0]": 3.3800420680382093, 
-        "sub.states.y[1]": 3.8769783256249601, 
-        "sub.x1": -6.9535523172792324e-14
+        "sub.states.y[0]": 3.3800420678360794, 
+        "sub.states.y[1]": 3.8769783255193575, 
+        "sub.x1": 2.7078859987650361e-13
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.455109
+    "timestamp": 1413833148.245353
 }
-, "__length_61": 693
+, "__length_61": 699
 , "iteration_case_58": {
-    "_driver_id": 4588241456, 
-    "_id": "87c78545-384e-11e4-842b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53bddab-588e-11e4-838e-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -3.2469921160682702e-06, 
+        "_pseudo_0": -3.2469921147360026e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 52, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.3800430680382094, 
-        "dis1.y2": 3.8769818445795101, 
+        "dis1.y1": 3.3800430678360796, 
+        "dis1.y2": 3.8769818444739061, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 52, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.876978597587394, 
+        "dis2.y2": 3.8769785974817914, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.456543
+    "timestamp": 1413833148.248447
 }
-, "__length_62": 692
+, "__length_62": 698
 , "iteration_case_59": {
-    "_driver_id": 4588241456, 
-    "_id": "87c7a8b5-384e-11e4-842c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53c49f5-588e-11e4-838f-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.7661195439444555e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 53, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.3800437174366325, 
-        "dis1.y2": 3.876978597587394, 
+        "dis1.y1": 3.3800437172345026, 
+        "dis1.y2": 3.8769785974817914, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 53, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.8769787741993484, 
+        "dis2.y2": 3.8769787740937458, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.457448
+    "timestamp": 1413833148.249518
 }
-, "__length_63": 692
+, "__length_63": 697
 , "iteration_case_60": {
-    "_driver_id": 4588241456, 
-    "_id": "87c7df59-384e-11e4-842d-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53c8626-588e-11e4-8390-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 5.4063075571875174e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 54, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.3800432174366328, 
-        "dis1.y2": 3.876978597587394, 
+        "dis1.y1": 3.380043217234503, 
+        "dis1.y2": 3.8769785974817914, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 54, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.8769791382181498, 
+        "dis2.y2": 3.8769791381125471, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.458842
+    "timestamp": 1413833148.251039
 }
-, "__length_64": 694
+, "__length_64": 699
 , "iteration_case_61": {
-    "_driver_id": 4588241456, 
-    "_id": "87c802d1-384e-11e4-842e-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53cc24c-588e-11e4-8391-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -2.9406248991392658e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 55, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.3800431093104817, 
-        "dis1.y2": 3.8769791382181498, 
+        "dis1.y1": 3.3800431091083514, 
+        "dis1.y2": 3.8769791381125471, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 55, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.8769791088119008, 
+        "dis2.y2": 3.8769791087062981, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.459759
+    "timestamp": 1413833148.252377
 }
-, "__length_65": 693
+, "__length_65": 698
 , "iteration_case_62": {
-    "_driver_id": 4588241456, 
-    "_id": "87c83cde-384e-11e4-842f-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53cfc28-588e-11e4-8392-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.4433974695471363e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 56, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.3800466862899889, 
-        "dis1.y2": 3.8769791382181498, 
+        "dis1.y1": 3.3800466860878586, 
+        "dis1.y2": 3.8769791381125471, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 56, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.8769805816156193, 
+        "dis2.y2": 3.8769805815100167, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.461236
+    "timestamp": 1413833148.254261
 }
-, "__length_66": 694
+, "__length_66": 698
 , "iteration_case_63": {
-    "_driver_id": 4588241456, 
-    "_id": "87c86038-384e-11e4-8430-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53d29f0-588e-11e4-8393-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -7.8509931888959272e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 57, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.3800463976104953, 
-        "dis1.y2": 3.8769805816156193, 
+        "dis1.y1": 3.380046397408365, 
+        "dis1.y2": 3.8769805815100167, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 57, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.8769805031056874, 
+        "dis2.y2": 3.8769805030000848, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.462151
+    "timestamp": 1413833148.255275
 }
-, "__length_67": 697
+, "__length_67": 702
 , "iteration_case_64": {
-    "_driver_id": 4588241456, 
-    "_id": "87c8d368-384e-11e4-8432-a82066074ecd", 
-    "_parent_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53db351-588e-11e4-8395-080027a1f086", 
+    "_parent_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.10734332838195337, 
+        "_pseudo_0": -0.10734332830304316, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 58, 
         "dis1.itername": "7-sub.1-dis1", 
-        "dis1.y1": 3.1754208212021755, 
-        "dis1.y2": 3.8769805816156193, 
+        "dis1.y1": 3.1754208211618833, 
+        "dis1.y2": 3.8769805815100167, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 58, 
         "dis2.itername": "7-sub.1-dis2", 
-        "dis2.y2": 3.7696372532336659, 
+        "dis2.y2": 3.7696372532069735, 
         "driver.workflow.itername": "7-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.465094
+    "timestamp": 1413833148.258778
 }
-, "__length_68": 697
+, "__length_68": 703
 , "iteration_case_65": {
-    "_driver_id": 4588241456, 
-    "_id": "87c8f80f-384e-11e4-8433-a82066074ecd", 
-    "_parent_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53ddb1e-588e-11e4-8396-080027a1f086", 
+    "_parent_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.0060137062886798098, 
+        "_pseudo_0": 0.0060137062843041988, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 59, 
         "dis1.itername": "7-sub.2-dis1", 
-        "dis1.y1": 3.196889486878566, 
-        "dis1.y2": 3.7696372532336659, 
+        "dis1.y1": 3.1968894868224917, 
+        "dis1.y2": 3.7696372532069735, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 59, 
         "dis2.itername": "7-sub.2-dis2", 
-        "dis2.y2": 3.7756509595223458, 
+        "dis2.y2": 3.7756509594912777, 
         "driver.workflow.itername": "7-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.466038
+    "timestamp": 1413833148.259775
 }
-, "__length_69": 699
+, "__length_69": 705
 , "iteration_case_66": {
-    "_driver_id": 4588241456, 
-    "_id": "87c91a8c-384e-11e4-8434-a82066074ecd", 
-    "_parent_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53e0094-588e-11e4-8397-080027a1f086", 
+    "_parent_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.00033637154893817467, 
+        "_pseudo_0": -0.00033637154869659014, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 60, 
         "dis1.itername": "7-sub.3-dis1", 
-        "dis1.y1": 3.1956867456208302, 
-        "dis1.y2": 3.7756509595223458, 
+        "dis1.y1": 3.1956867455656308, 
+        "dis1.y2": 3.7756509594912777, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 60, 
         "dis2.itername": "7-sub.3-dis2", 
-        "dis2.y2": 3.7753145879734076, 
+        "dis2.y2": 3.7753145879425811, 
         "driver.workflow.itername": "7-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.46692
+    "timestamp": 1413833148.260512
 }
-, "__length_70": 699
+, "__length_70": 704
 , "iteration_case_67": {
-    "_driver_id": 4588241456, 
-    "_id": "87c93cc2-384e-11e4-8435-a82066074ecd", 
-    "_parent_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53e17b5-588e-11e4-8398-080027a1f086", 
+    "_parent_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.8816327731929761e-05, 
+        "_pseudo_0": 1.8816327718607084e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 61, 
         "dis1.itername": "7-sub.4-dis1", 
-        "dis1.y1": 3.1957540199306176, 
-        "dis1.y2": 3.7753145879734076, 
+        "dis1.y1": 3.1957540198753702, 
+        "dis1.y2": 3.7753145879425811, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 61, 
         "dis2.itername": "7-sub.4-dis2", 
-        "dis2.y2": 3.7753334043011395, 
+        "dis2.y2": 3.7753334042702997, 
         "driver.workflow.itername": "7-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.467794
+    "timestamp": 1413833148.261328
 }
-, "__length_71": 699
+, "__length_71": 704
 , "iteration_case_68": {
-    "_driver_id": 4588241456, 
-    "_id": "87c95f6b-384e-11e4-8436-a82066074ecd", 
-    "_parent_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53e3d70-588e-11e4-8399-080027a1f086", 
+    "_parent_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.0525635456559712e-06, 
+        "_pseudo_0": -1.0525635447677928e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 62, 
         "dis1.itername": "7-sub.5-dis1", 
-        "dis1.y1": 3.1957502566650713, 
-        "dis1.y2": 3.7753334043011395, 
+        "dis1.y1": 3.1957502566098266, 
+        "dis1.y2": 3.7753334042702997, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 62, 
         "dis2.itername": "7-sub.5-dis2", 
-        "dis2.y2": 3.7753323517375939, 
+        "dis2.y2": 3.775332351706755, 
         "driver.workflow.itername": "7-sub.5"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.46868
+    "timestamp": 1413833148.262292
 }
-, "__length_72": 1058
+, "__length_72": 1062
 , "iteration_case_69": {
-    "_driver_id": 4587867984, 
-    "_id": "87c8ca0a-384e-11e4-8431-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e53d95d4-588e-11e4-8394-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.2186797253916826, 
-        "_pseudo_1": -0.035750256665071145, 
-        "_pseudo_2": -20.224667648262407, 
+        "_pseudo_0": 3.2186797253372239, 
+        "_pseudo_1": -0.035750256609826447, 
+        "_pseudo_2": -20.224667648293245, 
         "driver.workflow.itername": "7", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 22, 
         "half.itername": "7-half", 
-        "half.z2a": -7.2041157129700346e-14, 
-        "half.z2b": -3.6020578564850173e-14, 
+        "half.z2a": 8.5890028948464022e-14, 
+        "half.z2b": 4.2945014474232011e-14, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 22, 
-        "sub.globals.z1": 1.9876662037488415, 
+        "sub.globals.z1": 1.9876662037333754, 
         "sub.itername": "7-sub", 
         "sub.states": {
             "y": [
-                3.1957502566650713, 
-                3.775332351737594
+                3.1957502566098266, 
+                3.775332351706755
             ]
         }, 
-        "sub.states.y[0]": 3.1957502566650713, 
-        "sub.states.y[1]": 3.7753323517375939, 
-        "sub.x1": 3.903516232505669e-15
+        "sub.states.y[0]": 3.1957502566098266, 
+        "sub.states.y[1]": 3.775332351706755, 
+        "sub.x1": -4.6681658672592805e-15
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.469567
+    "timestamp": 1413833148.263232
 }
-, "__length_73": 693
+, "__length_73": 699
 , "iteration_case_70": {
-    "_driver_id": 4588241456, 
-    "_id": "87c9bab3-384e-11e4-8437-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53e9754-588e-11e4-839a-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -7.7286928590325488e-07, 
+        "_pseudo_0": -7.7286928457098725e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 63, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.195751256665071, 
-        "dis1.y2": 3.7753334043011395, 
+        "dis1.y1": 3.1957512566098267, 
+        "dis1.y2": 3.7753334042702997, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 63, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7753326314318536, 
+        "dis2.y2": 3.7753326314010152, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.471035
+    "timestamp": 1413833148.265057
 }
-, "__length_74": 693
+, "__length_74": 697
 , "iteration_case_71": {
-    "_driver_id": 4588241456, 
-    "_id": "87c9df75-384e-11e4-8438-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53ede75-588e-11e4-839b-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 4.3233416846533146e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 64, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1957514112389283, 
-        "dis1.y2": 3.7753326314318536, 
+        "dis1.y1": 3.1957514111836836, 
+        "dis1.y2": 3.7753326314010152, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 64, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7753326746652704, 
+        "dis2.y2": 3.775332674634432, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.471963
+    "timestamp": 1413833148.266561
 }
-, "__length_75": 692
+, "__length_75": 698
 , "iteration_case_72": {
-    "_driver_id": 4588241456, 
-    "_id": "87ca173d-384e-11e4-8439-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53f334c-588e-11e4-839c-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 4.0338629547775895e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 65, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1957509112389286, 
-        "dis1.y2": 3.7753326314318536, 
+        "dis1.y1": 3.1957509111836835, 
+        "dis1.y2": 3.7753326314010152, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 65, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7753330348181491, 
+        "dis2.y2": 3.7753330347873106, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.47339
+    "timestamp": 1413833148.268705
 }
-, "__length_76": 694
+, "__length_76": 699
 , "iteration_case_73": {
-    "_driver_id": 4588241456, 
-    "_id": "87ca3b68-384e-11e4-843a-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53f688c-588e-11e4-839d-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -2.2564965895810474e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 66, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1957508305616695, 
-        "dis1.y2": 3.7753330348181491, 
+        "dis1.y1": 3.1957508305064244, 
+        "dis1.y2": 3.7753330347873106, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 66, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7753330122531832, 
+        "dis2.y2": 3.7753330122223447, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.474325
+    "timestamp": 1413833148.269975
 }
-, "__length_77": 692
+, "__length_77": 698
 , "iteration_case_74": {
-    "_driver_id": 4588241456, 
-    "_id": "87ca7378-384e-11e4-843b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53faae8-588e-11e4-839e-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.4494655649066601e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 67, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1957543058950764, 
-        "dis1.y2": 3.7753330348181491, 
+        "dis1.y1": 3.1957543058398312, 
+        "dis1.y2": 3.7753330347873106, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 67, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.775334484283714, 
+        "dis2.y2": 3.7753344842528755, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.475743
+    "timestamp": 1413833148.271681
 }
-, "__length_78": 693
+, "__length_78": 698
 , "iteration_case_75": {
-    "_driver_id": 4588241456, 
-    "_id": "87ca95e1-384e-11e4-843c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e53ff1ee-588e-11e4-839f-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.1081396263726901e-08, 
+        "_pseudo_0": -8.1081396707816111e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 68, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1957540160019633, 
-        "dis1.y2": 3.775334484283714, 
+        "dis1.y1": 3.1957540159467186, 
+        "dis1.y2": 3.7753344842528755, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 68, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7753344032023177, 
+        "dis2.y2": 3.7753344031714788, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.476617
+    "timestamp": 1413833148.27359
 }
-, "__length_79": 696
+, "__length_79": 701
 , "iteration_case_76": {
-    "_driver_id": 4588241456, 
-    "_id": "87cb0657-384e-11e4-843e-a82066074ecd", 
-    "_parent_id": "87cafd51-384e-11e4-843d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54129cf-588e-11e4-83a1-080027a1f086", 
+    "_parent_id": "e5406d99-588e-11e4-83a0-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.020091579872592025, 
+        "_pseudo_0": -0.020091579842504537, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 69, 
         "dis1.itername": "8-sub.1-dis1", 
-        "dis1.y1": 3.1580361610960042, 
-        "dis1.y2": 3.775334484283714, 
+        "dis1.y1": 3.158036161097332, 
+        "dis1.y2": 3.7753344842528755, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 69, 
         "dis2.itername": "8-sub.1-dis2", 
-        "dis2.y2": 3.755242904411122, 
+        "dis2.y2": 3.755242904410371, 
         "driver.workflow.itername": "8-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.479493
+    "timestamp": 1413833148.281619
 }
-, "__length_80": 696
+, "__length_80": 699
 , "iteration_case_77": {
-    "_driver_id": 4588241456, 
-    "_id": "87cb28f5-384e-11e4-843f-a82066074ecd", 
-    "_parent_id": "87cafd51-384e-11e4-843d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54162eb-588e-11e4-83a2-080027a1f086", 
+    "_parent_id": "e5406d99-588e-11e4-83a0-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.001130231623799105, 
+        "_pseudo_0": 0.001130231622106681, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 70, 
         "dis1.itername": "8-sub.2-dis1", 
-        "dis1.y1": 3.1620544770705226, 
-        "dis1.y2": 3.755242904411122, 
+        "dis1.y1": 3.162054477065833, 
+        "dis1.y2": 3.755242904410371, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 70, 
         "dis2.itername": "8-sub.2-dis2", 
-        "dis2.y2": 3.7563731360349211, 
+        "dis2.y2": 3.7563731360324777, 
         "driver.workflow.itername": "8-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.480411
+    "timestamp": 1413833148.28291
 }
-, "__length_81": 700
+, "__length_81": 704
 , "iteration_case_78": {
-    "_driver_id": 4588241456, 
-    "_id": "87cb4b4a-384e-11e4-8440-a82066074ecd", 
-    "_parent_id": "87cafd51-384e-11e4-843d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e541882e-588e-11e4-83a3-080027a1f086", 
+    "_parent_id": "e5406d99-588e-11e4-83a0-080027a1f086", 
     "data": {
-        "_pseudo_0": -6.3560973839749124e-05, 
+        "_pseudo_0": -6.3560973744714033e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 71, 
         "dis1.itername": "8-sub.3-dis1", 
-        "dis1.y1": 3.1618284307457629, 
-        "dis1.y2": 3.7563731360349211, 
+        "dis1.y1": 3.1618284307414117, 
+        "dis1.y2": 3.7563731360324777, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 71, 
         "dis2.itername": "8-sub.3-dis2", 
-        "dis2.y2": 3.7563095750610813, 
+        "dis2.y2": 3.756309575058733, 
         "driver.workflow.itername": "8-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.481264
+    "timestamp": 1413833148.283868
 }
-, "__length_82": 699
+, "__length_82": 703
 , "iteration_case_79": {
-    "_driver_id": 4588241456, 
-    "_id": "87cb6c73-384e-11e4-8441-a82066074ecd", 
-    "_parent_id": "87cafd51-384e-11e4-843d-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e541ad19-588e-11e4-83a4-080027a1f086", 
+    "_parent_id": "e5406d99-588e-11e4-83a0-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.5745465405412347e-06, 
+        "_pseudo_0": 3.5745465352121641e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 72, 
         "dis1.itername": "8-sub.4-dis1", 
-        "dis1.y1": 3.1618411429405309, 
-        "dis1.y2": 3.7563095750610813, 
+        "dis1.y1": 3.1618411429361606, 
+        "dis1.y2": 3.756309575058733, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 72, 
         "dis2.itername": "8-sub.4-dis2", 
-        "dis2.y2": 3.7563131496076219, 
+        "dis2.y2": 3.7563131496052682, 
         "driver.workflow.itername": "8-sub.4"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.482112
+    "timestamp": 1413833148.284525
 }
-, "__length_83": 1060
+, "__length_83": 1062
 , "iteration_case_80": {
-    "_driver_id": 4587867984, 
-    "_id": "87cafd51-384e-11e4-843d-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e5406d99-588e-11e4-83a0-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1852108854237615, 
-        "_pseudo_1": -0.0018411429405307267, 
-        "_pseudo_2": -20.243686850392379, 
+        "_pseudo_0": 3.1852108854195786, 
+        "_pseudo_1": -0.0018411429361604448, 
+        "_pseudo_2": -20.243686850394731, 
         "driver.workflow.itername": "8", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 26, 
         "half.itername": "8-half", 
-        "half.z2a": -7.8286518937363033e-14, 
-        "half.z2b": -3.9143259468681516e-14, 
+        "half.z2a": 1.8659344683905383e-13, 
+        "half.z2b": 9.3296723419526914e-14, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 26, 
-        "sub.globals.z1": 1.9781564796427977, 
+        "sub.globals.z1": 1.9781564796415407, 
         "sub.itername": "8-sub", 
         "sub.states": {
             "y": [
-                3.161841142940531, 
-                3.756313149607622
+                3.1618411429361606, 
+                3.756313149605268
             ]
         }, 
-        "sub.states.y[0]": 3.1618411429405309, 
-        "sub.states.y[1]": 3.7563131496076219, 
-        "sub.x1": -4.1148665463931043e-16
+        "sub.states.y[0]": 3.1618411429361606, 
+        "sub.states.y[1]": 3.7563131496052682, 
+        "sub.x1": 7.9120518075410347e-16
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.482924
+    "timestamp": 1413833148.28548
 }
-, "__length_84": 692
+, "__length_84": 695
 , "iteration_case_81": {
-    "_driver_id": 4588241456, 
-    "_id": "87cbc02b-384e-11e4-8442-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54202e8-588e-11e4-83a5-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.8557365891200845e-06, 
+        "_pseudo_0": 3.855736583791014e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 73, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.161842142940531, 
-        "dis1.y2": 3.7563095750610813, 
+        "dis1.y1": 3.1618421429361603, 
+        "dis1.y2": 3.756309575058733, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 73, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7563134307976704, 
+        "dis2.y2": 3.7563134307953168, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.484252
+    "timestamp": 1413833148.28701
 }
-, "__length_85": 693
+, "__length_85": 699
 , "iteration_case_82": {
-    "_driver_id": 4588241456, 
-    "_id": "87cbe242-384e-11e4-8443-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5422a23-588e-11e4-83a6-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.1683894813051552e-07, 
+        "_pseudo_0": -2.1683894768642631e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 74, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.161841371793213, 
-        "dis1.y2": 3.7563134307976704, 
+        "dis1.y1": 3.1618413717888436, 
+        "dis1.y2": 3.7563134307953168, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 74, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7563132139587223, 
+        "dis2.y2": 3.7563132139563691, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.485129
+    "timestamp": 1413833148.288014
 }
-, "__length_86": 693
+, "__length_86": 697
 , "iteration_case_83": {
-    "_driver_id": 4588241456, 
-    "_id": "87cc1687-384e-11e4-8444-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5427b80-588e-11e4-83a7-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4256601588158446e-07, 
+        "_pseudo_0": 1.4256601676976288e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 75, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1618408717932129, 
-        "dis1.y2": 3.7563134307976704, 
+        "dis1.y1": 3.161840871788844, 
+        "dis1.y2": 3.7563134307953168, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 75, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7563135733636863, 
+        "dis2.y2": 3.7563135733613335, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.486459
+    "timestamp": 1413833148.290148
 }
-, "__length_87": 692
+, "__length_87": 699
 , "iteration_case_84": {
-    "_driver_id": 4588241456, 
-    "_id": "87cc3878-384e-11e4-8445-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e542a8d1-588e-11e4-83a8-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.0176296712863859e-09, 
+        "_pseudo_0": -8.0176301153755958e-09, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 76, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.16184084328001, 
-        "dis1.y2": 3.7563135733636863, 
+        "dis1.y1": 3.1618408432756406, 
+        "dis1.y2": 3.7563135733613335, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 76, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7563135653460566, 
+        "dis2.y2": 3.7563135653437034, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.487342
+    "timestamp": 1413833148.291263
 }
-, "__length_88": 692
+, "__length_88": 698
 , "iteration_case_85": {
-    "_driver_id": 4588241456, 
-    "_id": "87cc7326-384e-11e4-8446-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e542d754-588e-11e4-83a9-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": 1.4638633172303628e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 77, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1618442995939686, 
-        "dis1.y2": 3.7563135733636863, 
+        "dis1.y1": 3.1618442995895997, 
+        "dis1.y2": 3.7563135733613335, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 77, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7563150372270036, 
+        "dis2.y2": 3.7563150372246508, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.48883
+    "timestamp": 1413833148.292471
 }
-, "__length_89": 693
+, "__length_89": 699
 , "iteration_case_86": {
-    "_driver_id": 4588241456, 
-    "_id": "87cc954a-384e-11e4-8447-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e542fdc5-588e-11e4-83aa-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
         "_pseudo_0": -8.2324726591309627e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 78, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1618440068213047, 
-        "dis1.y2": 3.7563150372270036, 
+        "dis1.y1": 3.1618440068169362, 
+        "dis1.y2": 3.7563150372246508, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 78, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.756314954902277, 
+        "dis2.y2": 3.7563149548999242, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.489711
+    "timestamp": 1413833148.293426
 }
-, "__length_90": 699
+, "__length_90": 704
 , "iteration_case_87": {
-    "_driver_id": 4588241456, 
-    "_id": "87cd0305-384e-11e4-8449-a82066074ecd", 
-    "_parent_id": "87ccfa26-384e-11e4-8448-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5436b30-588e-11e4-83ac-080027a1f086", 
+    "_parent_id": "e5436054-588e-11e4-83ab-080027a1f086", 
     "data": {
-        "_pseudo_0": -0.0013602993804413543, 
+        "_pseudo_0": -0.0013602993748085268, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 79, 
         "dis1.itername": "9-sub.1-dis1", 
-        "dis1.y1": 3.1592970137660279, 
-        "dis1.y2": 3.7563150372270036, 
+        "dis1.y1": 3.1592970137732128, 
+        "dis1.y2": 3.7563150372246508, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 79, 
         "dis2.itername": "9-sub.1-dis2", 
-        "dis2.y2": 3.7549547378465622, 
+        "dis2.y2": 3.7549547378498422, 
         "driver.workflow.itername": "9-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.492515
+    "timestamp": 1413833148.296199
 }
-, "__length_91": 699
+, "__length_91": 704
 , "iteration_case_88": {
-    "_driver_id": 4588241456, 
-    "_id": "87cd2533-384e-11e4-844a-a82066074ecd", 
-    "_parent_id": "87ccfa26-384e-11e4-8448-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54390c2-588e-11e4-83ad-080027a1f086", 
+    "_parent_id": "e5436054-588e-11e4-83ab-080027a1f086", 
     "data": {
-        "_pseudo_0": 7.6529684400306053e-05, 
+        "_pseudo_0": 7.6529684083226357e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 80, 
         "dis1.itername": "9-sub.2-dis1", 
-        "dis1.y1": 3.1595690736421163, 
-        "dis1.y2": 3.7549547378465622, 
+        "dis1.y1": 3.1595690736481745, 
+        "dis1.y2": 3.7549547378498422, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 80, 
         "dis2.itername": "9-sub.2-dis2", 
-        "dis2.y2": 3.7550312675309625, 
+        "dis2.y2": 3.7550312675339255, 
         "driver.workflow.itername": "9-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.493395
+    "timestamp": 1413833148.297201
 }
-, "__length_92": 699
+, "__length_92": 705
 , "iteration_case_89": {
-    "_driver_id": 4588241456, 
-    "_id": "87cd474a-384e-11e4-844b-a82066074ecd", 
-    "_parent_id": "87ccfa26-384e-11e4-8448-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e543b75c-588e-11e4-83ae-080027a1f086", 
+    "_parent_id": "e5436054-588e-11e4-83ab-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.3054298863864915e-06, 
+        "_pseudo_0": -4.3054298690670123e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 81, 
         "dis1.itername": "9-sub.3-dis1", 
-        "dis1.y1": 3.1595537677052361, 
-        "dis1.y2": 3.7550312675309625, 
+        "dis1.y1": 3.1595537677113579, 
+        "dis1.y2": 3.7550312675339255, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 81, 
         "dis2.itername": "9-sub.3-dis2", 
-        "dis2.y2": 3.7550269621010761, 
+        "dis2.y2": 3.7550269621040564, 
         "driver.workflow.itername": "9-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.49428
+    "timestamp": 1413833148.298275
 }
-, "__length_93": 1059
+, "__length_93": 1065
 , "iteration_case_90": {
-    "_driver_id": 4587867984, 
-    "_id": "87ccfa26-384e-11e4-8448-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e5436054-588e-11e4-83ab-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1829535873974515, 
-        "_pseudo_1": 0.00044623229476403736, 
-        "_pseudo_2": -20.244973037898923, 
+        "_pseudo_0": 3.1829535874029093, 
+        "_pseudo_1": 0.0004462322886422676, 
+        "_pseudo_2": -20.244973037895942, 
         "driver.workflow.itername": "9", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 30, 
         "half.itername": "9-half", 
-        "half.z2a": -3.7302641709955181e-13, 
-        "half.z2b": -1.865132085497759e-13, 
+        "half.z2a": -1.5609871721379452e-12, 
+        "half.z2b": -7.8049358606897258e-13, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 30, 
-        "sub.globals.z1": 1.9775135957084142, 
+        "sub.globals.z1": 1.9775135957102667, 
         "sub.itername": "9-sub", 
         "sub.states": {
             "y": [
-                3.159553767705236, 
-                3.755026962101076
+                3.159553767711358, 
+                3.7550269621040564
             ]
         }, 
-        "sub.states.y[0]": 3.1595537677052361, 
-        "sub.states.y[1]": 3.7550269621010761, 
-        "sub.x1": -6.0388383517425184e-15
+        "sub.states.y[0]": 3.1595537677113579, 
+        "sub.states.y[1]": 3.7550269621040564, 
+        "sub.x1": -2.4573872611558267e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.495087
+    "timestamp": 1413833148.299841
 }
-, "__length_94": 692
+, "__length_94": 697
 , "iteration_case_91": {
-    "_driver_id": 4588241456, 
-    "_id": "87cd9b35-384e-11e4-844c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5444123-588e-11e4-83af-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.02413807165658e-06, 
+        "_pseudo_0": -4.02413805478119e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 82, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1595547677052362, 
-        "dis1.y2": 3.7550312675309625, 
+        "dis1.y1": 3.1595547677113576, 
+        "dis1.y2": 3.7550312675339255, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 82, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7550272433928908, 
+        "dis2.y2": 3.7550272433958707, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.496413
+    "timestamp": 1413833148.301818
 }
-, "__length_95": 693
+, "__length_95": 698
 , "iteration_case_92": {
-    "_driver_id": 4588241456, 
-    "_id": "87cdbd4c-384e-11e4-844d-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e544a1ba-588e-11e4-83b0-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 2.2639138741453735e-07, 
+        "_pseudo_0": 2.2639138697044814e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 83, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1595555725328506, 
-        "dis1.y2": 3.7550272433928908, 
+        "dis1.y1": 3.1595555725389683, 
+        "dis1.y2": 3.7550272433958707, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 83, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7550274697842783, 
+        "dis2.y2": 3.7550274697872577, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.497313
+    "timestamp": 1413833148.304329
 }
-, "__length_96": 692
+, "__length_96": 697
 , "iteration_case_93": {
-    "_driver_id": 4588241456, 
-    "_id": "87cdf24f-384e-11e4-844e-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e544e261-588e-11e4-83b1-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 5.8574550410028792e-07, 
+        "_pseudo_0": 5.857455032121095e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 84, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.159555072532851, 
-        "dis1.y2": 3.7550272433928908, 
+        "dis1.y1": 3.1595550725389687, 
+        "dis1.y2": 3.7550272433958707, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 84, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7550278291383949, 
+        "dis2.y2": 3.7550278291413739, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.498639
+    "timestamp": 1413833148.306111
 }
-, "__length_97": 694
+, "__length_97": 698
 , "iteration_case_94": {
-    "_driver_id": 4588241456, 
-    "_id": "87ce14eb-384e-11e4-844f-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54525d7-588e-11e4-83b2-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -3.2953079376341066e-08, 
+        "_pseudo_0": -3.2953078932251856e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 85, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1595549553837499, 
-        "dis1.y2": 3.7550278291383949, 
+        "dis1.y1": 3.1595549553898685, 
+        "dis1.y2": 3.7550278291413739, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 85, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7550277961853156, 
+        "dis2.y2": 3.755027796188295, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.499532
+    "timestamp": 1413833148.307979
 }
-, "__length_98": 692
+, "__length_98": 698
 , "iteration_case_95": {
-    "_driver_id": 4588241456, 
-    "_id": "87ce4978-384e-11e4-8450-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e545e0c2-588e-11e4-83b3-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4389176983264917e-06, 
+        "_pseudo_0": 1.4389176992146702e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 86, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.159558410411941, 
-        "dis1.y2": 3.7550278291383949, 
+        "dis1.y1": 3.1595584104180592, 
+        "dis1.y2": 3.7550278291413739, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 86, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7550292680560933, 
+        "dis2.y2": 3.7550292680590731, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.500869
+    "timestamp": 1413833148.312353
 }
-, "__length_99": 694
+, "__length_99": 697
 , "iteration_case_96": {
-    "_driver_id": 4588241456, 
-    "_id": "87ce6b73-384e-11e4-8451-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5460494-588e-11e4-83b4-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.0951102710002942e-08, 
+        "_pseudo_0": -8.0951103154092152e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 87, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1595581226284013, 
-        "dis1.y2": 3.7550292680560933, 
+        "dis1.y1": 3.1595581226345195, 
+        "dis1.y2": 3.7550292680590731, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 87, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7550291871049906, 
+        "dis2.y2": 3.75502918710797, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.501745
+    "timestamp": 1413833148.313261
 }
-, "__length_100": 702
+, "__length_100": 707
 , "iteration_case_97": {
-    "_driver_id": 4588241456, 
-    "_id": "87ced8f8-384e-11e4-8453-a82066074ecd", 
-    "_parent_id": "87ced01c-384e-11e4-8452-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54677c5-588e-11e4-83b6-080027a1f086", 
+    "_parent_id": "e5466bdc-588e-11e4-83b5-080027a1f086", 
     "data": {
-        "_pseudo_0": 0.00021426733261131758, 
+        "_pseudo_0": 0.00021426733106277851, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 88, 
         "dis1.itername": "10-sub.1-dis1", 
-        "dis1.y1": 3.1599594345831759, 
-        "dis1.y2": 3.7550292680560933, 
+        "dis1.y1": 3.1599594345855704, 
+        "dis1.y2": 3.7550292680590731, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 88, 
         "dis2.itername": "10-sub.1-dis2", 
-        "dis2.y2": 3.7552435353887046, 
+        "dis2.y2": 3.7552435353901359, 
         "driver.workflow.itername": "10-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.504547
+    "timestamp": 1413833148.316556
 }
-, "__length_101": 703
+, "__length_101": 708
 , "iteration_case_98": {
-    "_driver_id": 4588241456, 
-    "_id": "87cefb4f-384e-11e4-8454-a82066074ecd", 
-    "_parent_id": "87ced01c-384e-11e4-8452-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e546b3cf-588e-11e4-83b7-080027a1f086", 
+    "_parent_id": "e5466bdc-588e-11e4-83b5-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.2053597407302163e-05, 
+        "_pseudo_0": -1.2053597320260678e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 89, 
         "dis1.itername": "10-sub.2-dis1", 
-        "dis1.y1": 3.1599165811166534, 
-        "dis1.y2": 3.7552435353887046, 
+        "dis1.y1": 3.1599165811193579, 
+        "dis1.y2": 3.7552435353901359, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 89, 
         "dis2.itername": "10-sub.2-dis2", 
-        "dis2.y2": 3.7552314817912973, 
+        "dis2.y2": 3.7552314817928156, 
         "driver.workflow.itername": "10-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.505432
+    "timestamp": 1413833148.317784
 }
-, "__length_102": 702
+, "__length_102": 705
 , "iteration_case_99": {
-    "_driver_id": 4588241456, 
-    "_id": "87cf1ca1-384e-11e4-8455-a82066074ecd", 
-    "_parent_id": "87ced01c-384e-11e4-8452-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e546da4a-588e-11e4-83b8-080027a1f086", 
+    "_parent_id": "e5466bdc-588e-11e4-83b5-080027a1f086", 
     "data": {
-        "_pseudo_0": 6.7807665082852964e-07, 
+        "_pseudo_0": 6.7807664638763754e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 90, 
         "dis1.itername": "10-sub.3-dis1", 
-        "dis1.y1": 3.1599189918361352, 
-        "dis1.y2": 3.7552314817912973, 
+        "dis1.y1": 3.159918991838822, 
+        "dis1.y2": 3.7552314817928156, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 90, 
         "dis2.itername": "10-sub.3-dis2", 
-        "dis2.y2": 3.7552321598679481, 
+        "dis2.y2": 3.755232159869462, 
         "driver.workflow.itername": "10-sub.3"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.506285
+    "timestamp": 1413833148.318796
 }
-, "__length_103": 1064
+, "__length_103": 1065
 , "iteration_case_100": {
-    "_driver_id": 4587867984, 
-    "_id": "87ced01c-384e-11e4-8452-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e5466bdc-588e-11e4-83b5-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833140104303861, 
-        "_pseudo_1": 8.1008163864915161e-05, 
-        "_pseudo_2": -20.244767840132052, 
+        "_pseudo_0": 3.1833140104330413, 
+        "_pseudo_1": 8.1008161178175442e-05, 
+        "_pseudo_2": -20.244767840130539, 
         "driver.workflow.itername": "10", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 34, 
         "half.itername": "10-half", 
-        "half.z2a": -1.8843911936162246e-14, 
-        "half.z2b": -9.4219559680811232e-15, 
+        "half.z2a": -1.039016157619699e-14, 
+        "half.z2b": -5.1950807880984948e-15, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 34, 
-        "sub.globals.z1": 1.9776160618771301, 
+        "sub.globals.z1": 1.9776160618778842, 
         "sub.itername": "10-sub", 
         "sub.states": {
             "y": [
-                3.1599189918361352, 
-                3.755232159867948
+                3.159918991838822, 
+                3.755232159869462
             ]
         }, 
-        "sub.states.y[0]": 3.1599189918361352, 
-        "sub.states.y[1]": 3.7552321598679481, 
-        "sub.x1": -4.9889593037719832e-15
+        "sub.states.y[0]": 3.159918991838822, 
+        "sub.states.y[1]": 3.755232159869462, 
+        "sub.x1": -8.0461097138326296e-16
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.507104
+    "timestamp": 1413833148.319748
 }
-, "__length_104": 693
+, "__length_104": 698
 , "iteration_case_101": {
-    "_driver_id": 4588241456, 
-    "_id": "87cf70d9-384e-11e4-8456-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5472d42-588e-11e4-83b9-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 9.5935220922882536e-07, 
+        "_pseudo_0": 9.5935220478793326e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 91, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599199918361349, 
-        "dis1.y2": 3.7552314817912973, 
+        "dis1.y1": 3.1599199918388221, 
+        "dis1.y2": 3.7552314817928156, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 91, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552324411435065, 
+        "dis2.y2": 3.7552324411450204, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.508436
+    "timestamp": 1413833148.320881
 }
-, "__length_105": 694
+, "__length_105": 699
 , "iteration_case_102": {
-    "_driver_id": 4588241456, 
-    "_id": "87cf9451-384e-11e4-8457-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5475682-588e-11e4-83ba-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -5.3968462143672014e-08, 
+        "_pseudo_0": -5.3968461699582804e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 92, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599197999656932, 
-        "dis1.y2": 3.7552324411435065, 
+        "dis1.y1": 3.1599197999683812, 
+        "dis1.y2": 3.7552324411450204, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 92, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552323871750444, 
+        "dis2.y2": 3.7552323871765587, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.509348
+    "timestamp": 1413833148.321948
 }
-, "__length_106": 693
+, "__length_106": 698
 , "iteration_case_103": {
-    "_driver_id": 4588241456, 
-    "_id": "87cfcce3-384e-11e4-8458-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5479494-588e-11e4-83bb-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.0539376005833674e-07, 
+        "_pseudo_0": 3.0539376050242595e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 93, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599192999656935, 
-        "dis1.y2": 3.7552324411435065, 
+        "dis1.y1": 3.1599192999683812, 
+        "dis1.y2": 3.7552324411450204, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 93, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552327465372666, 
+        "dis2.y2": 3.7552327465387809, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.510809
+    "timestamp": 1413833148.323497
 }
-, "__length_107": 693
+, "__length_107": 699
 , "iteration_case_104": {
-    "_driver_id": 4588241456, 
-    "_id": "87cff059-384e-11e4-8459-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e547b87a-588e-11e4-83bc-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.7179960565272268e-08, 
+        "_pseudo_0": -1.7179961009361477e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 94, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599192388869413, 
-        "dis1.y2": 3.7552327465372666, 
+        "dis1.y1": 3.1599192388896289, 
+        "dis1.y2": 3.7552327465387809, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 94, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.755232729357306, 
+        "dis2.y2": 3.7552327293588199, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.511711
+    "timestamp": 1413833148.324457
 }
-, "__length_108": 693
+, "__length_108": 697
 , "iteration_case_105": {
-    "_driver_id": 4588241456, 
-    "_id": "87d02623-384e-11e4-845a-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e547f5b0-588e-11e4-83bd-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4546924385072657e-06, 
+        "_pseudo_0": 1.4546924380631765e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 95, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599226941200649, 
-        "dis1.y2": 3.7552327465372666, 
+        "dis1.y1": 3.1599226941227525, 
+        "dis1.y2": 3.7552327465387809, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 95, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552342012297051, 
+        "dis2.y2": 3.755234201231219, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.513081
+    "timestamp": 1413833148.326021
 }
-, "__length_109": 694
+, "__length_109": 697
 , "iteration_case_106": {
-    "_driver_id": 4588241456, 
-    "_id": "87d049cc-384e-11e4-845b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5481dd9-588e-11e4-83be-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.1833846365952922e-08, 
+        "_pseudo_0": -8.1833845921863713e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 96, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599224031815774, 
-        "dis1.y2": 3.7552342012297051, 
+        "dis1.y1": 3.159922403184265, 
+        "dis1.y2": 3.755234201231219, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 96, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552341193958587, 
+        "dis2.y2": 3.7552341193973731, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.513992
+    "timestamp": 1413833148.327061
 }
-, "__length_110": 700
+, "__length_110": 706
 , "iteration_case_107": {
-    "_driver_id": 4588241456, 
-    "_id": "87d0bb78-384e-11e4-845d-a82066074ecd", 
-    "_parent_id": "87d0b2b0-384e-11e4-845c-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e548b433-588e-11e4-83c0-080027a1f086", 
+    "_parent_id": "e548a8e8-588e-11e4-83bf-080027a1f086", 
     "data": {
-        "_pseudo_0": 4.797117335852974e-05, 
+        "_pseudo_0": 4.7970968220845123e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 97, 
         "dis1.itername": "11-sub.1-dis1", 
-        "dis1.y1": 3.160012372941698, 
-        "dis1.y2": 3.7552342012297051, 
+        "dis1.y1": 3.1600123725803457, 
+        "dis1.y2": 3.755234201231219, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 97, 
         "dis2.itername": "11-sub.1-dis2", 
-        "dis2.y2": 3.7552821724030636, 
+        "dis2.y2": 3.7552821721994398, 
         "driver.workflow.itername": "11-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.516944
+    "timestamp": 1413833148.330874
 }
-, "__length_111": 703
+, "__length_111": 708
 , "iteration_case_108": {
-    "_driver_id": 4588241456, 
-    "_id": "87d0e0a8-384e-11e4-845e-a82066074ecd", 
-    "_parent_id": "87d0b2b0-384e-11e4-845c-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e548e254-588e-11e4-83c1-080027a1f086", 
+    "_parent_id": "e548a8e8-588e-11e4-83bf-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.6985861021344704e-06, 
+        "_pseudo_0": -2.6985745629204416e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 98, 
         "dis1.itername": "11-sub.2-dis1", 
-        "dis1.y1": 3.1600027787070264, 
-        "dis1.y2": 3.7552821724030636, 
+        "dis1.y1": 3.1600027783867013, 
+        "dis1.y2": 3.7552821721994398, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 98, 
         "dis2.itername": "11-sub.2-dis2", 
-        "dis2.y2": 3.7552794738169615, 
+        "dis2.y2": 3.7552794736248769, 
         "driver.workflow.itername": "11-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.517853
+    "timestamp": 1413833148.332363
 }
-, "__length_112": 1063
+, "__length_112": 1066
 , "iteration_case_109": {
-    "_driver_id": 4587867984, 
-    "_id": "87d0b2b0-384e-11e4-845c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e548a8e8-588e-11e4-83bf-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833966904477005, 
-        "_pseudo_1": -2.7787070262519364e-06, 
-        "_pseudo_2": -20.244720526183038, 
+        "_pseudo_0": 3.1833966901173327, 
+        "_pseudo_1": -2.7783867011521579e-06, 
+        "_pseudo_2": -20.244720526375122, 
         "driver.workflow.itername": "11", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 38, 
         "half.itername": "11-half", 
-        "half.z2a": 6.1889612517341323e-11, 
-        "half.z2b": 3.0944806258670661e-11, 
+        "half.z2a": 3.2818430824937171e-11, 
+        "half.z2b": 1.6409215412468585e-11, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 38, 
-        "sub.globals.z1": 1.9776398087506564, 
+        "sub.globals.z1": 1.9776398086632065, 
         "sub.itername": "11-sub", 
         "sub.states": {
             "y": [
-                3.1600027787070264, 
-                3.7552794738169615
+                3.1600027783867013, 
+                3.755279473624877
             ]
         }, 
-        "sub.states.y[0]": 3.1600027787070264, 
-        "sub.states.y[1]": 3.7552794738169615, 
-        "sub.x1": 1.3610296676184399e-12
+        "sub.states.y[0]": 3.1600027783867013, 
+        "sub.states.y[1]": 3.7552794736248769, 
+        "sub.x1": 7.3629447117276036e-13
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.518688
+    "timestamp": 1413833148.33372
 }
-, "__length_113": 702
+, "__length_113": 708
 , "iteration_case_110": {
-    "_driver_id": 4588241456, 
-    "_id": "87d132f8-384e-11e4-8460-a82066074ecd", 
-    "_parent_id": "87d129d4-384e-11e4-845f-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e549d2eb-588e-11e4-83c3-080027a1f086", 
+    "_parent_id": "e549bb21-588e-11e4-83c2-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.7847584505600338e-05, 
+        "_pseudo_0": -4.7847388341182295e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 99, 
         "dis1.itername": "12-sub.1-dis1", 
-        "dis1.y1": 3.1599182461623538, 
-        "dis1.y2": 3.7552821724030636, 
+        "dis1.y1": 3.1599182461696662, 
+        "dis1.y2": 3.7552821721994398, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 99, 
         "dis2.itername": "12-sub.1-dis2", 
-        "dis2.y2": 3.755234324818558, 
+        "dis2.y2": 3.7552343248110986, 
         "driver.workflow.itername": "12-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.519968
+    "timestamp": 1413833148.338338
 }
-, "__length_114": 703
+, "__length_114": 709
 , "iteration_case_111": {
-    "_driver_id": 4588241456, 
-    "_id": "87d1583a-384e-11e4-8461-a82066074ecd", 
-    "_parent_id": "87d129d4-384e-11e4-845f-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54a2266-588e-11e4-83c4-080027a1f086", 
+    "_parent_id": "e549bb21-588e-11e4-83c2-080027a1f086", 
     "data": {
-        "_pseudo_0": 2.6916697017931313e-06, 
+        "_pseudo_0": 2.6916586666203557e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 100, 
         "dis1.itername": "12-sub.2-dis1", 
-        "dis1.y1": 3.1599278156792545, 
-        "dis1.y2": 3.755234324818558, 
+        "dis1.y1": 3.1599278156473343, 
+        "dis1.y2": 3.7552343248110986, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 100, 
         "dis2.itername": "12-sub.2-dis2", 
-        "dis2.y2": 3.7552370164882598, 
+        "dis2.y2": 3.7552370164697653, 
         "driver.workflow.itername": "12-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.520951
+    "timestamp": 1413833148.340129
 }
-, "__length_115": 1060
+, "__length_115": 1062
 , "iteration_case_112": {
-    "_driver_id": 4587867984, 
-    "_id": "87d129d4-384e-11e4-845f-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e549bb21-588e-11e4-83c2-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833227206561538, 
-        "_pseudo_1": 7.2184320745627417e-05, 
-        "_pseudo_2": -20.244762983511741, 
+        "_pseudo_0": 3.1833227206232162, 
+        "_pseudo_1": 7.2184352665871643e-05, 
+        "_pseudo_2": -20.244762983530237, 
         "driver.workflow.itername": "12", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 39, 
         "half.itername": "12-half", 
-        "half.z2a": 6.1720017309915868e-12, 
-        "half.z2b": 3.0860008654957934e-12, 
+        "half.z2a": 3.27249193707514e-12, 
+        "half.z2b": 1.63624596853757e-12, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 39, 
-        "sub.globals.z1": 1.9776184365644827, 
+        "sub.globals.z1": 1.9776184365564164, 
         "sub.itername": "12-sub", 
         "sub.states": {
             "y": [
-                3.1599278156792545, 
-                3.75523701648826
+                3.1599278156473343, 
+                3.7552370164697653
             ]
         }, 
-        "sub.states.y[0]": 3.1599278156792545, 
-        "sub.states.y[1]": 3.7552370164882598, 
-        "sub.x1": 1.3161290338844922e-13
+        "sub.states.y[0]": 3.1599278156473343, 
+        "sub.states.y[1]": 3.7552370164697653, 
+        "sub.x1": 7.2905297243031103e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.521809
+    "timestamp": 1413833148.34293
 }
-, "__length_116": 694
+, "__length_116": 699
 , "iteration_case_113": {
-    "_driver_id": 4588241456, 
-    "_id": "87d1b0f0-384e-11e4-8462-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54af0e3-588e-11e4-83c5-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 2.9729448671744763e-06, 
+        "_pseudo_0": 2.9729338324457899e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 101, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599288156792547, 
-        "dis1.y2": 3.755234324818558, 
+        "dis1.y1": 3.1599288156473344, 
+        "dis1.y2": 3.7552343248110986, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 101, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552372977634252, 
+        "dis2.y2": 3.7552372977449311, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.523205
+    "timestamp": 1413833148.34564
 }
-, "__length_117": 696
+, "__length_117": 700
 , "iteration_case_114": {
-    "_driver_id": 4588241456, 
-    "_id": "87d1d514-384e-11e4-8463-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54b2473-588e-11e4-83c6-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.6724310647475704e-07, 
+        "_pseudo_0": -1.6724248608213088e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 102, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599282210902815, 
-        "dis1.y2": 3.7552372977634252, 
+        "dis1.y1": 3.1599282210605679, 
+        "dis1.y2": 3.7552372977449311, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 102, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552371305203187, 
+        "dis2.y2": 3.755237130502445, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.524123
+    "timestamp": 1413833148.346919
 }
-, "__length_118": 695
+, "__length_118": 700
 , "iteration_case_115": {
-    "_driver_id": 4588241456, 
-    "_id": "87d20b05-384e-11e4-8464-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54b67cc-588e-11e4-83c7-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.9211930313289827e-07, 
+        "_pseudo_0": 1.9211992352552443e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 103, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599277210902814, 
-        "dis1.y2": 3.7552372977634252, 
+        "dis1.y1": 3.1599277210605679, 
+        "dis1.y2": 3.7552372977449311, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 103, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552374898827283, 
+        "dis2.y2": 3.7552374898648546, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.525496
+    "timestamp": 1413833148.348487
 }
-, "__length_119": 696
+, "__length_119": 700
 , "iteration_case_116": {
-    "_driver_id": 4588241456, 
-    "_id": "87d22e38-384e-11e4-8465-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54b81bd-588e-11e4-83c8-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.0807678751945105e-08, 
+        "_pseudo_0": -1.0807713834992683e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 104, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599276826664209, 
-        "dis1.y2": 3.7552374898827283, 
+        "dis1.y1": 3.159927682636583, 
+        "dis1.y2": 3.7552374898648546, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 104, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552374790750496, 
+        "dis2.y2": 3.7552374790571408, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.526393
+    "timestamp": 1413833148.349239
 }
-, "__length_120": 695
+, "__length_120": 700
 , "iteration_case_117": {
-    "_driver_id": 4588241456, 
-    "_id": "87d26361-384e-11e4-8466-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54bbbd1-588e-11e4-83c9-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4610647576240865e-06, 
+        "_pseudo_0": 1.4610647225410389e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 105, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599311379042936, 
-        "dis1.y2": 3.7552374898827283, 
+        "dis1.y1": 3.1599311378744557, 
+        "dis1.y2": 3.7552374898648546, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 105, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552389509474859, 
+        "dis2.y2": 3.7552389509295772, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.527747
+    "timestamp": 1413833148.350747
 }
-, "__length_121": 695
+, "__length_121": 701
 , "iteration_case_118": {
-    "_driver_id": 4588241456, 
-    "_id": "87d28540-384e-11e4-8467-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54be273-588e-11e4-83ca-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.2192211259268788e-08, 
+        "_pseudo_0": -8.2192209482911949e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 106, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.159930845691342, 
-        "dis1.y2": 3.7552389509474859, 
+        "dis1.y1": 3.1599308456615112, 
+        "dis1.y2": 3.7552389509295772, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 106, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552388687552747, 
+        "dis2.y2": 3.7552388687373677, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.528619
+    "timestamp": 1413833148.351926
 }
-, "__length_122": 704
+, "__length_122": 708
 , "iteration_case_119": {
-    "_driver_id": 4588241456, 
-    "_id": "87d2f494-384e-11e4-8469-a82066074ecd", 
-    "_parent_id": "87d2ebc0-384e-11e4-8468-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54c5aeb-588e-11e4-83cc-080027a1f086", 
+    "_parent_id": "e54c50a6-588e-11e4-83cb-080027a1f086", 
     "data": {
-        "_pseudo_0": 4.8165688030898934e-05, 
+        "_pseudo_0": 4.8131813381147026e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 107, 
         "dis1.itername": "13-sub.1-dis1", 
-        "dis1.y1": 3.1600211797806512, 
-        "dis1.y2": 3.7552389509474859, 
+        "dis1.y1": 3.160021117021123, 
+        "dis1.y2": 3.7552389509295772, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 107, 
         "dis2.itername": "13-sub.1-dis2", 
-        "dis2.y2": 3.7552871166355168, 
+        "dis2.y2": 3.7552870827429583, 
         "driver.workflow.itername": "13-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.531468
+    "timestamp": 1413833148.354804
 }
-, "__length_123": 702
+, "__length_123": 710
 , "iteration_case_120": {
-    "_driver_id": 4588241456, 
-    "_id": "87d316e8-384e-11e4-846a-a82066074ecd", 
-    "_parent_id": "87d2ebc0-384e-11e4-8468-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54c8238-588e-11e4-83cd-080027a1f086", 
+    "_parent_id": "e54c50a6-588e-11e4-83cb-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.7095246268871165e-06, 
+        "_pseudo_0": -2.7076190591834859e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 108, 
         "dis1.itername": "13-sub.2-dis1", 
-        "dis1.y1": 3.160011546643045, 
-        "dis1.y2": 3.7552871166355168, 
+        "dis1.y1": 3.1600114906584471, 
+        "dis1.y2": 3.7552870827429583, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 108, 
         "dis2.itername": "13-sub.2-dis2", 
-        "dis2.y2": 3.75528440711089, 
+        "dis2.y2": 3.7552843751238991, 
         "driver.workflow.itername": "13-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.532354
+    "timestamp": 1413833148.355801
 }
-, "__length_124": 1056
+, "__length_124": 1065
 , "iteration_case_121": {
-    "_driver_id": 4587867984, 
-    "_id": "87d2ebc0-384e-11e4-8468-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e54c50a6-588e-11e4-83cb-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1834053434488738, 
-        "_pseudo_1": -1.154664304481301e-05, 
-        "_pseudo_2": -20.244715592889111, 
+        "_pseudo_0": 3.183405287707715, 
+        "_pseudo_1": -1.1490658446966506e-05, 
+        "_pseudo_2": -20.2447156248761, 
         "driver.workflow.itername": "13", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 43, 
         "half.itername": "13-half", 
-        "half.z2a": 1.0097160008445068e-09, 
-        "half.z2b": 5.0485800042225341e-10, 
+        "half.z2a": -5.6961461202681338e-17, 
+        "half.z2b": -2.8480730601340669e-17, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 43, 
-        "sub.globals.z1": 1.9776422753987846, 
+        "sub.globals.z1": 1.9776422596635213, 
         "sub.itername": "13-sub", 
         "sub.states": {
             "y": [
-                3.160011546643045, 
-                3.75528440711089
+                3.160011490658447, 
+                3.755284375123899
             ]
         }, 
-        "sub.states.y[0]": 3.160011546643045, 
-        "sub.states.y[1]": 3.75528440711089, 
-        "sub.x1": 2.0808026247571543e-11
+        "sub.states.y[0]": 3.1600114906584471, 
+        "sub.states.y[1]": 3.7552843751238991, 
+        "sub.x1": 1.8568913008334969e-16
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.533169
+    "timestamp": 1413833148.357205
 }
-, "__length_125": 705
+, "__length_125": 710
 , "iteration_case_122": {
-    "_driver_id": 4588241456, 
-    "_id": "87d3670a-384e-11e4-846c-a82066074ecd", 
-    "_parent_id": "87d35e51-384e-11e4-846b-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54cf4f0-588e-11e4-83cf-080027a1f086", 
+    "_parent_id": "e54ceb38-588e-11e4-83ce-080027a1f086", 
     "data": {
-        "_pseudo_0": -4.8033908889077992e-05, 
+        "_pseudo_0": -4.8001516089968277e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 109, 
         "dis1.itername": "14-sub.1-dis1", 
-        "dis1.y1": 3.1599266861974349, 
-        "dis1.y2": 3.7552871166355168, 
+        "dis1.y1": 3.1599266866696318, 
+        "dis1.y2": 3.7552870827429583, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 109, 
         "dis2.itername": "14-sub.1-dis2", 
-        "dis2.y2": 3.7552390827266278, 
+        "dis2.y2": 3.7552390812268683, 
         "driver.workflow.itername": "14-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.534409
+    "timestamp": 1413833148.358826
 }
-, "__length_126": 704
+, "__length_126": 707
 , "iteration_case_123": {
-    "_driver_id": 4588241456, 
-    "_id": "87d38a11-384e-11e4-846d-a82066074ecd", 
-    "_parent_id": "87d35e51-384e-11e4-846b-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54d24ca-588e-11e4-83d0-080027a1f086", 
+    "_parent_id": "e54ceb38-588e-11e4-83ce-080027a1f086", 
     "data": {
-        "_pseudo_0": 2.7021477784217041e-06, 
+        "_pseudo_0": 2.7003255227420198e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 110, 
         "dis1.itername": "14-sub.2-dis1", 
-        "dis1.y1": 3.1599362929792125, 
-        "dis1.y2": 3.7552390827266278, 
+        "dis1.y1": 3.15993628697285, 
+        "dis1.y2": 3.7552390812268683, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 110, 
         "dis2.itername": "14-sub.2-dis2", 
-        "dis2.y2": 3.7552417848744062, 
+        "dis2.y2": 3.7552417815523911, 
         "driver.workflow.itername": "14-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.535298
+    "timestamp": 1413833148.359961
 }
-, "__length_127": 1059
+, "__length_127": 1061
 , "iteration_case_124": {
-    "_driver_id": 4587867984, 
-    "_id": "87d35e51-384e-11e4-846b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e54ceb38-588e-11e4-83ce-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833310864506141, 
-        "_pseudo_1": 6.3707020787617807e-05, 
-        "_pseudo_2": -20.244758215125593, 
+        "_pseudo_0": 3.1833310804701789, 
+        "_pseudo_1": 6.371302715013627e-05, 
+        "_pseudo_2": -20.244758218447608, 
         "driver.workflow.itername": "14", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 44, 
         "half.itername": "14-half", 
-        "half.z2a": 1.065264016423431e-10, 
-        "half.z2b": 5.326320082117155e-11, 
+        "half.z2a": 2.9452370472215056e-12, 
+        "half.z2b": 1.4726185236107528e-12, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 44, 
-        "sub.globals.z1": 1.9776208204479129, 
+        "sub.globals.z1": 1.9776208188671269, 
         "sub.itername": "14-sub", 
         "sub.states": {
             "y": [
-                3.1599362929792125, 
-                3.755241784874406
+                3.15993628697285, 
+                3.755241781552391
             ]
         }, 
-        "sub.states.y[0]": 3.1599362929792125, 
-        "sub.states.y[1]": 3.7552417848744062, 
-        "sub.x1": 2.1992542378067588e-12
+        "sub.states.y[0]": 3.15993628697285, 
+        "sub.states.y[1]": 3.7552417815523911, 
+        "sub.x1": 6.5633336431736328e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.536098
+    "timestamp": 1413833148.360847
 }
-, "__length_128": 705
+, "__length_128": 710
 , "iteration_case_125": {
-    "_driver_id": 4588241456, 
-    "_id": "87d3d94a-384e-11e4-846f-a82066074ecd", 
-    "_parent_id": "87d3d094-384e-11e4-846e-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54d7ed4-588e-11e4-83d2-080027a1f086", 
+    "_parent_id": "e54d751c-588e-11e4-83d1-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.5020558192802014e-06, 
+        "_pseudo_0": -1.4940453900713635e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 111, 
         "dis1.itername": "15-sub.1-dis1", 
-        "dis1.y1": 3.1599284215320287, 
-        "dis1.y2": 3.7552390827266278, 
+        "dis1.y1": 3.1599284338773694, 
+        "dis1.y2": 3.7552390812268683, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 111, 
         "dis2.itername": "15-sub.1-dis2", 
-        "dis2.y2": 3.7552375806708085, 
+        "dis2.y2": 3.7552375871814783, 
         "driver.workflow.itername": "15-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.537321
+    "timestamp": 1413833148.362265
 }
-, "__length_129": 704
+, "__length_129": 709
 , "iteration_case_126": {
-    "_driver_id": 4588241456, 
-    "_id": "87d3fba1-384e-11e4-8470-a82066074ecd", 
-    "_parent_id": "87d3d094-384e-11e4-846e-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54da582-588e-11e4-83d3-080027a1f086", 
+    "_parent_id": "e54d751c-588e-11e4-83d1-080027a1f086", 
     "data": {
-        "_pseudo_0": 8.4498195995763581e-08, 
+        "_pseudo_0": 8.4047569792744525e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 112, 
         "dis1.itername": "15-sub.2-dis1", 
-        "dis1.y1": 3.1599287219431926, 
-        "dis1.y2": 3.7552375806708085, 
+        "dis1.y1": 3.1599287326864474, 
+        "dis1.y2": 3.7552375871814783, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 112, 
         "dis2.itername": "15-sub.2-dis2", 
-        "dis2.y2": 3.7552376651690045, 
+        "dis2.y2": 3.7552376712290481, 
         "driver.workflow.itername": "15-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.538205
+    "timestamp": 1413833148.363302
 }
-, "__length_130": 1062
+, "__length_130": 1065
 , "iteration_case_127": {
-    "_driver_id": 4587867984, 
-    "_id": "87d3d094-384e-11e4-846e-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e54d751c-588e-11e4-83d1-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833236117525607, 
-        "_pseudo_1": 7.1278056807511092e-05, 
-        "_pseudo_2": -20.244762334830995, 
+        "_pseudo_0": 3.1833236223442762, 
+        "_pseudo_1": 7.126731355278082e-05, 
+        "_pseudo_2": -20.244762328770953, 
         "driver.workflow.itername": "15", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 45, 
         "half.itername": "15-half", 
-        "half.z2a": 2.2748248969424887e-11, 
-        "half.z2b": 1.1374124484712444e-11, 
+        "half.z2a": 3.2179814356134514e-12, 
+        "half.z2b": 1.6089907178067257e-12, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 45, 
-        "sub.globals.z1": 1.9776188303273985, 
+        "sub.globals.z1": 1.9776188333753961, 
         "sub.itername": "15-sub", 
         "sub.states": {
             "y": [
-                3.1599287219431926, 
-                3.7552376651690045
+                3.1599287326864474, 
+                3.755237671229048
             ]
         }, 
-        "sub.states.y[0]": 3.1599287219431926, 
-        "sub.states.y[1]": 3.7552376651690045, 
-        "sub.x1": 4.7313987171268708e-13
+        "sub.states.y[0]": 3.1599287326864474, 
+        "sub.states.y[1]": 3.7552376712290481, 
+        "sub.x1": 7.1694014408997008e-14
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.539016
+    "timestamp": 1413833148.364261
 }
-, "__length_131": 694
+, "__length_131": 699
 , "iteration_case_128": {
-    "_driver_id": 4588241456, 
-    "_id": "87d44f23-384e-11e4-8471-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54dff14-588e-11e4-83d4-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.6577332185316891e-07, 
+        "_pseudo_0": 3.6532269476197143e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 113, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599297219431928, 
-        "dis1.y2": 3.7552375806708085, 
+        "dis1.y1": 3.1599297326864475, 
+        "dis1.y2": 3.7552375871814783, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 113, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552379464441303, 
+        "dis2.y2": 3.755237952504173, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.54034
+    "timestamp": 1413833148.365769
 }
-, "__length_132": 696
+, "__length_132": 700
 , "iteration_case_129": {
-    "_driver_id": 4588241456, 
-    "_id": "87d4713d-384e-11e4-8472-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54e3fba-588e-11e4-83d5-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.0576585768594668e-08, 
+        "_pseudo_0": -2.0551236268318007e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 114, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599296487885287, 
-        "dis1.y2": 3.7552379464441303, 
+        "dis1.y1": 3.1599296596219086, 
+        "dis1.y2": 3.755237952504173, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 114, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552379258675446, 
+        "dis2.y2": 3.7552379319529368, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.541273
+    "timestamp": 1413833148.367326
 }
-, "__length_133": 695
+, "__length_133": 699
 , "iteration_case_130": {
-    "_driver_id": 4588241456, 
-    "_id": "87d4afd1-384e-11e4-8473-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54ed702-588e-11e4-83d6-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.3878585536939454e-07, 
+        "_pseudo_0": 3.3881120531376041e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 115, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599291487885286, 
-        "dis1.y2": 3.7552379464441303, 
+        "dis1.y1": 3.1599291596219086, 
+        "dis1.y2": 3.755237952504173, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 115, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552382852299857, 
+        "dis2.y2": 3.7552382913153783, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.542857
+    "timestamp": 1413833148.371153
 }
-, "__length_134": 694
+, "__length_134": 701
 , "iteration_case_131": {
-    "_driver_id": 4588241456, 
-    "_id": "87d4d58f-384e-11e4-8474-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54f3173-588e-11e4-83d7-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.90584068526789e-08, 
+        "_pseudo_0": -1.9059832823131728e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 116, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599290810313576, 
-        "dis1.y2": 3.7552382852299857, 
+        "dis1.y1": 3.1599290918596674, 
+        "dis1.y2": 3.7552382913153783, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 116, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552382661715789, 
+        "dis2.y2": 3.7552382722555455, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.543798
+    "timestamp": 1413833148.373551
 }
-, "__length_135": 695
+, "__length_135": 699
 , "iteration_case_132": {
-    "_driver_id": 4588241456, 
-    "_id": "87d50bb3-384e-11e4-8475-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54f90ca-588e-11e4-83d8-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4528140357406016e-06, 
+        "_pseudo_0": 1.452812610214238e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 117, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1599325362700181, 
-        "dis1.y2": 3.7552382852299857, 
+        "dis1.y1": 3.1599325470983337, 
+        "dis1.y2": 3.7552382913153783, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 117, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552397380440214, 
+        "dis2.y2": 3.7552397441279886, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.545174
+    "timestamp": 1413833148.375701
 }
-, "__length_136": 696
+, "__length_136": 700
 , "iteration_case_133": {
-    "_driver_id": 4588241456, 
-    "_id": "87d52eba-384e-11e4-8476-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e54fea87-588e-11e4-83d9-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.1728048773044293e-08, 
+        "_pseudo_0": -8.172796928107573e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 118, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1599322457072105, 
-        "dis1.y2": 3.7552397380440214, 
+        "dis1.y1": 3.1599322565358117, 
+        "dis1.y2": 3.7552397441279886, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 118, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552396563159727, 
+        "dis2.y2": 3.7552396624000193, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.546076
+    "timestamp": 1413833148.378442
 }
-, "__length_137": 704
+, "__length_137": 709
 , "iteration_case_134": {
-    "_driver_id": 4588241456, 
-    "_id": "87d5a145-384e-11e4-8478-a82066074ecd", 
-    "_parent_id": "87d59775-384e-11e4-8477-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e550754f-588e-11e4-83db-080027a1f086", 
+    "_parent_id": "e55068cf-588e-11e4-83da-080027a1f086", 
     "data": {
-        "_pseudo_0": 4.0537193391809723e-05, 
+        "_pseudo_0": 4.0529728116300845e-05, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 119, 
         "dis1.itername": "16-sub.1-dis1", 
-        "dis1.y1": 3.1600082966983516, 
-        "dis1.y2": 3.7552397380440214, 
+        "dis1.y1": 3.1600082935369511, 
+        "dis1.y2": 3.7552397441279886, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 119, 
         "dis2.itername": "16-sub.1-dis2", 
-        "dis2.y2": 3.7552802752374133, 
+        "dis2.y2": 3.7552802738561049, 
         "driver.workflow.itername": "16-sub.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.549027
+    "timestamp": 1413833148.381707
 }
-, "__length_138": 705
+, "__length_138": 710
 , "iteration_case_135": {
-    "_driver_id": 4588241456, 
-    "_id": "87d5c4e3-384e-11e4-8479-a82066074ecd", 
-    "_parent_id": "87d59775-384e-11e4-8477-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e5509ec2-588e-11e4-83dc-080027a1f086", 
+    "_parent_id": "e55068cf-588e-11e4-83da-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.2803937600457402e-06, 
+        "_pseudo_0": -2.2799738070844455e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 120, 
         "dis1.itername": "16-sub.2-dis1", 
-        "dis1.y1": 3.1600001892596734, 
-        "dis1.y2": 3.7552802752374133, 
+        "dis1.y1": 3.1600001875913279, 
+        "dis1.y2": 3.7552802738561049, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 120, 
         "dis2.itername": "16-sub.2-dis2", 
-        "dis2.y2": 3.7552779948436532, 
+        "dis2.y2": 3.7552779938822978, 
         "driver.workflow.itername": "16-sub.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.549915
+    "timestamp": 1413833148.382754
 }
-, "__length_139": 1061
+, "__length_139": 1068
 , "iteration_case_136": {
-    "_driver_id": 4587867984, 
-    "_id": "87d59775-384e-11e4-8477-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196350480, 
+    "_id": "e55068cf-588e-11e4-83da-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 3.1833941355690039, 
-        "_pseudo_1": -1.8925967326666182e-07, 
-        "_pseudo_2": -20.244722005156348, 
+        "_pseudo_0": 3.1833941339225396, 
+        "_pseudo_1": -1.875913278048813e-07, 
+        "_pseudo_2": -20.244722006117701, 
         "driver.workflow.itername": "16", 
         "half.derivative_exec_count": 0, 
         "half.exec_count": 49, 
         "half.itername": "16-half", 
-        "half.z2a": 1.2093231829802082e-12, 
-        "half.z2b": 6.0466159149010408e-13, 
+        "half.z2a": -6.9948596830700821e-15, 
+        "half.z2b": -3.497429841535041e-15, 
         "sub.derivative_exec_count": 0, 
         "sub.exec_count": 49, 
-        "sub.globals.z1": 1.9776390581464893, 
+        "sub.globals.z1": 1.9776390576550011, 
         "sub.itername": "16-sub", 
         "sub.states": {
             "y": [
-                3.1600001892596734, 
-                3.755277994843653
+                3.160000187591328, 
+                3.7552779938822978
             ]
         }, 
-        "sub.states.y[0]": 3.1600001892596734, 
-        "sub.states.y[1]": 3.7552779948436532, 
-        "sub.x1": 1.791678750373327e-14
+        "sub.states.y[0]": 3.1600001875913279, 
+        "sub.states.y[1]": 3.7552779938822978, 
+        "sub.x1": -8.2420436216953625e-15
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.550737
+    "timestamp": 1413833148.383687
 }
-, "__length_140": 696
+, "__length_140": 701
 , "iteration_case_137": {
-    "_driver_id": 4588241456, 
-    "_id": "87d61a35-384e-11e4-847a-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e550ff70-588e-11e4-83dd-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -1.9991218156434343e-06, 
+        "_pseudo_0": -1.9987018622380504e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 121, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1600011892596735, 
-        "dis1.y2": 3.7552802752374133, 
+        "dis1.y1": 3.1600011875913281, 
+        "dis1.y2": 3.7552802738561049, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 121, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552782761155976, 
+        "dis2.y2": 3.7552782751542426, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.552095
+    "timestamp": 1413833148.385229
 }
-, "__length_141": 695
+, "__length_141": 699
 , "iteration_case_138": {
-    "_driver_id": 4588241456, 
-    "_id": "87d63c6b-384e-11e4-847b-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e55127c0-588e-11e4-83de-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.1245936404336021e-07, 
+        "_pseudo_0": 1.1243573938557461e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 122, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1600015890840369, 
-        "dis1.y2": 3.7552782761155976, 
+        "dis1.y1": 3.1600015873317004, 
+        "dis1.y2": 3.7552782751542426, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 122, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552783885749617, 
+        "dis2.y2": 3.755278387589982, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.552973
+    "timestamp": 1413833148.386255
 }
-, "__length_142": 695
+, "__length_142": 700
 , "iteration_case_139": {
-    "_driver_id": 4588241456, 
-    "_id": "87d67182-384e-11e4-847c-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e55162cf-588e-11e4-83df-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 4.7182340567886172e-07, 
+        "_pseudo_0": 4.7179978146516532e-07, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 123, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1600010890840364, 
-        "dis1.y2": 3.7552782761155976, 
+        "dis1.y1": 3.1600010873317004, 
+        "dis1.y2": 3.7552782751542426, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 123, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552787479390033, 
+        "dis2.y2": 3.7552787469540241, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.554323
+    "timestamp": 1413833148.387798
 }
-, "__length_143": 695
+, "__length_143": 701
 , "iteration_case_140": {
-    "_driver_id": 4588241456, 
-    "_id": "87d69368-384e-11e4-847d-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e551875e-588e-11e4-83e0-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -2.6542136044582776e-08, 
+        "_pseudo_0": -2.6540806885577695e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 124, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.160000994719355, 
-        "dis1.y2": 3.7552787479390033, 
+        "dis1.y1": 3.1600009929717441, 
+        "dis1.y2": 3.7552787469540241, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 124, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552787213968672, 
+        "dis2.y2": 3.7552787204132172, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.555199
+    "timestamp": 1413833148.388704
 }
-, "__length_144": 695
+, "__length_144": 700
 , "iteration_case_141": {
-    "_driver_id": 4588241456, 
-    "_id": "87d6c81c-384e-11e4-847e-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e551c657-588e-11e4-83e1-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": 1.4453306276251965e-06, 
+        "_pseudo_0": 1.4453319563401124e-06, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 125, 
         "dis1.itername": "-fd.1-dis1", 
-        "dis1.y1": 3.1600044499984712, 
-        "dis1.y2": 3.7552787479390033, 
+        "dis1.y1": 3.1600044482508589, 
+        "dis1.y2": 3.7552787469540241, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 125, 
         "dis2.itername": "-fd.1-dis2", 
-        "dis2.y2": 3.7552801932696309, 
+        "dis2.y2": 3.7552801922859804, 
         "driver.workflow.itername": "-fd.1"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.556539
+    "timestamp": 1413833148.390307
 }
-, "__length_145": 694
+, "__length_145": 701
 , "iteration_case_142": {
-    "_driver_id": 4588241456, 
-    "_id": "87d6ea0c-384e-11e4-847f-a82066074ecd", 
-    "_parent_id": "87b780f5-384e-11e4-beb3-a82066074ecd", 
+    "_driver_id": 140452196348464, 
+    "_id": "e551ebb8-588e-11e4-83e2-080027a1f086", 
+    "_parent_id": "e52616f2-588e-11e4-86dd-080027a1f086", 
     "data": {
-        "_pseudo_0": -8.13061444837615e-08, 
+        "_pseudo_0": -8.1306219534837965e-08, 
         "dis1.derivative_exec_count": 0, 
         "dis1.exec_count": 126, 
         "dis1.itername": "-fd.2-dis1", 
-        "dis1.y1": 3.1600041609323455, 
-        "dis1.y2": 3.7552801932696309, 
+        "dis1.y1": 3.1600041591844676, 
+        "dis1.y2": 3.7552801922859804, 
         "dis2.derivative_exec_count": 0, 
         "dis2.exec_count": 126, 
         "dis2.itername": "-fd.2-dis2", 
-        "dis2.y2": 3.7552801119634864, 
+        "dis2.y2": 3.7552801109797609, 
         "driver.workflow.itername": "-fd.2"
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1410287066.557417
+    "timestamp": 1413833148.391274
 }
 }

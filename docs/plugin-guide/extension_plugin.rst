@@ -115,7 +115,7 @@ cross-sectional areas of the three bars that minimize the total weight of the st
 satisfying constraints on the bar stresses, the displacement of node 1, and the frequency of the
 first mode.
 
-The `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
+The `F2PY Users Guide <https://sysbio.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
 ways to use F2PY to generate the Python-callable object. The "quick way" is to just run F2PY on the
 Fortran file, which produces a shared object containing a function (or functions) that can be
 called from Python. This works for the simplest case but breaks down when F2PY doesn't know which

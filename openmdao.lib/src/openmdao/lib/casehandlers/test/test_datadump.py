@@ -105,9 +105,7 @@ Constants:
    driver.gradient_options.lin_solver: scipy_gmres
    driver.gradient_options.maxiter: 100
    driver.gradient_options.rtol: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
    nested.comp1.directory:
    nested.comp1.force_fd: False
@@ -144,10 +142,11 @@ Constants:
    nested.doublenest.driver.gradient_options.lin_solver: scipy_gmres
    nested.doublenest.driver.gradient_options.maxiter: 100
    nested.doublenest.driver.gradient_options.rtol: 1e-09
-   nested.doublenest.excludes: []
    nested.doublenest.force_fd: False
-   nested.doublenest.includes: ['*']
    nested.doublenest.missing_deriv_policy: assume_zero
+   nested.doublenest.recording_options.excludes: []
+   nested.doublenest.recording_options.includes: ['*']
+   nested.doublenest.recording_options.save_problem_formulation: True
    nested.driver.directory:
    nested.driver.force_fd: False
    nested.driver.gradient_options.atol: 1e-09
@@ -161,14 +160,18 @@ Constants:
    nested.driver.gradient_options.lin_solver: scipy_gmres
    nested.driver.gradient_options.maxiter: 100
    nested.driver.gradient_options.rtol: 1e-09
-   nested.excludes: []
    nested.force_fd: False
-   nested.includes: ['*']
    nested.missing_deriv_policy: assume_zero
+   nested.recording_options.excludes: []
+   nested.recording_options.includes: ['*']
+   nested.recording_options.save_problem_formulation: True
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 87008694-e042-11e3-8005-005056000100
-   timestamp: 1400606208.869153
-   parent_uuid: 87001ef0-e042-11e3-8004-005056000100
+   uuid: d3f91eee-5bc0-11e4-8005-080027a1f086
+   timestamp: 1414184447.614453
+   parent_uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
    outputs:
       nested.doublenest.comp1.derivative_exec_count: 0
       nested.doublenest.comp1.exec_count: 1
@@ -184,9 +187,9 @@ Case:
       nested.doublenest.comp3.y1: 10101.0
       nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
-   uuid: 87001ef0-e042-11e3-8004-005056000100
-   timestamp: 1400606208.869368
-   parent_uuid: 870019e8-e042-11e3-8003-005056000100
+   uuid: d3f8c4ee-5bc0-11e4-8004-080027a1f086
+   timestamp: 1414184447.614583
+   parent_uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
    outputs:
       nested.comp1.derivative_exec_count: 0
       nested.comp1.exec_count: 1
@@ -205,16 +208,17 @@ Case:
       nested.doublenest.itername: 1-nested.1-doublenest
       nested.driver.workflow.itername: 1-nested.1
 Case:
-   uuid: 870019e8-e042-11e3-8003-005056000100
-   timestamp: 1400606208.869599
+   uuid: d3f8bfbd-5bc0-11e4-8003-080027a1f086
+   timestamp: 1414184447.614670
    outputs:
       driver.workflow.itername: 1
       nested.derivative_exec_count: 0
       nested.exec_count: 1
-      nested.itername: 1-nested"""
+      nested.itername: 1-nested
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
         for line, template in zip(lines, expected):
             line = line.rstrip()
@@ -236,6 +240,7 @@ Case:
 
         sout = StringIO.StringIO()
         self.top.recorders = [DumpCaseRecorder(sout)]
+        self.top.recording_options.includes = ['*comp1.*']
         self.top.run()
 
         expected = """\
@@ -244,80 +249,14 @@ Constants:
    comp1.force_fd: False
    comp1.missing_deriv_policy: error
    comp1.x1: 0.0
-   directory:
-   driver.directory:
-   driver.force_fd: False
-   driver.gradient_options.atol: 1e-09
-   driver.gradient_options.derivative_direction: auto
-   driver.gradient_options.directional_fd: False
-   driver.gradient_options.fd_blocks: []
-   driver.gradient_options.fd_form: forward
-   driver.gradient_options.fd_step: 1e-06
-   driver.gradient_options.fd_step_type: absolute
-   driver.gradient_options.force_fd: False
-   driver.gradient_options.lin_solver: scipy_gmres
-   driver.gradient_options.maxiter: 100
-   driver.gradient_options.rtol: 1e-09
-   excludes: []
-   force_fd: False
-   includes: ['*']
-   missing_deriv_policy: assume_zero
    nested.comp1.directory:
    nested.comp1.force_fd: False
    nested.comp1.missing_deriv_policy: error
    nested.comp1.x1: 0.0
-   nested.comp2.directory:
-   nested.comp2.force_fd: False
-   nested.comp2.missing_deriv_policy: error
-   nested.comp3.directory:
-   nested.comp3.force_fd: False
-   nested.comp3.missing_deriv_policy: error
-   nested.directory:
    nested.doublenest.comp1.directory:
    nested.doublenest.comp1.force_fd: False
    nested.doublenest.comp1.missing_deriv_policy: error
    nested.doublenest.comp1.x1: 0.0
-   nested.doublenest.comp2.directory:
-   nested.doublenest.comp2.force_fd: False
-   nested.doublenest.comp2.missing_deriv_policy: error
-   nested.doublenest.comp3.directory:
-   nested.doublenest.comp3.force_fd: False
-   nested.doublenest.comp3.missing_deriv_policy: error
-   nested.doublenest.directory:
-   nested.doublenest.driver.directory:
-   nested.doublenest.driver.force_fd: False
-   nested.doublenest.driver.gradient_options.atol: 1e-09
-   nested.doublenest.driver.gradient_options.derivative_direction: auto
-   nested.doublenest.driver.gradient_options.directional_fd: False
-   nested.doublenest.driver.gradient_options.fd_blocks: []
-   nested.doublenest.driver.gradient_options.fd_form: forward
-   nested.doublenest.driver.gradient_options.fd_step: 1e-06
-   nested.doublenest.driver.gradient_options.fd_step_type: absolute
-   nested.doublenest.driver.gradient_options.force_fd: False
-   nested.doublenest.driver.gradient_options.lin_solver: scipy_gmres
-   nested.doublenest.driver.gradient_options.maxiter: 100
-   nested.doublenest.driver.gradient_options.rtol: 1e-09
-   nested.doublenest.excludes: []
-   nested.doublenest.force_fd: False
-   nested.doublenest.includes: ['*']
-   nested.doublenest.missing_deriv_policy: assume_zero
-   nested.driver.directory:
-   nested.driver.force_fd: False
-   nested.driver.gradient_options.atol: 1e-09
-   nested.driver.gradient_options.derivative_direction: auto
-   nested.driver.gradient_options.directional_fd: False
-   nested.driver.gradient_options.fd_blocks: []
-   nested.driver.gradient_options.fd_form: forward
-   nested.driver.gradient_options.fd_step: 1e-06
-   nested.driver.gradient_options.fd_step_type: absolute
-   nested.driver.gradient_options.force_fd: False
-   nested.driver.gradient_options.lin_solver: scipy_gmres
-   nested.driver.gradient_options.maxiter: 100
-   nested.driver.gradient_options.rtol: 1e-09
-   nested.excludes: []
-   nested.force_fd: False
-   nested.includes: ['*']
-   nested.missing_deriv_policy: assume_zero
 Case:
    uuid: 84c2195c-e043-11e3-8008-005056000100
    timestamp: 1400606634.601406
@@ -327,15 +266,6 @@ Case:
       nested.doublenest.comp1.exec_count: 1
       nested.doublenest.comp1.itername: 1-nested.1-doublenest.1-comp1
       nested.doublenest.comp1.y1: 1.0
-      nested.doublenest.comp2.derivative_exec_count: 0
-      nested.doublenest.comp2.exec_count: 1
-      nested.doublenest.comp2.itername: 1-nested.1-doublenest.1-comp2
-      nested.doublenest.comp2.y1: 101.0
-      nested.doublenest.comp3.derivative_exec_count: 0
-      nested.doublenest.comp3.exec_count: 1
-      nested.doublenest.comp3.itername: 1-nested.1-doublenest.1-comp3
-      nested.doublenest.comp3.y1: 10101.0
-      nested.doublenest.driver.workflow.itername: 1-nested.1-doublenest.1
 Case:
    uuid: 84c1b666-e043-11e3-8007-005056000100
    timestamp: 1400606634.601622
@@ -345,29 +275,10 @@ Case:
       nested.comp1.exec_count: 1
       nested.comp1.itername: 1-nested.1-comp1
       nested.comp1.y1: 1.0
-      nested.comp2.derivative_exec_count: 0
-      nested.comp2.exec_count: 1
-      nested.comp2.itername: 1-nested.1-comp2
-      nested.comp2.y1: 101.0
-      nested.comp3.derivative_exec_count: 0
-      nested.comp3.exec_count: 1
-      nested.comp3.itername: 1-nested.1-comp3
-      nested.comp3.y1: 10101.0
-      nested.doublenest.derivative_exec_count: 0
-      nested.doublenest.exec_count: 1
-      nested.doublenest.itername: 1-nested.1-doublenest
-      nested.driver.workflow.itername: 1-nested.1
-Case:
-   uuid: 84c1b0f8-e043-11e3-8006-005056000100
-   timestamp: 1400606634.601857
-   outputs:
-      driver.workflow.itername: 1
-      nested.derivative_exec_count: 0
-      nested.exec_count: 1
-      nested.itername: 1-nested"""
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -416,13 +327,14 @@ Constants:
    driver.gradient_options.lin_solver: scipy_gmres
    driver.gradient_options.maxiter: 100
    driver.gradient_options.rtol: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 0d85f3c5-e044-11e3-8001-005056000100
-   timestamp: 1400606864.054437
+   uuid: 0a159cf8-5bc1-11e4-8001-080027a1f086
+   timestamp: 1414184538.397483
    outputs:
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
@@ -432,10 +344,11 @@ Case:
       comp2.exec_count: 1
       comp2.itername: 1-comp2
       comp2.y1: 101.0
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -477,22 +390,25 @@ Constants:
    driver.gradient_options.lin_solver: scipy_gmres
    driver.gradient_options.maxiter: 100
    driver.gradient_options.rtol: 1e-09
-   excludes: []
    force_fd: False
-   includes: ['*']
    missing_deriv_policy: assume_zero
+   recording_options.excludes: []
+   recording_options.includes: ['*']
+   recording_options.save_problem_formulation: True
 Case:
-   uuid: 4f3ca163-e044-11e3-8002-005056000100
-   timestamp: 1400606974.301962
+   uuid: 22e98e75-5bc1-11e4-8002-080027a1f086
+   timestamp: 1414184580.050823
    outputs:
       comp1.derivative_exec_count: 0
       comp1.exec_count: 1
       comp1.itername: 1-comp1
       comp1.string: Testing
-      driver.workflow.itername: 1"""
+      driver.workflow.itername: 1
+
+"""
 
         expected = expected.split('\n')
-#        print sout.getvalue()
+        # print sout.getvalue()
         lines = sout.getvalue().split('\n')
 
         for line, template in zip(lines, expected):
@@ -550,7 +466,7 @@ Case:
          'subassy.driver.workflow.itername: 1-driverB.4-subassy.1',
          'driverB.workflow.itername: 1-driverB.4',
          'driver.workflow.itername: 1'
-         ]
+        ]
         lines = [l.strip() for l in sout.getvalue().split('\n')
                                  if 'workflow.itername' in l]
         for i, line in enumerate(lines):

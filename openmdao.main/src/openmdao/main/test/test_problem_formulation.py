@@ -1,5 +1,9 @@
+import os
 import unittest
 import ordereddict
+
+import numpy as np
+
 from openmdao.main.api import Component, Architecture, set_as_top
 from openmdao.main.problem_formulation import ArchitectureAssembly, \
                                               HasCouplingVars
@@ -7,8 +11,11 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasobjective import HasObjectives
 
 from openmdao.main.datatypes.api import Float, Int, Enum, Array
-
+from openmdao.lib.architectures.api import MDF
+from openmdao.lib.optproblems.api import SellarProblem
 from openmdao.util.decorators import add_delegate
+from openmdao.lib.casehandlers.api import CaseDataset, JSONCaseRecorder
+
 
 @add_delegate(HasCouplingVars, HasObjectives, HasConstraints)
 class GlobalAssembly(ArchitectureAssembly):
@@ -30,6 +37,30 @@ class DummyArchitecture(Architecture):
     def configure(self):
         pass
 
+class ArchitectureAssemblyTest(unittest.TestCase):
+    def test_case_recording(self):
+        cds_path = os.path.join(
+            os.path.dirname(__file__),
+            "cds.json")
+
+        asm = set_as_top(SellarProblem())
+        asm.architecture = MDF()
+        asm.recorders = [JSONCaseRecorder(cds_path)]
+        asm.run()
+
+        cds = CaseDataset(cds_path, 'json')
+        data = cds.data.by_variable().fetch()
+
+        self.assertFalse(set(asm.solution.keys()) - set(data.keys()))
+
+        for var in asm.solution.keys():
+            self.assertTrue(data[var])
+            np.allclose(data[var], asm.solution[var])
+
+        del cds
+        del data
+
+        os.remove(cds_path)
 
 class ProblemFormulationTest(unittest.TestCase):
 
@@ -145,6 +176,7 @@ class ProblemFormulationTest(unittest.TestCase):
         self.asm.check_config()
         arch = self.asm.architecture
         try:
+        #    import pdb;pdb.set_trace()
             self.asm.architecture = DummyArchitecture()
         except RuntimeError as err:
             self.assertEqual(str(err),

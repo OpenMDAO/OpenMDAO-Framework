@@ -29,7 +29,7 @@ from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
 from openmdao.main.variable import Variable
 from openmdao.main.vartree import VariableTree
-from openmdao.main.datatypes.api import List, Slot, Str
+from openmdao.main.datatypes.api import List, Slot, Bool, VarTree
 from openmdao.main.driver import Driver
 from openmdao.main.hasparameters import HasParameters, ParameterGroup
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
@@ -47,16 +47,22 @@ from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
                                         get_var_shape, flattened_size
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
                                    collapse_connections, prune_reduced_graph, \
-                                   vars2tuples, relevant_subgraph, \
+                                   vars2tuples, relevant_subgraph, list_driver_connections, \
                                    map_collapsed_nodes, simple_node_iter, \
                                    reduced2component, collapse_subdrivers, \
                                    fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps, fix_dangling_vars, fix_duplicate_dests
+                                   add_boundary_comps, fix_dangling_vars, fix_duplicate_dests, \
+                                   is_boundary_node
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
 from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 from openmdao.util.log import logger
 from openmdao.util.debug import strict_chk_config
+
+from openmdao.util.graphplot import _clean_graph
+from networkx.readwrite import json_graph
+import json
+
 
 _iodict = {'out': 'output', 'in': 'input'}
 
@@ -128,6 +134,18 @@ def _find_common_interface(obj1, obj2):
     return None
 
 
+class RecordingOptions(VariableTree):
+    """Container for options that control case recording. """
+
+    save_problem_formulation = Bool(True, desc='Save problem formulation '
+                                               '(parameters, constraints, etc.)')
+
+    includes = List(['*'], desc='Patterns for variables to include in recording')
+
+    excludes = List([], desc='Patterns for variables to exclude from recording '
+                             '(processed after includes')
+
+
 class Assembly(Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the top level
@@ -144,13 +162,9 @@ class Assembly(Component):
                      desc='Case recorders for iteration data'
                           ' (only valid at top level).')
 
-    includes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to include in the recorders'
-                         ' (only valid at top level).')
-
-    excludes = List(Str, iotype='in', framework_var=True,
-                    desc='Patterns for variables to exclude from the recorders'
-                         ' (only valid at top level).')
+    recording_options = VarTree(RecordingOptions(), iotype='in',
+                    framework_var=True, deriv_ignore=True,
+                    desc='Case recording options (only valid at top level).')
 
     def __init__(self):
 
@@ -187,8 +201,7 @@ class Assembly(Component):
         # any boundary vars that are unconnected should be zero.
         self.missing_deriv_policy = 'assume_zero'
 
-        self.includes = ['*']
-        self.excludes = []
+        self.add('recording_options', RecordingOptions())
 
     @property
     def _top_driver(self):
@@ -784,17 +797,23 @@ class Assembly(Component):
         self._system.run(self.itername, ffd_order=self.ffd_order,
                          case_uuid=self._case_uuid)
 
-    def configure_recording(self, includes=None, excludes=None, inputs=None):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
         if self.parent is None:
             if self.recorders:
-                includes = self.includes
-                excludes = self.excludes
+                recording_options = self.recording_options
                 for recorder in self.recorders:
                     recorder.startup()
             else:
-                includes = excludes = None
+                recording_options = None
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
 
         # Determine (changing) inputs and outputs to record
         inputs = set()
@@ -802,12 +821,12 @@ class Assembly(Component):
         for name in self.list_containers():
             obj = getattr(self, name)
             if has_interface(obj, IDriver, IAssembly):
-                inps, consts = obj.configure_recording(includes, excludes)
+                inps, consts = obj.configure_recording(recording_options)
                 inputs.update(inps)
                 constants.update(consts)
 
         # If nothing to record, return after configuring workflows.
-        if not includes:
+        if not save_problem_formulation and not includes:
             return (inputs, constants)
 
         # Locate top level assembly.
@@ -837,15 +856,18 @@ class Assembly(Component):
                     path = prefix+name
                     if path in inputs:
                         continue  # Changing input.
+
+                    record_constant = False
                     for pattern in includes:
                         if fnmatch(path, pattern):
-                            break
-                    else:
-                        continue  # Not to be included.
-                    for pattern in excludes:
-                        if fnmatch(path, pattern):
-                            break # Excluded.
-                    else:
+                            record_constant = True
+
+                    if record_constant:
+                        for pattern in excludes:
+                            if fnmatch(path, pattern):
+                                record_constant = False
+
+                    if record_constant:
                         val = getattr(obj, name)
                         if isinstance(val, VariableTree):
                             for path, val in self._expand_tree(path, val):
@@ -1363,13 +1385,40 @@ class Assembly(Component):
 
         return connectivity
 
-    # def _repr_svg_(self):
-    #     """ Returns an SVG representation of this Assembly's dependency graph
-    #         Note: the graph_to_svg() function currently uses tkinter which
-    #               requires a display and thus will cause an exception when
-    #               running headless (e.g. during non-interactive testing)
-    #     """
-    #     return graph_to_svg(self._depgraph.component_graph())
+    def get_graph(self, components_only=False, format='json'):
+        ''' returns cleaned up graph data in the selected format
+
+            components_only: (optional) boolean
+                if True, only components will be included in the graph
+                otherwise the full dependency graph will be returned
+
+            format: (optional) string
+                json - returns serialized graph data in JSON format
+                svg  - returns scalable vector graphics rendition of graph
+        '''
+        if components_only:
+            graph = self._depgraph.component_graph()
+        else:
+            graph = _clean_graph(self._depgraph)
+
+        if format.lower() == 'json':
+            graph_data = json_graph.node_link_data(graph)
+            return json.dumps(graph_data)
+        elif format.lower() == 'svg':
+            agraph = nx.to_agraph(graph)
+            return agraph.draw(format='svg', prog='dot')
+        else:
+            self.raise_exception("'%s' is not a supported graph data format" % format)
+
+    def _repr_svg_(self):
+        """ Returns an SVG representation of this Assembly's dependency graph
+            (if pygraphviz is not available, returns an empty string)
+        """
+        try:
+            import pygraphviz
+            return self.get_graph(components_only=True, format='svg')
+        except ImportError:
+            return ''
 
     def get_depgraph(self):
         return self._depgraph
@@ -1520,6 +1569,13 @@ class Assembly(Component):
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
+            
+            # keep any connected boundary vars
+            for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
+                if not inputs and is_boundary_node(dgraph, u):
+                        keep.add(u)
+                if not outputs and is_boundary_node(dgraph, v):
+                    keep.add(v)
 
             if inputs is None:
                 inputs = list(ddests)
@@ -1911,35 +1967,39 @@ def _get_wflow_names(iter_tree):
 
 def _get_scoped_inputs(comp, g, explicit_ins):
     """Return a list of input varnames scoped to the given name."""
-    cname = comp.name
-    inputs = []
+    cnamedot = comp.name + '.'
+    inputs = set()
     if explicit_ins is None:
         explicit_ins = ()
         
-    for p in g.predecessors(cname):
-        if p.startswith(cname+'.'):# and (g.in_degree(p) > 0 or p in explicit_ins):
-            inputs.append(p.split('.',1)[1])
+    for u,v in chain(g.list_connections(), list_driver_connections(g)):
+        if v.startswith(cnamedot):
+            inputs.add(v)
+
+    inputs.update([n for n in explicit_ins if n.startswith(cnamedot)])
 
     if not inputs:
         return None
 
-    return inputs
+    return [n.split('.',1)[1] for n in inputs]
 
 def _get_scoped_outputs(comp, g, explicit_outs):
     """Return a list of output varnames scoped to the given name."""
-    cname = comp.name
-    outputs = []
+    cnamedot = comp.name + '.'
+    outputs = set()
     if explicit_outs is None:
         explicit_outs = ()
         
-    for s in g.successors(cname):
-        if s.startswith(cname+'.'):# and (g.out_degree(s) > 0 or s in explicit_outs):
-            outputs.append(s.split('.',1)[1])
+    for u,v in chain(g.list_connections(), list_driver_connections(g)):
+        if u.startswith(cnamedot):
+            outputs.add(u)
+
+    outputs.update([n for n in explicit_outs if n.startswith(cnamedot)])
 
     if not outputs:
         return None
 
-    return outputs
+    return [n.split('.',1)[1] for n in outputs]
 
 def _gdump(g):
     print "nodes:"

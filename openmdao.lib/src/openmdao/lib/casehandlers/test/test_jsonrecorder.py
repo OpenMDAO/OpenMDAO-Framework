@@ -29,9 +29,11 @@ class Loads(VariableTree):
     Fy = Array()
     Fz = Array()
 
+
 class LoadsArray(VariableTree):
 
     loads = List(Loads)
+
 
 class LoadsComp(Component):
 
@@ -66,13 +68,25 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         self.top = None
 
+    def test_jsonrecorder_norun(self):
+        # test ability to get model data from case recorder
+        #    before calling run()
+        
+        sout = StringIO()
+        self.top.recorders = [JSONCaseRecorder(sout)]
+        self.top.configure_recording()
+
+        # with open('jsonrecorder_norun.new', 'w') as out:
+        #     out.write(sout.getvalue())
+        self.verify(sout, 'jsonrecorder_norun.json')
+
     def test_jsonrecorder(self):
         sout = StringIO()
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        with open('jsonrecorder.new', 'w') as out:
-            out.write(sout.getvalue())
+        # with open('jsonrecorder.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'jsonrecorder.json')
 
     def test_multiple_objectives(self):
@@ -86,8 +100,8 @@ class TestCase(unittest.TestCase):
         self.top.recorders = [JSONCaseRecorder(sout)]
         self.top.run()
 
-        #with open('multiobj.new', 'w') as out:
-        #    out.write(sout.getvalue())
+        # with open('multiobj.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'multiobj.json')
 
     def test_nested(self):
@@ -127,8 +141,8 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-#        with open('nested.new', 'w') as out:
-#            out.write(sout.getvalue())
+        # with open('nested.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
     def verify(self, sout, filename):
@@ -212,7 +226,7 @@ class TestCase(unittest.TestCase):
             # graph sometimes serializes with nodes in differant order
             # between json and bson. The graphs are still equivalent, but the
             # assertion below will fail
-            if key not in ('uuid','graph',):
+            if key not in ('uuid', 'graph',):
                 self.assertEqual(obj[key], json_run['simulation_info'][key])
 
         driver_count = 1
@@ -264,11 +278,10 @@ class TestCase(unittest.TestCase):
 
         top.run()
 
-        #with open('vtree.new', 'w') as out:
-        #    out.write(sout.getvalue())
+        # with open('vtree.new', 'w') as out:
+        #     out.write(sout.getvalue())
         self.verify(sout, 'vtree.json')
 
 
 if __name__ == '__main__':
     unittest.main()
-

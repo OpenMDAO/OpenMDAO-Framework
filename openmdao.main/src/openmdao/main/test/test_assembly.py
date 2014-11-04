@@ -533,7 +533,6 @@ class AssemblyTestCase(unittest.TestCase):
             def configure(self):
                 pass
 
-
         top = set_as_top(Top())
         top.connect('Src.Lp', 'Targ.Lp')
         conn = top.list_connections()
