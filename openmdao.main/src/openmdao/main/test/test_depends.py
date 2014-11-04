@@ -12,6 +12,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
+from openmdao.main.depgraph import gsort, reduced2component
 
 exec_order = []
 
@@ -736,7 +737,93 @@ class ExprDependsTestCase(unittest.TestCase):
             self.fail("Exception expected")
                     
                            
+class SortingTestCase(unittest.TestCase):
+    def test_sort(self):
+        top = set_as_top(Assembly())
+        for i in range(11):
+            top.add('c%d'%i, Simple())
+
+        # connect two independent strings of comps to test sorting
+        top.connect('c1.c', 'c2.a')
+        top.connect('c2.c', 'c3.a')
+        top.connect('c3.c', 'c4.a')
+        top.connect('c4.c', 'c5.a')
         
+        top.connect('c6.c', 'c7.a')
+        top.connect('c7.c', 'c8.a')
+        top.connect('c8.c', 'c9.a')
+        top.connect('c9.c', 'c10.a')
+        
+        wfnames = ['c10','c5', 'c9', 'c4', 'c8', 'c3', 'c7', 'c2', 'c6', 'c1']
+        top.driver.workflow.add(wfnames)
+
+        top._setup()
+
+        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+
+        self.assertEqual(names, ['c6', 'c7', 'c8', 'c9', 'c10', 'c1', 'c2', 'c3', 'c4', 'c5'])
+                           
+    def test_sort2(self):
+        top = set_as_top(Assembly())
+        for i in range(11):
+            top.add('c%d'%i, Simple())
+
+        # connect two independent strings of comps to test sorting
+        top.connect('c1.c', 'c2.a')
+        top.connect('c2.c', 'c3.a')
+        top.connect('c3.c', 'c4.a')
+        top.connect('c4.c', 'c5.a')
+        
+        top.connect('c6.c', 'c7.a')
+        top.connect('c7.c', 'c8.a')
+        top.connect('c8.c', 'c9.a')
+        top.connect('c9.c', 'c10.a')
+        
+        wfnames = ['c10', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9']
+        top.driver.workflow.add(wfnames)
+
+        top._setup()
+
+        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+
+        self.assertEqual(names, ['c6', 'c7', 'c8', 'c9', 'c10', 'c1', 'c2', 'c3', 'c4', 'c5'])
+
+    def test_sort_keep_orig_order2(self):
+        top = set_as_top(Assembly())
+        for i in range(11):
+            top.add('c%d'%i, Simple())
+
+        # connect two independent strings of comps to test sorting
+        top.connect('c1.c', 'c2.a')
+        top.connect('c2.c', 'c3.a')
+        top.connect('c3.c', 'c4.a')
+        top.connect('c4.c', 'c5.a')
+        
+        top.connect('c6.c', 'c7.a')
+        top.connect('c7.c', 'c8.a')
+        top.connect('c8.c', 'c9.a')
+        top.connect('c9.c', 'c10.a')
+        
+        wfnames = ['c6', 'c7', 'c8', 'c9', 'c10', 'c1', 'c2', 'c3', 'c4', 'c5']
+        top.driver.workflow.add(wfnames)
+
+        top._setup()
+
+        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+
+        self.assertEqual(names, wfnames)   
+        
+        top.driver.workflow.clear()
+        wfnames = ['c6', 'c1', 'c7', 'c2', 'c8', 'c3', 'c9', 'c4', 'c10', 'c5']
+        top.driver.workflow.add(wfnames)
+
+        top._setup()
+
+        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+
+        self.assertEqual(names, wfnames)        
+
+
 if __name__ == "__main__":
     
     #import cProfile

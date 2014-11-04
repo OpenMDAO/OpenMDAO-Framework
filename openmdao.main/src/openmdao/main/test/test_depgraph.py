@@ -4,7 +4,7 @@ import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
-                                    gsort, transitive_closure, \
+                                    gsort, \
                                     collapse_connections, \
                                     vars2tuples, \
                                     prune_reduced_graph
@@ -154,10 +154,9 @@ class DepGraphTestCase(unittest.TestCase):
 
     def test_sorting(self):
         cgraph = self.dep.component_graph()
-        deps = transitive_closure(cgraph)
         order = ['C','D','B','A']
-        neworder = gsort(deps, order)
-        self.assertEqual(neworder, ['A','D','B','C'])
+        neworder = gsort(cgraph, order)
+        self.assertEqual(neworder, ['A','B','C','D'])
                         
         
     def test_add(self):

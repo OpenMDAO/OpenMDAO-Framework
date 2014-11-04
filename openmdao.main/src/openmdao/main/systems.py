@@ -9,20 +9,18 @@ from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
-from openmdao.main.exceptions import RunStopped, NoFlatError
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
-from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter, get_reduced_subgraph, \
-                                   internal_nodes, reduced2component, unique
-from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
-                                        get_var_shape, flattened_size, get_shape
+from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
+                                   collapse_nodes, simple_node_iter, \
+                                   internal_nodes, reduced2component
 from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.util.graph import flatten_list_of_iters, base_var
+from openmdao.util.graph import base_var
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -1610,8 +1608,6 @@ class SerialSystem(CompoundSystem):
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
 
-        deps = transitive_closure(g)
-
         for node in self.graph.nodes_iter():
             if node not in self._ordering:
                 edges = list(nx.dfs_edges(g, node))
@@ -1629,7 +1625,7 @@ class SerialSystem(CompoundSystem):
                 else:
                     self._ordering.append(node)
 
-        self._ordering = gsort(deps, self._ordering)
+        self._ordering = gsort(g, self._ordering)
 
         for s in self.all_subsystems():
             s.set_ordering(ordering, opaque_map)

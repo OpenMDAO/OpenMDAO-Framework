@@ -2,7 +2,6 @@ import sys
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
-from functools import cmp_to_key
 
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
@@ -1521,63 +1520,43 @@ def internal_nodes(g, comps):
 
     return nodes
 
-def transitive_closure(g):
-    """Return a set of edge tuples where the
-    existence of a tuple (u,v) means that v depends
-    on u, either directly or indirectly.  Note that this will
-    be slow for large dense graphs.
-    """
-    edges = set()
-    dfs = nx.dfs_edges
-
-    for node in g.nodes_iter():
-        edges.update([(node, v) for u,v in dfs(g, node)])
-
-    return edges
-
-# this could be optimized a bit for speed, but we only use it
-# for small graphs, so performance isn't an issue
-def gsort(deps, names):
+def gsort(g, names):
     """Return a sorted version of the given names
     iterator, based on dependency specified by the
-    given set of dependencies.
+    given directed graph.
     """
-
-    def gorder(n1, n2):
-        if (n1,n2) in deps:
-            return -1
-        elif (n2,n1) in deps:
-            return 1
-        return 0
-
-    # get all names that actually have a graph dependency
-    depnames = set([u for u,v in deps])
-    depnames.update([v for u,v in deps])
-
-    ordered = [n for n in names if n in depnames]
-
-    # get the sorted list of names with dependencies. Note that this
-    # is a stable sort, so original order of the list will be
-    # preserved unless there's a dependency violation.
-    sortlist = sorted(ordered, key=cmp_to_key(gorder))
-
-    # reverse the list so we can pop from it below
-    rev = sortlist[::-1]
-
-    # now take the names without dependencies and insert them in the
-    # proper location in the list.  Since they have no dependencies,
-    # they can be inserted anywhere in the list without messing up
-    # the sort
-
-    final = [None]*len(names)
-    for i,n in enumerate(names):
-        if n in depnames:
-            final[i] = rev.pop()
+    if len(names) < 2:
+        return names
+    
+    empty = set()
+    nset = set(names)
+    final = list(names)
+    ups = {}
+    
+    for name in names:
+        downs = [v for u,v in nx.dfs_edges(g, name) if v in nset]
+        for d in downs:
+            if d not in ups.get(name, empty):  # handle cycles
+                ups.setdefault(d, set()).add(name)
+           
+    i = 0
+    while True:
+        tmp = final[:i]
+        tset = set(tmp)
+        unames = [f for f in final[i+1:] if f in ups.get(final[i],empty) and f not in tset]
+        if unames:
+            tmp.extend(unames)
+            tmp.extend([f for f in final[i:] if f not in unames])
         else:
-            final[i] = n
-
+            tmp.extend(final[i:])
+            i += 1
+            
+        if i == len(names):
+            break
+        final = tmp
+        
     return final
-
+                      
 def list_data_connections(graph):
     """Return all edges that are data connections"""
     return [(u,v) for u,v,data in graph.edges_iter(data=True)
