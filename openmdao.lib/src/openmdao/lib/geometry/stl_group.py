@@ -53,10 +53,10 @@ class STLGroup(Component):
 
         #add the geometry var tree
         n_points = self.points.shape[0]
-        n_edges = self.triangles.shape[0]
-        self.add('geom_data', VarTree(GeomData(n_points, n_edges), iotype="out", desc="geometry points and connectivity"))
+        n_tria = self.triangles.shape[0]
+        self.add('geom_data', VarTree(GeomData(n_points, n_tria), iotype="out", desc="geometry points and connectivity"))
         self.geom_data.points = self.points
-        self.geom_data.edges = self.triangles
+        self.geom_data.facets = self.triangles
         
         self._needs_linerize = True
 
@@ -472,7 +472,7 @@ class STLGroup(Component):
 
         self._build_io() #needed for book-keeping
         self.geom_data.points = self.points
-        self.geom_data.edges = self.triangles
+        self.geom_data.facets = self.triangles
 
 
 
