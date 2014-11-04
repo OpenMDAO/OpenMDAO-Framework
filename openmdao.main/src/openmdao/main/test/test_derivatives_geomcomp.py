@@ -7,117 +7,63 @@ import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
+from openmdao.lib.geometry.geom_data import GeomData
 from openmdao.main.api import Component, Assembly, set_as_top
-from openmdao.main.datatypes.api import Array
-from openmdao.main.interfaces import IParametricGeometry, implements, \
-                                     IStaticGeometry
-from openmdao.main.variable import Variable
+from openmdao.main.datatypes.api import Array, Float, VarTree
 from openmdao.util.testutil import assert_rel_error
 
-#not a working geometry, but pretends to be! only useful for this test
-class DummyGeometry(object):
-    implements(IParametricGeometry, IStaticGeometry)
+class GeomComponent(Component):
+    
+    x = Float(1.0, iotype='in')
+    y = Float(2.0, iotype='in')
+    z = Float(3.5, iotype='in')
 
-    def __init__(self):
-        self.vars = {'x':np.array([1,2]), 'y':1, 'z':np.array([0,0])}
-        self._callbacks = []
-
-
-    def list_parameters(self):
-        self.params = []
-        meta = {'value':np.array([1,2]), 'iotype':'in', 'shape':(2,)}
-        self.params.append(('x', meta))
-
-        meta = {'value':1.0, 'iotype':'in',}
-        self.params.append(('y', meta))
-
-        meta = {'value':np.array([0,0]), 'iotype':'out', 'shape':(2,)}
-        self.params.append(('z', meta))
-
-        meta = {'iotype':'out', 'type':IStaticGeometry}
-        self.params.append(('geom_out',meta))
-
-        return self.params
-
-    def set_parameter(self, name, val):
-        self.vars[name] = val
-
-    def get_parameters(self, names):
-        return [self.vars[n] for n in names]
-
+    geom_out = VarTree(GeomData(2, 1), iotype='out')
+    
     def list_deriv_vars(self):
-        return ('x', 'y', 'z'), ('geom_out')
+        return ('x', 'y', 'z'), ('geom_out.points')
 
     def provideJ(self):
         self.J = np.array([[2, 0, 1],
                            [0, 2, 1]])
-        self.JT = self.J.T
 
     def apply_deriv(self, arg, result):
         if 'x' in arg:
-            if 'z' in result:
-                result['z'] += self.J[:,:2].dot(arg['x'])
-            if 'geom_out' in result:
-                result['geom_out'] += self.J[:,:2].dot(arg['x'])
+            result['geom_out'] += self.J[:, 0]*arg['x']
         if 'y' in arg:
-            if 'z' in result:
-                result['z'] += self.J[:,2]*arg['y']
-            if 'geom_out' in result:
-                result['geom_out'] += self.J[:,2]*arg['y']
+            result['geom_out'] += self.J[:, 1]*arg['y']
+        if 'z' in arg:
+            result['geom_out'] += self.J[:, 2]*arg['z']
 
         return result
 
     def apply_derivT(self, arg, result):
+
+        if 'x' in arg:
+            result['x'] += self.J[:, 0]*arg['geom_out']
+        if 'y' in arg:
+            result['y'] += self.J[:, 1]*arg['geom_out']
         if 'z' in arg:
-            if 'x' in result:
-                result['x'] += self.JT[:2,:].dot(arg['z'])
-            if 'y' in result:
-                result['y'] += self.JT[2,:].dot(arg['z'])
-        if 'geom_out' in arg:
-            if 'x' in result:
-                result['x'] += self.JT[:2,:].dot(arg['geom_out'])
-            if 'y' in result:
-                result['y'] += self.JT[2,:].dot(arg['geom_out'])
+            result['z'] += self.J[:, 2]*arg['geom_out']
 
         return result
 
-    def regen_model(self):
-        x = self.vars['x']
-        y = self.vars['y']
+    def execute(self):
+        x = self.x
+        y = self.y
+        z = self.z
 
-        self.z = 2*x + y
-        self.vars['z'] = self.z
-
-    def get_static_geometry(self):
-        return self
-
-    def register_param_list_changedCB(self, callback):
-        self._callbacks.append(callback)
-
-    def _invoke_callbacks(self):
-        for cb in self._callbacks:
-            cb()
-
-    def get_visualization_data(self, wv): #stub
-        pass
-
-    def get_flattened_size(self):
-        return 2
-
-    def get_flattened_value(self):
-        return self.vars['z']
-
-    def set_flattened_value(self, val):
-        self.vars['z'] = val[0]
+        self.geom_out.points[0, :] = J[0, 0]*x + J[0, 1]*y + J[0, 2]*z
+        self.geom_out.points[1, :] = J[1, 0]*x + J[1, 1]*y + J[1, 2]*z
+        
 
 class GeomRecieve(Component):
 
-    geom_in = Variable(DummyGeometry(), iotype='in', data_shape=(2,))
-    out = Array([0,0], iotype='out')
+    geom_in = VarTree(GeomData(2, 1), iotype='in')
+    out = Array([0, 0, 0], iotype='out')
 
     def execute(self):
-        self.out = self.geom_in.z
+        self.out = self.geom_in.points
 
 
 class GeomRecieveDerivProvideJ(GeomRecieve):
@@ -167,13 +113,13 @@ class Testcase_deriv_obj(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
         self.top.add('c1', GeomComponent())
-        self.top.c1.add('parametric_geometry', DummyGeometry())
         self.top.add('c2', GeomRecieve())
         self.top.connect('c1.geom_out', 'c2.geom_in')
         self.top.driver.workflow.add(['c1', 'c2'])
 
-        self.top.c1.x = [3.0,4.0]
+        self.top.c1.x = 4.0
         self.top.c1.y = 10
+        self.top.c1.z = 3.0
 
         self.inputs = ['c1.x', 'c1.y']
         self.outputs = ['c1.z','c2.out']
