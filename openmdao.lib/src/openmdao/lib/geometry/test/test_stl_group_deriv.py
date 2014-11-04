@@ -152,9 +152,9 @@ class TestcaseSTLGroup(unittest.TestCase):
             Jy_adjoint = J[1::3]
             Jz_adjoint = J[2::3]
 
-            shape = self.top.geom.get(param).shape
+            shape = self.top.plug_noz.get(param).shape
             #offset = self.top.geom.parametric_geometry.param_J_offset_map[param]
-            Jx, Jy, Jz = self.top.geom.parametric_geometry.param_J_map[param]
+            Jx, Jy, Jz = self.top.plug_noz.param_J_map[param]
 
             self.assertTrue(np.all(np.abs(Jx_forward) < 1e-10))
             self.assertTrue(np.any(np.abs(Jy_forward) > 0.0))
@@ -218,9 +218,9 @@ class TestcaseSTLGroup(unittest.TestCase):
     def test_jacobian_manual_fd(self):
 
         self.top.run()
-        self.top.geom.provideJ()
+        self.top.plug_noz.provideJ()
 
-        p0 = self.plug_noz.geom_data.points.copy()
+        p0 = self.top.plug_noz.geom_data.points.copy()
 
         step = 1
         params = ["plug.X", "plug2.X", "cowl.X", "cowl2.X"]
@@ -236,7 +236,7 @@ class TestcaseSTLGroup(unittest.TestCase):
 
                 self.top.run()
 
-                p1 = self.plug_noz.geom_data.points.copy()
+                p1 = self.top.plug_noz.geom_data.points.copy()
 
                 FDx = ((p1-p0)/step)[:,0]
 
@@ -259,7 +259,7 @@ class TestcaseSTLGroup(unittest.TestCase):
 
                 self.top.run()
 
-                p1 = self.top.plug_noz.geom_data.point.copy()
+                p1 = self.top.plug_noz.geom_data.points.copy()
 
                 FDy = ((p1-p0)/step)[:,1]
                 FDz = ((p1-p0)/step)[:,2]
