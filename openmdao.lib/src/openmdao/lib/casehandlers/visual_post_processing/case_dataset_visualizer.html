@@ -2,6 +2,8 @@
     <head>
         <link rel='stylesheet' type='text/css' href='http://w2ui.com/src/w2ui-1.4.1.min.css' />
         <script src='http://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
+        <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/themes/smoothness/jquery-ui.css" />
+        <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.2/jquery-ui.min.js"></script>
         <script src="http://d3js.org/d3.v3.min.js"></script>
         <script type='text/javascript' src='http://w2ui.com/src/w2ui-1.4.1.min.js'></script>
         <script type='text/javascript' src='http://www.flotcharts.org/javascript/jquery.flot.min.js'></script>
@@ -75,6 +77,154 @@
                     d3.event.preventDefault();
                 };
             };
+        </script>
+        <style>
+            .custom-combobox {
+                position: relative;
+                display: inline-block;
+            }
+            .custom-combobox-toggle {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                margin-left: -1px;
+                padding: 0;
+            }
+            .custom-combobox-input {
+                margin: 0;
+                padding: 5px 10px;
+            }
+        </style>
+        <script>
+            (function( $ ) {
+                $.widget( "custom.combobox", {
+                    _create: function() {
+                        this.wrapper = $( "<span>" )
+                            .addClass( "custom-combobox" )
+                            .insertAfter( this.element );
+
+                        this.element.hide();
+                        this._createAutocomplete();
+                        this._createShowAllButton();
+                    },
+
+                    _createAutocomplete: function() {
+                        var selected = this.element.children( ":selected" ),
+                            value = selected.val() ? selected.text() : "";
+
+                        this.input = $( "<input>" )
+                            .appendTo( this.wrapper )
+                            .val( value )
+                            .attr( "title", "" )
+                            .addClass( "custom-combobox-input ui-widget ui-widget-content ui-state-default ui-corner-left" )
+                            .autocomplete({
+                                delay: 0,
+                                minLength: 0,
+                                source: $.proxy( this, "_source" )
+                            })
+                            .tooltip({
+                                tooltipClass: "ui-state-highlight"
+                            });
+
+                        this._on( this.input, {
+                            autocompleteselect: function( event, ui ) {
+                                ui.item.option.selected = true;
+                                this._trigger( "select", event, {
+                                    item: ui.item.option
+                                });
+                            },
+
+                            autocompletechange: "_removeIfInvalid"
+                        });
+                    },
+
+                    _createShowAllButton: function() {
+                        var input = this.input,
+                            wasOpen = false;
+
+                        $( "<a>" )
+                            .attr( "tabIndex", -1 )
+                            .attr( "title", "Show All Items" )
+                            .tooltip()
+                            .appendTo( this.wrapper )
+                            .button({
+                                icons: {
+                                    primary: "ui-icon-triangle-1-s"
+                                },
+                                text: false
+                            })
+                            .removeClass( "ui-corner-all" )
+                            .addClass( "custom-combobox-toggle ui-corner-right" )
+                            .mousedown(function() {
+                                wasOpen = input.autocomplete( "widget" ).is( ":visible" );
+                            })
+                            .click(function() {
+                                input.focus();
+
+                                // Close if already visible
+                                if ( wasOpen ) {
+                                    return;
+                                }
+
+                                // Pass empty string as value to search for, displaying all results
+                                input.autocomplete( "search", "" );
+                            });
+                    },
+
+                    _source: function( request, response ) {
+                        var matcher = new RegExp( $.ui.autocomplete.escapeRegex(request.term), "i" );
+                        response( this.element.children( "option" ).map(function() {
+                            var text = $( this ).text();
+                            if ( this.value && ( !request.term || matcher.test(text) ) )
+                                return {
+                                    label: text,
+                                    value: text,
+                                    option: this
+                                };
+                        }) );
+                    },
+
+                    _removeIfInvalid: function( event, ui ) {
+
+                        // Selected an item, nothing to do
+                        if ( ui.item ) {
+                            return;
+                        }
+
+                        // Search for a match (case-insensitive)
+                        var value = this.input.val(),
+                            valueLowerCase = value.toLowerCase(),
+                            valid = false;
+                        this.element.children( "option" ).each(function() {
+                            if ( $( this ).text().toLowerCase() === valueLowerCase ) {
+                                this.selected = valid = true;
+                                return false;
+                            }
+                        });
+
+                        // Found a match, nothing to do
+                        if ( valid ) {
+                            return;
+                        }
+
+                        // Remove invalid value
+                        this.input
+                            .val( "" )
+                            .attr( "title", value + " didn't match any item" )
+                            .tooltip( "open" );
+                        this.element.val( "" );
+                        this._delay(function() {
+                            this.input.tooltip( "close" ).attr( "title", "" );
+                        }, 2500 );
+                        this.input.autocomplete( "instance" ).term = "";
+                    },
+
+                    _destroy: function() {
+                        this.wrapper.remove();
+                        this.element.show();
+                    }
+                });
+            })( jQuery );
         </script>
     </head>
     <body>
@@ -437,8 +587,8 @@
                 w2ui.layout.content('main', '<div id="plotContent" style="background-color:white"></div>');
 
                 var plotContent = $('#plotContent');
-                var plotDiv = plotContent.append('<div id="plotDiv" style="height:80%"></div>');
-                var queryDiv = plotContent.append('<div id="queryDiv" style="height:20%></div>');
+                var plotDiv = plotContent.append('<div id="plotDiv" style="height:90%"></div>');
+                var queryDiv = plotContent.append('<div id="queryDiv" style="height:10%></div>');
 
                 // function to generate plot
                 function plotSeries(title, series) {
@@ -464,6 +614,7 @@
                     plotSeries($(this).text(), series);
                 }
 
+                var_names = {};
                 // add a button for every numeric variable in variable_metadata
                 $.each(case_data.simulation_info.variable_metadata, function(name, value) {
                     var color = 'white';
@@ -477,9 +628,10 @@
                             // console.log('excluding constant:', name);
                             return true;
                         }
-                        $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+name+'</div>')
-                            .on('click', clickHandler)
-                            .appendTo(queryDiv);
+                        var_names[name] = { 'title': name, 'color': color };
+                        // $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+name+'</div>')
+                        //     .on('click', clickHandler)
+                        //     .appendTo(queryDiv);
                     }
                 });
 
@@ -492,10 +644,75 @@
                     else if (value.type === 'Objective') {
                         color = 'gold';
                     }
-                    $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.expr+'</div>')
-                        .on('click', clickHandler)
-                        .appendTo(queryDiv);
+                    var_names[name] = { 'title': value.expr, 'color': color };
+                    // $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.expr+'</div>')
+                    //     .on('click', clickHandler)
+                    //     .appendTo(queryDiv);
                 });
+
+                // add combo box for selecting expression/variable
+                var html = '<div class="ui-widget"><label>Value:  </label><select id="combobox">';
+                html += '<option value=""></option>';
+                $.each(var_names, function(name, val) {
+                    console.log(name, val);
+                    html += '<option value="'+name+'"">'+val.title+'</option>';
+                });
+                html += '</select></div>';
+
+                var combo = $(html).appendTo(queryDiv);
+                combo.on('change', function() {
+                    $(this).find('option:selected').each(function() {
+                        var name = $(this).attr('value');
+                        var vals = getHistory(name);
+                        var series = vals.map(function(e, i) {
+                            return [i, vals[i]]
+                        })
+                        plotSeries($(this).text(), series);
+                    });
+                });
+                combo.css('font-size', '12px');
+
+                // add combo box for selecting Case
+                var html = '<div class="ui-widget"><label>Case :    </label><select id="combobox">';
+                html += '<option value=""></option>';
+                $.each(case_objects, function(uuid, val) {
+                    html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
+                });
+                html += '</select></div>';
+                var combo = $(html).appendTo(queryDiv);
+                combo.on('change', function() {
+                    $(this).find('option:selected').each(function() {
+                        // var name = $(this).attr('value');
+                        // var vals = getHistory(name);
+                        // var series = vals.map(function(e, i) {
+                        //     return [i, vals[i]]
+                        // })
+                        // plotSeries($(this).text(), series);
+                    });
+                });
+                combo.css('font-size', '12px');
+
+                // add combo box for selecting driver
+                var html = '<div class="ui-widget"><label>Driver: </label><select id="combobox">';
+                html += '<option value=""></option>';
+                $.each(driver_info, function(name, val) {
+                    html += '<option value="'+name+'"">'+name+'</option>';
+                });
+                html += '</select></div>';
+                var combo = $(html).appendTo(queryDiv);
+                combo.on('change', function() {
+                    $(this).find('option:selected').each(function() {
+                        // var name = $(this).attr('value');
+                        // var vals = getHistory(name);
+                        // var series = vals.map(function(e, i) {
+                        //     return [i, vals[i]]
+                        // })
+                        // plotSeries($(this).text(), series);
+                    });
+                });
+                combo.css('font-size', '12px');
+
+
 
                 return 'plotting';
             }
@@ -569,10 +786,10 @@
                 },
             };
 
-            jQuery(document).ready(function() {
+            $(document).ready(function() {
                 // get all the cases in an associative array with the id as the key
                 // Also collect info on the simulation_info and the driver names
-                jQuery.each(case_data, function(key, val) {
+                $.each(case_data, function(key, val) {
 
                    // val.data has the values of the variables
                    // need to add simulation info object for top of tree of cases
