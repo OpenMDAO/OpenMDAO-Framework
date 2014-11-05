@@ -1873,8 +1873,7 @@ class Assembly(Component):
 
     def pre_setup(self):
         self._provideJ_bounds = None
-        for comp in self.get_comps_and_pseudos():
-            comp.pre_setup()
+        self.driver.pre_setup()
 
     def post_setup(self):
         for comp in self.get_comps():

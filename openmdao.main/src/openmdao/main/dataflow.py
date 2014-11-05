@@ -59,7 +59,8 @@ class Dataflow(SequentialWorkflow):
             if has_interface(comp, IDriver):
                 comp._collapse_subdrivers(collapsed_graph)
 
-        self._fullnames = gsort(collapsed_graph, [n for n in self._fullnames if n in collapsed_graph])
+        fnames = [n for n in self._fullnames if n in collapsed_graph]
+        self._fullnames = gsort(collapsed_graph, fnames)
 
         self._collapsed_graph = collapsed_graph
 

@@ -37,7 +37,7 @@ from openmdao.main.datatypes.list import List
 from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, \
+                                     IContainer, \
                                      IVariableTree, IContainerProxy
 #from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 #INDEX, ATTR, SLICE, _index_functs
@@ -47,12 +47,11 @@ from openmdao.main.mp_support import ObjectManager, \
 from openmdao.main.rbac import rbac
 from openmdao.main.variable import Variable, is_legal_name, _missing
 from openmdao.main.array_helpers import flattened_value, get_index
-from openmdao.main.pseudocomp import PseudoComponent
 
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.util.typegroups import real_types, int_types, complex_or_real_types
+from openmdao.util.typegroups import int_types, complex_or_real_types
 
 _copydict = {
     'deep': copy.deepcopy,
@@ -1457,7 +1456,6 @@ def _get_entry_group(obj):
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
             (Variable,             'openmdao.variable'),
-            (IParametricGeometry,  'openmdao.parametric_geometry'),
             (Driver,               'openmdao.driver'),
             (ICaseIterator,        'openmdao.case_iterator'),
             (IResourceAllocator,   'openmdao.resource_allocator'),
