@@ -322,8 +322,7 @@ class Driver(Component):
             full.update(getcomps)
             full.update(self.list_pseudocomps())
 
-            #compgraph = self.get_depgraph().component_graph()
-            compgraph = reduced2component(self.get_reduced_graph())
+            compgraph = self.get_depgraph().component_graph()
 
             for end in getcomps:
                 for start in setcomps:

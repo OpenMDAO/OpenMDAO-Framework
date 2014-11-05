@@ -141,8 +141,8 @@ class TestCase(unittest.TestCase):
         asm1.recorders = [JSONCaseRecorder(sout)]
         asm1.run()
 
-        # with open('nested.new', 'w') as out:
-        #     out.write(sout.getvalue())
+        #with open('nested.new', 'w') as out:
+        #    out.write(sout.getvalue())
         self.verify(sout, 'nested.json')
 
     def verify(self, sout, filename):

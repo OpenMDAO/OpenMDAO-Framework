@@ -218,6 +218,7 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
         top.driver.workflow.add('comp')
         top.driver.add_parameter('comp.ins.x1', low=-100, high=100)
         top.driver.add_objective('comp.y')
+        top.comp.comp1.missing_deriv_policy = 'assume_zero'
 
         top.run()
 

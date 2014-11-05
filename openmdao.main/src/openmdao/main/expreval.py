@@ -54,7 +54,8 @@ else:
 
 
 from numpy import ndarray, ndindex, zeros, complex, imag, issubdtype
-
+from openmdao.main.interfaces import IComponent
+from openmdao.main.mp_support import has_interface
 
 _Missing = object()
 
@@ -759,7 +760,7 @@ class ExprEvaluator(object):
         nameset = set()
         for name in self.var_names:
             parts = name.split('.', 1)
-            if len(parts) > 1:
+            if len(parts) > 1 and has_interface(getattr(self.scope, parts[0]), IComponent):
                 nameset.add(parts[0])
         return nameset
 

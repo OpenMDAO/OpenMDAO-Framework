@@ -359,19 +359,19 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.get_referenced_varpaths(), set(['asm2.comp3.contlist']))
 
     def test_get_referenced_compnames(self):
-        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top)
         self.assertEqual(ex.get_referenced_compnames(), set(['comp', 'a']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
-        ex.scope = self.top.comp
+        ex.scope = self.top
         ex.text = 'comp.contlist[1]'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
         ex.text = 'comp.contlist[1].foo'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
         ex.text = 'contlist[1].foo'
         self.assertEqual(ex.get_referenced_compnames(), set())
-        ex.text = 'asm2.comp3.contlist[1].foo'
-        self.assertEqual(ex.get_referenced_compnames(), set(['asm2']))
+        ex.text = 'a.comp3.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_compnames(), set(['a']))
 
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)

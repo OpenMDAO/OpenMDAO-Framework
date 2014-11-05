@@ -70,6 +70,7 @@ Constants:
    directory:
    driver.directory:
    driver.force_fd: False
+   driver.gradient_options.atol: 1e-09
    driver.gradient_options.derivative_direction: auto
    driver.gradient_options.directional_fd: False
    driver.gradient_options.fd_blocks: []
@@ -77,8 +78,9 @@ Constants:
    driver.gradient_options.fd_step: 1e-06
    driver.gradient_options.fd_step_type: absolute
    driver.gradient_options.force_fd: False
-   driver.gradient_options.gmres_maxiter: 100
-   driver.gradient_options.gmres_tolerance: 1e-09
+   driver.gradient_options.lin_solver: scipy_gmres
+   driver.gradient_options.maxiter: 100
+   driver.gradient_options.rtol: 1e-09
    force_fd: False
    missing_deriv_policy: assume_zero
    recording_options.excludes: []

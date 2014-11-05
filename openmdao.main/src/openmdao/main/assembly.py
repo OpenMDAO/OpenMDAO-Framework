@@ -1572,9 +1572,9 @@ class Assembly(Component):
             
             # keep any connected boundary vars
             for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
-                if not inputs and is_boundary_node(dgraph, u):
+                if is_boundary_node(dgraph, u):
                         keep.add(u)
-                if not outputs and is_boundary_node(dgraph, v):
+                if is_boundary_node(dgraph, v):
                     keep.add(v)
 
             if inputs is None:
