@@ -380,40 +380,40 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
 
 class TestDerivativeVarTree(unittest.TestCase):
 
-    # def test_varTree_parameter2(self):
+    #def test_varTree_parameter2(self):
 
-    #     top = set_as_top(Assembly())
-    #     top.add('comp', CompWithVarTreeSubTree())
-    #     top.add('comp2', CompWithVarTreeSubTree())
-    #     top.add('driver', SimpleDriver())
-    #     top.driver.workflow.add(['comp','comp2'])
-    #     top.connect('comp.outs2', 'comp2.ins')
-    #     top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
-    #     top.driver.add_parameter('comp.ins.x.x2', low=-1000, high=1000)
-    #     top.driver.add_parameter('comp.ins.y', low=-1000, high=1000)
+        #top = set_as_top(Assembly())
+        #top.add('comp', CompWithVarTreeSubTree())
+        #top.add('comp2', CompWithVarTreeSubTree())
+        #top.add('driver', SimpleDriver())
+        #top.driver.workflow.add(['comp','comp2'])
+        #top.connect('comp.outs2', 'comp2.ins')
+        #top.driver.add_parameter('comp.ins.x.x1', low=-1000, high=1000)
+        #top.driver.add_parameter('comp.ins.x.x2', low=-1000, high=1000)
+        #top.driver.add_parameter('comp.ins.y', low=-1000, high=1000)
 
-    #     top.driver.add_objective('comp.z')
-    #     top.driver.add_constraint('comp.outs.z < 0')
-    #     top.driver.add_constraint('(comp.ins.x.x1 +  comp.ins.x.x2) < 0')
+        #top.driver.add_objective('comp.z')
+        #top.driver.add_constraint('comp.outs.z < 0')
+        #top.driver.add_constraint('(comp.ins.x.x1 +  comp.ins.x.x2) < 0')
 
-    #     top.comp.ins.x.x1 = 3
-    #     top.comp.ins.x.x2 = 3
-    #     top.comp.ins.y = 5
-    #     top.comp.run()
+        #top.comp.ins.x.x1 = 3
+        #top.comp.ins.x.x2 = 3
+        #top.comp.ins.y = 5
+        #top.comp.run()
 
-    #     inputs = top.driver.list_param_group_targets()
+        #inputs = top.driver.list_param_group_targets()
 
-    #     obj = ["%s.out0" % item.pcomp_name for item in \
-    #            top.driver.get_objectives().values()]
-    #     con = ["%s.out0" % item.pcomp_name for item in \
-    #            top.driver.get_constraints().values()]
+        #obj = ["%s.out0" % item.pcomp_name for item in \
+               #top.driver.get_objectives().values()]
+        #con = ["%s.out0" % item.pcomp_name for item in \
+               #top.driver.get_constraints().values()]
 
-    #     top.run()
-    #     J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
-    #     top.driver.workflow.config_changed()
-    #     J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
-    #     top.driver.workflow.config_changed()
-    #     J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
+        #top.run()
+        #J_fd = top.driver.workflow.calc_gradient(inputs, obj+con, mode='fd')
+        #top.driver.workflow.config_changed()
+        #J_forward = top.driver.workflow.calc_gradient(inputs, obj+con, mode="forward")
+        #top.driver.workflow.config_changed()
+        #J_reverse = top.driver.workflow.calc_gradient(inputs, obj+con, mode="adjoint")
 
     def test_varTree_parameter(self):
 

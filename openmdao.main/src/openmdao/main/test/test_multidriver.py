@@ -557,6 +557,9 @@ class MultiDriverTestCase(unittest.TestCase):
                           'D2', 'C2', 'C2', 'C2', 'C2'])
 
     def test_cascade_opt(self):
+        
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
+        
         top = set_as_top(Assembly())
 
         eq = ['f = (x-3)**2 + x*y + (y+4)**2 - 3']
