@@ -242,8 +242,8 @@ is a block of code as would be found in a Python script:
 
 .. testcode::
 
-    from openmdao.examples.enginedesign.engine import Engine
-    my_engine = Engine()
+    from openmdao.examples.simple.paraboloid import Paraboloid
+    top = Paraboloid()
     
 The second type of code example is a copy of an interactive shell session:
 
@@ -328,7 +328,7 @@ block:
 
 ::
 
-    .. literalinclude:: ../../openmdao.examples/openmdao/examples/enginedesign/engine_wrap_c.py
+    .. literalinclude:: ../../contrib/enginedesign/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engine_wrap_c.py
        :start-after: engine_weight = 0.0
        :end-before: # end engine.py
        :language: python
@@ -343,7 +343,7 @@ also be done with the *lines* option.
 
 ::
 
-    .. literalinclude:: ../../openmdao.examples/openmdao/examples/enginedesign/engine_wrap_c.py
+    .. literalinclude:: ../../contrib/enginedesign/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engine_wrap_c.py
        :lines: 3,7-12,45
        :language: python
 
