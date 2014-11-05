@@ -721,13 +721,15 @@ class ArrayParameter(ParameterBase):
                                  % (value.size, self._size))
         else:
             value = value * ones(self.shape, self.dtype)
+            
         transval = self._transform(value)
+        
         try:
-            vecs = param_owner._system.vec
-        except AttributeError:
+            view = param_owner._system.vec['u'][self._expreval.text]
+        except (KeyError, AttributeError):
             self._expreval.set(transval)
         else:
-            vecs['u'][self._expreval.text][:] = transval.flatten()
+            view[:] = transval.flatten()
 
     def copy(self):
         """Return a copy of this parameter."""
