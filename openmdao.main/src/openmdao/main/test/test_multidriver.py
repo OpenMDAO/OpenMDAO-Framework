@@ -427,6 +427,8 @@ class MultiDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
+        
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         print "*** test_2drivers_same_iterset ***"
         global exec_order
         top = set_as_top(Assembly())
@@ -464,6 +466,7 @@ class MultiDriverTestCase(unittest.TestCase):
         #              |    |
         #              |<---D2
         #
+        raise SkipTest("We currently don't allow a component instance in multiple workflows.")
         global exec_order
         print "*** test_2drivers_discon_same_iterset ***"
         top = set_as_top(Assembly())

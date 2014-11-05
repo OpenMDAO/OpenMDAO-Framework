@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 
 from openmdao.main.api import Assembly, set_as_top, Component
-from openmdao.main.datatypes.geom_data import GeomData
+from openmdao.lib.geometry.geom_data import GeomData
 from openmdao.main.datatypes.vtree import VarTree
 
 class GeomDataTestCase(unittest.TestCase):
@@ -16,11 +16,11 @@ class GeomDataTestCase(unittest.TestCase):
         box.add('geo', VarTree(GeomData(13, 17, 3), iotype='in'))
         
         self.assertTrue(box.geo.points.shape == (13, 3))
-        self.assertTrue(box.geo.edges.shape == (17, 3))
-        self.assertTrue(box.geo.edges.dtype == np.int64)
+        self.assertTrue(box.geo.facets.shape == (17, 3))
+        self.assertTrue(box.geo.facets.dtype == np.int64)
 
         box.add('geo2', VarTree(GeomData(13, 17, 4), iotype='out'))
-        self.assertTrue(box.geo2.edges.shape == (17, 4))
+        self.assertTrue(box.geo2.facets.shape == (17, 4))
        
         try:
             box.geo = GeomData(3, 4, 5)
