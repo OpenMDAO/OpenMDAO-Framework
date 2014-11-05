@@ -60,7 +60,7 @@ if sys.platform == 'win32':  #pragma no cover
 
 from traits.trait_handlers import TraitDictObject
 
-from openmdao.main.interfaces import obj_has_interface
+from openmdao.main.interfaces import implements, obj_has_interface, IContainerProxy
 from openmdao.main.mp_util import decrypt, encrypt, is_legal_connection, \
                                   keytype, make_typeid, public_methods, \
                                   tunnel_address, SPECIALS
@@ -1211,6 +1211,8 @@ class OpenMDAO_Proxy(BaseProxy):
         network round-trip delay, use :meth:`repr` or the ``%r`` format.
 
     """
+
+    implements(IContainerProxy)
 
     def __init__(self, *args, **kwds):
         try:

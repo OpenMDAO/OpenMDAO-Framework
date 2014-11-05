@@ -1352,7 +1352,7 @@ class EqConstraintSystem(SimpleSystem):
 
             # Propagate residuals.
             if state:
-                self.vec['f'][state][:] = -self._comp.out0
+                self.vec['f'][state][:] = -self._comp.get_flattened_value('out0')
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1836,9 +1836,10 @@ class OpaqueSystem(SimpleSystem):
                 graph.add_node(src, comp='dumbvar')
                 graph.add_edge(src, node)
 
-            comp = src.split('.', 1)[0]
-            if comp != src and comp in graph:
-                graph.add_edge(node, comp)
+            for dest in node[1]:
+                comp = dest.split('.', 1)[0]
+                if comp != src and comp in graph:
+                    graph.add_edge(node, comp)
 
             if src in graph:
                 graph.node[src]['system'] = _create_simple_sys(scope, graph, src)

@@ -3,18 +3,18 @@
 Recording Your Inputs and Outputs
 =====================================
 
-In the previous example, we showed how to use a `DOEdriver` to vary parameters and plot the values from the DOE using the `case_input` and `case_output` variable trees. Another way to work with the DOE data is to record it to a file, and then make your plots in a 
-post processing step. 
+In the previous example, we showed how to use a `DOEdriver` to vary parameters and plot the values from the DOE using the `case_input` and `case_output` variable trees. Another way to work with the DOE data is to record it to a file, and then make your plots in a
+post processing step.
 
-Let's re-run the DOE example from the previous tutorial: a Unifrom DOE of a Paraboloid component. The 
-only difference from before is that we will specify a :ref:`JSONCaseRecorder 
-<openmdao.lib.casehandlers.jsoncase.py>`, which will save off all the data from our run into a 
-file, named by the `filename` argument. The following `script </../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py>` will run the DOE for you, and should result 
-in a file being created called `doe.json`. 
+Let's re-run the DOE example from the previous tutorial: a Unifrom DOE of a Paraboloid component. The
+only difference from before is that we will specify a :ref:`JSONCaseRecorder
+<openmdao.lib.casehandlers.jsoncase.py>`, which will save off all the data from our run into a
+file, named by the `filename` argument. The following `script </../examples/openmdao.examples.simple/openmdao/examples/simple/case_recorders.py>` will run the DOE for you, and should result
+in a file being created called `doe.json`.
 
-.. note:: 
+.. note::
 
-    OpenMDAO also constains a :ref:`BSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` recorder 
+    OpenMDAO also constains a :ref:`BSONCaseRecorder <openmdao.lib.casehandlers.jsoncase.py>` recorder
     which records the data in a more compact format.
 
 .. testcode:: case_recorders
@@ -42,7 +42,7 @@ in a file being created called `doe.json`.
 
             self.recorders = [JSONCaseRecorder(out='doe.json')]
 
-    if __name__ == "__main__": 
+    if __name__ == "__main__":
         #-----------------------------
         # Run analysis
         #-----------------------------
@@ -55,7 +55,7 @@ in a file being created called `doe.json`.
         analysis.run()
 
 
-Once you have the `doe.json` file, then you can start to set up some post processing scripts to 
+Once you have the `doe.json` file, then you can start to set up some post processing scripts to
 let you interpret your data. The next script just prints the data to your screen.
 
 .. testsetup:: case_recorders_post_processing
@@ -83,7 +83,7 @@ let you interpret your data. The next script just prints the data to your screen
 
             self.recorders = [JSONCaseRecorder(filename='doe.json')]
 
-    if __name__ == "__main__": 
+    if __name__ == "__main__":
         #-----------------------------
         # Run analysis
         #-----------------------------
@@ -95,7 +95,7 @@ let you interpret your data. The next script just prints the data to your screen
 
         analysis.run()
 
-::  
+::
 
     from openmdao.lib.casehandlers.api import CaseDataset
 
@@ -108,14 +108,14 @@ let you interpret your data. The next script just prints the data to your screen
     for case in data:
         print "x: %f, y:%f, f_xy:%s"%(case['paraboloid.x'], case['paraboloid.y'], case['paraboloid.f_xy'])
 
-To open the data file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments 
-for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety 
-of methods for controlling what information is read from the file. In this example, we use `by_case` 
-to specify that the data should be returned as a list of dictionaries, where each item of the list is a single case and variables can be accessed by row. The `fetch` executes the query to read the data into memory. 
+To open the data file, we use a :ref:`CaseDataset <openmdao.lib.casehandlers.query.py>` object. The arguments
+for creating a `CaseDataset` object are the file name and file type. `CaseDataset` objects have a variety
+of methods for controlling what information is read from the file. In this example, we use `by_case`
+to specify that the data should be returned as a list of dictionaries, where each item of the list is a single case and variables can be accessed by row. The `fetch` executes the query to read the data into memory.
 
-In the DOE tutorial, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseDataset` objects. 
-Retrieve the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than 
-by case order. Notice that we're using the exact same data file, without re-running to get it again. 
+In the DOE tutorial, we showed how to generate a 3D surface plot using the `case_input` and `case_output` variable trees of a `DOEdriver`. Below is an example of generating the same plot using `CaseDataset` objects.
+Retrieve the data using a `CaseDataset` object. We use `by_variable` to arrange the data by variable, rather than
+by case order. Notice that we're using the exact same data file, without re-running to get it again.
 
 ::
 
@@ -140,7 +140,7 @@ by case order. Notice that we're using the exact same data file, without re-runn
     every_10 = range(3,len(x))[::10]
 
 
-    for i in every_10: 
+    for i in every_10:
         ax.clear()
         ax.set_xlim(-60,60)
         ax.set_ylim(-60,60)
@@ -162,7 +162,7 @@ OpenMDAO has convenience functions for two common post processing steps: writing
     from openmdao.lib.casehandlers.api import CaseDataset
     from openmdao.lib.casehandlers.api import caseset_query_to_csv
     from openmdao.lib.casehandlers.api import caseset_query_dump
-    
+
     case_dataset = CaseDataset('doe.json', 'json')
     data = case_dataset.data.by_case().fetch()
 
@@ -170,9 +170,20 @@ OpenMDAO has convenience functions for two common post processing steps: writing
     caseset_query_dump(data)
 
 
-By default OpenMDAO will record all variables in the model (based on the top
-level assembly's `includes` and `excludes` lists).  This can get to be a lot
-of data and the associated file can be quite large.  If you want to reduce
+By default OpenMDAO will record all variables in the model.  This can get to be a lot
+of data and the associated file can be quite large.  You can change the default behavior
+by modifying the ``recording_options`` variable tree in the top level assembly.  There
+are three options:
+
+============================  =======   ===============================================
+Option                        Default   Description
+============================  =======   ===============================================
+``save_problem_formulation``  True      Save parameters, objectives, constraints, etc.
+``includes``                  ['*']     Variables to include
+``excludes``                  [ ]       Variables to exclude (processed after includes)
+============================  =======   ===============================================
+
+Also, if you want to reduce
 the data processed for a specific post processing scenario you can write out
 a new file based on cases and/or variables specified in a query by replacing
 `fetch()` with `write(filename)`.  You can optionally specify a format for the

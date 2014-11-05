@@ -58,23 +58,9 @@ def get_val_and_index(scope, name):
     which may contain array element access.
     """
     if '[' in name:
-        val = getattr(scope, name.split('[',1)[0], __missing)
-        if val is __missing:
-            val = scope.get(name.split('[',1)[0])
-        idx = get_index(name)
-        # for objects that are not numpy arrays, an index tuple
-        #  really means [idx0][idx1]...[idx_n]
-        if isinstance(idx, tuple) and not isinstance(val, ndarray):
-            for i in idx:
-                val = val[i]
-        else:
-            val = val[idx]
-        return (val, idx)
+        return (scope.get(name), get_index(name))
     else:
-        val = getattr(scope, name, __missing)
-        if val is __missing:
-            val = scope.get(name)
-        return (val, None)
+        return (scope.get(name), None)
 
 def idx_size(idxs, size=None):
     """Return the number of entries corresponding to the given

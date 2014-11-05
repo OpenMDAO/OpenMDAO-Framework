@@ -438,7 +438,7 @@ class Case(object):
         for i, case in enumerate(cases):
             for path, value in case.get_inputs():
                 path = make_legal_path(path)
-                driver.set('case_inputs.'+path, value, index=(i,))
+                driver.set('case_inputs.%s[%d]'%(path,i), value)
 
 
 class CaseTreeNode(object):

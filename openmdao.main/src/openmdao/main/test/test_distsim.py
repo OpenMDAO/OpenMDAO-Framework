@@ -230,9 +230,9 @@ class ProtectedBox(Box):
         return self.protector
 
     @rbac(('owner', 'user'), proxy_types=[FileRef])
-    def get(self, path, index=None):
+    def get(self, path):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).get(path, index)
+            return super(ProtectedBox, self).get(path)
         raise RoleError('No get access to %r' % path)
 
     @rbac(('owner', 'user'), proxy_types=[CTrait])
@@ -242,15 +242,15 @@ class ProtectedBox(Box):
         raise RoleError('No get_dyn_trait access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def get_attr(self, name, index=None):
+    def get_attr_w_copy(self, name):
         if self.protector.user_attribute(self, name):
             return super(ProtectedBox, self).get_attr(name)
-        raise RoleError('No get_attr access to %r' % name)
+        raise RoleError('No get_attr_w_copy access to %r' % name)
 
     @rbac(('owner', 'user'))
-    def set(self, path, value, index=None, force=False):
+    def set(self, path, value):
         if self.protector.user_attribute(self, path):
-            return super(ProtectedBox, self).set(path, value, index, force)
+            return super(ProtectedBox, self).set(path, value)
         raise RoleError('No set access to %r' % path)
 
 
@@ -432,7 +432,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('_pseudo_0'),
+                    self.assertEqual(case.get_output('volume'),
                                      width*height*depth)
 
         self.assertTrue(is_instance(model.box.parent, Assembly))
@@ -449,12 +449,12 @@ class TestCase(unittest.TestCase):
         self.assertEqual(path, 'subcontainer.subvar')
 
         obj, path = get_closest_proxy(model, 'source.subcontainer.subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         obj, path = get_closest_proxy(model.source.subcontainer, 'subvar')
-        self.assertEqual(obj, model.source.subcontainer)
-        self.assertEqual(path, 'subvar')
+        self.assertEqual(obj, model.source.subcontainer.subvar)
+        self.assertEqual(path, '')
 
         # Observable proxied type.
         tmp = model.box.open_in_parent('tmp', 'w')
@@ -527,7 +527,7 @@ class TestCase(unittest.TestCase):
             for height in range(1, 3):
                 for depth in range(1, 4):
                     case = model.recorders[0].cases.pop(0)
-                    self.assertEqual(case.get_output('_pseudo_0'),
+                    self.assertEqual(case.get_output('volume'),
                                      width*height*depth)
 
         # Check access protections.
@@ -613,7 +613,7 @@ class TestCase(unittest.TestCase):
                 for height in range(1, 3):
                     for depth in range(1, 4):
                         case = model.recorders[0].cases.pop(0)
-                        self.assertEqual(case.get_output('_pseudo_0'),
+                        self.assertEqual(case.get_output('volume'),
                                          width*height*depth)
         finally:
             if factory is not None:

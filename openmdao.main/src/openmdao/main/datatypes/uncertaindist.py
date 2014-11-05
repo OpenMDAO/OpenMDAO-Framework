@@ -2,7 +2,7 @@
 from openmdao.main.variable import Variable
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IUncertainVariable
-from openmdao.main.attrwrapper import AttrWrapper, UnitsAttrWrapper
+from openmdao.main.attrwrapper import UnitsAttrWrapper
 
 class UncertainDistVar(Variable):
     """A variable wrapper for an UncertainDistribution variable.

@@ -70,12 +70,9 @@ class IContainer(Interface):
             Trait to be used for validation.
         """
 
-    def get(path, index=None):
+    def get(path):
         """Return the object specified by the given
-        path, which may contain '.' characters.  *index*, if not None,
-        should be a list of container indices and/or tuples following
-        the protocol described in the docs for the
-        openmdao.main.index.process_index_entry() function.
+        path, which may contain '.' characters.
         """
 
     def get_pathname(rel_to_scope=None):
@@ -140,14 +137,10 @@ class IContainer(Interface):
             Protocol used.
         """
 
-    def set(path, value, index=None, src=None, force=False):
+    def set(path, value):
         """Set the value of the Variable specified by the given path, which
         may contain '.' characters. The Variable will be set to the given
-        value, subject to validation and constraints. *index*, if not None,
-        should be a list of container indices and/or single entry lists of attribute
-        names.  For example, to get something like comp.x[2]['mykey'].child.value,
-        *index* would look like:  [2,'mykey',['child'],['value']].  Attribute names
-        are placed in sublists to avoid ambiguity with string container indices.
+        value, subject to validation and constraints. 
         """
 
     def cpath_updated():
@@ -155,6 +148,10 @@ class IContainer(Interface):
 
     def configure():
         """Called once, after this Container has been placed in a rooted Container hierarchy."""
+
+
+class IContainerProxy(IContainer):
+    """Marker interface for proxy containers."""
 
 
 class IVariableTree(IContainer):

@@ -1528,7 +1528,7 @@ class Component(Container):
             partially_connected_indices = []
 
             for inp in connected_inputs:
-                cname = inp.split('[', 1)[0].split('.',1)[1]  # Could be 'inp[0]'.
+                cname = inp.split('[', 1)[0].split('.', 1)[1]  # Could be 'inp[0]'.
 
                 if cname == name:
                     connections = self.parent._depgraph._var_connections(inp)
