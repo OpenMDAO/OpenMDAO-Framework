@@ -499,7 +499,7 @@ class Testcase_implicit(unittest.TestCase):
         model = set_as_top(Assembly())
         model.add('comp1', Coupled1())
         model.add('comp2', Coupled2())
-        model.add('driver', NewtonSolver())
+        model.add('driver', BroydenSolver())
         model.driver.workflow.add(['comp1', 'comp2'])
         model.comp1.eval_only = False
         model.comp2.eval_only = False

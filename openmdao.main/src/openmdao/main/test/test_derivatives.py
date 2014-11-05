@@ -3204,15 +3204,20 @@ class TestMultiDriver(unittest.TestCase):
 
         # Make sure it runs.
         sp.run()
+        
+        # Reconverge inner solver with tight tolerance so FD is accurate.
+        sp.solver.tol = 1e-12
+        sp.run()
 
         # Test gradient
-        sp.driver.gradient_options.fd_form = 'central'
+        #sp.driver.gradient_options.fd_form = 'central'
         J = sp.driver.workflow.calc_gradient()
 
         Jfd = sp.driver.workflow.calc_gradient(mode='fd')
 
         diff = J - Jfd
 
+        sp.driver.workflow.check_gradient()
         assert_rel_error(self, diff.max(), 0.0, .001)
 
     def test_PA_subvar_driver_edges(self):
