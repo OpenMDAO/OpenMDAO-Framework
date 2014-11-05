@@ -611,7 +611,8 @@ class Component(Container):
     def _run_begins(self):
         """ Executed at start of top-level run. """
         if hasattr(self, 'recorders'):
-            self.configure_recording()
+            pass # qqq
+            #self.configure_recording()
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):

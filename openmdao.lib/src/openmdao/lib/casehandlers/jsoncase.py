@@ -166,6 +166,7 @@ class _BaseRecorder(object):
                       case_uuid, parent_uuid):
         """ Return case info dictionary. """
         in_names, out_names = self._cfg_map[driver]
+        
         data = dict(zip(in_names, inputs))
         data.update(zip(out_names, outputs))
 
@@ -174,10 +175,13 @@ class _BaseRecorder(object):
             subdriver_last_case_uuids[ id(subdriver) ] = self._last_child_case_uuids[ id(subdriver) ]
         self._last_child_case_uuids[ id(driver) ] = case_uuid
         
+        #qqq
+        #data = data.values()
+        
         return dict(_id=case_uuid,
                     _parent_id=parent_uuid or self._uuid,
                     _driver_id=id(driver),
-                    subdriver_last_case_uuids = subdriver_last_case_uuids,
+                    #subdriver_last_case_uuids = subdriver_last_case_uuids,
                     error_status=None,
                     error_message=str(exc) if exc else '',
                     timestamp=time.time(),
@@ -358,7 +362,10 @@ def _fixup(value):
     elif isinstance(value, (list, tuple, set, frozenset)):
         return [_fixup(val) for val in value]
     elif isinstance(value, ndarray):
-        return value.tolist()
+        #return value.tolist()
+        import cPickle
+        from myjson_util import dumps, Binary
+        return dumps(Binary( cPickle.dumps( value, protocol=2) ) )
     elif isinstance(value, VariableTree):
         return dict([(name, _fixup(getattr(value, name)))
                      for name in value.list_vars()])

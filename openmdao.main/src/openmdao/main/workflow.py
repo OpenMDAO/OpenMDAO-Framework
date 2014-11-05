@@ -542,6 +542,9 @@ class Workflow(object):
         inputs = []
         outputs = []
 
+        print "begin configure_recording", driver.name #qqq
+
+
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -553,6 +556,31 @@ class Workflow(object):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
+        #driver.get_reduced_graph()
+        for comp in driver.workflow: 
+            print "successor for", comp.name, 'is', driver._reduced_graph.successors(comp.name)
+            successors = driver._reduced_graph.successors(comp.name)
+            for output_name, aliases in successors:
+                print output_name
+                
+                if '.in' in output_name: # look for something that is not a pseudo input
+                    for n in aliases:
+                        if not ".in" in n:
+                            output_name = n
+                            break
+                outputs.append(output_name)
+
+
+
+            # if '.in' in output_name: # look for something that is not a pseudo input
+            #     for n in successors[0][1]:
+            #         if not ".in" in n:
+            #             output_name = n
+            #             break
+            # outputs.append(output_name)
+            
+
+
         # Objectives
         self._rec_objectives = []
         if hasattr(driver, 'eval_objectives'):
@@ -561,7 +589,8 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    outputs.append(name)
+                    print "objective", name  #qqq
+                    #qqq outputs.append(name)
 
         # Responses
         self._rec_responses = []
@@ -571,7 +600,7 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
-                    outputs.append(name)
+                    #qqq outputs.append(name)
 
         # Constraints
         self._rec_constraints = []
@@ -581,14 +610,16 @@ class Workflow(object):
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    print "eq_constraints", name  #qqq
+                    # qqq outputs.append(name)
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
                 if self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    outputs.append(name)
+                    print "ineq_constraints", name  #qqq
+                    #qqq outputs.append(name)
 
         # Other outputs.
         self._rec_outputs = []
@@ -618,7 +649,8 @@ class Workflow(object):
             if src not in inputs and src not in outputs and \
                self._check_path(path, includes, excludes):
                 self._rec_outputs.append(src)
-                outputs.append(src)
+                print "other output", src  #qqq
+                #qqq outputs.append(src)
 
         for comp in self.get_components():
             for name in comp.list_outputs():
@@ -627,7 +659,8 @@ class Workflow(object):
                 if src not in outputs and \
                    self._check_path(path, includes, excludes):
                     self._rec_outputs.append(src)
-                    outputs.append(src)
+                    print "other output", src  #qqq
+                    #qqq outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
         path = prefix+name
@@ -667,6 +700,8 @@ class Workflow(object):
         top = scope
         while top.parent is not None:
             top = top.parent
+            
+        print "recording case", driver.name
 
         inputs = []
         outputs = []
