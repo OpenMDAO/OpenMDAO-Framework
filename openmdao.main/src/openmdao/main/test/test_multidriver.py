@@ -1,5 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
+from nose import SkipTest
+
 import unittest
 from math import sqrt  # so expr can find it
 from StringIO import StringIO
