@@ -2,7 +2,6 @@ import sys
 from collections import deque
 from itertools import chain
 from ordereddict import OrderedDict
-from functools import cmp_to_key
 
 import networkx as nx
 from networkx.algorithms.dag import is_directed_acyclic_graph
@@ -10,14 +9,14 @@ from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IVariableTree, \
-                                     IImplicitComponent, ISolver, \
+                                     IImplicitComponent, \
                                      IAssembly, IComponent
 from openmdao.main.exceptions import NoFlatError
 from openmdao.main.expreval import ConnectedExprEvaluator
 from openmdao.main.array_helpers import is_differentiable_var, is_differentiable_val, flattened_size
 from openmdao.main.case import flatteners
 from openmdao.main.vartree import VariableTree
-from openmdao.util.graph import flatten_list_of_iters, list_deriv_vars
+from openmdao.util.graph import list_deriv_vars, base_var, fix_single_tuple
 
 # # to use as a quick check for exprs to avoid overhead of constructing an
 # # ExprEvaluator
@@ -51,7 +50,9 @@ def _sub_or_super(s1, s2):
 
 
 def unique(seq):
-    """Return a list of unique values, preserving order"""
+    """Return a list of unique values, preserving order. 
+    Items in sequence must be hashable.
+    """
     seen = set()
     sadd = seen.add
     return [x for x in seq if x not in seen and not sadd(x)]
@@ -180,69 +181,6 @@ class DependencyGraph(nx.DiGraph):
         self._allow_config_changed = True
         self.config_changed()
 
-    def base_var(self, node):
-        """Returns the name of the variable node that is the 'base' for
-        the given node name.  For example, for the node A.b[4], the
-        base variable is A.b.  For the node d.x.y, the base variable
-        is d if d is a boundary variable node, or d.x otherwise.
-        """
-        if node in self:
-            base = self.node[node].get('basevar')
-            if base:
-                return base
-            elif 'var' in self.node[node]:
-                return node
-
-        parts = node.split('[', 1)[0].split('.')
-
-        base = parts[0]
-        if base in self and 'var' in self.node[base]:
-            return base
-
-        return '.'.join(parts[:2])
-
-    # def sever_edges(self, edges):
-    #     """Temporarily remove the specified edges but save
-    #     them and their metadata for later restoration.
-    #     """
-    #     # Note: This will NOT call config_changed(), and if
-    #     # component_graph() has not been called since the last
-    #     # config_changed, it WILL create a temporary new
-    #     # component graph which will be overwritten by the original
-    #     # one when unsever_edges() is called.
-    #     if self._severed_edges:
-    #         raise RuntimeError("only one set of severed edges is permitted")
-
-    #     # save old stuff to restore later
-    #     self._saved_comp_graph = self._component_graph
-    #     self._saved_loops = self._loops
-
-    #     self._severed_edges = list(edges)
-
-    #     self._allow_config_changed = False
-    #     try:
-    #         for u,v in edges:
-    #             self.disconnect(u, v)
-    #     finally:
-    #         self._allow_config_changed = True
-
-    # def unsever_edges(self, scope):
-    #     """Restore previously severed edges."""
-    #     if not self._severed_edges:
-    #         return
-
-    #     self._allow_config_changed = False
-    #     try:
-    #         for u,v in self._severed_edges:
-    #             self.connect(scope, u, v)
-    #     finally:
-    #         self._allow_config_changed = True
-
-    #     self._severed_edges = []
-
-    #     self._loops = self._saved_loops
-    #     self._component_graph = self._saved_comp_graph
-
     def config_changed(self):
         if self._allow_config_changed:
             self._component_graph = None
@@ -266,8 +204,8 @@ class DependencyGraph(nx.DiGraph):
         cname = child.name
         old_ins  = set(self.list_inputs(cname))
         old_outs = set(self.list_outputs(cname))
-        old_states = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'state'])
-        old_resids = set([n for n in old_outs if self.node[self.base_var(n)]['iotype'] == 'residual'])
+        old_states = set([n for n in old_outs if self.node[base_var(self, n)]['iotype'] == 'state'])
+        old_resids = set([n for n in old_outs if self.node[base_var(self, n)]['iotype'] == 'residual'])
 
         # remove states from old_ins
         old_ins -= old_states
@@ -410,7 +348,7 @@ class DependencyGraph(nx.DiGraph):
         """Raise an exception if the specified destination is already
         connected.
         """
-        dpbase = self.base_var(destpath)
+        dpbase = base_var(self, destpath)
 
         dest_iotype = self.node[dpbase].get('iotype')
         if dest_iotype in ('out','residual') and \
@@ -448,8 +386,8 @@ class DependencyGraph(nx.DiGraph):
         and another edge from B.c.x to base variable B.c.
         """
 
-        base_src  = self.base_var(srcpath)
-        base_dest = self.base_var(destpath)
+        base_src  = base_var(self,srcpath)
+        base_dest = base_var(self,destpath)
 
         for v in [base_src, base_dest]:
             if v not in self:
@@ -457,72 +395,24 @@ class DependencyGraph(nx.DiGraph):
             elif not is_var_node(self, v):
                 raise RuntimeError("'%s' is not a variable node" % v)
 
-        # # path is a list of tuples of the form (var, basevar)
-        # path = [(base_src, base_src)]
-
-        # if srcpath != base_src:  # srcpath is a subvar
-
-        #     path.append((srcpath, base_src))
-
-        # if destpath != base_dest:  # destpath is a subvar
-        #     path.append((destpath, base_dest))
-
-        # path.append((base_dest, base_dest))
-
-        # if check:
-        #     self.check_connect(srcpath, destpath)
-
-        # for i in range(len(path)):
-        #     dest, base = path[i]
-        #     if dest not in self:  # create a new subvar if it's not already there
-        #         self.add_node(dest, basevar=base, **self.node[base])
-        #     if i > 0:
-        #         src = path[i-1][0]
-        #         try:
-        #             self[src][dest]
-        #         except KeyError:
-        #             self.add_edge(src, dest)
-
-        # # mark the actual connection edge to distinguish it
-        # # from other edges (for list_connections, etc.)
-        # self.edge[srcpath][destpath]['conn'] = True
-
-        # # create expression objects to handle setting of
-        # # array indces, etc.
-        # sexpr = ConnectedExprEvaluator(srcpath, scope=scope, getter='get_attr')
-        # dexpr = ConnectedExprEvaluator(destpath, scope=scope, getter='get_attr', is_dest=True)
-
-        # self.edge[srcpath][destpath]['sexpr'] = sexpr
-        # self.edge[srcpath][destpath]['dexpr'] = dexpr
         added_nodes = []
         added_edges = []
         if srcpath == base_src:
             pass  # will create connection edge later
         else:  # srcpath is a subvar
             if srcpath not in self:
-                self.add_node(srcpath, basevar=base_src, **self.node[base_src])
+                self.add_subvar(srcpath)
                 added_nodes.append(srcpath)
-            if self.node[base_src].get('boundary'):
-                iotypes = ('in', 'state')
-            else:
-                iotypes = ('out', 'state', 'residual')
-            if self.node[base_src]['iotype'] in iotypes:
-                self.add_edge(base_src, srcpath)
-                added_edges.append((base_src, srcpath))
+                if self.in_degree(srcpath) == 0:
+                    self.add_edge(base_var(self, srcpath), srcpath)
+                    #self.remove_edge(srcpath, base_var(self, srcpath))
 
         if destpath == base_dest:
             pass
         else:  # destpath is a subvar
             if destpath not in self:
-                self.add_node(destpath, basevar=base_dest, **self.node[base_dest])
+                self.add_subvar(destpath)
                 added_nodes.append(destpath)
-            if self.node[base_dest].get('boundary'):
-                iotypes = ('out', 'state', 'residual')
-            else:
-                iotypes = ('in', 'state')
-            if self.node[base_dest]['iotype'] in iotypes:
-                self.add_edge(destpath, base_dest)
-                added_edges.append((destpath, base_dest))
 
         if check:
             try:
@@ -544,7 +434,7 @@ class DependencyGraph(nx.DiGraph):
         """ Adds a subvar node to the graph, properly connecting
         it to its basevar.
         """
-        base = self.base_var(subvar)
+        base = base_var(self,subvar)
         if base not in self:
             raise RuntimeError("can't find basevar '%s' in graph" % base)
         elif subvar in self:
@@ -553,17 +443,65 @@ class DependencyGraph(nx.DiGraph):
 
         self.add_node(subvar, basevar=base, **self.node[base])
         if is_boundary_node(self, base):
-            u, v = base, subvar
+            if is_input_node(self, base):
+                self.add_edge(base, subvar)
+            else:
+                self.add_edge(subvar, base)
         else: # it's a var of a child component
-            u, v = subvar, base
-
-        if is_input_node(self, base):
-            self.add_edge(u, v)
-        else:
-            self.add_edge(v, u)
+            if is_input_node(self, base):
+                self.add_edge(subvar, base)
+            else:
+                self.add_edge(base, subvar)
 
         return subvar
 
+    def add_connected_subvar(self, subvar):
+        """ Adds a subvar node to the graph, properly connecting
+        it to its basevar and to anything that its basevar is connected to.
+        """
+        base = base_var(self,subvar)
+        if base not in self:
+            raise RuntimeError("can't find basevar '%s' in graph" % base)
+        elif subvar in self:
+            # adding something that's already there
+            return subvar
+
+        diff = subvar[len(base):]
+        
+        self.add_node(subvar, basevar=base, **self.node[base])
+        if is_boundary_node(self, base):
+            if is_input_node(self, base):
+                #self.add_edge(base, subvar)
+                for s in self.successors(base):
+                    if s == subvar or base_var(self, s) == base:
+                        continue
+                    self.add_subvar(s+diff)
+                    self.add_edge(subvar, s+diff, conn=True)
+            else:
+                #self.add_edge(subvar, base)
+                for p in self.predecessors(base):
+                    if p == subvar or base_var(self, p) == base:
+                        continue
+                    self.add_subvar(p+diff)
+                    self.add_edge(p+diff, subvar, conn=True)
+        else: # it's a var of a child component
+            if is_input_node(self, base):
+                #self.add_edge(subvar, base)
+                for p in self.predecessors(base):
+                    if p == subvar or base_var(self, p) == base:
+                        continue
+                    self.add_subvar(p+diff)
+                    self.add_edge(p+diff, subvar, conn=True)
+            else:
+                #self.add_edge(base, subvar)
+                for s in self.successors(base):
+                    if s == subvar or base_var(self, s) == base:
+                        continue
+                    self.add_subvar(s+diff)
+                    self.add_edge(subvar, s+diff, conn=True)
+        
+        return subvar
+    
     def disconnect(self, srcpath, destpath=None):
 
         if destpath is None:
@@ -829,6 +767,10 @@ class DependencyGraph(nx.DiGraph):
 
             for group in loops:
                 _break_loop(csub, group)
+                
+        # get rid of any self loops
+        to_remove = [(u,v) for u,v in csub.edges() if u == v]
+        csub.remove_edges_from(to_remove)
 
         return nx.topological_sort(csub)
 
@@ -942,7 +884,7 @@ class DependencyGraph(nx.DiGraph):
                                            'residuals': [],
                                            'states': []}
 
-                        basevar = self.base_var(target)
+                        basevar = base_var(self,target)
                         if basevar not in basevars:
                             comps[comp]['inputs'].append(var)
 
@@ -958,7 +900,7 @@ class DependencyGraph(nx.DiGraph):
                                        'residuals': [],
                                        'states': []}
 
-                    basevar = self.base_var(src)
+                    basevar = base_var(self,src)
                     if basevar not in basevars:
                         comps[comp]['outputs'].append(var)
                         if src == basevar:
@@ -992,10 +934,85 @@ class DependencyGraph(nx.DiGraph):
         conns.extend([(u,v) for u,v in list_driver_connections(self)])
         convars = set([u for u,v in conns])
         convars.update([v for u,v in conns])
-        convars.update([self.base_var(v) for v in convars])
+        convars.update([base_var(self,v) for v in convars])
         to_remove = [v for v in self.nodes_iter()
                          if v not in convars and is_var_node(self,v)]
         self.remove_nodes_from(to_remove)
+
+    def get_pruned(self):
+        """Return a copy of the graph with all unconnected 
+        var nodes (except states) removed.
+        """
+        g = self.subgraph(self.nodes_iter())
+
+        for node, data in g.nodes(data=True):
+            if 'comp' in data:
+                for base_in in g.predecessors(node):
+                    if not (g.node[base_in].get('basevar') or g.node[base_in].get('iotype') == 'state'):
+                        if g.in_degree(base_in) == 0 and g.out_degree(base_in) == 1:
+                            g.remove_node(base_in)
+
+                for base_out in g.successors(node):
+                    if not (g.node[base_out].get('basevar') or g.node[base_out].get('iotype') == 'state'):
+                        if g.in_degree(base_out) == 1 and g.out_degree(base_out) == 0:
+                            g.remove_node(base_out)
+
+            elif 'boundary' in data:
+                if g.degree(node) == 0:
+                    g.remove_node(node)
+
+        return g
+
+    def add_param(self, drvname, param):
+
+        if drvname:
+            param = fix_single_tuple(param)
+            if isinstance(param, tuple):
+                self.add_edge(drvname, self.add_subvar(param[0]),
+                              drv_conn=drvname)
+
+                # now connect the first member of the param group as a 
+                # source for all of the other members
+                for i,p in enumerate(param[1:]):
+                    if self.has_edge(param[0], p):
+                        self[param[0]][p]['drv_conn'] = drvname
+                    else:
+                        self.add_edge(param[0], self.add_subvar(p),
+                                      conn=True, drv_conn_ext=drvname)
+            else:
+                self.add_edge(drvname, self.add_subvar(param),
+                              drv_conn=drvname)
+
+    def remove_param(self, drvname, param):
+        if drvname:
+            param = fix_single_tuple(param)
+
+            if isinstance(param, tuple):
+                self.remove_edge(drvname, param[0])
+
+                # now disconnect the first member of the param group 
+                # from all of the other members
+                for i,p in enumerate(param[1:]):
+                    ## if it was a connection before adding param,
+                    ## don't remove edge
+                    #if 'conn' in self[param[0]][p]:
+                    #    del self[param[0]][p]['drv_conn_ext']
+                    #else:
+                    self.remove_edge(param[0], p)
+            else:
+                self.remove_edge(drvname, param)
+
+    def add_driver_input(self, drvname, vname):
+        # use this to add driver connections from objectives
+        # and constraints to a driver
+
+        if drvname:
+            self.add_edge(self.add_subvar(vname), drvname, 
+                          drv_conn=drvname)
+
+    def remove_driver_input(self, drvname, vname):
+        if drvname:
+            self.remove_edge(vname, drvname)
 
     # The following group of methods are overridden so we can
     # call config_changed when the graph structure is modified
@@ -1383,7 +1400,8 @@ def get_node_boundary(g, nodes):
 
 def collapse_nodes(g, collapsed_name, nodes, remove=True):
     """Collapse the given set of nodes into a single
-    node with the specified name.
+    node with the specified name. The node for the collapsed
+    name must be preexisting.
     """
     in_edges, out_edges = \
                   get_edge_boundary(g, nodes)
@@ -1409,7 +1427,7 @@ def collapse_nodes(g, collapsed_name, nodes, remove=True):
 def collapse_driver(g, driver, excludes=()):
     """For the given driver object, collapse the
     driver's iteration set nodes into a single driver
-    system node.
+    system node. (this only works on component graphs)
     """
     nodes = driver.get_full_nodeset()
     nodes.remove(driver.name)
@@ -1418,77 +1436,127 @@ def collapse_driver(g, driver, excludes=()):
 
     return collapse_nodes(g, driver.name, nodes)
 
+def collapse_subdrivers(g, names, subdrivers):
+    """collapse subdriver iteration sets into single nodes in a
+    reduced graph.
+    """
+    # collapse all subdrivers in our graph
+    itercomps = {}
+    itercomps['#parent'] = set(names)
+
+    for comp in subdrivers:
+        cnodes = set([c.name for c in comp.iteration_set()])
+        #if hasattr(comp, 'list_param_group_targets'):
+            #targs = []
+            #for p in comp.list_param_group_targets():
+                #if isinstance(p, tuple):
+                    #targs.append(p[0])
+                #else:
+                    #targs.append(p)
+            #cnodes.extend([t for t in targs if t in g])
+        itercomps[comp.name] = cnodes
+
+    for child_drv in subdrivers:
+        excludes = set()
+        for name, comps in itercomps.items():
+            if name != child_drv.name:
+                for cname in comps:
+                    if cname in itercomps[child_drv.name]:
+                        excludes.add(cname)
+
+        collapse_driver_reduced(g, child_drv, excludes)
+
+    # now remove any comps that are shared by subdrivers but are not found
+    # in our workflow
+    to_remove = set()
+    for name, comps in itercomps.items():
+        if name != '#parent':
+            for comp in comps:
+                if comp not in itercomps['#parent']:
+                    to_remove.add(comp)
+
+    g.remove_nodes_from(to_remove)
+
+def collapse_driver_reduced(g, driver, excludes=()):
+    """For the given driver object, collapse the
+    driver's iteration set nodes into a single driver
+    system node in a reduced graph.
+    """
+    excludes = set(excludes)
+    excludes.add(driver.name)
+    names = [c.name for c in driver.iteration_set()]
+    names.append(driver.name)
+    nodes = [n for n in internal_nodes(g, names)
+                if n not in excludes]
+
+    collapse_nodes(g, driver.name, nodes)
+    g.node[driver.name]['comp'] = True
+
 def internal_nodes(g, comps):
     """Returns a set of nodes containing the given component
-    nodes, plus any variable nodes between them.
+    nodes, plus any variable nodes between them that are not 
+    connected to any external nodes.
     """
     nodes = set(comps)
-    for comp1 in comps:
-        for comp2 in comps:
-            if comp1 != comp2:
-                outs1 = set([v for u,v in g.edges_iter(comp1)])
-                ins2 = set([u for u,v in g.in_edges_iter(comp2)])
-                nodes.update(outs1.intersection(ins2))
+    ins = set()
+    outs = set()
+
+    for comp in comps:
+        outs.update(g.successors_iter(comp))
+        ins.update(g.predecessors_iter(comp))
+
+    inner = outs.intersection(ins)
+    
+    to_remove = set()
+    for var in inner:
+        if set(g.successors(var)).difference(nodes):
+            to_remove.add(var)
+        if set(g.predecessors(var)).difference(nodes):
+            to_remove.add(var)
+    
+    inner = inner - to_remove
+
+    nodes.update(inner)
 
     return nodes
 
-def transitive_closure(g):
-    """Return a set of edge tuples where the
-    existence of a tuple (u,v) means that v depends
-    on u, either directly or indirectly.  Note that this will
-    be slow for large dense graphs.
-    """
-    edges = set()
-    dfs = nx.dfs_edges
-
-    for node in g.nodes_iter():
-        edges.update([(node, v) for u,v in dfs(g, node)])
-
-    return edges
-
-# this could be optimized a bit for speed, but we only use it
-# for small graphs, so performance isn't an issue
-def gsort(deps, names):
+def gsort(g, names):
     """Return a sorted version of the given names
     iterator, based on dependency specified by the
-    given set of dependencies.
+    given directed graph.
     """
-
-    def gorder(n1, n2):
-        if (n1,n2) in deps:
-            return -1
-        elif (n2,n1) in deps:
-            return 1
-        return 0
-
-    # get all names that actually have a graph dependency
-    depnames = set([u for u,v in deps])
-    depnames.update([v for u,v in deps])
-
-    ordered = [n for n in names if n in depnames]
-
-    # get the sorted list of names with dependencies. Note that this
-    # is a stable sort, so original order of the list will be
-    # preserved unless there's a dependency violation.
-    sortlist = sorted(ordered, key=cmp_to_key(gorder))
-
-    # reverse the list so we can pop from it below
-    rev = sortlist[::-1]
-
-    # now take the names without dependencies and insert them in the
-    # proper location in the list.  Since they have no dependencies,
-    # they can be inserted anywhere in the list without messing up
-    # the sort
-
-    final = [None]*len(names)
-    for i,n in enumerate(names):
-        if n in depnames:
-            final[i] = rev.pop()
+    if len(names) < 2:
+        return names
+    
+    empty = set()
+    nset = set(names)
+    final = list(names)
+    ups = {}
+    
+    for name in names:
+        downs = [v for u,v in nx.dfs_edges(g, name) if v in nset]
+        for d in downs:
+            if d not in ups.get(name, empty):  # handle cycles
+                ups.setdefault(d, set()).add(name)
+           
+    i = 0
+    while True:
+        tmp = final[:i]
+        tset = set(tmp)
+        unames = [f for f in final[i+1:] if f in ups.get(final[i],empty) and f not in tset]
+        if unames:
+            tmp.extend(unames)
+            tmp.extend([f for f in final[i:] if f not in unames])
         else:
-            final[i] = n
-
+            tmp.extend(final[i:])
+            i += 1
+            
+        if i == len(names):
+            break
+        final = tmp
+        
     return final
-
+                      
 def list_data_connections(graph):
     """Return all edges that are data connections"""
     return [(u,v) for u,v,data in graph.edges_iter(data=True)
@@ -1516,11 +1584,13 @@ def _add_collapsed_node(g, src, dests):
     """
     dests = list(dests)
     if '@' in src: # src is a driver node
-        meta = g.node[dests[0]]
-        newname = (dests[0], tuple(dests))
-        src = src.split('@')[0]
+        src, vsrc = src.split('@', 1)
+        meta = g.node[vsrc]
+        newname = (vsrc, tuple(dests))
+        drvsrc = src
     else:
         meta = g.node[src]
+        drvsrc = None
 
         for i, dest in enumerate(dests):
             if '@' in dest: # dest is a driver node
@@ -1562,15 +1632,22 @@ def _add_collapsed_node(g, src, dests):
     # and make sure its source, dests are components
     for p in g.predecessors(newname):
         cname = p.split('.', 1)[0]
+        if cname not in g:
+            continue
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
-            g.add_edge(cname, newname)
+            if p == cname or p in g[cname]:
+                if drvsrc == p:
+                    g.add_edge(cname, newname, drv_conn=drvsrc)
+                else:
+                    g.add_edge(cname, newname)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
-             g.add_edge(newname, cname)
+            if s == cname or cname in g[s]:
+                g.add_edge(newname, cname)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent
@@ -1605,7 +1682,7 @@ def collapse_connections(orig_graph):
         if is_driver_node(g, u):
             drvconns[i] = ('%s@%s' % (u,v), v)
             dest2src[v] = drvconns[i][0]
-        else:
+        elif is_driver_node(g, v):
             drvconns[i] = (u, '%s@%s' % (v,u))
 
     for u,v in drvconns:
@@ -1745,18 +1822,39 @@ def relevant_subgraph(g, srcs, dests, keep=()):
     to_add = [s for s in srcs if s not in g]
     to_add.extend([d for d in dests if d not in g])
 
-    if to_add:
-        for node in to_add:
-            base = g.base_var(node)
-            if base == node:
-                g.add_node(node, **g.node[base])
-            else:
-                g.add_node(node, basevar=base, **g.node[base])
-            # connect it to its component
+    for node in to_add:
+        base = base_var(g, node)
+        if base == node:
+            g.add_node(node, **g.node[base])
+        else:
+            g.add_node(node, basevar=base, **g.node[base])
+        # connect it to its component
+        if '.' in node: # it's a component var. connect to its component
             if node in srcs:
                 g.add_edge(node, node.split('.',1)[0])
             else:
                 g.add_edge(node.split('.',1)[0], node)
+        elif base in g:
+            if node in srcs:
+                for s in g.successors(base):
+                    if base_var(g, s) == base:
+                        continue
+                    dest = s+node[len(base):]
+                    if dest not in g:
+                        g.add_node(dest, basevar=s, **g.node[s])
+                        g.add_edge(dest, s)
+                    g.add_edge(node, dest, conn=True)
+                    g.add_edge(base, node)
+            else:
+                for p in g.predecessors(base):
+                    if base_var(g, p) == base:
+                        continue
+                    src = p+node[len(base):]
+                    if src not in g:
+                        g.add_node(src, basevar=p, **g.node[p])
+                        g.add_edge(p, src)
+                    g.add_edge(src, node, conn=True)
+                    g.add_edge(node, base)
 
     # create a 'fake' driver loop and grab
     # everything that's strongly connected to
@@ -1766,6 +1864,10 @@ def relevant_subgraph(g, srcs, dests, keep=()):
         g.add_edge('@driver', src)
     for dest in dests:
         g.add_edge(dest, '@driver')
+    for k in keep:
+        if '.' not in k:
+            g.add_edge('@driver', k)
+            g.add_edge(k, '@driver')
 
     for comps in strongly_connected_components(g):
         if '@driver' in comps:
@@ -1836,19 +1938,19 @@ def get_reduced_subgraph(g, compnodes):
     to those nodes.
     """
     compset = set(compnodes)
-    vnodes = set([])
+    vnodes = set()
     edges = g.edges()
     vnodes.update([u for u,v in edges if v in compset])
     vnodes.update([v for u,v in edges if u in compset])
     return g.subgraph(vnodes.union(compset))
 
-def get_nondiff_groups(graph, scope):
+def get_nondiff_groups(graph, cgraph, scope):
     """Return a modified graph with connected
     nondifferentiable systems grouped together.
     """
     groups = []
 
-    nondiff = set([n for n,data in graph.nodes_iter(data=True)
+    nondiff = set([n for n,data in cgraph.nodes_iter(data=True)
                     if 'system' in data 
                         and not data['system'].is_differentiable()])
 
@@ -1858,8 +1960,10 @@ def get_nondiff_groups(graph, scope):
     for src, target in graph.edges_iter():
         if 'comp' in data[src]:
             comp, var = src, target
-        else:
+        elif 'comp' in data[target]:
             var, comp = src, target
+        else:
+            raise RuntimeError("malformed graph in get_nondiff_groups()")
 
         # Can't include the containing assembly as a nondiff block.
         if data[var].get('boundary'):
@@ -1880,7 +1984,7 @@ def get_nondiff_groups(graph, scope):
     # connected to nondiff systems on both sides
 
     # get the component graph for the given reduced graph
-    cgraph = reduced2component(graph)
+    #cgraph = reduced2component(graph)
 
     # Groups any connected non-differentiable blocks. Each block is a
     # set of component names.
@@ -1940,26 +2044,6 @@ def connect_subvars_to_comps(g):
                         g.remove_edge(base_out, sub_out)
 
 
-def simple_prune(g):
-    """Remove all unconnected var nodes (except states).
-    """
-    for node, data in g.nodes(data=True):
-        if 'comp' in data:
-            for base_in in g.predecessors(node):
-                if not (g.node[base_in].get('basevar') or g.node[base_in].get('iotype') == 'state'):
-                    if g.in_degree(base_in) == 0 and g.out_degree(base_in) == 1:
-                        g.remove_node(base_in)
-
-            for base_out in g.successors(node):
-                if not (g.node[base_out].get('basevar') or g.node[base_out].get('iotype') == 'state'):
-                    if g.in_degree(base_out) == 1 and g.out_degree(base_out) == 0:
-                        g.remove_node(base_out)
-
-        elif 'boundary' in data:
-            if g.degree(node) == 0:
-                g.remove_node(node)
-
-
 def prune_framework_vars(g):
     g.remove_nodes_from([n for n,data in g.nodes_iter(data=True)
                                     if 'framework_var' in data])
@@ -1993,7 +2077,7 @@ def add_boundary_comps(g):
     g.add_node('#out', comp=True)
     
     for node, data in g.nodes_iter(data=True):
-        if 'boundary' in data and 'basevar' not in data:
+        if 'boundary' in data:# and 'basevar' not in data:
             if data['iotype'] == 'in':
                 g.add_edge('#in', node)
             elif data['iotype'] == 'out':
@@ -2002,33 +2086,65 @@ def add_boundary_comps(g):
     return g
         
 def collapse_comps(g, collapsed_name, comps):
-    nodes, in_vars, out_vars = comp_boundary(g, comps)
+    return collapse_nodes(g, collapsed_name, 
+                          internal_nodes(g, comps))
 
-    collapse_nodes(g, collapsed_name, nodes)
-
-    return in_vars, out_vars
-
-def comp_boundary(g, comps):
-    """Return the internal nodes, input nodes and
-    output nodes for the given group of comps.
+def fix_dangling_vars(g):
+    """If there are any dangling var nodes left in the
+    collapsed graph g, connect them to a var comp.
     """
-    nodes = comp_group_nodes(g, comps)
-    in_edges, out_edges = \
-                  get_edge_boundary(g, nodes)
-    in_vars = set([v for u,v in in_edges])
-    out_vars = set([u for u,v in out_edges])
+    to_add = []
+    for node, data in g.nodes(data=True):
+        if 'comp' not in data:
+            if g.in_degree(node) == 0:
+                #to_add.append(('@in', node))
+                if data['iotype'] == 'in':
+                    newname = node[0]
+                else:
+                    newname = '@'+node[0]
+                to_add.append((newname, node))
+                g.add_node(newname, comp='invar')
+            if g.out_degree(node) == 0:
+                #to_add.append((node, '@out'))
+                if data['iotype'] == 'out':
+                    newname = node[0]
+                else:
+                    newname = '@'+node[0]
+                to_add.append((node, newname))
+                g.add_node(newname, comp='outvar')
+    
+    if to_add:
+        # g.add_node('@in', comp='invar')
+        # g.add_node('@out', comp='outvar')
+        g.add_edges_from(to_add)
+        
+    # if g.degree('@out') == 0:
+    #     g.remove_node('@out')
+        
+    # if g.degree('@in') == 0:
+    #     g.remove_node('@in')
 
-    nodes = nodes.difference(in_vars)
-    nodes = nodes.difference(out_vars)
-
-    return nodes, in_vars, out_vars
-
-def comp_group_nodes(g, comps):
-    """For a given list of comps, return those comps plus
-    all variable nodes that are connected to them.
+def fix_duplicate_dests(g):
+    """If a dest has multiple sources, there will be multiple
+    varnodes for it in the reduced graph, so consolidate
+    those.
     """
-    nodes = set(comps)
-    for comp in comps:
-        nodes.update(g.predecessors(comp))
-        nodes.update(g.successors(comp))
-    return nodes
+    dests2node = {}
+    drivers = []
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' not in data:
+            dests2node.setdefault(node[1], set()).add(node)
+        elif is_driver_node(g, node):
+            drivers.append(node)
+                
+    for drv in drivers:
+        for s in g.successors(drv):
+            if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in g:
+                g.remove_node(s)
+                        
+def connects_to(g, src, dest):
+    """Return True if dest is downstream of src."""
+    for u,v in nx.bfs_edges(g, src):
+        if v == dest:
+            return True
+    return False

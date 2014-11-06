@@ -288,8 +288,6 @@ def is_differentiable_val(val):
         return True
     elif isinstance(val, ndarray) and str(val.dtype).startswith('float'):
         return True
-    elif IVariableTree.providedBy(val):
-        return all([is_differentiable_val(getattr(val,k)) for k in val.list_vars()])
     return False
 
 def flattened_size(name, val, scope=None):
@@ -346,12 +344,6 @@ def flattened_value(name, val):
         return array([val])
     elif isinstance(val, ndarray):
         return val.flatten()
-    elif IVariableTree.providedBy(val):
-        vals = []
-        for key in sorted(val.list_vars()):  # Force repeatable order.
-            value = getattr(val, key)
-            vals.extend(flattened_value('.'.join((name, key)), value))
-        return array(vals)
     elif isinstance(val, TraitListObject): #FIXME: list must contain floats
         # HACK: just check first value
         if len(val) > 0 and (isinstance(val[0], int_types) or \

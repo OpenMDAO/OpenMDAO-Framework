@@ -12,17 +12,18 @@ from networkx.algorithms.dag import is_directed_acyclic_graph
 from networkx.algorithms.components import strongly_connected_components
 
 # pylint: disable-msg=E0611,F0401
+from openmdao.main.mp_support import has_interface
 from openmdao.main.case import Case
 from openmdao.main.mpiwrap import MPI, MPI_info
 from openmdao.main.systems import SerialSystem, ParallelSystem, \
-                                  OpaqueSystem, \
+                                  OpaqueSystem, VarSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   simple_node_iter, get_nondiff_groups, \
-                                   internal_nodes, collapse_nodes
+                                   get_nondiff_groups, collapse_subdrivers, \
+                                   internal_nodes, collapse_nodes, simple_node_iter
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import IVariableTree
+from openmdao.main.interfaces import IVariableTree, IDriver
 
 __all__ = ['Workflow']
 
@@ -203,6 +204,32 @@ class Workflow(object):
             # the parts of the tuple.
             raise err[0], err[1], err[2]
 
+    def _system_reset_needed(self, inputs, outputs, force_regen):
+        if force_regen or not self.scope._derivs_required or self._system is None:
+            return True
+        
+        if inputs is None and self._calc_gradient_inputs is not None:
+            return True
+        
+        if outputs is None and self._calc_gradient_outputs is not None:
+            return True
+        
+        wfgraph = self._reduced_graph
+        oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
+                                     if 'comp' not in d and wfgraph.out_degree(n) > 0
+                                                        and wfgraph.in_degree(n) > 0])
+        
+        oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
+                                     if 'comp' not in d and wfgraph.in_degree(n) > 0]) 
+        
+        if set(inputs) - set(oldins):
+            return True
+
+        if set(outputs) - set(oldouts):
+            return True
+                       
+        return False
+        
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=False, options=None):
         """Returns the Jacobian of derivatives between inputs and outputs.
@@ -230,49 +257,14 @@ class Workflow(object):
 
         parent = self.parent
 
-        # Global override for user testing
-        reset = force_regen
-
-        if not self.scope._derivs_required:
-            reset = True
-
-        # TODO - Support automatic determination of mode
-
-        if self._system is None:
-            reset = True
-        else:
-            uvec = self._system.vec['u']
-
-        if reset is False:
-            if inputs:
-                for inp in inputs:
-                    if inp not in uvec:
-                        reset = True
-                        break
-            elif self.scope._setup_inputs != inputs:
-                reset = True
-
-            if reset is False:
-                if outputs:
-                    for out in outputs:
-                        if out not in uvec:
-                            reset = True
-                            break
-                elif self.scope._setup_outputs != outputs:
-                    reset = True
-
+        # if inputs aren't specified, use parameters
         if inputs is None:
             if hasattr(parent, 'list_param_group_targets'):
                 inputs = parent.list_param_group_targets()
             if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
-        elif reset is False:
-            for inp in inputs:
-                if inp not in uvec:
-                    reset = True
-                    break
-
+                
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
             outputs = []
@@ -280,18 +272,26 @@ class Workflow(object):
                 outputs.extend(parent.list_objective_targets())
             if hasattr(parent, 'list_constraint_targets'):
                 outputs.extend(parent.list_constraint_targets())
-        elif reset is False:
-            for out in outputs:
-                if out not in uvec:
-                    reset = True
-                    break
+            if not outputs:
+                msg = "No outputs given for derivatives."
+                self.scope.raise_exception(msg, RuntimeError)
 
         inputs  = [_fix_tups(x) for x in inputs]
         outputs = [_fix_tups(x) for x in outputs]
+                
+        reset = self._system_reset_needed(inputs, outputs, force_regen)
+
+        self._calc_gradient_inputs = inputs[:]
+        self._calc_gradient_outputs = outputs[:]
 
         if reset:
-            # recreate system hierarchy
-            self.scope._setup(inputs=inputs, outputs=outputs)
+            # recreate system hierarchy from the top
+
+            top = self.scope
+            # while top.parent is not None:
+            #     top = top.parent
+
+            top._setup(inputs=inputs, outputs=outputs)
 
 
         if options is None:
@@ -782,6 +782,8 @@ class Workflow(object):
         (dependencies, etc.) has changed.
         """
         self._system = None
+        self._calc_gradient_inputs = None
+        self._calc_gradient_outputs = None
 
     def remove(self, comp):
         """Remove a component from this Workflow by name."""
@@ -809,6 +811,8 @@ class Workflow(object):
 
     def pre_setup(self):
         self._reduced_graph = None
+        for comp in self:
+            comp.pre_setup()
 
     def setup_systems(self, system_type):
         """Get the subsystem for this workflow. Each
@@ -818,56 +822,80 @@ class Workflow(object):
         """
 
         scope = self.scope
-        name2collapsed = scope.name2collapsed
-        reduced = self.parent.get_reduced_graph()
-        reduced = reduced.subgraph(reduced.nodes_iter())
-        added = set()
+        drvname = self.parent.name
+
+        parent_graph = self.parent.get_reduced_graph()
+        reduced = parent_graph.subgraph(parent_graph.nodes_iter())
+        self._reduced_graph = reduced
 
         # remove our driver from the reduced graph
-        if self.parent.name in reduced:
-            reduced.remove_node(self.parent.name)
+        #if self.parent.name in parent_graph:
+        reduced.remove_node(drvname)
 
         params = []
-        if hasattr(self.parent, 'list_param_group_targets'):
-            params = self.parent.list_param_group_targets()
+        for s in parent_graph.successors(drvname):
+            if parent_graph[drvname][s].get('drv_conn') == drvname:
+                params.append(s)
 
         # we need to connect a param comp node to all param nodes
-        for param in params:
-            if isinstance(param, tuple):
-                param = param[0]
+        for node in params:
+            param = node[0]
             reduced.add_node(param, comp='param')
-            reduced.add_edge(param, name2collapsed[param])
-            added.add(param)
+            reduced.add_edge(param, node)
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
-
-        if self.scope._setup_inputs is not None:
-            for param in self.scope._setup_inputs:
-                if isinstance(param, tuple):
-                    param = param[0]
-                if param not in reduced:
-                    reduced.add_node(param, comp='param')
-                    reduced.add_edge(param, name2collapsed.get(param,param))
-                    reduced.node[param]['system'] = \
-                               ParamSystem(scope, reduced, param)
-                added.add(param)
-
-        cgraph = reduced2component(reduced)
+            
+        outs = []
+        for p in parent_graph.predecessors(drvname):
+            if parent_graph[p][drvname].get('drv_conn') == drvname:
+                outs.append(p)
+            
+        if outs:
+            for out in outs:
+                vname = out[1][0]
+                if reduced.out_degree(vname) == 0:
+                    reduced.add_node(vname, comp='dumbvar')
+                    reduced.add_edge(out, vname)
+                    reduced.node[out]['system'] = \
+                               VarSystem(scope, reduced, vname)
 
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.
-        self.parent._collapse_subdrivers(cgraph)
+        collapse_subdrivers(reduced, self.get_names(full=True),
+                            self.subdrivers())
 
+        cgraph = reduced2component(reduced)
+
+        opaque_map = {} # map of all internal comps to collapsed
+                              # name of opaque system
         if self.scope._derivs_required:
             # collapse non-differentiable system groups into
             # opaque systems
-            for group in get_nondiff_groups(reduced, self.scope):
+            systems = {}
+            for group in get_nondiff_groups(reduced, cgraph, self.scope):
+                gtup = tuple(group)
                 system = OpaqueSystem(scope, reduced,
                                       cgraph.subgraph(group),
-                                      str(tuple(group)))
-                collapse_to_system_node(cgraph, system, tuple(group))
-                collapse_nodes(reduced, tuple(group), internal_nodes(reduced, group))
+                                      str(gtup))
+                systems[gtup] = system
+
+            for gtup, system in systems.items():
+                collapse_to_system_node(cgraph, system, gtup)
+                reduced.add_node(gtup, comp=True)
+                collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
+                reduced.node[gtup]['comp'] = True
+                for c in gtup:
+                    opaque_map[c] = gtup
+
+            # get rid of any back edges for opaque boundary nodes that originate inside
+            # of the opaque system
+            to_remove = []
+            for node in systems:
+                for s in reduced.successors(node):
+                    if node in reduced.predecessors(s):
+                        to_remove.append((s, node))
+            reduced.remove_edges_from(to_remove)
 
         if MPI and system_type == 'auto':
             self._auto_setup_systems(scope, reduced, cgraph)
@@ -878,16 +906,15 @@ class Workflow(object):
             self._system = SerialSystem(scope, reduced, cgraph,
                                         str(tuple(cgraph.nodes())))
 
-        self._system.set_ordering(params+[c.name for c in self])
+        self._system.set_ordering([p[0] for p in params]+
+                                  [c.name for c in self], opaque_map)
 
         self._system._parent_system = self.scope._reduced_graph.node[self.parent.name]['system']
 
         for comp in self:
-            added.update(comp.setup_systems())
+            comp.setup_systems()
 
         self._cycle_vars = get_cycle_vars(self._system)
-
-        return added
 
     def _auto_setup_systems(self, scope, reduced, cgraph):
         """
@@ -963,6 +990,10 @@ class Workflow(object):
                     nodeset.add(node)
 
         return nodeset
+
+    def subdrivers(self):
+        """Return a list of direct subdrivers in this workflow."""
+        return [c for c in self if has_interface(c, IDriver)]
 
 def get_cycle_vars(system):
     # examine the graph to see if we have any cycles that we need to

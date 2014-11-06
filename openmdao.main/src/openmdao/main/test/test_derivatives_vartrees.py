@@ -242,7 +242,7 @@ class TestDerivativeVarTreeSubAssembly(unittest.TestCase):
 
         # check for invalidation problems
         top.comp.ins.x1 = 123.4
-        top.comp.run()
+        top.run()
         self.assertEqual(top.comp.ins.x1, top.comp.comp1.ins.x1)
 
         #print top.comp.driver.workflow.calc_gradient(['ins.x1'], ['y'], mode='fd')
@@ -574,7 +574,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         try:
             J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
-            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['ins.x2']")
+            self.assertEqual(str(err), "'dis1 (1-dis1): does not provide analytical derivatives for outs.x2'")
         else:
             self.fail("exception expected")
 
@@ -586,7 +586,7 @@ class TestDerivativeVarTree(unittest.TestCase):
         try:
             J = top.driver.workflow.calc_gradient(mode='forward')
         except Exception as err:
-            self.assertEqual(str(err), "'dis2' doesn't provide analytical derivatives ['ins.x2']")
+            self.assertEqual(str(err), "'dis2 (1-dis2): does not provide analytical derivatives for ins.x2'")
         else:
             self.fail("exception expected")
 

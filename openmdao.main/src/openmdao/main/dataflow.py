@@ -1,14 +1,10 @@
 """ A workflow where the execution order is automatically inferred from the
 data connections."""
 
-#import networkx as nx
-from networkx.algorithms.components import strongly_connected_components
-from networkx.algorithms.dag import is_directed_acyclic_graph
-
 from openmdao.main.sequentialflow import SequentialWorkflow
 from openmdao.main.interfaces import IDriver
 from openmdao.main.mp_support import has_interface
-from openmdao.main.depgraph import transitive_closure, gsort
+from openmdao.main.depgraph import gsort
 
 __all__ = ['Dataflow']
 
@@ -63,8 +59,8 @@ class Dataflow(SequentialWorkflow):
             if has_interface(comp, IDriver):
                 comp._collapse_subdrivers(collapsed_graph)
 
-        alldeps = transitive_closure(collapsed_graph)
-        self._fullnames = gsort(alldeps, self._fullnames)
+        fnames = [n for n in self._fullnames if n in collapsed_graph]
+        self._fullnames = gsort(collapsed_graph, fnames)
 
         self._collapsed_graph = collapsed_graph
 

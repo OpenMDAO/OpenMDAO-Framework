@@ -8,14 +8,15 @@ from openmdao.main.array_helpers import flattened_size, \
                                         flattened_value, get_val_and_index, get_index
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.main.expreval import ExprEvaluator, ConnectedExprEvaluator, _expr_dict
-from openmdao.main.interfaces import implements, IComponent, IVariableTree, \
+from openmdao.main.interfaces import implements, IComponent, IContainer, IVariableTree, \
                                      IAssembly, IPseudoComp
 from openmdao.main.printexpr import transform_expression, print_node
 from openmdao.main.mp_support import has_interface
 from openmdao.main.mpiwrap import MPI_info
+from openmdao.main.index import deep_getattr
 
 from openmdao.units.units import PhysicalQuantity, UnitsOnlyPQ
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types, complex_or_real_types
 
 
 
@@ -288,8 +289,8 @@ class PseudoComponent(object):
             scope.connect(src, dest)
 
         if driver is not None:
-            scope._depgraph.add_edge(self.name+'.out0', driver.name,
-                                     drv_conn=driver.name)
+            scope._depgraph.add_driver_input(driver.name, 
+                                             self.name+'.out0')
 
     def run(self, ffd_order=0, case_uuid=''):
         if self._negate:
@@ -370,6 +371,8 @@ class PseudoComponent(object):
             for ref, in_name in self._inmap.items():
                 setattr(self, in_name,
                         ExprEvaluator(ref).evaluate(self.parent))
+                if has_interface(getattr(self, in_name), IContainer):
+                    getattr(self, in_name).name = in_name
 
             # set the initial value of the output
             setattr(self, 'out0', self._srcexpr.evaluate())
@@ -384,6 +387,9 @@ class PseudoComponent(object):
 
     def pre_setup(self):
         self.ensure_init()
+
+    def setup_depgraph(self, dgraph):
+        pass
 
     def setup_systems(self):
         return ()
@@ -415,11 +421,11 @@ class PseudoComponent(object):
 
     def set_flattened_value(self, path, value):
         self.ensure_init()
-        val = getattr(self, path.split('[',1)[0])
+        val = deep_getattr(self, path.split('[',1)[0])
         idx = get_index(path)
         if isinstance(val, int_types):
             pass  # fall through to exception
-        if isinstance(val, real_types):
+        if isinstance(val, complex_or_real_types):
             if idx is None:
                 setattr(self, path, value[0])
                 return

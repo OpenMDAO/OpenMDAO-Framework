@@ -8,6 +8,7 @@ from openmdao.main.array_helpers import offset_flat_index, \
                                         get_flattened_index
 from openmdao.main.interfaces import IImplicitComponent
 from openmdao.util.typegroups import int_types
+from openmdao.util.graph import base_var
 
 
 class VecWrapperBase(object):
@@ -48,6 +49,24 @@ class VecWrapperBase(object):
                 # also add 1 item tuple form, since that's used for derivative inputs/outputs
                 self._info[(name,)] = info
                 self._subviews.add((name,))
+
+    def _add_subview(self, scope, name):
+        var = scope._var_meta[name]
+        name2collapsed = scope.name2collapsed
+
+        sz = var['size']
+        if sz > 0 and var.get('flat', True):
+            idx = var['flat_idx']
+            try:
+                basestart = self.start(name2collapsed[var['basevar']])
+            except KeyError:
+                mpiprint("name: %s, base: %s, vars: %s" %
+                         (name, var['basevar'], self._info.keys()))
+                raise
+            sub_idx = offset_flat_index(idx, basestart)
+            substart = get_flat_index_start(sub_idx)
+            self._info[name] = (self.array[sub_idx], substart)
+            self._subviews.add(name)
 
     def __getitem__(self, name):
         return self._info[name][0]
@@ -103,8 +122,11 @@ class VecWrapperBase(object):
         """
         return idx_merge([self.indices(n) for n in names])
 
-    def indices(self, name):
+    def indices(self, scope, name):
         """Return the index array corresponding to a single name."""
+        if name not in self._info:
+            if base_var(scope._depgraph, name) in self._info:
+                self._add_subview(scope, name)
         view, start = self._info[name]
         return petsc_linspace(start, start+view.size)
 
@@ -233,27 +255,28 @@ class VecWrapper(VecWrapperBase):
 
         # now add views for subvars that are subviews of their
         # basevars
-        for name, var in allvars.items():
-            if name not in vector_vars:
-                sz = var['size']
-                if sz > 0 and var.get('flat', True):
-                    idx = var['flat_idx']
-                    try:
-                        basestart = self.start(name2collapsed[var['basevar']])
-                    except KeyError:
-                        mpiprint("name: %s, base: %s, vars: %s" %
-                                 (name, var['basevar'], self._info.keys()))
-                        raise
-                    sub_idx = offset_flat_index(idx, basestart)
-                    substart = get_flat_index_start(sub_idx)
-                    self._info[name] = (self.array[sub_idx], substart)
-                    self._subviews.add(name)
-
-                    if self.array[sub_idx].size != sz:
-                        raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
-                                             (system.name, name,
-                                             list(self.bounds(name)),
-                                             sub_idx,self.array[sub_idx].size))
+        if vector_vars:
+            for name, var in allvars.items():
+                if name not in vector_vars:
+                    sz = var['size']
+                    if sz > 0 and var.get('flat', True):
+                        idx = var['flat_idx']
+                        try:
+                            basestart = self.start(name2collapsed[var['basevar']])
+                        except KeyError:
+                            mpiprint("name: %s, base: %s, vars: %s" %
+                                     (name, var['basevar'], self._info.keys()))
+                            raise
+                        sub_idx = offset_flat_index(idx, basestart)
+                        substart = get_flat_index_start(sub_idx)
+                        self._info[name] = (self.array[sub_idx], substart)
+                        self._subviews.add(name)
+    
+                        if self.array[sub_idx].size != sz:
+                            raise RuntimeError("size mismatch: in system %s, view for %s is %s, idx=%s, size=%d" %
+                                                 (system.name, name,
+                                                 list(self.bounds(name)),
+                                                 sub_idx,self.array[sub_idx].size))
 
         # TODO: handle cases where we have overlapping subvars but no basevar
 
@@ -306,6 +329,22 @@ class VecWrapper(VecWrapperBase):
                     array_val[:] = scope.get_flattened_value(name)
                 #mpiprint("getting %s from scope (%s)" % (name, array_val))
 
+    def set_from_scope_complex(self, scope, vnames=None):
+        """Get the named values from the given scope and set flattened
+        versions of just the complex portion into our array.
+        """
+        if vnames is None:
+            vnames = self.keys()
+
+        for name in vnames:
+            array_val, start = self._info.get(name,(None,None))
+            if start is not None:
+                if isinstance(name, tuple):
+                    array_val[:] = scope.get_flattened_value(name[0]).imag
+                else:
+                    array_val[:] = scope.get_flattened_value(name).imag
+                #mpiprint("getting %s from scope (%s)" % (name, array_val))
+
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
         and set them into the given scope.
@@ -330,6 +369,34 @@ class VecWrapper(VecWrapperBase):
                 else:
                     scope.set_flattened_value(name, array_val)
                     done.add(name)
+
+    #def set_to_scope_complex(self, scope, vnames=None):
+        #"""Pull values for the given set of names out of our array
+        #and set them into the given scope.
+        #"""
+        #if vnames is None:
+            #vnames = self.keys()
+        #else:
+            #vnames = [n for n in vnames if n in self]
+
+        #done = set()
+        #for name in vnames:
+            #step, start = self._info.get(name,(None,None))
+            #if start is not None:
+                ##mpiprint("setting %s to scope: %s" % (str(name),array_val))
+                #if isinstance(name, tuple):
+                    #array_val = scope.get_flattened_value(name[0])
+                    #scope.set_flattened_value(name[0], array_val + step*1j)
+                    #done.add(name[0])
+                    #for dest in name[1]:
+                        #if dest not in done:
+                            #array_val = scope.get_flattened_value(dest)
+                            #scope.set_flattened_value(dest, array_val + step*1j)
+                            #done.add(dest)
+                #else:
+                    #array_val = scope.get_flattened_value(name)
+                    #scope.set_flattened_value(name, array_val + step*1j)
+                    #done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -387,6 +454,24 @@ class InputVecWrapper(VecWrapperBase):
 
     def _map_resids_to_states(self, system):
         pass
+    
+    def get_dests_by_comp(self):
+        """Return a dict of comp name keyed to a list of input nodes, with
+        any subvars removed that have basevars in the vector.
+        """
+        ret = OrderedDict()
+        for node, (start, view) in self._info.items():
+            if isinstance(node, tuple) and len(node) > 1:
+                src, dests = node
+                for d in dests:
+                    cname, _, vname = d.partition('.')
+                    ret.setdefault(cname, []).append(node)
+                        
+        for cname, in_nodes in ret.items():
+            bases = [n[0] for n in in_nodes if n[0].split('[',1)[0]==n[0]]
+            ret[cname] = [n for n in in_nodes if n[0] in bases or n[0].split('[',1)[0] not in bases]
+            
+        return ret
 
     def set_to_scope(self, scope, vnames=None):
         """Pull values for the given set of names out of our array
@@ -398,13 +483,35 @@ class InputVecWrapper(VecWrapperBase):
             vnames = [n for n in vnames if n in self]
 
         for name in vnames:
-            array_val, start = self._info.get(name,(None,None))
+            array_val, start = self._info.get(name,(None, None))
             if start is not None:
+                #print "SETTING %s to %s" % (name, array_val)
                 if isinstance(name, tuple):
                     for dest in name[1]:
                         scope.set_flattened_value(dest, array_val)
                 else:
                     scope.set_flattened_value(name, array_val)
+
+    def set_to_scope_complex(self, scope, vnames=None):
+        """Pull values for the given set of names out of our array
+        and set them into the given scope as the complex part of the value.
+        """
+        if vnames is None:
+            vnames = self.keys()
+        else:
+            vnames = [n for n in vnames if n in self]
+
+        for name in vnames:
+            step, start = self._info.get(name,(None, None))
+            
+            if start is not None:
+                if isinstance(name, tuple):
+                    for dest in name[1]:
+                        array_val = scope.get_flattened_value(dest)
+                        scope.set_flattened_value(dest, array_val + step*1j)
+                else:
+                    array_val = scope.get_flattened_value(name)
+                    scope.set_flattened_value(name, array_val + step*1j)
 
 
 class DataTransfer(object):
@@ -457,7 +564,7 @@ class DataTransfer(object):
                 self.scatter = SerialScatter(system.vec['u'], var_idxs,
                                              system.vec['p'], input_idxs)
 
-    def __call__(self, system, srcvec, destvec):
+    def __call__(self, system, srcvec, destvec, complex_step=False):
 
         if self.scatter is None and not self.noflat_vars:
             #mpiprint("dataxfer is a noop for system %s" % system.name)
@@ -472,22 +579,15 @@ class DataTransfer(object):
 
         #srcvec.array *= system.vec['u0'].array
         addv = mode = False
-        if system.mode == 'adjoint' and srcvec.name.endswith('du'):
+        if system.mode == 'adjoint' and srcvec.name.endswith('du') and \
+           complex_step == False:
             addv = True
             mode = True
             destvec, srcvec = srcvec, destvec
             dest, src = src, dest
 
         if self.scatter:
-            #mpiprint("SCATTERING %s to %s" % (srcvec.name, destvec.name))
-            #mpiprint("mode = %s" % system.mode)
-            #mpiprint("%s BEFORE:" % srcvec.name)
-            #srcvec.dump()
-            #mpiprint("%s BEFORE:" % destvec.name)
-            #destvec.dump()
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
-            #mpiprint("%s AFTER:" % destvec.name)
-            #destvec.dump()
 
         if self.noflat_vars:
             if MPI:

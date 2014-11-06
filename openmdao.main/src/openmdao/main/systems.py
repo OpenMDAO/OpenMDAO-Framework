@@ -9,20 +9,18 @@ from zope.interface import implements
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.mpiwrap import MPI, MPI_info, mpiprint, PETSc
-from openmdao.main.exceptions import RunStopped, NoFlatError
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
 from openmdao.main.linearsolver import ScipyGMRES, PETSc_KSP, LinearGS
 from openmdao.main.mp_support import has_interface
 from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
-from openmdao.main.depgraph import break_cycles, get_node_boundary, transitive_closure, gsort, \
-                                   collapse_nodes, simple_node_iter, get_reduced_subgraph, \
+from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
+                                   collapse_nodes, simple_node_iter, \
                                    internal_nodes, reduced2component
-from openmdao.main.array_helpers import get_val_and_index, get_flattened_index, \
-                                        get_var_shape, flattened_size
 from openmdao.main.derivatives import applyJ, applyJT
-from openmdao.util.graph import flatten_list_of_iters
+from openmdao.util.graph import base_var
 
 def call_if_found(obj, fname, *args, **kwargs):
     """If the named function exists in the object, call it
@@ -52,11 +50,14 @@ def compound_setup_scatters(self):
     noflats = set([k for k,v in self.variables.items()
                        if not v.get('flat',True)])
 
-    start = end = numpy.sum(input_sizes[:rank])
+    start = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
 
     visited = {}
-
+    
+    # collect all destinations from p vector
+    ret = self.vec['p'].get_dests_by_comp()
+    
     for subsystem in self.all_subsystems():
         src_partial = []
         dest_partial = []
@@ -97,6 +98,12 @@ def compound_setup_scatters(self):
                     scatter_conns_full.add(node)
                     noflat_conns.add(node)
                     noflat_conns_full.add(node)
+                else:
+                    snames = [c for c in sub._get_comps()]
+                    for sname in snames:
+                        if sname in ret and node in self.vec['p'] and node in ret[sname]:
+                            scatter_conns.add(node)
+                            scatter_conns_full.add(node)
 
         if MPI or scatter_conns or noflat_conns:
             subsystem.scatter_partial = DataTransfer(self, src_partial,
@@ -124,7 +131,7 @@ class System(object):
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
-        self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
+        #self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
 
         self._mapped_resids = {}
 
@@ -150,7 +157,13 @@ class System(object):
         all_outs.update(pure_outs)
 
         # get our input nodes from the depgraph
-        self._in_nodes, _ = get_node_boundary(graph, all_outs)
+        ins, _ = get_node_boundary(graph, all_outs)
+        
+        # filter out any comps labeled as inputs. this happens when multiple comps
+        # output the same variable
+        self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
+                
+        self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
         # mpiprint("%s out_nodes: %s" % (self.name, self._out_nodes))
@@ -174,6 +187,17 @@ class System(object):
         self.dfd_solver = None
         self.sol_buf = None
         self.rhs_buf = None
+        self._parent_system = None
+        self.complex_step = False
+
+    def __getitem__(self, ident):
+        if isinstance(ident, basestring):
+            return self.find(ident)
+        else:
+            return self.subsystems()[ident]
+
+    def is_opaque(self):
+        return False
 
     def find(self, name):
         """A convenience method to allow easy access to descendant
@@ -343,40 +367,56 @@ class System(object):
         for system in self.local_subsystems():
             system.clear_dp()
 
+    def _get_comps(self):
+        """Return a set of comps for this system and all subsystems."""
+        comps = set()
+        for s in self.local_subsystems():
+            comps.update(simple_node_iter(s._get_comps()))
+        return comps
+            
     def list_inputs(self):
         """Returns names of input variables from this System and all of its
         children.
         """
         inputs = set()
+        bases = set()
         for system in self.simple_subsystems():
+            comps = self._get_comps()
             for tup in system._in_nodes:
                 seen = set() # need this to prevent paramgroup inputs on same comp to be counted more than once
                 for dest in tup[1]:
                     comp = dest.split('.', 1)[0]
-                    if comp not in seen and comp in system._nodes:
+                    if comp not in seen and comp in comps:
                         inputs.add(dest)
+                        base = base_var(self.scope._depgraph, dest)
+                        if base == dest:
+                            bases.add(base)
                         seen.add(comp)
 
-        top = self.scope
-        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
-                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+        # filter out subvars of included basevars
+        inputs = [n for n in inputs if n in bases or base_var(self.scope._depgraph, n) not in bases]
+
+        return _filter(self.scope, inputs)
 
     def list_states(self):
         """Returns names of states (not collapsed edges) from this System and
         all of its children.
         """
-        inputs = set()
+        states = set()
         for system in self.simple_subsystems():
             try:
-                inputs.update(['.'.join((system.name,s))
-                                  for s in system._comp.list_states()
-                                  if system._comp.eval_only is False])
+                if system._comp.eval_only is False:
+                    states.update(['.'.join((system.name,s))
+                                      for s in system._comp.list_states()])
             except AttributeError:
                 pass
 
         top = self.scope
-        return [i for i in inputs if top.name2collapsed[i] in top._system.vector_vars
-                and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+        states = [i for i in states if top.name2collapsed[i] in top._system.vector_vars
+                    and not top._system.vector_vars[top.name2collapsed[i]].get('deriv_ignore')]
+
+        #print "%s states: %s" % (self.name, states)
+        return states
 
     def list_outputs(self):
         """Returns names of output variables (not collapsed edges)
@@ -393,14 +433,13 @@ class System(object):
                 pass
             out_nodes = [node for node in system._out_nodes \
                          if node not in self._mapped_resids]
+            comps = self._get_comps()
             for src, _ in out_nodes:
                 parts = src.split('.', 1)
-                if parts[0] in system._nodes and src not in states:
+                if parts[0] in comps and src not in states:
                     outputs.append(src)
 
-        top = self.scope
-        return [out for out in outputs if top.name2collapsed[out] in top._system.vector_vars
-                   and not top._system.vector_vars[top.name2collapsed[out]].get('deriv_ignore')]
+        return _filter(self.scope, outputs)
 
     def list_residuals(self):
         """Returns names of all residuals.
@@ -415,6 +454,7 @@ class System(object):
                 pass
 
         outputs.extend([n for n, m in self._mapped_resids.keys()])
+        #print "%s residuals: %s" % (self.name, outputs)
         return outputs
 
     def get_size(self, names):
@@ -427,6 +467,7 @@ class System(object):
         if isinstance(names, basestring):
             names = [names]
         uvec = self.scope._system.vec['u']
+        varmeta = self.scope._var_meta
         var_sizes = self.scope._system.local_var_sizes
         varkeys = self.scope._system.vector_vars.keys()
         collnames = self.scope.name2collapsed
@@ -438,16 +479,23 @@ class System(object):
 
             if name in uvec:
                 size += uvec[name].size
-            else:
+            #elif name.split('[',1)[0] in uvec:
+                #bval = self.scope.get(name.split('[',1)[0])
+                #_, idx = get_val_and_index(self.scope, name)
+                #idxs = get_flattened_index(idx, get_shape(bval))
+                #size += bval[idxs].size
+            elif collnames[name] in varkeys:
                 idx = varkeys.index(collnames[name])
                 for proc in procs:
                     if var_sizes[proc, idx] > 0:
                         size += var_sizes[proc, idx]
                         break
+            else:
+                size += varmeta[name]['size']
 
         return size
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         pass
 
     def is_active(self):
@@ -549,6 +597,10 @@ class System(object):
             # FIXME: this needs to use the actual indices for this
             #        process' version of the arg once we have distributed
             #        components...
+            #flat_idx = varmeta[name].get('flat_idx')
+            #if flat_idx and varmeta[name]['basevar'] in varmeta:  # var is an array index into a basevar
+            #    self.arg_idx[name] = to_indices(flat_idx, self.scope.get(varmeta[name]['basevar']))
+            #else:
             self.arg_idx[name] = numpy.array(range(varmeta[name]['size']), 'i')
 
     def setup_vectors(self, arrays=None, state_resid_map=None):
@@ -610,13 +662,23 @@ class System(object):
             destvec = self.vec[destvecname]
 
             scatter(self, srcvec, destvec)
-
+            
             if destvecname == 'p':
+                
+                if self.complex_step is True:
+                    scatter(self, self.vec['du'], self.vec['dp'],
+                            complex_step = True)
+
                 if scatter is self.scatter_full:
                     self.vec['p'].set_to_scope(self.scope)
+                    if self.complex_step is True:
+                        self.vec['dp'].set_to_scope_complex(self.scope)
                 else:
                     if subsystem._in_nodes:
                         self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
+                        if self.complex_step is True:
+                            self.vec['dp'].set_to_scope_complex(self.scope, 
+                                                                subsystem._in_nodes)
 
         return scatter
 
@@ -643,15 +705,17 @@ class System(object):
             world_rank = MPI.COMM_WORLD.rank
 
         name_map = { 'SerialSystem': 'ser', 'ParallelSystem': 'par',
-                     'SimpleSystem': 'simp', 'OpaqueDriverSystem': 'drv',
+                     'SimpleSystem': 'simp', 'FiniteDiffDriverSystem': 'drv',
                      'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', } #'InnerAssemblySystem': 'inner'}
+                     'AssemblySystem': 'asm', } 
+
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
+        klass = self.__class__.__name__
         stream.write(" [%s](req=%d)(rank=%d)(vsize=%d)(isize=%d)\n" %
-                                          (name_map[self.__class__.__name__],
+                                          (name_map.get(klass, klass.lower()[:3]),
                                            self.get_req_cpus(),
                                            world_rank,
                                            self.vec['u'].array.size,
@@ -687,9 +751,27 @@ class System(object):
             stream.write(" "*(nest+2))
             stream.write("%s --> %s\n" % (src, dest))
 
+        stream.write(" "*(nest+2))
+        stream.write("_in_nodes: %s\n" % self._in_nodes)
+        stream.write(" "*(nest+2))
+        stream.write("_out_nodes: %s\n" % self._out_nodes)
+        stream.write(" "*(nest+2))
+        stream.write("list_inputs(): %s\n" % self.list_inputs())
+        stream.write(" "*(nest+2))
+        stream.write("list_outputs(): %s\n" % self.list_outputs())
+        stream.write(" "*(nest+2))
+        stream.write("list_states(): %s\n" % self.list_states())
+        stream.write(" "*(nest+2))
+        stream.write("list_residuals(): %s\n" % self.list_residuals())
+
         nest += 4
-        for sub in self.local_subsystems():
-            sub.dump(nest, stream)
+        if isinstance(self, OpaqueSystem):
+            self._inner_system.dump(nest, stream)
+        elif isinstance(self, AssemblySystem):
+            self._comp._system.dump(nest, stream)
+        else:
+            for sub in self.local_subsystems():
+                sub.dump(nest, stream)
 
         return stream.getvalue() if getval else None
 
@@ -781,6 +863,14 @@ class System(object):
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
+            
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. """
+
+        self.complex_step = complex_step
+        for subsystem in self.local_subsystems():
+            subsystem.set_complex_step(complex_step)
 
     def calc_gradient(self, inputs, outputs, mode='auto', options=None,
                       iterbase='', return_format='array'):
@@ -857,7 +947,8 @@ class System(object):
             self.sol_vec.array[:] = 0.0
             return self.sol_vec.array
 
-        self.set_options(self.mode, options)
+        if options is not None:
+            self.set_options(self.mode, options)
         self.initialize_gradient_solver()
 
         """ Solve Jacobian, df |-> du [fwd] or du |-> df [rev] """
@@ -869,15 +960,6 @@ class System(object):
     def applyJ(self, variables):
         """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
         pass
-
-    def iterate_all(self, local=False):
-        """Returns a generator that will iterate over this
-        System and all of its children recursively.
-        """
-        yield self
-        for child in self.subsystems(local=local):
-            for s in child.iterate_all(local=local):
-                yield s
 
     def _compute_derivatives(self, vname, ind):
         """ Solves derivatives of system (direct/adjoint).
@@ -984,6 +1066,9 @@ class SimpleSystem(System):
 
         return True
 
+    def _get_comps(self):
+        return self._nodes
+
     def simple_subsystems(self):
         yield self
 
@@ -1010,6 +1095,9 @@ class SimpleSystem(System):
 
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
+                base = base_var(self.scope._depgraph, vname[0])
+                if base != vname[0] and base in self.scope._reduced_graph:
+                    continue
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
@@ -1031,7 +1119,7 @@ class SimpleSystem(System):
                 if out in mapped_states and state not in self.variables:
                     to_remove.add(out)
 
-            if not isinstance(self, (SolverSystem, OpaqueDriverSystem)):
+            if not isinstance(self, (SolverSystem, FiniteDiffDriverSystem)):
                 for name in to_remove:
                     del self.variables[name]
 
@@ -1079,9 +1167,12 @@ class SimpleSystem(System):
             self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
 
             # put component outputs in u vector
-            self.vec['u'].set_from_scope(self.scope,
-                             [n for n in graph.successors(self.name)
-                                   if n in self.vector_vars])
+            vnames = [n for n in graph.successors(self.name)
+                                   if n in self.vector_vars]
+            self.vec['u'].set_from_scope(self.scope, vnames)
+
+            if self.complex_step is True:
+                self.vec['du'].set_from_scope_complex(self.scope, vnames)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1170,9 +1261,6 @@ class VarSystem(SimpleSystem):
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
-        """ Evalutes a component's residuals without invoking its
-        internal solve (for implicit comps.)
-        """
         pass
 
     def applyJ(self, variables):
@@ -1190,10 +1278,10 @@ class ParamSystem(VarSystem):
 
     def applyJ(self, variables):
         """ Set to zero """
-        if self.variables: # don't do anything if we don't own our output
-            # mpiprint("param sys %s: adding %s to %s" %
-            #                 (self.name, self.sol_vec[self.name],
-            #                     self.rhs_vec[self.name]))
+        if self.vector_vars: # don't do anything if we don't own our output
+            #mpiprint("param sys %s: adding %s to %s" %
+                            #(self.name, self.sol_vec[self.name],
+                                #self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1207,6 +1295,9 @@ class InVarSystem(VarSystem):
     def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
+            
+            if self.complex_step is True:
+                self.vec['du'].set_from_scope_complex(self.scope, self._nodes)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1220,9 +1311,9 @@ class InVarSystem(VarSystem):
         # don't do anything if we are not requesting this invar
         if self.variables and \
            self.scope.name2collapsed.get(self.name) in variables:
-            # mpiprint("param sys %s: adding %s to %s" %
-            #                 (self.name, self.sol_vec[self.name],
-            #                     self.rhs_vec[self.name]))
+            #mpiprint("invar sys %s: adding %s to %s" %
+                            #(self.name, self.sol_vec[self.name],
+                                #self.rhs_vec[self.name]))
             self.rhs_vec[self.name] += self.sol_vec[self.name]
 
     def pre_run(self):
@@ -1276,6 +1367,9 @@ class AssemblySystem(SimpleSystem):
     def __init__(self, scope, graph, name):
         super(AssemblySystem, self).__init__(scope, graph, name)
         self._provideJ_bounds = None
+
+    def is_opaque(self):
+        return True
 
     def setup_communicators(self, comm):
         super(AssemblySystem, self).setup_communicators(comm)
@@ -1338,7 +1432,14 @@ class AssemblySystem(SimpleSystem):
         self.J = inner_system.calc_gradient(inputs=inputs, outputs=outputs,
                                             options=self.options)
 
-        #print self.J
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. Assemblies must prepare their inner system."""
+
+        self.complex_step = complex_step
+        self._comp._system.set_complex_step(complex_step)
+
+        #print inputs, outputs, self.J
 
     #def applyJ(self, variables):
         #""" Call into our assembly's top ApplyJ to get the matrix vector
@@ -1407,7 +1508,7 @@ class CompoundSystem(System):
     def __init__(self, scope, graph, subg, name=None):
         super(CompoundSystem, self).__init__(scope,
                                              graph,
-                                             get_full_nodeset(scope, subg.nodes()),
+                                             subg.nodes(), #get_full_nodeset(scope, subg.nodes()),
                                              name)
         self.driver = None
         self.graph = subg
@@ -1465,15 +1566,40 @@ class CompoundSystem(System):
         """
         self.dfd_solver.calculate(arg, result)
 
+def _get_counts(names):
+    """Return a dict with each name keyed to a number indicating the
+    number of times it occurs in the list.
+    """
+    counts = dict([(n,0) for n in names])
+    for name in names:
+        counts[name] += 1
+
+    return counts
 
 class SerialSystem(CompoundSystem):
 
     def all_subsystems(self):
         return [self.graph.node[node]['system'] for node in self._ordering]
 
-    def set_ordering(self, ordering):
+    def set_ordering(self, ordering, opaque_map):
         """Return the execution order of our subsystems."""
-        self._ordering = [n for n in ordering if n in self.graph]
+        counts = _get_counts(ordering)
+        self._ordering = []
+
+        mapcount = dict([(v, 0) for v in opaque_map.values()])
+        for name in ordering:
+            if name in self.graph:
+                self._ordering.append(name)
+                continue
+
+            opaque_name = opaque_map.get(name, name)
+            if opaque_name in mapcount:
+                mapcount[opaque_name] += 1
+            if opaque_name in self.graph:
+                count = counts[name]
+                if opaque_name in mapcount and mapcount[opaque_name] > count:
+                    continue
+                self._ordering.append(opaque_name)
 
         if nx.is_directed_acyclic_graph(self.graph):
             g = self.graph
@@ -1481,8 +1607,6 @@ class SerialSystem(CompoundSystem):
             # don't modify real graph
             g = self.graph.subgraph(self.graph.nodes())
             break_cycles(g)
-
-        deps = transitive_closure(g)
 
         for node in self.graph.nodes_iter():
             if node not in self._ordering:
@@ -1501,10 +1625,10 @@ class SerialSystem(CompoundSystem):
                 else:
                     self._ordering.append(node)
 
-        self._ordering = gsort(deps, self._ordering)
+        self._ordering = gsort(g, self._ordering)
 
         for s in self.all_subsystems():
-            s.set_ordering(ordering)
+            s.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         cpus = []
@@ -1681,45 +1805,43 @@ class ParallelSystem(CompoundSystem):
             return []
 
 
-class OpaqueSystem(CompoundSystem):
+class OpaqueSystem(SimpleSystem):
     """A system with an external interface like that
     of a simple system, but encapsulating a compound
     system.
     """
     def __init__(self, scope, graph, subg, name):
-        # for now, just create an internal SerialSystem
-        super(OpaqueSystem, self).__init__(scope, graph, subg, name)
-
-        graph = graph.subgraph(graph.nodes_iter())
-
-        nodes = internal_nodes(graph, subg.nodes())
-
-        # Out local outputs must only include the nodes on the boundary.
-        ext_out_nodes = [n for n in self._out_nodes if n not in nodes]
-
-        # Some interior nodes may also have a connection that we don't want
-        # to lose:
-        int_out_nodes = []
-        for node in self._out_nodes:
-            target_comps = [x.partition('.')[0] for x in node[1] if '.' in x]
-            if len(target_comps)> 1 and any(target_comps) not in nodes:
-                int_out_nodes.append(node)
-
-        graph = graph.subgraph(nodes)
+        nodes = set(subg.nodes())
         
+        # take the graph we're given, collapse our nodes into a single
+        # node, and create a simple system for that
+        ograph = graph.subgraph(graph.nodes_iter())
+        int_nodes = internal_nodes(ograph, nodes)
+        ograph.add_node(tuple(nodes), comp='opaque')
+        collapse_nodes(ograph, tuple(nodes), int_nodes)
+        
+        super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
+
+        graph = graph.subgraph(int_nodes)
+
+        srcs = sorted([(node[0], node) for node in self._in_nodes])
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
-        for node in self._in_nodes:
-            graph.add_node(node[0], comp='dumbvar')
-            graph.add_edge(node[0], node)
-            comp = node[0].split('.', 1)[0]
-            if comp != node[0] and comp in graph:
-                graph.add_edge(node, comp)
-            graph.node[node[0]]['system'] = _create_simple_sys(scope, graph, node[0])
-            nodes.add(node)
-            nodes.add(node[0])
+        for src, node in srcs:
+            base = base_var(graph, src)
+            if base in graph:
+                graph.add_edge(base, node)
+            else:
+                graph.add_node(src, comp='dumbvar')
+                graph.add_edge(src, node)
 
-        self.out_nodes = ext_out_nodes + int_out_nodes
+            comp = src.split('.', 1)[0]
+            if comp != src and comp in graph:
+                graph.add_edge(node, comp)
+
+            if src in graph:
+                graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
 
         self._inner_system = SerialSystem(scope, graph,
                                           reduced2component(graph),
@@ -1728,8 +1850,14 @@ class OpaqueSystem(CompoundSystem):
         self._inner_system._provideJ_bounds = None
         self._comp = None
 
+    def is_opaque(self):
+        return True
+
     def inner(self):
         return self._inner_system
+
+    def _get_comps(self):
+        return self._inner_system._get_comps()
 
     def setup_communicators(self, comm):
         self.mpi.comm = comm
@@ -1752,11 +1880,11 @@ class OpaqueSystem(CompoundSystem):
         # This was needed for the case where you regenerate the system
         # hierarchy on the first calc_gradient call.
         inner_u = self._inner_system.vec['u']
-        inner_u.set_from_scope(self.scope,
-                               self._inner_system.list_inputs() + \
-                               self._inner_system.list_states() +\
-                               self._inner_system.list_outputs() +
-                               self._inner_system.list_residuals())
+        inner_u.set_from_scope(self.scope)#,
+                               #self._inner_system.list_inputs() + \
+                               #self._inner_system.list_states() +\
+                               #self._inner_system.list_outputs() +
+                               #self._inner_system.list_residuals())
 
     def setup_scatters(self):
         super(OpaqueSystem, self).setup_scatters()
@@ -1775,14 +1903,21 @@ class OpaqueSystem(CompoundSystem):
         self_u = self.vec['u']
         inner_u = self._inner_system.vec['u']
 
-        inner_u.set_from_scope(self.scope,
-                               self._inner_system.list_inputs() + \
-                               self._inner_system.list_states())
+        vnames = self._inner_system.list_inputs() + \
+                 self._inner_system.list_states()
+        inner_u.set_from_scope(self.scope, vnames)
+        if self.complex_step is True:
+            self._inner_system.vec['du'].set_from_scope_complex(self.scope, vnames)
 
         self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
 
-        for item in self.list_outputs():
-            self_u[item][:] = inner_u[item][:]
+        #for item in self.list_outputs():
+            #self_u[item][:] = inner_u[item][:]
+        for name, val in inner_u.items():
+            if name in self_u:
+                self_u[name][:] = val
+                if self.complex_step is True:
+                    self.vec['du'][name][:] = self._inner_system.vec['du'][name]
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1796,11 +1931,13 @@ class OpaqueSystem(CompoundSystem):
         """
 
         inner_system = self._inner_system
-        inner_system.linearize()
         inputs = self.list_inputs() + self.list_states()
         outputs = self.list_outputs()
 
         if self.options.directional_fd is True:
+            if self.mode == 'adjoint':
+                msg = "Directional derivatives can only be used with forward mode."
+                raise RuntimeError(msg)
             self.J = None
             inner_system.dfd_solver = DirectionalFD(inner_system, inputs,
                                                     outputs)
@@ -1809,6 +1946,13 @@ class OpaqueSystem(CompoundSystem):
             self.J = inner_system.solve_fd(inputs, outputs)
 
         #print self.J, inputs, outputs
+
+    def set_complex_step(self, complex_step=False):
+        """ Toggles complex_step plumbing for this system and all
+        subsystems. The Opaque System must call its inner system."""
+
+        self.complex_step = complex_step
+        self._inner_system.set_complex_step(complex_step)
 
     def applyJ(self, variables):
         vec = self.vec
@@ -1853,29 +1997,26 @@ class OpaqueSystem(CompoundSystem):
     def simple_subsystems(self):
         yield self
 
-    def set_ordering(self, ordering):
-        self._inner_system.set_ordering(ordering)
+    def set_ordering(self, ordering, opaque_map):
+        self._inner_system.set_ordering(ordering, opaque_map)
 
     def get_req_cpus(self):
         return self._inner_system.get_req_cpus()
 
-class OpaqueDriverSystem(SimpleSystem):
+class FiniteDiffDriverSystem(SimpleSystem):
     """A System for a Driver component that is not a Solver."""
 
     def __init__(self, graph, driver):
         scope = driver.parent
-        super(OpaqueDriverSystem, self).__init__(scope, graph, driver.name)
+        super(FiniteDiffDriverSystem, self).__init__(scope, graph, driver.name)
         driver._system = self
 
     def setup_communicators(self, comm):
-        super(OpaqueDriverSystem, self).setup_communicators(comm)
+        super(FiniteDiffDriverSystem, self).setup_communicators(comm)
         self._comp.setup_communicators(self.mpi.comm)
 
-    # FIXME: I'm inconsistent in the way that base methods are handled.  The System
-    # base class should call setup methods on subsystems or local_subsystems in
-    # order to avoid overriding setup methods like this one in derived classes.
     def setup_scatters(self):
-        #super(OpaqueDriverSystem, self).setup_scatters()
+        #super(FiniteDiffDriverSystem, self).setup_scatters()
         compound_setup_scatters(self)
         self._comp.setup_scatters()
 
@@ -1892,6 +2033,7 @@ class OpaqueDriverSystem(SimpleSystem):
         return (self._comp.workflow._system,)
 
     def simple_subsystems(self):
+        yield self
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
@@ -1935,6 +2077,7 @@ class TransparentDriverSystem(SimpleSystem):
         return (self._comp.workflow._system,)
 
     def simple_subsystems(self):
+        yield self
         for sub in self._comp.workflow._system.simple_subsystems():
             yield sub
 
@@ -2052,7 +2195,7 @@ def _create_simple_sys(scope, graph, name):
         if comp.__class__ == Driver:
             sub = TransparentDriverSystem(graph, comp)
         else:
-            sub = OpaqueDriverSystem(graph, comp)
+            sub = FiniteDiffDriverSystem(graph, comp)
     elif has_interface(comp, IAssembly):
         sub = AssemblySystem(scope, graph, name)
     elif has_interface(comp, IPseudoComp) and comp._pseudo_type=='constraint' \
@@ -2174,3 +2317,51 @@ def get_full_nodeset(scope, group):
             names.add(name)
     return names
 
+def _filter(scope, lst):
+    filtered = _filter_subs(lst)
+    filtered = _filter_flat(scope, filtered)
+    return _filter_ignored(scope, filtered)
+
+def _filter_subs(lst):
+    """Return a copy of the list with any subvars of basevars in the list
+    removed.
+    """
+    bases = [n.split('[',1)[0] for n in lst]
+    
+    return [n for i,n in enumerate(lst) 
+               if not (bases[i] in lst and n != bases[i])]
+    
+def _filter_ignored(scope, lst):
+    # Remove any vars that the user designates as 'deriv_ignore'
+    unignored = []
+    topvars = scope._system.vector_vars
+    
+    for name in lst:
+        collapsed_name = scope.name2collapsed[name]
+        if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
+            continue
+    
+        # The user sets 'deriv_ignore' in the basevar, so we have to check that for
+        # subvars.
+        base = base_var(scope._depgraph, name)
+        if base != name:
+            collname = scope.name2collapsed.get(base)
+            if collname and collname in topvars and \
+               topvars[collname].get('deriv_ignore'):
+                continue
+            
+        unignored.append(name)
+
+    return unignored
+
+def _filter_flat(scope, lst):
+    filtered = []
+    
+    for name in lst:
+        collapsed_name = scope.name2collapsed[name]
+        
+        # ignore non-float-flattenable vars
+        if scope._var_meta[collapsed_name].get('flat'):
+            filtered.append(name)
+
+    return filtered

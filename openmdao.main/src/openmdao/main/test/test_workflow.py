@@ -281,7 +281,7 @@ class TestCase(unittest.TestCase):
     def test_lazy_auto_top(self):
         # lazy evaluation with auto determination of top level workflow
         top = set_as_top(LazyModel())
-        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_parameter('C2.b', low=-99, high=99)
         top.driver.add_objective('C3.d')
 
         top.run()
@@ -303,7 +303,7 @@ class TestCase(unittest.TestCase):
         # lazy evaluation with auto determination of D2 workflow
         top = set_as_top(LazyModel())
         top.driver.workflow.add(['D2', 'C1'])
-        top.D2.add_parameter('C2.a', low=-99, high=99)
+        top.D2.add_parameter('C2.b', low=-99, high=99)
         top.D2.add_objective('C3.d')
 
         top.run()
@@ -323,7 +323,7 @@ class TestCase(unittest.TestCase):
     def test_lazy_manual_top(self):
         # manual top level workflow
         top = set_as_top(LazyModel())
-        top.driver.add_parameter('C2.a', low=-99, high=99)
+        top.driver.add_parameter('C2.b', low=-99, high=99)
         top.driver.add_objective('C3.d')
         top.driver.workflow.add(['C2', 'C3'])
         top.run()

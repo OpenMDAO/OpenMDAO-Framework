@@ -53,7 +53,7 @@ class TestDirectionalFD(unittest.TestCase):
                                                   outputs=['comp.y'],
                                                   mode = 'adjoint')
         except RuntimeError, err:
-            msg = ": Directional derivatives can only be used with forward "
+            msg = "Directional derivatives can only be used with forward "
             msg += "mode."
             self.assertEqual(str(err), msg)
         else:

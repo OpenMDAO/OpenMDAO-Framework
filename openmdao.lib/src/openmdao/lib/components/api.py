@@ -10,4 +10,3 @@ from openmdao.lib.components.mux import Mux, DeMux
 from openmdao.lib.components.broadcaster import Broadcaster
 from openmdao.lib.components.linear_distribution import LinearDistribution
 from openmdao.test.execcomp import ExecComp, ExecCompWithDerivatives
-from openmdao.lib.components.geomcomp import GeomComponent

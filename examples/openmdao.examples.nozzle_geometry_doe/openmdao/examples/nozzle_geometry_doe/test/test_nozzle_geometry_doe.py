@@ -33,7 +33,7 @@ class NozzleGeometryDOETestCase(unittest.TestCase):
         self.model.run()
 
         # just to test something
-        self.assertEqual(self.model.sc.exec_count,
+        self.assertEqual(self.model.plug_noz.exec_count,
                          self.model.driver.DOEgenerator.num_samples)
 
 

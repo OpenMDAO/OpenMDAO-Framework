@@ -38,7 +38,7 @@ from openmdao.main.datatypes.slot import Slot
 from openmdao.main.datatypes.vtree import VarTree
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator, \
-                                     IContainer, IParametricGeometry, \
+                                     IContainer, \
                                      IComponent, IVariableTree
 from openmdao.main.index import get_indexed_value, deep_hasattr, \
                                 INDEX, ATTR, SLICE, _index_functs
@@ -54,7 +54,7 @@ from openmdao.main.pseudocomp import PseudoComponent
 from openmdao.util.log import Logger, logger
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.typegroups import real_types, int_types, complex_or_real_types
 from openmdao.main.mpiwrap import mpiprint
 
 _copydict = {
@@ -1005,6 +1005,21 @@ class Container(SafeHasTraits):
         nest your key tuple inside of an INDEX tuple to avoid ambiguity,
         for example, (0, my_tuple).
         """
+        #expr = self._code_cache.get(path)
+        #if expr is not None:
+        #    return eval(expr, self.__dict__, locals())
+        # 
+        #if '.' in path or '[' in path or '(' in path:
+        #    expr = compile(path, path, mode='eval')
+        #    try:
+        #        val = eval(expr, self.__dict__, locals())
+        #    except AttributeError:
+        #        # fall through
+        #        pass
+        #    else:
+        #        self._code_cache[path] = expr
+        #        return val
+
         if '.' in path:
             childname, _, restofpath = path.partition('.')
             obj = getattr(self, childname, Missing)
@@ -1074,17 +1089,20 @@ class Container(SafeHasTraits):
             idx = get_index(path)
             if isinstance(val, int_types):
                 pass  # fall through to exception
-            if isinstance(val, real_types):
+            if isinstance(val, complex_or_real_types):
                 if idx is None:
                     #mpiprint("SETTING %s.%s to %s" % (self.name,path, value))
                     setattr(self, path, value[0])
                     return
                 # else, fall through to error
-            elif isinstance(val, ndarray):
-                if idx is None:
-                    setattr(self, path, value.reshape(val.shape))
+            elif hasattr(val, '__setitem__') and idx is not None:
+                if isinstance(val[idx], real_types):
+                    val[idx] = value[0]
                 else:
                     val[idx] = value
+                return
+            elif isinstance(val, ndarray):
+                setattr(self, path, value.reshape(val.shape))
                 return
             elif IVariableTree.providedBy(val):
                 raise NotImplementedError("no support for setting flattened values into vartrees")
@@ -1565,7 +1583,6 @@ def _get_entry_group(obj):
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
             (Variable,             'openmdao.variable'),
-            (IParametricGeometry,  'openmdao.parametric_geometry'),
             (Driver,               'openmdao.driver'),
             (ICaseIterator,        'openmdao.case_iterator'),
             (IResourceAllocator,   'openmdao.resource_allocator'),

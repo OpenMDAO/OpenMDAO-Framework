@@ -4,13 +4,13 @@ import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
-                                    gsort, transitive_closure, \
+                                    gsort, \
                                     collapse_connections, \
                                     vars2tuples, \
                                     prune_reduced_graph
 from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
-                                edges_matching_some
+                                edges_matching_some, base_var
 from openmdao.main.interfaces import implements, IImplicitComponent
 
 def fullpaths(cname, names):
@@ -154,10 +154,9 @@ class DepGraphTestCase(unittest.TestCase):
 
     def test_sorting(self):
         cgraph = self.dep.component_graph()
-        deps = transitive_closure(cgraph)
         order = ['C','D','B','A']
-        neworder = gsort(deps, order)
-        self.assertEqual(neworder, ['A','D','B','C'])
+        neworder = gsort(cgraph, order)
+        self.assertEqual(neworder, ['A','B','C','D'])
                         
         
     def test_add(self):
@@ -192,12 +191,12 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
         
     def test_base_var(self):
-        self.assertEqual(self.dep.base_var('B.a'), 'B.a')
-        self.assertEqual(self.dep.base_var('a'), 'a')
-        self.assertEqual(self.dep.base_var('a.x'), 'a')
-        self.assertEqual(self.dep.base_var('a.x.y'), 'a')
-        self.assertEqual(self.dep.base_var('a.x[3].y'), 'a')
-        self.assertEqual(self.dep.base_var('A.c[2]'), 'A.c')
+        self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
+        self.assertEqual(base_var(self.dep, 'a'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x.y'), 'a')
+        self.assertEqual(base_var(self.dep, 'a.x[3].y'), 'a')
+        self.assertEqual(base_var(self.dep, 'A.c[2]'), 'A.c')
         
     def test_list_connections(self):
         self.assertEqual(set(self.dep.list_connections()), 

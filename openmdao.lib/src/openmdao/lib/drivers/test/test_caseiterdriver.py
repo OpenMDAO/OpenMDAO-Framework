@@ -624,8 +624,8 @@ class Rethore(unittest.TestCase):
 
 class SimpleComp(Component):
 
-    in1 = Float(6, iotype='in')
-    in2 = Float(7, iotype='in')
+    in1 = Float(6., iotype='in')
+    in2 = Float(7., iotype='in')
 
     out1 = Float(iotype='out')
     out2 = Float(iotype='out')
@@ -680,8 +680,8 @@ class SampleAssembly(Assembly):
         #vtree inputs created on the fly based on parameters given
         #number of multi-point executions given at runtime based on length of
         # inputs, all inputs must be same length
-        self.cid_driver.case_inputs.b.in2 = [1, 2, 3, 4, 5, 6]
-        self.cid_driver.case_inputs.c.in2 = [0, 1, 0, 1, 0, 1]
+        self.cid_driver.case_inputs.b.in2 = [1., 2., 3., 4., 5., 6.]
+        self.cid_driver.case_inputs.c.in2 = [0., 1., 0., 1., 0., 1.]
 
         #d is a component that does mp_aggregation
         #NOTE: d is expecting arrays of equal length
@@ -745,30 +745,30 @@ class Connections(unittest.TestCase):
     def test_connections(self):
         print '---- sequential ----'
         a1 = set_as_top(ConnectA(True))
-        a1.i1 = range(10)
+        a1.i1 = [float(i) for i in range(10)]
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(10)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(10)])
 
         print '\n---- par ----'
-        a1.i1 = range(5)
+        a1.i1 = [float(i) for i in range(5)]
         a1.driver.sequential = False
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(5)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(5)])
 
         print '\n---- seq ----'
-        a1.i1 = range(3)
+        a1.i1 = [float(i) for i in range(3)]
         a1.driver.sequential = True
         a1.run()
         print a1.driver.case_inputs.c.i1
         print a1.driver.case_outputs.c.o1
         print a1.o1
-        self.assertEqual(a1.o1, [v**2 for v in range(3)])
+        self.assertEqual(a1.o1, [float(v)**2 for v in range(3)])
 
 
 # Test bug reported by Frederik Zahle.

@@ -7,13 +7,9 @@ import unittest
 
 import numpy as np
 
-from openmdao.lib.components.geomcomp import GeomComponent
-from openmdao.lib.geometry.box import BoxParametricGeometry
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.datatypes.api import Float, Str, Int
 from openmdao.main.depgraph import simple_node_iter
-from openmdao.main.interfaces import IParametricGeometry, implements, \
-                                     IStaticGeometry
 from openmdao.main.test.simpledriver import SimpleDriver
 from openmdao.main.variable import Variable
 from openmdao.util.testutil import assert_rel_error
@@ -216,49 +212,6 @@ class TestcaseDerivObj(unittest.TestCase):
         self._check_derivs()
 
 
-class GeoWithDerivatives(BoxParametricGeometry):
-    '''Adds derivative functions to the famous box geometry.'''
-
-    implements(IParametricGeometry, IStaticGeometry)
-
-    def apply_deriv(self, arg, result):
-        pass
-
-    def apply_derivT(self, arg, result):
-        pass
-
-    def provideJ(self):
-        pass
-
-class Testcase_geom_deriv(unittest.TestCase):
-    """ Test a simple object that passes a geometry. """
-
-    def setUp(self):
-        """ Called before each test. """
-        pass
-
-    def tearDown(self):
-        """ Called after each test. """
-        pass
-
-    def test_basic_delegation(self):
-
-        top = Assembly()
-        top.add('geo', GeomComponent())
-
-        # Function not there before we slot
-        self.assertTrue(not hasattr(top.geo, 'apply_deriv'))
-        self.assertTrue(not hasattr(top.geo, 'apply_derivT'))
-        self.assertTrue(not hasattr(top.geo, 'provideJ'))
-
-        top.geo.add('parametric_geometry', GeoWithDerivatives())
-
-        # Now they should be there.
-        self.assertTrue(hasattr(top.geo, 'apply_deriv'))
-        self.assertTrue(hasattr(top.geo, 'apply_derivT'))
-        self.assertTrue(hasattr(top.geo, 'provideJ'))
-
-
 class ND_Send(Component):
     '''Passes a data object as output.'''
 
@@ -325,6 +278,7 @@ class TestcaseNonDiff(unittest.TestCase):
 
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='fd')
 
+    def test_non_diff_subassy(self):
         # What about subassys?
 
         model = set_as_top(Assembly())
@@ -343,7 +297,7 @@ class TestcaseNonDiff(unittest.TestCase):
         inputs = ['comp1.x']
         outputs = ['sub.y']
         J = model.driver.workflow.calc_gradient(inputs, outputs, mode='forward')
-
+        
         self.assertAlmostEqual(J[0, 0], 2.5)
 
 if __name__ == '__main__':

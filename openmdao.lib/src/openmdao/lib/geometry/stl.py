@@ -11,9 +11,9 @@ try:
     # Note: STLSender needs to be importable from this file for our binpub
     # api. It is not referenced here, so ignore the lint complaint.
     from pyV3D.stl import STLGeometryObject, STLSender
-    from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry, \
-                                         classImplements
-    classImplements(STLGeometryObject, IStaticGeometry)
+    #from openmdao.main.interfaces import IParametricGeometry, IStaticGeometry, \
+    #                                     classImplements
+    #classImplements(STLGeometryObject, IStaticGeometry)
 except ImportError:
     #just fake it so you can use this outside openmdao
     pass

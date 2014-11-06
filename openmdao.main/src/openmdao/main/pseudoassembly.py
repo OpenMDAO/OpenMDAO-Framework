@@ -5,9 +5,7 @@ provide derivatives, and thus must be finite differenced.'''
 import networkx as nx
 
 from openmdao.main.finite_difference import FiniteDifference, DirectionalFD
-from openmdao.main.mp_support import has_interface
-from openmdao.main.interfaces import IDriver, IAssembly
-from openmdao.util.graph import flatten_list_of_iters, edges_to_dict
+from openmdao.util.graph import flatten_list_of_iters, edges_to_dict, base_var
 
 
 def to_PA_var(name, pa_name):
@@ -129,7 +127,7 @@ class PseudoAssembly(object):
             varname = to_PA_var(varpath, pa_name)
             if varpath in dgraph:
                 renames[varpath] = varname
-                old = dgraph.base_var(varpath)
+                old = base_var(dgraph, varpath)
                 if old != varpath:
                     renames[old] = to_PA_var(old, pa_name)
 
