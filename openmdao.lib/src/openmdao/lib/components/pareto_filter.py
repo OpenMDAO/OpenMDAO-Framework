@@ -18,9 +18,9 @@ class ParetoFilter(Component):
     """
 
     # pylint: disable-msg=E1101
-    params = VarTree(VariableTree(), iotype='in')
+    params = VarTree(VariableTree(), iotype='in', noflat=True)
 
-    responses = VarTree(VariableTree(), iotype='in')
+    responses = VarTree(VariableTree(), iotype='in', noflat=True)
 
     constraints = VarTree(
         VariableTree(), iotype='in',
