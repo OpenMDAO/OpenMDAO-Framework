@@ -1,6 +1,6 @@
 
 import unittest
-
+from nose import SkipTest
 from numpy import array
 
 from openmdao.examples.mdao.sellar_MDF import SellarMDF
@@ -280,6 +280,9 @@ class TestCase(unittest.TestCase):
         assert_rel_error(self, 1.0-prob.x1, 1.0, 0.1)
 
     def test_BLISS(self):
+        
+        #raise SkipTest("We currently don't allow a component instance in multiple workflows.")
+        
         prob = set_as_top(SellarBLISS())
 
         prob.dis1.z1 = prob.dis2.z1 = prob.z_store[0] = 5.0

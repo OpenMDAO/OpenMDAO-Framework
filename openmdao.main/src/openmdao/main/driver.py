@@ -616,9 +616,10 @@ class Driver(Component):
         outputs: list of strings
             Lis of OpenMDAO outputs to take derivatives of.
 
-        mode: string in ['forward', 'adjoint', 'auto']
+        mode: string in ['forward', 'adjoint', 'auto', 'fd']
             Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
-            forward or adjoint based on problem dimensions.
+            forward or adjoint based on problem dimensions. Set to 'fd' to
+            finite difference the entire workflow.
 
         return_format: string in ['array', 'dict']
             Format for return value. Default is array, but some optimizers may

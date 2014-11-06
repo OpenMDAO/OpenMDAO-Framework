@@ -140,12 +140,8 @@ def do_fix(repo_path, options):
         'buildout/html',
         'buildout/parts',
         'docs/_build',
-        'examples/openmdao.examples.enginedesign/build',
-        'examples/openmdao.examples.enginedesign/openmdao.examples.enginedesign.egg-info',
     )
     files = (
-        'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineCmodule.c',
-        'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineC.so',
         'examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f',
         'examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c'
     )

@@ -1825,6 +1825,7 @@ class Assembly(Component):
             obj = self.get(vt)
             vtvars[vt] = ['.'.join((vt, n.split('.',1)[1]))
                                      for n in obj.list_all_vars()]
+            vtvars[vt].sort()
             for sub in vtvars[vt]:
                 if sub not in depgraph:
                     depgraph.add_subvar(sub)
