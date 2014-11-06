@@ -1,6 +1,6 @@
 
 import unittest
-from nose import skiptest
+from nose import SkipTest
 from numpy import array
 
 from openmdao.examples.mdao.sellar_MDF import SellarMDF

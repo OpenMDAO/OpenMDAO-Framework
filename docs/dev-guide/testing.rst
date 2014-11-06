@@ -355,6 +355,8 @@ More details on the ``literalinclude`` directive can be found at http://sphinx-d
 * Tracebacks don't have to be accurately reproduced (and they can't be
   anyway). Handle these by replacing the traceback with ellipses:
 
+::
+
     >>> my_engine.set("throttle",3.0)
     Traceback (most recent call last):
         ...

@@ -47,38 +47,41 @@ follows:
 .. testcode:: CONMIN_load
 
     from openmdao.main.api import Assembly
-    from openmdao.examples.enginedesign.vehicle import Vehicle
+    from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.lib.drivers.api import CONMINdriver
-
-    class EngineOptimization(Assembly):
-        """ Top level assembly for optimizing a vehicle. """
-
+        
+    class Top(Assembly):
+        """Constrained optimization of the Paraboloid with whatever optimizer
+        we want."""
+            
         def configure(self):
-
-            # Create CONMIN Optimizer instance
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+                
+            # Create Paraboloid component instances
+            self.add('comp', Paraboloid())
+        
+            # Create Optimizer instance
             self.add('driver', CONMINdriver())
-
-            # Create Vehicle instance
-            self.add('vehicle', Vehicle())
-
-            # add Vehicle to optimizer workflow
-            self.driver.workflow.add('vehicle')
+                
+            # Driver process definition
+            self.driver.workflow.add('comp')
+        
+            # Objective 
+            self.driver.add_objective('comp.f_xy')
+                
+            # Design Variables 
+            self.driver.add_parameter('comp.x', low=-50., high=50.)
+            self.driver.add_parameter('comp.y', low=-50., high=50.)
 
             # CONMIN Flags
             self.driver.iprint = 0
             self.driver.itmax = 30
 
-            # CONMIN Objective
-            self.driver.add_objective('vehicle.fuel_burn')
 
-            # CONMIN Design Variables
-            self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
-            self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
-
-This first section of code defines an assembly called EngineOptimization.
-This assembly contains a DrivingSim component and a CONMINdriver, both of
+This first section of code defines an assembly called Top.
+This assembly contains a Paraboloid component and a CONMINdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
-DrivingSim component is also added to the driver's workflow. The objective
+Paraboloid component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any CONMIN parameters are also
 assigned in the ``__init__`` function.
 
@@ -94,9 +97,9 @@ The default value is 10.
 
 .. testsetup:: CONMIN_show
 
-    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     from openmdao.main.api import set_as_top
-    self = set_as_top(EngineOptimization())
+    self = set_as_top(OptimizationUnconstrained())
 
 .. testcode:: CONMIN_show
 
@@ -175,8 +178,8 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-    self.driver.add_constraint('vehicle.stroke < vehicle.bore', linear=True)
-    self.driver.add_constraint('vehicle.stroke * vehicle.bore > 1.0')
+    self.driver.add_constraint('paraboloid.x - paraboloid.y >= 15.0')
+    self.driver.add_constraint('paraboloid.x*paraboloid.y < 77.0', linear=True)
 
 Here, the first constraint is linear, and the second constraint is nonlinear. If
 the ``linear`` attribute is not specified, then the constraints is assumed to be
