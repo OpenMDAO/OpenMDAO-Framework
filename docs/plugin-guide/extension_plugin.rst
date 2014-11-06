@@ -64,8 +64,7 @@ attractive feature of F2PY is its simplicity -- it can be learned quickly and us
 without understanding the details under the hood.
 
 While F2PY was developed for use with Fortran, it can also wrap C functions with almost as 
-much ease. An example of wrapping a C function with F2PY can be found in :ref:`Wrapping-an-External-Module-Using-F2PY`
-in the OpenMDAO Tutorial.
+much ease.
 
 To illustrate the creation of an OpenMDAO component from a Fortran function, we'll present a brief
 tutorial. The following instructions will help you locate the directory containing the pieces
@@ -123,14 +122,14 @@ input/output intent of each function in the signature file (extension ``.pyf``).
 "quick and smart way," the input/output intents are specified directly in the Fortran code as 
 comments.
 
-This example showcases the "quick and smart way." An example of the "smart way" can be found in 
-:ref:`Wrapping-an-External-Module-Using-F2PY`, where a signature file is included
-as part of the engine design tutorial. The "quick and smart way" should be fine for most cases,
-provided there are no objections to inserting new comments into your existing source code. For
-some cases, the extra flexibility of the signature file may be needed. One specific example
-is where you only want to expose one function from a Fortran file that contains
-several functions. In this case you can instruct F2PY to generate a signature file,
-after which you can edit it to your satisfaction.
+This example showcases the "quick and smart way." There is another "smart
+way" where the directives are included in a separate signature file. The
+"quick and smart way" should be fine for most cases, provided there are no
+objections to inserting new comments into your existing source code. For some
+cases, the extra flexibility of the signature file may be needed. One
+specific example is where you only want to expose one function from a Fortran
+file that contains several functions. In this case you can instruct F2PY to
+generate a signature file, after which you can edit it to your satisfaction.
 
 Subroutine ``runbar3truss`` has the following interface:
 

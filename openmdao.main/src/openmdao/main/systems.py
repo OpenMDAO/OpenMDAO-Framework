@@ -958,7 +958,7 @@ class System(object):
         self.sol_vec.array[:] = self.sol_buf[:]
 
     def applyJ(self, variables):
-        """ Apply Jacobian, (dp,du) |-> df [fwd] or df |-> (dp,du) [rev] """
+        """ Defined in derived classes."""
         pass
 
     def _compute_derivatives(self, vname, ind):

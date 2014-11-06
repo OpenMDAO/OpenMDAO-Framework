@@ -144,14 +144,14 @@ Hyperlinks
 
   Labels that aren't placed before a section title can still be referenced, but you must give the link
   an explicit title using this syntax: ``:ref:`Link title <label-name>```.  For example, the cross
-  reference ``:ref:`process model <process-model>``` appears in the HTML text file as:
+  reference ``:ref:`Workflow Overview <workflow overview>``` appears in the HTML text file as:
 
-    :ref:`process model <process-model>`
+    :ref:`Workflow Overview <workflow overview>`
   
   The label below was placed above the paragraph in the more complex tutorial that discusses the
-  process model and shows a figure of it, 
+  workflow and shows a figure of it, 
 
-     ``.. _`process-model`:``
+     ``.. _workflow overview`:``
    
   So clicking on the cross reference in the text file takes you to where the label was placed. In this case an  
   arbitrary label was created rather than cross referencing to the figure title.
