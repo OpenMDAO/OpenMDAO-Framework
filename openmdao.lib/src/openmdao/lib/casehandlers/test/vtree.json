@@ -1,7 +1,8 @@
 {
-"__length_1": 13820
+"__length_1": 13462
 , "simulation_info": {
     "OpenMDAO_Version": "0.10.2", 
+    "comp_graph": "{\"directed\": true, \"graph\": [], \"nodes\": [{\"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"comp\": true, \"id\": \"sub\"}], \"links\": [], \"multigraph\": false}", 
     "constants": {
         "directory": "", 
         "driver.directory": "", 
@@ -17,12 +18,13 @@
         "driver.gradient_options.lin_solver": "scipy_gmres", 
         "driver.gradient_options.maxiter": 100, 
         "driver.gradient_options.rtol": 1e-09, 
-        "excludes": [], 
         "force_fd": false, 
-        "includes": [
+        "missing_deriv_policy": "assume_zero", 
+        "recording_options.excludes": [], 
+        "recording_options.includes": [
             "*"
         ], 
-        "missing_deriv_policy": "assume_zero", 
+        "recording_options.save_problem_formulation": true, 
         "sub.comp.directory": "", 
         "sub.comp.force_fd": false, 
         "sub.comp.missing_deriv_policy": "error", 
@@ -40,11 +42,7 @@
         "sub.driver.gradient_options.lin_solver": "scipy_gmres", 
         "sub.driver.gradient_options.maxiter": 100, 
         "sub.driver.gradient_options.rtol": 1e-09, 
-        "sub.excludes": [], 
         "sub.force_fd": false, 
-        "sub.includes": [
-            "*"
-        ], 
         "sub.loads_in.loads": [
             {
                 "Fx": [
@@ -64,12 +62,17 @@
                 ]
             }
         ], 
-        "sub.missing_deriv_policy": "assume_zero"
+        "sub.missing_deriv_policy": "assume_zero", 
+        "sub.recording_options.excludes": [], 
+        "sub.recording_options.includes": [
+            "*"
+        ], 
+        "sub.recording_options.save_problem_formulation": true
     }, 
     "expressions": {}, 
     "graph": "{\"directed\": true, \"graph\": [[\"title\", \"unknown\"]], \"nodes\": [{\"short\": \"sub\", \"color_idx\": 1, \"full\": \"sub\", \"title\": \"{}\", \"comp\": true, \"id\": \"sub\"}, {\"full\": \"sub.loads_in\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_in\", \"var\": true, \"iotype\": \"in\", \"id\": \"sub.loads_in\"}, {\"short\": \"driver\", \"color_idx\": 0, \"full\": \"driver\", \"title\": \"{'driver': True}\", \"comp\": true, \"driver\": true, \"id\": \"driver\"}, {\"full\": \"sub.loads_out\", \"color_idx\": 1, \"title\": \"{'differentiable': False}\", \"differentiable\": false, \"short\": \"loads_out\", \"var\": true, \"iotype\": \"out\", \"id\": \"sub.loads_out\"}], \"links\": [{\"source\": 0, \"target\": 3}, {\"source\": 1, \"target\": 0}], \"multigraph\": false}", 
     "name": "", 
-    "uuid": "79e897a0-5fa2-11e4-b3d9-843a4b0673cc", 
+    "uuid": "f2ba4636-5bbc-11e4-badb-080027a1f086", 
     "variable_metadata": {
         "directory": {
             "deriv_ignore": true, 
@@ -173,21 +176,11 @@
             "low": null, 
             "vartypename": "Float"
         }, 
-        "excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "force_fd": {
             "assumed_default": false, 
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "missing_deriv_policy": {
             "assumed_default": false, 
@@ -198,6 +191,21 @@
                 "assume_zero"
             ], 
             "vartypename": "Enum"
+        }, 
+        "recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
         }, 
         "sub.comp.derivative_exec_count": {
             "assumed_default": false, 
@@ -366,11 +374,6 @@
             "low": null, 
             "vartypename": "Float"
         }, 
-        "sub.excludes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
-        }, 
         "sub.exec_count": {
             "assumed_default": false, 
             "deriv_ignore": true, 
@@ -386,11 +389,6 @@
             "deriv_ignore": true, 
             "iotype": "in", 
             "vartypename": "Bool"
-        }, 
-        "sub.includes": {
-            "copy": "deep", 
-            "iotype": "in", 
-            "vartypename": "List"
         }, 
         "sub.itername": {
             "deriv_ignore": true, 
@@ -418,12 +416,27 @@
                 "assume_zero"
             ], 
             "vartypename": "Enum"
+        }, 
+        "sub.recording_options.excludes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "sub.recording_options.includes": {
+            "copy": "deep", 
+            "iotype": "in", 
+            "vartypename": "List"
+        }, 
+        "sub.recording_options.save_problem_formulation": {
+            "assumed_default": false, 
+            "iotype": "in", 
+            "vartypename": "Bool"
         }
     }
 }
-, "__length_2": 224
+, "__length_2": 231
 , "driver_info_1": {
-    "_id": 95279824, 
+    "_id": 140669886797584, 
     "name": "driver", 
     "recording": [
         "sub.derivative_exec_count", 
@@ -433,9 +446,9 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_3": 232
+, "__length_3": 239
 , "driver_info_2": {
-    "_id": 95280112, 
+    "_id": 140669886796240, 
     "name": "sub.driver", 
     "recording": [
         "comp.loads_out", 
@@ -445,11 +458,11 @@
         "driver.workflow.itername"
     ]
 }
-, "__length_4": 927
+, "__length_4": 933
 , "iteration_case_1": {
-    "_driver_id": 95280112, 
-    "_id": "79f558a8-5fa2-11e4-800c-843a4b0673cc", 
-    "_parent_id": "79f46421-5fa2-11e4-800b-843a4b0673cc", 
+    "_driver_id": 140669886796240, 
+    "_id": "f2bb2951-5bbc-11e4-805a-080027a1f086", 
+    "_parent_id": "f2bb227a-5bbc-11e4-8059-080027a1f086", 
     "data": {
         "comp.derivative_exec_count": 0, 
         "comp.exec_count": 1, 
@@ -479,13 +492,13 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1414611216.344654
+    "timestamp": 1414182781.23062
 }
-, "__length_5": 910
+, "__length_5": 917
 , "iteration_case_2": {
-    "_driver_id": 95279824, 
-    "_id": "79f46421-5fa2-11e4-800b-843a4b0673cc", 
-    "_parent_id": "79e897a0-5fa2-11e4-b3d9-843a4b0673cc", 
+    "_driver_id": 140669886797584, 
+    "_id": "f2bb227a-5bbc-11e4-8059-080027a1f086", 
+    "_parent_id": "f2ba4636-5bbc-11e4-badb-080027a1f086", 
     "data": {
         "driver.workflow.itername": "1", 
         "sub.derivative_exec_count": 0, 
@@ -515,6 +528,6 @@
     }, 
     "error_message": "", 
     "error_status": null, 
-    "timestamp": 1414611216.346635
+    "timestamp": 1414182781.234172
 }
 }

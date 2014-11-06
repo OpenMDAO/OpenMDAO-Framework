@@ -5,6 +5,8 @@ import tempfile
 import tarfile
 import shutil
 import traceback
+import requests
+import base64
 
 import urllib2
 try:
@@ -13,8 +15,8 @@ except ImportError:
     import json
 import pprint
 import StringIO
-from ConfigParser import SafeConfigParser
-from argparse import ArgumentParser
+from ConfigParser import SafeConfigParser, NoSectionError, NoOptionError
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from subprocess import call, check_call, STDOUT
 import fnmatch
 
@@ -517,7 +519,6 @@ def plugin_makedist(parser, options, args=None, capture=None, srcdir='src'):
 
     try:
         plugin_build_docs(parser, options)
-
         cfg = SafeConfigParser(dict_type=OrderedDict)
         cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
 
@@ -677,32 +678,39 @@ def plugin_install(parser, options, args=None, capture=None):
         print_sub_help(parser, 'install')
         return -1
 
-    # Interact with github (but not when testing).
-    if options.github or options.all:  # pragma no cover
-        plugin_url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
-        github_plugins = []
-
-        if options.all:
-            #go get names of all the github plugins
-            plugin_page = urllib2.urlopen(plugin_url)
-            for line in plugin_page.fp:
-                text = json.loads(line)
-                for item in sorted(text):
-                    github_plugins.append(item['name'])
-
+    if options.all:
+        if options.owner:
+            owner = options.owner
         else:
-            #just use the name of the specific plugin requested
-            github_plugins.append(options.dist_name)
+            owner = 'OpenMDAO-Plugins'
 
-        for plugin in github_plugins:
+        #Get everything from OpenMDAO-Plugins
+        plugin_url = "https://api.github.com/users/{owner}/repos?type=public"
+        plugin_url = plugin_url.format(owner=owner)
+        custom_github_plugins = []
+        plugin_page = urllib2.urlopen(plugin_url)
+        for line in plugin_page.fp:
+           text = json.loads(line)
+           for item in sorted(text):
+               custom_github_plugins.append(item['name'])
+
+        for plugin in custom_github_plugins:
             try:
                 print "Installing plugin:", plugin
-                _github_install(plugin, options.findlinks)
+                _github_install(plugin, options.findlinks, owner)
             except Exception:
+                msg = "The plugin failed to install. You should notify the plugin maintainer \
+                with the error message below."
                 traceback.print_exc()
+
+    elif options.owner:
+        #Get specified plugin from owner
+        _github_install(options.dist_name, options.findlinks, options.owner)
+
 
     else:  # Install plugin from local file or directory
         develop = False
+
         if not options.dist_name:
             print "installing distribution from current directory as a 'develop' egg"
             develop = True
@@ -731,12 +739,13 @@ def plugin_install(parser, options, args=None, capture=None):
 
     return 0
 
-
-def _github_install(dist_name, findLinks):
+def _github_install(dist_name, findLinks, owner):
     # Get plugin from github.
     #FIXME: this should support all valid version syntax (>=, <=, etc.)
+
     pieces = dist_name.split('==')
     name = pieces[0]
+    url = 'https://api.github.com/repos/{owner}/{repo}/tarball/{ref}'
 
     # User specified version using easy_install style ("plugin==version")
     if len(pieces) > 1:
@@ -744,11 +753,11 @@ def _github_install(dist_name, findLinks):
 
     # Get most recent version from our tag list
     else:
-        url = 'https://api.github.com/repos/OpenMDAO-Plugins/%s/tags' % name
+        tags_url = 'https://api.github.com/repos/%s/%s/tags' % (owner, name)
         try:
-            resp = urllib2.urlopen(url)
+            resp = urllib2.urlopen(tags_url)
         except urllib2.HTTPError:
-            print "\nERROR: plugin named '%s' not found in OpenMDAO-Plugins" % name
+            print "\nERROR: plugin named '%s' not found in %s" % (name, owner)
             return -1
 
         for line in resp.fp:
@@ -766,16 +775,33 @@ def _github_install(dist_name, findLinks):
             return -1
 
         if not tags:
-            print "\nERROR: plugin named '%s' has no tagged releases." % name
-            print "You may want to contact the repository owner to create a tag"
-            return -1
+            print "\nPlugin named '%s' has no tagged releases." % name
+            print "You may want to contact the repository owner to create a tag."
+            print "Grabbing the most recent version of default branch instead..."
 
-        version = tags[-1]
+        if tags:
+            version = tags[-1]
 
-    url = 'https://nodeload.github.com/OpenMDAO-Plugins/%s/tarball/%s' \
-          % (name, version)
-    print url
-    build_docs_and_install(name, version, findLinks)
+        else:
+            tarball_url = 'https://api.github.com/repos/{owner}/{repo}/tarball'
+            tarball_url = tarball_url.format(owner=owner, repo=dist_name)
+
+            resp = requests.get(tarball_url, allow_redirects=False)
+
+            if resp.status_code == 302:
+                version = resp.headers['location'].split('/')[-1]
+
+            else:
+                print "\nERROR: plugin named '%s' not found in %s" % (name, owner)
+                return -1
+
+    print url.format(
+        owner=owner,
+        repo=name,
+        ref=version
+    )
+
+    build_docs_and_install(owner, name, version, findLinks)
 
 def _bld_sdist_and_install(deps=True):
     check_call([sys.executable, 'setup.py', 'sdist', '-d', '.'])
@@ -797,12 +823,12 @@ def _bld_sdist_and_install(deps=True):
     return tars[0]
 
 # This requires Internet connectivity to github.
-def build_docs_and_install(name, version, findlinks):  # pragma no cover
+def build_docs_and_install(owner, name, version, findlinks):  # pragma no cover
     tdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     os.chdir(tdir)
     try:
-        tarpath = download_github_tar('OpenMDAO-Plugins', name, version)
+        tarpath = download_github_tar(owner, name, version)
 
         # extract the repo tar file
         tar = tarfile.open(tarpath)
@@ -818,12 +844,33 @@ def build_docs_and_install(name, version, findlinks):  # pragma no cover
         os.chdir(files[0])  # should be in distrib directory now
 
         cfg = SafeConfigParser(dict_type=OrderedDict)
-        cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
-        if cfg.has_option('metadata', 'requires-dist'):
+
+        try:
+            cfg.readfp(open('setup.cfg', 'r'), 'setup.cfg')
+
+        except IOError as io_error:
+            raise IOError, \
+                "OpenMDAO plugins must have a setup.cfg: {}".format(io_error), \
+                sys.exc_info()[2]
+
+        try:
             reqs = cfg.get('metadata', 'requires-dist').strip()
             reqs = reqs.replace(',', ' ')
             reqs = [n.strip() for n in reqs.split()]
-        else:
+
+            try:
+                flinks = cfg.get('easy_install', 'find_links').strip()
+                flinks = flinks.split('\n')
+                flinks = [n.strip() for n in flinks]
+
+                flinks.append(findlinks)
+
+                findlinks = ' '.join(flinks)
+
+            except (NoSectionError, NoOptionError):
+                pass
+
+        except NoOptionError:
             # couldn't find requires-dist in setup.cfg, so
             # create an sdist so we can query metadata for distrib dependencies
             tarname = _bld_sdist_and_install(deps=False)
@@ -928,8 +975,9 @@ def plugin_list(parser, options, args=None):
         return -1
 
     # Requires Internet to access github.
-    if options.github:  # pragma no cover
-        _list_github_plugins()
+    if options.owner:  # pragma no cover
+
+        _list_github_plugins(options.owner)
         return 0
 
     groups = []
@@ -993,19 +1041,30 @@ def print_sub_help(parser, subname):
 
 
 # Requires Internet to access github.
-def _list_github_plugins():  # pragma no cover
-    url = 'https://api.github.com/orgs/OpenMDAO-Plugins/repos?type=public'
+def _list_github_plugins(owner):  # pragma no cover
+    url = 'https://api.github.com/users/{owner}/repos?type=public'
+    url = url.format(owner=owner)
+
+    if owner != "OpenMDAO-Plugins":
+        msg = "This is a listing of {user}'s repositories. " \
+        "There is no guarantee that these are OpenMDAO plugins.\n\n" \
+        "Please contact {user} to get an official " \
+        "listing of their OpenMDAO plugins."
+
+        print msg.format(user=owner)
 
     print "\nAvailable plugin distributions"
     print "==============================\n"
 
-    resp = urllib2.urlopen(url)
-    for line in resp.fp:
-        text = json.loads(line)
-        for item in sorted(text):
+    resp = requests.get(url, headers={'Connection':'close'})
+    items = None
+
+    if resp.ok:
+        items = sorted(resp.json())
+
+        for item in items:
             print '%20s -- %s' % (item['name'], item['description'])
         print '\n'
-
 
 def _get_plugin_parser():
     """Sets up the plugin arg parser and all of its subcommand parsers."""
@@ -1013,45 +1072,77 @@ def _get_plugin_parser():
     top_parser = ArgumentParser()
     subparsers = top_parser.add_subparsers(title='commands')
 
-    parser = subparsers.add_parser('list', help="List installed plugins")
+    parser = subparsers.add_parser('list',
+                        help="List installed plugins, or list plugins " \
+                             "available on github.")
+
     parser.usage = "plugin list [options]"
     parser.add_argument("--github",
-                        help='List plugins in the official Openmdao-Plugins'
-                             ' repository on github',
-                        action='store_true')
+                        help='List plugin repos owned by OWNER on github.',
+                        action='store',
+                        nargs='?',
+                        type=str,
+                        dest='owner',
+                        const='OpenMDAO-Plugins')
+
     parser.add_argument("-b", "--builtin",
                         help='List all installed plugins that are part of the'
                              ' OpenMDAO distribution',
                         action='store_true')
+
     parser.add_argument("-e", "--external",
                         help='List all installed plugins that are not part of'
                              ' the OpenMDAO distribution',
                         action='store_true')
-    parser.add_argument("-g", "--group", action="append", type=str,
-                        dest='groups', default=[],
+
+    parser.add_argument("-g", "--group",
+                        action="append",
+                        type=str,
+                        dest='groups',
+                        default=[],
                         choices=[p.split('.', 1)[1]
                                  for p in plugin_groups.keys()],
-                        help="specify plugin group")
+                        help="List plugins of a specified type. "
+                             "Type should be one of the listed options.")
+
     parser.set_defaults(func=plugin_list)
 
     parser = subparsers.add_parser('install',
                                    help="install an OpenMDAO plugin into the"
-                                        " current environment")
-    parser.usage = "plugin install [plugin_distribution] [options]"
-    parser.add_argument('dist_name',
-                        help='name of plugin distribution'
-                             ' (defaults to distrib found in current dir)',
+                                        " current environment",
+                                   description="Install selected plugin or plugins either locally or from github.",
+                                   formatter_class=RawDescriptionHelpFormatter)
+
+    parser.usage = "plugin install [dist_name] [options] \n"
+
+    parser.epilog = "example: get the plugin pyopt_driver from github \n" \
+                    ">plugin install pyopt_driver --github\n\n" \
+                    "example: install all OpenMDAO-compatible plugins from GithubMember's repo.\n" \
+                    ">plugin install --github GithubMember --all" 
+
+    #can't do a single component and --all in same command, make them m.e.
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument('dist_name',
+                        help='name of a single plugin distribution.  cannot be used with --all.'
+                             '(defaults to distrib found in current dir)',
                         nargs='?')
-    parser.add_argument("--github",
-                        help='Find plugin in the official OpenMDAO-Plugins'
-                             ' repository on github',
-                        action='store_true')
+
+    parser.add_argument("--github", action='store',  nargs='?', type=str, dest='owner',
+                        const='OpenMDAO-Plugins',
+                        help='Search for plugin repo owned by OWNER on github. '
+                             'Defaults to \'OpenMDAO-Plugins\'' )
+
     parser.add_argument("-f", "--find-links", action="store", type=str,
                         dest='findlinks', default='http://openmdao.org/dists',
-                        help="URL of find-links server")
-    parser.add_argument("--all", help='Install all plugins in the official'
-                        ' OpenMDAO-Plugins repository on github',
+                        help="URL of find-links server. Defaults to "
+                             "'http://openmdao.org/dists'")
+
+    group.add_argument("--all",
+                        help='Install all plugins owned by OWNER as specified '
+                             'with --github.  Defaults to OpenMDAO-Plugins.',
                         action='store_true')
+
     parser.set_defaults(func=plugin_install)
 
     parser = subparsers.add_parser('build_docs',
@@ -1115,4 +1206,3 @@ def plugin():  # pragma no cover
     parser = _get_plugin_parser()
     options, args = parser.parse_known_args()
     sys.exit(options.func(parser, options, args))
-

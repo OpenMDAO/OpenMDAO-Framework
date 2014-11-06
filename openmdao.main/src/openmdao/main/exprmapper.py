@@ -211,7 +211,7 @@ class ExprMapper(object):
 
         destexpr = ConnectedExprEvaluator(dest, scope, is_dest=True)
         srcexpr = ConnectedExprEvaluator(src, scope,
-                                         getter='get_attr')
+                                         getter='get_attr_w_copy')
 
         srccomps = srcexpr.get_referenced_compnames()
         destcomps = list(destexpr.get_referenced_compnames())

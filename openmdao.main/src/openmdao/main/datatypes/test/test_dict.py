@@ -13,7 +13,7 @@ class MyComponent(Component):
 class DictTestCase(unittest.TestCase):
     def test_missing_key_set(self):
         comp = MyComponent()
-        comp.set('arr', 2.0, [(0, 1)])
+        comp.set('arr[1]', 2.0)
         self.assertEqual(2.0, comp.arr[1])
         
         # while here, let's test the get_attributes

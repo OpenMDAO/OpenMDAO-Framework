@@ -18,9 +18,7 @@ from uuid   import uuid1
 from openmdao.main.api import VariableTree
 from openmdao.main.interfaces import implements, ICaseRecorder
 from openmdao.main.releaseinfo import __version__
-from openmdao.util.graphplot import _clean_graph
 
-from networkx.readwrite import json_graph
 
 class _BaseRecorder(object):
     """ Base class for JSONRecorder and BSONRecorder. """
@@ -44,7 +42,6 @@ class _BaseRecorder(object):
 
     def get_simulation_info(self, constants):
         """ Return simulation info dictionary. """
-
         # Locate top level assembly from first driver registered.
         top = self._cfg_map.keys()[0].parent
         while top.parent:
@@ -118,14 +115,14 @@ class _BaseRecorder(object):
         self._uuid = str(uuid1())
         self._cases = 0
 
-        graph = _clean_graph(top._depgraph)
-        data = json_graph.node_link_data(graph)
-        serial_graph = json.dumps(data)
+        dep_graph = top.get_graph(format='json')
+        comp_graph = top.get_graph(components_only=True, format='json')
 
         return dict(variable_metadata=variable_metadata,
                     expressions=expressions,
                     constants=constants,
-                    graph=serial_graph,
+                    graph=dep_graph,
+                    comp_graph=comp_graph,
                     name=top.name,
                     OpenMDAO_Version=__version__,
                     uuid=self._uuid)

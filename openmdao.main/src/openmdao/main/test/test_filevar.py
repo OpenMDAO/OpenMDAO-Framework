@@ -205,7 +205,7 @@ class TestCase(unittest.TestCase):
         # Set mismatched type and verify error message.
         self.model.source.text_file.content_type = 'invalid'
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-              " Content type 'invalid' not one of ['xyzzy', 'txt']"
+              " : Content type 'invalid' not one of ['xyzzy', 'txt']"
         try:
             self.model.run()
         except ValueError as exc:
@@ -217,11 +217,10 @@ class TestCase(unittest.TestCase):
         # Set null type and verify error message.
         self.model.source.text_file.content_type = ''
         msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-              " Content type '' not one of ['xyzzy', 'txt']"
+              " : Content type '' not one of ['xyzzy', 'txt']"
         try:
             self.model.run()
         except ValueError as exc:
-            print exc
             self.assertTrue(msg in str(exc))
         else:
             self.fail('ValueError expected')

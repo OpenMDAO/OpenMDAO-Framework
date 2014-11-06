@@ -145,9 +145,9 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.f', "scope.get('a.f')"),
             ('a.f**2', "scope.get('a.f')**2"),
             ('a.f/a.a1d[int(a.f)]',
-             "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+             "scope.get('a.f')/scope.get('a.a1d[int(a.f)]')"),
             ('a.f = a.a1d[int(a.f)]',
-             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
+             "scope.set('a.f',scope.get('a.a1d[int(a.f)]'))"),
         ]
         self._do_tests(tests, self.top)
 
@@ -155,15 +155,15 @@ class ExprEvalTestCase(unittest.TestCase):
         tests = [
             ('comp.cont.f', "scope.get('comp.cont.f')"),
             ('comp.contlist[2].a1d[3]',
-             "scope.get('comp.contlist',[(0,2),(1,'a1d'),(0,3)])"),
+             "scope.get('comp.contlist[2].a1d[3]')"),
         ]
         self._do_tests(tests, self.top)
 
     def test_dicts(self):
         tests = [
-            ("comp.indct['foo.bar']", "scope.get('comp.indct',[(0,'foo.bar')])"),
+            ("comp.indct['foo.bar']", "scope.get('comp.indct['foo.bar']')"),
             ("comp.indct['foo.bar']=comp.cont.f",
-             "scope.set('comp.indct',scope.get('comp.cont.f'),[(0,'foo.bar')])"),
+             "scope.set('comp.indct['foo.bar']',scope.get('comp.cont.f'))"),
         ]
         self._do_tests(tests, self.top)
 
@@ -172,44 +172,36 @@ class ExprEvalTestCase(unittest.TestCase):
             ('a.a1d', "scope.get('a.a1d')"),
             ('-a.a1d', "-scope.get('a.a1d')"),
             ('+a.a1d', "+scope.get('a.a1d')"),
-            ('a.a1d[0]', "scope.get('a.a1d',[(0,0)])"),
-            ('a.a2d[0][0]', "scope.get('a.a2d',[(0,0),(0,0)])"),
-            ('a.a2d[:,0]', "scope.get('a.a2d',[(4,(None,None,None),0)])"),
-            ('a.a2d[-a.a1d[2]]',
-             "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)]))])"),
-            ('a.a2d[-a.a1d[2]][foo.bar]',
-             "scope.get('a.a2d',[(0,-scope.get('a.a1d',[(0,2)])),(0,scope.get('foo.bar'))])"),
-            ('a.a2d[-a.a1d[2]]=a.f',
-             "scope.set('a.a2d',scope.get('a.f'),[(0,-scope.get('a.a1d',[(0,2)]))])"),
-            ('a.f/a.a1d[int(a.f)]',
-             "scope.get('a.f')/scope.get('a.a1d',[(0,int(scope.get('a.f')))])"),
+            ('a.a1d[0]', "scope.get('a.a1d[0]')"),
+            ('a.a2d[0][0]', "scope.get('a.a2d[0][0]')"),
+            ('a.a2d[:,0]', "scope.get('a.a2d[::,0]')"),
+            ('a.a2d[-a.a1d[2]]', "scope.get('a.a2d[-a.a1d[2]]')"),
+            ('a.a2d[-a.a1d[2]][foo.bar]', "scope.get('a.a2d[-a.a1d[2]][foo.bar]')"),
+            ('a.a2d[-a.a1d[2]]=a.f', "scope.set('a.a2d[-a.a1d[2]]',scope.get('a.f'))"),
+            ('a.f/a.a1d[int(a.f)]', "scope.get('a.f')/scope.get('a.a1d[int(a.f)]')"),
             ('a.f = a.a1d[int(a.f)]',
-             "scope.set('a.f',scope.get('a.a1d',[(0,int(scope.get('a.f')))]))"),
-            ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde',[(0,1+3**4*1)])"),
-            ('a.b[1][2]', "scope.get('a.b',[(0,1),(0,2)])"),
-            ('abs(a.b[1][2])', "abs(scope.get('a.b',[(0,1),(0,2)]))"),
-            ('a.b[1][x.y]', "scope.get('a.b',[(0,1),(0,scope.get('x.y'))])"),
+             "scope.set('a.f',scope.get('a.a1d[int(a.f)]'))"),
+            ('a.b.cde[1+3**4*1]', "scope.get('a.b.cde[1+3**4*1]')"),
+            ('a.b[1][2]', "scope.get('a.b[1][2]')"),
+            ('abs(a.b[1][2])', "abs(scope.get('a.b[1][2]'))"),
+            ('a.b[1][x.y]', "scope.get('a.b[1][x.y]')"),
             ('comp.x=a.b[1]',
-             "scope.set('comp.x',scope.get('a.b',[(0,1)]))"),
-            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d',[(0,-3)])"),
+             "scope.set('comp.x',scope.get('a.b[1]'))"),
+            ('comp.cont.a1d[-3]', "scope.get('comp.cont.a1d[-3]')"),
         ]
         self._do_tests(tests, self.top)
 
     def test_calls(self):
         tests = [
-            ('a.b()', "scope.get('a.b',[(2,)])"),
-            ('a.b(5)', "scope.get('a.b',[(2,[5])])"),
-            ('a.b(5,9)', "scope.get('a.b',[(2,[5,9])])"),
-            ('a.b(5,z.y)', "scope.get('a.b',[(2,[5,scope.get('z.y')])])"),
-            ('a.b(5, z.y(2,3))',
-             "scope.get('a.b',[(2,[5,scope.get('z.y',[(2,[2,3])])])])"),
-            ('a.b(5, z.y[3])',
-             "scope.get('a.b',[(2,[5,scope.get('z.y',[(0,3)])])])"),
-            ('a.b(1,23,foo=9)',
-             "scope.get('a.b',[(2,[1,23],[('foo',9)])])"),
-            ('a.b(1,23)[1]', "scope.get('a.b',[(2,[1,23]),(0,1)])"),
-            ('a.b(1).somefunct(2)[1]',
-             "scope.get('a.b',[(2,[1]),(1,'somefunct'),(2,[2]),(0,1)])"),
+            ('a.b()', "scope.get('a.b')()"),
+            ('a.b(5)', "scope.get('a.b')(5)"),
+            ('a.b(5,9)', "scope.get('a.b')(5,9)"),
+            ('a.b(5,z.y)', "scope.get('a.b')(5,scope.get('z.y'))"),
+            ('a.b(5, z.y(2,3))', "scope.get('a.b')(5,scope.get('z.y')(2,3))"),
+            ('a.b(5, z.y[3])', "scope.get('a.b')(5,scope.get('z.y[3]'))"),
+            ('a.b(1,23,foo=9)', "scope.get('a.b')(1,23,foo=9)"),
+            ('a.b(1,23)[1]', "scope.get('a.b(1,23)[1]')"),
+            ('a.b(1).somefunct(2)[1]', "scope.get('a.b(1).somefunct(2)[1]')"),
         ]
 
         self._do_tests(tests, self.top)
@@ -297,7 +289,7 @@ class ExprEvalTestCase(unittest.TestCase):
         try:
             ex.set(0.5)
         except AttributeError as err:
-            self.assertEqual(str(err), "a: object has no attribute 'comp.x'")
+            self.assertEqual(str(err), "a: 'A' object has no attribute 'comp'")
         else:
             self.fail("AttributeError expected")
         self.assertEqual(new_text(ex), "scope.get('comp.x')")
@@ -309,7 +301,7 @@ class ExprEvalTestCase(unittest.TestCase):
             ex.evaluate(self.top.a)
         except AttributeError as err:
             self.assertEqual(str(err), "can't evaluate expression 'comp.y':"
-                             " a: 'A' object has no attribute 'comp'")
+                             " a: name 'comp' is not defined")
         else:
             self.fail("AttributeError expected")
         ex.scope = self.top
@@ -367,19 +359,19 @@ class ExprEvalTestCase(unittest.TestCase):
         self.assertEqual(ex.get_referenced_varpaths(), set(['asm2.comp3.contlist']))
 
     def test_get_referenced_compnames(self):
-        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top.a)
+        ex = ExprEvaluator('comp.x[0] = 10*(3.2+ a.a1d[3]* 1.1*a.a1d[2 ].foobar)', self.top)
         self.assertEqual(ex.get_referenced_compnames(), set(['comp', 'a']))
         ex.text = 'comp.contlist[1].a2d[2][1]'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
-        ex.scope = self.top.comp
+        ex.scope = self.top
         ex.text = 'comp.contlist[1]'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
         ex.text = 'comp.contlist[1].foo'
         self.assertEqual(ex.get_referenced_compnames(), set(['comp']))
         ex.text = 'contlist[1].foo'
         self.assertEqual(ex.get_referenced_compnames(), set())
-        ex.text = 'asm2.comp3.contlist[1].foo'
-        self.assertEqual(ex.get_referenced_compnames(), set(['asm2']))
+        ex.text = 'a.comp3.contlist[1].foo'
+        self.assertEqual(ex.get_referenced_compnames(), set(['a']))
 
     def test_slice(self):
         ex = ExprEvaluator('a1d[1::2]', self.top.a)
@@ -527,7 +519,7 @@ class ExprEvalTestCase(unittest.TestCase):
         except AttributeError, err:
 
             self.assertEqual(str(err), "can't evaluate expression 'abcd.efg':"
-                             " : 'Assembly' object has no attribute 'abcd'")
+                             " : name 'abcd' is not defined")
 
         else:
             raise AssertionError('AttributeError expected')

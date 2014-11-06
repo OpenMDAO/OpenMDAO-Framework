@@ -48,39 +48,41 @@ follows:
 .. testcode:: NEWSUMT_load
 
     from openmdao.main.api import Assembly
-    from openmdao.examples.enginedesign.vehicle import Vehicle
+    from openmdao.examples.simple.paraboloid import Paraboloid
     from openmdao.lib.drivers.api import NEWSUMTdriver
-
-    class EngineOptimization(Assembly):
-        """ Top level assembly for optimizing a vehicle. """
-    
-        def configure(self):
-            """ Creates a new Assembly for vehicle performance optimization."""
+        
+    class Top(Assembly):
+        """Constrained optimization of the Paraboloid with whatever optimizer
+        we want."""
             
-            # Create NEWSUMT Optimizer instance
+        def configure(self):
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+                
+            # Create Paraboloid component instances
+            self.add('comp', Paraboloid())
+        
+            # Create Optimizer instance
             self.add('driver', NEWSUMTdriver())
+                
+            # Driver process definition
+            self.driver.workflow.add('comp')
         
-            # Create Vehicle instance
-            self.add('vehicle', Vehicle())
-        
-            # add Vehicle to optimizer workflow
-            self.driver.workflow.add('vehicle')
-    
+            # Objective 
+            self.driver.add_objective('comp.f_xy')
+                
+            # Design Variables 
+            self.driver.add_parameter('comp.x', low=-50., high=50.)
+            self.driver.add_parameter('comp.y', low=-50., high=50.)
+
             # NEWSUMT Flags
             self.driver.iprint = 0
             self.driver.itmax = 30
             
-            # NEWSUMT Objective 
-            self.driver.add_objective('vehicle.fuel_burn')
-        
-            # NEWSUMT Design Variables 
-            self.driver.add_parameter('vehicle.spark_angle', low=-50. , high=10.)
-            self.driver.add_parameter('vehicle.bore', low=65. , high=100.)
 
-This first section of code defines an assembly called EngineOptimization.
-This assembly contains a DrivingSim component and a NEWSUMTdriver, both of
+This first section of code defines an assembly called Top.
+This assembly contains a Paraboloid component and a NEWSUMTdriver, both of
 which are created and added inside the ``__init__`` function with ``add``. The
-DrivingSim component is also added to the driver's workflow. The objective
+Paraboloid component is also added to the driver's workflow. The objective
 function, design variables, constraints, and any NEWSUMT parameters are also
 assigned in the ``__init__`` function.
 
@@ -103,9 +105,9 @@ parameter.
 .. testcode:: NEWSUMT_fd
     :hide:
     
-    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     from openmdao.main.api import set_as_top
-    self = set_as_top(EngineOptimization())
+    self = set_as_top(OptimizationUnconstrained())
     
 .. testcode:: NEWSUMT_fd
 
@@ -114,26 +116,23 @@ parameter.
 The default step size will be used for all parameters for which you have not
 set the ``fd_step`` attribute.
 
-When using NEWSUMT, if you have any linear constraints, it may be
-advantageous to specify them as such so that NEWSUMT can treat them
-differently. Use the integer array `ilin` to designate whether a constraint
-is linear. A value of 0 indicates that that constraint is non-linear, while a
-value of 1 indicates that that the constraint is linear. This parameter is
-optional, and when it is omitted, all constraints are assumed to be nonlinear.
+If your problem uses linear constraints, you can improve the efficiency of the
+optimization process by designating those that are linear functions of the design
+variables as follows:
 
-.. testcode:: NEWSUMT_show
+.. testcode:: NEWSUMT_fd
 
-    map(self.driver.add_constraint, ['vehicle.stroke < vehicle.bore',
-                               'vehicle.stroke * vehicle.bore > 1.0'])
-    self.driver.ilin_linear = [1, 0]
+    self.driver.add_constraint('paraboloid.x - paraboloid.y >= 15.0')
+    self.driver.add_constraint('paraboloid.x*paraboloid.y < 77.0', linear=True)
 
+Note that this method of specification replaces the use of the ``iln_linear`` flag.
 
 Similarly, NEWSUMT has a flag parameter to indicate whether the objective
 function is linear or nonlinear. Setting ``lobj`` to 1 indicates a linear
 objective function. Setting it to 0, which is the default value, indicates a
 nonlinear objective function.
 
-.. testcode:: NEWSUMT_show
+.. testcode:: NEWSUMT_fd
 
         self.driver.lobj = 0
 
@@ -141,7 +140,7 @@ The `iprint` parameter can be used to display diagnostic
 messages. These messages are currently sent to the standard
 output.
 
-.. testcode:: NEWSUMT_show
+.. testcode:: NEWSUMT_fd
 
         self.driver.iprint = 0
 
@@ -172,9 +171,9 @@ The default value is 10.
 
 .. testsetup:: NEWSUMT_show
     
-    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     from openmdao.main.api import set_as_top
-    self = set_as_top(EngineOptimization())
+    self = set_as_top(OptimizationUnconstrained())
 
 .. testcode:: NEWSUMT_show
 

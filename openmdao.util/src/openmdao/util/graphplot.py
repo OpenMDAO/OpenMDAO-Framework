@@ -41,9 +41,12 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
     should not be used for really large graphs because it
     copies the entire graph.
     """
-    # make a subgraph, creating new edge/node meta dicts later if
-    # we change anything
+    # make a subgraph with new metadata so we don't have to worry
+    # about what we change
     graph = graph.subgraph(graph.nodes_iter())
+    graph.graph = dict(graph.graph)
+    for n in graph.nodes():
+        graph.node[n] = dict(graph.node[n])
 
     if parent is None:
         graph.graph['title'] = 'unknown'
@@ -79,23 +82,19 @@ def _clean_graph(graph, excludes=(), scope=None, parent=None, minimal=False):
                     nodes_to_remove.append(node)
                     continue
             # update node metadata
-            newdata = data
             for meta in _excluded_node_data:
-                if meta in newdata:
-                    if newdata is data:
-                        newdata = dict(data)  # make a copy of metadata since we're changing it
-                        graph.node[node] = newdata
-                    del newdata[meta]
+                if meta in data:
+                    del data[meta]
             tt_dct = {}
-            for key, val in newdata.items():
+            for key, val in data.items():
                 if key not in _excluded_tooltip_data:
                     tt_dct[key] = val
                 elif scope is not None and key == 'pseudo':
                     if val == 'objective':
-                        newdata['objective'] = getattr(scope, node)._orig_expr
+                        data['objective'] = getattr(scope, node)._orig_expr
                     elif val == 'constraint':
-                        newdata['constraint'] = getattr(scope, node)._orig_expr
-            newdata['title'] = pprint.pformat(tt_dct)
+                        data['constraint'] = getattr(scope, node)._orig_expr
+            data['title'] = pprint.pformat(tt_dct)
 
     graph.remove_nodes_from(nodes_to_remove)
 

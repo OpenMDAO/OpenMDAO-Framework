@@ -240,9 +240,10 @@ class Workflow(object):
         outputs: list of strings
             Lis of OpenMDAO outputs to take derivatives of.
 
-        mode: string in ['forward', 'adjoint', 'auto']
+        mode: string in ['forward', 'adjoint', 'auto', 'fd']
             Mode for gradient calculation. Set to 'auto' to let OpenMDAO choose
-            forward or adjoint based on problem dimensions.
+            forward or adjoint based on problem dimensions. Set to 'fd' to
+            finite difference the entire workflow.
 
         return_format: string in ['array', 'dict']
             Format for return value. Default is array, but some optimizers may
@@ -527,10 +528,18 @@ class Workflow(object):
         # return arrays and suspects to make it easier to check from a test
         return Jbase.flatten(), J.flatten(), io_pairs, suspects
 
-    def configure_recording(self, includes, excludes):
+    def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-        if not includes:
+
+        if recording_options:
+            includes = recording_options.includes
+            excludes = recording_options.excludes
+            save_problem_formulation = recording_options.save_problem_formulation
+        else:
+            includes = excludes = save_problem_formulation = None
+
+        if not recording_options or not (save_problem_formulation or includes):
             self._rec_required = False
             return (set(), dict())
 
@@ -552,7 +561,8 @@ class Workflow(object):
                 if isinstance(name, tuple):
                     name = name[0]
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_parameters.append(param)
                     inputs.append(name)
 
@@ -586,8 +596,13 @@ class Workflow(object):
         if hasattr(driver, 'eval_objectives'):
             for key, objective in driver.get_objectives().items():
                 name = objective.pcomp_name
+                if key != objective.text:
+                    name = key
+
+                #name = objective.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
                     print "objective", name  #qqq
                     #qqq outputs.append(name)
@@ -598,7 +613,8 @@ class Workflow(object):
             for key, response in driver.get_responses().items():
                 name = response.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_responses.append(key)
                     #qqq outputs.append(name)
 
@@ -608,7 +624,8 @@ class Workflow(object):
             for con in driver.get_eq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     print "eq_constraints", name  #qqq
                     # qqq outputs.append(name)
@@ -616,7 +633,8 @@ class Workflow(object):
             for con in driver.get_ineq_constraints().values():
                 name = con.pcomp_name
                 path = prefix+name
-                if self._check_path(path, includes, excludes):
+                if save_problem_formulation or \
+                   self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
                     print "ineq_constraints", name  #qqq
                     #qqq outputs.append(name)
@@ -628,6 +646,7 @@ class Workflow(object):
             srcs.extend(param.target
                         for param in driver.get_parameters().values())
         dsts = scope.list_outputs()
+
         if hasattr(driver, 'get_objectives'):
             dsts.extend(objective.pcomp_name+'.out0'
                         for objective in driver.get_objectives().values())
@@ -647,7 +666,7 @@ class Workflow(object):
                 continue
             path = prefix+src
             if src not in inputs and src not in outputs and \
-               self._check_path(path, includes, excludes):
+               (save_problem_formulation or self._check_path(path, includes, excludes)):
                 self._rec_outputs.append(src)
                 print "other output", src  #qqq
                 #qqq outputs.append(src)
@@ -682,16 +701,20 @@ class Workflow(object):
     @staticmethod
     def _check_path(path, includes, excludes):
         """ Return True if `path` should be recorded. """
+        record = False
+
+        # first see if it's included
         for pattern in includes:
             if fnmatch(path, pattern):
-                break
-        else:
-            return False
+                record = True
 
-        for pattern in excludes:
-            if fnmatch(path, pattern):
-                return False
-        return True
+        # if it passes include filter, check exclude filter
+        if record:
+            for pattern in excludes:
+                if fnmatch(path, pattern):
+                    record = False
+
+        return record
 
     def _record_case(self, case_uuid, err):
         """ Record case in all recorders. """

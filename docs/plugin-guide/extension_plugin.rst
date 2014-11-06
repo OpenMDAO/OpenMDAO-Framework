@@ -34,8 +34,7 @@ it is not always a viable option. To learn how to file-wrap in OpenMDAO, see
 :ref:`Building-a-Plugin-Using-a-File-Wrapper`.
 
 For the examples presented here, we assume that you are already familiar with the
-fundamentals of the OpenMDAO component API and also with creating Python components
-as outlined in the :ref:`A-More-Complex-Tutorial-Problem`.
+fundamentals of the OpenMDAO component API and also with creating Python components.
 
 .. index:: extension; creating with F2PY
 .. index:: F2PY
@@ -65,8 +64,7 @@ attractive feature of F2PY is its simplicity -- it can be learned quickly and us
 without understanding the details under the hood.
 
 While F2PY was developed for use with Fortran, it can also wrap C functions with almost as 
-much ease. An example of wrapping a C function with F2PY can be found in :ref:`Wrapping-an-External-Module-Using-F2PY`
-in the OpenMDAO Tutorial.
+much ease.
 
 To illustrate the creation of an OpenMDAO component from a Fortran function, we'll present a brief
 tutorial. The following instructions will help you locate the directory containing the pieces
@@ -115,7 +113,7 @@ cross-sectional areas of the three bars that minimize the total weight of the st
 satisfying constraints on the bar stresses, the displacement of node 1, and the frequency of the
 first mode.
 
-The `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
+The `F2PY Users Guide <https://sysbio.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
 ways to use F2PY to generate the Python-callable object. The "quick way" is to just run F2PY on the
 Fortran file, which produces a shared object containing a function (or functions) that can be
 called from Python. This works for the simplest case but breaks down when F2PY doesn't know which
@@ -124,14 +122,14 @@ input/output intent of each function in the signature file (extension ``.pyf``).
 "quick and smart way," the input/output intents are specified directly in the Fortran code as 
 comments.
 
-This example showcases the "quick and smart way." An example of the "smart way" can be found in 
-:ref:`Wrapping-an-External-Module-Using-F2PY`, where a signature file is included
-as part of the engine design tutorial. The "quick and smart way" should be fine for most cases,
-provided there are no objections to inserting new comments into your existing source code. For
-some cases, the extra flexibility of the signature file may be needed. One specific example
-is where you only want to expose one function from a Fortran file that contains
-several functions. In this case you can instruct F2PY to generate a signature file,
-after which you can edit it to your satisfaction.
+This example showcases the "quick and smart way." There is another "smart
+way" where the directives are included in a separate signature file. The
+"quick and smart way" should be fine for most cases, provided there are no
+objections to inserting new comments into your existing source code. For some
+cases, the extra flexibility of the signature file may be needed. One
+specific example is where you only want to expose one function from a Fortran
+file that contains several functions. In this case you can instruct F2PY to
+generate a signature file, after which you can edit it to your satisfaction.
 
 Subroutine ``runbar3truss`` has the following interface:
 
@@ -370,8 +368,7 @@ attempting to wrap your own C or C++ codes.
 
 The first step in creating a Python extension is to create the interface file for the C functions
 that are to be wrapped. The interface file is analogous to the signature file that F2PY uses, though
-its format is more like C. For example, consider the engine simulation as described in the :ref:`more
-complex tutorial <A-More-Complex-Tutorial-Problem>`. There is one function with inputs and outputs
+its format is more like C. There is one function with inputs and outputs
 effectively passed as arguments. The corresponding interface file would look like this:
 
 .. __: http://www.swig.org/tutorial.html

@@ -148,17 +148,13 @@ def _test_slot_subclass(browser):
         ['', 'input', '0', '', ''],
         ['', 'directory', '', '',
          'If non-blank, the directory to execute in.'],
-        ['', 'excludes', '[]', '',
-         'Patterns for variables to exclude from the recorders'
-         ' (only valid at top level).'],
         ['', 'force_fd', 'False', '',
          'If True, always finite difference this component.'],
-        ['', 'includes', "['*']", '',
-         'Patterns for variables to include in the recorders'
-         ' (only valid at top level).'],
         ['', 'missing_deriv_policy', 'assume_zero', '',
          'Determines behavior when some analytical derivatives are provided but'
          ' some are missing'],
+        ['', ' recording_options', '', '',
+         'Case recording options (only valid at top level).'],
     ]
     for i, row in enumerate(inputs.value):
         eq(row, expected[i])
@@ -347,7 +343,6 @@ def _test_dict_slot(browser):
 
     # Clean up.
     closeout(project_dict, workspace_page)
-
 
 
 if __name__ == '__main__':
