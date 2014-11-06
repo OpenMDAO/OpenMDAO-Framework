@@ -91,7 +91,7 @@ class _Case(object):
                 self._exprs = {}
             self._exprs[name] = expr
 
-    def apply_inputs(self, scope):
+    def apply_inputs(self, scope, parent):
         """
         Take the values of all of the inputs in this case and apply them
         to the specified scope.
@@ -105,13 +105,9 @@ class _Case(object):
                 expr.set(value, scope) #, tovector=True)
             else:
                 scope.set(name, value)
-                # FIXME: this extra setting of the vector is messy...
-                if hasattr(scope, 'get_system'):
-                    system = scope.get_system()
-                    if system is not None:
-                        uvec = system.vec.get('u')
-                        if uvec and name in uvec:
-                            uvec[name][:] = flattened_value(name, value)
+
+        parent._system.vec.get('u').set_from_scope(scope)
+            
 
     def fetch_outputs(self, scope, extra=False, itername=''):
         """
@@ -301,6 +297,13 @@ class CaseIteratorDriver(Driver):
 
     def _setup(self):
         """ Setup to begin new run. """
+        # if params have changed we need to setup systems again
+        if self.workflow._system is None:
+            obj = self
+            while obj.parent is not None:
+                obj = obj.parent
+            obj._setup()
+            
         if not self.sequential:
             # Save model to egg.
             # Must do this before creating any locks or queues.
@@ -694,11 +697,11 @@ class CaseIteratorDriver(Driver):
         case.parent_uuid = self._case_uuid
 
         try:
-            case.apply_inputs(server.top)
+            case.apply_inputs(server.top, self)
         except Exception:
             case.exc = sys.exc_info()
             msg = 'Exception setting case inputs: %s' % case.exc[1]
-            self._logger.debug('    %s', msg)
+            self._logger.error('    %s', msg)
             if case.retries < self.max_retries:
                 case.retries += 1
                 self._rerun.append(case)

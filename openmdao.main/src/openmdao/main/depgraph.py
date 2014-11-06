@@ -436,7 +436,7 @@ class DependencyGraph(nx.DiGraph):
         """
         base = base_var(self,subvar)
         if base not in self:
-            raise RuntimeError("can't find basevar '%s' in graph" % base)
+            raise NameError("can't find basevar '%s' in graph" % base)
         elif subvar in self:
             # adding something that's already there
             return subvar

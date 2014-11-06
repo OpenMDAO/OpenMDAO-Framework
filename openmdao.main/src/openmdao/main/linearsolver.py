@@ -187,9 +187,8 @@ class ScipyGMRES(LinearSolver):
         vnames = set(system.flat_vars.keys())
         if system._parent_system:
             g = system._parent_system._comp._reduced_internal_graph
-            #g = system._parent_system._comp.get_reduced_graph()
             vnames.update([n for n,data in g.nodes_iter(data=True) 
-                               if 'comp' not in data and varmeta[n].get('flat')])
+                               if 'comp' not in data and not varmeta[n].get('noflat')])
 
         ## add inputs, filtered so that we don't include any inputs from
         ## outside of this workflow system

@@ -48,7 +48,7 @@ def compound_setup_scatters(self):
     scatter_conns_full = set()
     noflat_conns_full = set()
     noflats = set([k for k,v in self.variables.items()
-                       if not v.get('flat',True)])
+                       if v.get('noflat')])
 
     start = numpy.sum(input_sizes[:rank])
     varkeys = self.vector_vars.keys()
@@ -259,7 +259,7 @@ class System(object):
         to variables that are flattenable to float arrays.
         """
         varmeta = self.scope._var_meta
-        return [n for n in names if varmeta[n].get('flat')]
+        return [n for n in names if not varmeta[n].get('noflat')]
 
     def get_unique_vars(self, vnames):
         """
@@ -779,7 +779,7 @@ class System(object):
         """Return a list of names of vars that represent variables that are
         flattenable to float arrays.
         """
-        return [n for n,info in vardict.items() if info.get('flat', True)]
+        return [n for n,info in vardict.items() if not info.get('noflat')]
 
     def _get_vector_vars(self, vardict):
         """Return vector_vars, which are vars that actually add to the
@@ -998,7 +998,7 @@ class System(object):
 
         self.sol_vec.array[:] = self.sol_buf.array[:]
 
-        mpiprint('dx', self.sol_vec.array)
+        #mpiprint('dx', self.sol_vec.array)
         return self.sol_vec
 
     # def _get_global_indices(self, var, rank):
@@ -2356,13 +2356,13 @@ def _filter_ignored(scope, lst):
     return unignored
 
 def _filter_flat(scope, lst):
-    filtered = []
+    keep = []
     
     for name in lst:
         collapsed_name = scope.name2collapsed[name]
         
         # ignore non-float-flattenable vars
-        if scope._var_meta[collapsed_name].get('flat'):
-            filtered.append(name)
+        if not scope._var_meta[collapsed_name].get('noflat'):
+            keep.append(name)
 
-    return filtered
+    return keep
