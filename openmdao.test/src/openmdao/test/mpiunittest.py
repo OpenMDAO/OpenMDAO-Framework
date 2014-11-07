@@ -177,6 +177,15 @@ if __name__ == '__main__':
 
         parts = testpath.split('.')
 
+        # FIXME: LAME HACK, but it'll do for now
+        tdir = os.path.dirname(os.path.abspath(__file__))
+        # up 4 levels to the top of the repo
+        for i in range(4):
+            tdir = os.path.dirname(tdir)
+        tdir = os.path.join(tdir, 'contrib')
+        if tdir not in sys.path:
+            sys.path.append(tdir)
+
         try:
             method = parts[-1]
             testcase_classname = parts[-2]
