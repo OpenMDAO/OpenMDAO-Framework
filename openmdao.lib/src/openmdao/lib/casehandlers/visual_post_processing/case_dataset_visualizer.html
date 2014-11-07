@@ -582,15 +582,44 @@
                 return graph_id;
             }
 
-            // load a UI for plotting the history of values for a variable
+            // load plotting UI
             function load_plotting() {
                 w2ui.layout.content('main', '<div id="plotContent" style="background-color:white"></div>');
 
                 var plotContent = $('#plotContent');
-                var plotDiv = plotContent.append('<div id="plotDiv" style="height:90%"></div>');
+                var plotDiv  = plotContent.append('<div id="plotDiv" style="height:90%"></div>');
                 var queryDiv = plotContent.append('<div id="queryDiv" style="height:10%></div>');
+                var comboDiv = $('<div id="comboDiv">')
+                        .appendTo(queryDiv);
+                var toggleButtons = $('<div>Toggle Buttons</div>')
+                        .appendTo(queryDiv)
+                        .on('click', function() { buttonDiv.toggle(); })
+                        .css({
+                            'float':        'left',
+                            'border-style': 'groove',
+                            'margin':       '5px',
+                            'position':     'absolute',
+                            'right':        '0',
+                            'font-size':    '12px',
+                            'font-family':  'Arial, sans-serif'
+                        })
+                var buttonDiv = $('<div id="buttonDiv" style="clear:both;display:none;overflow:auto">')
+                        .appendTo(queryDiv);
+                var queryValue  = undefined;
+                var queryCase   = undefined;
+                var queryDriver = undefined;
+                var plottable = {};
 
-                // function to generate plot
+                // update plot for currently selected var, case and driver
+                function updatePlot() {
+                    var vals = getHistory(queryValue);
+                    var series = vals.map(function(e, i) {
+                        return [i, vals[i]]
+                    })
+                    plotSeries(plottable[queryValue].title, series);
+                }
+
+                // generate plot
                 function plotSeries(title, series) {
                     // create new plot
                     $.plot('#plotDiv', [series]);
@@ -604,115 +633,121 @@
                     context.fillText(title, cx, 35);
                 }
 
-                // function to handle click event on a variable name
-                function clickHandler() {
-                    var name = $(this).attr('title');
-                    var vals = getHistory(name);
-                    var series = vals.map(function(e, i) {
-                        return [i, vals[i]]
-                    })
-                    plotSeries($(this).text(), series);
+                // get all plottable values (numeric variables and expressions)
+                function getPlottable(simulation_info) {
+                    // find every numeric variable in variable_metadata and every (objective/constraint) expression
+                    var plottable = {};
+                    $.each(simulation_info.variable_metadata, function(name, value) {
+                        var type = 'Variable';
+                        if ((value.vartypename === 'Float') || (value.vartypename === 'Int')) {
+                            if (parameter_list.indexOf(name) >= 0) {
+                                type = 'Parameter';
+                            }
+                            else if (simulation_info.constants.hasOwnProperty(name)) {
+                                // don't include constants that are not parameters
+                                return true;
+                            }
+                            plottable[name] = { 'title': name, 'type': type };
+                        }
+                    });
+                    $.each(pseudo_to_expr, function(name, value) {
+                        var type = 'Expression';
+                        if ((value.type === 'Constraint') ||  (value.type === 'Objective')) {
+                            type = value.type;
+                        }
+                        plottable[name] = { 'title': value.expr, 'type': type };
+                    });
+                    return plottable;
                 }
 
-                var_names = {};
-                // add a button for every numeric variable in variable_metadata
-                $.each(case_data.simulation_info.variable_metadata, function(name, value) {
-                    var color = 'white';
-                    if ((value.vartypename === 'Float') || (value.vartypename === 'Int')) {
-                        if (parameter_list.indexOf(name) >= 0) {
-                            // color parameters pink
-                            color = 'pink';
+                // add a button for every plottable value
+                function addButtons(plottable) {
+                    function clickHandler() {
+                        queryValue = $(this).attr('title');
+                        updatePlot();
+                    }
+
+                    $.each(plottable, function(name, value) {
+                        var color = 'white';
+                        switch(value.type) {
+                            case 'Parameter' : color = 'pink'; break;
+                            case 'Constraint': color = 'red';  break;
+                            case 'Objective' : color = 'gold'; break;
                         }
-                        else if (case_data.simulation_info.constants.hasOwnProperty(name)) {
-                            // don't include constants that are not parameters
-                            // console.log('excluding constant:', name);
-                            return true;
-                        }
-                        var_names[name] = { 'title': name, 'color': color };
-                        // $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+name+'</div>')
-                        //     .on('click', clickHandler)
-                        //     .appendTo(queryDiv);
-                    }
-                });
-
-                // add a button for every (objective/constraint) expression
-                $.each(pseudo_to_expr, function(name, value) {
-                    var color = 'white';
-                    if (value.type === 'Constraint') {
-                        color = 'red';
-                    }
-                    else if (value.type === 'Objective') {
-                        color = 'gold';
-                    }
-                    var_names[name] = { 'title': value.expr, 'color': color };
-                    // $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.expr+'</div>')
-                    //     .on('click', clickHandler)
-                    //     .appendTo(queryDiv);
-                });
-
-                // add combo box for selecting expression/variable
-                var html = '<div class="ui-widget"><label>Value:  </label><select id="combobox">';
-                html += '<option value=""></option>';
-                $.each(var_names, function(name, val) {
-                    console.log(name, val);
-                    html += '<option value="'+name+'"">'+val.title+'</option>';
-                });
-                html += '</select></div>';
-
-                var combo = $(html).appendTo(queryDiv);
-                combo.on('change', function() {
-                    $(this).find('option:selected').each(function() {
-                        var name = $(this).attr('value');
-                        var vals = getHistory(name);
-                        var series = vals.map(function(e, i) {
-                            return [i, vals[i]]
-                        })
-                        plotSeries($(this).text(), series);
+                        $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.title+'</div>')
+                            .on('click', clickHandler)
+                            .appendTo(buttonDiv);
                     });
-                });
-                combo.css('font-size', '12px');
+                }
 
-                // add combo box for selecting Case
-                var html = '<div class="ui-widget"><label>Case :    </label><select id="combobox">';
-                html += '<option value=""></option>';
-                $.each(case_objects, function(uuid, val) {
-                    html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
-                });
-                html += '</select></div>';
-                var combo = $(html).appendTo(queryDiv);
-                combo.on('change', function() {
-                    $(this).find('option:selected').each(function() {
-                        // var name = $(this).attr('value');
-                        // var vals = getHistory(name);
-                        // var series = vals.map(function(e, i) {
-                        //     return [i, vals[i]]
-                        // })
-                        // plotSeries($(this).text(), series);
+                // add combo boxes to select value, case and driver for query
+                function addCombos(plottable, case_objects, driver_info) {
+                    // add combo box for selecting plottable variable/expression
+                    var html = '<div class="ui-widget"><label>Value:  </label><select id="combobox">';
+                    html += '<option value=""></option>';
+                    $.each(plottable, function(name, val) {
+                        console.log(name, val);
+                        html += '<option value="'+name+'"">'+val.title+'</option>';
                     });
-                });
-                combo.css('font-size', '12px');
+                    html += '</select></div>';
 
-                // add combo box for selecting driver
-                var html = '<div class="ui-widget"><label>Driver: </label><select id="combobox">';
-                html += '<option value=""></option>';
-                $.each(driver_info, function(name, val) {
-                    html += '<option value="'+name+'"">'+name+'</option>';
-                });
-                html += '</select></div>';
-                var combo = $(html).appendTo(queryDiv);
-                combo.on('change', function() {
-                    $(this).find('option:selected').each(function() {
-                        // var name = $(this).attr('value');
-                        // var vals = getHistory(name);
-                        // var series = vals.map(function(e, i) {
-                        //     return [i, vals[i]]
-                        // })
-                        // plotSeries($(this).text(), series);
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryValue =  $(this).attr('value');
+                            updatePlot();
+                        });
                     });
-                });
-                combo.css('font-size', '12px');
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
 
+                    // add combo box for selecting Case
+                    var html = '<div class="ui-widget"><label>Case :    </label><select id="combobox">';
+                    html += '<option value=""></option>';
+                    $.each(case_objects, function(uuid, val) {
+                        html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
+                    });
+                    html += '</select></div>';
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryCase =  $(this).attr('value');
+                            updatePlot();
+                        });
+                    });
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
 
+                    // add combo box for selecting driver
+                    var html = '<div class="ui-widget"><label>Driver: </label><select id="combobox">';
+                    html += '<option value=""></option>';
+                    $.each(driver_info, function(name, val) {
+                        html += '<option value="'+name+'"">'+name+'</option>';
+                    });
+                    html += '</select></div>';
+                    var combo = $(html).appendTo(comboDiv);
+                    combo.on('change', function() {
+                        $(this).find('option:selected').each(function() {
+                            queryDriver =  $(this).attr('value');
+                            updatePlot();
+                        });
+                    });
+                    combo.css({
+                        'font-size': '12px',
+                        'margin': '5px',
+                        'float': 'left'
+                    });
+                }
+
+                plottable = getPlottable(case_data.simulation_info);
+                addCombos(plottable, case_objects, driver_info);
+                addButtons(plottable);
 
                 return 'plotting';
             }
