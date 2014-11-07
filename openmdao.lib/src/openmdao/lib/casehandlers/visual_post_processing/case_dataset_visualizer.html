@@ -79,153 +79,16 @@
             };
         </script>
         <style>
-            .custom-combobox {
-                position: relative;
-                display: inline-block;
-            }
-            .custom-combobox-toggle {
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                margin-left: -1px;
-                padding: 0;
-            }
-            .custom-combobox-input {
-                margin: 0;
-                padding: 5px 10px;
+            .valbutton {
+                float:         left;
+                border:        1px solid #bbb;
+                border-radius: 3px;
+                padding:       2px;
+                margin:        5px;
+                font-size:     12px;
+                font-family':  Arial, sans-serif;
             }
         </style>
-        <script>
-            (function( $ ) {
-                $.widget( "custom.combobox", {
-                    _create: function() {
-                        this.wrapper = $( "<span>" )
-                            .addClass( "custom-combobox" )
-                            .insertAfter( this.element );
-
-                        this.element.hide();
-                        this._createAutocomplete();
-                        this._createShowAllButton();
-                    },
-
-                    _createAutocomplete: function() {
-                        var selected = this.element.children( ":selected" ),
-                            value = selected.val() ? selected.text() : "";
-
-                        this.input = $( "<input>" )
-                            .appendTo( this.wrapper )
-                            .val( value )
-                            .attr( "title", "" )
-                            .addClass( "custom-combobox-input ui-widget ui-widget-content ui-state-default ui-corner-left" )
-                            .autocomplete({
-                                delay: 0,
-                                minLength: 0,
-                                source: $.proxy( this, "_source" )
-                            })
-                            .tooltip({
-                                tooltipClass: "ui-state-highlight"
-                            });
-
-                        this._on( this.input, {
-                            autocompleteselect: function( event, ui ) {
-                                ui.item.option.selected = true;
-                                this._trigger( "select", event, {
-                                    item: ui.item.option
-                                });
-                            },
-
-                            autocompletechange: "_removeIfInvalid"
-                        });
-                    },
-
-                    _createShowAllButton: function() {
-                        var input = this.input,
-                            wasOpen = false;
-
-                        $( "<a>" )
-                            .attr( "tabIndex", -1 )
-                            .attr( "title", "Show All Items" )
-                            .tooltip()
-                            .appendTo( this.wrapper )
-                            .button({
-                                icons: {
-                                    primary: "ui-icon-triangle-1-s"
-                                },
-                                text: false
-                            })
-                            .removeClass( "ui-corner-all" )
-                            .addClass( "custom-combobox-toggle ui-corner-right" )
-                            .mousedown(function() {
-                                wasOpen = input.autocomplete( "widget" ).is( ":visible" );
-                            })
-                            .click(function() {
-                                input.focus();
-
-                                // Close if already visible
-                                if ( wasOpen ) {
-                                    return;
-                                }
-
-                                // Pass empty string as value to search for, displaying all results
-                                input.autocomplete( "search", "" );
-                            });
-                    },
-
-                    _source: function( request, response ) {
-                        var matcher = new RegExp( $.ui.autocomplete.escapeRegex(request.term), "i" );
-                        response( this.element.children( "option" ).map(function() {
-                            var text = $( this ).text();
-                            if ( this.value && ( !request.term || matcher.test(text) ) )
-                                return {
-                                    label: text,
-                                    value: text,
-                                    option: this
-                                };
-                        }) );
-                    },
-
-                    _removeIfInvalid: function( event, ui ) {
-
-                        // Selected an item, nothing to do
-                        if ( ui.item ) {
-                            return;
-                        }
-
-                        // Search for a match (case-insensitive)
-                        var value = this.input.val(),
-                            valueLowerCase = value.toLowerCase(),
-                            valid = false;
-                        this.element.children( "option" ).each(function() {
-                            if ( $( this ).text().toLowerCase() === valueLowerCase ) {
-                                this.selected = valid = true;
-                                return false;
-                            }
-                        });
-
-                        // Found a match, nothing to do
-                        if ( valid ) {
-                            return;
-                        }
-
-                        // Remove invalid value
-                        this.input
-                            .val( "" )
-                            .attr( "title", value + " didn't match any item" )
-                            .tooltip( "open" );
-                        this.element.val( "" );
-                        this._delay(function() {
-                            this.input.tooltip( "close" ).attr( "title", "" );
-                        }, 2500 );
-                        this.input.autocomplete( "instance" ).term = "";
-                    },
-
-                    _destroy: function() {
-                        this.wrapper.remove();
-                        this.element.show();
-                    }
-                });
-            })( jQuery );
-        </script>
     </head>
     <body>
         <div id='main' style='width: 100%; height: 100%;'></div>
@@ -249,11 +112,12 @@
             var driver_info_key = "driver_info" ;
             var case_objects = new Object();
             var simulation_info_id = "" ;
-            var driver_id_name_map = new Object() ;
+            var driver_name = new Object();
+            var driver_id = new Object();
             var driver_info = new Object();
             var parameter_list = [];
-            var case_number_to_id_map = new Object() ;
-            var num_orphan_cases = 0 ;
+            var case_id = new Object();
+            var num_orphan_cases = 0;
             var comps = [];
             var pseudo_to_expr = {};
             var plot_frame = $('#plot-frame');
@@ -591,18 +455,9 @@
                 var queryDiv = plotContent.append('<div id="queryDiv" style="height:10%></div>');
                 var comboDiv = $('<div id="comboDiv">')
                         .appendTo(queryDiv);
-                var toggleButtons = $('<div>Toggle Buttons</div>')
+                var toggleButtons = $('<div class="valbutton" style="position:absolute;right:0;">Buttons</div>')
                         .appendTo(queryDiv)
                         .on('click', function() { buttonDiv.toggle(); })
-                        .css({
-                            'float':        'left',
-                            'border-style': 'groove',
-                            'margin':       '5px',
-                            'position':     'absolute',
-                            'right':        '0',
-                            'font-size':    '12px',
-                            'font-family':  'Arial, sans-serif'
-                        })
                 var buttonDiv = $('<div id="buttonDiv" style="clear:both;display:none;overflow:auto">')
                         .appendTo(queryDiv);
                 var queryValue  = undefined;
@@ -612,11 +467,60 @@
 
                 // update plot for currently selected var, case and driver
                 function updatePlot() {
-                    var vals = getHistory(queryValue);
+                    if (! queryValue) {
+                        return;
+                    }
+
+                    var vals = [];
+
+                    var included_cases = [];
+                    function add_cases(cid) {
+                        included_cases.push(case_objects[cid].case_number);
+                        $.each(case_objects[cid].children, function() {
+                            add_cases(this._id);
+                        });
+                    }
+                    if (queryCase) {
+                        add_cases(case_id[queryCase]);
+                        console.log('checking cases', included_cases);
+                    }
+
+                    $.each(case_data, function(key, val) {
+                        if (key.lastIndexOf('iteration_case', 0) === 0) {
+                            // console.log('checking case', val.case_number, included_cases);
+                            var include = true;
+                            if (! val.data.hasOwnProperty(queryValue)) {
+                                // console.log('value', queryValue, 'not in case data', Object.keys(val.data));
+                                include = false;
+                            }
+                            else if (queryCase && ($.inArray(val.case_number.toString(), included_cases) < 0)) {
+                                // console.log('case', val.case_number, 'not in included_cases', included_cases);
+                                include = false;
+                            }
+                            else if (queryDriver && !(val._driver_id === driver_id[queryDriver])) {
+                                // console.log('driver', queryDriver, 'not', val._driver_id);
+                                include = false;
+                            }
+                            if (include) {
+                                console.log('found value for', queryValue, 'in case:', queryCase,'for driver', queryDriver);
+                                vals.push(val['data'][queryValue])
+                            }
+                        }
+                    });
+                    console.log('updatePlot', plottable[queryValue], vals);
+
                     var series = vals.map(function(e, i) {
                         return [i, vals[i]]
                     })
-                    plotSeries(plottable[queryValue].title, series);
+
+                    $.plot('#plotDiv', [{ label: plottable[queryValue].title, data: series }], {
+                        series: {
+                            lines: { show: true },
+                            points: { show: true }
+                        }
+                    });
+
+                    // plotSeries(plottable[queryValue].title, series);
                 }
 
                 // generate plot
@@ -664,7 +568,7 @@
                 function addButtons(plottable) {
                     function clickHandler() {
                         queryValue = $(this).attr('title');
-                        updatePlot();
+                        $('#select-value').val(queryValue).change();
                     }
 
                     $.each(plottable, function(name, value) {
@@ -674,7 +578,7 @@
                             case 'Constraint': color = 'red';  break;
                             case 'Objective' : color = 'gold'; break;
                         }
-                        $('<div style="float:left;border-style:groove;background-color:'+color+'" title="'+name+'">'+value.title+'</div>')
+                        $('<div class="valbutton" style="float:left;background-color:'+color+'" title="'+name+'">'+value.title+'</div>')
                             .on('click', clickHandler)
                             .appendTo(buttonDiv);
                     });
@@ -683,10 +587,9 @@
                 // add combo boxes to select value, case and driver for query
                 function addCombos(plottable, case_objects, driver_info) {
                     // add combo box for selecting plottable variable/expression
-                    var html = '<div class="ui-widget"><label>Value:  </label><select id="combobox">';
+                    var html = '<div class="ui-widget"><label>Value: </label><select id="select-value">';
                     html += '<option value=""></option>';
                     $.each(plottable, function(name, val) {
-                        console.log(name, val);
                         html += '<option value="'+name+'"">'+val.title+'</option>';
                     });
                     html += '</select></div>';
@@ -705,10 +608,12 @@
                     });
 
                     // add combo box for selecting Case
-                    var html = '<div class="ui-widget"><label>Case :    </label><select id="combobox">';
+                    var html = '<div class="ui-widget"><label>Case : </label><select id="select-case">';
                     html += '<option value=""></option>';
                     $.each(case_objects, function(uuid, val) {
-                        html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
+                        if (val.case_number) {
+                            html += '<option value="'+val.case_number+'"">'+val.case_number+'</option>';
+                        }
                     });
                     html += '</select></div>';
                     var combo = $(html).appendTo(comboDiv);
@@ -725,7 +630,7 @@
                     });
 
                     // add combo box for selecting driver
-                    var html = '<div class="ui-widget"><label>Driver: </label><select id="combobox">';
+                    var html = '<div class="ui-widget"><label>Driver: </label><select id="select-driver">';
                     html += '<option value=""></option>';
                     $.each(driver_info, function(name, val) {
                         html += '<option value="'+name+'"">'+name+'</option>';
@@ -761,24 +666,37 @@
 
                 // Add a label for the driver name at this hierarchy level
                 if (children.length > 0) {
-                    nodes[nodes.length] = {id: children[0].driver_name + '_' + children[0].case_number.toString(),
-                                           text: children[0].driver_name.toString(),
-                                           img: 'icon-page' };
+                    nodes[nodes.length] = {
+                        id:   children[0].driver_name + '_' + children[0].case_number.toString(),
+                        text: children[0].driver_name.toString(),
+                        img:  'icon-page'
+                    };
                 }
                 else {
                     // there are no cases to pull driver info from, so just add a default driver node
-                    nodes[nodes.length] = {id: 'driver', text: 'driver', img: 'icon-page' };
+                    nodes[nodes.length] = {
+                        id:   'driver',
+                        text: 'driver',
+                        img:  'icon-page'
+                    };
                 }
-                for (var i=0; i < children.length; i++) {
+                for (var i=0; i<children.length; i++) {
                     child = children[i] ;
                     if (child.children.length) { // if node has subnodes, recurse
                         child_nodes = get_nodes(child) ;
                         // nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() + ' (' + child.driver_name + ')', nodes: child_nodes } ;
-                        nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() , nodes: child_nodes } ;
+                        nodes[nodes.length] = {
+                            id:    child.case_number.toString(),
+                            text:  child.case_number.toString(),
+                            nodes: child_nodes
+                        };
                     }
                     else {
                         // nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() + ' (' + child.driver_name + ')' } ;
-                        nodes[nodes.length] = {id: child.case_number.toString(), text: child.case_number.toString() } ;
+                        nodes[nodes.length] = {
+                            id:   child.case_number.toString(),
+                            text: child.case_number.toString()
+                        };
                     }
                 }
                 return nodes ;
@@ -830,13 +748,14 @@
                    // need to add simulation info object for top of tree of cases
                    if (key.lastIndexOf(simulation_info_key, 0) === 0) {
                         val['children'] = [] ;
-                        case_objects[ val.uuid ] = val ;
-                        simulation_info_id = val.uuid ; // need to remember this since it is special since it is not really a case
+                        case_objects[val.uuid] = val;
+                        simulation_info_id = val.uuid; // need to remember this since it is special since it is not really a case
                     }
 
                     // Make a structure to hold all of the driver info
                     if (key.lastIndexOf(driver_info_key, 0) === 0) {
-                        driver_id_name_map[ val._id ] = val.name;
+                        driver_name[val._id] = val.name;
+                        driver_id[val.name] = val._id;
                         driver_info[val.name] = val;
                         // add all parameters to global parameter list
                         if (val.hasOwnProperty('parameters')) {
@@ -849,14 +768,15 @@
                         case_number = key.substring(it_case_key.length);
                         val['children'] = [] ;
                         val['case_number'] = case_number ;
-                        val['driver_name'] = driver_id_name_map[val._driver_id] ;
-                        case_objects[ val._id ] = val ;
-                        case_number_to_id_map[ case_number ] = val._id ;
+                        val['driver_name'] = driver_name[val._driver_id] ;
+                        case_objects[val._id] = val ;
+                        case_id[case_number] = val._id ;
                     }
                 }); // end each
 
                 console.log('sim_info:', case_data.simulation_info);
-                console.log('driver_id_name_map:', driver_id_name_map);
+                console.log('driver_name:', driver_name);
+                console.log('driver_id:', driver_id);
                 console.log('driver_info:', driver_info);
                 console.log('parameter_list:', parameter_list);
 
@@ -898,6 +818,7 @@
                 if (num_orphan_cases > 0) {
                     alert("WARNING: There were " + num_orphan_cases.toString() + " cases with no parent cases");
                 }
+                console.log('case_objects:', case_objects);
 
                 // Starting from the top "case_object", which is really the sim info data,
                 // Walk down the children leaves, creating the value for nodes in the w2ui call below
@@ -921,11 +842,15 @@
                         svgContent.find('polygon').filter(":first").attr('stroke-width', '0');
 
                         if (event.node.img != "icon-page") {
-                            d = case_objects[case_number_to_id_map[event.target]].data ;
+                            // if plotting tab is open, set the selected case in the query
+                            $('#select-case').val(event.target).change();
+
+                            // if a graph tab is open, show case values on variable nodes
+                            d = case_objects[case_id[event.target]].data;
                             jQuery.each(d, function(key, val) {
                                 // Get only the text element with exactly the value of key
                                 t = svgContent.find("text").filter(function() {
-                                      return $(this).text() === key;
+                                    return $(this).text() === key;
                                 }) ;
 
                                 if (t.length === 1) {
@@ -962,6 +887,10 @@
                                     }
                                }
                             });
+                        }
+                        else {
+                            // if plotting tab is open, set the selected driver in the query
+                            $('#select-driver').val(event.node.text).change();
                         }
                     }
                 })); // end layout content left
