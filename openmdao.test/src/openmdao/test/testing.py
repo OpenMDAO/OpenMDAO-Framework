@@ -332,12 +332,14 @@ def run_openmdao_suite(argv=None):
         options, argz = parser.parse_known_args(argv)
         plugin_install(parser, options, argz)
 
-    # The default action should be to run the GUI functional tests.
-    # The 'win32' test here is to allow easily changing the default for Windows.
-    if sys.platform == 'win32':
-        do_gui_tests = True
-    else:
-        do_gui_tests = True
+    do_gui_tests = False
+
+    # # The default action should be to run the GUI functional tests.
+    # # The 'win32' test here is to allow easily changing the default for Windows.
+    # if sys.platform == 'win32':
+    #     do_gui_tests = True
+    # else:
+    #     do_gui_tests = True
 
     # run GUI functional tests, overriding default action
     if '--gui' in args:
@@ -348,6 +350,16 @@ def run_openmdao_suite(argv=None):
     if '--skip-gui' in args:
         args.remove('--skip-gui')
         do_gui_tests = False
+
+    # don't run MPI tests by default
+    if '--mpi' in args:
+        args.remove('--mpi')
+        tdir = os.path.dirname(os.path.abspath(__file__))
+        # up 4 levels to the top of the repo
+        for i in range(4):
+            tdir = os.path.dirname(tdir)
+        tdir = os.path.join(tdir, 'contrib', 'testmpi')
+        args.append(tdir)
 
     if not do_gui_tests:
         os.environ['OPENMDAO_SKIP_GUI'] = '1'

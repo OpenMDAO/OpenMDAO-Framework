@@ -1096,8 +1096,16 @@ class SimpleSystem(System):
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
                 base = base_var(self.scope._depgraph, vname[0])
-                if base != vname[0] and base in self.scope._reduced_graph:
+                if base != vname[0] and base in self.scope._reduced_graph: #self.scope._var_meta:
                     continue
+                #hasbase = False
+                #for dest in vname[1]:
+                #    base = base_var(self.scope._depgraph, dest)
+                #    if base != dest and base in self.scope._var_meta:
+                #        hasbase = True
+                #        break
+                #    if hasbase:
+                #        break
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
