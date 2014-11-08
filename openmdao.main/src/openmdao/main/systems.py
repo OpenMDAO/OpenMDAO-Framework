@@ -94,6 +94,8 @@ def compound_setup_scatters(self):
 
             for node in sub._in_nodes:
                 if node in noflats:
+                    if node not in self._owned_args or node in noflat_conns or node not in subsystem._in_nodes:
+                        continue
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
                     noflat_conns.add(node)
