@@ -493,7 +493,7 @@ class DataTransfer(object):
                  scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
-        self.noflat_vars = noflat_vars
+        self.noflat_vars = list(noflat_vars)
 
         #print "noflat: %s" % noflat_vars
 
@@ -559,7 +559,7 @@ class DataTransfer(object):
         if self.scatter:
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
-        if self.noflat_vars:
+        if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:
                 raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
                                           self.noflat_vars) # FIXME
