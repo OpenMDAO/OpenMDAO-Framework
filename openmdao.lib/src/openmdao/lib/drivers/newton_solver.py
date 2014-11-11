@@ -68,7 +68,7 @@ class NewtonSolver(Driver):
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
-        print self.name, "Norm: ", f_norm, 0
+        #print self.name, "Norm: ", f_norm, 0
         #print uvec.array, fvec.array
 
         itercount = 0
@@ -89,7 +89,7 @@ class NewtonSolver(Driver):
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
-            print self.name, "Norm: ", f_norm, itercount+1
+            #print self.name, "Norm: ", f_norm, itercount+1
             #print uvec.array, fvec.array
             itercount += 1
 
@@ -127,7 +127,7 @@ class NewtonSolver(Driver):
         self.run_iteration()
         self.post_iteration()
 
-        print self.name, "converged"
+        #print self.name, "converged"
 
     def requires_derivs(self):
         return True
