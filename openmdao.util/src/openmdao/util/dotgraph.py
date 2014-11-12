@@ -295,58 +295,64 @@ def plot_graph(G, outfile=None, fmt='pdf', pseudos=True, workflow=False, scope=N
 
     os.remove(dotfile)
 
-def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False, sysdone=False):
+def _driver_plots(obj, recurse=True, fmt='pdf', pseudos=True, 
+                  workflow=False, sysdone=False, prefix=''):
     # driver graph
     try:
         plot_graph(obj.get_reduced_graph(), fmt=fmt,
-                   outfile=obj.get_pathname()+'_reduced'+'.'+fmt, pseudos=pseudos)
+                   outfile=prefix+obj.get_pathname()+'_reduced'+'.'+fmt, pseudos=pseudos)
     except Exception as err:
         print "Can't plot reduced graph of '%s': %s" % (obj.get_pathname(), str(err))
     
     # workflow graph
     try:
         plot_graph(obj.workflow._reduced_graph, fmt=fmt,
-                   outfile=obj.get_pathname()+'_wflow_reduced'+'.'+fmt, pseudos=pseudos)
+                   outfile=prefix+obj.get_pathname()+'_wflow_reduced'+'.'+fmt, pseudos=pseudos)
     except Exception as err:
         print "Can't plot reduced graph of '%s' workflow: %s" % (obj.get_pathname(), str(err))
 
     if recurse:
         for comp in obj.workflow:
             if IAssembly.providedBy(comp):
-                plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow, sysdone=True)
+                plot_graphs(comp, recurse, fmt=fmt, pseudos=pseudos, 
+                            workflow=workflow, sysdone=True, prefix=prefix)
             elif IDriver.providedBy(comp):
-                _driver_plots(comp, recurse, fmt=fmt, pseudos=pseudos, workflow=workflow, sysdone=True)
+                _driver_plots(comp, recurse, fmt=fmt, pseudos=pseudos, 
+                              workflow=workflow, sysdone=True, prefix=prefix)
 
-def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, workflow=False, sysdone=False):
+def plot_graphs(obj, recurse=True, fmt='pdf', pseudos=True, 
+                workflow=False, sysdone=False, prefix=''):
     if IAssembly.providedBy(obj):
         name = 'top' if obj.get_pathname()=='' else obj.get_pathname()
 
         try:
             plot_graph(obj._depgraph.get_pruned(), fmt=fmt,
-                       outfile=name+'_depgraph'+'.'+fmt, pseudos=pseudos)
+                       outfile=prefix+name+'_depgraph'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
             print "Can't plot depgraph of '%s': %s" % (name, str(err))
         try:
             plot_graph(obj._reduced_graph, fmt=fmt,
-                       outfile=name+'_reduced'+'.'+fmt, pseudos=pseudos)
+                       outfile=prefix+name+'_reduced'+'.'+fmt, pseudos=pseudos)
         except Exception as err:
             print "Can't plot reduced graph of '%s': %s" % (name, str(err))
 
         if not sysdone:
             try:
                 plot_system_tree(obj._system, fmt=fmt,
-                           outfile=name+'_system_tree'+'.'+fmt)
+                           outfile=prefix+name+'_system_tree'+'.'+fmt)
             except Exception as err:
                 print "Can't plot system graph of '%s': %s" % (name, str(err))
 
         try:
             plot_graph(reduced2component(obj._reduced_graph),
-                       fmt=fmt, outfile=name+'_compgraph'+'.'+fmt,
+                       fmt=fmt, outfile=prefix+name+'_compgraph'+'.'+fmt,
                        pseudos=pseudos, workflow=workflow, scope=obj)
         except Exception as err:
             print "Can't plot component_graph of '%s': %s" % (name, str(err))
 
-        _driver_plots(obj._top_driver, recurse=recurse, fmt=fmt, pseudos=pseudos, workflow=workflow, sysdone=True)
+        _driver_plots(obj._top_driver, recurse=recurse, fmt=fmt, 
+                      pseudos=pseudos, workflow=workflow, sysdone=True,
+                      prefix=prefix)
                     
 
 def main():

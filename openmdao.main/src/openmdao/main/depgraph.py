@@ -1492,10 +1492,11 @@ def collapse_driver_reduced(g, driver, excludes=()):
     collapse_nodes(g, driver.name, nodes)
     g.node[driver.name]['comp'] = True
 
-def internal_nodes(g, comps):
+def internal_nodes(g, comps, shared=False):
     """Returns a set of nodes containing the given component
     nodes, plus any variable nodes between them that are not 
-    connected to any external nodes.
+    connected to any external nodes. If shared is True, then
+    variable nodes connected to the outside will be included.
     """
     nodes = set(comps)
     ins = set()
@@ -1507,14 +1508,15 @@ def internal_nodes(g, comps):
 
     inner = outs.intersection(ins)
     
-    to_remove = set()
-    for var in inner:
-        if set(g.successors(var)).difference(nodes):
-            to_remove.add(var)
-        if set(g.predecessors(var)).difference(nodes):
-            to_remove.add(var)
-    
-    inner = inner - to_remove
+    if not shared:
+        to_remove = set()
+        for var in inner:
+            if set(g.successors(var)).difference(nodes):
+                to_remove.add(var)
+            if set(g.predecessors(var)).difference(nodes):
+                to_remove.add(var)
+        
+        inner = inner - to_remove
 
     nodes.update(inner)
 
@@ -1634,20 +1636,22 @@ def _add_collapsed_node(g, src, dests):
         cname = p.split('.', 1)[0]
         if cname not in g:
             continue
+        #meta = g[p][newname]
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
                 if drvsrc == p:
                     g.add_edge(cname, newname, drv_conn=drvsrc)
                 else:
-                    g.add_edge(cname, newname)
+                    g.add_edge(cname, newname) #, **meta)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
+        #meta = g[newname][s]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
-                g.add_edge(newname, cname)
+                g.add_edge(newname, cname)#, **meta)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent

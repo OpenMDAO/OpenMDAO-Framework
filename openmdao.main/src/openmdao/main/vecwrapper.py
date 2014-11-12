@@ -354,20 +354,16 @@ class VecWrapper(VecWrapperBase):
         else:
             vnames = [n for n in vnames if n in self]
 
-        done = set()
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
-                    done.add(name[0])
                     for dest in name[1]:
-                        if dest not in done:
+                        if dest != name[0]:
                             scope.set_flattened_value(dest, array_val)
-                            done.add(dest)
                 else:
                     scope.set_flattened_value(name, array_val)
-                    done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -493,7 +489,7 @@ class DataTransfer(object):
                  scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
-        self.noflat_vars = noflat_vars
+        self.noflat_vars = list(noflat_vars)
 
         #print "noflat: %s" % noflat_vars
 
@@ -559,7 +555,7 @@ class DataTransfer(object):
         if self.scatter:
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
-        if self.noflat_vars:
+        if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:
                 raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
                                           self.noflat_vars) # FIXME

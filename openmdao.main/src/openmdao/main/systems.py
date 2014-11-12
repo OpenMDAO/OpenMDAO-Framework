@@ -94,6 +94,8 @@ def compound_setup_scatters(self):
 
             for node in sub._in_nodes:
                 if node in noflats:
+                    if node not in self._owned_args or node in noflat_conns or node not in subsystem._in_nodes:
+                        continue
                     scatter_conns.add(node)
                     scatter_conns_full.add(node)
                     noflat_conns.add(node)
@@ -1296,6 +1298,10 @@ class ParamSystem(VarSystem):
         """ Load param value into u vector. """
         self.vec['u'].set_from_scope(self.scope, [self.name])
 
+    #def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    #    if self.is_active():
+    #        self.vec['u'].set_to_scope(self.scope)
+
 
 class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
@@ -1824,33 +1830,49 @@ class OpaqueSystem(SimpleSystem):
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
         ograph = graph.subgraph(graph.nodes_iter())
-        int_nodes = internal_nodes(ograph, nodes)
+        int_nodes = internal_nodes(ograph, nodes, shared=False)
+        shared_int_nodes = internal_nodes(ograph, nodes, shared=True)
         ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
         
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
-        graph = graph.subgraph(int_nodes)
+        graph = graph.subgraph(shared_int_nodes)
 
-        srcs = sorted([(node[0], node) for node in self._in_nodes])
-
+        dests = set()
+        nodeset = set()
+        internal_comps = set()
+        for name in nodes:
+            obj = getattr(scope, name, None)
+            if obj is not None:
+                if has_interface(obj, IDriver):
+                    internal_comps.update([c.name for c in obj.iteration_set()])
+                else:
+                    internal_comps.add(name)
+                    
+        for node in self._in_nodes:
+            for d in node[1]:
+                cname, _, vname = d.partition('.')
+                if vname and cname in internal_comps and node not in nodeset:
+                    dests.add((d, node))
+                    nodeset.add(node)
+                    
+        # sort so that base vars will be before subvars
+        dests = sorted(dests)
+        
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
-        for src, node in srcs:
-            base = base_var(graph, src)
-            if base in graph:
-                graph.add_edge(base, node)
-            else:
-                graph.add_node(src, comp='dumbvar')
-                graph.add_edge(src, node)
+        for dest, node in dests:
+            if not graph.in_degree(node):
+                base = base_var(graph, dest)
+                if base in graph:
+                    graph.add_edge(base, node)
+                else:
+                    graph.add_node(dest, comp='dumbvar')
+                    graph.add_edge(dest, node)
 
-            for dest in node[1]:
-                comp = dest.split('.', 1)[0]
-                if comp != src and comp in graph:
-                    graph.add_edge(node, comp)
-
-            if src in graph:
-                graph.node[src]['system'] = _create_simple_sys(scope, graph, src)
+            if dest in graph:
+                graph.node[dest]['system'] = _create_simple_sys(scope, graph, dest)
 
         self._inner_system = SerialSystem(scope, graph,
                                           reduced2component(graph),
