@@ -24,16 +24,16 @@ class Dis1Linear(Component):
 
     sa_dis1_F = Array([0.0], iotype='in')
     sa_dis1_G = Array([0.0, 0.0], iotype='in')
-    sa_dis1_dF = Array([0.0, 0.0], iotype='in')
-    sa_dis1_dG = Array([[0.0, 0.0], [0.0, 0.0]], iotype='in')
+    sa_dis1_dF = Array([0.0], iotype='in')
+    sa_dis1_dG = Array([[0.0], [0.0]], iotype='in')
     
-    obj = Float(0., iotype='out')
-    con1 = Float(0., iotype='out')
-    con2 = Float(0., iotype='out')
+    obj = Float(0.0, iotype='out')
+    con1 = Float(0.0, iotype='out')
+    con2 = Float(0.0, iotype='out')
     
     def execute(self):
         
-        self.obj  = self.sa_dis1_F[0] + self.sa_dis1_dF[0][0]*(self.x1_store - self.x1)
+        self.obj  = self.sa_dis1_F[0] + self.sa_dis1_dF[0]*(self.x1_store - self.x1)
         self.con1 = self.sa_dis1_G[0] + self.sa_dis1_dG[0][0]*(self.x1_store - self.x1)
         self.con2 = self.sa_dis1_G[1] + self.sa_dis1_dG[1][0]*(self.x1_store - self.x1)
         
@@ -49,14 +49,14 @@ class Dis12Linear(Component):
     ssa_dF = Array([0.0, 0.0], iotype='in')
     ssa_dG = Array([[0.0, 0.0], [0.0, 0.0]], iotype='in')
     
-    obj = Float(0., iotype='out')
-    con1 = Float(0., iotype='out')
-    con2 = Float(0., iotype='out')
+    obj = Float(0.0, iotype='out')
+    con1 = Float(0.0, iotype='out')
+    con2 = Float(0.0, iotype='out')
     
     def execute(self):
         
-        self.obj = self.ssa_F[0] + self.ssa_dF[0][0]*(self.z_store[0] - self.z1) + \
-                                   self.ssa_dF[0][1]*(self.z_store[1] - self.z2)
+        self.obj = self.ssa_F[0] + self.ssa_dF[0]*(self.z_store[0] - self.z1) + \
+                                   self.ssa_dF[1]*(self.z_store[1] - self.z2)
         self.con1 = self.ssa_G[0] + self.ssa_dG[0][0]*(self.z_store[0] - self.z1) + \
                                     self.ssa_dG[0][1]*(self.z_store[1] - self.z2)
         self.con2 = self.ssa_G[1] + self.ssa_dG[1][0]*(self.z_store[0] - self.z1) + \
@@ -99,8 +99,8 @@ class SellarBLISS(Assembly):
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
         self.driver.add_parameter('dis1.x1', low=0.0, high=10.0, start=1.0)
-        self.driver.add_parameter(['dis1.z1','dis1pre.z1','dis2.z1'], low=-10.0, high=10.0, start=5.0)
-        self.driver.add_parameter(['dis1.z2','dis1pre.z2','dis2.z2'], low=  0.0, high=10.0, start=2.0)
+        self.driver.add_parameter(['dis1pre.z1', 'dis1.z1', 'dis2.z1'], low=-10.0, high=10.0, start=5.0)
+        self.driver.add_parameter(['dis1pre.z2', 'dis1.z2', 'dis2.z2'], low=  0.0, high=10.0, start=2.0)
         self.driver.add_constraint('x1_store = dis1.x1')
         self.driver.add_constraint('z_store[0] = dis1.z1')
         self.driver.add_constraint('z_store[1] = dis1.z2')
