@@ -226,7 +226,7 @@ class Assembly(Component):
             self._new_config = False
 
 
-        self.configure_recording()
+            self.configure_recording(self.recording_options)
 
 
 
@@ -833,6 +833,13 @@ class Assembly(Component):
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
+
+        #if self.recorders:
+            #recording_options = self.recording_options
+            #for recorder in self.recorders:
+                #recorder.startup()
+        #else:
+            #recording_options = None
         if self.parent is None:
             if self.recorders:
                 recording_options = self.recording_options
