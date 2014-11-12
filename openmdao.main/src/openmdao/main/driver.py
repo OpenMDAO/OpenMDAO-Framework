@@ -328,6 +328,7 @@ class Driver(Component):
             for end in getcomps:
                 for start in setcomps:
                     full.update(find_all_connecting(compgraph, start, end))
+                    print self.name, start, end, find_all_connecting(compgraph, start, end)
 
             self._required_compnames = full
 
