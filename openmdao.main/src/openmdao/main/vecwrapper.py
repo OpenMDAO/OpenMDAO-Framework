@@ -354,20 +354,16 @@ class VecWrapper(VecWrapperBase):
         else:
             vnames = [n for n in vnames if n in self]
 
-        done = set()
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
-                    done.add(name[0])
                     for dest in name[1]:
-                        if dest not in done:
+                        if dest != name[0]:
                             scope.set_flattened_value(dest, array_val)
-                            done.add(dest)
                 else:
                     scope.set_flattened_value(name, array_val)
-                    done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
