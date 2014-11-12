@@ -131,7 +131,8 @@ class NewtonSolver(Driver):
         self.run_iteration()
         self.post_iteration()
 
-        #print self.name, "converged"
+        if self.iprint == 1:
+            print self.name, "converged"
 
     def requires_derivs(self):
         return True
