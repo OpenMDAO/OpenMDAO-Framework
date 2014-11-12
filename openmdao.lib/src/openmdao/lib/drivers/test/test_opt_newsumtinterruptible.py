@@ -256,6 +256,7 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
                                self.top.comp.x[1], places=2)
 
     def test_infinite_bounds(self):
+
         self.top.driver.add_objective('comp.result')
         self.top.driver.add_parameter('comp.x[0]', float('-inf'), float('inf'))
         self.top.driver.add_parameter('comp.x[1]', float('-inf'), float('inf'))
@@ -277,7 +278,6 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
 
         self.top.run()
         self.top.run()
-
 
     def test_initial_run(self):
         # Test the fix that put run_iteration at the top
