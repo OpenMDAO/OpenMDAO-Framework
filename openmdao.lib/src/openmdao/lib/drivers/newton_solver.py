@@ -17,7 +17,7 @@ def norm(a, order=None):
 # pylint: disable=E0611, F0401
 from openmdao.main.case import Case
 from openmdao.main.driver import Driver
-from openmdao.main.datatypes.api import Float, Int
+from openmdao.main.datatypes.api import Float, Int, Enum
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
 from openmdao.main.interfaces import IHasParameters, IHasEqConstraints, \
@@ -52,6 +52,7 @@ class NewtonSolver(Driver):
     alpha = Float(1.0, iotype='in', low=0.0, high=1.0,
                   desc='Initial over-relaxation factor')
 
+    iprint = Enum(0, [0 ,1], iotype='in', desc='set to 1 to print convergence')
 
     def execute(self):
         """ General Newton's method. """
@@ -68,8 +69,10 @@ class NewtonSolver(Driver):
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
-        #print self.name, "Norm: ", f_norm, 0
-        #print uvec.array, fvec.array
+        
+        if self.iprint == 1:
+            print self.name, "Norm: ", f_norm, 0
+            #print uvec.array, fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -89,10 +92,11 @@ class NewtonSolver(Driver):
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
 
             f_norm = norm(fvec.array)
-            #print self.name, "Norm: ", f_norm, itercount+1
-            #print uvec.array, fvec.array
+            if self.iprint == 1:
+                print self.name, "Norm: ", f_norm, itercount+1
+                #print uvec.array, fvec.array
+                
             itercount += 1
-
             ls_itercount = 0
 
             # Backtracking Line Search
