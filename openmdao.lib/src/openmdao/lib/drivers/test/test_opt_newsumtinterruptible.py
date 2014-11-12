@@ -255,12 +255,10 @@ class NEWSUMTdriverParaboloidTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1],
                                self.top.comp.x[1], places=2)
 
-
-    def test_opt1(self):
-
+    def test_infinite_bounds(self):
         self.top.driver.add_objective('comp.result')
-        self.top.driver.add_parameter('comp.x[0]', -100.0, 100.0)
-        self.top.driver.add_parameter('comp.x[1]', -100.0, 100.0)
+        self.top.driver.add_parameter('comp.x[0]', float('-inf'), float('inf'))
+        self.top.driver.add_parameter('comp.x[1]', float('-inf'), float('inf'))
 
         self.top.run()
 
