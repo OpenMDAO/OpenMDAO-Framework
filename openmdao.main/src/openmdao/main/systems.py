@@ -1298,6 +1298,10 @@ class ParamSystem(VarSystem):
         """ Load param value into u vector. """
         self.vec['u'].set_from_scope(self.scope, [self.name])
 
+    #def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    #    if self.is_active():
+    #        self.vec['u'].set_to_scope(self.scope)
+
 
 class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
