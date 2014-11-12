@@ -217,6 +217,6 @@ class MPITests2(MPITestCase):
                 assert_rel_error(self, val, expval, 0.001)
 
 # FIXME: running this file as main currently doesn't work...
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
+# if __name__ == '__main__':
+#     import unittest
+#     unittest.main()

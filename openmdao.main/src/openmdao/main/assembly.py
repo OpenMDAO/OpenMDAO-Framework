@@ -1718,13 +1718,18 @@ class Assembly(Component):
         """Collect any variable metadata from the
         model here.
         """
-        info = { 'size': 0, 'flat': True }
+        info = { 'size': 0 }
 
         base = None
+        noflat = False
 
         if isinstance(node, tuple):
             # use the name of the src
             name = node[0]
+            for n in simple_node_iter(node):
+                if self.get_metadata(n.split('[',1)[0], 'noflat'):
+                    noflat = True
+                    break
         else:
             name = node
 
@@ -1738,7 +1743,6 @@ class Assembly(Component):
 
         try:
             # TODO: add checking of local_size metadata...
-            parts = vname.split('.')
             val, idx = get_val_and_index(child, vname)
 
             if hasattr(val, 'shape'):
@@ -1757,7 +1761,7 @@ class Assembly(Component):
                 info['flat_idx'] = flat_idx
 
         except NoFlatError:
-            info['flat'] = False
+            info['noflat'] = True
 
         if base is not None:
             if cname:
@@ -1767,15 +1771,18 @@ class Assembly(Component):
             info['basevar'] = bname
 
         # get any other metadata we want
+        meta = child.get_metadata(vname)
         for mname in ['deriv_ignore']:
-            meta = child.get_metadata(vname, mname)
-            if meta is not None:
+            if meta.get(mname) is not None:
                 info[mname] = meta
+
+        if noflat:
+            info['noflat'] = True
 
         return info
 
     def _flat(self, lst):
-        return [n for n in lst if self._get_var_info(n).get('flat')]
+        return [n for n in lst if not self._get_var_info(n).get('noflat')]
 
     def _get_all_var_metadata(self, graph):
         """Collect size, shape, etc. info for all variables referenced
@@ -1858,6 +1865,7 @@ class Assembly(Component):
             obj = self.get(vt)
             vtvars[vt] = ['.'.join((vt, n.split('.',1)[1]))
                                      for n in obj.list_all_vars()]
+            vtvars[vt].sort()
             for sub in vtvars[vt]:
                 if sub not in depgraph:
                     depgraph.add_subvar(sub)

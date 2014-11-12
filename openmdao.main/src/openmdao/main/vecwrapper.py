@@ -55,7 +55,7 @@ class VecWrapperBase(object):
         name2collapsed = scope.name2collapsed
 
         sz = var['size']
-        if sz > 0 and var.get('flat', True):
+        if sz > 0 and not var.get('noflat'):
             idx = var['flat_idx']
             try:
                 basestart = self.start(name2collapsed[var['basevar']])
@@ -114,7 +114,7 @@ class VecWrapperBase(object):
             return (start, start + view.size)
 
         infos = [self._info[n] for n in names]
-        bnds = [(start, start+view.size) for view,start in infos]
+        bnds = [(strt, strt+v.size) for v,strt in infos]
         return (min([u for u,v in bnds]), max([v for u,v in bnds]))
 
     def multi_indices(self, names):
@@ -259,7 +259,7 @@ class VecWrapper(VecWrapperBase):
             for name, var in allvars.items():
                 if name not in vector_vars:
                     sz = var['size']
-                    if sz > 0 and var.get('flat', True):
+                    if sz > 0 and not var.get('noflat'):
                         idx = var['flat_idx']
                         try:
                             basestart = self.start(name2collapsed[var['basevar']])
@@ -324,10 +324,10 @@ class VecWrapper(VecWrapperBase):
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
                 if isinstance(name, tuple):
-                    array_val[:] = scope.get_flattened_value(name[0])
+                    array_val[:] = scope.get_flattened_value(name[0]).real
                 else:
-                    array_val[:] = scope.get_flattened_value(name)
-                #mpiprint("getting %s from scope (%s)" % (name, array_val))
+                    array_val[:] = scope.get_flattened_value(name).real
+                #mpiprint("setting %s from scope (%s)" % (name, array_val))
 
     def set_from_scope_complex(self, scope, vnames=None):
         """Get the named values from the given scope and set flattened
@@ -354,49 +354,16 @@ class VecWrapper(VecWrapperBase):
         else:
             vnames = [n for n in vnames if n in self]
 
-        done = set()
         for name in vnames:
             array_val, start = self._info.get(name,(None,None))
             if start is not None:
-                #mpiprint("setting %s to scope: %s" % (str(name),array_val))
                 if isinstance(name, tuple):
                     scope.set_flattened_value(name[0], array_val)
-                    done.add(name[0])
                     for dest in name[1]:
-                        if dest not in done:
+                        if dest != name[0]:
                             scope.set_flattened_value(dest, array_val)
-                            done.add(dest)
                 else:
                     scope.set_flattened_value(name, array_val)
-                    done.add(name)
-
-    #def set_to_scope_complex(self, scope, vnames=None):
-        #"""Pull values for the given set of names out of our array
-        #and set them into the given scope.
-        #"""
-        #if vnames is None:
-            #vnames = self.keys()
-        #else:
-            #vnames = [n for n in vnames if n in self]
-
-        #done = set()
-        #for name in vnames:
-            #step, start = self._info.get(name,(None,None))
-            #if start is not None:
-                ##mpiprint("setting %s to scope: %s" % (str(name),array_val))
-                #if isinstance(name, tuple):
-                    #array_val = scope.get_flattened_value(name[0])
-                    #scope.set_flattened_value(name[0], array_val + step*1j)
-                    #done.add(name[0])
-                    #for dest in name[1]:
-                        #if dest not in done:
-                            #array_val = scope.get_flattened_value(dest)
-                            #scope.set_flattened_value(dest, array_val + step*1j)
-                            #done.add(dest)
-                #else:
-                    #array_val = scope.get_flattened_value(name)
-                    #scope.set_flattened_value(name, array_val + step*1j)
-                    #done.add(name)
 
 
 class InputVecWrapper(VecWrapperBase):
@@ -433,7 +400,7 @@ class InputVecWrapper(VecWrapperBase):
                 continue
             
             sz = var['size']
-            if sz > 0 and var.get('flat', True):
+            if sz > 0 and not var.get('noflat'):
                 idx = var['flat_idx']
                 try:
                     basestart = self.start(name2collapsed[var['basevar']])
@@ -485,7 +452,6 @@ class InputVecWrapper(VecWrapperBase):
         for name in vnames:
             array_val, start = self._info.get(name,(None, None))
             if start is not None:
-                #print "SETTING %s to %s" % (name, array_val)
                 if isinstance(name, tuple):
                     for dest in name[1]:
                         scope.set_flattened_value(dest, array_val)
@@ -523,7 +489,7 @@ class DataTransfer(object):
                  scatter_conns, noflat_vars):
         self.scatter = None
         self.scatter_conns = scatter_conns
-        self.noflat_vars = noflat_vars
+        self.noflat_vars = list(noflat_vars)
 
         #print "noflat: %s" % noflat_vars
 
@@ -589,7 +555,7 @@ class DataTransfer(object):
         if self.scatter:
             self.scatter.scatter(src, dest, addv=addv, mode=mode)
 
-        if self.noflat_vars:
+        if destvec.name.endswith('.p') and self.noflat_vars:
             if MPI:
                 raise NotImplementedError("passing of non-flat vars %s has not been implemented yet" %
                                           self.noflat_vars) # FIXME

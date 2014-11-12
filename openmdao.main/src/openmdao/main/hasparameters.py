@@ -7,8 +7,10 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import obj_has_interface, ISolver, IDriver
 from openmdao.main.variable import make_legal_path
 from openmdao.main.vartree import VariableTree
+from openmdao.main.depgraph import base_var
 
 from openmdao.util.typegroups import real_types, int_types
+from openmdao.util.graph import fix_single_tuple
 
 from numpy import array, ndarray, ndindex, ones
 from openmdao.main.mpiwrap import mpiprint, MPI
@@ -1235,6 +1237,7 @@ class HasVarTreeParameters(HasParameters):
                       scaler=None, adder=None, start=None,
                       fd_step=None, name=None, scope=None):
         """Adds a parameter or group of parameters to the driver."""
+
         super(HasVarTreeParameters, self).add_parameter(
                   target, low, high, scaler, adder, start, fd_step, name, scope)
 
@@ -1259,7 +1262,7 @@ class HasVarTreeParameters(HasParameters):
             obj = val
 
         name = names[-1]
-        obj.add_trait(name, List(iotype='in', deriv_ignore=True))
+        obj.add_trait(name, List(iotype='in', deriv_ignore=True, noflat=True))
 
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""

@@ -59,6 +59,10 @@ class BladeStructure(Assembly):
         self.add('section0', BladeSection(5))
         self.driver.workflow.add('section0')
         self.st3d.add_section('section0')
+        
+        # Copy vartree before connecting to make sure it matches.
+        self.st3d.section0 = self.section0.section.copy()
+        
         self.connect('section0.section', 'st3d.section0')
 
 class Builder(Component):
@@ -78,6 +82,10 @@ class Blade(Assembly):
         self.add('builder', Builder())
 
         self.driver.workflow.add(['blade_st','builder'])
+        
+        # Copy vartree before connecting to make sure it matches.
+        self.builder.st3d = self.blade_st.st3d.copy()
+        
         self.connect('blade_st.st3d', 'builder.st3d')
 
 class VTreeCopyTestCase(unittest.TestCase):

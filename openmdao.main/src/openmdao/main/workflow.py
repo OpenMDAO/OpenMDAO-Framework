@@ -882,6 +882,18 @@ class Workflow(object):
                     reduced.node[out]['system'] = \
                                VarSystem(scope, reduced, vname)
 
+        ## make sure any subvars of param/input var comps are
+        ## properly connected
+        #for node, data in reduced.nodes(data=True):
+        #    if 'comp' not in data:
+        #        if reduced.in_degree(node) == 0:
+        #            if '.' not in node[0]:
+        #                vcomp = node[0].split('[', 1)[0]
+        #                if vcomp in reduced:
+        #                    reduced.add_edge(vcomp, node)
+        #        elif reduced.out_degree(node) == 0:
+        #            reduced.remove_node(node)
+
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.

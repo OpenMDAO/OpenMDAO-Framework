@@ -313,7 +313,11 @@ class PseudoComponent(object):
     def get_metadata(self, traitpath, metaname=None):
         if metaname is None:
             return self._meta[traitpath]
-        return self._meta[traitpath].get(metaname)
+        childname, _, restofpath = traitpath.partition('.')
+        if restofpath:
+            return getattr(self, childname).get_metadata(restofpath, metaname)
+        else:
+            return self._meta[traitpath].get(metaname)
 
     def set_itername(self, itername):
         self._itername = itername

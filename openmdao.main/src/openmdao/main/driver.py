@@ -12,13 +12,14 @@ from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
-from openmdao.main.depgraph import find_all_connecting, simple_node_iter, \
-                                   collapse_driver, get_reduced_subgraph, reduced2component
+from openmdao.main.depgraph import find_all_connecting, \
+                                   collapse_driver, get_reduced_subgraph
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
 from openmdao.main.hasobjective import HasObjective, HasObjectives
 from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasresponses import HasResponses
 from openmdao.main.interfaces import IDriver, IHasEvents, ISolver, \
                                      implements
 from openmdao.main.mp_support import is_instance, has_interface
@@ -359,7 +360,7 @@ class Driver(Component):
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
-                                     HasObjective, HasObjectives)):
+                                     HasObjective, HasObjectives, HasResponses)):
                     refs[inst] = inst.get_references(name)
         return refs
 
@@ -375,7 +376,7 @@ class Driver(Component):
                 inst = getattr(self, dname)
                 if isinstance(inst, (HasParameters, HasConstraints,
                                      HasEqConstraints, HasIneqConstraints,
-                                     HasObjective, HasObjectives)):
+                                     HasObjective, HasObjectives, HasResponses)):
                     inst.remove_references(name)
         self.workflow.remove(name)
 
@@ -411,7 +412,7 @@ class Driver(Component):
         if hasattr(self, 'config_parameters'):
             self.config_parameters()
 
-        # # force param pseudocomps to get updated values to start
+        # force param pseudocomps to get updated values to start
         self.update_parameters()
 
         # Reset the workflow.

@@ -32,6 +32,7 @@ class SellarBLISS(Assembly):
         Optimal Objective = 3.18339"""
 
         # Disciplines
+        self.add('dis1pre', sellar.Discipline1()) # Used for global sensitivity analysis
         self.add('dis1', sellar.Discipline1())
         self.add('dis2', sellar.Discipline2())
 
@@ -42,8 +43,8 @@ class SellarBLISS(Assembly):
         # Top level is Fixed-Point Iteration
         self.add('driver', FixedPointIterator())
         self.driver.add_parameter('dis1.x1', low=0.0, high=10.0, start=1.0)
-        self.driver.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0, start=5.0)
-        self.driver.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0, start=2.0)
+        self.driver.add_parameter(['dis1.z1','dis1pre.z1','dis2.z1'], low=-10.0, high=10.0, start=5.0)
+        self.driver.add_parameter(['dis1.z2','dis1pre.z2','dis2.z2'], low=  0.0, high=10.0, start=2.0)
         self.driver.add_constraint('x1_store = dis1.x1')
         self.driver.add_constraint('z_store[0] = dis1.z1')
         self.driver.add_constraint('z_store[1] = dis1.z2')
@@ -52,7 +53,8 @@ class SellarBLISS(Assembly):
 
         # Multidisciplinary Analysis
         self.add('mda', BroydenSolver())
-        self.mda.add_parameter('dis1.y2', start=0.0)
+        self.mda.workflow.add(['dis1pre', 'dis2'])
+        self.mda.add_parameter(('dis1.y2', 'dis1pre.y2'), start=0.0)
         self.mda.add_constraint('dis2.y2 = dis1.y2')
         self.mda.add_parameter('dis2.y1', start=3.16)
         self.mda.add_constraint('dis2.y1 = dis1.y1')
@@ -74,11 +76,13 @@ class SellarBLISS(Assembly):
         # GSE equations. Have to put this on the TODO list.
         self.add('ssa', SensitivityDriver())
         self.ssa.workflow.add(['mda'])
-        self.ssa.add_parameter(['dis1.z1','dis2.z1'], low=-10.0, high=10.0)
-        self.ssa.add_parameter(['dis1.z2','dis2.z2'], low=  0.0, high=10.0)
-        self.ssa.add_constraint(constraint1)
+        self.ssa.add_parameter(['dis1.z1','dis1pre.z1','dis2.z1'], low=-10.0, high=10.0)
+        self.ssa.add_parameter(['dis1.z2','dis1pre.z2','dis2.z2'], low=  0.0, high=10.0)
+        objective_pre = '(dis1pre.x1)**2 + dis1.z2 + dis1pre.y1 + exp(-dis2.y2)'
+        constraint1_pre = 'dis1pre.y1 > 3.16'
+        self.ssa.add_constraint(constraint1_pre)
         self.ssa.add_constraint(constraint2)
-        self.ssa.add_objective(objective, name='obj')
+        self.ssa.add_objective(objective_pre, name='obj')
 
         # Discipline Optimization
         # (Only discipline1 has an optimization input)
