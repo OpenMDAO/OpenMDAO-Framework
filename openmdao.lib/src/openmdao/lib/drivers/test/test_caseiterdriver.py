@@ -874,6 +874,11 @@ class OptimizationTestCase(unittest.TestCase):
         top.run()
         print 'objective', top.cidasm.f_xy
         assert_rel_error(self, top.cidasm.f_xy, -27.0833328304, 0.001)
+        
+        # Clean up after ourselves
+        outfile = 'slsqp.out'
+        if os.path.exists(outfile):
+            os.remove(outfile)        
 
 
 # Test bug reported by Pierre-Elouan Rethore.

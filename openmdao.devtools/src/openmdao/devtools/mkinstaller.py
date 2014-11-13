@@ -42,7 +42,6 @@ openmdao_packages = [
     ('openmdao.main',  '', 'sdist'),
     ('openmdao.lib',   '', 'sdist'),
     ('openmdao.test',  '', 'sdist'),
-    ('openmdao.gui',   '', 'sdist'),
     ('openmdao.examples.simple',               'examples', 'sdist'),
     ('openmdao.examples.bar3simulation',       'examples', 'bdist_egg'),
     ('openmdao.examples.mdao',                 'examples', 'sdist'),
@@ -234,8 +233,6 @@ def main(args=None):
                 extra_env={'ARCHFLAGS': '-Wno-error=unused-command-line-argument-hard-error-in-future'}
 
             for pkg, pdir, _ in openmdao_packages:
-                if not options.gui and pkg == 'openmdao.gui':
-                    continue
                 os.chdir(join(topdir, pdir, pkg))
                 cmdline = [join(absbin, 'python'), 'setup.py',
                            'develop', '-N'] + cmds
@@ -282,8 +279,6 @@ def extend_parser(parser):
                       help="specify additional required distributions", default=[])
     parser.add_option("--noprereqs", action="store_true", dest='noprereqs',
                       help="don't check for any prerequisites, e.g., numpy or scipy")
-    parser.add_option("--nogui", action="store_false", dest='gui', default=True,
-                      help="do not install the openmdao graphical user interface and its dependencies")
     parser.add_option("--nodocs", action="store_false", dest='docs', default=True,
                       help="do not build the docs")
     parser.add_option("-f", "--findlinks", action="store", type="string",
@@ -429,8 +424,6 @@ def after_install(options, home_dir, activated=False):
         os.remove(setuptools_egg)
 
     reqs = %(reqs)s
-    guireqs = %(guireqs)s
-    guitestreqs = %(guitestreqs)s
 
     if options.findlinks is None:
         url = '%(url)s'
@@ -513,9 +506,6 @@ def after_install(options, home_dir, activated=False):
     try:
         allreqs = reqs[:]
         failures = []
-        if options.gui:
-            allreqs = allreqs + guireqs
-            allreqs = allreqs + guitestreqs
 
         for req in allreqs:
             if req.startswith('openmdao.'):
@@ -605,20 +595,13 @@ def after_install(options, home_dir, activated=False):
     """
 
     reqs = set()
-    guireqs = set()
-    guitestreqs = set()
 
     version = '?.?.?'
     excludes = set(['setuptools', 'distribute', 'SetupDocs']+openmdao_prereqs)
     dists = working_set.resolve([Requirement.parse(r[0])
-                                   for r in openmdao_packages if r[0] != 'openmdao.gui'])
+                                   for r in openmdao_packages])
 
     distnames = set([d.project_name for d in dists])-excludes
-    gui_dists = working_set.resolve([Requirement.parse('openmdao.gui')])
-    guinames = set([d.project_name for d in gui_dists])-distnames-excludes
-    guitest_dists = working_set.resolve([Requirement.parse('openmdao.gui[jsTest]')])
-    guitest_dists.extend(working_set.resolve([Requirement.parse('openmdao.gui[functionalTest]')]))
-    guitestnames = set([d.project_name for d in guitest_dists])-distnames-excludes-guinames
 
     try:
         setupdoc_dist = working_set.resolve([Requirement.parse('setupdocs')])[0]
@@ -636,32 +619,12 @@ def after_install(options, home_dir, activated=False):
         else:
             reqs.add('%s' % dist.as_requirement())
 
-    for dist in gui_dists:
-        if dist.project_name not in guinames:
-            continue
-        if options.dev:  # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
-            if not dist.project_name.startswith('openmdao.'):
-                guireqs.add('%s' % dist.as_requirement())
-        else:
-            guireqs.add('%s' % dist.as_requirement())
-
-    for dist in guitest_dists:
-        if dist.project_name not in guitestnames:
-            continue
-        if options.dev:  # in a dev build, exclude openmdao stuff because we'll make them 'develop' eggs
-            if not dist.project_name.startswith('openmdao.'):
-                guitestreqs.add('%s' % dist.as_requirement())
-        else:
-            guitestreqs.add('%s' % dist.as_requirement())
-
     # adding setupdocs req is a workaround to prevent Traits from looking elsewhere for it
     if setupdoc_dist:
         _reqs = [str(setupdoc_dist.as_requirement())]
     else:
         _reqs = ['setupdocs>=1.0']
     reqs = sorted(_reqs + list(reqs))
-    guireqs = sorted(guireqs)
-    guitestreqs = sorted(guitestreqs)
 
     # pin setuptools to this version
     setuptools_version = "0.9.5"
@@ -675,8 +638,6 @@ def after_install(options, home_dir, activated=False):
         'cmds_str':          offline_[4],
         'openmdao_cmds_str': offline_[5],
         'reqs':              reqs,
-        'guireqs':           guireqs,
-        'guitestreqs':       guitestreqs,
         'version':           version,
         'url':               options.findlinks,
         'make_dev_eggs':     make_dev_eggs,
