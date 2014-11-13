@@ -551,9 +551,6 @@ class Workflow(object):
         inputs = []
         outputs = []
 
-        print "begin configure_recording", driver.name #qqq
-
-
         # Parameters
         self._rec_parameters = []
         if hasattr(driver, 'get_parameters'):
@@ -568,28 +565,14 @@ class Workflow(object):
 
         #driver.get_reduced_graph()
         for comp in driver.workflow: 
-            print "successor for", comp.name, 'is', driver._reduced_graph.successors(comp.name)
             successors = driver._reduced_graph.successors(comp.name)
             for output_name, aliases in successors:
-                print output_name
-                
                 if '.in' in output_name: # look for something that is not a pseudo input
                     for n in aliases:
                         if not ".in" in n:
                             output_name = n
                             break
                 outputs.append(output_name)
-
-
-
-            # if '.in' in output_name: # look for something that is not a pseudo input
-            #     for n in successors[0][1]:
-            #         if not ".in" in n:
-            #             output_name = n
-            #             break
-            # outputs.append(output_name)
-            
-
 
         # Objectives
         self._rec_objectives = []
@@ -604,7 +587,6 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_objectives.append(key)
-                    print "objective", name  #qqq
                     #qqq outputs.append(name)
 
         # Responses
@@ -627,7 +609,6 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    print "eq_constraints", name  #qqq
                     # qqq outputs.append(name)
         if hasattr(driver, 'get_ineq_constraints'):
             for con in driver.get_ineq_constraints().values():
@@ -636,7 +617,6 @@ class Workflow(object):
                 if save_problem_formulation or \
                    self._check_path(path, includes, excludes):
                     self._rec_constraints.append(con)
-                    print "ineq_constraints", name  #qqq
                     #qqq outputs.append(name)
 
         # Other outputs.
@@ -668,7 +648,6 @@ class Workflow(object):
             if src not in inputs and src not in outputs and \
                (save_problem_formulation or self._check_path(path, includes, excludes)):
                 self._rec_outputs.append(src)
-                print "other output", src  #qqq
                 #qqq outputs.append(src)
 
         for comp in self.get_components():
@@ -678,7 +657,6 @@ class Workflow(object):
                 if src not in outputs and \
                    self._check_path(path, includes, excludes):
                     self._rec_outputs.append(src)
-                    print "other output", src  #qqq
                     #qqq outputs.append(src)
 
         name = '%s.workflow.itername' % driver.name
@@ -723,8 +701,6 @@ class Workflow(object):
         top = scope
         while top.parent is not None:
             top = top.parent
-            
-        print "recording case", driver.name
 
         inputs = []
         outputs = []

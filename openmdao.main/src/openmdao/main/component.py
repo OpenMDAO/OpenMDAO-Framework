@@ -611,8 +611,7 @@ class Component(Container):
     def _run_begins(self):
         """ Executed at start of top-level run. """
         if hasattr(self, 'recorders'):
-            pass # qqq
-            #self.configure_recording()
+            pass
 
     @rbac(('owner', 'user'))
     def _run_terminated(self):
@@ -1901,7 +1900,7 @@ class Component(Container):
         return set((self.name,))
 
     @rbac(('owner', 'user'))
-    def setup_graph(self, inputs=None, outputs=None):
+    def setup_depgraph(self, inputs=None, outputs=None):
         pass
 
     @rbac(('owner', 'user'))

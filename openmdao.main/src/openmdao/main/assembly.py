@@ -203,13 +203,6 @@ class Assembly(Component):
 
         self.add('recording_options', RecordingOptions())
 
-        self._setup_inputs = _missing
-        self._setup_outputs = _missing
-
-
-
-
-
     def _pre_execute(self):
         """Prepares for execution by calling various initialization methods
         if necessary.
@@ -225,16 +218,7 @@ class Assembly(Component):
                 self._setup()  # only call _setup from top level
             self._new_config = False
 
-
             self.configure_recording(self.recording_options)
-
-
-
-
-
-
-
-
 
     @property
     def _top_driver(self):
@@ -833,13 +817,6 @@ class Assembly(Component):
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
         Returns set of paths for changing inputs."""
-
-        #if self.recorders:
-            #recording_options = self.recording_options
-            #for recorder in self.recorders:
-                #recorder.startup()
-        #else:
-            #recording_options = None
         if self.parent is None:
             if self.recorders:
                 recording_options = self.recording_options
