@@ -89,6 +89,7 @@ Component, Driver, Variable and other plugins for OpenMDAO
       openmdao.lib.components.pareto_filter.ParetoFilter = openmdao.lib.components.pareto_filter:ParetoFilter
       openmdao.lib.components.linear_distribution.LinearDistribution = openmdao.lib.components.linear_distribution:LinearDistribution
       openmdao.lib.components.sleep_comp.SleepComponent = openmdao.lib.components.sleep_comp:SleepComponent
+      openmdao.lib.components.linear_system.LinearSystem = openmdao.lib.componnets.linear_system:LinearSystem
       openmdao.lib.geometry.stl_group.STLGroup = openmdao.lib.components.stl_group:STLGroup
       openmdao.lib.geometry.box.BoxParametricGeometry = openmdao.lib.components.box:BoxParametricGeometry
 
