@@ -2290,7 +2290,6 @@ def after_install(options, home_dir, activated=False):
  ('openmdao.main', '', 'sdist'),
  ('openmdao.lib', '', 'sdist'),
  ('openmdao.test', '', 'sdist'),
- ('openmdao.gui', '', 'sdist'),
  ('openmdao.examples.simple', 'examples', 'sdist'),
  ('openmdao.examples.bar3simulation', 'examples', 'bdist_egg'),
  ('openmdao.examples.mdao', 'examples', 'sdist'),
