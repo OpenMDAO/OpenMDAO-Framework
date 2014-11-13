@@ -1437,9 +1437,6 @@ class AssemblySystem(SimpleSystem):
 
         inner_system = self._comp._system
 
-        # Linearize systems in the assembly
-        inner_system.linearize()
-
         # Calculate and save Jacobian for this assy
         inputs = [item.partition('.')[-1] for item in self.list_inputs()]
         outputs = [item.partition('.')[-1] for item in self.list_outputs()]
