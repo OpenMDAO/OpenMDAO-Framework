@@ -1056,6 +1056,51 @@ class DependencyGraph(nx.DiGraph):
         self.config_changed()
 
 
+class CollapsedGraph(nx.DiGraph):
+    def config_changed(self):
+        pass
+
+    # The following group of methods are overridden so we can
+    # call config_changed when the graph structure is modified
+    # in any way.
+
+    def add_node(self, n, attr_dict=None, **attr):
+        super(CollapsedGraph, self).add_node(n,
+                                              attr_dict=attr_dict,
+                                              **attr)
+        self.config_changed()
+
+    def add_nodes_from(self, nodes, **attr):
+        super(CollapsedGraph, self).add_nodes_from(nodes, **attr)
+        self.config_changed()
+
+    def remove_node(self, n):
+        super(CollapsedGraph, self).remove_node(n)
+        self.config_changed()
+
+    def remove_nodes_from(self, nbunch):
+        super(CollapsedGraph, self).remove_nodes_from(nbunch)
+        self.config_changed()
+
+    def add_edge(self, u, v, attr_dict=None, **attr):
+        super(CollapsedGraph, self).add_edge(u, v,
+                                      attr_dict=attr_dict, **attr)
+        self.config_changed()
+
+    def add_edges_from(self, ebunch, attr_dict=None, **attr):
+        super(CollapsedGraph, self).add_edges_from(ebunch,
+                                        attr_dict=attr_dict,
+                                        **attr)
+        self.config_changed()
+
+    def remove_edge(self, u, v):
+        super(CollapsedGraph, self).remove_edge(u, v)
+        self.config_changed()
+
+    def remove_edges_from(self, ebunch):
+        super(CollapsedGraph, self).remove_edges_from(ebunch)
+        self.config_changed()
+
 def find_related_pseudos(depgraph, nodes):
     """Return a set of pseudocomponent nodes not driver related and are
     attached to the given set of component nodes.
@@ -1409,6 +1454,8 @@ def collapse_nodes(g, collapsed_name, nodes, remove=True):
     # create new connections to collapsed node
     for u,v in in_edges:
         if u != collapsed_name:
+            #if g.node[collapsed_name].get('driver') and g.has_edge(collapsed_name, u):
+            #    g.remove_edge(collapsed_name, u)
             g.add_edge(u, collapsed_name)
             # create our own copy of edge metadata
             g[u][collapsed_name] = g[u][v].copy()
@@ -1668,7 +1715,7 @@ def collapse_connections(orig_graph):
     src2dests = {}
     dest2src = {}
 
-    g = nx.DiGraph(orig_graph)
+    g = CollapsedGraph(orig_graph)
     #g = orig_graph.subgraph(orig_graph.nodes_iter())
 
     conns = list_data_connections(g)
@@ -1730,6 +1777,38 @@ def collapse_connections(orig_graph):
         _add_collapsed_node(g, src, dests)
 
     g.remove_nodes_from(to_remove)
+    
+    return _consolidate_srcs(g)
+    
+    
+def _consolidate_srcs(g):
+    # consolidate any varnodes with a common src
+    d = _get_duped_varnodes(g)
+    
+    old = set(g.nodes())
+    
+    newnodes = []
+    for src, nodes in d.items():
+        alldests = set()
+        for n in nodes:
+            alldests.update(n[1])
+        if src in alldests:
+            alldests.remove(src)
+            alldests = [src]+sorted(alldests)
+        else:
+            alldests = sorted(alldests)
+        newname = (src, tuple(alldests))
+        newnodes.append((newname, merge_metadata(g, nodes), nodes))
+        
+    for newname, meta, nodes in newnodes:
+        g.add_node(newname, **meta)
+        collapse_nodes(g, newname, nodes)
+        #print "new node: %s: %s" % (newname[0], list(newname[1]))
+        
+    #diff = old.difference(g.nodes())
+    #for d in diff:
+        #print "%s: %s" % (d[0], list(d[1]))
+    #print "---"
 
     return g
 
@@ -2152,3 +2231,33 @@ def connects_to(g, src, dest):
         if v == dest:
             return True
     return False
+
+def merge_metadata(g, nodes):
+    """Return a combined meatdata dict for the given set of
+    nodes."""
+    meta = {}
+    for n in nodes:
+        m = g.node[n]
+        meta.update(m)
+        io = m.get('iotype')
+        if io == 'state':
+            meta['state'] = True
+        elif io == 'residual':
+            meta['residual'] = True
+        if 'iotype' in meta:
+            del meta['iotype'] # has no meaning in collapsed node
+    return meta
+
+def _get_duped_varnodes(g):
+    """Return any varnodes that share the same source. (this is a no-no)"""
+    srcmap = {}
+    for node, data in g.nodes_iter(data=True):
+        if 'comp' not in data:
+            if isinstance(node, tuple):
+                srcmap.setdefault(node[0], set()).add(node)
+
+    for src, nodes in srcmap.items():
+        if len(nodes) < 2:
+            del srcmap[src]
+
+    return srcmap

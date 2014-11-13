@@ -138,6 +138,7 @@ class System(object):
         self._mapped_resids = {}
 
         self._out_nodes = []
+        #multi_in_nodes = {}
 
         # find our output nodes (outputs from our System and any child Systems)
         for node in nodes:
@@ -145,6 +146,16 @@ class System(object):
                 for succ in graph.successors(node):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
+                        #preds = graph.predecessors(succ)
+                        #if len(preds) > 1 and self.name in preds:
+                        #    multi_in_nodes[succ] = preds[:]
+                        #    multi_in_nodes[succ].remove(self.name)
+                        
+        #if multi_in_nodes and graph.node[self.name].get('driver'):
+        #    mydrivers = [c.name for c in self._comp.iteration_set() if has_interface(c, IDriver)]
+        #    for node, preds in multi_in_nodes.items():
+        #        if node in self._out_nodes and set(preds).difference(mydrivers):
+        #            self._out_nodes.remove(node)
 
         if hasattr(self, '_comp') and \
            IImplicitComponent.providedBy(self._comp):
@@ -727,18 +738,17 @@ class System(object):
             if verbose or v not in self.vec['u']._subviews:
                 stream.write(" "*(nest+2))
                 if v in self.vec['p']:
-                    stream.write("u['%s'] (%s)   p['%s'] (%s)\n" %
-                                     (v, list(self.vec['u'].bounds([v])),
-                                      v, list(self.vec['p'].bounds([v]))))
+                    stream.write("u (%s)  p (%s): %s\n" %
+                                     (list(self.vec['u'].bounds([v])),
+                                      list(self.vec['p'].bounds([v])), v))
                 else:
-                    stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds([v]))))
+                    stream.write("u (%s): %s\n" % (list(self.vec['u'].bounds([v])), v))
 
         for v, (arr, start) in self.vec['p']._info.items():
             if v not in self.vec['u'] and (verbose or v not in self.vec['p']._subviews):
                 stream.write(" "*(nest+2))
-                stream.write("%s%s   p['%s'] (%s)\n" %
-                                 (' '*(len(v)+6), ' '*len(str(list(self.vec['p'].bounds([v])))),
-                                  v, list(self.vec['p'].bounds([v]))))
+                stream.write("           p (%s): %s\n" %
+                                 (list(self.vec['p'].bounds([v])), v))
 
         if self.scatter_partial:
             noflats = self.scatter_partial.noflat_vars

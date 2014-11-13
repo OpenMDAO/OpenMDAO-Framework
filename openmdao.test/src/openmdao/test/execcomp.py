@@ -186,8 +186,7 @@ class ExecCompWithDerivatives(Component):
         for expr in self.derivative_codes:
             exec(expr, _expr_dict, self.__dict__ )
 
-        inputs = [x[0] for x in self.items(framework_var=None, iotype='in')]
-        outputs = [x[0] for x in self.items(framework_var=None, iotype='out')]
+        inputs, outputs = self.list_deriv_vars()
         self.J = zeros((len(outputs), len(inputs)))
         
         for item in sorted(self.derivative_names):
