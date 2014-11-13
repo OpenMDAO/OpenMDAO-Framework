@@ -12,7 +12,7 @@ from openmdao.main.hasconstraints import HasConstraints
 from openmdao.main.hasparameters import HasParameters
 from openmdao.util.decorators import add_delegate
 from openmdao.util.testutil import assert_rel_error
-from openmdao.main.depgraph import gsort, reduced2component
+from openmdao.main.depgraph import gsort
 
 exec_order = []
 
@@ -759,7 +759,7 @@ class SortingTestCase(unittest.TestCase):
 
         top._setup()
 
-        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+        names = gsort(top.driver.workflow._reduced_graph.component_graph(), wfnames)
 
         self.assertEqual(names, ['c6', 'c7', 'c8', 'c9', 'c10', 'c1', 'c2', 'c3', 'c4', 'c5'])
                            
@@ -784,7 +784,7 @@ class SortingTestCase(unittest.TestCase):
 
         top._setup()
 
-        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+        names = gsort(top.driver.workflow._reduced_graph.component_graph(), wfnames)
 
         self.assertEqual(names, ['c6', 'c7', 'c8', 'c9', 'c10', 'c1', 'c2', 'c3', 'c4', 'c5'])
 
@@ -809,7 +809,7 @@ class SortingTestCase(unittest.TestCase):
 
         top._setup()
 
-        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+        names = gsort(top.driver.workflow._reduced_graph.component_graph(), wfnames)
 
         self.assertEqual(names, wfnames)   
         
@@ -819,7 +819,7 @@ class SortingTestCase(unittest.TestCase):
 
         top._setup()
 
-        names = gsort(reduced2component(top.driver.workflow._reduced_graph), wfnames)
+        names = gsort(top.driver.workflow._reduced_graph.component_graph(), wfnames)
 
         self.assertEqual(names, wfnames)        
 

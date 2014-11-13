@@ -18,7 +18,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
                                    collapse_nodes, simple_node_iter, \
-                                   internal_nodes, reduced2component
+                                   internal_nodes
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.util.graph import base_var
 
@@ -1882,7 +1882,7 @@ class OpaqueSystem(SimpleSystem):
                 graph.node[dest]['system'] = _create_simple_sys(scope, graph, dest)
 
         self._inner_system = SerialSystem(scope, graph,
-                                          reduced2component(graph),
+                                          graph.component_graph(),
                                           name = "FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None

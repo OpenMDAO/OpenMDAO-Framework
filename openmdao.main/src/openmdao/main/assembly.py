@@ -46,12 +46,11 @@ from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
                                         get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
-                                   collapse_connections, prune_reduced_graph, \
-                                   vars2tuples, relevant_subgraph, list_driver_connections, \
-                                   map_collapsed_nodes, simple_node_iter, \
-                                   reduced2component, collapse_subdrivers, \
+                                   collapse_connections, \
+                                   relevant_subgraph, list_driver_connections, \
+                                   simple_node_iter, \
                                    fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps, fix_dangling_vars, fix_duplicate_dests, \
+                                   add_boundary_comps, \
                                    is_boundary_node
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
@@ -1461,9 +1460,9 @@ class Assembly(Component):
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
 
-        collapse_subdrivers(rgraph, [], [self._top_driver])
+        rgraph.collapse_subdrivers([], [self._top_driver])
 
-        cgraph = reduced2component(rgraph)
+        cgraph = rgraph.component_graph()
 
         if len(cgraph) > 1:
             for u,v in cgraph.edges():
@@ -1638,12 +1637,10 @@ class Assembly(Component):
 
         # collapse all connections into single nodes.
         collapsed_graph = collapse_connections(dgraph)
-        
-        fix_duplicate_dests(collapsed_graph)
+        collapsed_graph.fix_duplicate_dests()
+        collapsed_graph.vars2tuples(dgraph)
 
-        vars2tuples(dgraph, collapsed_graph)
-
-        self.name2collapsed = map_collapsed_nodes(collapsed_graph)
+        self.name2collapsed = collapsed_graph.map_collapsed_nodes()
 
         # add InVarSystems and OutVarSystems for boundary vars
         for node, data in collapsed_graph.nodes_iter(data=True):
@@ -1659,10 +1656,9 @@ class Assembly(Component):
         coll_keep = set([self.name2collapsed.get(k,k) for k in keep])
 
         # remove all vars that don't connect components
-        prune_reduced_graph(self._depgraph, collapsed_graph,
-                            coll_keep)
+        collapsed_graph.prune(coll_keep)
 
-        fix_dangling_vars(collapsed_graph)
+        collapsed_graph.fix_dangling_vars()
 
         self._reduced_graph = collapsed_graph
 

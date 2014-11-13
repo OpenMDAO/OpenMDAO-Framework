@@ -5,9 +5,7 @@ from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
                                     gsort, \
-                                    collapse_connections, \
-                                    vars2tuples, \
-                                    prune_reduced_graph
+                                    collapse_connections
 from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some, base_var
@@ -725,8 +723,8 @@ class ReductionTestCase(unittest.TestCase):
     def test_subvar_conns(self):
         g, scope = _make_base_sub_permutations()
         reduced = collapse_connections(g)
-        vars2tuples(g, reduced)
-        prune_reduced_graph(g, reduced, [])
+        reduced.vars2tuples(g)
+        reduced.prune([])
         self.assertEqual(set(reduced.nodes()),
                          set([('C1.out4', ('C2.in4[1][:]',)),
                               ('C1.out2[1][:]', ('C2.in2',)),
