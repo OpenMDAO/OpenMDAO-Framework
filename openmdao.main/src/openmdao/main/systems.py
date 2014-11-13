@@ -17,8 +17,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
-                                   collapse_nodes, simple_node_iter, \
-                                   internal_nodes
+                                   collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.util.graph import base_var
 
@@ -1837,8 +1836,8 @@ class OpaqueSystem(SimpleSystem):
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
         ograph = graph.subgraph(graph.nodes_iter())
-        int_nodes = internal_nodes(ograph, nodes, shared=False)
-        shared_int_nodes = internal_nodes(ograph, nodes, shared=True)
+        int_nodes = ograph.internal_nodes(nodes, shared=False)
+        shared_int_nodes = ograph.internal_nodes(nodes, shared=True)
         ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
         

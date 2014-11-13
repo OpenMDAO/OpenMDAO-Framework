@@ -23,7 +23,7 @@ from openmdao.main.exceptions import NoFlatError
 from openmdao.main.interfaces import implements, IAssembly, IDriver, \
                                      IArchitecture, IComponent, IContainer, \
                                      ICaseIterator, ICaseRecorder, \
-                                     IDOEgenerator, IHasParameters, IImplicitComponent
+                                     IDOEgenerator, IHasParameters
 from openmdao.main.mp_support import has_interface
 from openmdao.main.container import _copydict
 from openmdao.main.component import Component, Container
@@ -46,11 +46,8 @@ from openmdao.main.array_helpers import is_differentiable_var, get_val_and_index
                                         get_flattened_index, \
                                         get_var_shape, flattened_size
 from openmdao.main.depgraph import DependencyGraph, all_comps, \
-                                   collapse_connections, \
-                                   relevant_subgraph, list_driver_connections, \
+                                   list_driver_connections, \
                                    simple_node_iter, \
-                                   fix_state_connections, connect_subvars_to_comps, \
-                                   add_boundary_comps, \
                                    is_boundary_node
 from openmdao.main.systems import SerialSystem, _create_simple_sys
 
@@ -1615,8 +1612,7 @@ class Assembly(Component):
                             keep.add(base)
                     dgraph.add_connected_subvar(out)
                     
-            dgraph = relevant_subgraph(dgraph, inputs, outputs,
-                                       keep)
+            dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
             
             self._remove_vartrees(dgraph)
             
@@ -1626,17 +1622,12 @@ class Assembly(Component):
             dgraph = self._explode_vartrees(dgraph)
             self._remove_vartrees(dgraph)
 
-        fix_state_connections(self, dgraph)
+        dgraph._fix_state_connections(self)
 
-        add_boundary_comps(dgraph)
-
-        connect_subvars_to_comps(dgraph)
-
-        # get rid of fake boundary comps
-        dgraph.remove_nodes_from(['#in', '#out'])
+        dgraph._connect_subvars_to_comps()
 
         # collapse all connections into single nodes.
-        collapsed_graph = collapse_connections(dgraph)
+        collapsed_graph = dgraph.collapse_connections()
         collapsed_graph.fix_duplicate_dests()
         collapsed_graph.vars2tuples(dgraph)
 

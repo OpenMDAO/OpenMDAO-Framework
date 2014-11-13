@@ -4,8 +4,7 @@ import networkx as nx
 from openmdao.main.depgraph import DependencyGraph, \
                                     find_all_connecting, \
                                     _get_inner_connections,\
-                                    gsort, \
-                                    collapse_connections
+                                    gsort
 from openmdao.util.graph import nodes_matching_all, \
                                 nodes_matching_some, edges_matching_all, \
                                 edges_matching_some, base_var
@@ -663,7 +662,7 @@ class DepGraphStateTestCase1(unittest.TestCase):
 class ReductionTestCase(unittest.TestCase):
 
     def _make_graph(self, comps, invars, outvars):
-        g = nx.DiGraph()
+        g = DependencyGraph()
         g.add_nodes_from(comps, comp=True)
         for n in comps:
             g.add_nodes_from(["%s.%s" % (n, v) for v in invars], iotype='in')
@@ -677,7 +676,7 @@ class ReductionTestCase(unittest.TestCase):
         g = self._make_graph(['C1','C2'], ['in'], ['out'])
         g.add_edge('C1.out','C2.in', conn=True)
 
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
 
         self.assertEqual(set(reduced.nodes()),
                          set(['C1.in','C1','C2','C2.out',('C1.out',('C2.in',))]))
@@ -690,7 +689,7 @@ class ReductionTestCase(unittest.TestCase):
         g.add_edge('C1.out','C2.in', conn=True)
         g.add_edge('C2.in','C3.in', conn=True)
         
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
 
         self.assertEqual(set(reduced.nodes()),
                          set(['C1.in', ('C1.out', ('C3.in', 'C2.in')), 'C3', 'C2', 
@@ -706,7 +705,7 @@ class ReductionTestCase(unittest.TestCase):
         g.add_edge('C2.in','C3.in', conn=True)
         g.add_edge('C3.in','C4.in', conn=True)
         
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
         
         self.assertEqual(set(reduced.nodes()),
                          set([('C1.out', ('C3.in', 'C4.in', 'C2.in')), 
@@ -722,7 +721,7 @@ class ReductionTestCase(unittest.TestCase):
 
     def test_subvar_conns(self):
         g, scope = _make_base_sub_permutations()
-        reduced = collapse_connections(g)
+        reduced = g.collapse_connections()
         reduced.vars2tuples(g)
         reduced.prune([])
         self.assertEqual(set(reduced.nodes()),

@@ -20,7 +20,7 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
 from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
-                                   internal_nodes, collapse_nodes, simple_node_iter
+                                   collapse_nodes, simple_node_iter
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -882,7 +882,7 @@ class Workflow(object):
             for gtup, system in systems.items():
                 collapse_to_system_node(cgraph, system, gtup)
                 reduced.add_node(gtup, comp=True)
-                collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
+                collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
                 reduced.node[gtup]['comp'] = True
                 for c in gtup:
                     opaque_map[c] = gtup

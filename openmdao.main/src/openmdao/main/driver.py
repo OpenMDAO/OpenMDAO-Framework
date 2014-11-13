@@ -13,7 +13,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.datatypes.api import Bool, Enum, Float, Int, Slot, \
                                         List, VarTree
 from openmdao.main.depgraph import find_all_connecting, \
-                                   collapse_driver, get_reduced_subgraph
+                                   collapse_driver
 from openmdao.main.hasconstraints import HasConstraints, HasEqConstraints, \
                                          HasIneqConstraints
 from openmdao.main.hasevents import HasEvents
@@ -191,7 +191,7 @@ class Driver(Component):
             # if self.workflow._calc_gradient_inputs:
             #     nodes.update(simple_node_iter(self.workflow._calc_gradient_inputs))
             g = parent_graph.subgraph(parent_graph.nodes_iter())
-            g = get_reduced_subgraph(parent_graph, nodes)
+            g = parent_graph.full_subgraph(nodes)
             self._reduced_graph = g.subgraph(g.nodes_iter())
 
             to_add = []
