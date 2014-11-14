@@ -105,7 +105,7 @@ class PassthroughProperty(Variable):
             return v.get(name, self._trait.default_value)
         else:
             return self._trait.default_value
-        
+
     def set(self, obj, name, value):
         if obj not in self._vals:
             self._vals[obj] = {}
@@ -649,11 +649,11 @@ class Assembly(Component):
             self._depgraph.connect(self, src, dest)
 
         self._exprmapper.connect(srcexpr, destexpr, self, pseudocomp)
-        
+
         dest = destexpr.evaluate()
         if isinstance(dest, ndarray) and dest.size == 0:
             destexpr.set(srcexpr.evaluate(), self)
-            
+
 
         self.config_changed(update_parent=False)
 
@@ -1103,14 +1103,14 @@ class Assembly(Component):
         for node, data in rgraph.nodes_iter(data=True):
             if 'comp' in data:
                 data['system'] = _create_simple_sys(self, rgraph, node)
-                
+
         for name in self._unexecuted:
             comp = getattr(self, name)
             if has_interface(comp, IDriver) or has_interface(comp, IAssembly):
                 comp.setup_systems()
 
         self._top_driver.setup_systems()
-        
+
         # copy the reduced graph
         rgraph = rgraph.subgraph(rgraph.nodes_iter())
 
@@ -1200,7 +1200,7 @@ class Assembly(Component):
         into Systems.
         """
         dgraph = self._setup_depgraph
-        
+
         # keep all states
         # FIXME: I think this should only keep states of comps that are directly relevant...
         keep = set([n for n,d in dgraph.nodes_iter(data=True)
@@ -1218,7 +1218,7 @@ class Assembly(Component):
             dsrcs, ddests = self._top_driver.get_expr_var_depends(recurse=True)
             keep.add(self._top_driver.name)
             keep.update([c.name for c in self._top_driver.iteration_set()])
-            
+
             # keep any connected boundary vars
             for u,v in chain(dgraph.list_connections(), list_driver_connections(dgraph)):
                 if is_boundary_node(dgraph, u):
@@ -1247,7 +1247,7 @@ class Assembly(Component):
                 outputs = dsrcs
 
             dgraph = dgraph._explode_vartrees(self)
-            
+
             # add any variables requested that don't exist in the graph
             for inp in inputs:
                 if inp not in dgraph:
@@ -1256,7 +1256,7 @@ class Assembly(Component):
                         if base_var(dgraph, n) != base:
                             keep.add(base)
                     dgraph.add_connected_subvar(inp)
-                    
+
             for out in outputs:
                 if out not in dgraph:
                     base = base_var(dgraph, out)
@@ -1264,11 +1264,11 @@ class Assembly(Component):
                         if base_var(dgraph, n) != base:
                             keep.add(base)
                     dgraph.add_connected_subvar(out)
-                    
+
             dgraph = dgraph.relevant_subgraph(inputs, outputs, keep)
-            
+
             dgraph._remove_vartrees(self)
-            
+
             keep.update(inputs)
             keep.update(outputs)
         else:
@@ -1444,7 +1444,7 @@ class Assembly(Component):
             comm = None
 
         self._var_meta = {}
-        
+
         try:
             self.pre_setup()
             self.setup_depgraph()
@@ -1505,7 +1505,7 @@ def _get_scoped_inputs(comp, g, explicit_ins):
     inputs = set()
     if explicit_ins is None:
         explicit_ins = ()
-        
+
     for u,v in chain(g.list_connections(), list_driver_connections(g)):
         if v.startswith(cnamedot):
             inputs.add(v)
@@ -1523,7 +1523,7 @@ def _get_scoped_outputs(comp, g, explicit_outs):
     outputs = set()
     if explicit_outs is None:
         explicit_outs = ()
-        
+
     for u,v in chain(g.list_connections(), list_driver_connections(g)):
         if u.startswith(cnamedot):
             outputs.add(u)

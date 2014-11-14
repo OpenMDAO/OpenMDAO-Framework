@@ -206,29 +206,29 @@ class Workflow(object):
     def _system_reset_needed(self, inputs, outputs, force_regen):
         if force_regen or not self.scope._derivs_required or self._system is None:
             return True
-        
+
         if inputs is None and self._calc_gradient_inputs is not None:
             return True
-        
+
         if outputs is None and self._calc_gradient_outputs is not None:
             return True
-        
+
         wfgraph = self._reduced_graph
         oldins = simple_node_iter([n[1] for n,d in wfgraph.nodes_iter(data=True)
                                      if 'comp' not in d and wfgraph.out_degree(n) > 0
                                                         and wfgraph.in_degree(n) > 0])
-        
+
         oldouts = simple_node_iter([n[0] for n,d in wfgraph.nodes_iter(data=True)
-                                     if 'comp' not in d and wfgraph.in_degree(n) > 0]) 
-        
+                                     if 'comp' not in d and wfgraph.in_degree(n) > 0])
+
         if set(inputs) - set(oldins):
             return True
 
         if set(outputs) - set(oldouts):
             return True
-                       
+
         return False
-        
+
     def calc_gradient(self, inputs=None, outputs=None, mode='auto',
                       return_format='array', force_regen=False, options=None):
         """Returns the Jacobian of derivatives between inputs and outputs.
@@ -264,7 +264,7 @@ class Workflow(object):
             if not inputs:
                 msg = "No inputs given for derivatives."
                 self.scope.raise_exception(msg, RuntimeError)
-                
+
         # If outputs aren't specified, use the objectives and constraints
         if outputs is None:
             outputs = []
@@ -278,7 +278,7 @@ class Workflow(object):
 
         inputs  = [_fix_tups(x) for x in inputs]
         outputs = [_fix_tups(x) for x in outputs]
-                
+
         reset = self._system_reset_needed(inputs, outputs, force_regen)
 
         self._calc_gradient_inputs = inputs[:]
@@ -805,7 +805,6 @@ class Workflow(object):
         """Get the subsystem for this workflow. Each
         subsystem contains a subgraph of this workflow's component
         graph, which contains components and/or other subsystems.
-        Returns the names of any added systems.
         """
 
         scope = self.scope
@@ -831,12 +830,12 @@ class Workflow(object):
             reduced.add_edge(param, node)
             reduced.node[param]['system'] = \
                        ParamSystem(scope, reduced, param)
-            
+
         outs = []
         for p in parent_graph.predecessors(drvname):
             if parent_graph[p][drvname].get('drv_conn') == drvname:
                 outs.append(p)
-            
+
         if outs:
             for out in outs:
                 vname = out[1][0]

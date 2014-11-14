@@ -574,12 +574,10 @@ class A_vt(Assembly):
 
 class Rethore(unittest.TestCase):
 
-    def test_l(self):
-        # FIXME
-        raise SkipTest("FIXME: temporarily skipped because it crashes my machine.")
+    def test_l_sequential(self):
         # Sequential is base.
         logging.debug('')
-        logging.debug('test_l: sequential')
+        logging.debug('test_l_sequential')
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = True
@@ -587,9 +585,11 @@ class Rethore(unittest.TestCase):
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
+    def test_1_concurrent(self):
+        raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
-        logging.debug('test_l: concurrent')
+        logging.debug('test_l_concurrent')
         a = set_as_top(A_l())
         cid = a.parallel_driver
         cid.sequential = False
@@ -599,12 +599,10 @@ class Rethore(unittest.TestCase):
 
         self.assertEqual(concurrent, sequential)
 
-    def test_vt(self):
-        # FIXME
-        raise SkipTest("FIXME: temporarily skipped because it crashes my machine.")
+    def test_vt_sequential(self):
         # Sequential is base.
         logging.debug('')
-        logging.debug('test_vt: sequential')
+        logging.debug('test_vt_sequential')
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = True
@@ -612,9 +610,11 @@ class Rethore(unittest.TestCase):
         sequential = [(cid.case_inputs.c1.i[i], cid.case_outputs.c1.val[i])
                       for i in range(len(cid.case_inputs.c1.i))]
 
+    def test_vt_concurrent(self):
+        raise SkipTest("concurrent CaseIterDriver execution currently not supported")
         # Now run concurrent and verify.
         logging.debug('')
-        logging.debug('test_vt: concurrent')
+        logging.debug('test_vt_concurrent')
         a = set_as_top(A_vt())
         cid = a.parallel_driver
         cid.sequential = False
@@ -874,11 +874,11 @@ class OptimizationTestCase(unittest.TestCase):
         top.run()
         print 'objective', top.cidasm.f_xy
         assert_rel_error(self, top.cidasm.f_xy, -27.0833328304, 0.001)
-        
+
         # Clean up after ourselves
         outfile = 'slsqp.out'
         if os.path.exists(outfile):
-            os.remove(outfile)        
+            os.remove(outfile)
 
 
 # Test bug reported by Pierre-Elouan Rethore.
@@ -919,12 +919,12 @@ class ParameterTarget(unittest.TestCase):
         a1.run()
         self.assertEqual(a1.driver.case_outputs.c.o,
                          [0., 1., 4., 9., 16., 25., 36., 49., 64., 81.])
-        
+
     def test_parameter_target_replace(self):
         a2 = set_as_top(PTAssembly())
         a2.configure()
         a2.replace('c', PTReplacement())
-        # connecting the replacement 'c' to the driver results in the 
+        # connecting the replacement 'c' to the driver results in the
         # case_inputs.c.i being set to [], so we need to recreate the list of inputs
         a2.driver.case_inputs.c.i = [float(i) for i in range(10)]
         a2.run()
