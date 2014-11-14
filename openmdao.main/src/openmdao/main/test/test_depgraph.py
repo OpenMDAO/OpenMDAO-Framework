@@ -180,13 +180,6 @@ class DepGraphTestCase(unittest.TestCase):
                           if out in self.dep])
         self.assertEqual(found, [])
         
-    def test_get_source(self):
-        self.assertEqual(self.dep.get_sources('B.a'), ['A.c[2]'])
-        self.assertEqual(self.dep.get_sources('A.a'), ['a'])
-        self.assertEqual(self.dep.get_sources('c'), ['C.c'])
-        self.assertEqual(self.dep.get_sources('A.c'), [])
-        self.assertEqual(self.dep.get_sources('B.b[4]'), ['A.d.z'])
-        
     def test_base_var(self):
         self.assertEqual(base_var(self.dep, 'B.a'), 'B.a')
         self.assertEqual(base_var(self.dep, 'a'), 'a')
@@ -368,26 +361,6 @@ class DepGraphTestCase(unittest.TestCase):
                                  outputs=['out1','out2'])
         cgraph = dep.component_graph()
         self.assertEqual(set(cgraph.edges()), set([('A','B')]))
-
-        
-    def test_connections_to(self):
-        self.assertEqual(set(self.dep.connections_to('c')),
-                         set([('C.c', 'c')]))
-        self.assertEqual(set(self.dep.connections_to('a')),
-                         set([('a', 'A.a')]))
-        
-        # unconnected var should return an empty list
-        self.assertEqual(self.dep.connections_to('D.a'),[])
-
-        # now test component connections
-        self.assertEqual(set(self.dep.connections_to('A')),
-                         set([('a', 'A.a'),
-                              ('b[3]', 'A.b'),
-                              ('A.c[2]','B.a.x.y'),
-                              ('A.d.z','B.b[4]')]))
-
-        self.assertEqual(set(self.dep.connections_to('D')),
-                         set([('D.d', 'd.x')]))
         
     def test_find_all_connecting(self):
         self.assertEqual(find_all_connecting(self.dep.component_graph(), 'A','D'), set())

@@ -63,18 +63,6 @@ class DBCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders = [DBCaseRecorder()]
         self.top.run()
 
-        # Gui pane stuff
-
-        attrs = self.top.recorders[0].get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'dbfile',
-                         'id': 'dbfile',
-                         'type': 'str',
-                         'connected': '',
-                         'value': ':memory:',
-                         'desc': 'Name of the database file to be recorded. Default ' +
-                       'is ":memory:", which writes the database to memory.'} in attrs['Inputs'])
-
         # now use the DB as source of Cases
         cases = [case for case in self.top.recorders[0].get_iterator()]
         Case.set_vartree_inputs(self.top.driver, cases)
@@ -203,25 +191,6 @@ class DBCaseRecorderTestCase(unittest.TestCase):
             shutil.rmtree(tmpdir, onerror=onerror)
         except OSError:
             logging.error("problem removing directory %s", tmpdir)
-
-    def test_dbcaseiterator_get_attributes(self):
-
-        caseiter = DBCaseIterator()
-        attrs = caseiter.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'dbfile',
-                         'type': 'str',
-                         'connected': '',
-                         'value': ':memory:',
-                         'desc': 'Name of the database file to be iterated.'
-                                 ' Default is ":memory:", which reads the'
-                                 ' database from memory.'} in attrs['Inputs'])
-        self.assertTrue({'name': 'selectors',
-                         'type': 'NoneType',
-                         'connected': '',
-                         'value': 'None',
-                         'desc': 'String of additional SQL queries to apply to'
-                                 ' the case selection.'} in attrs['Inputs'])
 
     def test_string(self):
         recorder = DBCaseRecorder()

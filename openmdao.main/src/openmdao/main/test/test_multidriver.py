@@ -351,11 +351,6 @@ class MultiDriverTestCase(unittest.TestCase):
             '\n   driver\n      comp1\n      driver1\n         comp3\n      comp2\n'
             '      comp4\n')
 
-        # test all_wflows_order
-        comps = top.all_wflows_order()
-        self.assertEqual(comps,
-                         ['driver', 'comp1', 'driver1', 'comp3', '_pseudo_0', 'comp2', 'comp4', '_pseudo_1'])
-
     def test_2_nested_drivers_same_assembly_extra_comp(self):
         print "*** test_2_nested_drivers_same_assembly ***"
         #

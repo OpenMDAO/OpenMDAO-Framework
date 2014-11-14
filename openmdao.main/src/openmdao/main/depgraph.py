@@ -218,6 +218,7 @@ class DGraphBase(nx.DiGraph):
         super(DGraphBase, self).remove_edges_from(ebunch)
         self.config_changed()
 
+
 class DependencyGraph(DGraphBase):
     def __init__(self, *args, **kwargs):
         super(DependencyGraph, self).__init__(*args, **kwargs)
@@ -586,32 +587,6 @@ class DependencyGraph(DGraphBase):
                     if self.in_degree(node) < 1 or self.out_degree(node) < 1:
                         self.remove_node(node)
 
-    def get_directional_interior_edges(self, comp1, comp2):
-        """ Behaves like get_interior_edges, except that it only
-        returns interior edges that originate in comp1 and and end in comp2.
-
-        comp1: str
-            Source component name
-
-        comp2: str
-            Dest component name
-        """
-        in_set = set()
-        for inp in self.list_inputs(comp2):
-            in_set.update(self._var_connections(inp, 'in'))
-
-        out_set = set()
-        for out in self.list_outputs(comp1):
-            out_set.update(self._var_connections(out, 'out'))
-
-        return in_set.intersection(out_set)
-
-    def connections_to(self, path, direction=None):
-        if is_comp_node(self, path):
-            return self._comp_connections(path, direction)
-        else:
-            return self._var_connections(path, direction)
-
     def list_connections(self, show_passthrough=True):
         conns = self._conns.get(show_passthrough)
         if conns is None:
@@ -623,25 +598,6 @@ class DependencyGraph(DGraphBase):
 
             self._conns[show_passthrough] = conns
         return conns[:]
-
-    def get_sources(self, name):
-        """Return the node that's actually a source for the
-        named node (as opposed to just a connected subvar).
-        This should only be called for destination nodes (inputs
-        or output boundary vars).
-        """
-        srcs = self._srcs.get(name)
-        if srcs is None:
-            srcs = []
-            for u,v in self.in_edges_iter(name):
-                if is_connection(self, u, v):
-                    srcs.append(u)
-                elif is_subvar_node(self, u):
-                    for uu,vv in self.in_edges_iter(u):
-                        if is_connection(self, uu, vv):
-                            srcs.append(uu)
-            self._srcs[name] = srcs
-        return srcs[:]
 
     def _all_child_vars(self, node, direction=None):
         """Return a list of nodes containing all nodes that are one
@@ -705,16 +661,6 @@ class DependencyGraph(DGraphBase):
         variable or subvar nodes belonging to those nodes.
         """
         return self.subgraph(self.find_prefixed_nodes(nodes))
-
-    def _comp_connections(self, cname, direction=None):
-        conns = []
-        if direction != 'in':
-            for out in self.list_outputs(cname):
-                conns.extend(self._var_connections(out, 'out'))
-        if direction != 'out':
-            for inp in self.list_inputs(cname):
-                conns.extend(self._var_connections(inp, 'in'))
-        return conns
 
     def get_boundary_inputs(self):
         """Returns inputs that are on the component boundary.
@@ -1647,173 +1593,8 @@ def _get_inner_connections(G, srcs, dests):
     data = G.edge
     return [(u,v) for u,v in _get_inner_edges(G, srcs, dests) if 'conn' in data[u][v]]
 
-def _remove_ignored_derivs(graph):
-    to_remove = [n for n, data in graph.nodes_iter(data=True) if data.get('deriv_ignore')]
-    graph.remove_nodes_from(to_remove)
-
 def _is_false(item):
     return not item
-
-def _check_for_missing_derivs(scope, comps):
-    ''' we have the edges that are actually needed for the derivatives, so
-    check all of the corresponding components now to see if they are
-    supplying the needed derivatives.'''
-    remove = []
-    vt_flattener = flatteners[VariableTree]
-    for cname, vnames in comps.items():
-        vnames = set(vnames) # vnames may have dups
-        comps[cname] = vnames
-        if cname is None or cname.startswith('~'):
-            # skip boundary vars and pseudoassemblies
-            continue
-        comp = getattr(scope, cname)
-
-        # Skip comp if we are forcing it to fd
-        if getattr(comp, 'force_fd', False):
-            continue
-
-        if not has_interface(comp, IComponent): # filter out vartrees
-            continue
-        if has_interface(comp, IAssembly):
-
-            # Assemblies need to call into provideJ so that we can determine
-            # what derivatives are available. Note that boundary variables
-            # that are unconnected on the interior need a missing_deriv_policy
-            # of 'assume_zero' to calculate them as zero.
-            dins = [k for k, v in comp.items(iotype='in', deriv_ignore=_is_false)] #comp.list_inputs()
-            douts = [k for k, v in comp.items(iotype='out', deriv_ignore=_is_false)]#comp.list_outputs()
-            comp.provideJ(dins, douts, check_only=True)
-            dins, douts = list_deriv_vars(comp)
-            # if inputs are vartrees and we have full vt connections inside, add
-            # leaf nodes to our list
-            for i,din in enumerate(dins[:]):
-                obj = getattr(comp, din)
-                if has_interface(obj, IVariableTree):
-                    dins.extend([n for n,v in vt_flattener(din, obj)])
-            for i,dout in enumerate(douts[:]):
-                obj = getattr(comp, dout)
-                if has_interface(obj, IVariableTree):
-                    douts.extend([n for n,v in vt_flattener(dout, obj)])
-        else:
-            dins, douts = list_deriv_vars(comp)
-            for name in chain(dins, douts):
-                if not comp.contains(name):
-                    raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
-                                        (comp.get_pathname(), name))
-        if len(dins) == 0 or len(douts) == 0:
-            if hasattr(comp, 'provideJ'):
-                raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
-            else:
-                continue  # we'll finite difference this comp
-        missing = []
-        for name in vnames:
-            if name not in dins and name not in douts:
-                nname = name.split('[', 1)[0]
-                if nname not in dins and nname not in douts and is_differentiable_var(nname.split('.',1)[0], comp):
-                    missing.append(nname)
-        if missing:
-            if comp.missing_deriv_policy == 'error':
-                raise RuntimeError("'%s' doesn't provide analytical derivatives %s"
-                                   % (comp.get_pathname(), missing))
-            elif comp.missing_deriv_policy == 'assume_zero':
-                # remove the vars with zero derivatives
-                comps[cname] = [n for n in vnames if n not in missing]
-                remove.extend(['.'.join((cname, m)) for m in missing])
-
-    return remove
-
-def get_missing_derivs(obj, recurse=True):
-    """Return a list of missing derivatives found in the given
-    object.
-    """
-    if not has_interface(obj, IComponent):
-        raise RuntimeError("Given object is not a Component")
-
-    vt_flattener = flatteners[VariableTree]
-
-    def _get_missing_derivs(comp, missing, finite_diffs, recurse):
-
-        cins = comp.list_inputs()
-        couts = comp.list_outputs()
-
-        for i,cin in enumerate(cins[:]):
-            obj = comp.get(cin)
-            #meta = comp.get_metadata(cin, 'framework_var')
-            if has_interface(obj, IVariableTree):
-                cins.extend([n for n,v in vt_flattener(cin, obj)])
-
-        for i,cout in enumerate(couts[:]):
-            obj = comp.get(cout)
-            if has_interface(obj, IVariableTree) :
-                couts.extend([n for n,v in vt_flattener(cout, obj)])
-
-
-        if has_interface(comp, IAssembly):
-            # Assemblies need to call into provideJ so that we can determine
-            # what derivatives are available.
-            comp.provideJ(cins, couts, check_only=True)
-            dins, douts = list_deriv_vars(comp)
-            # if inputs are vartrees and we have full vt connections inside, add
-            # leaf nodes to our list
-            for i,din in enumerate(dins[:]):
-                obj = comp.get(din)
-                if has_interface(obj, IVariableTree):
-                    dins.extend([n for n,v in vt_flattener(din, obj)])
-            for i,dout in enumerate(douts[:]):
-                obj = comp.get(dout)
-                if has_interface(obj, IVariableTree):
-                    douts.extend([n for n,v in vt_flattener(dout, obj)])
-
-            if recurse:
-                for cname in comp.list_containers():
-                    ccomp = getattr(comp, cname)
-                    if has_interface(ccomp, IComponent):
-                        _get_missing_derivs(ccomp, missing, finite_diffs, recurse)
-
-        else:
-            dins, douts = list_deriv_vars(comp)
-
-            for name in chain(dins, douts):
-                if not comp.contains(name):
-                    raise RuntimeError("'%s' reports '%s' as a deriv var, but it doesn't exist." %
-                                        (comp.get_pathname(), name))
-
-            for i,din in enumerate(dins[:]):
-                obj = comp.get(din)
-                if has_interface(obj, IVariableTree):
-                    dins.extend([n for n,v in vt_flattener(din, obj)])
-            for i,dout in enumerate(douts[:]):
-                obj = comp.get(dout)
-                if has_interface(obj, IVariableTree):
-                    douts.extend([n for n,v in vt_flattener(dout, obj)])
-
-        if (len(dins) == 0 or len(douts) == 0) and comp.parent:
-            if hasattr(comp, 'provideJ'):
-                raise RuntimeError("'%s' defines provideJ but doesn't provide input or output deriv vars" % comp.get_pathname())
-            else:
-                finite_diffs.append(comp.get_pathname())
-                return
-
-        for name in chain(cins, couts):
-            obj = comp.get(name)
-            if has_interface(obj, IVariableTree): #can never be a whole vartree, only the children
-                continue
-
-            base_name, _, index = name.partition("[")
-            if index:
-                if base_name in dins or base_name in douts:
-                    continue
-
-
-            if name not in dins and name not in douts and is_differentiable_var(name, comp):
-                missing.append('.'.join((comp.get_pathname(), name)))
-
-    missing = []
-    finite_diffs = []
-
-    _get_missing_derivs(obj, missing, finite_diffs, recurse)
-
-    return missing, finite_diffs
 
 def break_cycles(graph):
     """Breaks up a cyclic graph and returns a list of severed

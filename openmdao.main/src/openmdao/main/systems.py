@@ -132,12 +132,9 @@ class System(object):
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
 
-        #self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
-
         self._mapped_resids = {}
 
         self._out_nodes = []
-        #multi_in_nodes = {}
 
         # find our output nodes (outputs from our System and any child Systems)
         for node in nodes:
@@ -145,16 +142,6 @@ class System(object):
                 for succ in graph.successors(node):
                     if succ not in self._out_nodes:
                         self._out_nodes.append(succ)
-                        #preds = graph.predecessors(succ)
-                        #if len(preds) > 1 and self.name in preds:
-                        #    multi_in_nodes[succ] = preds[:]
-                        #    multi_in_nodes[succ].remove(self.name)
-                        
-        #if multi_in_nodes and graph.node[self.name].get('driver'):
-        #    mydrivers = [c.name for c in self._comp.iteration_set() if has_interface(c, IDriver)]
-        #    for node, preds in multi_in_nodes.items():
-        #        if node in self._out_nodes and set(preds).difference(mydrivers):
-        #            self._out_nodes.remove(node)
 
         if hasattr(self, '_comp') and \
            IImplicitComponent.providedBy(self._comp):
