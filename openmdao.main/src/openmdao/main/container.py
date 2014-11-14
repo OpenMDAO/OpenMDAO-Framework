@@ -803,58 +803,6 @@ class Container(SafeHasTraits):
         """Return a list of Variables in this Container."""
         return [k for k, v in self.items(iotype=not_none)]
 
-    def get_attributes(self, io_only=True):
-        """ Get attributes of this container. Includes all variables ('Inputs')
-            and, if *io_only* is not true, attributes for all slots as well.
-
-            Arguments:
-                io_only:  if True then only 'Inputs' are included
-        """
-
-        attrs = {}
-        attrs['type'] = type(self).__name__
-
-        var_attrs = []
-
-        if not io_only:
-            slot_attrs = []
-        else:
-            slot_attrs = None
-
-        #for name in self.list_vars() + self._added_traits.keys():
-        for name in set(self.list_vars()).union(self._added_traits.keys(),
-                                                self._alltraits(type=Slot).keys()):
-
-            trait = self.get_trait(name)
-            meta = self.get_metadata(name)
-            value = getattr(self, name)
-            ttype = trait.trait_type
-
-            # Each variable type provides its own basic attributes
-            attr, slot_attr = ttype.get_attribute(name, value, trait, meta)
-            if 'framework_var' in meta:
-                attr['id'] = '~' + name
-            else:
-                attr['id'] = name
-            attr['indent'] = 0
-
-            # Container variables are not connectable
-            attr['connected'] = ''
-
-            var_attrs.append(attr)
-
-            # Process slots
-            if slot_attrs is not None and slot_attr is not None:
-                # slots can be hidden (e.g. the Workflow slot in drivers)
-                if 'hidden' not in meta or meta['hidden'] is False:
-                    slot_attrs.append(slot_attr)
-
-        attrs['Inputs'] = var_attrs
-
-        if slot_attrs:
-            attrs['Slots'] = slot_attrs
-        return attrs
-
     # Can't use items() since it returns a generator (won't pickle).
     @rbac(('owner', 'user'))
     def _alltraits(self, traits=None, events=False, **metadata):

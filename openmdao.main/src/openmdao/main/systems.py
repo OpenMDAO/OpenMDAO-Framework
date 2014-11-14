@@ -17,8 +17,7 @@ from openmdao.main.interfaces import IDriver, IAssembly, IImplicitComponent, \
                                      ISolver, IPseudoComp, IComponent, ISystem
 from openmdao.main.vecwrapper import VecWrapper, InputVecWrapper, DataTransfer, idx_merge, petsc_linspace
 from openmdao.main.depgraph import break_cycles, get_node_boundary, gsort, \
-                                   collapse_nodes, simple_node_iter, \
-                                   internal_nodes, reduced2component
+                                   collapse_nodes, simple_node_iter
 from openmdao.main.derivatives import applyJ, applyJT
 from openmdao.util.graph import base_var
 
@@ -132,8 +131,6 @@ class System(object):
         self.flat_vars = OrderedDict() # all vars used in vectors, whether they add to vector size or not
         self.noflat_vars = OrderedDict() # all vars that are not flattenable to float arrays (so are not part of vectors)
         self.vector_vars = OrderedDict() # all vars that contribute to the size of vectors
-
-        #self._pargraph = graph.subgraph(graph.nodes_iter()) # FIXME: just for debugging. remove later
 
         self._mapped_resids = {}
 
@@ -727,18 +724,17 @@ class System(object):
             if verbose or v not in self.vec['u']._subviews:
                 stream.write(" "*(nest+2))
                 if v in self.vec['p']:
-                    stream.write("u['%s'] (%s)   p['%s'] (%s)\n" %
-                                     (v, list(self.vec['u'].bounds([v])),
-                                      v, list(self.vec['p'].bounds([v]))))
+                    stream.write("u (%s)  p (%s): %s\n" %
+                                     (list(self.vec['u'].bounds([v])),
+                                      list(self.vec['p'].bounds([v])), v))
                 else:
-                    stream.write("u['%s'] (%s)\n" % (v, list(self.vec['u'].bounds([v]))))
+                    stream.write("u (%s): %s\n" % (list(self.vec['u'].bounds([v])), v))
 
         for v, (arr, start) in self.vec['p']._info.items():
             if v not in self.vec['u'] and (verbose or v not in self.vec['p']._subviews):
                 stream.write(" "*(nest+2))
-                stream.write("%s%s   p['%s'] (%s)\n" %
-                                 (' '*(len(v)+6), ' '*len(str(list(self.vec['p'].bounds([v])))),
-                                  v, list(self.vec['p'].bounds([v]))))
+                stream.write("           p (%s): %s\n" %
+                                 (list(self.vec['p'].bounds([v])), v))
 
         if self.scatter_partial:
             noflats = self.scatter_partial.noflat_vars
@@ -1827,8 +1823,8 @@ class OpaqueSystem(SimpleSystem):
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
         ograph = graph.subgraph(graph.nodes_iter())
-        int_nodes = internal_nodes(ograph, nodes, shared=False)
-        shared_int_nodes = internal_nodes(ograph, nodes, shared=True)
+        int_nodes = ograph.internal_nodes(nodes, shared=False)
+        shared_int_nodes = ograph.internal_nodes(nodes, shared=True)
         ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
         
@@ -1872,7 +1868,7 @@ class OpaqueSystem(SimpleSystem):
                 graph.node[dest]['system'] = _create_simple_sys(scope, graph, dest)
 
         self._inner_system = SerialSystem(scope, graph,
-                                          reduced2component(graph),
+                                          graph.component_graph(),
                                           name = "FD_" + str(name))
 
         self._inner_system._provideJ_bounds = None

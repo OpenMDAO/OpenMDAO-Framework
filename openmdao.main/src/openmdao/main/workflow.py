@@ -19,9 +19,8 @@ from openmdao.main.systems import SerialSystem, ParallelSystem, \
                                   OpaqueSystem, VarSystem, \
                                   partition_subsystems, ParamSystem, \
                                   get_comm_if_active, collapse_to_system_node
-from openmdao.main.depgraph import _get_inner_connections, reduced2component, \
-                                   get_nondiff_groups, collapse_subdrivers, \
-                                   internal_nodes, collapse_nodes, simple_node_iter
+from openmdao.main.depgraph import _get_inner_connections, get_nondiff_groups, \
+                                   collapse_nodes, simple_node_iter
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IVariableTree, IDriver
 
@@ -862,10 +861,10 @@ class Workflow(object):
         # collapse driver iteration sets into a single node for
         # the driver, except for nodes from their iteration set
         # that are in the iteration set of their parent driver.
-        collapse_subdrivers(reduced, self.get_names(full=True),
-                            self.subdrivers())
+        reduced.collapse_subdrivers(self.get_names(full=True),
+                                    self.subdrivers())
 
-        cgraph = reduced2component(reduced)
+        cgraph = reduced.component_graph()
 
         opaque_map = {} # map of all internal comps to collapsed
                               # name of opaque system
@@ -883,7 +882,7 @@ class Workflow(object):
             for gtup, system in systems.items():
                 collapse_to_system_node(cgraph, system, gtup)
                 reduced.add_node(gtup, comp=True)
-                collapse_nodes(reduced, gtup, internal_nodes(reduced, gtup))
+                collapse_nodes(reduced, gtup, reduced.internal_nodes(gtup))
                 reduced.node[gtup]['comp'] = True
                 for c in gtup:
                     opaque_map[c] = gtup

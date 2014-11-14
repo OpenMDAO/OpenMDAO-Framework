@@ -113,28 +113,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.recorders[0].num_backups = 0
         self.top.run()
 
-        attrs = self.top.recorders[0].get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'filename',
-                         'id': 'filename',
-                         'type': 'str',
-                         'connected': '',
-                         'value': 'openmdao_test_csv_case_iterator.csv',
-                         'desc': 'Name of the CSV file to be output.'} in attrs['Inputs'])
-        self.assertTrue({'name': 'append',
-                         'id': 'append',
-                         'type': 'bool',
-                         'connected': '',
-                         'value': 'False',
-                         'desc': 'Set to True to append to the existing CSV file.'} in attrs['Inputs'])
-        self.assertTrue({'name': 'delimiter',
-                         'id': 'delimiter',
-                         'type': 'str',
-                         'connected': '',
-                         'value': ';',
-                         'desc': 'CSV delimiter. Default is ",".'} in attrs['Inputs'])
-
-
         # now use the DB as source of Cases
         self.top.driver.iterator = self.top.recorders[0].get_iterator()
 
@@ -201,22 +179,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.assertEqual(self.top.comp1.y, 0.0)
         self.assertEqual(self.top.comp2.b_string, "Goodbye z")
 
-        # Gui pane stuff
-
-        iterator = CSVCaseIterator(filename=self.filename)
-        attrs = iterator.get_attributes()
-        self.assertTrue("Inputs" in attrs.keys())
-        self.assertTrue({'name': 'filename',
-                         'type': 'str',
-                         'connected': '',
-                         'value': 'openmdao_test_csv_case_iterator.csv',
-                         'desc': 'Name of the CSV file to be iterated.'} in attrs['Inputs'])
-        self.assertTrue({'name': 'headers',
-                         'type': 'NoneType',
-                         'connected': '',
-                         'value': 'None',
-                         'desc': 'Optional dictionary of header labels, where the key is the column number.'} in attrs['Inputs'])
-
     def test_CSVCaseIterator_read_external_file_without_header(self):
 
         csv_data = ['33.5, 76.2, "Hello There"\n'
@@ -240,9 +202,6 @@ class CSVCaseRecorderTestCase(unittest.TestCase):
         self.top.driver.clear_parameters()
         Case.set_vartree_inputs(self.top.driver, cases)
         self.top.recorders = [DumpCaseRecorder(sout)]
-        
-        #from openmdao.util.dotgraph import plot_graph
-        #plot_graph(self.top._depgraph)
         
         self.top.run()
 

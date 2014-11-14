@@ -54,6 +54,7 @@ setup(name='openmdao.main',
           'openmdao.util',
           'pycrypto',
           'pyparsing',
+          'requests',
           'setuptools',
           'Sphinx',
           'Traits==4.3.0',
@@ -67,7 +68,7 @@ setup(name='openmdao.main',
       idle=idlelib.PyShell:main
       plugin=openmdao.main.plugin:plugin
       openmdao=openmdao.main.cli:openmdao
-      
+
       [openmdao.component]
       openmdao.main.assembly.Assembly = openmdao.main.assembly:Assembly
       openmdao.main.component_with_derivatives.ComponentWithDerivatives = openmdao.main.component_with_derivatives:ComponentWithDerivatives
@@ -94,9 +95,5 @@ setup(name='openmdao.main',
       openmdao.main.datatypes.uncertaindist.UncertainDistVar = openmdao.main.datatypes.uncertaindist:UncertainDistVar
       openmdao.main.datatypes.vtree.VarTree = openmdao.main.datatypes.vtree:VarTree
       openmdao.main.datatypes.array.Array = openmdao.main.datatypes.array:Array
-      
-      [openmdao.driver]
-      openmdao.main.distsolve.MPINonlinearSolver=openmdao.main.distsolve:MPINonlinearSolver
-      openmdao.main.distsolve.MPISolver=openmdao.main.distsolve:MPISolver
       """,
       )

@@ -346,6 +346,7 @@ class NEWSUMTdriver(Driver):
         self._sn = zeros(0)
         self._x = zeros(0)
         self._iik = zeros(0, dtype=int)
+        self._ilin = zeros(0, dtype=int)
 
         self._lower_bounds = zeros(0)
         self._upper_bounds = zeros(0)
@@ -419,7 +420,7 @@ class NEWSUMTdriver(Driver):
                    self._gb, self._g1, self._g2, self._g3,
                    self._obj, self._objmin,
                    self._s, self._sn, self.design_vals, self.__design_vals_tmp,
-                   self._iik, self.ilin, self._iside,
+                   self._iik, self._ilin, self._iside,
                    self.n1, self.n2, self.n3, self.n4,
                    self.isdone, self.resume, analys_extra_args=(self,))
 
@@ -486,12 +487,15 @@ class NEWSUMTdriver(Driver):
         if len(self.ilin) == 0:
             if ncon > 0:
                 self.ilin = zeros(ncon, dtype=int)
+                self._ilin = self.ilin
             else:
-                self.ilin = zeros(1, dtype=int)
+                self._ilin = zeros(1, dtype=int)
         elif len(self.ilin) != ncon:
             msg = "Dimension of NEWSUMT setting 'ilin' should be equal to " \
                   "the number of constraints."
             self.raise_exception(msg, RuntimeError)
+        else:
+            self._ilin = self.ilin            
 
         # Set initial values in the common blocks
         self.countr.clear()
