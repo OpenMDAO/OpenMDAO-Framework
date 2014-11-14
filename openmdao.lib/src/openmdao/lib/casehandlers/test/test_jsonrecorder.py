@@ -19,25 +19,21 @@ from openmdao.util.testutil import assert_raises
 
 
 class TExecComp(ExecComp):
-
     data = Instance(iotype='in', desc='Used to check bad JSON data')
 
 
 class Loads(VariableTree):
-
     Fx = Array()
     Fy = Array()
     Fz = Array()
 
 
 class LoadsArray(VariableTree):
-
     loads = List(Loads)
 
 
 class LoadsComp(Component):
-
-    loads_in = VarTree(LoadsArray(), iotype='in')
+    loads_in  = VarTree(LoadsArray(), iotype='in')
     loads_out = VarTree(LoadsArray(), iotype='out')
 
     def execute(self):

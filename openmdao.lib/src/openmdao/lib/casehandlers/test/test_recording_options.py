@@ -128,8 +128,6 @@ Case:
    outputs:
       Objective(comp1.z): 0.0
       Objective(comp2.z): 1.0
-      comp1.z: 0.0
-      comp2.z: 1.0
 """
 
         # print sout.getvalue()
@@ -240,7 +238,6 @@ Case:
       comp1.exec_count: 1
       comp1.itername: 1-comp1
       comp1.z: 0.0
-      comp2.z: 1.0
 """
 
         # print sout.getvalue()
