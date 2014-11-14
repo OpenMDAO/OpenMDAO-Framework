@@ -51,3 +51,7 @@ class MultiDrvSameParamTestCase(unittest.TestCase):
         top.run()
         assert_rel_error(self, 31., top.sens.dF, 0.00001)
         assert_rel_error(self, 31., top.down.y, 0.00001)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -519,7 +519,7 @@ class System(object):
             if not isinstance(sub, ParamSystem):
                 sub.setup_variables(resid_state_map)
                 variables.update(sub.variables)
-                
+
         for sub in self.local_subsystems():
             if isinstance(sub, ParamSystem):
                 sub.setup_variables(variables, resid_state_map)
@@ -1102,10 +1102,14 @@ class SimpleSystem(System):
         mynonstates = [v for v in self._out_nodes if v[1][0] not in states
                          and v not in resid_state_map]
 
+        topsys = self
+        while topsys._parent_system:
+            topsys = topsys._parent_system
+
         for vname in chain(mystates, mynonstates):
             if vname not in self.variables:
                 base = base_var(self.scope._depgraph, vname[0])
-                if base != vname[0] and base in self.scope._reduced_graph: #self.scope._var_meta:
+                if base != vname[0] and base in topsys._combined_graph: #self.scope._reduced_graph:
                     continue
                 self.variables[vname] = varmeta[vname].copy()
 
@@ -1293,13 +1297,13 @@ class ParamSystem(VarSystem):
             del self.flat_vars[to_remove[0]]
         else:
             self._dup_in_subdriver = False
-        
+
     def applyJ(self, variables):
         """ Set to zero """
         system = None
         if self.vector_vars or self._dup_in_subdriver:
             system = self._get_sys()
-            
+
         if system:
             system.rhs_vec[self.name] += system.sol_vec[self.name]
 
@@ -1310,7 +1314,7 @@ class ParamSystem(VarSystem):
     #def run(self, iterbase, case_label='', case_uuid=None):
     #    if self.is_active():
     #        self._get_sys().vec['u'].set_to_scope(self.scope, [self.name])
-    
+
     def _get_sys(self):
         if self._dup_in_subdriver:
             return self._parent_system
@@ -1376,8 +1380,8 @@ class EqConstraintSystem(SimpleSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            super(EqConstraintSystem, self).run(iterbase, 
-                                                case_label=case_label, 
+            super(EqConstraintSystem, self).run(iterbase,
+                                                case_label=case_label,
                                                 case_uuid=case_uuid)
             state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
 
