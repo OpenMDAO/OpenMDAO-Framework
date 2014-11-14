@@ -50,7 +50,7 @@ def _sub_or_super(s1, s2):
 
 
 def unique(seq):
-    """Return a list of unique values, preserving order. 
+    """Return a list of unique values, preserving order.
     Items in sequence must be hashable.
     """
     seen = set()
@@ -512,7 +512,7 @@ class DependencyGraph(DGraphBase):
             return subvar
 
         diff = subvar[len(base):]
-        
+
         self.add_node(subvar, basevar=base, **self.node[base])
         if is_boundary_node(self, base):
             if is_input_node(self, base):
@@ -540,9 +540,9 @@ class DependencyGraph(DGraphBase):
                         continue
                     self.add_subvar(s+diff)
                     self.add_edge(subvar, s+diff, conn=True)
-        
+
         return subvar
-    
+
     def disconnect(self, srcpath, destpath=None):
 
         if destpath is None:
@@ -793,7 +793,7 @@ class DependencyGraph(DGraphBase):
         self.remove_nodes_from(to_remove)
 
     def get_pruned(self):
-        """Return a copy of the graph with all unconnected 
+        """Return a copy of the graph with all unconnected
         var nodes (except states) removed.
         """
         g = self.subgraph(self.nodes_iter())
@@ -824,7 +824,7 @@ class DependencyGraph(DGraphBase):
                 self.add_edge(drvname, self.add_subvar(param[0]),
                               drv_conn=drvname)
 
-                # now connect the first member of the param group as a 
+                # now connect the first member of the param group as a
                 # source for all of the other members
                 for i,p in enumerate(param[1:]):
                     if self.has_edge(param[0], p):
@@ -843,7 +843,7 @@ class DependencyGraph(DGraphBase):
             if isinstance(param, tuple):
                 self.remove_edge(drvname, param[0])
 
-                # now disconnect the first member of the param group 
+                # now disconnect the first member of the param group
                 # from all of the other members
                 for i,p in enumerate(param[1:]):
                     ## if it was a connection before adding param,
@@ -859,7 +859,7 @@ class DependencyGraph(DGraphBase):
         # use this to add driver connections from objectives
         # and constraints to a driver
         if drvname:
-            self.add_edge(self.add_subvar(vname), drvname, 
+            self.add_edge(self.add_subvar(vname), drvname,
                           drv_conn=drvname)
 
     def remove_driver_input(self, drvname, vname):
@@ -883,7 +883,7 @@ class DependencyGraph(DGraphBase):
                             self.remove_edge(cname, node)
                     else:
                         if cname in self[node]:
-                            self.remove_edge(node, cname)     
+                            self.remove_edge(node, cname)
         return self
 
     def _connect_subvars_to_comps(self):
@@ -1054,34 +1054,34 @@ class DependencyGraph(DGraphBase):
             if '@' in src:
                 drv, var = src.split('@',1)
                 dparams.setdefault(drv, set()).update([d for d in dests if d != var])
-                
+
         for src, dests, in src2dests.items():
             if '@' in src:
                 drv, var = src.split('@',1)
                 if var in dparams[drv]:
                     del src2dests[src]
-                
+
         for src, dests in src2dests.items():
             _add_collapsed_node(g, src, dests)
 
         g.remove_nodes_from(to_remove)
-        
+
         return g._consolidate_srcs()
 
     def _add_boundary_comps(self):
-        """Add fake boundary components and connect them to boundary 
+        """Add fake boundary components and connect them to boundary
         basevars.
         """
         self.add_node('#in', comp=True)
         self.add_node('#out', comp=True)
-        
+
         for node, data in self.nodes_iter(data=True):
             if 'boundary' in data:# and 'basevar' not in data:
                 if data['iotype'] == 'in':
                     self.add_edge('#in', node)
                 elif data['iotype'] == 'out':
                     self.add_edge(node, '#out')
-    
+
         return self
 
     def _explode_vartrees(self, scope):
@@ -1089,11 +1089,11 @@ class DependencyGraph(DGraphBase):
         to VariableTrees and replace them with a variable node for each
         variable in the VariableTree.
         """
-        vtvars = dict([(n,None) for n in self if isinstance(scope.get(n), VariableTree)])        
+        vtvars = dict([(n,None) for n in self if isinstance(scope.get(n), VariableTree)])
         conns = [(u,v) for u,v in self.list_connections() if u in vtvars]
-        
+
         depgraph = self.subgraph(self.nodes_iter())
-        
+
         # explode all vt nodes first
         for vt in vtvars:
             obj = scope.get(vt)
@@ -1103,7 +1103,7 @@ class DependencyGraph(DGraphBase):
             for sub in vtvars[vt]:
                 if sub not in depgraph:
                     depgraph.add_subvar(sub)
-        
+
         vtconns = {}
         for u,v in conns:
             varlist = [vtvars[u], vtvars[v]]
@@ -1150,13 +1150,13 @@ class DependencyGraph(DGraphBase):
 
     def _remove_vartrees(self, scope):
         """Remove all vartree nodes."""
-        vtnodes = [n for n in self if scope.contains(n) 
+        vtnodes = [n for n in self if scope.contains(n)
                      and isinstance(scope.get(n), VariableTree)]
-        
+
         for vt in vtnodes:
             succ = self.successors(vt)
             pred = self.predecessors(vt)
-            
+
             if '.' in vt:
                 # connect subs to parent comp
                 cname = vt.split('.', 1)[0]
@@ -1168,7 +1168,7 @@ class DependencyGraph(DGraphBase):
                     for s in succ:
                         if s != cname and base_var(self, s) == vt:
                             self.add_edge(cname, s)
-                            
+
         self.remove_nodes_from(vtnodes)
 
 
@@ -1213,7 +1213,7 @@ class CollapsedGraph(DGraphBase):
 
     def internal_nodes(self, comps, shared=False):
         """Returns a set of nodes containing the given component
-        nodes, plus any variable nodes between them that are not 
+        nodes, plus any variable nodes between them that are not
         connected to any external nodes. If shared is True, then
         variable nodes connected to the outside will be included.
         """
@@ -1226,7 +1226,7 @@ class CollapsedGraph(DGraphBase):
             ins.update(self.predecessors_iter(comp))
 
         inner = outs.intersection(ins)
-        
+
         if not shared:
             to_remove = set()
             for var in inner:
@@ -1234,7 +1234,7 @@ class CollapsedGraph(DGraphBase):
                     to_remove.add(var)
                 if set(self.predecessors(var)).difference(nodes):
                     to_remove.add(var)
-            
+
             inner = inner - to_remove
 
         nodes.update(inner)
@@ -1348,12 +1348,12 @@ class CollapsedGraph(DGraphBase):
                 dests2node.setdefault(node[1], set()).add(node)
             elif is_driver_node(self, node):
                 drivers.append(node)
-                    
+
         for drv in drivers:
             for s in self.successors(drv):
                 if len(dests2node[s[1]]) > 1 and s[0] == s[1][0] and s in self:
                     self.remove_node(s)
-                            
+
     def vars2tuples(self, orig_g):
         """convert all var nodes to tuple form"""
         varmap = {}
@@ -1384,20 +1384,31 @@ class CollapsedGraph(DGraphBase):
                         newname = '@'+node[0]
                     to_add.append((node, newname))
                     self.add_node(newname, comp='outvar')
-        
+
         if to_add:
             self.add_edges_from(to_add)
-        
+
     def config_changed(self):
         pass
 
     def _get_duped_varnodes(self):
         """Return any varnodes that share the same source. (this is a no-no)"""
         srcmap = {}
+        allsrcs = set()
+        for node, data in self.nodes_iter(data=True):
+            if 'comp' not in data:
+                if isinstance(node, tuple):
+                    allsrcs.add(node[0])
+
         for node, data in self.nodes_iter(data=True):
             if 'comp' not in data:
                 if isinstance(node, tuple):
                     srcmap.setdefault(node[0], set()).add(node)
+                    # check dests for any sources.  this can happen with
+                    # parameters
+                    for dest in node[1]:
+                        if dest in allsrcs:
+                            srcmap.setdefault(dest, set()).add(node)
 
         for src, nodes in srcmap.items():
             if len(nodes) < 2:
@@ -1408,7 +1419,7 @@ class CollapsedGraph(DGraphBase):
     def _consolidate_srcs(self):
         """ consolidate any varnodes with a common src."""
         d = self._get_duped_varnodes()
-                
+
         newnodes = []
         for src, nodes in d.items():
             alldests = set()
@@ -1421,7 +1432,7 @@ class CollapsedGraph(DGraphBase):
                 alldests = sorted(alldests)
             newname = (src, tuple(alldests))
             newnodes.append((newname, merge_metadata(self, nodes), nodes))
-            
+
         for newname, meta, nodes in newnodes:
             self.add_node(newname, **meta)
             collapse_nodes(self, newname, nodes)
@@ -1652,18 +1663,18 @@ def gsort(g, names):
     """
     if len(names) < 2:
         return names
-    
+
     empty = set()
     nset = set(names)
     final = list(names)
     ups = {}
-    
+
     for name in names:
         downs = [v for u,v in nx.dfs_edges(g, name) if v in nset]
         for d in downs:
             if d not in ups.get(name, empty):  # handle cycles
                 ups.setdefault(d, set()).add(name)
-           
+
     i = 0
     while True:
         tmp = final[:i]
@@ -1675,13 +1686,13 @@ def gsort(g, names):
         else:
             tmp.extend(final[i:])
             i += 1
-            
+
         if i == len(names):
             break
         final = tmp
-        
+
     return final
-                      
+
 def list_data_connections(graph):
     """Return all edges that are data connections"""
     return [(u,v) for u,v,data in graph.edges_iter(data=True)
@@ -1746,22 +1757,26 @@ def _add_collapsed_node(g, src, dests):
         cname = p.split('.', 1)[0]
         if cname not in g:
             continue
-        #meta = g[p][newname]
+        pmeta = g[p][newname]
+        cmeta = g[cname][newname] if g.has_edge(cname,newname) else {}
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
-                if drvsrc == p:
+                if 'drv_conn' in cmeta:
+                    g.add_edge(cname, newname, drv_conn=cmeta['drv_conn'])
+                elif 'drv_conn' in pmeta:
+                    g.add_edge(cname, newname, drv_conn=pmeta['drv_conn'])
+                elif drvsrc == p:
                     g.add_edge(cname, newname, drv_conn=drvsrc)
-                else:
-                    g.add_edge(cname, newname) #, **meta)
+                elif not g.has_edge(cname, newname):
+                    g.add_edge(cname, newname)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
-        #meta = g[newname][s]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
-                g.add_edge(newname, cname)#, **meta)
+                g.add_edge(newname, cname)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent
@@ -1807,7 +1822,7 @@ def get_nondiff_groups(graph, cgraph, scope):
     groups = []
 
     nondiff = set([n for n,data in cgraph.nodes_iter(data=True)
-                    if 'system' in data 
+                    if 'system' in data
                         and not data['system'].is_differentiable()])
 
     # If a connection is non-differentiable, so are its src and
@@ -1860,8 +1875,9 @@ def get_nondiff_groups(graph, cgraph, scope):
     return groups
 
 def merge_metadata(g, nodes):
-    """Return a combined meatdata dict for the given set of
-    nodes."""
+    """Return a combined metadata dict for the given set of
+    nodes.
+    """
     meta = {}
     for n in nodes:
         m = g.node[n]
@@ -1871,6 +1887,4 @@ def merge_metadata(g, nodes):
             meta['state'] = True
         elif io == 'residual':
             meta['residual'] = True
-        if 'iotype' in meta:
-            del meta['iotype'] # has no meaning in collapsed node
     return meta

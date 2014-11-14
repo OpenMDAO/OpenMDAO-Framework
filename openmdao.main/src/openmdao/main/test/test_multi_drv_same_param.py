@@ -49,5 +49,5 @@ class MultiDrvSameParamTestCase(unittest.TestCase):
         top.p1pre.y = 13.0
         
         top.run()
-        assert_rel_error(31., top.sens.dF)
-        assert_rel_error(31., top.down.y)
+        assert_rel_error(self, 31., top.sens.dF, 0.00001)
+        assert_rel_error(self, 31., top.down.y, 0.00001)

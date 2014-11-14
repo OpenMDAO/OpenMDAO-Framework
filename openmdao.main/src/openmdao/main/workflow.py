@@ -814,10 +814,10 @@ class Workflow(object):
         #if self.parent.name in parent_graph:
         reduced.remove_node(drvname)
 
-        params = []
+        params = set()
         for s in parent_graph.successors(drvname):
             if parent_graph[drvname][s].get('drv_conn') == drvname:
-                params.append(s)
+                params.add(s)
 
         # we need to connect a param comp node to all param nodes
         for node in params:
