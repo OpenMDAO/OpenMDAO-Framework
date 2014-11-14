@@ -3,10 +3,9 @@
 #public symbols
 __all__ = ["Driver"]
 
-from zope.interface import implementedBy
-from networkx.algorithms.components import strongly_connected_components
-
 # pylint: disable=E0611,F0401
+
+from networkx.algorithms.components import strongly_connected_components
 
 from openmdao.main.component import Component
 from openmdao.main.dataflow import Dataflow
@@ -22,7 +21,7 @@ from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasresponses import HasResponses
 from openmdao.main.interfaces import IDriver, IHasEvents, ISolver, \
                                      implements
-from openmdao.main.mp_support import is_instance, has_interface
+from openmdao.main.mp_support import has_interface
 from openmdao.main.rbac import rbac
 from openmdao.main.vartree import VariableTree
 from openmdao.main.workflow import Workflow
@@ -570,8 +569,9 @@ class Driver(Component):
             is set to True because this function is meant for manual testing.
         """
 
-        return self.workflow.calc_gradient(inputs, outputs, mode, return_format,
-                                           force_regen)
+        return self.workflow.calc_gradient(inputs=inputs, outputs=outputs,
+                                           mode=mode, return_format=return_format,
+                                           force_regen=force_regen)
 
     @rbac(('owner', 'user'))
     def setup_depgraph(self, dgraph):
@@ -586,7 +586,7 @@ class Driver(Component):
             # if hasattr(self, 'list_param_group_targets'):
             #     params = self.list_param_group_targets()
 
-            # for now do nothing here because params are already 
+            # for now do nothing here because params are already
             # in the depgraph
             pass
 
