@@ -1347,14 +1347,15 @@ class EqConstraintSystem(SimpleSystem):
 
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            super(EqConstraintSystem, self).run(iterbase, 
-                                                case_label=case_label, 
+            super(EqConstraintSystem, self).run(iterbase,
+                                                case_label=case_label,
                                                 case_uuid=case_uuid)
             state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
 
             # Propagate residuals.
             if state:
-                self.vec['f'][state][:] = -self._comp.get_flattened_value('out0')
+                self.vec['f'][state][:] = \
+                    -self._comp.get_flattened_value('out0').real
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its

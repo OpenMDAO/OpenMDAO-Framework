@@ -38,6 +38,7 @@ def pre_process_dicts(obj, key, arg_or_result, shape_cache, scope, is_sys):
         shape = shape_cache[key]
         if shape:
             value = value.reshape(shape_cache[key])
+
         var = arg_or_result[basekey] # This speeds up the eval
         exec("var[%s = value" % index)
 
@@ -48,10 +49,7 @@ def pre_process_dicts(obj, key, arg_or_result, shape_cache, scope, is_sys):
 
         if hasattr(var, 'shape'):
             shape = var.shape
-        else:
-            meta = obj.get_metadata(key)
-
-        arg_or_result[key] = value.reshape(shape)
+            arg_or_result[key] = value.reshape(shape)
 
 def post_process_dicts(key, result):
     '''Once we've called apply_deriv or appyMinv (or their adjoint
@@ -494,17 +492,12 @@ def get_bounds(obj, input_keys, output_keys, J):
     ibounds = {}
     nvar = 0
     scope = getattr(obj, 'parent', None)
-    #varmeta = obj.scope._var_meta
 
     for key in input_keys:
 
         # For parameter group, all should be equal so just get first.
         if not isinstance(key, tuple):
             key = [key]
-
-        #meta = varmeta[key[0]]
-        #width = meta['size']
-        #shape = meta.get('shape')
 
         val = obj.get(key[0])
 
@@ -520,9 +513,6 @@ def get_bounds(obj, input_keys, output_keys, J):
     obounds = {}
     nvar = 0
     for key in output_keys:
-        #meta = varmeta[key]
-        #width = meta['size']
-        #shape = meta.get('shape')
         val = obj.get(key)
         width = flattened_size('.'.join((obj.name, key)), val)
         shape = getattr(val, 'shape', None)
