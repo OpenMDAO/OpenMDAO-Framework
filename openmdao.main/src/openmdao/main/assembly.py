@@ -735,8 +735,7 @@ class Assembly(Component):
         """Runs driver and updates our boundary variables."""
         for system in self._system.local_subsystems():
             system.pre_run()
-        self._system.run(self.itername, ffd_order=self.ffd_order,
-                         case_uuid=self._case_uuid)
+        self._system.run(self.itername, case_uuid=self._case_uuid)
 
     def configure_recording(self, recording_options=None):
         """Called at start of top-level run to configure case recording.
@@ -893,8 +892,6 @@ class Assembly(Component):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         name: (optional) str
             If provided, specifies the name of a Driver or Component to

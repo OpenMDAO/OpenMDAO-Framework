@@ -2449,7 +2449,7 @@ Max RelError: [^ ]+ for comp.f_xy / comp.x
         self.assertTrue('comp4' in comp_list)
 
 
-        # Put everything in a single pseudo-assy, and run fd with no fake.
+        # Put everything in a single pseudo-assy, and run fd.
         J = self.top.driver.workflow.calc_gradient(inputs=['comp1.x1'],
                                                    outputs=['comp5.y1'],
                                                    mode='fd')

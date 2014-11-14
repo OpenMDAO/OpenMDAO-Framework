@@ -83,7 +83,7 @@ class FixedPointIterator(Driver):
             if name not in cycle_vars:
                 uvec[name] -= fvec[name]
 
-        self.workflow.run(ffd_order=self.ffd_order)
+        self.workflow.run()
 
     def continue_iteration(self):
         return not self.should_stop() and \

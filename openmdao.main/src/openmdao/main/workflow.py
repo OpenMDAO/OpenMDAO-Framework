@@ -153,7 +153,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_uuid=None):
+    def run(self, case_uuid=None):
         """ Run the Components in this Workflow. """
         self._stop = False
         self._exec_count += 1
@@ -176,9 +176,7 @@ class Workflow(object):
             for node in self._cycle_vars:
                 fvec[node][:] = uvec[node][:]
 
-            self._system.run(iterbase=iterbase,
-                             ffd_order=ffd_order,
-                             case_uuid=case_uuid)
+            self._system.run(iterbase=iterbase, case_uuid=case_uuid)
 
             # update resid vector for cyclic vars
             for node in self._cycle_vars:
@@ -353,8 +351,6 @@ class Workflow(object):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         inputs: (optional) iter of str or None
             Names of input variables. The calculated gradient will be

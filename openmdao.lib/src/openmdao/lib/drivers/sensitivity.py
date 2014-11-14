@@ -27,7 +27,6 @@ class SensitivityDriver(Driver):
     inputs (Parameters) to all outputs (Objectives and Constraints).
 
     SensitivityDriver includes requires OpenMDAO to calculate a gradient.
-    Fake Finite Difference is supported.
     """
 
     implements(IHasParameters, IHasObjectives, IHasConstraints)
