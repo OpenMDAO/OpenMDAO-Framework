@@ -514,8 +514,19 @@ class System(object):
         if resid_state_map is None:
             resid_state_map = {}
 
+        variables = {}
         for sub in self.local_subsystems():
-            sub.setup_variables(resid_state_map)
+            if not isinstance(sub, ParamSystem):
+                sub.setup_variables(resid_state_map)
+                variables.update(sub.variables)
+                
+        for sub in self.local_subsystems():
+            if isinstance(sub, ParamSystem):
+                sub.setup_variables(variables, resid_state_map)
+
+        # now loop through a final time to keep order of all subsystems the same
+        # as local_subsystems()
+        for sub in self.local_subsystems():
             self.variables.update(sub.variables)
 
         self._create_var_dicts(resid_state_map)
@@ -1272,21 +1283,39 @@ class VarSystem(SimpleSystem):
 class ParamSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
+    def setup_variables(self, parent_vars, resid_state_map=None):
+        super(ParamSystem, self).setup_variables(resid_state_map)
+        to_remove = [v for v in self.variables if v in parent_vars]
+        if to_remove: # this param appears in some subdriver, so we don't own it
+            self._dup_in_subdriver = True
+            del self.variables[to_remove[0]]
+            del self.vector_vars[to_remove[0]]
+            del self.flat_vars[to_remove[0]]
+        else:
+            self._dup_in_subdriver = False
+        
     def applyJ(self, variables):
         """ Set to zero """
-        if self.vector_vars: # don't do anything if we don't own our output
-            #mpiprint("param sys %s: adding %s to %s" %
-                            #(self.name, self.sol_vec[self.name],
-                                #self.rhs_vec[self.name]))
-            self.rhs_vec[self.name] += self.sol_vec[self.name]
+        system = None
+        if self.vector_vars or self._dup_in_subdriver:
+            system = self._get_sys()
+            
+        if system:
+            system.rhs_vec[self.name] += system.sol_vec[self.name]
 
     def pre_run(self):
         """ Load param value into u vector. """
-        self.vec['u'].set_from_scope(self.scope, [self.name])
+        self._get_sys().vec['u'].set_from_scope(self.scope)#, [self.name])
 
     #def run(self, iterbase, case_label='', case_uuid=None):
     #    if self.is_active():
-    #        self.vec['u'].set_to_scope(self.scope)
+    #        self._get_sys().vec['u'].set_to_scope(self.scope, [self.name])
+    
+    def _get_sys(self):
+        if self._dup_in_subdriver:
+            return self._parent_system
+        else:
+            return self
 
 
 class InVarSystem(VarSystem):

@@ -1394,10 +1394,21 @@ class CollapsedGraph(DGraphBase):
     def _get_duped_varnodes(self):
         """Return any varnodes that share the same source. (this is a no-no)"""
         srcmap = {}
+        allsrcs = set()
+        for node, data in self.nodes_iter(data=True):
+            if 'comp' not in data:
+                if isinstance(node, tuple):
+                    allsrcs.add(node[0])
+
         for node, data in self.nodes_iter(data=True):
             if 'comp' not in data:
                 if isinstance(node, tuple):
                     srcmap.setdefault(node[0], set()).add(node)
+                    # check dests for any sources.  this can happen with
+                    # parameters
+                    for dest in node[1]:
+                        if dest in allsrcs:
+                            srcmap.setdefault(dest, set()).add(node)
 
         for src, nodes in srcmap.items():
             if len(nodes) < 2:
@@ -1746,22 +1757,26 @@ def _add_collapsed_node(g, src, dests):
         cname = p.split('.', 1)[0]
         if cname not in g:
             continue
-        #meta = g[p][newname]
+        pmeta = g[p][newname]
+        cmeta = g[cname][newname] if g.has_edge(cname,newname) else {}
         g.remove_edge(p, newname)
         if g.node[cname].get('comp'):
             if p == cname or p in g[cname]:
-                if drvsrc == p:
+                if 'drv_conn' in cmeta:
+                    g.add_edge(cname, newname, drv_conn=cmeta['drv_conn'])
+                elif 'drv_conn' in pmeta:
+                    g.add_edge(cname, newname, drv_conn=pmeta['drv_conn'])
+                elif drvsrc == p:
                     g.add_edge(cname, newname, drv_conn=drvsrc)
-                else:
-                    g.add_edge(cname, newname) #, **meta)
+                elif not g.has_edge(cname, newname):
+                    g.add_edge(cname, newname)
 
     for s in g.successors(newname):
         cname = s.split('.', 1)[0]
-        #meta = g[newname][s]
         g.remove_edge(newname, s)
         if g.node[cname].get('comp'):
             if s == cname or cname in g[s]:
-                g.add_edge(newname, cname)#, **meta)
+                g.add_edge(newname, cname)
 
 def all_comps(g):
     """Returns a list of all component and PseudoComponent
@@ -1860,8 +1875,9 @@ def get_nondiff_groups(graph, cgraph, scope):
     return groups
 
 def merge_metadata(g, nodes):
-    """Return a combined meatdata dict for the given set of
-    nodes."""
+    """Return a combined metadata dict for the given set of
+    nodes.
+    """
     meta = {}
     for n in nodes:
         m = g.node[n]
@@ -1871,6 +1887,4 @@ def merge_metadata(g, nodes):
             meta['state'] = True
         elif io == 'residual':
             meta['residual'] = True
-        if 'iotype' in meta:
-            del meta['iotype'] # has no meaning in collapsed node
     return meta
