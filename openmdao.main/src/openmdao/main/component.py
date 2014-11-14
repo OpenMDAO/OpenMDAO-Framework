@@ -171,7 +171,6 @@ class Component(Container):
         self._dir_context = None
 
         # Flags and caching used by the derivatives calculation
-        self.ffd_order = 0
         self._provideJ_bounds = None
 
         self._case_id = ''
@@ -412,54 +411,15 @@ class Component(Container):
         """
         raise NotImplementedError('%s.execute' % self.get_pathname())
 
-    def _execute_ffd(self, ffd_order):
-        """During Fake Finite Difference, instead of executing, a component
-        can use the available derivatives to calculate the output efficiently.
-        Before FFD can execute, calc_derivatives must be called to save the
-        baseline state and the derivatives at that baseline point.
-
-        This method approximates the output using a Taylor series expansion
-        about the saved baseline point.
-
-        ffd_order: int
-            Order of the derivatives to be used (1 or 2).
-        """
-
-        input_keys, output_keys = list_deriv_vars(self)
-        J = self.provideJ()
-
-        if ffd_order == 1:
-            for j, out_name in enumerate(output_keys):
-                y = self._ffd_outputs[out_name]
-                for i, in_name in enumerate(input_keys):
-                    y += J[j, i]*(self.get(in_name) - self._ffd_inputs[in_name])
-
-                self.set(out_name, y)
-
-    def linearize(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
-        """Prepare for Fake Finite Difference runs by calculating all needed
-        derivatives, and saving the current state as the baseline if
-        requested. The user must supply *provideJ* and *list_deriv_vars*
-        in the component.
-
-        This function should not be overriden.
+    def linearize(self, first=False, second=False):
+        """Component wrapper for the ProvideJ hook. This function should not
+        be overriden.
 
         first: Bool
             Set to True to calculate first derivatives.
 
         second: Bool
-            Set to True to calculate second derivatives.
-
-        savebase: Bool
-            If set to true, then we save our baseline state for fake finite
-            difference.
-
-        required_inputs:
-            Not needed by Component
-
-        required_outputs
-            Not needed by Component
+            Set to True to calculate second derivatives. This is not cuurrently supported.
         """
 
         J = None
@@ -472,36 +432,10 @@ class Component(Container):
 
         # Calculate first derivatives using the new API.
         if first and hasattr(self, 'provideJ'):
-
-            # Don't fake finite difference assemblies, but do fake finite
-            # difference on their contained components.
-            if obj_has_interface(self, IAssembly):
-                if savebase:
-                    self.driver.calc_derivatives(first, second, savebase,
-                                                 required_inputs, required_outputs)
-                    return
-
-                J = self.provideJ(required_inputs=required_inputs,
-                                  required_outputs=required_outputs)
-            else:
-                J = self.provideJ()
-
+            J = self.provideJ()
             self.derivative_exec_count += 1
         else:
             return
-
-        # Save baseline state for fake finite difference.
-        # TODO: fake finite difference something with apply_der?
-        ffd_inputs, ffd_outputs = list_deriv_vars(self)
-        if savebase and J is not None:
-            self._ffd_inputs = {}
-            self._ffd_outputs = {}
-
-            for name in ffd_inputs:
-                self._ffd_inputs[name] = self.get(name)
-
-            for name in ffd_outputs:
-                self._ffd_outputs[name] = self.get(name)
 
         return J
 
@@ -530,15 +464,10 @@ class Component(Container):
         pass
 
     @rbac('*', 'owner')
-    def run(self, ffd_order=0, case_uuid=''):
+    def run(self, case_uuid=''):
         """Run this object. This should include fetching input variables
         (if necessary), executing, and updating output variables.
         Do not override this function.
-
-        ffd_order: int
-            Order of the derivatives to be used during Fake
-            Finite Difference (typically 1 or 2). During regular execution,
-            ffd_order should be 0. (Default is 0.)
 
         case_uuid: str
             Identifier for the Case that is associated with this run.
@@ -548,7 +477,6 @@ class Component(Container):
             self.push_dir()
 
         self._stop = False
-        self.ffd_order = ffd_order
         self._case_uuid = case_uuid
 
         if self.parent is None:
@@ -557,35 +485,17 @@ class Component(Container):
             self._pre_execute()
             self._set_exec_state('RUNNING')
 
-            if ffd_order == 1 \
-               and not obj_has_interface(self, IDriver, IAssembly) \
-               and hasattr(self, '_ffd_inputs') \
-               and self.force_fd is not True:
-                # During Fake Finite Difference, the available derivatives
-                # are used to approximate the outputs.
-                #print 'execute_ffd: %s' % self.get_pathname()
-                self._execute_ffd(1)
+            #print 'execute: %s' % self.get_pathname()
+            # Component executes as normal
+            self.exec_count += 1
+            if tracing.TRACER is not None and \
+               not obj_has_interface(self, IDriver, IAssembly):
+                tracing.TRACER.debug(self.get_itername())
+                #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
+            self.execute()
 
-            elif ffd_order == 2 and \
-               hasattr(self, 'calculate_second_derivatives'):
-                # During Fake Finite Difference, the available derivatives
-                # are used to approximate the outputs.
-                #print "FFD pass. doing nothing for %s" % self.get_pathname()
-                pass
+            self._post_execute()
 
-            else:
-                #print 'execute: %s' % self.get_pathname()
-                # Component executes as normal
-                self.exec_count += 1
-                if tracing.TRACER is not None and \
-                   not obj_has_interface(self, IDriver, IAssembly):
-                    tracing.TRACER.debug(self.get_itername())
-                    #tracing.TRACER.debug(self.get_itername() + '  ' + self.name)
-                self.execute()
-
-                self._post_execute()
-            #else:
-            #    print 'skipping: %s' % self.get_pathname()
             self._post_run()
         except Exception:
             info = sys.exc_info()

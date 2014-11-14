@@ -292,7 +292,7 @@ class PseudoComponent(object):
             scope._depgraph.add_driver_input(driver.name, 
                                              self.name+'.out0')
 
-    def run(self, ffd_order=0, case_uuid=''):
+    def run(self, case_uuid=''):
         if self._negate:
             setattr(self, 'out0', -self._srcexpr.evaluate())
         else:
@@ -322,8 +322,8 @@ class PseudoComponent(object):
     def set_itername(self, itername):
         self._itername = itername
 
-    def linearize(self, first=False, second=False, savebase=False,
-                  required_inputs=None, required_outputs=None):
+    def linearize(self, first=False, second=False):
+        """Component wrapper for the ProvideJ hook."""
         if first:
             return self.provideJ()
         if second:

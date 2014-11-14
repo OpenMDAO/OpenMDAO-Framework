@@ -153,7 +153,7 @@ class Workflow(object):
         """ Reset execution count. """
         self._exec_count = self._initial_count
 
-    def run(self, ffd_order=0, case_uuid=None):
+    def run(self, case_uuid=None):
         """ Run the Components in this Workflow. """
         self._stop = False
         self._exec_count += 1
@@ -176,9 +176,7 @@ class Workflow(object):
             for node in self._cycle_vars:
                 fvec[node][:] = uvec[node][:]
 
-            self._system.run(iterbase=iterbase,
-                             ffd_order=ffd_order,
-                             case_uuid=case_uuid)
+            self._system.run(iterbase=iterbase, case_uuid=case_uuid)
 
             # update resid vector for cyclic vars
             for node in self._cycle_vars:

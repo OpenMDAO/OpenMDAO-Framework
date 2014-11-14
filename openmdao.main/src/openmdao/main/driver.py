@@ -389,7 +389,7 @@ class Driver(Component):
             inst.restore_references(inst_refs)
 
     @rbac('*', 'owner')
-    def run(self, force=False, ffd_order=0, case_uuid=''):
+    def run(self, force=False, case_uuid=''):
         """Run this object. This should include fetching input variables if
         necessary, executing, and updating output variables. Do not override
         this function.
@@ -397,11 +397,6 @@ class Driver(Component):
         force: bool
             If True, force component to execute even if inputs have not
             changed. (Default is False)
-
-        ffd_order: int
-            Order of the derivatives to be used when finite differencing (1
-            for first derivatives, 2 for second derivatives). During regular
-            execution, ffd_order should be 0. (Default is 0)
 
         case_uuid: str
             Identifier for the Case that is associated with this run.
@@ -415,7 +410,7 @@ class Driver(Component):
 
         # Reset the workflow.
         self.workflow.reset()
-        super(Driver, self).run(ffd_order, case_uuid)
+        super(Driver, self).run(case_uuid)
 
     @rbac(('owner', 'user'))
     def configure_recording(self, recording_options=None):
@@ -481,14 +476,12 @@ class Driver(Component):
             self._logger.warning("'%s': workflow is empty!"
                                  % self.get_pathname())
 
-        wf.run(ffd_order=self.ffd_order)
+        wf.run()
 
-    def calc_derivatives(self, first=False, second=False, savebase=False,
-                         required_inputs=None, required_outputs=None):
+    def calc_derivatives(self, first=False, second=False):
         """ Calculate derivatives and save baseline states for all components
         in this workflow."""
-        self.workflow.calc_derivatives(first, second, savebase,
-                                       required_inputs, required_outputs)
+        self.workflow.calc_derivatives(first, second)
 
     def post_iteration(self):
         """Called after each iteration."""

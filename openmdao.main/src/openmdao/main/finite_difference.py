@@ -219,7 +219,7 @@ class FiniteDifference(object):
                     # Step
                     self.set_value(src, fd_step, i-i1)
 
-                    self.system.run(iterbase, ffd_order=1)
+                    self.system.run(iterbase)
                     self.get_outputs(self.y)
 
                     # Forward difference
@@ -236,7 +236,7 @@ class FiniteDifference(object):
                     # Step
                     self.set_value(src, -fd_step, i-i1)
 
-                    self.system.run(iterbase, ffd_order=1)
+                    self.system.run(iterbase)
                     self.get_outputs(self.y)
 
                     # Backward difference
@@ -253,13 +253,13 @@ class FiniteDifference(object):
                     # Forward Step
                     self.set_value(src, fd_step, i-i1)
 
-                    self.system.run(iterbase, ffd_order=1)
+                    self.system.run(iterbase)
                     self.get_outputs(self.y)
 
                     # Backward Step
                     self.set_value(src, -2.0*fd_step, i-i1)
 
-                    self.system.run(iterbase, ffd_order=1)
+                    self.system.run(iterbase)
                     self.get_outputs(self.y2)
 
                     # Central difference
@@ -280,7 +280,7 @@ class FiniteDifference(object):
                     # Step
                     self.set_value_complex(src, complex_step, i-i1)
 
-                    self.system.run(iterbase, ffd_order=1)
+                    self.system.run(iterbase)
                     self.get_complex_outputs(yc)
 
                     # Forward difference
@@ -453,7 +453,7 @@ class DirectionalFD(object):
             # Step
             self.set_value(fd_step, arg)
 
-            self.system.run(iterbase, ffd_order=1)
+            self.system.run(iterbase)
             self.get_outputs(self.y)
 
             # Forward difference
@@ -470,7 +470,7 @@ class DirectionalFD(object):
             # Step
             self.set_value(-fd_step, arg)
 
-            self.system.run(iterbase, ffd_order=1)
+            self.system.run(iterbase)
             self.get_outputs(self.y)
 
             # Backward difference
@@ -487,13 +487,13 @@ class DirectionalFD(object):
             # Forward Step
             self.set_value(fd_step, arg)
 
-            self.system.run(iterbase, ffd_order=1)
+            self.system.run(iterbase)
             self.get_outputs(self.y)
 
             # Backward Step
             self.set_value(-2.0*fd_step, arg)
 
-            self.system.run(iterbase, ffd_order=1)
+            self.system.run(iterbase)
             self.get_outputs(self.y2)
 
             # Central difference
@@ -513,7 +513,7 @@ class DirectionalFD(object):
             # Step
             self.set_value_complex(fd_step, arg)
 
-            self.system.run(iterbase, ffd_order=1)
+            self.system.run(iterbase)
             self.get_outputs_complex(yc)
 
             # Forward difference

@@ -1161,7 +1161,7 @@ class SimpleSystem(System):
             self.scatter_full = DataTransfer(self, src_idxs, dest_idxs,
                                              scatter_conns, other_conns)
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
             graph = self.scope._reduced_graph
 
@@ -1170,7 +1170,7 @@ class SimpleSystem(System):
             #    self.vec['f'][var][:] = self.vec['u'][var][:]
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
-            self._comp.run(ffd_order=ffd_order, case_uuid=case_uuid)
+            self._comp.run(case_uuid=case_uuid)
 
             # put component outputs in u vector
             vnames = [n for n in graph.successors(self.name)
@@ -1263,7 +1263,7 @@ class SimpleSystem(System):
 class VarSystem(SimpleSystem):
     """Base class for a System that contains a single variable."""
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         pass
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
@@ -1294,7 +1294,7 @@ class ParamSystem(VarSystem):
         """ Load param value into u vector. """
         self.vec['u'].set_from_scope(self.scope, [self.name])
 
-    #def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    #def run(self, iterbase, case_label='', case_uuid=None):
     #    if self.is_active():
     #        self.vec['u'].set_to_scope(self.scope)
 
@@ -1302,7 +1302,7 @@ class ParamSystem(VarSystem):
 class InVarSystem(VarSystem):
     """System wrapper for Assembly input variables (internal perspective)."""
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
             
@@ -1355,9 +1355,11 @@ class EqConstraintSystem(SimpleSystem):
             elif state_node == destnode:
                 break
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
-            super(EqConstraintSystem, self).run(iterbase, ffd_order, case_label, case_uuid)
+            super(EqConstraintSystem, self).run(iterbase, 
+                                                case_label=case_label, 
+                                                case_uuid=case_uuid)
             state = self._mapped_resids.get(self.scope.name2collapsed[self.name+'.out0'])
 
             # Propagate residuals.
@@ -1644,14 +1646,14 @@ class SerialSystem(CompoundSystem):
         self.mpi.requested_cpus = max(cpus+[1])
         return self.mpi.requested_cpus
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
             self._stop = False
 
             for sub in self.local_subsystems():
                 self.scatter('u', 'p', sub)
 
-                sub.run(iterbase, ffd_order, case_label, case_uuid)
+                sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
                 if self._stop:
                     raise RunStopped('Stop requested')
 
@@ -1693,7 +1695,7 @@ class ParallelSystem(CompoundSystem):
         self.mpi.requested_cpus = cpus
         return cpus
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         #mpiprint("running parallel system %s: %s" % (self.name, [c.name for c in self.local_subsystems()]))
         # don't scatter unless we contain something that's actually
         # going to run
@@ -1703,7 +1705,7 @@ class ParallelSystem(CompoundSystem):
         self.scatter('u', 'p')
 
         for sub in self.local_subsystems():
-            sub.run(iterbase, ffd_order, case_label, case_uuid)
+            sub.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
     def evaluate(self, iterbase, case_label='', case_uuid=None):
         """ Evalutes a component's residuals without invoking its
@@ -1923,7 +1925,7 @@ class OpaqueSystem(SimpleSystem):
     def pre_run(self):
         self._inner_system.pre_run()
 
-    def run(self, iterbase, ffd_order=0, case_label='', case_uuid=None):
+    def run(self, iterbase, case_label='', case_uuid=None):
         self_u = self.vec['u']
         inner_u = self._inner_system.vec['u']
 
@@ -1933,7 +1935,7 @@ class OpaqueSystem(SimpleSystem):
         if self.complex_step is True:
             self._inner_system.vec['du'].set_from_scope_complex(self.scope, vnames)
 
-        self._inner_system.run(iterbase, ffd_order, case_label, case_uuid)
+        self._inner_system.run(iterbase, case_label=case_label, case_uuid=case_uuid)
 
         #for item in self.list_outputs():
             #self_u[item][:] = inner_u[item][:]
