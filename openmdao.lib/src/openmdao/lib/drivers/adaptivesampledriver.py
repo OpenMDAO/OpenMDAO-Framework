@@ -11,8 +11,11 @@ from openmdao.main.pseudocomp import _remove_spaces
 from openmdao.main.variable import make_legal_path
 from openmdao.main.vartree import VariableTree
 
+
 class AdaptiveSampleDriver(DOEdriver):
 
+    # pylint: disable-msg=E1101
+    
     adaptive_inputs = VarTree(VariableTree(), iotype='in')
 
     all_case_inputs = VarTree(VariableTree(), iotype='out')

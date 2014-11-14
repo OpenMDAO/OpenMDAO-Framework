@@ -4,14 +4,15 @@ output to the input for the next iteration. Relative change and number of
 iterations are used as termination criteria.
 """
 
-from openmdao.main.mpiwrap import MPI, mpiprint
+# pylint: disable=E0611,F0401
 
+from openmdao.main.mpiwrap import MPI, mpiprint
 if not MPI:
     from numpy.linalg import norm
 
 from openmdao.main.datatypes.api import Float, Int, Bool, Enum
-from openmdao.main.driver import Driver
 from openmdao.util.decorators import add_delegate
+from openmdao.main.driver import Driver
 from openmdao.main.hasstopcond import HasStopConditions
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.hasconstraints import HasEqConstraints
@@ -28,7 +29,7 @@ class FixedPointIterator(Driver):
 
     implements(IHasParameters, IHasEqConstraints, ISolver)
 
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     max_iteration = Int(25, iotype='in', desc='Maximum number of '
                                          'iterations before termination.')
 
@@ -73,6 +74,7 @@ class FixedPointIterator(Driver):
         self.norm0 = self.normval if self.normval != 0.0 else 1.0
 
     def run_iteration(self):
+        """Runs an iteration."""
         self.current_iteration += 1
         system = self.workflow._system
         uvec = system.vec['u']
@@ -86,6 +88,7 @@ class FixedPointIterator(Driver):
         self.workflow.run()
 
     def continue_iteration(self):
+        """Convergence check."""
         return not self.should_stop() and \
                self.current_iteration < self.max_iteration and \
                self.normval > self.tolerance
@@ -160,6 +163,7 @@ class IterateUntil(Driver):
         self.iteration = 0
 
     def continue_iteration(self):
+        """ Convergence check."""
         if self.iteration < 1 and self.run_at_least_once:
             self.iteration += 1
             return True

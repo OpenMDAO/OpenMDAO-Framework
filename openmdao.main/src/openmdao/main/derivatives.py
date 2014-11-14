@@ -51,12 +51,6 @@ def pre_process_dicts(obj, key, arg_or_result, shape_cache, scope, is_sys):
         else:
             meta = obj.get_metadata(key)
 
-            # Custom data objects with data_shape in the metadata
-            if 'data_shape' in meta:
-                shape = meta['data_shape']
-            else:
-                return
-
         arg_or_result[key] = value.reshape(shape)
 
 def post_process_dicts(key, result):
@@ -144,7 +138,7 @@ def applyJ(system, variables):
         result[key] = system.rhs_vec[item]
 
     # Bail if this component is not connected in the graph
-    if len(arg)==0 or len(result)==0:
+    if len(arg) == 0 or len(result) == 0:
         return
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
@@ -195,8 +189,10 @@ def applyJ(system, variables):
         input_keys = system.list_inputs() + system.list_states()
         output_keys = system.list_outputs() + system.list_residuals()
     elif IAssembly.providedBy(obj):
-        input_keys = [item.partition('.')[-1] for item in system.list_inputs()]
-        output_keys = [item.partition('.')[-1] for item in system.list_outputs()]
+        input_keys = [item.partition('.')[-1] \
+                      for item in system.list_inputs()]
+        output_keys = [item.partition('.')[-1] \
+                       for item in system.list_outputs()]
     else:
         input_keys, output_keys = list_deriv_vars(obj)
 
@@ -221,7 +217,8 @@ def applyJ(system, variables):
                 o1, o2, osh = obounds[basekey]
             except KeyError:
                 if obj.missing_deriv_policy == 'error':
-                    msg = "does not provide analytical derivatives for %s" % okey
+                    msg = "does not provide analytical derivatives" + \
+                          " for %s" % okey
                     obj.raise_exception(msg, KeyError)
                 continue
 
@@ -241,7 +238,8 @@ def applyJ(system, variables):
                     i1, i2, ish = ibounds[basekey]
                 except KeyError:
                     if obj.missing_deriv_policy == 'error':
-                        msg = "does not provide analytical derivatives for %s" % ikey
+                        msg = "does not provide analytical derivatives" + \
+                              " for %s" % ikey
                         obj.raise_exception(msg, KeyError)
                     continue
 
@@ -325,7 +323,7 @@ def applyJT(system, variables):
                 break
 
     # Bail if this component is not connected in the graph
-    if len(arg)==0 or len(result)==0:
+    if len(arg) == 0 or len(result) == 0:
         return
 
     # Speedhack, don't call component's derivatives if incoming vector is zero.
@@ -377,8 +375,10 @@ def applyJT(system, variables):
         input_keys = system.list_inputs() + system.list_states()
         output_keys = system.list_outputs() + system.list_residuals()
     elif IAssembly.providedBy(obj):
-        input_keys = [item.partition('.')[-1] for item in system.list_inputs()]
-        output_keys = [item.partition('.')[-1] for item in system.list_outputs()]
+        input_keys = [item.partition('.')[-1] \
+                      for item in system.list_inputs()]
+        output_keys = [item.partition('.')[-1] \
+                       for item in system.list_outputs()]
     else:
         input_keys, output_keys = list_deriv_vars(obj)
 
@@ -405,7 +405,8 @@ def applyJT(system, variables):
                 o1, o2, osh = obounds[basekey]
             except KeyError:
                 if obj.missing_deriv_policy == 'error':
-                    msg = "does not provide analytical derivatives for %s" % okey
+                    msg = "does not provide analytical derivatives for" + \
+                          "%s" % okey
                     obj.raise_exception(msg, KeyError)
                 continue
 
@@ -424,7 +425,8 @@ def applyJT(system, variables):
                     i1, i2, ish = ibounds[basekey]
                 except KeyError:
                     if obj.missing_deriv_policy == 'error':
-                        msg = "does not provide analytical derivatives for %s" % ikey
+                        msg = "does not provide analytical derivatives for" + \
+                               "%s" % ikey
                         obj.raise_exception(msg, KeyError)
                     continue
 

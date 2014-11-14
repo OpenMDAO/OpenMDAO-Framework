@@ -52,7 +52,9 @@ class NewtonSolver(Driver):
     alpha = Float(1.0, iotype='in', low=0.0, high=1.0,
                   desc='Initial over-relaxation factor')
 
-    iprint = Enum(0, [0 ,1], iotype='in', desc='set to 1 to print convergence')
+    iprint = Enum(0, [0, 1, 2], iotype='in', desc='set to 1 to print '
+                  'convergence. Set to 2 to get backtracking convergence '
+                  'as well.')
 
     def execute(self):
         """ General Newton's method. """
@@ -69,10 +71,9 @@ class NewtonSolver(Driver):
 
         f_norm = norm(fvec.array)
         f_norm0 = f_norm
-        
+
         if self.iprint == 1:
             print self.name, "Norm: ", f_norm, 0
-            #print uvec.array, fvec.array
 
         itercount = 0
         alpha = self.alpha
@@ -80,13 +81,9 @@ class NewtonSolver(Driver):
               f_norm/f_norm0 > self.rtol:
 
             system.calc_newton_direction(options=options)
-            #print "new direction", dfvec.array
 
             #print "LS 1", uvec.array, '+', dfvec.array
             uvec.array += alpha*dfvec.array
-            #for param in self.list_param_targets():
-                #p_edge = self.parent.name2collapsed.get(param)
-                #uvec[p_edge] += alpha*dfvec[p_edge]
 
             # Just evaluate the model with the new points
             self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
@@ -94,8 +91,7 @@ class NewtonSolver(Driver):
             f_norm = norm(fvec.array)
             if self.iprint == 1:
                 print self.name, "Norm: ", f_norm, itercount+1
-                #print uvec.array, fvec.array
-                
+
             itercount += 1
             ls_itercount = 0
 
@@ -105,21 +101,17 @@ class NewtonSolver(Driver):
                   f_norm/f_norm0 > self.ls_rtol:
 
                 uvec.array -= alpha*dfvec.array
-                #for param in self.list_param_targets():
-                    #p_edge = self.parent.name2collapsed.get(param)
-                    #uvec[p_edge] -= alpha*dfvec[p_edge]
                 alpha = alpha/2.0
                 uvec.array += alpha*dfvec.array
-                #for param in self.list_param_targets():
-                    #p_edge = self.parent.name2collapsed.get(param)
-                    #uvec[p_edge] += alpha*dfvec[p_edge]
 
                 # Just evaluate the model with the new points
-                self.workflow._system.evaluate(iterbase, case_uuid=Case.next_uuid())
+                self.workflow._system.evaluate(iterbase,
+                                               case_uuid=Case.next_uuid())
 
                 f_norm = npnorm(fvec.array)
-                #print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
-                #print uvec.array, fvec.array
+                if self.iprint == 2:
+                    print "Backtracking Norm: %f, Alpha: %f" % (f_norm, alpha)
+
                 ls_itercount += 1
 
             # Reset backtracking
@@ -135,4 +127,5 @@ class NewtonSolver(Driver):
             print self.name, "converged"
 
     def requires_derivs(self):
+        """Newtonsolver always requires derivatives."""
         return True
