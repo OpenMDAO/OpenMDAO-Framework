@@ -111,7 +111,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
 
             # Save baseline states and calculate derivatives
             #if driver.baseline_point:
-            #    driver.calc_derivatives(first=True)
+            #    driver.calc_derivatives(first=True, savebase=True)
             #driver.baseline_point = False
 
             # update the parameters in the model
@@ -145,23 +145,21 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
         if driver.newsumt_diff:
             return obj, dobj, ddobj, g, dg
 
-        driver.ffd_order = 1
-        driver.differentiator.calc_gradient()
+        msg = "Hessians currently not supported by OpenMDAO differentiator"
+        raise NotImplementedError(msg)
 
-        driver.ffd_order = 2
-        driver.differentiator.calc_hessian(reuse_first=True)
+        #driver.differentiator.calc_gradient()
+        #driver.differentiator.calc_hessian(reuse_first=True)
 
-        driver.ffd_order = 0
+        #obj_name = driver.get_objectives().keys()[0]
+        #dobj = driver.differentiator.get_gradient(obj_name)
 
-        obj_name = driver.get_objectives().keys()[0]
-        dobj = driver.differentiator.get_gradient(obj_name)
-
-        i_current = 0
-        names = driver.get_parameters().keys()
-        for row, name1 in enumerate(names):
-            for name2 in names[0:row+1]:
-                ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
-                i_current += 1
+        #i_current = 0
+        #names = driver.get_parameters().keys()
+        #for row, name1 in enumerate(names):
+            #for name2 in names[0:row+1]:
+                #ddobj[i_current] = driver.differentiator.get_2nd_derivative(obj_name, wrt=(name1, name2))
+                #i_current += 1
 
     elif info in [4, 5]:
         # evaluate gradient of nonlinear or linear constraints.
@@ -174,9 +172,7 @@ def user_function(info, x, obj, dobj, ddobj, g, dg, n2, n3, n4, imode, driver):
             if driver.newsumt_diff:
                 return obj, dobj, ddobj, g, dg
 
-            driver.ffd_order = 1
             driver.differentiator.calc_gradient()
-            driver.ffd_order = 0
 
         i_current = 0
         for param_name in driver.get_parameters():
@@ -363,7 +359,7 @@ class NEWSUMTdriver(Driver):
 
         super(NEWSUMTdriver, self).check_config(strict=strict)
 
-        if not self.newsumt_diff:
+        if self.newsumt_diff is False:
             msg = "Hessians currently not supported by OpenMDAO differentiator"
             raise NotImplementedError(msg)
 

@@ -174,9 +174,6 @@ class Component(Container):
         self._provideJ_bounds = None
 
         self._case_id = ''
-
-        self._complex_step = False
-
         self._case_uuid = ''
 
     @property
@@ -424,9 +421,7 @@ class Component(Container):
 
         J = None
 
-        # Allow user to force finite difference on a comp. This also turns off
-        # fake finite difference (i.e., there must be a reason they don't
-        # trust their own derivatives.)
+        # Allow user to force finite difference on a comp.
         if self.force_fd is True:
             return
 
@@ -1286,8 +1281,6 @@ class Component(Container):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         inputs: (optional) iter of str or None
             Names of input variables. The calculated gradient will be

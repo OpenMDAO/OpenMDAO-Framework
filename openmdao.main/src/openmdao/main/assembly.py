@@ -892,8 +892,6 @@ class Assembly(Component):
         """Compare the OpenMDAO-calculated gradient with one calculated
         by straight finite-difference. This provides the user with a way
         to validate his derivative functions (apply_deriv and provideJ.)
-        Note that fake finite difference is turned off so that we are
-        doing a straight comparison.
 
         name: (optional) str
             If provided, specifies the name of a Driver or Component to
