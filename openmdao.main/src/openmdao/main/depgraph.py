@@ -516,14 +516,12 @@ class DependencyGraph(DGraphBase):
         self.add_node(subvar, basevar=base, **self.node[base])
         if is_boundary_node(self, base):
             if is_input_node(self, base):
-                #self.add_edge(base, subvar)
                 for s in self.successors(base):
                     if s == subvar or base_var(self, s) == base:
                         continue
                     self.add_subvar(s+diff)
                     self.add_edge(subvar, s+diff, conn=True)
             else:
-                #self.add_edge(subvar, base)
                 for p in self.predecessors(base):
                     if p == subvar or base_var(self, p) == base:
                         continue
@@ -531,14 +529,12 @@ class DependencyGraph(DGraphBase):
                     self.add_edge(p+diff, subvar, conn=True)
         else: # it's a var of a child component
             if is_input_node(self, base):
-                #self.add_edge(subvar, base)
                 for p in self.predecessors(base):
                     if p == subvar or base_var(self, p) == base:
                         continue
                     self.add_subvar(p+diff)
                     self.add_edge(p+diff, subvar, conn=True)
             else:
-                #self.add_edge(base, subvar)
                 for s in self.successors(base):
                     if s == subvar or base_var(self, s) == base:
                         continue
@@ -738,39 +734,6 @@ class DependencyGraph(DGraphBase):
 
         return self._component_graph
 
-    def order_components(self, comps):
-        """Return a list of the given components, sorted in
-        dataflow order.
-        """
-        cgraph = self.component_graph()
-        csub = cgraph.subgraph(comps)
-        if len(csub) != len(comps):
-            missing = [n for n in comps if n not in cgraph]
-            if missing:
-                raise RuntimeError("Components %s are missing from the graph" %
-                                   missing)
-        while True:
-            loops = [s for s in nx.strongly_connected_components(csub)
-                       if len(s) > 1]
-            if not loops:
-                break
-
-            for group in loops:
-                _break_loop(csub, group)
-                
-        # get rid of any self loops
-        to_remove = [(u,v) for u,v in csub.edges() if u == v]
-        csub.remove_edges_from(to_remove)
-
-        return nx.topological_sort(csub)
-
-    def get_loops(self):
-        if self._loops is None:
-            self._loops = [s for s in
-                nx.strongly_connected_components(self.component_graph())
-                if len(s)>1]
-        return self._loops
-
     def _var_connections(self, path, direction=None):
         """Returns a list of tuples of the form (srcpath, destpath) for all
         variable connections to the specified variable or sub-variable.
@@ -817,100 +780,6 @@ class DependencyGraph(DGraphBase):
                         queue.append((child, neighbors(child)))
             except StopIteration:
                 queue.popleft()
-
-    def update_destvar(self, scope, vname):
-        """Update the value of the given variable in the
-        given scope using upstream variables.
-        """
-        tup = self._dstvars.get(vname)
-        if tup is None:
-            sexprs = []
-            dexprs = []
-            for u,v,data in self.in_edges_iter(vname, data=True):
-                if 'conn' in data:
-                    dexprs.append(data['dexpr'])
-                    sexprs.append(data['sexpr'])
-                else:
-                    for uu,vv,ddata in self.in_edges_iter(u, data=True):
-                        if 'conn' in ddata:
-                            dexprs.append(ddata['dexpr'])
-                            sexprs.append(ddata['sexpr'])
-            self._dstvars[vname] = (sexprs, dexprs)
-        else:
-            sexprs, dexprs = tup
-
-        try:
-            for sexpr, dexpr in zip(sexprs, dexprs):
-                dexpr.set(sexpr.evaluate(scope=scope), scope=scope)
-        except Exception as err:
-            raise err.__class__("cannot set '%s' from '%s': %s" %
-                                 (dexpr.text, sexpr.text, str(err)))
-
-    def edge_dict_to_comp_list(self, edges, implicit_edges=None):
-        """Converts inner edge dict into an ordered dict whose keys
-        are component names, and whose values are lists of relevant
-        (in the graph) inputs and outputs.
-        """
-        comps = OrderedDict()
-        basevars = set()
-        for src, targets in edges.iteritems():
-
-            if not isinstance(targets, list):
-                targets = [targets]
-
-            for target in targets:
-                if not target.startswith('@'):
-                    comp, _, var = target.partition('.')
-                    if var: # TODO: this adds VarTrees as well as comps. Should it?
-                        if comp not in comps:
-                            comps[comp] = {'inputs': [],
-                                           'outputs': [],
-                                           'residuals': [],
-                                           'states': []}
-
-                        basevar = base_var(self,target)
-                        if basevar not in basevars:
-                            comps[comp]['inputs'].append(var)
-
-                            if target == basevar:
-                                basevars.add(target)
-
-            if not src.startswith('@'):
-                comp, _, var = src.partition('.')
-                if var: # TODO: this adds VarTrees as well as comps. Should it?
-                    if comp not in comps:
-                        comps[comp] = {'inputs': [],
-                                       'outputs': [],
-                                       'residuals': [],
-                                       'states': []}
-
-                    basevar = base_var(self,src)
-                    if basevar not in basevars:
-                        comps[comp]['outputs'].append(var)
-                        if src == basevar:
-                            basevars.add(src)
-
-        # Implicit edges
-        if implicit_edges is not None:
-            for srcs, targets in implicit_edges.iteritems():
-                for src in srcs:
-                    comp, _, var = src.partition('.')
-                    comps[comp]['residuals'].append(var)
-                    comps[comp]['outputs'].append(var)
-                for target in targets:
-                    if isinstance(target, str):
-                        target = [target]
-                    for itarget in target:
-                        comp, _, var = itarget.partition('.')
-                        comps[comp]['states'].append(var)
-                        comps[comp]['inputs'].append(var)
-
-                        # Remove any states that came into outputs via
-                        # input-input connections.
-                        if var in comps[comp]['outputs']:
-                            comps[comp]['outputs'].remove(var)
-
-        return comps
 
     def prune_unconnected_vars(self):
         """Remove unconnected variable nodes"""
@@ -1782,19 +1651,6 @@ def _add_collapsed_node(g, src, dests):
 
     g.add_node(newname, meta.copy())
 
-    # cname = src.split('.', 1)[0]
-    # if is_comp_node(g, cname):
-    #     ## edge goes the other way if src is actually an input
-    #     #if g.node[src].get('iotype') == 'in':
-    #         #g.add_edge(newname, cname)
-    #     #else:
-    #     g.add_edge(cname, newname)
-
-    # for dest in dests:
-    #     cname = dest.split('.', 1)[0]
-    #     if is_comp_node(g, cname):
-    #         g.add_edge(newname, cname)
-
     # now wire up the new node
     collapse_nodes(g, newname, [newname[0]]+list(newname[1]), remove=False)
 
@@ -1857,7 +1713,6 @@ def simple_node_iter(nodes):
             allnodes.extend(simple_node_iter(node))
     return allnodes
 
-
 def get_nondiff_groups(graph, cgraph, scope):
     """Return a modified graph with connected
     nondifferentiable systems grouped together.
@@ -1916,13 +1771,6 @@ def get_nondiff_groups(graph, cgraph, scope):
         groups.append(nodeset)
 
     return groups
-
-def connects_to(g, src, dest):
-    """Return True if dest is downstream of src."""
-    for u,v in nx.bfs_edges(g, src):
-        if v == dest:
-            return True
-    return False
 
 def merge_metadata(g, nodes):
     """Return a combined meatdata dict for the given set of
