@@ -53,10 +53,10 @@ def compound_setup_scatters(self):
     varkeys = self.vector_vars.keys()
 
     visited = {}
-    
+
     # collect all destinations from p vector
     ret = self.vec['p'].get_dests_by_comp()
-    
+
     for subsystem in self.all_subsystems():
         src_partial = []
         dest_partial = []
@@ -157,11 +157,11 @@ class System(object):
 
         # get our input nodes from the depgraph
         ins, _ = get_node_boundary(graph, all_outs)
-        
+
         # filter out any comps labeled as inputs. this happens when multiple comps
         # output the same variable
         self._in_nodes = [i for i in ins if 'comp' not in graph.node[i]]
-                
+
         self._combined_graph = graph.subgraph(list(all_outs)+list(self._in_nodes))
 
         # mpiprint("%s in_nodes: %s" % (self.name, self._in_nodes))
@@ -372,7 +372,7 @@ class System(object):
         for s in self.local_subsystems():
             comps.update(simple_node_iter(s._get_comps()))
         return comps
-            
+
     def list_inputs(self):
         """Returns names of input variables from this System and all of its
         children.
@@ -661,9 +661,9 @@ class System(object):
             destvec = self.vec[destvecname]
 
             scatter(self, srcvec, destvec)
-            
+
             if destvecname == 'p':
-                
+
                 if self.complex_step is True:
                     scatter(self, self.vec['du'], self.vec['dp'],
                             complex_step = True)
@@ -676,7 +676,7 @@ class System(object):
                     if subsystem._in_nodes:
                         self.vec['p'].set_to_scope(self.scope, subsystem._in_nodes)
                         if self.complex_step is True:
-                            self.vec['dp'].set_to_scope_complex(self.scope, 
+                            self.vec['dp'].set_to_scope_complex(self.scope,
                                                                 subsystem._in_nodes)
 
         return scatter
@@ -708,7 +708,7 @@ class System(object):
                      'TransparentDriverSystem': 'tdrv', 'OpaqueSystem': 'opaq',
                      'InVarSystem': 'invar', 'OutVarSystem': 'outvar',
                      'SolverSystem': 'slv',  'ParamSystem': 'param',
-                     'AssemblySystem': 'asm', } 
+                     'AssemblySystem': 'asm', }
 
         stream.write(" "*nest)
         stream.write(str(self.name).replace(' ','').replace("'",""))
@@ -861,7 +861,7 @@ class System(object):
 
         for subsystem in self.local_subsystems():
             subsystem.linearize()
-            
+
     def set_complex_step(self, complex_step=False):
         """ Toggles complex_step plumbing for this system and all
         subsystems. """
@@ -1096,14 +1096,6 @@ class SimpleSystem(System):
                 base = base_var(self.scope._depgraph, vname[0])
                 if base != vname[0] and base in self.scope._reduced_graph: #self.scope._var_meta:
                     continue
-                #hasbase = False
-                #for dest in vname[1]:
-                #    base = base_var(self.scope._depgraph, dest)
-                #    if base != dest and base in self.scope._var_meta:
-                #        hasbase = True
-                #        break
-                #    if hasbase:
-                #        break
                 self.variables[vname] = varmeta[vname].copy()
 
         mapped_states = resid_state_map.values()
@@ -1166,8 +1158,6 @@ class SimpleSystem(System):
             graph = self.scope._reduced_graph
 
             self.scatter('u', 'p')
-            #for var in self.list_outputs():
-            #    self.vec['f'][var][:] = self.vec['u'][var][:]
 
             self._comp.set_itername('%s-%s' % (iterbase, self.name))
             self._comp.run(case_uuid=case_uuid)
@@ -1305,7 +1295,7 @@ class InVarSystem(VarSystem):
     def run(self, iterbase, case_label='', case_uuid=None):
         if self.is_active():
             self.vec['u'].set_from_scope(self.scope, self._nodes)
-            
+
             if self.complex_step is True:
                 self.vec['du'].set_from_scope_complex(self.scope, self._nodes)
 
@@ -1821,7 +1811,7 @@ class OpaqueSystem(SimpleSystem):
     """
     def __init__(self, scope, graph, subg, name):
         nodes = set(subg.nodes())
-        
+
         # take the graph we're given, collapse our nodes into a single
         # node, and create a simple system for that
         ograph = graph.subgraph(graph.nodes_iter())
@@ -1829,7 +1819,7 @@ class OpaqueSystem(SimpleSystem):
         shared_int_nodes = ograph.internal_nodes(nodes, shared=True)
         ograph.add_node(tuple(nodes), comp='opaque')
         collapse_nodes(ograph, tuple(nodes), int_nodes)
-        
+
         super(OpaqueSystem, self).__init__(scope, ograph, tuple(nodes))
 
         graph = graph.subgraph(shared_int_nodes)
@@ -1844,17 +1834,17 @@ class OpaqueSystem(SimpleSystem):
                     internal_comps.update([c.name for c in obj.iteration_set()])
                 else:
                     internal_comps.add(name)
-                    
+
         for node in self._in_nodes:
             for d in node[1]:
                 cname, _, vname = d.partition('.')
                 if vname and cname in internal_comps and node not in nodeset:
                     dests.add((d, node))
                     nodeset.add(node)
-                    
+
         # sort so that base vars will be before subvars
         dests = sorted(dests)
-        
+
         # need to create invar nodes here else inputs won't exist in
         # internal vectors
         for dest, node in dests:
@@ -2353,20 +2343,20 @@ def _filter_subs(lst):
     removed.
     """
     bases = [n.split('[',1)[0] for n in lst]
-    
-    return [n for i,n in enumerate(lst) 
+
+    return [n for i,n in enumerate(lst)
                if not (bases[i] in lst and n != bases[i])]
-    
+
 def _filter_ignored(scope, lst):
     # Remove any vars that the user designates as 'deriv_ignore'
     unignored = []
     topvars = scope._system.vector_vars
-    
+
     for name in lst:
         collapsed_name = scope.name2collapsed[name]
         if collapsed_name in topvars and topvars[collapsed_name].get('deriv_ignore'):
             continue
-    
+
         # The user sets 'deriv_ignore' in the basevar, so we have to check that for
         # subvars.
         base = base_var(scope._depgraph, name)
@@ -2375,17 +2365,17 @@ def _filter_ignored(scope, lst):
             if collname and collname in topvars and \
                topvars[collname].get('deriv_ignore'):
                 continue
-            
+
         unignored.append(name)
 
     return unignored
 
 def _filter_flat(scope, lst):
     keep = []
-    
+
     for name in lst:
         collapsed_name = scope.name2collapsed[name]
-        
+
         # ignore non-float-flattenable vars
         if not scope._var_meta[collapsed_name].get('noflat'):
             keep.append(name)
